@@ -4,7 +4,7 @@
 using namespace purelib;
 using namespace purelib::net;
 
-#if defined( _WIN32 ) && !defined( _WP8 )
+#if defined( _WIN32 ) && !defined( _WP8 ) && !defined(WINRT)
 extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
@@ -64,7 +64,7 @@ bool xxsocket::open(int af, int type, int protocol)
     return is_open();
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINRT)
 bool xxsocket::open_ex(int af, int type, int protocol)
 {
 #if !defined(WP8)
@@ -239,6 +239,7 @@ int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)
 int xxsocket::connect_n(const char* addr, u_short port,  timeval* timeout)
 {
     if(xxsocket::connect_n(this->fd, addr, port, timeout) != 0) {
+        this->fd = bad_sock;
         return -1;
     }
     return 0;
@@ -653,7 +654,7 @@ int xxsocket::set_keepalive(int flag, int idle, int interval, int probes)
 
 int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interval, int probes)
 {
-#if defined(_WIN32) && !defined(WP8)
+#if defined(_WIN32) && !defined(WP8) && !defined(WINRT)
     tcp_keepalive buffer_in;
     buffer_in.onoff = flag;
     buffer_in.keepalivetime = idle;
@@ -688,7 +689,7 @@ xxsocket::operator socket_native_type(void) const
     return this->fd;
 }
 
-bool xxsocket::available(void) const
+bool xxsocket::alive(void) const
 {
     return this->send_i("", 0) != -1;
 }
@@ -707,9 +708,13 @@ void xxsocket::close(void)
     }
 }
 
+#if defined(WP8) || defined(WINRT)
+#undef _naked_mark
+#define _naked_mark
+#endif
 void _naked_mark xxsocket::init_ws32_lib(void)
 {
-#if defined(_WIN32) && !defined(_WIN64)
+#if defined(_WIN32) && !defined(_WIN64) && !defined(WINRT)
     _asm ret;
 #else
     return;
@@ -750,7 +755,7 @@ const char* xxsocket::get_error_msg(int error)
         sizeof(error_msg),
         NULL
         );
-
+    
     /*if (lpMsgBuf != nullptr) {
         strcpy(error_msg, (const char*)lpMsgBuf);
         ::LocalFree(lpMsgBuf);
@@ -762,7 +767,7 @@ const char* xxsocket::get_error_msg(int error)
 }
 
 // initialize win32 socket library
-#if defined(_WIN32 ) && !defined(WP8)
+#if defined(_WIN32 ) && !defined(WP8) && !defined(WINRT)
 LPFN_ACCEPTEX __accept_ex = nullptr;
 LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
 #endif

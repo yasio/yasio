@@ -147,6 +147,7 @@ static __inline int64_t rdtsc(void)
 }
 #elif !defined(_WIN64) /* win32 */
 #define _naked_mark __declspec(naked)
+#if 0
 _naked_mark
 static inline int64_t rdtsc(void)
 {
@@ -156,6 +157,7 @@ static inline int64_t rdtsc(void)
         ret;
     }
 }
+#endif
 #else
 #define _naked_mark
 #endif

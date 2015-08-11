@@ -1,16 +1,13 @@
 /////////////////////////////////////////////////////////////
-// A cross platform socket APIs, support ios & android & wp8
+// A cross platform socket APIs, support ios & android & wp8 & winrt & winstore app
 /////////////////////////////////////////////////////////////
 #ifndef _XXSOCKET_H_
 #define _XXSOCKET_H_
-
-#define XXSOCKET_VERSION 1.0.31.2
-
 #ifdef _WIN32
 #include <WinSock2.h>
 
 #include <Windows.h>
-#if defined(_WIN32) && !defined(_WP8)
+#if defined(_WIN32) && !defined(_WP8) && !defined(WINRT)
 #include <Mswsock.h>
 #include <Mstcpip.h>
 #endif
@@ -719,7 +716,7 @@ public:
     **          see MSDN or man page
     ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is returned
     */
-    bool available(void) const;
+    bool alive(void) const;
 
 
     /* @brief: Disables sends or receives on this socket

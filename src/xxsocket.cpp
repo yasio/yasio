@@ -4,7 +4,7 @@
 using namespace purelib;
 using namespace purelib::net;
 
-#if defined( _WIN32 ) && !defined( _WP8 ) && !defined(WINRT)
+#if defined( _WIN32 )  && !defined(_WINSTORE)
 extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
@@ -64,7 +64,7 @@ bool xxsocket::open(int af, int type, int protocol)
     return is_open();
 }
 
-#if defined(_WIN32) && !defined(WINRT)
+#if defined(_WIN32) && !defined(_WINSTORE)
 bool xxsocket::open_ex(int af, int type, int protocol)
 {
 #if !defined(WP8)
@@ -708,7 +708,7 @@ void xxsocket::close(void)
     }
 }
 
-#if defined(WP8) || defined(WINRT)
+#if defined(_WINSTORE) || defined(WINRT)
 #undef _naked_mark
 #define _naked_mark
 #endif
@@ -767,7 +767,7 @@ const char* xxsocket::get_error_msg(int error)
 }
 
 // initialize win32 socket library
-#if defined(_WIN32 ) && !defined(WP8) && !defined(WINRT)
+#if defined(_WIN32 ) && !defined(_WINSTORE)
 LPFN_ACCEPTEX __accept_ex = nullptr;
 LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
 #endif

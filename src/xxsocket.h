@@ -1,13 +1,21 @@
-/////////////////////////////////////////////////////////////
-// A cross platform socket APIs, support ios & android & wp8 & winrt & winstore app
-/////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store universal app
+// version: 1.0.31.6
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifndef _XXSOCKET_H_
 #define _XXSOCKET_H_
+
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+#include <sstream>
+#include "politedef.h"
+
 #ifdef _WIN32
 #include <WinSock2.h>
 
 #include <Windows.h>
-#if defined(_WIN32) && !defined(_WP8) && !defined(WINRT)
+#if defined(_WIN32) && !defined(_WINSTORE)
 #include <Mswsock.h>
 #include <Mstcpip.h>
 #endif
@@ -38,11 +46,6 @@ typedef int socklen_t;
 typedef int socket_native_type;
 #undef socket
 #endif
-#include <errno.h>
-#include <string.h>
-#include <stdio.h>
-#include <sstream>
-#include "politedef.h"
 
 // redefine socket error ode for posix api
 #ifdef _WIN32

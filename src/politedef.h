@@ -33,6 +33,12 @@
 #  define nullptr         0
 #endif
 
+#if defined( WINAPI_FAMILY ) && WINAPI_FAMILY != WINAPI_FAMILY_DESKTOP_APP
+#ifndef _WINSTORE
+#define _WINSTORE 1
+#endif
+#endif
+
 /*
  * _POLAPI_ Definitions
  */

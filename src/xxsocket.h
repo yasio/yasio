@@ -1,7 +1,7 @@
-//////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 1.0.31.6
-//////////////////////////////////////////////////////////////////////////////////////////////////////
+// version: 1.0.32.9
+//////////////////////////////////////////////////////////////////////////////////////////
 #ifndef _XXSOCKET_H_
 #define _XXSOCKET_H_
 
@@ -302,7 +302,7 @@ public:
     {
         ::memset(&this->operating, 0x0, sizeof(this->operating));
     }
-    endpoint_v4(const char* addr, unsigned short port)
+    explicit endpoint_v4(const char* addr, unsigned short port)
     {
         this->operating.sin_family = AF_INET;
         this->operating.sin_addr.s_addr = addr ? inet_addr(addr) : 0;
@@ -380,6 +380,7 @@ public:
     ** @returns: false: check reason by errno
     */
     bool open(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
+    bool reopen(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
 #ifdef _WIN32
     bool open_ex(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
 
@@ -447,6 +448,7 @@ public:
     **         If no error occurs, bind returns [0]. Otherwise, it returns SOCKET_ERROR
     */
     int bind(const char* addr, unsigned short port) const;
+    int bind(const ip::endpoint_v4&);
 
 
     /* @brief: Places this socket in a state in which it is listening for an incoming connection
@@ -492,7 +494,9 @@ public:
     **         Otherwise, it returns SOCKET_ERROR
     */
     int connect(const char* addr, u_short port);
+    int connect(const ip::endpoint_v4& ep);
     static int connect(socket_native_type s, const char* addr, u_short port);
+    static int connect(socket_native_type s, const ip::endpoint_v4& ep);
 
 
     /* @brief: Establishes a connection to a specified this socket with nonblocking
@@ -503,10 +507,13 @@ public:
     */
 
     int connect_n(const char* addr, u_short port, long timeout_sec);
+    int connect_n(const ip::endpoint_v4& ep, long timeout_sec);
 
     int connect_n(const char* addr, u_short port, timeval* timeout);
+    int connect_n(const ip::endpoint_v4& ep, timeval* timeout);
 
     static int connect_n(socket_native_type s,const char* addr, u_short port, timeval* timeout);
+    static int connect_n(socket_native_type s, const ip::endpoint_v4& ep, timeval* timeout);
     
     /* @brief: Sends data on this connected socket
     ** @params: omit
@@ -541,6 +548,9 @@ public:
     */
     int recv(void* buf, int len, int flags = 0) const;
 
+    bool read_until(std::string& buffer, const char delim);
+    bool read_until(std::string& buffer, const std::string& delims);
+    bool read_until(std::string& buffer, const char* delims, int len);
     
     /* @brief: nonblock recv
     ** @params: omit

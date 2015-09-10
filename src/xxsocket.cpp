@@ -64,6 +64,12 @@ bool xxsocket::open(int af, int type, int protocol)
     return is_open();
 }
 
+bool xxsocket::reopen(int af, int type, int protocol)
+{
+    this->close();
+    return this->open(af, type, protocol);
+}
+
 #if defined(_WIN32) && !defined(_WINSTORE)
 bool xxsocket::open_ex(int af, int type, int protocol)
 {
@@ -188,6 +194,11 @@ int xxsocket::bind(const char* addr, unsigned short port) const
     return ::bind(this->fd, &local.internal, sizeof(local));
 }
 
+int xxsocket::bind(const ip::endpoint_v4& endpoint)
+{
+    return ::bind(this->fd, &endpoint.internal, sizeof(endpoint));
+}
+
 int xxsocket::listen(int backlog) const
 {
     return ::listen(this->fd, backlog);
@@ -220,7 +231,12 @@ xxsocket xxsocket::accept_n(timeval* timeout)
 
 int xxsocket::connect(const char* addr, u_short port)
 {
-    return connect(this->fd, addr, port);
+    return connect(ip::endpoint_v4(addr, port));
+}
+
+int xxsocket::connect(const ip::endpoint_v4& ep)
+{
+    return ::connect(fd, &ep.internal, sizeof(ep));
 }
 
 int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
@@ -230,15 +246,31 @@ int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
     return ::connect(s, &peer.internal, sizeof(peer));
 }
 
+int xxsocket::connect(socket_native_type s, const ip::endpoint_v4& ep)
+{
+    return ::connect(s, &ep.internal, sizeof(ep));
+}
+
 int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)
 {
     auto timeout = make_tv(timeout_sec);
     return connect_n(addr, port, &timeout);
 }
 
+int xxsocket::connect_n(const ip::endpoint_v4& ep, long timeout_sec)
+{
+    auto timeout = make_tv(timeout_sec);
+    return connect_n(ep, &timeout);
+}
+
 int xxsocket::connect_n(const char* addr, u_short port,  timeval* timeout)
 {
-    if(xxsocket::connect_n(this->fd, addr, port, timeout) != 0) {
+    return connect_n(ip::endpoint_v4(addr, port), timeout);
+}
+
+int xxsocket::connect_n(const ip::endpoint_v4& ep, timeval* timeout)
+{
+    if (xxsocket::connect_n(this->fd, ep, timeout) != 0) {
         this->fd = bad_sock;
         return -1;
     }
@@ -247,26 +279,11 @@ int xxsocket::connect_n(const char* addr, u_short port,  timeval* timeout)
 
 int xxsocket::connect_n(socket_native_type s,const char* addr, u_short port, timeval* timeout)
 {
-//#ifdef _WIN32
-//    set_nonblocking(s, true);
-//
-//    (void)connect(s, addr, port); // ignore return value
-//
-//    fd_set fds_wr; 
-//    FD_ZERO(&fds_wr);
-//    FD_SET(s, &fds_wr);
-//
-//    if (::select(s + 1, nullptr, &fds_wr, nullptr, timeout) > 0 && FD_ISSET(s, &fds_wr))
-//    { // connect successfully
-//        set_nonblocking(s, false);
-//        return 0;
-//    }
-//
-//    // otherwise timeout or error occured
-//    if(s != bad_sock) 
-//        ::closesocket(s);
-//    return -1;
-//#else
+    return connect_n(s, ip::endpoint_v4(addr, port), timeout);
+}
+
+int xxsocket::connect_n(socket_native_type s, const ip::endpoint_v4& ep, timeval* timeout)
+{
     fd_set rset, wset;
     int n, error = 0;
 #ifdef _WIN32
@@ -275,7 +292,7 @@ int xxsocket::connect_n(socket_native_type s,const char* addr, u_short port, tim
     int flags = ::fcntl(s, F_GETFL, 0);
     ::fcntl(s, F_SETFL, flags | O_NONBLOCK);
 #endif
-    if ((n = xxsocket::connect(s, addr, port)) < 0) {
+    if ((n = xxsocket::connect(s, ep)) < 0) {
         error = xxsocket::get_last_errno();
         if (error != EINPROGRESS && error != EWOULDBLOCK)
             return -1;
@@ -314,9 +331,8 @@ done:
         xxsocket::set_last_errno(error);
         return (-1);
     }
-    return (0);
 
-//#endif
+    return (0);
 }
 
 int xxsocket::send(const void* buf, int len, int flags) const
@@ -480,6 +496,67 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
     }
 
     return bytes_transferred;
+}
+
+bool xxsocket::read_until(std::string& buffer, const char delim)
+{
+    return read_until(buffer, &delim, sizeof(delim));
+}
+
+bool xxsocket::read_until(std::string& buffer, const std::string& delims)
+{
+    return read_until(buffer, delims.c_str(), delims.size());
+}
+
+bool xxsocket::read_until(std::string& buffer, const char* delims, int len)
+{
+    if (len == -1)
+        len = strlen(delims);
+
+    bool ok = false;
+    char buf[128];
+    int retry = 3; // retry three times
+    int n = 0;
+    for (; retry > 0; )
+    {
+        memset(buf, 0, sizeof(buf));
+        n = recv_i(buf, sizeof(buf));
+        if (n <= 0)
+        {
+            auto error = xxsocket::get_last_errno();
+            if (n == -1 &&
+                (error == EAGAIN
+                || error == EINTR
+                || error == EWOULDBLOCK
+                || error == EINPROGRESS))
+            {
+                timeval tv = { 0, 1500000 };
+                int rtn = handle_read_ready(&tv);
+
+                if (rtn != -1)
+                { // read ready
+                    continue;
+                }
+            }
+
+            // read not ready, retry.
+            --retry;
+            continue;
+        }
+
+        buffer.append(buf, n);
+        if (static_cast<int>(buffer.size()) >= len)
+        {
+            auto eof = &buffer[buffer.size() - len];
+            if (0 == memcmp(eof, delims, len))
+            {
+                ok = true;
+                break;
+            }
+        }
+    }
+
+    return ok;
 }
 
 int xxsocket::send(void* buf, int len, int slicelen, int flags) const

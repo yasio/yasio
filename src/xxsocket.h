@@ -42,7 +42,6 @@ SOFTWARE.
 #include <Mswsock.h>
 #include <Mstcpip.h>
 #endif
-#define skerrno WSAGetLastError()
 typedef SOCKET socket_native_type; 
 typedef int socklen_t;
 #pragma comment(lib, "ws2_32.lib")
@@ -63,7 +62,6 @@ typedef int socklen_t;
 #define SD_RECEIVE SHUT_RD
 #define SD_SEND SHUT_WR
 #define SD_BOTH SHUT_RDWR
-#define skerrno errno
 #define closesocket close
 #define ioctlsocket ioctl
 typedef int socket_native_type;

@@ -530,7 +530,7 @@ bool xxsocket::read_until(std::string& buffer, const char* delims, int len)
                 || error == EWOULDBLOCK
                 || error == EINPROGRESS))
             {
-                timeval tv = { 0, 1500000 };
+                timeval tv = { 3, 500000 };
                 int rtn = handle_read_ready(&tv);
 
                 if (rtn != -1)

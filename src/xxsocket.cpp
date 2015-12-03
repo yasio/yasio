@@ -818,7 +818,7 @@ void xxsocket::set_last_errno(int error)
 
 const char* xxsocket::get_error_msg(int error)
 {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && (WINAPI_FAMILY_APP == WINAPI_FAMILY_DESKTOP_APP)
     static char error_msg[256];
     /*LPVOID lpMsgBuf = nullptr;*/
     ::FormatMessageA(

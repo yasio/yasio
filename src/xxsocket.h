@@ -50,6 +50,7 @@ typedef int socklen_t;
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <netdb.h>
 #include <sys/types.h>
 #include <sys/poll.h>
 // #include <sys/epoll.h>

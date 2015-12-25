@@ -9,6 +9,27 @@ extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
 
+ip::endpoint_v4 xxsocket::resolve(const char* hostname, unsigned short port)
+{
+    ip::endpoint_v4 ep;
+    auto hostptr = gethostbyname(hostname);
+
+    switch (hostptr->h_addrtype)
+    {
+    case AF_INET:
+        ep.operating.sin_family = AF_INET;
+        memcpy(&(ep.operating.sin_addr), hostptr->h_addr, sizeof(ep.operating.sin_addr));
+        ep.operating.sin_port = htons(port);
+    case AF_INET6:
+    default:
+        break;
+    }
+    
+    auto checkip = ep.to_string_full();
+
+    return std::move(ep);
+}
+
 xxsocket::xxsocket(void) : fd(bad_sock)
 {
 }

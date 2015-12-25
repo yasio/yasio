@@ -781,6 +781,8 @@ public:
     static void set_last_errno(int error);
     static const char* get_error_msg(int error);
 
+    static ip::endpoint_v4 resolve(const char* hostname, unsigned short port = 0);
+
 private:
     socket_native_type   fd;
 };

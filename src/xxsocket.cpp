@@ -13,6 +13,9 @@ ip::endpoint_v4 xxsocket::resolve(const char* hostname, unsigned short port)
 {
     ip::endpoint_v4 ep;
     auto hostptr = gethostbyname(hostname);
+    
+    if(hostptr == nullptr)
+    	return std::move(ep);
 
     switch (hostptr->h_addrtype)
     {

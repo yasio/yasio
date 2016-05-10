@@ -583,44 +583,6 @@ bool xxsocket::read_until(std::string& buffer, const char* delims, int len)
     return ok;
 }
 
-int xxsocket::send(void* buf, int len, int slicelen, int flags) const
-{
-    char* ptr = (char*)buf;
-    int bytes_leavings = len;
-    while(bytes_leavings > 0)
-    {
-        if(bytes_leavings > slicelen)
-        {
-            bytes_leavings -= this->send(ptr, slicelen, flags);
-            ptr += slicelen;
-        }
-        else
-        {
-            bytes_leavings -= this->send(ptr, bytes_leavings, flags);
-        }
-    }
-    return len - bytes_leavings;
-}
-
-int xxsocket::recv(void* buf, int len, int slicelen, int flags) const
-{
-    char* ptr = (char*)buf;
-    int bytes_leavings = len;
-    while(bytes_leavings > 0)
-    {
-        if(bytes_leavings > slicelen)
-        {
-            bytes_leavings -= this->recv_i(ptr, slicelen, flags);
-            ptr += slicelen;
-        }
-        else
-        {
-            bytes_leavings -= this->recv_i(ptr, bytes_leavings, flags);
-        }
-    }
-    return len - bytes_leavings;
-}
-
 int xxsocket::send_i(const void* buf, int len, int flags) const
 {
     return ::send(

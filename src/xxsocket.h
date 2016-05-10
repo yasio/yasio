@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 0.0.339.2
+// version: 1.0
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -584,30 +584,6 @@ public:
     int recv_n(void* buf, int len, long timeout_sec, int flags = 0) const;
     int recv_n(void* buf, int len, timeval* timeout, int flags = 0) const;
     static int recv_n(socket_native_type s, void* buf, int len, timeval* timeout, int flags = 0);
-
-
-    /* @brief: Sends data on this connected socket
-    ** @params:
-    **       slicelen: slice length;
-    **           
-    ** @returns: 
-    **         If no error occurs, send returns the total number of bytes sent, 
-    **         which can be less than the number requested to be sent in the len parameter. 
-    **         Otherwise, a value of SOCKET_ERROR is returned.
-    */
-    int send(void* buf, int len, int slicelen, int flags = 0) const;
-
-
-    /* @brief: Receives data from this connected socket or a bound connectionless socket. 
-    ** @params: slicelen: slice length
-    **           
-    ** @returns: 
-    **         If no error occurs, recv returns the number of bytes received and 
-    **         the buffer pointed to by the buf parameter will contain this data received.
-    **         If the connection has been gracefully closed, the return value is [0].
-    */
-    int recv(void* buf, int len, int slicelen, int flags = 0) const;
-
 
     /* @brief: Sends data on this connected socket
     ** @params: omit

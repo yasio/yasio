@@ -1,11 +1,11 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 1.0
+// version: 2.0
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
 
-Copyright (c) 2015 halx99
+Copyright (c) 2015-2016 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -408,7 +408,7 @@ public: /// portable connect APIs
     // easy to connect a server ipv4 or ipv6.
     int pconnect_n(const char* hostname, u_short port, long timeout_sec);
 
-    // easy to create a tcp server socket.
+    // easy to create a tcp ipv4 or ipv6 server socket.
     int pserv(const char* addr, u_short port);
 public:
 

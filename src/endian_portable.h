@@ -10,9 +10,7 @@
 #include <arpa/inet.h>
 #endif
 
-#define _VS2013_UPDATE4 1
-
-#if !defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1800) || (defined(_VS2013_UPDATE4) && _VS2013_UPDATE4 == 0 && !defined(WINRT)) 
+#if !defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1800) || (NTDDI_VERSION <= 0x06010000 && !defined(WINRT)) 
 /*
 * Byte order conversion functions for 64-bit integers and 32 + 64 bit
 * floating-point numbers.  IEEE big-endian format is used for the

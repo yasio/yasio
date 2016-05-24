@@ -847,7 +847,7 @@ template<typename _T> inline
 
 #endif
 /*
-* Copyright (c) 2012-2015 by X.D. Guo  ALL RIGHTS RESERVED.
+* Copyright (c) 2012-2016 by X.D. Guo  ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
 **/
 

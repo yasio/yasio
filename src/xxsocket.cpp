@@ -12,7 +12,7 @@ extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 int xxsocket::pconnect(const char* hostname, u_short port)
 {
     auto ep = xxsocket::resolve(hostname, port);
-    if (this->reopen(ep.intri_.sa_family))
+    if (this->reopen(ep.af()))
     {
         return this->connect(ep);
     }
@@ -22,7 +22,7 @@ int xxsocket::pconnect(const char* hostname, u_short port)
 int xxsocket::pconnect_n(const char* hostname, u_short port, long timeout_sec)
 {
     auto ep = xxsocket::resolve(hostname, port);
-    if (this->reopen(ep.intri_.sa_family))
+    if (this->reopen(ep.af()))
     {
         return this->connect_n(ep, timeout_sec);
     }
@@ -33,7 +33,7 @@ int xxsocket::pserv(const char* addr, u_short port)
 {
     ip::endpoint local(addr, port);
 
-    if (!this->reopen(local.intri_.sa_family)) {
+    if (!this->reopen(local.af())) {
         return -1;
     }
 
@@ -342,7 +342,7 @@ int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
 
 int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
 {
-    return ::connect(s, &ep.intri_, ep.intri_.sa_family == AF_INET ? sizeof(ep.in4_) : sizeof(ep.in6_));
+    return ::connect(s, &ep.intri_, ep.af() == AF_INET ? sizeof(ep.in4_) : sizeof(ep.in6_));
 }
 
 int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)

@@ -9,6 +9,41 @@ extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
 
+int xxsocket::getinetpv(void)
+{
+    int flags = 0;
+    /*char hostname[256] = { 0 };
+    gethostname(hostname, sizeof(hostname));*/
+
+    // ipv4 & ipv6
+    addrinfo hint, *ailist = nullptr;
+    memset(&hint, 0x0, sizeof(hint));
+    hint.ai_flags = AI_PASSIVE;
+    // hint.ai_family = AF_UNSPEC;
+    // hint.ai_socktype = 0; // SOCK_STREAM;
+    getaddrinfo(nullptr/*hostname*/, "", &hint, &ailist);
+
+    if (ailist != nullptr) {
+        for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
+        {
+            switch (aip->ai_family) {
+            case AF_INET:
+                flags |= sip_ipv4;
+                break;
+            case AF_INET6:
+                flags |= sip_ipv6;
+                break;
+            }
+        }
+        freeaddrinfo(ailist);
+    }
+    else {
+        // gai_strerror(xxsocket::get_last_errno())
+    }
+
+    return flags;
+}
+
 int xxsocket::pconnect(const char* hostname, u_short port)
 {
     auto ep = xxsocket::resolve(hostname, port);

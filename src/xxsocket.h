@@ -341,6 +341,12 @@ public:
         }
         this->in4_.sin_port = htons(port);
     }
+
+    int af() const
+    {
+        return intri_.sa_family;
+    }
+
     std::string to_string_full(void) const
     {
         std::stringstream ss;
@@ -395,12 +401,23 @@ timeval make_tv(uint32_t sec, uint32_t usec = 0)
     return tv;
 }
 
+// supported internet protocol flags
+enum {
+    sip_unavailable = 0,
+    sip_ipv4 = 1,
+    sip_ipv6 = 2,
+    sip_dual_stack = sip_ipv4 | sip_ipv6
+};
+
 /*
 ** CLASS xxsocket: a posix socket wrapper
 */
 class xxsocket
 {
-    
+public:
+    // return supported internet protocols versions
+    static int getinetpv(void);
+
 public: /// portable connect APIs
     // easy to connect a server ipv4 or ipv6.
     int pconnect(const char* hostname, u_short port);

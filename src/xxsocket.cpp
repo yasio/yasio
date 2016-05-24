@@ -92,9 +92,6 @@ ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
     memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
     switch (answer->ai_family)
     {
-    case AF_INET:
-        ep.in4_.sin_port = htons(port);
-        break;
     case AF_INET6:
         ep.in6_.sin6_port = htons(port);
         break;

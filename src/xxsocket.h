@@ -329,6 +329,7 @@ public:
     { /*
       * Windows XP no inet_pton or inet_ntop
       */
+        ::memset(this, 0x0, sizeof(*this));
         if (strchr(addr, '.') != nullptr)
         { // ipv4
             this->in4_.sin_family = AF_INET;

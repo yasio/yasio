@@ -41,6 +41,7 @@ SOFTWARE.
 #if defined(_WIN32) && !defined(_WINSTORE)
 #include <Mswsock.h>
 #include <Mstcpip.h>
+#include <Ws2tcpip.h>
 #endif
 typedef SOCKET socket_native_type; 
 typedef int socklen_t;
@@ -317,18 +318,28 @@ struct arp_packet
 } ;
 #pragma pack(pop)
 
-union endpoint_v4
+union endpoint
 {
 public:
-    endpoint_v4(void) 
+    endpoint(void) 
     {
-        ::memset(&this->operating, 0x0, sizeof(this->operating));
+        ::memset(this, 0x0, sizeof(*this));
     }
-    explicit endpoint_v4(const char* addr, unsigned short port)
-    {
-        this->operating.sin_family = AF_INET;
-        this->operating.sin_addr.s_addr = addr ? inet_addr(addr) : 0;
-        this->operating.sin_port = htons(port);
+    explicit endpoint(const char* addr, unsigned short port)
+    { /*
+      * Windows XP no inet_pton or inet_ntop
+      */
+        if (strchr(addr, '.') != nullptr)
+        { // ipv4
+            this->in4_.sin_family = AF_INET;
+            inet_pton(AF_INET, addr, &this->in4_.sin_addr);
+            // this->in4_.sin_addr.s_addr = inet_addr(addr); 
+        }
+        else { // ipv6
+            this->in6_.sin6_family = AF_INET6;
+            inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
+        }
+        this->in4_.sin_port = htons(port);
     }
     std::string to_string_full(void) const
     {
@@ -338,22 +349,39 @@ public:
     }
     std::string to_string(void) const
     {
-        return std::string(inet_ntoa(this->operating.sin_addr));
+        std::string addr(64, '\0');
+
+        int n = 0;
+
+        switch (intri_.sa_family) {
+        case AF_INET:
+            n = strlen(inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), 64));
+            break;
+        case AF_INET6:
+            n = strlen(inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front(), 64));
+            break;
+        }
+        addr.resize(n);
+        return std::move(addr);
+        // return std::string(inet_ntoa(this->in4_.sin_addr));
     }
+#if 0
     void to_string_full(char* buffer) const // not safe, if use, please confirm buffer enough
     {
-        sprintf(buffer, "%s:%u", inet_ntoa(this->operating.sin_addr), this->port());
+        sprintf(buffer, "%s:%u", inet_ntoa(this->in4_.sin_addr), this->port());
     }
     void to_string(char* buffer) const // // not safe, if use, please confirm buffer enough
     {
-        strcpy(buffer, inet_ntoa(this->operating.sin_addr));
+        strcpy(buffer, inet_ntoa(this->in4_.sin_addr));
     }
+#endif
     unsigned short port(void) const
     {
-        return ntohs(operating.sin_port);
+        return ntohs(in4_.sin_port);
     }
-    sockaddr internal;
-    sockaddr_in operating;
+    sockaddr intri_;
+    mutable sockaddr_in in4_;
+    mutable sockaddr_in6 in6_;
 };
 
 };
@@ -372,6 +400,16 @@ timeval make_tv(uint32_t sec, uint32_t usec = 0)
 */
 class xxsocket
 {
+    
+public: /// portable connect APIs
+    // easy to connect a server ipv4 or ipv6.
+    int pconnect(const char* hostname, u_short port);
+
+    // easy to connect a server ipv4 or ipv6.
+    int pconnect_n(const char* hostname, u_short port, long timeout_sec);
+
+    // easy to create a tcp server socket.
+    int pserv(const char* addr, u_short port);
 public:
 
     // Construct a empty socket object
@@ -464,13 +502,13 @@ public:
 
     /* @brief: Associates a local address with this socket
     ** @params: 
-    **        addr: four point address, if set nullptr, the socket will listen at any.
+    **        addr: four point address, if set "0.0.0.0" ipv4, "::" ipv6, the socket will listen at any.
     **        port: @$$#s
     ** @returns: 
     **         If no error occurs, bind returns [0]. Otherwise, it returns SOCKET_ERROR
     */
     int bind(const char* addr, unsigned short port) const;
-    int bind(const ip::endpoint_v4&);
+    int bind(const ip::endpoint&);
 
 
     /* @brief: Places this socket in a state in which it is listening for an incoming connection
@@ -516,9 +554,9 @@ public:
     **         Otherwise, it returns SOCKET_ERROR
     */
     int connect(const char* addr, u_short port);
-    int connect(const ip::endpoint_v4& ep);
+    int connect(const ip::endpoint& ep);
     static int connect(socket_native_type s, const char* addr, u_short port);
-    static int connect(socket_native_type s, const ip::endpoint_v4& ep);
+    static int connect(socket_native_type s, const ip::endpoint& ep);
 
 
     /* @brief: Establishes a connection to a specified this socket with nonblocking
@@ -529,13 +567,13 @@ public:
     */
 
     int connect_n(const char* addr, u_short port, long timeout_sec);
-    int connect_n(const ip::endpoint_v4& ep, long timeout_sec);
+    int connect_n(const ip::endpoint& ep, long timeout_sec);
 
     int connect_n(const char* addr, u_short port, timeval* timeout);
-    int connect_n(const ip::endpoint_v4& ep, timeval* timeout);
+    int connect_n(const ip::endpoint& ep, timeval* timeout);
 
     static int connect_n(socket_native_type s,const char* addr, u_short port, timeval* timeout);
-    static int connect_n(socket_native_type s, const ip::endpoint_v4& ep, timeval* timeout);
+    static int connect_n(socket_native_type s, const ip::endpoint& ep, timeval* timeout);
     
     /* @brief: Sends data on this connected socket
     ** @params: omit
@@ -617,7 +655,7 @@ public:
     **         which can be less than the number requested to be sent in the len parameter. 
     **         Otherwise, a value of SOCKET_ERROR is returned.
     */
-    int sendto_i(const void* buf, int len, ip::endpoint_v4& to, int flags = 0) const;
+    int sendto_i(const void* buf, int len, ip::endpoint& to, int flags = 0) const;
 
 
     /* @brief: Receives a datagram and stores the source address
@@ -628,7 +666,7 @@ public:
     **         the buffer pointed to by the buf parameter will contain this data received.
     **         If the connection has been gracefully closed, the return value is [0].
     */
-    int recvfrom_i(void* buf, int len, ip::endpoint_v4& peer, int flags = 0) const;
+    int recvfrom_i(void* buf, int len, ip::endpoint& peer, int flags = 0) const;
 
     int handle_write_ready(timeval* timeo) const;
     static int handle_write_ready(socket_native_type s, timeval* timeo);
@@ -642,8 +680,8 @@ public:
     **   
     ** @returns: 
     */ 
-    ip::endpoint_v4 local_endpoint(void) const;
-    static ip::endpoint_v4 local_endpoint(socket_native_type);
+    ip::endpoint local_endpoint(void) const;
+    static ip::endpoint local_endpoint(socket_native_type);
 
 
     /* @brief: Get peer address info
@@ -652,8 +690,8 @@ public:
     ** @returns: 
     *  @remark: if this a listening socket fd, will return "0.0.0.0:0"
     */
-    ip::endpoint_v4 peer_endpoint(void) const;
-    static ip::endpoint_v4 peer_endpoint(socket_native_type);
+    ip::endpoint peer_endpoint(void) const;
+    static ip::endpoint peer_endpoint(socket_native_type);
 
 
     /* @brief: Configure TCP keepalive
@@ -758,7 +796,9 @@ public:
     static void set_last_errno(int error);
     static const char* get_error_msg(int error);
 
-    static ip::endpoint_v4 resolve(const char* hostname, unsigned short port = 0);
+    static ip::endpoint resolve(const char* hostname, unsigned short port = 0);
+
+    static ip::endpoint resolve_v6(const char* hostname, unsigned short port = 0);
 
 private:
     socket_native_type   fd;

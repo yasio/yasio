@@ -9,26 +9,99 @@ extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
 
-ip::endpoint_v4 xxsocket::resolve(const char* hostname, unsigned short port)
+int xxsocket::pconnect(const char* hostname, u_short port)
 {
-    ip::endpoint_v4 ep;
-    auto hostptr = gethostbyname(hostname);
-    
-    if(hostptr == nullptr)
-    	return std::move(ep);
+    auto ep = xxsocket::resolve(hostname, port);
+    if (this->reopen(ep.intri_.sa_family))
+    {
+        return this->connect(ep);
+    }
+    return -1;
+}
 
-    switch (hostptr->h_addrtype)
+int xxsocket::pconnect_n(const char* hostname, u_short port, long timeout_sec)
+{
+    auto ep = xxsocket::resolve(hostname, port);
+    if (this->reopen(ep.intri_.sa_family))
+    {
+        return this->connect_n(ep, timeout_sec);
+    }
+    return -1;
+}
+
+int xxsocket::pserv(const char* addr, u_short port)
+{
+    ip::endpoint local(addr, port);
+
+    if (!this->reopen(local.intri_.sa_family)) {
+        return -1;
+    }
+
+    int n = this->bind(local);
+    if (n != 0)
+        return n;
+
+    return this->listen();
+}
+
+ip::endpoint xxsocket::resolve(const char* hostname, unsigned short port)
+{
+    ip::endpoint ep;
+
+    addrinfo hint;
+    memset(&hint, 0x0, sizeof(hint));
+
+    addrinfo* answer = nullptr;
+    getaddrinfo(hostname, nullptr, &hint, &answer);
+
+    if (answer == nullptr)
+        return std::move(ep);
+
+    memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
+    switch (answer->ai_family)
     {
     case AF_INET:
-        ep.operating.sin_family = AF_INET;
-        memcpy(&(ep.operating.sin_addr), hostptr->h_addr, sizeof(ep.operating.sin_addr));
-        ep.operating.sin_port = htons(port);
-    case AF_INET6:
-    default:
+        ep.in4_.sin_port = htons(port);
         break;
+    case AF_INET6:
+        ep.in6_.sin6_port = htons(port);
+        break;
+    default:;
     }
-    
-    auto checkip = ep.to_string_full();
+
+    freeaddrinfo(answer);
+
+    return std::move(ep);
+}
+
+ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
+{
+    ip::endpoint ep;
+
+    struct addrinfo hint;
+    memset(&hint, 0x0, sizeof(hint));
+    hint.ai_family = AF_INET6;
+    hint.ai_flags = AI_V4MAPPED;
+
+    addrinfo* answer = nullptr;
+    getaddrinfo(hostname, nullptr, &hint, &answer);
+
+    if (answer == nullptr)
+        return std::move(ep);
+
+    memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
+    switch (answer->ai_family)
+    {
+    case AF_INET:
+        ep.in4_.sin_port = htons(port);
+        break;
+    case AF_INET6:
+        ep.in6_.sin6_port = htons(port);
+        break;
+    default:;
+    }
+
+    freeaddrinfo(answer);
 
     return std::move(ep);
 }
@@ -48,7 +121,7 @@ xxsocket::xxsocket(xxsocket&& right) : fd(bad_sock)
 
 xxsocket& xxsocket::operator=(socket_native_type handle)
 {
-    if(!this->is_open()) {
+    if (!this->is_open()) {
         this->fd = handle;
     }
     return *this;
@@ -72,7 +145,7 @@ xxsocket::~xxsocket(void)
 xxsocket& xxsocket::swap(xxsocket& who)
 {
     // avoid fd missing
-    if(!is_open()) {
+    if (!is_open()) {
         this->fd = who.fd;
         who.fd = bad_sock;
     }
@@ -81,7 +154,7 @@ xxsocket& xxsocket::swap(xxsocket& who)
 
 bool xxsocket::open(int af, int type, int protocol)
 {
-    if(bad_sock == this->fd) 
+    if (bad_sock == this->fd)
     {
         this->fd = ::socket(af, type, protocol);
     }
@@ -98,38 +171,38 @@ bool xxsocket::reopen(int af, int type, int protocol)
 bool xxsocket::open_ex(int af, int type, int protocol)
 {
 #if !defined(WP8)
-    if(bad_sock == this->fd)
+    if (bad_sock == this->fd)
     {
         this->fd = ::WSASocket(af, type, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 
         DWORD dwBytes = 0;
-        if(nullptr == __accept_ex)
+        if (nullptr == __accept_ex)
         {
             GUID guidAcceptEx = WSAID_ACCEPTEX;
             (void)WSAIoctl(
-                this->fd, 
-                SIO_GET_EXTENSION_FUNCTION_POINTER, 
-                &guidAcceptEx, 
-                sizeof(guidAcceptEx), 
-                &__accept_ex, 
-                sizeof(__accept_ex), 
-                &dwBytes, 
-                nullptr, 
+                this->fd,
+                SIO_GET_EXTENSION_FUNCTION_POINTER,
+                &guidAcceptEx,
+                sizeof(guidAcceptEx),
+                &__accept_ex,
+                sizeof(__accept_ex),
+                &dwBytes,
+                nullptr,
                 nullptr);
         }
 
-        if(nullptr == __get_accept_ex_sockaddrs)
+        if (nullptr == __get_accept_ex_sockaddrs)
         {
             GUID guidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
             (void)WSAIoctl(
-                this->fd, 
-                SIO_GET_EXTENSION_FUNCTION_POINTER, 
-                &guidGetAcceptExSockaddrs, 
-                sizeof(guidGetAcceptExSockaddrs), 
-                &__get_accept_ex_sockaddrs, 
-                sizeof(__get_accept_ex_sockaddrs), 
-                &dwBytes, 
-                nullptr, 
+                this->fd,
+                SIO_GET_EXTENSION_FUNCTION_POINTER,
+                &guidGetAcceptExSockaddrs,
+                sizeof(guidGetAcceptExSockaddrs),
+                &__get_accept_ex_sockaddrs,
+                sizeof(__get_accept_ex_sockaddrs),
+                &dwBytes,
+                nullptr,
                 nullptr);
         }
     }
@@ -149,7 +222,7 @@ bool xxsocket::accept_ex(
     __out LPDWORD lpdwBytesReceived,
     __inout LPOVERLAPPED lpOverlapped)
 {
-    return __accept_ex(sockfd_listened, 
+    return __accept_ex(sockfd_listened,
         sockfd_prepared,
         lpOutputBuffer,
         dwReceiveDataLength,
@@ -169,7 +242,7 @@ void xxsocket::translate_sockaddrs(
     sockaddr **RemoteSockaddr,
     LPINT RemoteSockaddrLength)
 {
-    __get_accept_ex_sockaddrs( 
+    __get_accept_ex_sockaddrs(
         lpOutputBuffer,
         dwReceiveDataLength,
         dwLocalAddressLength,
@@ -213,14 +286,14 @@ int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
 
 int xxsocket::bind(const char* addr, unsigned short port) const
 {
-    ip::endpoint_v4 local(addr, port);
+    ip::endpoint local(addr, port);
 
-    return ::bind(this->fd, &local.internal, sizeof(local));
+    return ::bind(this->fd, &local.intri_, sizeof(local));
 }
 
-int xxsocket::bind(const ip::endpoint_v4& endpoint)
+int xxsocket::bind(const ip::endpoint& endpoint)
 {
-    return ::bind(this->fd, &endpoint.internal, sizeof(endpoint));
+    return ::bind(this->fd, &endpoint.intri_, sizeof(endpoint));
 }
 
 int xxsocket::listen(int backlog) const
@@ -228,7 +301,7 @@ int xxsocket::listen(int backlog) const
     return ::listen(this->fd, backlog);
 }
 
-xxsocket xxsocket::accept(socklen_t )
+xxsocket xxsocket::accept(socklen_t)
 {
     return ::accept(this->fd, nullptr, nullptr);
 }
@@ -239,11 +312,11 @@ xxsocket xxsocket::accept_n(timeval* timeout)
 
     set_nonblocking(true);
 
-    fd_set fds_rd; 
+    fd_set fds_rd;
     FD_ZERO(&fds_rd);
     FD_SET(this->fd, &fds_rd);
 
-    if(::select(1, &fds_rd, 0, 0, timeout) > 0) 
+    if (::select(1, &fds_rd, 0, 0, timeout) > 0)
     {
         result = this->accept();
     }
@@ -255,24 +328,24 @@ xxsocket xxsocket::accept_n(timeval* timeout)
 
 int xxsocket::connect(const char* addr, u_short port)
 {
-    return connect(ip::endpoint_v4(addr, port));
+    return connect(ip::endpoint(addr, port));
 }
 
-int xxsocket::connect(const ip::endpoint_v4& ep)
+int xxsocket::connect(const ip::endpoint& ep)
 {
-    return ::connect(fd, &ep.internal, sizeof(ep));
+    return xxsocket::connect(fd, ep);
 }
 
 int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
 {
-    ip::endpoint_v4 peer(addr, port);
+    ip::endpoint peer(addr, port);
 
-    return ::connect(s, &peer.internal, sizeof(peer));
+    return xxsocket::connect(s, peer);
 }
 
-int xxsocket::connect(socket_native_type s, const ip::endpoint_v4& ep)
+int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
 {
-    return ::connect(s, &ep.internal, sizeof(ep));
+    return ::connect(s, &ep.intri_, ep.intri_.sa_family == AF_INET ? sizeof(ep.in4_) : sizeof(ep.in6_));
 }
 
 int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)
@@ -281,32 +354,32 @@ int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)
     return connect_n(addr, port, &timeout);
 }
 
-int xxsocket::connect_n(const ip::endpoint_v4& ep, long timeout_sec)
+int xxsocket::connect_n(const ip::endpoint& ep, long timeout_sec)
 {
     auto timeout = make_tv(timeout_sec);
     return connect_n(ep, &timeout);
 }
 
-int xxsocket::connect_n(const char* addr, u_short port,  timeval* timeout)
+int xxsocket::connect_n(const char* addr, u_short port, timeval* timeout)
 {
-    return connect_n(ip::endpoint_v4(addr, port), timeout);
+    return connect_n(ip::endpoint(addr, port), timeout);
 }
 
-int xxsocket::connect_n(const ip::endpoint_v4& ep, timeval* timeout)
+int xxsocket::connect_n(const ip::endpoint& ep, timeval* timeout)
 {
     if (xxsocket::connect_n(this->fd, ep, timeout) != 0) {
         this->fd = bad_sock;
         return -1;
-    }
+}
     return 0;
 }
 
-int xxsocket::connect_n(socket_native_type s,const char* addr, u_short port, timeval* timeout)
+int xxsocket::connect_n(socket_native_type s, const char* addr, u_short port, timeval* timeout)
 {
-    return connect_n(s, ip::endpoint_v4(addr, port), timeout);
+    return connect_n(s, ip::endpoint(addr, port), timeout);
 }
 
-int xxsocket::connect_n(socket_native_type s, const ip::endpoint_v4& ep, timeval* timeout)
+int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* timeout)
 {
     fd_set rset, wset;
     int n, error = 0;
@@ -363,15 +436,15 @@ int xxsocket::send(const void* buf, int len, int flags) const
 {
     int bytes_transferred = 0;
     int n = 0;
-    do 
+    do
     {
-        bytes_transferred += 
-            ( n = ::send(this->fd,
+        bytes_transferred +=
+            (n = ::send(this->fd,
             (char*)buf + bytes_transferred,
-            len - bytes_transferred,
-            flags
-            ) );
-    } while(bytes_transferred < len && n > 0);
+                len - bytes_transferred,
+                flags
+            ));
+    } while (bytes_transferred < len && n > 0);
     return bytes_transferred;
 }
 
@@ -400,8 +473,8 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
         // Try to transfer as much of the remaining data as possible.
         // Since the socket is in non-blocking mode, this call will not
         // block.
-        n = xxsocket::send_i (s,
-            (char *) buf + bytes_transferred,
+        n = xxsocket::send_i(s,
+            (char *)buf + bytes_transferred,
             len - bytes_transferred,
             flags);
         //++send_times;
@@ -410,7 +483,7 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
         {
             // Check for possible blocking.
 #ifdef _WIN32
-            errcode = WSAGetLastError();       
+            errcode = WSAGetLastError();
 #else
             errcode = errno;
 #endif
@@ -418,7 +491,7 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
                 (errcode == EAGAIN || errcode == EWOULDBLOCK || errcode == ENOBUFS || errcode == EINTR))
             {
                 // Wait upto <timeout> for the blocking to subside.
-                int const rtn = handle_write_ready (s, timeout);
+                int const rtn = handle_write_ready(s, timeout);
 
                 // Did select() succeed?
                 if (rtn != -1)
@@ -445,14 +518,14 @@ int xxsocket::recv(void* buf, int len, int flags) const
     int n = 0;
     do
     {
-        bytes_transfrred += 
-            ( n = ::recv(this->fd,
+        bytes_transfrred +=
+            (n = ::recv(this->fd,
             (char*)buf + bytes_transfrred,
-            len - bytes_transfrred,
-            flags
-            ) );
+                len - bytes_transfrred,
+                flags
+            ));
 
-    } while(bytes_transfrred < len && n > 0);
+    } while (bytes_transfrred < len && n > 0);
     return bytes_transfrred;
 }
 
@@ -490,18 +563,18 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
         {
             // Check for possible blocking.
 #ifdef _WIN32
-            ec = WSAGetLastError();       
+            ec = WSAGetLastError();
 #else
             ec = errno; // socket errno
 #endif
             if (n == -1 &&
-                ( ec == EAGAIN 
-                || ec == EINTR 
-                || ec == EWOULDBLOCK
-                || ec == EINPROGRESS) )
+                (ec == EAGAIN
+                    || ec == EINTR
+                    || ec == EWOULDBLOCK
+                    || ec == EINPROGRESS))
             {
                 // Wait upto <timeout> for the blocking to subside.
-                int const rtn = handle_read_ready (s, timeout);
+                int const rtn = handle_read_ready(s, timeout);
 
                 // Did select() succeed?
                 if (rtn != -1)
@@ -550,9 +623,9 @@ bool xxsocket::read_until(std::string& buffer, const char* delims, int len)
             auto error = xxsocket::get_last_errno();
             if (n == -1 &&
                 (error == EAGAIN
-                || error == EINTR
-                || error == EWOULDBLOCK
-                || error == EINPROGRESS))
+                    || error == EINTR
+                    || error == EWOULDBLOCK
+                    || error == EINPROGRESS))
             {
                 timeval tv = { 3, 500000 };
                 int rtn = handle_read_ready(&tv);
@@ -614,27 +687,27 @@ int xxsocket::recv_i(socket_native_type s, void* buf, int len, int flags)
         flags);
 }
 
-int xxsocket::recvfrom_i(void* buf, int len, ip::endpoint_v4& from, int flags) const
+int xxsocket::recvfrom_i(void* buf, int len, ip::endpoint& from, int flags) const
 {
     socklen_t addrlen = sizeof(from);
     return ::recvfrom(this->fd,
         (char*)buf,
         len,
         flags,
-        &from.internal,
+        &from.intri_,
         &addrlen
-        );
+    );
 }
 
-int xxsocket::sendto_i(const void* buf, int len, ip::endpoint_v4& to, int flags) const
+int xxsocket::sendto_i(const void* buf, int len, ip::endpoint& to, int flags) const
 {
     return ::sendto(this->fd,
         (const char*)buf,
         len,
         flags,
-        &to.internal,
+        &to.intri_,
         sizeof(to)
-        );
+    );
 }
 
 
@@ -684,30 +757,30 @@ int xxsocket::handle_read_ready(socket_native_type s, timeval* timeo)
     return ret;
 }
 
-ip::endpoint_v4 xxsocket::local_endpoint(void) const
+ip::endpoint xxsocket::local_endpoint(void) const
 {
     return local_endpoint(this->fd);
 }
 
-ip::endpoint_v4 xxsocket::local_endpoint(socket_native_type fd)
+ip::endpoint xxsocket::local_endpoint(socket_native_type fd)
 {
-    ip::endpoint_v4 v4;
-    socklen_t socklen = sizeof(v4);
-    getsockname(fd, &v4.internal, &socklen);
-    return v4;
+    ip::endpoint ep;
+    socklen_t socklen = sizeof(ep);
+    getsockname(fd, &ep.intri_, &socklen);
+    return ep;
 }
 
-ip::endpoint_v4 xxsocket::peer_endpoint(void) const
+ip::endpoint xxsocket::peer_endpoint(void) const
 {
     return peer_endpoint(this->fd);
 }
 
-ip::endpoint_v4 xxsocket::peer_endpoint(socket_native_type fd)
+ip::endpoint xxsocket::peer_endpoint(socket_native_type fd)
 {
-    ip::endpoint_v4 v4;
-    socklen_t socklen = sizeof(v4);
-    getpeername(fd, &v4.internal, &socklen);
-    return v4;
+    ip::endpoint ep;
+    socklen_t socklen = sizeof(ep);
+    getpeername(fd, &ep.intri_, &socklen);
+    return ep;
 }
 
 int xxsocket::set_keepalive(int flag, int idle, int interval, int probes)
@@ -764,7 +837,7 @@ int xxsocket::shutdown(int how) const
 
 void xxsocket::close(void)
 {
-    if(is_open())
+    if (is_open())
     {
         ::closesocket(this->fd);
         this->fd = bad_sock;
@@ -817,8 +890,8 @@ const char* xxsocket::get_error_msg(int error)
         error_msg,
         sizeof(error_msg),
         NULL
-        );
-    
+    );
+
     /*if (lpMsgBuf != nullptr) {
         strcpy(error_msg, (const char*)lpMsgBuf);
         ::LocalFree(lpMsgBuf);

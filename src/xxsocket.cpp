@@ -9,24 +9,29 @@ extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
 
+namespace purelib {
+namespace net {
+namespace ip {
 namespace compat {
-    ///////////// inet_ntop ///////////////
-    // from glibc
+                ///////////// inet_ntop ///////////////
+                // from glibc
 #ifdef SPRINTF_CHAR
 # define SPRINTF(x) strlen(sprintf/**/x)
 #else
 # define SPRINTF(x) ((size_t)sprintf x)
 #endif
 
+#define NS_INT16SZ 2
+#define NS_INADDRSZ 4
+#define NS_IN6ADDRSZ 16
+
     /*
     * WARNING: Don't even consider trying to compile this on a system where
     * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
     */
 
-    static const char *inet_ntop4(const u_char *src, char *dst, socklen_t size)
-        internal_function;
-    static const char *inet_ntop6(const u_char *src, char *dst, socklen_t size)
-        internal_function;
+    static const char *inet_ntop4(const u_char *src, char *dst, socklen_t size);
+    static const char *inet_ntop6(const u_char *src, char *dst, socklen_t size);
 
     /* char *
     * inet_ntop(af, src, dst, size)
@@ -41,37 +46,36 @@ namespace compat {
     {
         switch (af) {
         case AF_INET:
-            return (inet_ntop4(src, dst, size));
+            return (inet_ntop4((u_char*)src, dst, size));
         case AF_INET6:
-            return (inet_ntop6(src, dst, size));
+            return (inet_ntop6((u_char*)src, dst, size));
         default:
-            __set_errno(EAFNOSUPPORT);
+            // __set_errno(EAFNOSUPPORT);
+            errno = EAFNOSUPPORT;
             return (NULL);
         }
         /* NOTREACHED */
     }
-    libc_hidden_def(inet_ntop)
 
-        /* const char *
-        * inet_ntop4(src, dst, size)
-        *	format an IPv4 address
-        * return:
-        *	`dst' (as a const)
-        * notes:
-        *	(1) uses no statics
-        *	(2) takes a u_char* not an in_addr as input
-        * author:
-        *	Paul Vixie, 1996.
-        */
-        static const char *
-        internal_function
+    /* const char *
+    * inet_ntop4(src, dst, size)
+    *	format an IPv4 address
+    * return:
+    *	`dst' (as a const)
+    * notes:
+    *	(1) uses no statics
+    *	(2) takes a u_char* not an in_addr as input
+    * author:
+    *	Paul Vixie, 1996.
+    */
+    static const char *
         inet_ntop4(const u_char *src, char *dst, socklen_t size)
     {
         static const char fmt[] = "%u.%u.%u.%u";
         char tmp[sizeof "255.255.255.255"];
 
         if (SPRINTF((tmp, fmt, src[0], src[1], src[2], src[3])) >= size) {
-            __set_errno(ENOSPC);
+            errno = (ENOSPC);
             return (NULL);
         }
         return strcpy(dst, tmp);
@@ -84,7 +88,6 @@ namespace compat {
     *	Paul Vixie, 1996.
     */
     static const char *
-        internal_function
         inet_ntop6(const u_char *src, char *dst, socklen_t size)
     {
         /*
@@ -123,9 +126,9 @@ namespace compat {
                     if (best.base == -1 || cur.len > best.len)
                         best = cur;
                     cur.base = -1;
-}
+                }
+            }
         }
-    }
         if (cur.base != -1) {
             if (best.base == -1 || cur.len > best.len)
                 best = cur;
@@ -168,11 +171,11 @@ namespace compat {
         * Check for overflow, copy, and we're done.
         */
         if ((socklen_t)(tp - tmp) > size) {
-            __set_errno(ENOSPC);
+            errno = (ENOSPC);
             return (NULL);
         }
         return strcpy(dst, tmp);
-}
+    }
 
 #if 0
     static const char *
@@ -290,8 +293,8 @@ namespace compat {
     * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
     */
 
-    static int inet_pton4(const char *src, u_char *dst) internal_function;
-    static int inet_pton6(const char *src, u_char *dst) internal_function;
+    static int inet_pton4(const char *src, u_char *dst);
+    static int inet_pton6(const char *src, u_char *dst);
 
     /* int
     * inet_pton(af, src, dst)
@@ -305,36 +308,32 @@ namespace compat {
     *	Paul Vixie, 1996.
     */
     int
-        __inet_pton(int af, const char *src, void *dst)
+        inet_pton(int af, const char *src, void *dst)
     {
         switch (af) {
         case AF_INET:
-            return (inet_pton4(src, dst));
+            return (inet_pton4(src, (u_char*)dst));
         case AF_INET6:
-            return (inet_pton6(src, dst));
+            return (inet_pton6(src, (u_char*)dst));
         default:
-            __set_errno(EAFNOSUPPORT);
+            errno = (EAFNOSUPPORT);
             return (-1);
         }
         /* NOTREACHED */
     }
-    libc_hidden_def(__inet_pton)
-        weak_alias(__inet_pton, inet_pton)
-        libc_hidden_weak(inet_pton)
 
-        /* int
-        * inet_pton4(src, dst)
-        *	like inet_aton() but without all the hexadecimal, octal (with the
-        *	exception of 0) and shorthand.
-        * return:
-        *	1 if `src' is a valid dotted quad, else 0.
-        * notice:
-        *	does not touch `dst' unless it's returning 1.
-        * author:
-        *	Paul Vixie, 1996.
-        */
-        static int
-        internal_function
+    /* int
+    * inet_pton4(src, dst)
+    *	like inet_aton() but without all the hexadecimal, octal (with the
+    *	exception of 0) and shorthand.
+    * return:
+    *	1 if `src' is a valid dotted quad, else 0.
+    * notice:
+    *	does not touch `dst' unless it's returning 1.
+    * author:
+    *	Paul Vixie, 1996.
+    */
+    static int
         inet_pton4(const char *src, u_char *dst)
     {
         int saw_digit, octets, ch;
@@ -346,13 +345,13 @@ namespace compat {
         while ((ch = *src++) != '\0') {
 
             if (ch >= '0' && ch <= '9') {
-                u_int new = *tp * 10 + (ch - '0');
+                u_int newv = *tp * 10 + (ch - '0');
 
                 if (saw_digit && *tp == 0)
                     return (0);
-                if (new > 255)
+                if (newv > 255)
                     return (0);
-                *tp = new;
+                *tp = newv;
                 if (!saw_digit) {
                     if (++octets > 4)
                         return (0);
@@ -388,7 +387,6 @@ namespace compat {
     *	Paul Vixie, 1996.
     */
     static int
-        internal_function
         inet_pton6(const char *src, u_char *dst)
     {
         static const char xdigits[] = "0123456789abcdef";
@@ -397,7 +395,7 @@ namespace compat {
         int ch, saw_xdigit;
         u_int val;
 
-        tp = memset(tmp, '\0', NS_IN6ADDRSZ);
+        tp = (u_char*)memset(tmp, '\0', NS_IN6ADDRSZ);
         endp = tp + NS_IN6ADDRSZ;
         colonp = NULL;
         /* Leading :: requires some special handling. */
@@ -473,7 +471,9 @@ namespace compat {
         memcpy(dst, tmp, NS_IN6ADDRSZ);
         return (1);
     }
-
+            };
+        };
+    };
 };
 
 int xxsocket::getinetpv(void)

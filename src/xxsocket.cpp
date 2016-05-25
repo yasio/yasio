@@ -13,8 +13,8 @@ namespace purelib {
 namespace net {
 namespace ip {
 namespace compat {
-                ///////////// inet_ntop ///////////////
-                // from glibc
+
+// from glibc
 #ifdef SPRINTF_CHAR
 # define SPRINTF(x) strlen(sprintf/**/x)
 #else
@@ -24,7 +24,7 @@ namespace compat {
 #define NS_INT16SZ 2
 #define NS_INADDRSZ 4
 #define NS_IN6ADDRSZ 16
-
+    /////////////////// inet_ntop //////////////////
     /*
     * WARNING: Don't even consider trying to compile this on a system where
     * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
@@ -471,9 +471,9 @@ namespace compat {
         memcpy(dst, tmp, NS_IN6ADDRSZ);
         return (1);
     }
-            };
-        };
-    };
+};
+};
+};
 };
 
 int xxsocket::getinetpv(void)

@@ -1,21 +1,31 @@
 #include "xxsocket.h"
 #include "endian_portable.h"
 using namespace purelib::net;
+
 /*
 "115.159.188.219""::FFFF:115:159:188:219"
 */
 
-// ipv4: 15
-// ipv6: 39
-// port: 5
-
 INT
 WSAAPI
 inet_pton_xp(
-    _In_                                      INT             Family,
-    _In_                                      PCSTR           pszAddrString,
-    _Out_writes_bytes_(sizeof(IN6_ADDR))      PVOID           pAddrBuf
-);
+    INT             Family,
+    PCSTR           pszAddrString,
+    PVOID           pAddrBuf
+)
+{
+    if (Family == AF_INET) {
+        in_addr* pAddr = (in_addr*)pAddrBuf;
+        return sscanf(pszAddrString, "%d.%d.%d.%d", &pAddr->s_net, &pAddr->s_host, &pAddr->s_lh, &pAddr->s_impno);
+    }
+    else {
+        in6_addr* pAddr = (in6_addr*)pAddrBuf;
+        return sscanf(pszAddrString, "%d:%d:%d:%d:%d:%d:%d:%d", 
+            &pAddr->s6_bytes[0], &pAddr->s6_bytes[1], &pAddr->s6_bytes[2], &pAddr->s6_bytes[3],
+            &pAddr->s6_bytes[4], &pAddr->s6_bytes[5], &pAddr->s6_bytes[6], &pAddr->s6_bytes[7]);
+        return 0;
+    }
+}
 
 int main(int, char**)
 {
@@ -81,7 +91,25 @@ int main(int, char**)
 
     freeaddrinfo(ailist);
 #endif
+
+    in_addr addr4, addr41;
+    memset(&addr4, 0x0, sizeof(addr4));
+    memset(&addr41, 0x0, sizeof(addr41));
+    addr4.s_addr = inet_addr("115.159.188.219");
+    auto n = inet_pton_xp(AF_INET, "115.159.188.219", &addr41);
+
+    in6_addr addr6, addr61;
+    memset(&addr6, 0x0, sizeof(addr6));
+    memset(&addr61, 0x0, sizeof(addr61));
+    inet_pton(AF_INET6, "fe80::a0b2:dded:8b90:50c5", &addr6);
+    inet_pton_xp(AF_INET6, "fe80::a0b2:dded:8b90:50c5", &addr61);
+
+    
     auto flags = xxsocket::getinetpv();
+
+    auto v6addr = xxsocket::resolve_v6("115.159.188.219", 2033);
+
+    std::string addrname = v6addr.to_string();
 
     xxsocket s;
     s.pconnect("fe80::f1:584e:dfb4:4d95", 1033);

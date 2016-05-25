@@ -326,10 +326,12 @@ public:
         ::memset(this, 0x0, sizeof(*this));
     }
     explicit endpoint(const char* addr, unsigned short port)
-    { /*
-      * Windows XP no inet_pton or inet_ntop
-      */
+    {
         ::memset(this, 0x0, sizeof(*this));
+
+        /*
+        * Windows XP no inet_pton or inet_ntop
+        */
         if (strchr(addr, '.') != nullptr)
         { // ipv4
             this->in4_.sin_family = AF_INET;

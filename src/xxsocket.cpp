@@ -379,8 +379,9 @@ int xxsocket::getipsv(void)
     hint.ai_flags = AI_PASSIVE;
     // hint.ai_family = AF_UNSPEC;
     // hint.ai_socktype = 0; // SOCK_STREAM;
-    getaddrinfo(nullptr/*hostname*/, "", &hint, &ailist);
+    int iret = getaddrinfo(nullptr/*hostname*/, "0", &hint, &ailist);
 
+    const char* errmsg = nullptr;
     if (ailist != nullptr) {
         for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
         {
@@ -392,11 +393,13 @@ int xxsocket::getipsv(void)
                 flags |= ipsv_ipv6;
                 break;
             }
+            if(flags & ipsv_dual_stack)
+                break;
         }
         freeaddrinfo(ailist);
     }
     else {
-        // gai_strerror(xxsocket::get_last_errno())
+        errmsg = gai_strerror(iret);
     }
 
     return flags;

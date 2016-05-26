@@ -476,7 +476,7 @@ namespace compat {
 };
 };
 
-int xxsocket::getinetpv(void)
+int xxsocket::getipsv(void)
 {
     int flags = 0;
     /*char hostname[256] = { 0 };

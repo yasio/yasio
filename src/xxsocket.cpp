@@ -4,6 +4,11 @@
 using namespace purelib;
 using namespace purelib::net;
 
+#ifdef _WIN32
+#undef gai_strerror
+#define gai_strerror gai_strerrorA
+#endif
+
 #if defined( _WIN32 )  && !defined(_WINSTORE)
 extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;

@@ -42,6 +42,7 @@ SOFTWARE.
 #include <Mswsock.h>
 #include <Mstcpip.h>
 #include <Ws2tcpip.h>
+#include <Wspiapi.h>
 #endif
 typedef SOCKET socket_native_type; 
 typedef int socklen_t;

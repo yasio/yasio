@@ -91,12 +91,12 @@ int main(int, char**)
 
     freeaddrinfo(ailist);
 #endif
-
+#if 0
     in_addr addr4, addr41;
     memset(&addr4, 0x0, sizeof(addr4));
     memset(&addr41, 0x0, sizeof(addr41));
-    addr4.s_addr = inet_addr("115.159.188.219");
-    auto n = inet_pton_xp(AF_INET, "115.159.188.219", &addr41);
+    addr4.s_addr = inet_addr("0.0.0.0");
+    auto n = inet_pton_xp(AF_INET, "0.0.0.0", &addr41);
 
     in6_addr addr6, addr61;
     memset(&addr6, 0x0, sizeof(addr6));
@@ -105,15 +105,18 @@ int main(int, char**)
     inet_pton_xp(AF_INET6, "fe80::a0b2:dded:8b90:50c5", &addr61);
 
     
-    auto flags = xxsocket::getinetpv();
+    auto flags = xxsocket::getipsv();
 
-    auto v6addr = xxsocket::resolve_v6("115.159.188.219", 2033);
+    auto v6addr = xxsocket::resolve_v6("0.0.0.0", 2033);
 
     std::string addrname = v6addr.to_string();
-
+#endif
     xxsocket s;
-    s.pconnect("fe80::f1:584e:dfb4:4d95", 1033);
+    s.connect("fe80::f1:584e:dfb4:4d95", 1033);
     int ec = xxsocket::get_last_errno();
+
+    ip::endpoint ep("192.168.1.10", 8002);
+    auto checks = ep.to_string();
 
     auto localep = s.local_endpoint();
     auto localaddr = localep.to_string();

@@ -319,10 +319,15 @@ struct arp_packet
 } ;
 #pragma pack(pop)
 
+namespace compat {
+    const char * inet_ntop(int af, const void *src, char *dst, socklen_t size);
+    int inet_pton(int af, const char *src, void *dst);
+}
+
 union endpoint
 {
 public:
-    endpoint(void) 
+    endpoint(void)
     {
         ::memset(this, 0x0, sizeof(*this));
     }
@@ -336,26 +341,18 @@ public:
         if (strchr(addr, '.') != nullptr)
         { // ipv4
             this->in4_.sin_family = AF_INET;
-            inet_pton(AF_INET, addr, &this->in4_.sin_addr);
-            // this->in4_.sin_addr.s_addr = inet_addr(addr); 
+            compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
+            this->in4_.sin_port = htons(port);
         }
         else { // ipv6
             this->in6_.sin6_family = AF_INET6;
-            inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
-        }
-        this->in4_.sin_port = htons(port);
+            compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
+            this->in6_.sin6_port = htons(port);
+        }  
     }
-
     int af() const
     {
         return intri_.sa_family;
-    }
-
-    std::string to_string_full(void) const
-    {
-        std::stringstream ss;
-        ss << this->to_string() << ":" << this->port();
-        return ss.str();
     }
     std::string to_string(void) const
     {
@@ -371,20 +368,28 @@ public:
             n = strlen(inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front(), 64));
             break;
         }
+        n += sprintf(&addr.front() + n, ":%u", this->port());
+
         addr.resize(n);
+
         return std::move(addr);
-        // return std::string(inet_ntoa(this->in4_.sin_addr));
     }
-#if 0
-    void to_string_full(char* buffer) const // not safe, if use, please confirm buffer enough
+    char* to_cstring(char buffer[64]) const // // not safe, if use, please confirm buffer enough
     {
-        sprintf(buffer, "%s:%u", inet_ntoa(this->in4_.sin_addr), this->port());
+        int n = 0;
+        switch (intri_.sa_family) {
+        case AF_INET:
+            n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buffer, 64));
+            break;
+        case AF_INET6:
+            n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, buffer, 64));
+            break;
+        }
+
+        sprintf(buffer + n, ":%u", this->port());
+
+        return buffer;
     }
-    void to_string(char* buffer) const // // not safe, if use, please confirm buffer enough
-    {
-        strcpy(buffer, inet_ntoa(this->in4_.sin_addr));
-    }
-#endif
     unsigned short port(void) const
     {
         return ntohs(in4_.sin_port);

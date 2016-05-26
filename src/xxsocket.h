@@ -406,10 +406,10 @@ timeval make_tv(uint32_t sec, uint32_t usec = 0)
 
 // supported internet protocol flags
 enum {
-    sip_unavailable = 0,
-    sip_ipv4 = 1,
-    sip_ipv6 = 2,
-    sip_dual_stack = sip_ipv4 | sip_ipv6
+    ipsv_unavailable = 0,
+    ipsv_ipv4 = 1,
+    ipsv_ipv6 = 2,
+    ipsv_dual_stack = ipsv_ipv4 | ipsv_ipv6
 };
 
 /*
@@ -419,7 +419,7 @@ class xxsocket
 {
 public:
     // return supported internet protocols versions
-    static int getinetpv(void);
+    static int getipsv(void);
 
 public: /// portable connect APIs
     // easy to connect a server ipv4 or ipv6.

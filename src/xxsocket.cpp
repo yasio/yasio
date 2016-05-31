@@ -441,7 +441,7 @@ int xxsocket::getipsv(void)
                 flags |= ipsv_ipv6;
                 break;
             }
-            if(flags & ipsv_dual_stack)
+            if(flags == ipsv_dual_stack)
                 break;
         }
         freeaddrinfo(ailist);

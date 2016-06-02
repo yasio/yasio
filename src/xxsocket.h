@@ -41,9 +41,9 @@ SOFTWARE.
 #if defined(_WIN32) && !defined(_WINSTORE)
 #include <Mswsock.h>
 #include <Mstcpip.h>
+#endif
 #include <Ws2tcpip.h>
 #include <Wspiapi.h>
-#endif
 typedef SOCKET socket_native_type; 
 typedef int socklen_t;
 #pragma comment(lib, "ws2_32.lib")

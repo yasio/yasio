@@ -34,6 +34,9 @@ SOFTWARE.
 #include <sstream>
 #include "politedef.h"
 
+#pragma warning(push)
+#pragma warning(disable: 4996)
+
 #ifdef _WIN32
 #include <WinSock2.h>
 
@@ -358,7 +361,7 @@ public:
     {
         std::string addr(64, '\0');
 
-        int n = 0;
+        size_t n = 0;
 
         switch (intri_.sa_family) {
         case AF_INET:
@@ -376,7 +379,7 @@ public:
     }
     char* to_cstring(char buffer[64]) const // // not safe, if use, please confirm buffer enough
     {
-        int n = 0;
+        size_t n = 0;
         switch (intri_.sa_family) {
         case AF_INET:
             n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buffer, 64));
@@ -636,7 +639,7 @@ public:
 
     bool read_until(std::string& buffer, const char delim);
     bool read_until(std::string& buffer, const std::string& delims);
-    bool read_until(std::string& buffer, const char* delims, int len);
+    bool read_until(std::string& buffer, const char* delims, size_t len);
     
     /* @brief: nonblock recv
     ** @params: omit
@@ -870,6 +873,8 @@ template<typename _T> inline
 }; /* namespace: purelib::net */
 
 }; /* namespace: purelib */
+
+#pragma warning(pop) 
 
 #endif
 /*

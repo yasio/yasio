@@ -28,6 +28,9 @@ SOFTWARE.
 #include "xxsocket.h"
 #include <fcntl.h>
 
+#pragma warning(push)
+#pragma warning(disable: 4996)
+
 using namespace purelib;
 using namespace purelib::net;
 
@@ -202,7 +205,7 @@ namespace compat {
             /* Is this address an encapsulated IPv4? */
             if (i == 6 && best.base == 0 &&
                 (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) {
-                if (!inet_ntop4(src + 12, tp, sizeof tmp - (tp - tmp)))
+                if (!inet_ntop4(src + 12, tp, static_cast<socklen_t>(sizeof tmp - (tp - tmp))))
                     return (NULL);
                 tp += strlen(tp);
                 break;
@@ -394,7 +397,7 @@ namespace compat {
             * Since some memmove()'s erroneously fail to handle
             * overlapping regions, we'll do the shift by hand.
             */
-            const int n = tp - colonp;
+            const auto n = tp - colonp;
             int i;
 
             if (tp == endp)
@@ -844,7 +847,7 @@ int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* t
     FD_SET(s, &rset);
     wset = rset;
 
-    if ((n = ::select(s + 1, &rset, &wset, NULL, timeout)) == 0) {
+    if ((n = ::select(static_cast<int>(s + 1), &rset, &wset, NULL, timeout)) == 0) {
         ::closesocket(s);  /* timeout */
         xxsocket::set_last_errno(ETIMEDOUT);
         return (-1);
@@ -1046,9 +1049,9 @@ bool xxsocket::read_until(std::string& buffer, const std::string& delims)
     return read_until(buffer, delims.c_str(), delims.size());
 }
 
-bool xxsocket::read_until(std::string& buffer, const char* delims, int len)
+bool xxsocket::read_until(std::string& buffer, const char* delims, size_t len)
 {
-    if (len == -1)
+    if (len == static_cast<size_t>(-1))
         len = strlen(delims);
 
     bool ok = false;
@@ -1162,7 +1165,7 @@ int xxsocket::handle_write_ready(socket_native_type s, timeval* timeo)
     fd_set fds_wr;
     FD_ZERO(&fds_wr);
     FD_SET(s, &fds_wr);
-    int ret = ::select(s + 1, nullptr, &fds_wr, nullptr, timeo);
+    int ret = ::select(static_cast<int>(s + 1), nullptr, &fds_wr, nullptr, timeo);
     return ret;
 }
 
@@ -1194,7 +1197,7 @@ int xxsocket::handle_read_ready(socket_native_type s, timeval* timeo)
     fd_set fds_rd;
     FD_ZERO(&fds_rd);
     FD_SET(s, &fds_rd);
-    int ret = ::select(s + 1, &fds_rd, nullptr, nullptr, timeo);
+    int ret = ::select(static_cast<int>(s + 1), &fds_rd, nullptr, nullptr, timeo);
     return ret;
 }
 
@@ -1318,7 +1321,7 @@ void xxsocket::set_last_errno(int error)
 
 const char* xxsocket::get_error_msg(int error)
 {
-#if defined(_MSC_VER) && (WINAPI_FAMILY_APP == WINAPI_FAMILY_DESKTOP_APP)
+#if defined(_MSC_VER) &&  !defined(_WINSTORE)
     static char error_msg[256];
     /*LPVOID lpMsgBuf = nullptr;*/
     ::FormatMessageA(
@@ -1369,6 +1372,8 @@ namespace {
 };
 #endif
 
+#pragma warning(pop)
+
 /* select usage:
 char dat;
 fd_set fds_rd;
@@ -1392,3 +1397,6 @@ return -1;
 }
 */
 
+#if 0
+#pragma warning(push)
+#endif

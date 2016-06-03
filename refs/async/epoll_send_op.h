@@ -6,7 +6,7 @@ template<typename _Handler>
 class epoll_send_op : public epoll_io_op
 {
 public:
-    epoll_recv_op(
+    epoll_send_op(
         xxsocket& sock, 
         void*    buffer,
         size_t   size,

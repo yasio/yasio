@@ -24,9 +24,21 @@
     <ClCompile Include="..\..\src\xxsocket.cpp">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\oslib.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\xxtcp_client.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\xxsocket.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\oslib.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\xxtcp_client.h">
       <Filter>lib</Filter>
     </ClInclude>
   </ItemGroup>

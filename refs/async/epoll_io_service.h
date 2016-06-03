@@ -22,9 +22,9 @@ public:
 
     ~epoll_io_service(void);
 
-    bool register_descriptor(socket_handle fd, epoll_io_op* op, int type = EV_SHOT_VALUE);
+    bool register_descriptor(socket_handle fd, epoll_io_op* op);
 
-    bool deregister_descriptor(socket_handle fd, epoll_io_op* op, int type = EV_SHOT_VALUE);
+    bool unregister_descriptor(socket_handle fd, epoll_io_op* op);
 
     // Initialise the task. Nothing to do here.
     void start(size_t task_number);

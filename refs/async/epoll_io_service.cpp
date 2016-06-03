@@ -25,7 +25,7 @@ epoll_io_service::~epoll_io_service(void)
     }
 }
 
-bool epoll_io_service::register_descriptor(socket_handle fd, epoll_io_op* op, int type)
+bool epoll_io_service::register_descriptor(socket_handle fd, epoll_io_op* op)
 {
     epoll_event ev = { 0, { 0 } };
     ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLPRI | EPOLLET; // 边缘触发模式完整标识

@@ -23,7 +23,7 @@ public:
 
     // Register a handle with the IO completion port.
     template<typename _Handle>
-    bool register_handle(_Handle handle)
+    bool register_descriptor(_Handle handle)
     {
         return (::CreateIoCompletionPort((HANDLE)handle, iocp_.handle, 0, 0) != nullptr);
     }

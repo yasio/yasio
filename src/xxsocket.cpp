@@ -1374,29 +1374,3 @@ namespace {
 
 #pragma warning(pop)
 
-/* select usage:
-char dat;
-fd_set fds_rd;
-FD_ZERO(&fds_rd);
-FD_SET(fd, &fds_rd);
-timeval timeo;
-timeo.sec = 5;
-timeo.usec = 500000;
-switch( ::select(fd + 1, &fds_rd, nullptr, nullptr, &timeo) )
-{
-case -1:  // select error
-break;
-case 0:   // select timeout
-break;
-default:  // can read
-if(sock.recv_i(&dat, sizeof(dat), MSG_PEEK) < 0)
-{
-return -1;
-}
-;
-}
-*/
-
-#if 0
-#pragma warning(push)
-#endif

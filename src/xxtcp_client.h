@@ -50,7 +50,7 @@ namespace purelib {
             std::mutex                 send_queue_mtx_;
             std::queue<xxappl_pdu*>    send_quene_;
             std::vector<char>          receiving_pdu_;
-            int                        expected_pdu_len_ = -1;
+            int                        expected_pdu_length_ = -1;
             int                        error = 0;
 
             bool do_read(void);
@@ -64,10 +64,12 @@ namespace purelib {
         public:
 
             // End user pdu decode length func
-            typedef bool(*DecodepduLengthFunc)(const char* data, size_t datalen, int& len);
+            typedef bool(*decode_pdu_length_func)(const char* data, size_t datalen, int& len);
 
             // BuildErrorInfoFunc
-            typedef std::vector<char>(*BuildErrorpduFunc)(int errorcode, const char* errormsg);
+            typedef std::vector<char>(*build_error_func)(int errorcode, const char* errormsg);
+
+            typedef std::function<void(bool succeed, int ec)> connect_listener;
 
         public:
             xxtcp_client();
@@ -75,8 +77,9 @@ namespace purelib {
 
             void       set_endpoint(const char* address, const char* addressv6, u_short port);
 
-            void       set_callbacks(DecodepduLengthFunc decode_length_func,
-                BuildErrorpduFunc build_error_pdu_func,
+            void       set_callbacks(
+                decode_pdu_length_func decode_length_func,
+                build_error_func build_error_pdu_func,
                 const xxappl_pdu_received_callback_t& callback);
 
             void       set_timeouts(long timeo_connect, long timeo_send);
@@ -163,18 +166,16 @@ namespace purelib {
 
             // socket event set
             // fd_set readfds, writefds, excepfds;
-
+            connect_listener        connect_listener_;
             xxappl_pdu_received_callback_t on_received_pdu_;
-
-            DecodepduLengthFunc  decode_pdu_length_;
-            BuildErrorpduFunc    build_error_pdu_;
+            decode_pdu_length_func  decode_pdu_length_;
+            build_error_func    build_error_pdu_;
 
             bool                    idle_;
 
-
             // p2p support
-            std::mutex              p2p_conn_notify_mtx_;
-            std::condition_variable p2p_conn_notify_cv_;
+            std::mutex              p2p_connect_notify_mtx_;
+            std::condition_variable p2p_connect_notify_cv_;
             ip::endpoint            p2p_available_endpoint_;
             xxsocket                p2p_acceptor_;
             xxsocket                p2p_channel1_; // local --> peer socket
@@ -187,7 +188,7 @@ namespace purelib {
  
             long long               total_connect_times_ = 0;
 
-            std::function<void(bool succeed, int ec)> connect_listener_;
+
 
         }; // xxtcp_client
     }; /* namspace purelib::net */

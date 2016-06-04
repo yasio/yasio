@@ -26,14 +26,14 @@ namespace purelib {
         public:
             xxappl_pdu(std::vector<char>&& right, const xxappl_pdu_sent_callback_t& callback)
             {
-                sending_data_ = std::move(right);
-                send_offset_ = 0;
+                data_ = std::move(right);
+                offset_ = 0;
                 on_sent_ = callback;
                 timestamp_ = ::millitime();
             }
-            std::vector<char>          sending_data_;
+            std::vector<char>          data_; // sending data
+            size_t                     offset_; // offset
             xxappl_pdu_sent_callback_t on_sent_;
-            size_t                     send_offset_;
             long long                  timestamp_; // In milliseconds
         };
 
@@ -59,13 +59,13 @@ namespace purelib {
         {
             app_exiting_ = true;
 
-            shutdown_p2p_chancel();
+            // shutdown_p2p_chancel();
             this->p2p_acceptor_.close();
 
             close();
 
             this->connect_notify_cv_.notify_all();
-            this->p2p_conn_notify_cv_.notify_all();
+            this->p2p_connect_notify_cv_.notify_all();
             while (working_counter_ > 0) {
                 msleep(1);
             }
@@ -99,6 +99,7 @@ namespace purelib {
 
         void xxtcp_client::start_p2p_service()
         {
+#if 0
             channel1_.channel_ = &p2p_channel1_;
             channel2_.channel_ = &p2p_channel2_;
             channel1_.channel_type_ = TCP_P2P_CLIENT;
@@ -110,6 +111,7 @@ namespace purelib {
             });
 
             p2p.detach();
+#endif
         }
 
         void xxtcp_client::wait_connect_notify()
@@ -300,7 +302,7 @@ namespace purelib {
             recv_queue_.push(std::move(ctx->receiving_pdu_));
             autolock.unlock();
 
-            ctx->expected_pdu_len_ = -1;
+            ctx->expected_pdu_length_ = -1;
 
             // CCSCHTASKS->resumeTarget(this);
         }
@@ -404,15 +406,16 @@ namespace purelib {
             do {
                 int n;
 
-                if (!this->impl.is_open())
+                if (!this->impl_.is_open())
                     break;
 
-                std::unique_lock<std::mutex> autolock(this->sendQueueMtx);
-                if (!sendQueue.empty()) {
-                    auto& v = sendQueue.front();
-                    n = impl.send_i(v->data.data(), v->data.size());
-                    if (n == v->data.size()) {
-                        sendQueue.pop();
+                std::unique_lock<std::mutex> autolock(this->send_queue_mtx_);
+                if (!send_queue_.empty()) {
+                    auto& v = send_queue_.front();
+                    auto bytes_left = v->data_.size() - v->offset_;
+                    n = impl_.send_i(v->data_.data() + v->offset_, bytes_left);
+                    if (n == bytes_left) { // All pdu bytes sent.
+                        send_queue_.pop();
                         /*CCRUNONGL([v] {
                             if (v->onSend != nullptr)
                                 v->onSend(ErrorCode::ERR_OK);
@@ -420,12 +423,13 @@ namespace purelib {
                         });*/
                     }
                     else if (n > 0) { // TODO: add time
-                        if ((millitime() - v->timestamp) < (timeoutForSend * 1000))
-                        { // erase sent data, remain data will send next time.
-                            v->data.erase(v->data.begin(), v->data.begin() + n);
+                        if ((millitime() - v->timestamp_) < (send_timeout_ * 1000))
+                        { // change offset, remain data will send next time.
+                            // v->data_.erase(v->data_.begin(), v->data_.begin() + n);
+                            v->offset_ += n;
                         }
                         else { // send timeout
-                            sendQueue.pop();
+                            send_queue_.pop();
                             /*CCRUNONGL([v] {
                                 if (v->onSend)
                                     v->onSend(ErrorCode::ERR_SEND_TIMEOUT);
@@ -434,9 +438,9 @@ namespace purelib {
                         }
                     }
                     else { // n <= 0, TODO: add time
-                        socket_error = xxsocket::get_last_errno();
-                        if (SHOULD_CLOSE_1(n, socket_error)) {
-                            sendQueue.pop();
+                        socket_error_ = xxsocket::get_last_errno();
+                        if (SHOULD_CLOSE_1(n, socket_error_)) {
+                            send_queue_.pop();
                             /*CCRUNONGL([v] {
                                 if (v->onSend)
                                     v->onSend(ErrorCode::ERR_CONNECTION_LOST);
@@ -446,7 +450,7 @@ namespace purelib {
                             break;
                         }
                     }
-                    idle = false;
+                    idle_ = false;
                 }
                 autolock.unlock();
 
@@ -460,69 +464,69 @@ namespace purelib {
         {
             bool bRet = false;
             do {
-                if (!this->impl.is_open())
+                if (!this->impl_.is_open())
                     break;
 
-                int n = impl.recv_i(this->buffer + offset, sizeof(buffer) - offset);
+                int n = impl_.recv_i(this->buffer_ + offset_, sizeof(buffer_) - offset_);
 
-                if (n > 0 || (n == -1 && offset != 0)) {
+                if (n > 0 || (n == -1 && offset_ != 0)) {
 
                     if (n == -1)
                         n = 0;
 
                     // INETLOG("xxtcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + offset);
 
-                    if (expectedpduLength == -1) { // decode length
-                        if (decodepduLength(this->buffer, offset + n, expectedpduLength))
+                    if (expected_pdu_length_ == -1) { // decode length
+                        if (decode_pdu_length_(this->buffer_, offset_ + n, expected_pdu_length_))
                         {
-                            if (expectedpduLength < 0) { // header insuff
-                                offset += n;
+                            if (expected_pdu_length_ < 0) { // header insuff
+                                offset_ += n;
                             }
                             else { // ok
-                                auto bytes_transferred = n + offset;
-                                this->recvingpdu.insert(recvingpdu.end(), buffer, buffer + (std::min)(expectedpduLength, bytes_transferred));
-                                if (bytes_transferred >= expectedpduLength)
+                                auto bytes_transferred = n + offset_;
+                                this->receiving_pdu_.insert(receiving_pdu_.end(), buffer_, buffer_ + (std::min)(expected_pdu_length_, bytes_transferred));
+                                if (bytes_transferred >= expected_pdu_length_)
                                 { // pdu received properly
-                                    offset = bytes_transferred - expectedpduLength; // set offset to bytes of remain buffer
-                                    if (offset > 0)  // move remain data to head of buffer and hold offset.
-                                        ::memmove(this->buffer, this->buffer + expectedpduLength, offset);
+                                    offset_ = bytes_transferred - expected_pdu_length_; // set offset to bytes of remain buffer
+                                    if (offset_ > 0)  // move remain data to head of buffer and hold offset.
+                                        ::memmove(this->buffer_, this->buffer_ + expected_pdu_length_, offset_);
 
                                     // move properly pdu to ready queue, GL thread will retrieve it.
-                                    moveReceivedpdu();
+                                    move_received_pdu();
                                 }
                                 else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                                    offset = 0;
+                                    offset_ = 0;
                                 }
                             }
                         }
                         else {
-                            error = ErrorCode::ERR_DPL_ILLEGAL_pdu;
+                            error_ = ErrorCode::ERR_DPL_ILLEGAL_pdu;
                             break;
                         }
                     }
                     else { // recv remain pdu data
-                        auto bytes_transferred = n + offset;// bytes transferred at this time
-                        if ((recvingpdu.size() + bytes_transferred) > MAX_pdu_LEN) // TODO: config MAX_pdu_LEN, now is 16384
+                        auto bytes_transferred = n + offset_;// bytes transferred at this time
+                        if ((receiving_pdu_.size() + bytes_transferred) > MAX_pdu_LEN) // TODO: config MAX_pdu_LEN, now is 16384
                         {
-                            error = ErrorCode::ERR_pdu_TOO_LONG;
+                            error_ = ErrorCode::ERR_pdu_TOO_LONG;
                             break;
                         }
                         else {
-                            auto bytesNeeded = expectedpduLength - static_cast<int>(recvingpdu.size()); // never equal zero or less than zero
-                            if (bytesNeeded > 0) {
-                                this->recvingpdu.insert(recvingpdu.end(), buffer, buffer + (std::min)(bytes_transferred, bytesNeeded));
+                            auto bytes_needed = expected_pdu_length_ - static_cast<int>(receiving_pdu_.size()); // never equal zero or less than zero
+                            if (bytes_needed > 0) {
+                                this->receiving_pdu_.insert(receiving_pdu_.end(), buffer_, buffer_ + (std::min)(bytes_transferred, bytes_needed));
 
-                                offset = bytes_transferred - bytesNeeded; // set offset to bytes of remain buffer
-                                if (offset >= 0)
+                                offset_ = bytes_transferred - bytes_needed; // set offset to bytes of remain buffer
+                                if (offset_ >= 0)
                                 { // pdu received properly
-                                    if (offset > 0)  // move remain data to head of buffer and hold offset.
-                                        ::memmove(this->buffer, this->buffer + bytesNeeded, offset);
+                                    if (offset_ > 0)  // move remain data to head of buffer and hold offset.
+                                        ::memmove(this->buffer_, this->buffer_ + bytes_needed, offset_);
 
                                     // move properly pdu to ready queue, GL thread will retrieve it.
-                                    moveReceivedpdu();
+                                    move_received_pdu();
                                 }
                                 else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                                    offset = 0;
+                                    offset_ = 0;
                                 }
                             }
                             else {
@@ -531,11 +535,11 @@ namespace purelib {
                         }
                     }
 
-                    idle = false;
+                    idle_ = false;
                 }
                 else {
-                    socket_error = xxsocket::get_last_errno();
-                    if (SHOULD_CLOSE_0(n, socket_error)) {
+                    socket_error_ = xxsocket::get_last_errno();
+                    if (SHOULD_CLOSE_0(n, socket_error_)) {
                         if (n == 0) {
                             //INETLOG("server close the connection!");
                         }
@@ -547,6 +551,7 @@ namespace purelib {
 
             } while (false);
 
+#if 0
             if (bRet) {
                 /// try to accept peer connect request.
                 if (!p2pChannel2.is_open())
@@ -561,6 +566,7 @@ namespace purelib {
                     }
                 }
             }
+#endif
 
             return bRet;
         }
@@ -593,7 +599,7 @@ namespace purelib {
         ///////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////// TCP P2P Supports  ///////////////////////////////////////////
-
+#if 0
         bool xxtcp_client::p2p_connect(void)
         {
            // INETLOG("p2p: connecting peer %s:%u...", p2pAvaiableEndpoint.to_string().c_str());
@@ -656,7 +662,7 @@ namespace purelib {
 
         void xxtcp_client::update_p2p_endpoint(const ip::endpoint& ep)
         {
-            this->p2p_avialable_endpoint_ = ep;
+            this->p2p_available_endpoint_ = ep;
             this->p2p_conn_notify_cv_.notify_one();
         }
 
@@ -909,7 +915,7 @@ namespace purelib {
 
             return bRet;
         }
-
+#endif
     }
 };
 

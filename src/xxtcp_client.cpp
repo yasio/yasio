@@ -1,7 +1,7 @@
 #include "xxtcp_client.h"
 #include "oslib.h"
 
-#define HAS_SELECT_OP 0
+#define HAS_SELECT_OP 1
 
 #ifdef _WIN32
 #define msleep(msec) Sleep((msec))
@@ -53,6 +53,9 @@ namespace purelib {
         {
             channel1_.client_ = this;
             channel2_.client_ = this;
+            FD_ZERO(&readfds_);
+            FD_ZERO(&writefds_);
+            FD_ZERO(&excepfds_);
         }
 
         xxtcp_client::~xxtcp_client()
@@ -157,14 +160,14 @@ namespace purelib {
                     idle_ = true;
 
 #if HAS_SELECT_OP == 1
-                    timeout.tv_sec = 5 * 60; // 5 minutes
-                    timeout.tv_usec = 0;     // 10 milliseconds
+                    timeout.tv_sec = 0; // 5 minutes
+                    timeout.tv_usec = 10 * 1000;     // 10 milliseconds
 
-                    memcpy(&read_set, &readfds, sizeof(fd_set));
-                    memcpy(&write_set, &writefds, sizeof(fd_set));
-                    memcpy(&excep_set, &excepfds, sizeof(fd_set));
+                    memcpy(&read_set, &readfds_, sizeof(fd_set));
+                    memcpy(&write_set, &writefds_, sizeof(fd_set));
+                    memcpy(&excep_set, &excepfds_, sizeof(fd_set));
 
-                    int connfd = impl.native_handle();
+                    int connfd = impl_.native_handle();
                     int nfds = ::select(connfd + 1, &read_set, &write_set, &excep_set, &timeout);
 
                     if (nfds == -1)
@@ -181,7 +184,7 @@ namespace purelib {
 #endif
 
 #if HAS_SELECT_OP == 1
-                    if (FD_ISSET(impl, &write_set))
+                    if (FD_ISSET(impl_, &write_set))
                     { // do send
 #endif
                         if (!do_write())
@@ -191,21 +194,21 @@ namespace purelib {
 #endif
 
 #if HAS_SELECT_OP == 1
-                    if (FD_ISSET(impl, &read_set))
+                    if (FD_ISSET(impl_, &read_set))
                     { // do read
 #endif
                         if (!do_read())
                             break;
 
 #if HAS_SELECT_OP == 1
-                        idle = false;
+                        idle_ = false;
                     }
 #endif
 
 #if HAS_SELECT_OP == 1
-                    if (FD_ISSET(impl, &excep_set))
+                    if (FD_ISSET(impl_, &excep_set))
                     { // do close
-                        handleError();
+                        handle_error();
                         break; // end loop, try next connect
                     }
 #endif
@@ -268,6 +271,42 @@ namespace purelib {
         {
             onRecvpdu = callback;
         }*/
+
+        void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
+        {
+            if ((flags & socket_event_read) != 0)
+            {
+                FD_SET(fd, &this->readfds_);
+            }
+
+            if ((flags & socket_event_write) != 0)
+            {
+                FD_SET(fd, &this->writefds_);
+            }
+
+            if ((flags & socket_event_except) != 0)
+            {
+                FD_SET(fd, &this->excepfds_);
+            }
+        }
+
+        void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
+        {
+            if ((flags & socket_event_read) != 0)
+            {
+                FD_CLR(fd, &this->readfds_);
+            }
+
+            if ((flags & socket_event_write) != 0)
+            {
+                FD_CLR(fd, &this->writefds_);
+            }
+
+            if ((flags & socket_event_except) != 0)
+            {
+                FD_CLR(fd, &this->excepfds_);
+            }
+        }
 
         void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_sent_callback_t& callback)
         {
@@ -336,19 +375,17 @@ namespace purelib {
             if (ret == 0)
             {
 #if HAS_SELECT_OP == 1
-                FD_ZERO(&readfds);
-                FD_ZERO(&writefds);
-                FD_ZERO(&excepfds);
+                FD_ZERO(&readfds_);
+                FD_ZERO(&writefds_);
+                FD_ZERO(&excepfds_);
 
-                auto fd = impl.native_handle();
-                FD_SET(fd, &readfds);
-                FD_SET(fd, &writefds);
-                FD_SET(fd, &excepfds);
+                auto fd = impl_.native_handle();
+                register_descriptor(fd, socket_event_read | socket_event_except);
 #endif
 
                 std::unique_lock<std::mutex> autolock(send_queue_mtx_);
                 std::queue<xxappl_pdu*> emptypduQueue;
-                //this->send_queue_.swap(emptypduQueue);
+                this->send_queue_.swap(emptypduQueue);
 
                 impl_.set_nonblocking(true);
 

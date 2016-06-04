@@ -33,6 +33,12 @@ namespace purelib {
             ERR_DPL_ILLEGAL_pdu, // decode pdu error.
         };
 
+        enum {
+            socket_event_read = 1,
+            socket_event_write = 2,
+            socket_event_except = 4,
+        };
+
 
         class xxtcp_client; // A tcp client with P2P supports.
         class xxappl_pdu; // application layer protocol data unit.
@@ -108,6 +114,9 @@ namespace purelib {
 
         private:
 
+            void       register_descriptor(const socket_native_type fd, int flags);
+            void       unregister_descriptor(const socket_native_type fd, int flags);
+
             void       wait_connect_notify();
 
             bool       connect(void);
@@ -165,7 +174,7 @@ namespace purelib {
             xxp2p_io_ctx            channel2_; // p2p connection: peer ---> local
 
             // socket event set
-            // fd_set readfds, writefds, excepfds;
+            fd_set readfds_, writefds_, excepfds_;
             connect_listener        connect_listener_;
             xxappl_pdu_received_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;

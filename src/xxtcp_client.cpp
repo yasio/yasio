@@ -143,7 +143,7 @@ namespace purelib {
                     ++total_connect_times_;
                     connection_ok = this->connect();
                     if (!connection_ok) { /// connect failed, waiting connect notify
-                        // reconnClock = clock(); never use clock api on android platform, it's a ¿Ó»õ
+                        // reconnClock = clock(); never use clock api on android platform
                         continue;
                     }
                 }
@@ -167,8 +167,7 @@ namespace purelib {
                     memcpy(&write_set, &writefds_, sizeof(fd_set));
                     memcpy(&excep_set, &excepfds_, sizeof(fd_set));
 
-                    int connfd = impl_.native_handle();
-                    int nfds = ::select(connfd + 1, &read_set, &write_set, &excep_set, &timeout);
+                    int nfds = ::select(0, &read_set, &write_set, &excep_set, &timeout);
 
                     if (nfds == -1)
                     {
@@ -746,7 +745,7 @@ namespace purelib {
 
                     connection_ok = this->p2p_connect();
                     if (!connection_ok) { /// connect failed, waiting connect notify
-                        // reconnClock = clock(); never use clock api on android platform, it's a ¿Ó»õ
+                        // reconnClock = clock(); never use clock api on android platform, it's a Â¿Ã“Â»Ãµ
                         continue;
                     }
                 }

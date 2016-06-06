@@ -1,0 +1,16 @@
+*.pdb
+*.idb
+*.log
+*.obj
+*.lastbuildstate
+*.sdf
+*.tlog
+*.opensdf
+*.ilk
+*.lib
+*.dll
+*.db
+*.cache
+*.pch
+*.opendb
+*.suo

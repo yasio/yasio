@@ -745,7 +745,7 @@ namespace purelib {
 
                     connection_ok = this->p2p_connect();
                     if (!connection_ok) { /// connect failed, waiting connect notify
-                        // reconnClock = clock(); never use clock api on android platform, it's a ¿Ó»õ
+                        // reconnClock = clock(); never use clock api on android platform, it's a
                         continue;
                     }
                 }

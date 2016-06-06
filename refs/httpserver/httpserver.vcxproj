@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{459A2074-A73E-4CF2-B5D8-228760B565A2}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>httpserver</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\3rdlibs\include\;..\..\..\3rdlibs\mysql-connector-c-6.1.3-src\include\</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\..\..\3rdlibs\lib\</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\3rdlibs\include\;..\..\..\3rdlibs\mysql-connector-c-6.1.3\include\</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>..\..\..\3rdlibs\lib\</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="connection.cpp" />
+    <ClCompile Include="connection_manager.cpp" />
+    <ClCompile Include="http_client.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="mime_types.cpp" />
+    <ClCompile Include="mysql_client.cpp" />
+    <ClCompile Include="reply.cpp" />
+    <ClCompile Include="request_handler.cpp" />
+    <ClCompile Include="request_parser.cpp" />
+    <ClCompile Include="server.cpp" />
+    <ClCompile Include="server_logger.cpp" />
+    <ClCompile Include="thelib\utils\aes_core.c" />
+    <ClCompile Include="thelib\utils\aes_modes.c" />
+    <ClCompile Include="thelib\utils\aes_wrapper.cpp" />
+    <ClCompile Include="thelib\utils\apr_allocator.cpp" />
+    <ClCompile Include="thelib\utils\cjson.cpp" />
+    <ClCompile Include="thelib\utils\cjson_wrapper.cpp" />
+    <ClCompile Include="thelib\utils\crypto_wrapper.cpp" />
+    <ClCompile Include="thelib\utils\crypto_utils.c" />
+    <ClCompile Include="thelib\utils\libb64.c" />
+    <ClCompile Include="thelib\utils\md5.c" />
+    <ClCompile Include="thelib\utils\md6.c" />
+    <ClCompile Include="thelib\utils\memblock.cpp" />
+    <ClCompile Include="thelib\utils\mempool.cpp" />
+    <ClCompile Include="thelib\utils\mempool2.cpp" />
+    <ClCompile Include="thelib\utils\mempool3.cpp" />
+    <ClCompile Include="thelib\utils\mysqlcc.cpp" />
+    <ClCompile Include="thelib\utils\oslib.c" />
+    <ClCompile Include="thelib\utils\thread_synch.cpp" />
+    <ClCompile Include="thelib\utils\xxfsutility.cpp" />
+    <ClCompile Include="thelib\utils\xxsocket.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="connection.hpp" />
+    <ClInclude Include="connection_manager.hpp" />
+    <ClInclude Include="header.hpp" />
+    <ClInclude Include="http_client.hpp" />
+    <ClInclude Include="mime_types.hpp" />
+    <ClInclude Include="mysql_client.hpp" />
+    <ClInclude Include="reply.hpp" />
+    <ClInclude Include="request.hpp" />
+    <ClInclude Include="request_handler.hpp" />
+    <ClInclude Include="request_parser.hpp" />
+    <ClInclude Include="server.hpp" />
+    <ClInclude Include="server_logger.hpp" />
+    <ClInclude Include="thelib\utils\aes.h" />
+    <ClInclude Include="thelib\utils\aes_locl.h" />
+    <ClInclude Include="thelib\utils\aes_wrapper.h" />
+    <ClInclude Include="thelib\utils\apr_allocator.h" />
+    <ClInclude Include="thelib\utils\cjson.h" />
+    <ClInclude Include="thelib\utils\cjson_wrapper.h" />
+    <ClInclude Include="thelib\utils\container_helper.h" />
+    <ClInclude Include="thelib\utils\crypto_wrapper.h" />
+    <ClInclude Include="thelib\utils\endian.h" />
+    <ClInclude Include="thelib\utils\crypto_utils.h" />
+    <ClInclude Include="thelib\utils\libb64.h" />
+    <ClInclude Include="thelib\utils\md5.h" />
+    <ClInclude Include="thelib\utils\md6.h" />
+    <ClInclude Include="thelib\utils\memblock.h" />
+    <ClInclude Include="thelib\utils\mempool.h" />
+    <ClInclude Include="thelib\utils\mempool2.h" />
+    <ClInclude Include="thelib\utils\mempool3.h" />
+    <ClInclude Include="thelib\utils\mysqlcc.h" />
+    <ClInclude Include="thelib\utils\nsconv.h" />
+    <ClInclude Include="thelib\utils\object_pool.h" />
+    <ClInclude Include="thelib\utils\oslib.h" />
+    <ClInclude Include="thelib\utils\thread_synch.h" />
+    <ClInclude Include="thelib\utils\xxsocket.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

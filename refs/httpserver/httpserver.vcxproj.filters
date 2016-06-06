@@ -1,0 +1,225 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="thelib">
+      <UniqueIdentifier>{89b5b3d4-3296-4f8d-821c-81bfd5f1be88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thelib\utils">
+      <UniqueIdentifier>{46705e22-9698-46e5-b139-fa3f2a3b90dd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="connection.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="connection_manager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="mime_types.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="reply.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="request_handler.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="request_parser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="server.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="http_client.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\aes_core.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\aes_modes.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\aes_wrapper.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\cjson.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\cjson_wrapper.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\crypto_wrapper.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\libb64.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\md5.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\md6.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\xxfsutility.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="mysql_client.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="server_logger.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\thread_synch.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\oslib.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\xxsocket.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\mysqlcc.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\mempool.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\memblock.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\mempool2.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\mempool3.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\apr_allocator.cpp">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="thelib\utils\crypto_utils.c">
+      <Filter>thelib\utils</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="connection.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="connection_manager.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="mime_types.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="reply.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="request.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="request_handler.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="request_parser.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="server.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="http_client.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\aes.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\aes_locl.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\aes_wrapper.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\cjson.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\cjson_wrapper.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\container_helper.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\crypto_wrapper.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\endian.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\libb64.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\md5.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\md6.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\nsconv.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="mysql_client.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\thread_synch.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\oslib.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\xxsocket.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\mysqlcc.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="server_logger.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\object_pool.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\mempool.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\apr_allocator.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\memblock.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\mempool2.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\mempool3.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="thelib\utils\crypto_utils.h">
+      <Filter>thelib\utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

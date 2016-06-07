@@ -1,0 +1,1 @@
+/develop/inetlibs/boost.asio.1.0.161/boost/smart_ptr/detail/spinlock.hpp:50:54: fatal error: boost/smart_ptr/detail/spinlock_sync.hpp: No such file or directory

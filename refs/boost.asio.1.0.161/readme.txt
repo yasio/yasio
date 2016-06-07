@@ -1,4 +1,4 @@
-#1.This lib is extract from boost_1.59.0, before start use asio, you just need to define follow preprocessors:
+#1.This lib is extract from boost_1.61.0, before start use asio, you just need to define follow preprocessors:
 
 BOOST_ERROR_CODE_HEADER_ONLY
 BOOST_SYSTEM_NO_DEPRECATED
@@ -8,7 +8,7 @@ BOOST_REGEX_NO_LIB
 
 If use single thread, you should define: BOOST_ASIO_DISABLE_THREADS, but can't use timer
 
-firstly, add aditionnal includes path "Root Of ¡®boost.asio.1.0.159¡¯ Directory" to your compile system, such as MSVC,XCode,GCC,Android.mk.
+firstly, add aditionnal includes path "Root Of Â¡Â®boost.asio.1.0.159Â¡Â¯ Directory" to your compile system, such as MSVC,XCode,GCC,Android.mk.
 
 #2.Detail usage: see example
 

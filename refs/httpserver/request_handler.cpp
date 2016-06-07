@@ -873,11 +873,18 @@ void request_handler::handle_ios_receipt_verify(const cjsonw::object& req, cjson
     std::string receipt_data_stream = receipt.toString();
 
     LOG_TRACE_ALL("ios_verify_url:%s", ios_verify_url);
-    std::string verify_result_stream = send_http_req(ios_verify_url, "POST", receipt_data_stream);
+    std::string verify_result_stream = send_http_req("https://buy.itunes.apple.com/verifyReceipt", "POST", receipt_data_stream);
     // LOG_TRACE_ALL("verify stream: %s", verify_result_stream.c_str());
     verify_result.parseString(verify_result_stream.c_str());
+    int status = verify_result.getInt("status", -1);
+    if(status == 21007) { // For sandbox verify
+       verify_result_stream = send_http_req("https://sandbox.itunes.apple.com/verifyReceipt", "POST", receipt_data_stream);
+       // LOG_TRACE_ALL("verify stream: %s", verify_result_stream.c_str());
+       verify_result.parseString(verify_result_stream.c_str());
+       status = verify_result.getInt("status", -1);
+    }
 
-    if(0 == verify_result.getInt("status", -1) )
+    if(0 == status)
     { // TODO: LOG Recharge
         resp["ret"] = 0;
         auto receipt = verify_result["receipt"];

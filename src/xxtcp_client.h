@@ -1,5 +1,5 @@
-#ifndef _XXSOCKET_AIO_H_
-#define _XXSOCKET_AIO_H_
+#ifndef _XXTCP_CLIENT_H_
+#define _XXTCP_CLIENT_H_
 #include "xxsocket.h"
 #include "endian_portable.h"
 #include "singleton.h"
@@ -29,18 +29,16 @@ namespace purelib {
             ERR_RECV_FAILED, // recv failed
             ERR_NETWORK_UNREACHABLE, // wifi or 2,3,4G not open
             ERR_CONNECTION_LOST, // connection lost
-            ERR_pdu_TOO_LONG, // pdu too long
+            ERR_PDU_TOO_LONG, // pdu too long
             ERR_DPL_ILLEGAL_pdu, // decode pdu error.
         };
 
         enum {
-            socket_event_read = 1,
-            socket_event_write = 2,
-            socket_event_except = 4,
+            impl_event_read = 1,
+            impl_event_write = 2,
+            impl_event_except = 4,
         };
 
-
-        class xxtcp_client; // A tcp client with P2P supports.
         class xxappl_pdu; // application layer protocol data unit.
 
         typedef std::function<void(ErrorCode)> xxappl_pdu_sent_callback_t;
@@ -48,23 +46,24 @@ namespace purelib {
 
         struct xxp2p_io_ctx
         {
-            xxtcp_client*              client_;
-            xxsocket*                  channel_ = nullptr;
+            xxsocket                   impl_;
+            bool                       connected_;
             P2PChannelType             channel_type_ = TCP_P2P_UNKNOWN;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
-            std::mutex                 send_queue_mtx_;
-            std::queue<xxappl_pdu*>    send_quene_;
+            
             std::vector<char>          receiving_pdu_;
             int                        expected_pdu_length_ = -1;
             int                        error = 0;
 
-            bool do_read(void);
-            bool do_write(void);
+            std::mutex                 send_queue_mtx_;
+            std::queue<xxappl_pdu*>    send_queue_;
+
+            void                       reset();
         };
 
         // A tcp client support P2P
-        class xxtcp_client
+        class xxtcp_client : public xxp2p_io_ctx
         {
             friend struct xxp2p_io_ctx;
         public:
@@ -81,36 +80,52 @@ namespace purelib {
             xxtcp_client();
             ~xxtcp_client();
 
+            // call on main thread, TODO: implement
+            bool       collect_received_pdu(float dt = 0);
+
+            // set endpoint of server.
             void       set_endpoint(const char* address, const char* addressv6, u_short port);
 
+            // set callbacks
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
                 build_error_func build_error_pdu_func,
                 const xxappl_pdu_received_callback_t& callback);
 
+            // set connect and send timeouts.
             void       set_timeouts(long timeo_connect, long timeo_send);
 
-            void       start_service();
+            // start async socket service
+            void       start_service(int working_counter = 1);
 
-            void       start_p2p_service();
-
-            void       close();
-
-            bool       is_connected(void) const { return this->impl_.is_open(); }
-
-            ErrorCode  get_errorno(void) { return error_; }
-
-            void       async_send(std::vector<char>&& data, const xxappl_pdu_sent_callback_t& callback = nullptr);
-
+            // notify tcp_client to connect server
             void       notify_connect();
 
-            /// p2p support
-            void       update_p2p_endpoint(const ip::endpoint& ep);
-            void       shutdown_p2p_chancel(void);
+            // close tcp_client
+            void       close();
 
- 
-            /// call on main thread
-            bool       collect_received_pdu(float dt = 0);
+            // Whether the client-->server connection  established.
+            bool       is_connected(void) const { return this->connected_; }
+
+            // Gets network error code
+            ErrorCode  get_errorno(void) { return error_; }
+
+            // post a async send request.
+            void       async_send(std::vector<char>&& data, const xxappl_pdu_sent_callback_t& callback = nullptr);
+
+
+            // ***********  p2p support *****************
+            // open p2p by local endpoint of "server --> local connection"
+            void       p2p_open();
+
+            // peer connect request detected by 'select', peer --> local connection established.
+            bool       p2p_do_accept(void);
+
+            // try to connect peer. local --> peer connection
+            void       p2p_async_connect(const ip::endpoint& ep);
+
+            // shutdown p2p
+            void       p2p_shutdown(void);
 
         private:
 
@@ -123,20 +138,12 @@ namespace purelib {
 
             void       service(void);
 
-            bool       do_write(void);
-            bool       do_read(void);
+            bool       do_write(xxp2p_io_ctx*);
+            bool       do_read(xxp2p_io_ctx*);
 
             void       handle_error(void); // TODO: add errorcode parameter
 
             void       move_received_pdu(); // move received properly pdu to recv queue
-
-
-            /// p2p supports
-            bool       p2p_connect(void);
-            void       p2p_service(void);
-            void       p2p_wait_connect_notify();
-            void       p2p_move_received_pdu(xxp2p_io_ctx* ctx);
-            void       p2p_handle_error(xxp2p_io_ctx* ctx);
 
         private:
             bool                    app_exiting_;
@@ -146,7 +153,7 @@ namespace purelib {
             std::string             addressv6_;
             u_short                 port_;
 
-            xxsocket                impl_;
+            // xxsocket                impl_;
             ErrorCode               error_;
 
             int                     socket_error_;
@@ -156,49 +163,32 @@ namespace purelib {
 
             bool                    connect_failed_;
 
-            std::mutex              send_queue_mtx_;
             std::mutex              recv_queue_mtx_;
-
-            std::queue<xxappl_pdu*> send_queue_;
-            std::queue<std::vector<char>> recv_queue_;
+            std::queue<std::vector<char>> recv_queue_; // the recev_queue_ for connections: local-->server, local-->peer, peer-->local 
 
             std::mutex              connect_notify_mtx_;
             std::condition_variable connect_notify_cv_;
 
-            char                    buffer_[65536]; // recv buffer
-            int                     offset_; // recv buffer offset
-            std::vector<char>       receiving_pdu_;
-            int                     expected_pdu_length_;
-
-            xxp2p_io_ctx            channel1_; // p2p connection: local ---> peer
-            xxp2p_io_ctx            channel2_; // p2p connection: peer ---> local
 
             // socket event set
             fd_set readfds_, writefds_, excepfds_;
             connect_listener        connect_listener_;
             xxappl_pdu_received_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;
-            build_error_func    build_error_pdu_;
+            build_error_func        build_error_pdu_;
 
             bool                    idle_;
 
-            // p2p support
-            std::mutex              p2p_connect_notify_mtx_;
-            std::condition_variable p2p_connect_notify_cv_;
-            ip::endpoint            p2p_available_endpoint_;
-            xxsocket                p2p_acceptor_;
-            xxsocket                p2p_channel1_; // local --> peer socket
-            xxsocket                p2p_channel2_; // peer --> local socket
-
-
-            std::atomic<int>        working_counter_;
-
             bool                    suspended_ = false;
- 
             long long               total_connect_times_ = 0;
 
+            std::atomic<int>        working_counter_; // service working counter, default: 1
 
-
+            // p2p support
+            xxsocket                p2p_acceptor_; // p2p: the acceptor for connections: peer-->local
+            ip::endpoint            p2p_peer_endpoint_; // p2p: this should tell by server
+            xxp2p_io_ctx            p2p_channel1_; // p2p: connection: local ---> peer
+            xxp2p_io_ctx            p2p_channel2_; // p2p: connection: peer ---> local 
         }; // xxtcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

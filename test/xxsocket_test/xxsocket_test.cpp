@@ -1,7 +1,7 @@
 #include "../../src/xxsocket.h"
 using namespace purelib::net;
 
-int main(int, char**)
+void test_https_connect()
 {
     xxsocket tcpcli;
 
@@ -12,6 +12,11 @@ int main(int, char**)
     else {
         printf("connect failed:%s", xxsocket::get_error_msg(xxsocket::get_last_errno()));
     }
+}
+
+int main(int, char**)
+{
+    test_https_connect();
 
     getchar();
 

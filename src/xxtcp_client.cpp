@@ -1,7 +1,6 @@
-#include "xxtcp_client.h"
 #include "oslib.h"
+#include "xxtcp_client.h"
 
-#define HAS_SELECT_OP 1
 
 #ifdef _WIN32
 #define msleep(msec) Sleep((msec))
@@ -37,6 +36,21 @@ namespace purelib {
             long long                  timestamp_; // In milliseconds
         };
 
+        void xxp2p_io_ctx::reset()
+        {
+            connected_ = false;
+            receiving_pdu_.clear();
+            offset_ = 0;
+            expected_pdu_length_ = -1;
+            error = 0;
+            std::queue<xxappl_pdu*> empty_queue;
+            send_queue_.swap(empty_queue);
+
+            if (this->impl_.is_open()) {
+                this->impl_.close();
+            }
+        }
+
         xxtcp_client::xxtcp_client() : app_exiting_(false),
             thread_started_(false),
             address_("192.168.1.104"),
@@ -44,18 +58,15 @@ namespace purelib {
             connect_timeout_(3),
             send_timeout_(3),
             decode_pdu_length_(nullptr),
-            offset_(0),
             error_(ErrorCode::ERR_OK),
-            expected_pdu_length_(-1),
             idle_(true),
-            connect_failed_(false),
-            working_counter_(0)
+            connect_failed_(false)
         {
-            channel1_.client_ = this;
-            channel2_.client_ = this;
             FD_ZERO(&readfds_);
             FD_ZERO(&writefds_);
             FD_ZERO(&excepfds_);
+
+            reset();
         }
 
         xxtcp_client::~xxtcp_client()
@@ -68,8 +79,7 @@ namespace purelib {
             close();
 
             this->connect_notify_cv_.notify_all();
-            this->p2p_connect_notify_cv_.notify_all();
-            while (working_counter_ > 0) {
+            while (working_counter_ > 0) { // wait all workers exited
                 msleep(1);
             }
         }
@@ -81,41 +91,24 @@ namespace purelib {
             this->port_ = port;
         }
 
-        void xxtcp_client::start_service()
+        void xxtcp_client::start_service(int working_counter)
         {
             if (!thread_started_) {
                 thread_started_ = true;
-               //  this->scheduleCollectResponse();    //
-
-                working_counter_ = 1;
-
-                std::thread t([this] {
-                    // INETLOG("xxtcp_client thread running...");
-                    this->service();
-                    --working_counter_;
-                    //cocos2d::log("p2s thread exited.");
-                });
-
-                t.detach();
+                //  this->scheduleCollectResponse();    //
+                this->working_counter_ = working_counter;
+                for (auto i = 0; i < working_counter; ++i) {
+                    std::thread t([this] {
+                        // INETLOG("xxtcp_client thread running...");
+                        this->service();
+                        --working_counter_;
+                        //cocos2d::log("p2s thread exited.");
+                    });
+                    t.detach();
+                }
             }
         }
 
-        void xxtcp_client::start_p2p_service()
-        {
-#if 0
-            channel1_.channel_ = &p2p_channel1_;
-            channel2_.channel_ = &p2p_channel2_;
-            channel1_.channel_type_ = TCP_P2P_CLIENT;
-            channel2_.channel_type_ = TCP_P2P_SERVER;
-
-            std::thread p2p([this] {
-                p2p_service();
-                --working_counter_;
-            });
-
-            p2p.detach();
-#endif
-        }
 
         void xxtcp_client::wait_connect_notify()
         {
@@ -132,8 +125,8 @@ namespace purelib {
             if (this->suspended_)
                 return;
 
-            while (!app_exiting_) {
-
+            while (!app_exiting_) 
+            {
                 bool connection_ok = impl_.is_open();
 
                 if (!connection_ok)
@@ -150,16 +143,13 @@ namespace purelib {
 
 
                 // event loop
-#if HAS_SELECT_OP == 1
                 fd_set read_set, write_set, excep_set;
                 timeval timeout;
-#endif
 
                 for (; !app_exiting_;)
                 {
                     idle_ = true;
 
-#if HAS_SELECT_OP == 1
                     timeout.tv_sec = 0; // 5 minutes
                     timeout.tv_usec = 10 * 1000;     // 10 milliseconds
 
@@ -180,44 +170,78 @@ namespace purelib {
                     {
                         continue;
                     }
-#endif
 
-#if HAS_SELECT_OP == 1
-                    if (FD_ISSET(impl_, &write_set))
-                    { // do send
-#endif
-                        if (!do_write())
-                            break;
-#if HAS_SELECT_OP == 1
+                    /*
+                    ** check and handle readable sockets
+                    */
+                    for (auto i = 0; i < excepfds_.fd_count; ++i) {
+                        if (excepfds_.fd_array[i] == this->impl_)
+                        {
+                            goto _L_error;
+                        }
                     }
-#endif
 
-#if HAS_SELECT_OP == 1
-                    if (FD_ISSET(impl_, &read_set))
-                    { // do read
-#endif
-                        if (!do_read())
-                            break;
-
-#if HAS_SELECT_OP == 1
-                        idle_ = false;
-                    }
-#endif
-
-#if HAS_SELECT_OP == 1
-                    if (FD_ISSET(impl_, &excep_set))
-                    { // do close
-                        handle_error();
-                        break; // end loop, try next connect
-                    }
-#endif
-
-                    // Avoid high Occupation CPU
-                    if (idle_) {
-                        msleep(1);
+                    /*
+                    ** check and handle readable sockets
+                    */
+                    for (auto i = 0; i < read_set.fd_count; ++i) {
+                        const auto readfd = read_set.fd_array[i];
+                        if (readfd == this->p2p_acceptor_)
+                        { // process p2p connect request from peer
+                            p2p_do_accept();
+                        }
+                        else if (readfd == this->impl_)
+                        {
+                            if (!do_read(this))
+                                goto _L_error;
+                            idle_ = false;
+                        }
+                        else if (readfd == this->p2p_channel2_.impl_) {
+                            if (!do_read(&this->p2p_channel2_))
+                            { // read failed
+                                this->p2p_channel2_.reset();
+                            }
+                        }
+                        else if (readfd == this->p2p_channel1_.impl_) {
+                            if (this->p2p_channel1_.connected_)
+                            {
+                                if (!do_read(&this->p2p_channel1_))
+                                { // read failed
+                                    this->p2p_channel2_.reset();
+                                }
+                            }
+                            else {
+                                printf("P2P: The connection local --> peer established. \n");
+                                this->p2p_channel1_.connected_ = true;
+                            }
+                        }
                     }
                 }
 
+                // perform write operations
+                if (!do_write(this))
+                { // TODO: check would block? for client, may be unnecessory.
+                    goto _L_error;
+                }
+
+                if (this->p2p_channel1_.connected_) {
+                    if (!do_write(&p2p_channel1_))
+                        p2p_channel1_.reset();
+                }
+
+                if (this->p2p_channel1_.connected_) {
+                    if (!do_write(&p2p_channel2_))
+                        p2p_channel2_.reset();
+                }
+
+                // Avoid high Occupation CPU
+                if (idle_) {
+                    msleep(1);
+                }
+
+                continue;
+
+            _L_error:
                 handle_error();
             }
 
@@ -247,43 +271,26 @@ namespace purelib {
                 impl_.close();
             }
             else {
-               // INETLOG("local close the connection!");
+                // INETLOG("local close the connection!");
             }
-
-            // assert(this->recvingpdu.empty());
 
             this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
             move_received_pdu();
         }
 
-        /*void xxtcp_client::setBuildErrorpduFunc(BuildErrorpduFunc func)
-        {
-            buildErrorpdu = func;
-        }
-
-        void xxtcp_client::setDecodeLengthFunc(DecodepduLengthFunc func)
-        {
-            decodepduLength = func;
-        }
-
-        void xxtcp_client::setOnRecvListener(const OnpduRecvCallback& callback)
-        {
-            onRecvpdu = callback;
-        }*/
-
         void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
         {
-            if ((flags & socket_event_read) != 0)
+            if ((flags & impl_event_read) != 0)
             {
                 FD_SET(fd, &this->readfds_);
             }
 
-            if ((flags & socket_event_write) != 0)
+            if ((flags & impl_event_write) != 0)
             {
                 FD_SET(fd, &this->writefds_);
             }
 
-            if ((flags & socket_event_except) != 0)
+            if ((flags & impl_event_except) != 0)
             {
                 FD_SET(fd, &this->excepfds_);
             }
@@ -291,17 +298,17 @@ namespace purelib {
 
         void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
         {
-            if ((flags & socket_event_read) != 0)
+            if ((flags & impl_event_read) != 0)
             {
                 FD_CLR(fd, &this->readfds_);
             }
 
-            if ((flags & socket_event_write) != 0)
+            if ((flags & impl_event_write) != 0)
             {
                 FD_CLR(fd, &this->writefds_);
             }
 
-            if ((flags & socket_event_except) != 0)
+            if ((flags & impl_event_except) != 0)
             {
                 FD_CLR(fd, &this->excepfds_);
             }
@@ -314,7 +321,7 @@ namespace purelib {
                 auto pdu = new xxappl_pdu(std::move(data), callback);
 
                 std::unique_lock<std::mutex> autolock(send_queue_mtx_);
-                send_queue_.push(pdu); 
+                send_queue_.push(pdu);
             }
             else {
                 // cocos2d::log("xxtcp_client::send failed, The connection not ok!!!");
@@ -334,16 +341,6 @@ namespace purelib {
             // CCSCHTASKS->resumeTarget(this);
         }
 
-        void xxtcp_client::p2p_move_received_pdu(xxp2p_io_ctx* ctx)
-        {
-            std::unique_lock<std::mutex> autolock(recv_queue_mtx_); // recvQueue is shared all channel
-            recv_queue_.push(std::move(ctx->receiving_pdu_));
-            autolock.unlock();
-
-            ctx->expected_pdu_length_ = -1;
-
-            // CCSCHTASKS->resumeTarget(this);
-        }
 
         bool xxtcp_client::connect(void)
         {
@@ -358,9 +355,7 @@ namespace purelib {
             //auto ep = xxsocket::resolve(this->address.c_str(), this->port);
 
             int ret = -1;
-            //impl.open();
-            //ret = impl.connect_n(this->address.c_str(), this->port, this->timeoutForConnect);
-#if 1
+
             int flags = xxsocket::getipsv();
             if (flags & ipsv_ipv4) {
                 ret = impl_.pconnect_n(this->address_.c_str(), this->port_, this->connect_timeout_);
@@ -370,17 +365,14 @@ namespace purelib {
                 //cocos2d::log("Client needs a ipv6 server address to connect!");
                 ret = impl_.pconnect_n(this->addressv6_.c_str(), this->port_, this->connect_timeout_);
             }
-#endif
             if (ret == 0)
-            {
-#if HAS_SELECT_OP == 1
+            { // connect succeed, reset fds
                 FD_ZERO(&readfds_);
                 FD_ZERO(&writefds_);
                 FD_ZERO(&excepfds_);
 
                 auto fd = impl_.native_handle();
-                register_descriptor(fd, socket_event_read | socket_event_except);
-#endif
+                register_descriptor(fd, impl_event_read | impl_event_except);
 
                 std::unique_lock<std::mutex> autolock(send_queue_mtx_);
                 std::queue<xxappl_pdu*> emptypduQueue;
@@ -395,38 +387,42 @@ namespace purelib {
 
                 this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-                //INETLOG("connect server: %s:%u succeed.", address.c_str(), port);
+                // INETLOG("connect server: %s:%u succeed.", address.c_str(), port);
 
+#if 0 // provided as API
                 auto endp = this->impl_.local_endpoint();
-                //INETLOG("local endpoint: %s", endp.to_string().c_str());
-                /// start p2p listener
-                if (p2p_acceptor_.reopen()) {
+                // INETLOG("local endpoint: %s", endp.to_string().c_str());
+
+                if (p2p_acceptor_.reopen())
+                { // start p2p listener
                     if (p2p_acceptor_.bind(endp) == 0)
                     {
                         if (p2p_acceptor_.listen() == 0)
                         {
                             // set socket to async
                             p2p_acceptor_.set_nonblocking(true);
+
+                            // register p2p's peer connect event
+                            register_descriptor(p2p_acceptor_, impl_event_read);
                             // INETLOG("listening at local %s successfully.", endp.to_string().c_str());
                         }
                     }
                 }
+#endif
 
                 if (this->connect_listener_ != nullptr) {
-                   /* CCRUNONGL([this] {
-                        connectListener(true, 0);
-                    });*/
+                    this->connect_listener_(true, 0);
                 }
 
                 return true;
             }
-            else {
+            else { // connect server failed.
                 connect_failed_ = true;
                 int ec = xxsocket::get_last_errno();
                 if (this->connect_listener_ != nullptr) {
-                   /* CCRUNONGL([this, ec] {
-                        connectListener(false, ec);
-                    });*/
+                    /* CCRUNONGL([this, ec] {
+                         connectListener(false, ec);
+                     });*/
                 }
 
                 // INETLOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address.c_str(), port, ec, xxsocket::get_error_msg(ec));
@@ -435,23 +431,23 @@ namespace purelib {
             }
         }
 
-        bool xxtcp_client::do_write(void)
+        bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
         {
             bool bRet = false;
 
             do {
                 int n;
 
-                if (!this->impl_.is_open())
+                if (!ctx->impl_.is_open())
                     break;
 
-                std::unique_lock<std::mutex> autolock(this->send_queue_mtx_);
-                if (!send_queue_.empty()) {
-                    auto& v = send_queue_.front();
+                std::unique_lock<std::mutex> autolock(ctx->send_queue_mtx_);
+                if (!ctx->send_queue_.empty()) {
+                    auto& v = ctx->send_queue_.front();
                     auto bytes_left = v->data_.size() - v->offset_;
-                    n = impl_.send_i(v->data_.data() + v->offset_, bytes_left);
+                    n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
                     if (n == bytes_left) { // All pdu bytes sent.
-                        send_queue_.pop();
+                        ctx->send_queue_.pop();
                         /*CCRUNONGL([v] {
                             if (v->onSend != nullptr)
                                 v->onSend(ErrorCode::ERR_OK);
@@ -465,7 +461,7 @@ namespace purelib {
                             v->offset_ += n;
                         }
                         else { // send timeout
-                            send_queue_.pop();
+                            ctx->send_queue_.pop();
                             /*CCRUNONGL([v] {
                                 if (v->onSend)
                                     v->onSend(ErrorCode::ERR_SEND_TIMEOUT);
@@ -476,7 +472,7 @@ namespace purelib {
                     else { // n <= 0, TODO: add time
                         socket_error_ = xxsocket::get_last_errno();
                         if (SHOULD_CLOSE_1(n, socket_error_)) {
-                            send_queue_.pop();
+                            ctx->send_queue_.pop();
                             /*CCRUNONGL([v] {
                                 if (v->onSend)
                                     v->onSend(ErrorCode::ERR_CONNECTION_LOST);
@@ -496,42 +492,42 @@ namespace purelib {
             return bRet;
         }
 
-        bool xxtcp_client::do_read(void)
+        bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
         {
             bool bRet = false;
             do {
-                if (!this->impl_.is_open())
+                if (!ctx->impl_.is_open())
                     break;
 
-                int n = impl_.recv_i(this->buffer_ + offset_, sizeof(buffer_) - offset_);
+                int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(buffer_) - ctx->offset_);
 
-                if (n > 0 || (n == -1 && offset_ != 0)) {
+                if (n > 0 || (n == -1 && ctx->offset_ != 0)) {
 
                     if (n == -1)
                         n = 0;
 
                     // INETLOG("xxtcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + offset);
 
-                    if (expected_pdu_length_ == -1) { // decode length
-                        if (decode_pdu_length_(this->buffer_, offset_ + n, expected_pdu_length_))
+                    if (ctx->expected_pdu_length_ == -1) { // decode length
+                        if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->expected_pdu_length_))
                         {
-                            if (expected_pdu_length_ < 0) { // header insuff
-                                offset_ += n;
+                            if (ctx->expected_pdu_length_ < 0) { // header insuff
+                                ctx->offset_ += n;
                             }
                             else { // ok
-                                auto bytes_transferred = n + offset_;
-                                this->receiving_pdu_.insert(receiving_pdu_.end(), buffer_, buffer_ + (std::min)(expected_pdu_length_, bytes_transferred));
+                                auto bytes_transferred = n + ctx->offset_;
+                                ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(ctx->expected_pdu_length_, bytes_transferred));
                                 if (bytes_transferred >= expected_pdu_length_)
                                 { // pdu received properly
-                                    offset_ = bytes_transferred - expected_pdu_length_; // set offset to bytes of remain buffer
+                                    ctx->offset_ = bytes_transferred - ctx->expected_pdu_length_; // set offset to bytes of remain buffer
                                     if (offset_ > 0)  // move remain data to head of buffer and hold offset.
-                                        ::memmove(this->buffer_, this->buffer_ + expected_pdu_length_, offset_);
+                                        ::memmove(ctx->buffer_, ctx->buffer_ + ctx->expected_pdu_length_, offset_);
 
                                     // move properly pdu to ready queue, GL thread will retrieve it.
                                     move_received_pdu();
                                 }
                                 else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                                    offset_ = 0;
+                                    ctx->offset_ = 0;
                                 }
                             }
                         }
@@ -541,28 +537,28 @@ namespace purelib {
                         }
                     }
                     else { // recv remain pdu data
-                        auto bytes_transferred = n + offset_;// bytes transferred at this time
+                        auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
                         if ((receiving_pdu_.size() + bytes_transferred) > MAX_pdu_LEN) // TODO: config MAX_pdu_LEN, now is 16384
                         {
-                            error_ = ErrorCode::ERR_pdu_TOO_LONG;
+                            error_ = ErrorCode::ERR_PDU_TOO_LONG;
                             break;
                         }
                         else {
-                            auto bytes_needed = expected_pdu_length_ - static_cast<int>(receiving_pdu_.size()); // never equal zero or less than zero
+                            auto bytes_needed = ctx->expected_pdu_length_ - static_cast<int>(ctx->receiving_pdu_.size()); // never equal zero or less than zero
                             if (bytes_needed > 0) {
-                                this->receiving_pdu_.insert(receiving_pdu_.end(), buffer_, buffer_ + (std::min)(bytes_transferred, bytes_needed));
+                                ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(bytes_transferred, bytes_needed));
 
-                                offset_ = bytes_transferred - bytes_needed; // set offset to bytes of remain buffer
-                                if (offset_ >= 0)
+                                ctx->offset_ = bytes_transferred - bytes_needed; // set offset to bytes of remain buffer
+                                if (ctx->offset_ >= 0)
                                 { // pdu received properly
                                     if (offset_ > 0)  // move remain data to head of buffer and hold offset.
-                                        ::memmove(this->buffer_, this->buffer_ + bytes_needed, offset_);
+                                        ::memmove(ctx->buffer_, ctx->buffer_ + bytes_needed, ctx->offset_);
 
                                     // move properly pdu to ready queue, GL thread will retrieve it.
                                     move_received_pdu();
                                 }
                                 else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                                    offset_ = 0;
+                                    ctx->offset_ = 0;
                                 }
                             }
                             else {
@@ -571,7 +567,7 @@ namespace purelib {
                         }
                     }
 
-                    idle_ = false;
+                    this->idle_ = false;
                 }
                 else {
                     socket_error_ = xxsocket::get_last_errno();
@@ -587,26 +583,33 @@ namespace purelib {
 
             } while (false);
 
-#if 0
-            if (bRet) {
-                /// try to accept peer connect request.
-                if (!p2pChannel2.is_open())
-                {
-                    if (p2pAcceptor.is_open())
-                    {
-                        p2pChannel2 = this->p2pAcceptor.accept();
-                        if (p2pChannel2.is_open())
-                        {
-                           // INETLOG("p2p: peer connection income, peer endpoint:%s", p2pChannel2.peer_endpoint().to_string().c_str());
-                        }
-                    }
-                }
-            }
-#endif
-
             return bRet;
         }
 
+        void xxtcp_client::p2p_open()
+        {
+            if (is_connected()) {
+                if (this->p2p_acceptor_.reopen())
+                {
+                    this->p2p_acceptor_.bind(this->impl_.local_endpoint());
+                    this->p2p_acceptor_.listen(1); // We just listen one connection for p2p
+                    register_descriptor(this->p2p_acceptor_, impl_event_read);
+                }
+            }
+        }
+
+        bool xxtcp_client::p2p_do_accept(void)
+        {
+            if (this->p2p_channel2_.impl_.is_open())
+            { // Just ignore other connect request for 1 <<-->> 1 connections.
+                this->p2p_acceptor_.accept().close();
+                return true;
+            }
+
+            this->idle_ = false;
+            this->p2p_channel2_.impl_ = this->p2p_acceptor_.accept();
+            return this->p2p_channel2_.impl_.is_open();
+        }
 #if 0
         void xxtcp_client::dispatchResponseCallbacks(float delta)
         {
@@ -631,327 +634,5 @@ namespace purelib {
             }
         }
 #endif
-
-        ///////////////////////////////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////// TCP P2P Supports  ///////////////////////////////////////////
-#if 0
-        bool xxtcp_client::p2p_connect(void)
-        {
-           // INETLOG("p2p: connecting peer %s:%u...", p2pAvaiableEndpoint.to_string().c_str());
-            p2pChannel1.open();
-            int ret = p2pChannel1.connect_n(p2pAvaiableEndpoint, this->timeoutForConnect);
-            if (ret == 0)
-            {
-                p2pChannel1.set_nonblocking(true);
-
-                channel1.expectedpduLength = -1;
-                channel1.error = ErrorCode::ERR_OK;
-                channel1.offset = 0;
-                channel1.recvingpdu.clear();
-
-               // INETLOG("p2p: connect peer: %s succeed.", p2pAvaiableEndpoint.to_string().c_str());
-
-                auto endp = p2pChannel1.local_endpoint();
-               // INETLOG("p2p: local endpoint: %s", endp.to_string().c_str());
-
-#if 0
-                p2pChannel1.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-
-                /// start p2p listener
-                if (p2pListener.reopen()) {
-                    if (p2pListener.bind(endp) == 0)
-                    {
-                        if (p2pListener.listen() == 0)
-                        {
-                            // set socket to async
-                            p2pListener.set_nonblocking(true);
-                            INETLOG("p2p: listening at local %s successfully.", endp.to_string_full().c_str());
-                        }
-                    }
-                }
-                if (this->connectListener != nullptr) {
-                    CCRUNONGL([this] {
-                        connectListener(true, 0);
-                    });
-                }
-#endif
-
-                return true;
-            }
-            else {
-                int ec = xxsocket::get_last_errno();
-
-#if 0
-                if (this->connectListener != nullptr) {
-                    CCRUNONGL([this, ec] {
-                        connectListener(false, ec);
-                    });
-                }
-#endif
-
-               // INETLOG("p2p: connect peer: %s failed, error code:%d, error msg:%s!", p2pAvaiableEndpoint.to_string().c_str(), ec, xxsocket::get_error_msg(ec));
-
-                return false;
-            }
-        }
-
-        void xxtcp_client::update_p2p_endpoint(const ip::endpoint& ep)
-        {
-            this->p2p_available_endpoint_ = ep;
-            this->p2p_conn_notify_cv_.notify_one();
-        }
-
-        void xxtcp_client::p2p_wait_connect_notify()
-        {
-            std::unique_lock<std::mutex> autolock(p2p_conn_notify_mtx_);
-            p2p_conn_notify_cv_.wait(autolock);
-        }
-
-        void xxtcp_client::shutdown_p2p_chancel(void)
-        {
-            this->p2p_channel1_.close();
-            this->p2p_channel2_.close();
-        }
-
-        void xxtcp_client::p2p_handle_error(xxp2p_io_ctx* ctx)
-        {
-            ctx->channel_->close();
-
-            if (ctx->channel_type_ == P2PChannelType::TCP_P2P_CLIENT)
-            {
-               // INETLOG("p2p: local-->peer connection lost!");
-            }
-            else {
-              //  INETLOG("p2p: peer-->local connection lost!");
-            }
-        }
-
-        void xxtcp_client::p2p_service(void)
-        {
-#if defined(_WIN32) && !defined(WINRT)
-            timeBeginPeriod(1);
-#endif
-            while (!bAppExiting) {
-
-                bool connection_ok = this->p2pChannel1.is_open();
-
-                if (!connection_ok)
-                { // if no connect, wait connect notify.
-                    p2p_waitConnectNotify();
-
-                    if (bAppExiting)
-                        break;
-
-                    connection_ok = this->p2p_connect();
-                    if (!connection_ok) { /// connect failed, waiting connect notify
-                        // reconnClock = clock(); never use clock api on android platform, it's a
-                        continue;
-                    }
-                }
-
-                // p2p connection ok
-                // start communication 
-              //  INETLOG("p2p channels ok, start communication");
-
-                std::vector<P2PIoContext*> channels = { &channel1, &channel2 };
-
-                for (; !bAppExiting;)
-                {
-                    idle = true;
-
-                    for (auto iter = channels.begin(); iter != channels.end();)
-                    {
-                        if (!(*iter)->doWrite())
-                        {
-                            iter = channels.erase(iter);
-                            continue;
-                        }
-
-                        if (!(*iter)->doRead())
-                        {
-                            iter = channels.erase(iter);
-                            continue;
-                        }
-
-                        ++iter;
-                    }
-
-                    if (channels.empty()) // no channel active
-                        break;
-
-                    // p2p always wait 1 millisecond, Avoid high Occupation CPU
-                    msleep(1);
-                }
-            }
-
-#if defined(_WIN32) && !defined(WINRT)
-            timeEndPeriod(1);
-#endif
-        }
-
-        bool xxp2p_io_ctx::do_write()
-        {
-            bool bRet = false;
-
-            if (this->channel == nullptr)
-                return false;
-
-            auto& channel = *this->channel;
-
-            do {
-                int n;
-
-                std::unique_lock<std::mutex> autolock(this->sendQueueMtx);
-                if (!this->sendQueue.empty()) {
-                    auto& v = this->sendQueue.front();
-                    n = channel.send_i(v->data.data(), v->data.size());
-                    if (n == v->data.size()) {
-                        this->sendQueue.pop();
-                       /* CCRUNONGL([v] {
-                            if (v->onSend != nullptr)
-                                v->onSend(ErrorCode::ERR_OK);
-                            v->release();
-                        });*/
-                    }
-                    else if (n > 0) { // TODO: add time
-                        if ((millitime() - v->timestamp) < (this->client->timeoutForSend * 1000))
-                        { // erase sent data, remain data will send next time.
-                            v->data.erase(v->data.begin(), v->data.begin() + n);
-                        }
-                        else { // send timeout
-                            this->sendQueue.pop();
-                            /*CCRUNONGL([v] {
-                                if (v->onSend)
-                                    v->onSend(ErrorCode::ERR_SEND_TIMEOUT);
-                                v->release();
-                            });*/
-                        }
-                    }
-                    else { // n <= 0, TODO: add time
-                        int ec = xxsocket::get_last_errno();
-                        if (SHOULD_CLOSE_1(n, ec)) {
-                            this->sendQueue.pop();
-                            /*CCRUNONGL([v] {
-                                if (v->onSend)
-                                    v->onSend(ErrorCode::ERR_CONNECTION_LOST);
-                                v->release();
-                            });*/
-
-                            client->p2p_handleError(this); //  TODO: handle error
-                            break;
-                        }
-                    }
-                    // idle = false;
-                }
-                autolock.unlock();
-
-                bRet = true;
-            } while (false);
-
-            return bRet;
-        }
-
-        bool xxp2p_io_ctx::do_read(void)
-        {
-            bool bRet = false;
-
-            if (!this->channel->is_open())
-                return false;
-
-            auto& channel = *this->channel;
-
-            do {
-                int n = channel.recv_i(this->buffer + this->offset, sizeof(this->buffer) - this->offset);
-
-                if (n > 0 || (n == -1 && this->offset != 0)) {
-
-                    if (n == -1)
-                        n = 0;
-
-                    // INETLOG("p2p: xxtcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + this->offset);
-
-                    if (this->expectedpduLength == -1) { // decode length
-                        if (client->decodepduLength(this->buffer, offset + n, this->expectedpduLength))
-                        {
-                            if (this->expectedpduLength < 0) { // header insuff
-                                this->offset += n;
-                            }
-                            else { // ok
-                                auto bytes_transferred = n + this->offset;
-                                this->recvingpdu.insert(this->recvingpdu.end(), this->buffer, this->buffer + (std::min)(this->expectedpduLength, bytes_transferred));
-                                if (bytes_transferred >= expectedpduLength)
-                                { // pdu received properly
-                                    offset = bytes_transferred - expectedpduLength; // set offset to bytes of remain buffer
-                                    if (offset > 0)  // move remain data to head of buffer and hold offset.
-                                        ::memmove(this->buffer, this->buffer + this->expectedpduLength, this->offset);
-
-                                    // move properly pdu to ready queue, GL thread will retrieve it.
-                                    client->p2p_moveReceivedpdu(this);
-                                }
-                                else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                                    this->offset = 0;
-                                }
-                            }
-                        }
-                        else {
-                            this->error = ErrorCode::ERR_DPL_ILLEGAL_pdu;
-                            client->p2p_handleError(this);
-                            break;
-                        }
-                    }
-                    else { // recv remain pdu data
-                        auto bytes_transferred = n + offset;// bytes transferred at this time
-                        if ((recvingpdu.size() + bytes_transferred) > MAX_pdu_LEN) // TODO: config MAX_pdu_LEN, now is 16384
-                        {
-                            this->error = ErrorCode::ERR_pdu_TOO_LONG;
-                            client->p2p_handleError(this);
-                            break;
-                        }
-                        else {
-                            auto bytesNeeded = expectedpduLength - static_cast<int>(recvingpdu.size()); // never equal zero or less than zero
-                            if (bytesNeeded > 0) {
-                                this->recvingpdu.insert(recvingpdu.end(), buffer, buffer + (std::min)(bytes_transferred, bytesNeeded));
-
-                                offset = bytes_transferred - bytesNeeded; // set offset to bytes of remain buffer
-                                if (offset >= 0)
-                                { // pdu received properly
-                                    if (offset > 0)  // move remain data to head of buffer and hold offset.
-                                        ::memmove(this->buffer, this->buffer + bytesNeeded, offset);
-
-                                    // move properly pdu to ready queue, GL thread will retrieve it.
-                                    client->p2p_moveReceivedpdu(this);
-                                }
-                                else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                                    offset = 0;
-                                }
-                            }
-                            else {
-                               // assert(false);
-                            }
-                        }
-                    }
-
-                    // idle = false;
-                }
-                else {
-                    int ec = xxsocket::get_last_errno();
-                    if (SHOULD_CLOSE_0(n, ec)) {
-                        if (n == 0) {
-                            // INETLOG("p2p: peer close the connection.");
-                        }
-                        client->p2p_handleError(this);
-                        break;
-                    }
-                }
-
-                bRet = true;
-
-            } while (false);
-
-            return bRet;
-        }
-#endif
-    }
-};
-
+    } /* namespace purelib::net */
+} /* namespace purelib */

@@ -8,7 +8,7 @@ BOOST_REGEX_NO_LIB
 
 If use single thread, you should define: BOOST_ASIO_DISABLE_THREADS, but can't use timer
 
-firstly, add aditionnal includes path "Root Of ¡®boost.asio.1.0.159¡¯ Directory" to your compile system, such as MSVC,XCode,GCC,Android.mk.
+firstly, add aditionnal includes path "Root Of boost.asio.1.0.161 Directory" to your compile system, such as MSVC,XCode,GCC,Android.mk.
 
 #2.Detail usage: see example
 

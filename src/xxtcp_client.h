@@ -140,10 +140,9 @@ namespace purelib {
 
             bool       do_write(xxp2p_io_ctx*);
             bool       do_read(xxp2p_io_ctx*);
+            void       move_received_pdu(xxp2p_io_ctx*); // move received properly pdu to recv queue
 
             void       handle_error(void); // TODO: add errorcode parameter
-
-            void       move_received_pdu(); // move received properly pdu to recv queue
 
         private:
             bool                    app_exiting_;

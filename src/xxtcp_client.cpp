@@ -275,7 +275,7 @@ namespace purelib {
             }
 
             this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
-            move_received_pdu();
+            move_received_pdu(this);
         }
 
         void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -328,15 +328,15 @@ namespace purelib {
             }
         }
 
-        void xxtcp_client::move_received_pdu()
+        void xxtcp_client::move_received_pdu(xxp2p_io_ctx* ctx)
         {
             //cocos2d::log("moveReceivedpdu...");
 
             std::unique_lock<std::mutex> autolock(recv_queue_mtx_);
-            recv_queue_.push(std::move(this->receiving_pdu_));
+            recv_queue_.push(std::move(ctx->receiving_pdu_));
             autolock.unlock();
 
-            expected_pdu_length_ = -1;
+            ctx->expected_pdu_length_ = -1;
 
             // CCSCHTASKS->resumeTarget(this);
         }
@@ -524,7 +524,7 @@ namespace purelib {
                                         ::memmove(ctx->buffer_, ctx->buffer_ + ctx->expected_pdu_length_, offset_);
 
                                     // move properly pdu to ready queue, GL thread will retrieve it.
-                                    move_received_pdu();
+                                    move_received_pdu(ctx);
                                 }
                                 else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
                                     ctx->offset_ = 0;
@@ -555,7 +555,7 @@ namespace purelib {
                                         ::memmove(ctx->buffer_, ctx->buffer_ + bytes_needed, ctx->offset_);
 
                                     // move properly pdu to ready queue, GL thread will retrieve it.
-                                    move_received_pdu();
+                                    move_received_pdu(ctx);
                                 }
                                 else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
                                     ctx->offset_ = 0;

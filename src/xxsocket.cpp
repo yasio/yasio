@@ -45,7 +45,7 @@ extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
 
 namespace purelib {
-namespace net {
+namespace inet {
 namespace ip {
 namespace compat {
 
@@ -53,7 +53,7 @@ namespace compat {
 #ifdef SPRINTF_CHAR
 # define SPRINTF(x) strlen(sprintf/**/x)
 #else
-# define SPRINTF(x) ((size_t)sprintf x)
+# define SPRINTF(x) (/*(size_t)*/sprintf x)
 #endif
 
 /*

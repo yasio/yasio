@@ -1,7 +1,7 @@
 #include "xxsocket.h"
 #include "pcode_autog_client_messages.h"
 
-using namespace purelib::net;
+using namespace purelib::inet;
 
 obinarystream pcode_autog_begin_encode(uint16_t command_id)
 {

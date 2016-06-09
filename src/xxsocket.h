@@ -175,7 +175,7 @@ typedef int socket_native_type;
 
 namespace purelib {
 
-namespace net {
+namespace inet {
 
 #define _make_value(b1,b2,b3,b4) ( ( ((uint32_t)(b4) << 24) & 0xff000000 ) | ( ((uint32_t)(b3) << 16) & 0x00ff0000 ) | ( ((uint32_t)(b2) << 8) & 0x0000ff00 ) | ( (uint32_t)(b1) & 0x000000ff ) )
 
@@ -870,7 +870,9 @@ template<typename _T> inline
         return ::ioctlsocket(s, cmd, &argp);
     }
 
-}; /* namespace: purelib::net */
+}; /* namespace: purelib::inet */
+
+namespace net = inet;
 
 }; /* namespace: purelib */
 

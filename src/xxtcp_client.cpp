@@ -19,7 +19,7 @@
 #define MAX_PDU_LEN 16384
 
 namespace purelib {
-namespace net {
+namespace inet {
 class xxappl_pdu
 {
 public:

@@ -13,7 +13,7 @@
 
 namespace purelib {
 
-    namespace net {
+    namespace inet {
         enum P2PChannelType {
             TCP_P2P_UNKNOWN = -1,
             TCP_P2P_CLIENT = 1, // local --> peer

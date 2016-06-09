@@ -1,5 +1,18 @@
-#include "../../src/xxsocket.h"
+#include "xxsocket.h"
+#include "pcode_autog_client_messages.h"
+
 using namespace purelib::net;
+
+obinarystream pcode_autog_begin_encode(uint16_t command_id)
+{
+    messages::MsgHeader hdr;
+    hdr.command_id = command_id;
+    hdr.length = 0;
+    hdr.reserved = 0x5a5a;
+    hdr.reserved2 = microtime();
+    hdr.version = 1;
+    return hdr.encode();
+}
 
 void test_https_connect()
 {

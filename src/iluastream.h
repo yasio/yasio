@@ -3,7 +3,12 @@
 #include <string>
 #include <sstream>
 #include <exception>
-#include "luax/LuaSupport.h"
+
+extern "C" {
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
+}
 
 class iluastream
 {

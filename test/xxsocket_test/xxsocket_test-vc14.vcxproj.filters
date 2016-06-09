@@ -30,6 +30,15 @@
     <ClCompile Include="..\..\src\xxtcp_client.cpp">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="pcode_autog_client_messages.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ibinarystream.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\obinarystream.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\xxsocket.h">
@@ -39,6 +48,24 @@
       <Filter>lib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xxtcp_client.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="pcode_autog_client_constants.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pcode_autog_client_includes.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pcode_autog_client_messages.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pcode_autog_client_structures.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ibinarystream.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\obinarystream.h">
       <Filter>lib</Filter>
     </ClInclude>
   </ItemGroup>

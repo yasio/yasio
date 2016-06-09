@@ -101,6 +101,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,6 +134,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -142,15 +144,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\ibinarystream.cpp" />
+    <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\oslib.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
     <ClCompile Include="..\..\src\xxtcp_client.cpp" />
+    <ClCompile Include="pcode_autog_client_messages.cpp" />
     <ClCompile Include="xxsocket_test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\ibinarystream.h" />
+    <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\oslib.h" />
     <ClInclude Include="..\..\src\xxsocket.h" />
     <ClInclude Include="..\..\src\xxtcp_client.h" />
+    <ClInclude Include="pcode_autog_client_constants.h" />
+    <ClInclude Include="pcode_autog_client_includes.h" />
+    <ClInclude Include="pcode_autog_client_messages.h" />
+    <ClInclude Include="pcode_autog_client_structures.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

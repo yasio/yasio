@@ -4,8 +4,8 @@
 #include <string>
 #include <stdio.h>
 
-#include "purelib/utils/object_pool.h"
-#include "purelib/NXSharedPtr.h"
+#include "object_pool.h"
+#include "ref_ptr.h"
 
 extern "C" {
 #include "lua.h"
@@ -13,12 +13,12 @@ extern "C" {
 #include "lauxlib.h"
 }
 
+#ifdef _USING_IN_COCOS2DX
 #include "cocos2d.h"
-//#ifndef LUAX_LOG_FUNC
-//#define LUAX_LOG_FUNC(format,...) printf(((format) "\n"), ##__VA_ARGS__)
-//#endif
-
 #define LUAX_LOG_FUNC cocos2d::log
+#else
+#define LUAX_LOG_FUNC(format,...) printf(((format) "\n"), ##__VA_ARGS__)
+#endif
 
 
 void       luax_setVM(lua_State *L);
@@ -577,13 +577,13 @@ void luax_vcall(int refid, const _Args&...args)
 }
 
 template<typename..._Args> inline
-void luax_vcall(const SharedPtr<LuaFunc>& refid, const _Args&...args)
+void luax_vcall(const ref_ptr<LuaFunc>& refid, const _Args&...args)
 {
 	luax_dovcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
 }
 
 template<typename _Result, typename..._Args> inline
-_Result luax_vxcall(const SharedPtr<LuaFunc>& refid, const _Args&...args)
+_Result luax_vxcall(const ref_ptr<LuaFunc>& refid, const _Args&...args)
 {
 	return luax_dovxcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
 }
@@ -596,13 +596,13 @@ void luax_vcall(int lobj, const char* objfunc, const _Args&...args)
 }
 
 template<typename..._Args> inline
-void luax_vcall(const SharedPtr<LuaObj>& lobj, const char* objfunc, const _Args&...args)
+void luax_vcall(const ref_ptr<LuaObj>& lobj, const char* objfunc, const _Args&...args)
 {
     luax_dovcall(luax_getobjfield(lobj->Id(), objfunc), objfunc, args...);
 }
 
 template<typename _Result, typename..._Args> inline
-_Result luax_vxcall(const SharedPtr<LuaObj>& lobj, const char* objfunc, const _Args&...args)
+_Result luax_vxcall(const ref_ptr<LuaObj>& lobj, const char* objfunc, const _Args&...args)
 {
     return luax_dovxcall(luax_getobjfield(lobj->Id(), objfunc), objfunc, args...);
 }
@@ -756,7 +756,7 @@ void luax_retrive_arg(lua_State* L, const char* func, int n, float& arg, bool& o
 void luax_retrive_arg(lua_State* L, const char* func, int n, const char*& arg, bool& ok);
 void luax_retrive_arg(lua_State* L, const char* func, int n, const char*& arg, size_t& len, bool& ok);
 void luax_retrive_arg(lua_State* L, const char* func, int n, std::string& arg, bool& ok);
-void luax_retrive_arg(lua_State* L, const char* func, int n, SharedPtr<LuaFunc>& arg, bool& ok);
+void luax_retrive_arg(lua_State* L, const char* func, int n, ref_ptr<LuaFunc>& arg, bool& ok);
 
 #endif
 

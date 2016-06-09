@@ -65,7 +65,7 @@ void       luax_foreach(const char* table, const _Fty& callback)
 
     auto top = lua_gettop(L);
 
-	luax_assume_read(L, table);
+    luax_assume_read(L, table);
     bool istable = lua_istable(L, -1);
 
     if (istable)
@@ -88,7 +88,7 @@ void       luax_foreach(const char* table, const _Fty& callback)
 class luax_value
 {
 public:
-    luax_value(lua_State* l) : l_(l){}
+    luax_value(lua_State* l) : l_(l) {}
 
     /// for array elements
     bool        is_string(void) const { return !!lua_isstring(l_, -1); }
@@ -96,7 +96,7 @@ public:
     bool        is_boolean(void) const { return !!lua_isboolean(l_, -1); }
 
     const char* to_string(void) const { return lua_tostring(l_, -1); }
-	std::string to_lstring(void) const { size_t len = 0; const char* s = lua_tolstring(l_, -1, &len); return std::string(s, len); }
+    std::string to_lstring(void) const { size_t len = 0; const char* s = lua_tolstring(l_, -1, &len); return std::string(s, len); }
     double      to_number(void) const { return lua_tonumber(l_, -1); }
     bool        to_boolean(void) const { return !!lua_toboolean(l_, -1); }
     LUA_INTEGER to_integer(void) const { return lua_tointeger(l_, -1); }
@@ -107,20 +107,20 @@ public:
     bool        getfield(const char* name, bool default_value) const { bool ret; lua_getfield(l_, -1, name); ret = !!lua_toboolean(l_, -1); lua_pop(l_, 1); return ret; }
     LUA_INTEGER getfield(const char* name, LUA_INTEGER default_value) const { LUA_INTEGER ret; lua_getfield(l_, -1, name); ret = lua_tointeger(l_, -1); lua_pop(l_, 1); return ret; }
 
-	template<typename _Ty>
-	void foreach(const _Ty& callback)
-	{
-		if (lua_istable(l_, -1))
-		{
-			auto n = luaL_getn(l_, -1);
-			for (auto i = 1; i <= n; ++i)
-			{
-				lua_rawgeti(l_, -1, i);
-				callback(l_);
-				lua_pop(l_, 1);
-			}
-		}
-	}
+    template<typename _Ty>
+    void foreach(const _Ty& callback)
+    {
+        if (lua_istable(l_, -1))
+        {
+            auto n = luaL_getn(l_, -1);
+            for (auto i = 1; i <= n; ++i)
+            {
+                lua_rawgeti(l_, -1, i);
+                callback(l_);
+                lua_pop(l_, 1);
+            }
+        }
+    }
 
 private:
     lua_State* l_;
@@ -144,46 +144,46 @@ private:
 template<size_t _IID>
 class LuaRef
 {
-	ENABLE_REFERENCE
-		int id_;
+    ENABLE_REFERENCE
+        int id_;
 public:
 
     LuaRef(int refid)
-	{
-		referenceCount_ = 1;
+    {
+        referenceCount_ = 1;
         this->id_ = refid;
-	}
+    }
 
     ~LuaRef()
-	{
-		if (!isNil())
-			luaL_unref(luax_getVM(), LUA_REGISTRYINDEX, this->id_);
-	}
+    {
+        if (!isNil())
+            luaL_unref(luax_getVM(), LUA_REGISTRYINDEX, this->id_);
+    }
 
-	int Id() const
-	{
-		return id_;
-	}
+    int Id() const
+    {
+        return id_;
+    }
 
-	bool isNil(void) const
-	{
-		return id_ == LUA_REFNIL;
-	}
+    bool isNil(void) const
+    {
+        return id_ == LUA_REFNIL;
+    }
 
-	static void * operator new(size_t /*size*/)
-	{
-		return getPool().get();
-	}
+    static void * operator new(size_t /*size*/)
+    {
+        return getPool().get();
+    }
 
-		static void operator delete(void *p)
-	{
-		getPool().release(p);
-	}
+    static void operator delete(void *p)
+    {
+        getPool().release(p);
+    }
 
     static object_pool<LuaRef<_IID>, 128>& getPool() {
         static object_pool<LuaRef<_IID>, 128> s_pool;
-		return s_pool;
-	}
+        return s_pool;
+    }
 };
 
 typedef LuaRef<0> LuaObj;
@@ -247,25 +247,25 @@ void luax_vpusharg(lua_State* L, int& carg, int& narg)
 inline
 void luax_vpusharg(lua_State* L, int& carg, int& narg, size_t arg)
 {
-	++carg;
-	if (lua_checkstack(L, 1))
-		lua_pushinteger(L, arg), ++narg;
+    ++carg;
+    if (lua_checkstack(L, 1))
+        lua_pushinteger(L, arg), ++narg;
 }
 
 inline
 void luax_vpusharg(lua_State* L, int& carg, int& narg, std::nullptr_t /*arg*/)
 {
-	++carg;
-	if (lua_checkstack(L, 1))
-		lua_pushnil(L), ++narg;
+    ++carg;
+    if (lua_checkstack(L, 1))
+        lua_pushnil(L), ++narg;
 }
 
 inline
 void luax_vpusharg(lua_State* L, int& carg, int& narg, bool arg)
 {
-	++carg;
-	if (lua_checkstack(L, 1))
-		lua_pushboolean(L, arg), ++narg;
+    ++carg;
+    if (lua_checkstack(L, 1))
+        lua_pushboolean(L, arg), ++narg;
 }
 
 inline
@@ -343,13 +343,13 @@ bool luax_dogetval(lua_State* L, _Ty& output_value);
 template<> inline
 bool luax_dogetval(lua_State* L, std::vector<int>& output_value)
 {
-    if (lua_istable(L, -1)){
+    if (lua_istable(L, -1)) {
         int count = luaL_getn(L, -1);
-        
+
         for (int i = 0; i < count; ++i)
         {
             lua_rawgeti(L, -1, i + 1);
-			auto m=lua_tonumber(L, -1);
+            auto m = lua_tonumber(L, -1);
             output_value.push_back(m);
             lua_pop(L, 1);
         }
@@ -363,27 +363,27 @@ bool luax_dogetval(lua_State* L, std::vector<int>& output_value)
 template<> inline
 bool luax_dogetval(lua_State* L, bool& output_value)
 {
-	if (lua_isboolean(L, -1)){
+    if (lua_isboolean(L, -1)) {
         output_value = !!lua_toboolean(L, -1);
         return false;
-	}
+    }
     return true;
 }
 
 template<> inline
 bool luax_dogetval(lua_State* L, int& output_value)
 {
-	if (lua_isnumber(L, -1)){
+    if (lua_isnumber(L, -1)) {
         output_value = lua_tointeger(L, -1);
         return true;
-	}
+    }
     return false;
 }
 
 template<> inline
 bool luax_dogetval<float>(lua_State* L, float& output_value)
 {
-    if (lua_isnumber(L, -1)){
+    if (lua_isnumber(L, -1)) {
         output_value = lua_tonumber(L, -1);
         return true;
     }
@@ -393,69 +393,69 @@ bool luax_dogetval<float>(lua_State* L, float& output_value)
 template<> inline
 bool luax_dogetval<double>(lua_State* L, double& output_value)
 {
-    if (lua_isnumber(L, -1)){
+    if (lua_isnumber(L, -1)) {
         output_value = lua_tonumber(L, -1);
         return true;
     }
-	return false;
+    return false;
 }
 
 template<> inline
 bool luax_dogetval<std::string>(lua_State* L, std::string& output_value)
 {
-	if (lua_isstring(L, -1)){
-		size_t len = 0;
-		const char* str = lua_tolstring(L, -1, &len);
+    if (lua_isstring(L, -1)) {
+        size_t len = 0;
+        const char* str = lua_tolstring(L, -1, &len);
         output_value.assign(str, len);
         return true;
-	}
-	return false;
+    }
+    return false;
 }
 
 template<> inline
 bool luax_dogetval<const char*>(lua_State* L, const char*& default_value)
 {
-	if (lua_isstring(L, -1)){
+    if (lua_isstring(L, -1)) {
         default_value = lua_tostring(L, -1);
         return true;
-	}
-	return false;
+    }
+    return false;
 }
 
 /// luax_dosetval
 template<typename _Ty> inline
 void luax_dosetval(lua_State* L, const char* k, const _Ty& val)
 {
-	lua_pushinteger(L, val);
-	lua_setfield(L, -2, k);
+    lua_pushinteger(L, val);
+    lua_setfield(L, -2, k);
 }
 
 template<> inline
 void luax_dosetval(lua_State* L, const char* k, const float& val)
 {
-	lua_pushinteger(L, val);
-	lua_setfield(L, -2, k);
+    lua_pushinteger(L, val);
+    lua_setfield(L, -2, k);
 }
 
 template<> inline
 void luax_dosetval(lua_State* L, const char* k, const double& val)
 {
-	lua_pushnumber(L, val);
-	lua_setfield(L, -2, k);
+    lua_pushnumber(L, val);
+    lua_setfield(L, -2, k);
 }
 
 template<> inline
 void luax_dosetval(lua_State* L, const char* k, const char*const& val)
 {
-	lua_pushstring(L, val);
-	lua_setfield(L, -2, k);
+    lua_pushstring(L, val);
+    lua_setfield(L, -2, k);
 }
 
 template<> inline
 void luax_dosetval(lua_State* L, const char* k, const std::string& val)
 {
-	lua_pushlstring(L, val.c_str(), val.size());
-	lua_setfield(L, -2, k);
+    lua_pushlstring(L, val.c_str(), val.size());
+    lua_setfield(L, -2, k);
 }
 
 #define LUAX_ERRLOG_1(ftemplate,func) LUAX_LOG_FUNC(#ftemplate " failed, the function:%s not exist!", func);
@@ -468,66 +468,66 @@ void luax_dosetval(lua_State* L, const char* k, const std::string& val)
 template<typename..._Args> inline
 void luax_dovcall(int top, const char* func, const _Args&...args)
 {
-	auto L = luax_getVM();
+    auto L = luax_getVM();
 
-	int carg = 0, narg = 0;
+    int carg = 0, narg = 0;
 
-	if (!lua_isfunction(L, -1))
-	{
-		LUAX_ERRLOG_1(luax_dovcall, func);
-		goto _L_exit;
-	}
+    if (!lua_isfunction(L, -1))
+    {
+        LUAX_ERRLOG_1(luax_dovcall, func);
+        goto _L_exit;
+    }
 
-	luax_vpusharg(L, carg, narg, args...);
+    luax_vpusharg(L, carg, narg, args...);
 
-	if (carg != narg) {
-		LUAX_ERRLOG_2(luax_dovcall, func);
-		goto _L_exit;
-	}
+    if (carg != narg) {
+        LUAX_ERRLOG_2(luax_dovcall, func);
+        goto _L_exit;
+    }
 
-	if (lua_pcall(L, narg, 0, 0) != 0)
-	{
-		LUAX_ERRLOG_3(luax_dovcall, func);
-		goto _L_exit;
-	}
+    if (lua_pcall(L, narg, 0, 0) != 0)
+    {
+        LUAX_ERRLOG_3(luax_dovcall, func);
+        goto _L_exit;
+    }
 
 _L_exit:
-	lua_settop(L, top); // resume stack
+    lua_settop(L, top); // resume stack
 }
 
 template<typename _Result, typename..._Args> inline
 _Result luax_dovxcall(int top, const char* func, const _Args&...args)
 {
-	auto L = luax_getVM();
+    auto L = luax_getVM();
 
-	_Result result = _Result();
-	int carg = 0, narg = 0;
-    
-	if (!lua_isfunction(L, -1))
-	{
-		LUAX_ERRLOG_1(luax_dovxcall, func);
-		goto _L_end;
-	}
-	
-	luax_vpusharg(L, carg, narg, args...);
+    _Result result = _Result();
+    int carg = 0, narg = 0;
 
-	if (carg != narg) {
-		LUAX_ERRLOG_2(luax_dovxcall, func);
-		goto _L_end;
-	}
+    if (!lua_isfunction(L, -1))
+    {
+        LUAX_ERRLOG_1(luax_dovxcall, func);
+        goto _L_end;
+    }
 
-	if (lua_pcall(L, narg, 1, 0) != 0)
-	{
-		LUAX_ERRLOG_3(luax_dovxcall, func);
-		goto _L_end;
-	}
-    
-	luax_dogetval(L, result);
+    luax_vpusharg(L, carg, narg, args...);
+
+    if (carg != narg) {
+        LUAX_ERRLOG_2(luax_dovxcall, func);
+        goto _L_end;
+    }
+
+    if (lua_pcall(L, narg, 1, 0) != 0)
+    {
+        LUAX_ERRLOG_3(luax_dovxcall, func);
+        goto _L_end;
+    }
+
+    luax_dogetval(L, result);
 
 _L_end:
-	lua_settop(L, top); // resume stack
+    lua_settop(L, top); // resume stack
 
-	return std::move(result);
+    return std::move(result);
 }
 
 template<typename _Result, typename..._Args> inline
@@ -565,27 +565,27 @@ _L_end:
 inline const char* luax_refid2a(int refid)
 {
 #define LUAX_LAMBDA_FUNC "LUA anonymous function:"
-	static char s_str[64] = LUAX_LAMBDA_FUNC;
-	sprintf(s_str + sizeof(LUAX_LAMBDA_FUNC) - 1, "%d", refid);
-	return s_str;
+    static char s_str[64] = LUAX_LAMBDA_FUNC;
+    sprintf(s_str + sizeof(LUAX_LAMBDA_FUNC) - 1, "%d", refid);
+    return s_str;
 }
 
 template<typename..._Args> inline
 void luax_vcall(int refid, const _Args&...args)
 {
-	luax_dovcall(luax_rawgeti(refid), luax_refid2a(refid), args...);
+    luax_dovcall(luax_rawgeti(refid), luax_refid2a(refid), args...);
 }
 
 template<typename..._Args> inline
 void luax_vcall(const ref_ptr<LuaFunc>& refid, const _Args&...args)
 {
-	luax_dovcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
+    luax_dovcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
 }
 
 template<typename _Result, typename..._Args> inline
 _Result luax_vxcall(const ref_ptr<LuaFunc>& refid, const _Args&...args)
 {
-	return luax_dovxcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
+    return luax_dovxcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
 }
 
 // Lua object func call helpers
@@ -611,13 +611,13 @@ _Result luax_vxcall(const ref_ptr<LuaObj>& lobj, const char* objfunc, const _Arg
 template<typename..._Args> inline
 void luax_vcall(const char* func, const _Args&...args)
 {
-	luax_dovcall(luax_getglobal(func), func, args...);
+    luax_dovcall(luax_getglobal(func), func, args...);
 }
 
 template<typename _Result, typename..._Args> inline
 _Result luax_vxcall(const char* func, const _Args&...args)
 {
-	return luax_dovxcall<_Result>(luax_getglobal(func), func, args...);
+    return luax_dovxcall<_Result>(luax_getglobal(func), func, args...);
 }
 
 // TEMPLATE luax_vxcall alias
@@ -649,13 +649,13 @@ std::string luax_vvcall(const char*  func, const _Args&...args)
 template<typename..._Args> inline
 void luax_pvcall(const char* func, const _Args&...args)
 {
-	luax_dovcall(luax_getglobal2(func), func, args...);
+    luax_dovcall(luax_getglobal2(func), func, args...);
 }
 
 template<typename _Result, typename..._Args> inline
 _Result luax_pvxcall(const char*  func, const _Args&...args)
 {
-	return luax_dovxcall<_Result>(luax_getglobal2(func), func, args...);
+    return luax_dovxcall<_Result>(luax_getglobal2(func), func, args...);
 }
 
 template<typename..._Args> inline
@@ -703,7 +703,7 @@ _Ty luax_vgetval(const char* field, const _Ty& default_value = _Ty())
 
     _Ty result;
 
-	if (!luax_assume_read(L, field))
+    if (!luax_assume_read(L, field))
     {
         LUAX_LOG_FUNC("luax_vgetval field %s not exist, use default value!", field);
         result = default_value;
@@ -723,27 +723,27 @@ err_exit:
 }
 
 template<typename _Ty, size_t _Size> inline
-const char* luax_vgetval(const char* field, const _Ty (&default_value)[_Size])
+const char* luax_vgetval(const char* field, const _Ty(&default_value)[_Size])
 {
-	return luax_vgetval(field, (const char*)default_value);
+    return luax_vgetval(field, (const char*)default_value);
 }
 
 template<typename _Ty> inline
 void luax_vsetval(const char* field, const _Ty& value)
 {
-	auto L = luax_getVM();
+    auto L = luax_getVM();
 
-	auto top = lua_gettop(L); // store stack
+    auto top = lua_gettop(L); // store stack
 
-	if (luax_assume_write(L, field))
-	{
-		luax_dosetval<_Ty>(L, field, value);
-	}
-	else {
-		LUAX_LOG_FUNC("luax_vsetval field %s not exist!", field);
-	}
+    if (luax_assume_write(L, field))
+    {
+        luax_dosetval<_Ty>(L, field, value);
+    }
+    else {
+        LUAX_LOG_FUNC("luax_vsetval field %s not exist!", field);
+    }
 
-	lua_settop(L, top); // resume stack
+    lua_settop(L, top); // resume stack
 }
 
 #endif  /* powerful get fields of table. */

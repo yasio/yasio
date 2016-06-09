@@ -30,13 +30,13 @@ namespace purelib {
             ERR_NETWORK_UNREACHABLE, // wifi or 2,3,4G not open
             ERR_CONNECTION_LOST, // connection lost
             ERR_PDU_TOO_LONG, // pdu too long
-            ERR_DPL_ILLEGAL_pdu, // decode pdu error.
+            ERR_DPL_ILLEGAL_PDU, // decode pdu error.
         };
 
         enum {
-            impl_event_read = 1,
-            impl_event_write = 2,
-            impl_event_except = 4,
+            socket_event_read = 1,
+            socket_event_write = 2,
+            socket_event_except = 4,
         };
 
         class xxappl_pdu; // application layer protocol data unit.

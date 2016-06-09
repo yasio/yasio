@@ -280,17 +280,17 @@ void xxtcp_client::handle_error(void)
 
 void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
 {
-    if ((flags & impl_event_read) != 0)
+    if ((flags & socket_event_read) != 0)
     {
         FD_SET(fd, &this->readfds_);
     }
 
-    if ((flags & impl_event_write) != 0)
+    if ((flags & socket_event_write) != 0)
     {
         FD_SET(fd, &this->writefds_);
     }
 
-    if ((flags & impl_event_except) != 0)
+    if ((flags & socket_event_except) != 0)
     {
         FD_SET(fd, &this->excepfds_);
     }
@@ -298,17 +298,17 @@ void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
 
 void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
 {
-    if ((flags & impl_event_read) != 0)
+    if ((flags & socket_event_read) != 0)
     {
         FD_CLR(fd, &this->readfds_);
     }
 
-    if ((flags & impl_event_write) != 0)
+    if ((flags & socket_event_write) != 0)
     {
         FD_CLR(fd, &this->writefds_);
     }
 
-    if ((flags & impl_event_except) != 0)
+    if ((flags & socket_event_except) != 0)
     {
         FD_CLR(fd, &this->excepfds_);
     }
@@ -372,7 +372,7 @@ bool xxtcp_client::connect(void)
         FD_ZERO(&excepfds_);
 
         auto fd = impl_.native_handle();
-        register_descriptor(fd, impl_event_read | impl_event_except);
+        register_descriptor(fd, socket_event_read | socket_event_except);
 
         std::unique_lock<std::mutex> autolock(send_queue_mtx_);
         std::queue<xxappl_pdu*> emptypduQueue;
@@ -403,7 +403,7 @@ bool xxtcp_client::connect(void)
                     p2p_acceptor_.set_nonblocking(true);
 
                     // register p2p's peer connect event
-                    register_descriptor(p2p_acceptor_, impl_event_read);
+                    register_descriptor(p2p_acceptor_, socket_event_read);
                     // INETLOG("listening at local %s successfully.", endp.to_string().c_str());
                 }
             }
@@ -532,7 +532,7 @@ bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
                     }
                 }
                 else {
-                    error_ = ErrorCode::ERR_DPL_ILLEGAL_pdu;
+                    error_ = ErrorCode::ERR_DPL_ILLEGAL_PDU;
                     break;
                 }
             }
@@ -593,7 +593,7 @@ void xxtcp_client::p2p_open()
         {
             this->p2p_acceptor_.bind(this->impl_.local_endpoint());
             this->p2p_acceptor_.listen(1); // We just listen one connection for p2p
-            register_descriptor(this->p2p_acceptor_, impl_event_read);
+            register_descriptor(this->p2p_acceptor_, socket_event_read);
         }
     }
 }

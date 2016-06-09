@@ -341,7 +341,7 @@ public:
         /*
         * Windows XP no inet_pton or inet_ntop
         */
-        if (strchr(addr, '.') != nullptr)
+        if (strchr(addr, ':') == nullptr)
         { // ipv4
             this->in4_.sin_family = AF_INET;
             compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);

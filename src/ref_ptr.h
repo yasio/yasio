@@ -11,12 +11,6 @@
 
 namespace purelib {
 
-template<typename _Ty> inline
-void ccReleaseObject(_Ty* ccObject)
-{
-    __SAFE_RELEASE(ccObject);
-}
-
 namespace gc {
 
 // TEMPLATE CLASS, equals to cocos2d-x-3.x cocos2d::RefPtr

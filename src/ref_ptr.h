@@ -25,12 +25,12 @@ public:
     typedef _Ty element_type;
 
     explicit ref_ptr(_Ty *_Ptr = 0) throw()
-        : ref(_Ptr)
+        : ptr_(_Ptr)
     {    // construct from object pointer
     }
 
-    ref_ptr(std::nullptr_t) throw() 
-        : ref(0)
+    ref_ptr(std::nullptr_t) throw()
+        : ptr_(0)
     {
     }
 
@@ -38,7 +38,7 @@ public:
     {    // construct by assuming pointer from _Right ref_ptr
         __SAFE_RETAIN(_Right.get());
 
-        ref = _Right.get();
+        ptr_ = _Right.get();
     }
 
     template<typename _Other>
@@ -46,14 +46,14 @@ public:
     {    // construct by assuming pointer from _Right
         __SAFE_RETAIN(_Right.get());
 
-        ref = (_Ty*)_Right.get();
+        ptr_ = (_Ty*)_Right.get();
     }
 
     ref_ptr(_Myt&& _Right) throw()
     {
         __SAFE_RETAIN(_Right.get());
 
-        ref = (_Ty*)_Right.get();
+        ptr_ = (_Ty*)_Right.get();
     }
 
     template<typename _Other>
@@ -61,17 +61,17 @@ public:
     {    // construct by assuming pointer from _Right
         __SAFE_RETAIN(_Right.get());
 
-        ref = (_Ty*)_Right.get();
+        ptr_ = (_Ty*)_Right.get();
     }
 
     _Myt& operator=(const _Myt& _Right) throw()
     {    // assign compatible _Right (assume pointer)
-        if(this == &_Right)
+        if (this == &_Right)
             return *this;
 
         __SAFE_RETAIN(_Right.get());
 
-        reset( _Right.get() );
+        reset(_Right.get());
         return (*this);
     }
 
@@ -80,19 +80,19 @@ public:
 
         __SAFE_RETAIN(_Right.get());
 
-        reset( _Right.get() );
+        reset(_Right.get());
         return (*this);
     }
 
     template<typename _Other>
     _Myt& operator=(const ref_ptr<_Other>& _Right) throw()
     {    // assign compatible _Right (assume pointer)
-        if(this == &_Right)
+        if (this == &_Right)
             return *this;
 
         __SAFE_RETAIN(_Right.get());
 
-        reset( (_Ty*)_Right.get() );
+        reset((_Ty*)_Right.get());
         return (*this);
     }
 
@@ -101,7 +101,7 @@ public:
     {    // assign compatible _Right (assume pointer)
         __SAFE_RETAIN(_Right.get());
 
-        reset( (_Ty*)_Right.get() );
+        reset((_Ty*)_Right.get());
         return (*this);
     }
 
@@ -113,64 +113,64 @@ public:
 
     ~ref_ptr()
     {    // release the object
-        __SAFE_RELEASE(ref);
+        __SAFE_RELEASE(ptr_);
     }
 
     _Ty& operator*() const throw()
     {    // return designated value
-        return (*ref); // return (*get());
+        return (*ptr_); // return (*get());
     }
 
     _Ty** operator &() throw()
     {
-        return &(ref);
+        return &(ptr_);
     }
 
     _Ty *operator->() const throw()
     {    // return pointer to class object
-        return (ref); // return (get());
+        return (ptr_); // return (get());
     }
 
     template<typename _Int>
     _Ty& operator[](_Int index) const throw()
     {
-        return (ref[index]);
+        return (ptr_[index]);
     }
 
     _Ty* get() const throw()
     {    // return wrapped pointer
-        return (ref);
+        return (ptr_);
     }
 
     _Ty*& get_ref() throw()
     {    // return wrapped pointer
-        return (ref);
+        return (ptr_);
     }
 
     operator _Ty*() const throw()
     { // convert to basic type
-        return (ref);
+        return (ptr_);
     }
 
     /*
     ** if already have a valid pointer, will call release firstly
     */
-    void reset(_Ty *_Ptr = 0) 
+    void reset(_Ty *_Ptr = 0)
     {    // relese designated object and store new pointer
-		if (ref != _Ptr) {
+        if (ptr_ != _Ptr) {
 
-			if (ref != nullptr)
-			{
-				if (ref != _Ptr) // release old
-					__SAFE_RELEASE(ref);
-			}
+            if (ptr_ != nullptr)
+            {
+                if (ptr_ != _Ptr) // release old
+                    __SAFE_RELEASE(ptr_);
+            }
 
-			ref = _Ptr;
-		}
+            ptr_ = _Ptr;
+        }
     }
 
 private:
-    _Ty* ref;    // the wrapped object pointer
+    _Ty* ptr_;    // the wrapped object pointer
 };
 
 }; /* namespace purelib::gc */

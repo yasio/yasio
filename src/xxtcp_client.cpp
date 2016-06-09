@@ -355,7 +355,7 @@ bool xxtcp_client::connect(void)
     //auto ep = xxsocket::resolve(this->address.c_str(), this->port);
 
     int ret = -1;
-
+    this->connected_ = false;
     int flags = xxsocket::getipsv();
     if (flags & ipsv_ipv4) {
         ret = impl_.pconnect_n(this->address_.c_str(), this->port_, this->connect_timeout_);
@@ -367,6 +367,8 @@ bool xxtcp_client::connect(void)
     }
     if (ret == 0)
     { // connect succeed, reset fds
+        this->connected_ = true;
+
         FD_ZERO(&readfds_);
         FD_ZERO(&writefds_);
         FD_ZERO(&excepfds_);

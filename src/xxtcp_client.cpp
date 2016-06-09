@@ -16,7 +16,7 @@
 #define RECONNECT_DELAY 5000 // 5000 millseconds
 #define TIMER_DURATION 100 // 100 miliseconds
 
-#define MAX_pdu_LEN 16384
+#define MAX_PDU_LEN 16384
 
 namespace purelib {
     namespace net {
@@ -538,7 +538,7 @@ namespace purelib {
                     }
                     else { // recv remain pdu data
                         auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
-                        if ((receiving_pdu_.size() + bytes_transferred) > MAX_pdu_LEN) // TODO: config MAX_pdu_LEN, now is 16384
+                        if ((receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                         {
                             error_ = ErrorCode::ERR_PDU_TOO_LONG;
                             break;

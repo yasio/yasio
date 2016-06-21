@@ -502,7 +502,7 @@ ip::endpoint xxsocket::resolve(const char* hostname, unsigned short port)
     getaddrinfo(hostname, nullptr, &hint, &answer);
 
     if (answer == nullptr)
-        return std::move(ep);
+        return ep;
 
     memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
     switch (answer->ai_family)
@@ -518,7 +518,7 @@ ip::endpoint xxsocket::resolve(const char* hostname, unsigned short port)
 
     freeaddrinfo(answer);
 
-    return std::move(ep);
+    return ep;
 }
 
 ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
@@ -534,7 +534,7 @@ ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
     getaddrinfo(hostname, nullptr, &hint, &answer);
 
     if (answer == nullptr)
-        return std::move(ep);
+        return ep;
 
     memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
     switch (answer->ai_family)
@@ -547,7 +547,7 @@ ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
 
     freeaddrinfo(answer);
 
-    return std::move(ep);
+    return ep;
 }
 
 xxsocket::xxsocket(void) : fd(bad_sock)

@@ -375,7 +375,7 @@ public:
 
         addr.resize(n);
 
-        return std::move(addr);
+        return addr;
     }
     char* to_cstring(char buffer[64]) const // // not safe, if use, please confirm buffer enough
     {

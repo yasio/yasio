@@ -824,9 +824,15 @@ public:
     static int get_last_errno(void);
     static void set_last_errno(int error);
     static const char* get_error_msg(int error);
-
+    
+    /// <summary>
+    /// Resolve as ipv4 or ipv6 endpoint
+    /// </summary>
     static ip::endpoint resolve(const char* hostname, unsigned short port = 0);
-
+    
+    /// <summary>
+    /// Force resolve as ipv6 endpoint
+    /// </summary>
     static ip::endpoint resolve_v6(const char* hostname, unsigned short port = 0);
 
 private:

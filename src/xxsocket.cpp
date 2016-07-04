@@ -421,8 +421,8 @@ namespace compat {
 int xxsocket::getipsv(void)
 {
     int flags = 0;
-    /*char hostname[256] = { 0 };
-    gethostname(hostname, sizeof(hostname));*/
+    char hostname[256] = { 0 };
+    gethostname(hostname, sizeof(hostname));
 
     // ipv4 & ipv6
     addrinfo hint, *ailist = nullptr;
@@ -430,22 +430,26 @@ int xxsocket::getipsv(void)
     hint.ai_flags = AI_PASSIVE;
     // hint.ai_family = AF_UNSPEC;
     // hint.ai_socktype = 0; // SOCK_STREAM;
-    int iret = getaddrinfo(nullptr/*hostname*/, "0", &hint, &ailist);
+
+    int iret = getaddrinfo(hostname, "0", &hint, &ailist);
 
     const char* errmsg = nullptr;
     if (ailist != nullptr) {
+        char s_empty[sizeof(ailist->ai_addr->sa_data)] = { 0x0 };
         for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
         {
-            switch (aip->ai_family) {
-            case AF_INET:
-                flags |= ipsv_ipv4;
-                break;
-            case AF_INET6:
-                flags |= ipsv_ipv6;
-                break;
+            if (memcmp(s_empty, aip->ai_addr->sa_data, sizeof(s_empty)) != 0) {
+                switch (aip->ai_family) {
+                case AF_INET:
+                    flags |= ipsv_ipv4;
+                    break;
+                case AF_INET6:
+                    flags |= ipsv_ipv6;
+                    break;
+                }
+                if (flags == ipsv_dual_stack)
+                    break;
             }
-            if(flags == ipsv_dual_stack)
-                break;
         }
         freeaddrinfo(ailist);
     }

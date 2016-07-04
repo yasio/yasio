@@ -437,6 +437,12 @@ public: /// portable connect APIs
     // easy to connect a server ipv4 or ipv6.
     int pconnect_n(const char* hostname, u_short port, long timeout_sec);
 
+    // easy to connect a server ipv4 or ipv6.
+    int pconnect(const ip::endpoint& ep, u_short port);
+
+    // easy to connect a server ipv4 or ipv6.
+    int pconnect_n(const ip::endpoint& ep, u_short port, long timeout_sec);
+
     // easy to create a tcp ipv4 or ipv6 server socket.
     int pserv(const char* addr, u_short port);
 public:

@@ -3,6 +3,9 @@
 
 using namespace purelib::inet;
 
+static const int sinlen = sizeof(sockaddr_in);
+static const int sinlen2 = 0x10;
+
 obinarystream pcode_autog_begin_encode(uint16_t command_id)
 {
     messages::MsgHeader hdr;

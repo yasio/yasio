@@ -919,7 +919,7 @@ int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
 
 int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
 {
-    return ::connect(s, &ep.intri_, sizeof(ep));
+    return ::connect(s, &ep.intri_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
 }
 
 int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)

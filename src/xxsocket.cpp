@@ -29,7 +29,23 @@ SOFTWARE.
 #include <fcntl.h>
 
 #if !defined(_WIN32)
+#if !defined(ANDROID)
 #include <ifaddrs.h>
+#else
+#include "ifaddrs.c"
+#endif
+
+#ifndef IN_CLASSB_NET
+#define	IN_CLASSB_NET		0xffff0000
+#endif
+
+#ifndef IN_LINKLOCALNETNUM
+#define IN_LINKLOCALNETNUM	(u_int32_t)0xA9FE0000 /* 169.254.0.0 */
+#endif
+
+#ifndef IN_LINKLOCAL
+#define IN_LINKLOCAL(i)		(((u_int32_t)(i) & IN_CLASSB_NET) == IN_LINKLOCALNETNUM)
+#endif
 
 #ifndef IN4_IS_ADDR_LOOPBACK
 #define IN4_IS_ADDR_LOOPBACK(paddr) IN_LOOPBACK(ntohl((paddr)->s_addr))
@@ -434,7 +450,7 @@ static int
 int xxsocket::getipsv(void)
 {
     int flags = 0;
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(ANDROID)
     char hostname[256] = { 0 };
     gethostname(hostname, sizeof(hostname));
 

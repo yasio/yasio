@@ -353,6 +353,21 @@ public:
             this->in6_.sin6_port = htons(port);
         }  
     }
+
+    void assign(const sockaddr* addr)
+    {
+        // intri_.sa_family = af;
+        switch(addr->sa_family)
+        {
+            case AF_INET:
+                ::memcpy(&in4_, addr, sizeof(sockaddr_in));
+                break;
+            case AF_INET6:
+                ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
+                break;
+        }
+    }
+
     int af() const
     {
         return intri_.sa_family;
@@ -365,10 +380,10 @@ public:
 
         switch (intri_.sa_family) {
         case AF_INET:
-            n = strlen(inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), 64));
+            n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), 64));
             break;
         case AF_INET6:
-            n = strlen(inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front(), 64));
+            n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front(), 64));
             break;
         }
         n += sprintf(&addr.front() + n, ":%u", this->port());

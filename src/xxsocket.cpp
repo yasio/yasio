@@ -28,6 +28,19 @@ SOFTWARE.
 #include "xxsocket.h"
 #include <fcntl.h>
 
+#if !defined(_WIN32)
+#include <ifaddrs.h>
+
+#ifndef IN4_IS_ADDR_LOOPBACK
+#define IN4_IS_ADDR_LOOPBACK(paddr) IN_LOOPBACK(ntohl((paddr)->s_addr))
+#endif
+
+#ifndef IN4_IS_ADDR_LINKLOCAL
+#define IN4_IS_ADDR_LINKLOCAL(paddr) IN_LINKLOCAL(ntohl((paddr)->s_addr))
+#endif
+
+#endif
+
 #pragma warning(push)
 #pragma warning(disable: 4996)
 
@@ -421,6 +434,7 @@ namespace purelib {
 int xxsocket::getipsv(void)
 {
     int flags = 0;
+#if defined(_WIN32)
     char hostname[256] = { 0 };
     gethostname(hostname, sizeof(hostname));
 
@@ -428,8 +442,10 @@ int xxsocket::getipsv(void)
     addrinfo hint, *ailist = nullptr;
     memset(&hint, 0x0, sizeof(hint));
 
-    ip::endpoint ep("0.0.0.0", 0);
-    // nullptr same as "localhost", @remark: only windows support, unix/linux should use getifaddrs
+    ip::endpoint ep;
+    // nullptr same as "localhost": always return loopback address
+    // so must specific hostname
+    // @remark: only windows support, unix/linux should use getifaddrs
     int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
 
     const char* errmsg = nullptr;
@@ -438,7 +454,7 @@ int xxsocket::getipsv(void)
         {
             memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
 
-            switch (aip->ai_family) {
+            switch (ep.af()) {
             case AF_INET:
                 if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
                     flags |= ipsv_ipv4;
@@ -457,6 +473,45 @@ int xxsocket::getipsv(void)
     else {
         errmsg = gai_strerror(iret);
     }
+#else
+    struct ifaddrs *ifaddr, *ifa;
+#ifdef _DEBUG
+    char localhost[NI_MAXHOST + 16];
+#endif
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        exit(EXIT_FAILURE);
+    }
+
+    ip::endpoint ep;
+    /* Walk through linked list*/
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        ep.assign(ifa->ifa_addr);
+
+#ifdef _DEBUG
+        ep.to_cstring(localhost);
+#endif
+
+        switch (ep.af()) {
+        case AF_INET:
+            if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
+                flags |= ipsv_ipv4;
+            break;
+        case AF_INET6:
+            if (!IN6_IS_ADDR_LOOPBACK(&ep.in6_.sin6_addr) && !IN6_IS_ADDR_LINKLOCAL(&ep.in6_.sin6_addr)) {
+                flags |= ipsv_ipv6;
+            }
+            break;
+        }
+        if (flags == ipsv_dual_stack)
+            break;
+    }
+
+    freeifaddrs(ifaddr);
+#endif
 
     return flags;
 }
@@ -860,7 +915,7 @@ int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* t
         error = xxsocket::get_last_errno();
         if (error != EINPROGRESS && error != EWOULDBLOCK)
             return -1;
-    }
+}
 
     /* Do whatever we want while the connect is taking place. */
     if (n == 0)
@@ -880,7 +935,7 @@ int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* t
         socklen_t len = sizeof(error);
         if (::getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0)
             return (-1);  /* Solaris pending error */
-}
+    }
     else
         return -1;
 done:
@@ -1309,7 +1364,7 @@ void xxsocket::close(void)
         ::closesocket(this->fd);
         this->fd = bad_sock;
     }
-    }
+}
 
 #if defined(_WINSTORE) || defined(WINRT)
 #undef _naked_mark

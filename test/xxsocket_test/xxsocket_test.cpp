@@ -20,9 +20,10 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
 void test_https_connect()
 {
     xxsocket tcpcli;
-	auto epv6 = xxsocket::resolve("127.0.0.1", 81);
-	tcpcli.open(epv6.af());
-	auto flag = tcpcli.getipsv();
+    auto epv6 = xxsocket::resolve("www.baidu.com", 443);
+    tcpcli.open(epv6.af());
+    auto flag = tcpcli.getipsv();
+    printf("ip protocol support flag is:%d\n", flag);
     if (tcpcli.connect_n(epv6, 3/* connect timeout: 3 seconds*/) == 0)
     {
         printf("connect https server success.");

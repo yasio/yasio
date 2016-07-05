@@ -28,15 +28,21 @@ SOFTWARE.
 #include "xxsocket.h"
 #include <fcntl.h>
 
+#ifdef _DEBUG
+#include <stdio.h>
+#endif
+
 #if !defined(_WIN32)
 #if !defined(ANDROID)
 #include <ifaddrs.h>
-#else
-#include "ifaddrs.c"
 #endif
 
 #ifndef IN_CLASSB_NET
 #define	IN_CLASSB_NET		0xffff0000
+#endif
+
+#ifndef IN_LOOPBACK
+#define IN_LOOPBACK(i)		(((u_int32_t)(i) & 0xff000000) == 0x7f000000)
 #endif
 
 #ifndef IN_LINKLOCALNETNUM
@@ -450,7 +456,7 @@ static int
 int xxsocket::getipsv(void)
 {
     int flags = 0;
-#if defined(_WIN32) || defined(ANDROID)
+#if defined(_WIN32) // I test so many times, currently only windows support use getaddrinfo to get local ip address(not loopback or linklocal)
     char hostname[256] = { 0 };
     gethostname(hostname, sizeof(hostname));
 
@@ -462,6 +468,9 @@ int xxsocket::getipsv(void)
     // nullptr same as "localhost": always return loopback address
     // so must specific hostname
     // @remark: only windows support, unix/linux should use getifaddrs
+#if defined(_DEBUG)
+    printf("localhost name:%s\n", hostname);
+#endif
     int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
 
     const char* errmsg = nullptr;
@@ -470,6 +479,9 @@ int xxsocket::getipsv(void)
         {
             memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
 
+#if defined(_DEBUG)
+            printf("xxsocket::getipsv --- endpoint:%s\n", ep.to_string().c_str());
+#endif   
             switch (ep.af()) {
             case AF_INET:
                 if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
@@ -489,7 +501,9 @@ int xxsocket::getipsv(void)
     else {
         errmsg = gai_strerror(iret);
     }
-#else
+#elif defined(ANDROID)
+    flags = ipsv_ipv4; // Could found any methods to get ip currently, so fixed return ipsv_ipv4;
+#else // __APPLE__ or complete linux support getifaddrs
     struct ifaddrs *ifaddr, *ifa;
 #ifdef _DEBUG
     char localhost[NI_MAXHOST + 16];
@@ -509,6 +523,7 @@ int xxsocket::getipsv(void)
 
 #ifdef _DEBUG
         ep.to_cstring(localhost);
+        printf("xxsocket::getipsv --- endpoint:%s\n", localhost);
 #endif
 
         switch (ep.af()) {

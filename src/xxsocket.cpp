@@ -516,6 +516,58 @@ int xxsocket::getipsv(void)
     return flags;
 }
 
+int xxsocket::xpconnect(const char* hostname, u_short port)
+{
+    auto ep = xxsocket::resolve(hostname, port);
+    auto flags = getipsv();
+
+    switch (ep.af())
+    {
+    case AF_INET:
+        if (flags & ipsv_ipv4) {
+            return pconnect(ep);
+        }
+        else if (flags & ipsv_ipv6) {
+            return pconnect(xxsocket::resolve_v6(hostname, port));
+        }
+        break;
+    case AF_INET6:
+        if (flags & ipsv_ipv6) {
+            return pconnect(ep);
+        }
+        break;
+    }
+
+    // not support.
+    return -1;
+}
+
+int xxsocket::xpconnect_n(const char* hostname, u_short port, long timeout_sec)
+{
+    auto ep = xxsocket::resolve(hostname, port);
+    auto flags = getipsv();
+
+    switch (ep.af())
+    {
+    case AF_INET:
+        if (flags & ipsv_ipv4) {
+            return pconnect_n(ep, timeout_sec);
+        }
+        else if (flags & ipsv_ipv6) {
+            return pconnect_n(xxsocket::resolve_v6(hostname, port), timeout_sec);
+        }
+        break;
+    case AF_INET6:
+        if (flags & ipsv_ipv6) {
+            return pconnect_n(ep, timeout_sec);
+        }
+        break;
+    }
+
+    // not support.
+    return -1;
+}
+
 int xxsocket::pconnect(const char* hostname, u_short port)
 {
     auto ep = xxsocket::resolve(hostname, port);
@@ -536,7 +588,7 @@ int xxsocket::pconnect_n(const char* hostname, u_short port, long timeout_sec)
     return -1;
 }
 
-int xxsocket::pconnect(const ip::endpoint& ep, u_short port)
+int xxsocket::pconnect(const ip::endpoint& ep)
 {
     if (this->reopen(ep.af()))
     {
@@ -545,7 +597,7 @@ int xxsocket::pconnect(const ip::endpoint& ep, u_short port)
     return -1;
 }
 
-int xxsocket::pconnect_n(const ip::endpoint& ep, u_short port, long timeout_sec)
+int xxsocket::pconnect_n(const ip::endpoint& ep, long timeout_sec)
 {
     if (this->reopen(ep.af()))
     {

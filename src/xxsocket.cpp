@@ -967,7 +967,7 @@ int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* t
         error = xxsocket::get_last_errno();
         if (error != EINPROGRESS && error != EWOULDBLOCK)
             return -1;
-}
+    }
 
     /* Do whatever we want while the connect is taking place. */
     if (n == 0)

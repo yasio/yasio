@@ -502,7 +502,7 @@ int xxsocket::getipsv(void)
         errmsg = gai_strerror(iret);
     }
 #elif defined(ANDROID)
-    flags = ipsv_ipv4; // Could found any methods to get ip currently, so fixed return ipsv_ipv4;
+    flags = ipsv_ipv4; // Could not found any methods to get ip currently, so fixed return ipsv_ipv4;
 #else // __APPLE__ or complete linux support getifaddrs
     struct ifaddrs *ifaddr, *ifa;
 #ifdef _DEBUG

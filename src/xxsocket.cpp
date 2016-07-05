@@ -427,29 +427,30 @@ int xxsocket::getipsv(void)
     // ipv4 & ipv6
     addrinfo hint, *ailist = nullptr;
     memset(&hint, 0x0, sizeof(hint));
-    hint.ai_flags = AI_PASSIVE;
-    // hint.ai_family = AF_UNSPEC;
-    // hint.ai_socktype = 0; // SOCK_STREAM;
 
-    int iret = getaddrinfo(hostname, "0", &hint, &ailist);
+    ip::endpoint ep("0.0.0.0", 0);
+    // nullptr same as "localhost", @remark: only windows support, unix/linux should use getifaddrs
+    int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
 
     const char* errmsg = nullptr;
     if (ailist != nullptr) {
-        char s_empty[sizeof(ailist->ai_addr->sa_data)] = { 0x0 };
         for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
         {
-            if (memcmp(s_empty, aip->ai_addr->sa_data, sizeof(s_empty)) != 0) {
-                switch (aip->ai_family) {
-                case AF_INET:
+            memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
+
+            switch (aip->ai_family) {
+            case AF_INET:
+                if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
                     flags |= ipsv_ipv4;
-                    break;
-                case AF_INET6:
+                break;
+            case AF_INET6:
+                if (!IN6_IS_ADDR_LOOPBACK(&ep.in6_.sin6_addr) && !IN6_IS_ADDR_LINKLOCAL(&ep.in6_.sin6_addr)) {
                     flags |= ipsv_ipv6;
-                    break;
                 }
-                if (flags == ipsv_dual_stack)
-                    break;
+                break;
             }
+            if (flags == ipsv_dual_stack)
+                break;
         }
         freeaddrinfo(ailist);
     }
@@ -879,7 +880,7 @@ int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* t
         socklen_t len = sizeof(error);
         if (::getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0)
             return (-1);  /* Solaris pending error */
-    }
+}
     else
         return -1;
 done:
@@ -1308,7 +1309,7 @@ void xxsocket::close(void)
         ::closesocket(this->fd);
         this->fd = bad_sock;
     }
-}
+    }
 
 #if defined(_WINSTORE) || defined(WINRT)
 #undef _naked_mark

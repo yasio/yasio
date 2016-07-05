@@ -25,6 +25,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+/** IPV6 ONLY support reference URLs
+* http://blog.csdn.net/baidu_25743639/article/details/51351638
+* http://www.cnblogs.com/SUPER-F/p/IPV6.html
+*/
+
 #ifndef _XXSOCKET_H_
 #define _XXSOCKET_H_
 

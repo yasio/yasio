@@ -80,7 +80,7 @@ typedef int socket_native_type;
 #undef socket
 #endif
 
-// redefine socket error ode for posix api
+// redefine socket error code for posix api
 #ifdef _WIN32
 
 #undef EWOULDBLOCK             

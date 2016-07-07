@@ -5,6 +5,7 @@ support IPv6-only network.
 
 Usage:
 1. Only compile src\xxsocket.cpp src\xxsocket.h src\politedef.h with your project
+
 2. demo code:
 ```
    xxsocket clientsock;

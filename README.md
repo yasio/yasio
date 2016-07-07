@@ -5,8 +5,11 @@ support IPv6-only network.
 
 Usage:
 1. Only compile src\xxsocket.cpp src\xxsocket.h src\politedef.h with your project
-2. xxsocket clientsock;
+2. demo code:
+```
+   xxsocket clientsock;
    if(0 == clientsock.xpconnect_n("www.baidu.com", 443, 5/* connect timeout 5 seconds */))
    {
        printf("connect succeed\n");
    }
+```

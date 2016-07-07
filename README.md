@@ -4,8 +4,8 @@ A mini cross platform posix socket API wrapper, support win32  &amp; linux  &amp
 support IPv6-only network.
 
 Usage:
-1. Only compile src\xxsocket.cpp src\xxsocket.h src\politedef.h with your project
 
+1. Only compile src\xxsocket.cpp src\xxsocket.h src\politedef.h with your project<br />
 2. demo code:
 ```
    xxsocket clientsock;

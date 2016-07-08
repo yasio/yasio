@@ -13,6 +13,8 @@ using namespace purelib::inet;
 void test_connect() 
 {
    xxsocket clientsock;
+   // The interface xpconnect_n will detect whether localhost is IPV6 only network automatically
+   // and connect the ipv4 server by V4MAPPED address.
    if(0 == clientsock.xpconnect_n("www.baidu.com", 443, 5/* connect timeout 5 seconds */))
    {
        printf("connect succeed\n");

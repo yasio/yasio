@@ -545,13 +545,11 @@ int xxsocket::getipsv(void)
 
 int xxsocket::xpconnect(const char* hostname, u_short port)
 {
-    std::vector<ip::endpoint> endpoints;
-    if (!xxsocket::resolve(endpoints, hostname, port))
-        return -1;
-
     auto flags = getipsv();
+
     int error = -1;
-    for (auto& ep : endpoints) {
+
+    xxsocket::resolve_i([&](const ip::endpoint& ep) {
         switch (ep.af())
         {
         case AF_INET:
@@ -559,15 +557,9 @@ int xxsocket::xpconnect(const char* hostname, u_short port)
                 error = pconnect(ep);
             }
             else if (flags & ipsv_ipv6) {
-                std::vector<ip::endpoint> endpoints_v6;
-                if (xxsocket::resolve_v6(endpoints_v6, hostname, port))
-                {
-                    for (auto& epv6 : endpoints)
-                    {
-                        if (pconnect(epv6) == 0)
-                            return 0;
-                    }
-                }
+                xxsocket::resolve_i([&](const ip::endpoint& ep6) {
+                    return 0 == (error = pconnect(ep6));
+                }, hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
         case AF_INET6:
@@ -576,22 +568,20 @@ int xxsocket::xpconnect(const char* hostname, u_short port)
             }
             break;
         }
-        if (error == 0)
-            return 0;
-    }
 
-    return -1;
+        return error == 0;
+    }, hostname, port);
+
+    return error;
 }
 
 int xxsocket::xpconnect_n(const char* hostname, u_short port, long timeout_sec)
 {
-    std::vector<ip::endpoint> endpoints;
-    if (!xxsocket::resolve(endpoints, hostname, port))
-        return -1;
-
     auto flags = getipsv();
-    for (auto& ep : endpoints) {
-        int error = -1;
+
+    int error = -1;
+
+    xxsocket::resolve_i([&](const ip::endpoint& ep) {
         switch (ep.af())
         {
         case AF_INET:
@@ -599,15 +589,9 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port, long timeout_sec)
                 error = pconnect_n(ep, timeout_sec);
             }
             else if (flags & ipsv_ipv6) {
-                std::vector<ip::endpoint> endpoints_v6;
-                if (xxsocket::resolve_v6(endpoints_v6, hostname, port))
-                {
-                    for (auto& epv6 : endpoints)
-                    {
-                        if (pconnect_n(epv6, timeout_sec) == 0)
-                            return 0;
-                    }
-                }
+                xxsocket::resolve_i([&](const ip::endpoint& ep6) {
+                    return 0 == (error = pconnect_n(ep6, timeout_sec));
+                }, hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
         case AF_INET6:
@@ -616,11 +600,11 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port, long timeout_sec)
             }
             break;
         }
-        if (error == 0)
-            return 0;
-    }
 
-    return -1;
+        return error == 0;
+    }, hostname, port);
+
+    return error;
 }
 
 int xxsocket::pconnect(const char* hostname, u_short port)
@@ -720,38 +704,6 @@ ip::endpoint xxsocket::resolve(const char* hostname, unsigned short port)
     return ep;
 }
 
-bool xxsocket::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
-{
-    addrinfo hint;
-    memset(&hint, 0x0, sizeof(hint));
-
-    addrinfo* answerlist = nullptr;
-    getaddrinfo(hostname, nullptr, &hint, &answerlist);
-    if (nullptr == answerlist)
-        return false;
-
-    for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next) {
-        ip::endpoint ep;
-        memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
-        switch (answer->ai_family)
-        {
-        case AF_INET:
-            ep.in4_.sin_port = htons(port);
-            endpoints.push_back(ep);
-            break;
-        case AF_INET6:
-            ep.in6_.sin6_port = htons(port);
-            endpoints.push_back(ep);
-            break;
-        default:;
-        }
-    }
-
-    freeaddrinfo(answerlist);
-
-    return true;
-}
-
 ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
 {
     ip::endpoint ep;
@@ -781,34 +733,20 @@ ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
     return ep;
 }
 
+bool xxsocket::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
+{
+    return resolve_i([&](const ip::endpoint& ep) {
+        endpoints.push_back(ep);
+        return false;
+    }, hostname, port);
+}
+
 bool xxsocket::resolve_v6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
 {
-    addrinfo hint;
-    memset(&hint, 0x0, sizeof(hint));
-    hint.ai_family = AF_INET6;
-    hint.ai_flags = AI_V4MAPPED;
-
-    addrinfo* answerlist = nullptr;
-    getaddrinfo(hostname, nullptr, &hint, &answerlist);
-    if (nullptr == answerlist)
+    return resolve_i([&](const ip::endpoint& ep) {
+        endpoints.push_back(ep);
         return false;
-
-    for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next) {
-        ip::endpoint ep;
-        memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
-        switch (answer->ai_family)
-        { // Must be AF_INET6
-        case AF_INET6:
-            ep.in6_.sin6_port = htons(port);
-            endpoints.push_back(ep);
-            break;
-        default:;
-        }
-    }
-
-    freeaddrinfo(answerlist);
-
-    return true;
+    }, hostname, port, AF_INET6, AI_V4MAPPED);
 }
 
 xxsocket::xxsocket(void) : fd(bad_sock)

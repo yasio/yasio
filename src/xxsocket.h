@@ -341,7 +341,38 @@ public:
     {
         ::memset(this, 0x0, sizeof(*this));
     }
-    explicit endpoint(const char* addr, unsigned short port)
+    explicit endpoint(const addrinfo* info)
+    {
+        assign(info);
+    }
+    explicit endpoint(const sockaddr* info)
+    {
+        assign(info);
+    }
+    endpoint(const char* addr, unsigned short port)
+    {
+        assign(addr, port);
+    }
+
+    void assign(const addrinfo* info)
+    {
+        ::memcpy(this, info->ai_addr, info->ai_addrlen);
+    }
+
+    void assign(const sockaddr* addr)
+    {
+        switch (addr->sa_family)
+        {
+        case AF_INET:
+            ::memcpy(&in4_, addr, sizeof(sockaddr_in));
+            break;
+        case AF_INET6:
+            ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
+            break;
+        }
+    }
+
+    void assign(const char* addr, unsigned short port)
     {
         ::memset(this, 0x0, sizeof(*this));
 
@@ -358,20 +389,6 @@ public:
             this->in6_.sin6_family = AF_INET6;
             compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
             this->in6_.sin6_port = htons(port);
-        }  
-    }
-
-    void assign(const sockaddr* addr)
-    {
-        // intri_.sa_family = af;
-        switch(addr->sa_family)
-        {
-            case AF_INET:
-                ::memcpy(&in4_, addr, sizeof(sockaddr_in));
-                break;
-            case AF_INET6:
-                ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
-                break;
         }
     }
 
@@ -855,24 +872,57 @@ public:
     static const char* get_error_msg(int error);
     
     /// <summary>
-    /// Resolve as ipv4 or ipv6 endpoint
+    /// Resolve as ipv4 or ipv6 endpoint, only return first available endpoint
     /// </summary>
     static ip::endpoint resolve(const char* hostname, unsigned short port = 0);
     
     /// <summary>
-    /// Force resolve as ipv6 endpoint
+    /// Force resolve as ipv6 endpoint, only return first available endpoint
     /// </summary>
     static ip::endpoint resolve_v6(const char* hostname, unsigned short port = 0);
 
     /// <summary>
-    /// Resolve as ipv4 or ipv6 endpoint
+    /// Resolve as ipv4 or ipv6 endpoints
     /// </summary>
     static bool resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
 
     /// <summary>
-    /// Force resolve as ipv6 endpoint
+    /// Force resolve as ipv6 endpoints
     /// </summary>
     static bool resolve_v6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
+
+    /// <summary>
+    /// Resolve as ipv4 or ipv6 endpoints with callback
+    /// </summary>
+    template<typename _Fty> inline
+    static bool resolve_i(const _Fty& callback, const char* hostname, unsigned short port = 0, int af = 0, int flags = 0)
+    {
+        addrinfo hint;
+        memset(&hint, 0x0, sizeof(hint));
+        hint.ai_family = af;
+        hint.ai_flags = flags;
+
+        addrinfo* answerlist = nullptr;
+        char sport[sizeof "65535"] = "";
+        const char* service = nullptr;
+        if (port > 0) {
+            service = itoa(port, sport, 10);
+        }
+        getaddrinfo(hostname, service, &hint, &answerlist);
+        if (nullptr == answerlist)
+            return false;
+
+        for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next) {
+            if (answer->ai_family == AF_INET6 || answer->ai_family == AF_INET) {
+                if (callback(ip::endpoint(answer)))
+                    break;
+            }
+        }
+
+        freeaddrinfo(answerlist);
+
+        return true;
+    }
 
 private:
     socket_native_type   fd;

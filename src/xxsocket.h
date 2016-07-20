@@ -38,6 +38,7 @@ SOFTWARE.
 #include <string.h>
 #include <stdio.h>
 #include <sstream>
+#include <vector>
 #include "politedef.h"
 
 #pragma warning(push)
@@ -862,6 +863,16 @@ public:
     /// Force resolve as ipv6 endpoint
     /// </summary>
     static ip::endpoint resolve_v6(const char* hostname, unsigned short port = 0);
+
+    /// <summary>
+    /// Resolve as ipv4 or ipv6 endpoint
+    /// </summary>
+    static bool resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
+
+    /// <summary>
+    /// Force resolve as ipv6 endpoint
+    /// </summary>
+    static bool resolve_v6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
 
 private:
     socket_native_type   fd;

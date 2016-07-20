@@ -80,11 +80,11 @@ extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 #endif
 
 namespace purelib {
-namespace inet {
-namespace ip {
-namespace compat {
+    namespace inet {
+        namespace ip {
+            namespace compat {
 
-// from glibc
+                // from glibc
 #ifdef SPRINTF_CHAR
 # define SPRINTF(x) strlen(sprintf/**/x)
 #else
@@ -116,341 +116,341 @@ namespace compat {
 * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
 */
 
-static const char *inet_ntop4(const u_char *src, char *dst, socklen_t size);
-static const char *inet_ntop6(const u_char *src, char *dst, socklen_t size);
+                static const char *inet_ntop4(const u_char *src, char *dst, socklen_t size);
+                static const char *inet_ntop6(const u_char *src, char *dst, socklen_t size);
 
-/* char *
-* inet_ntop(af, src, dst, size)
-*	convert a network format address to presentation format.
-* return:
-*	pointer to presentation format address (`dst'), or NULL (see errno).
-* author:
-*	Paul Vixie, 1996.
-*/
-const char *
-    inet_ntop(int af, const void *src, char *dst, socklen_t size)
-{
-    switch (af) {
-    case AF_INET:
-        return (inet_ntop4((u_char*)src, dst, size));
-    case AF_INET6:
-        return (inet_ntop6((u_char*)src, dst, size));
-    default:
-        // __set_errno(EAFNOSUPPORT);
-        errno = EAFNOSUPPORT;
-        return (NULL);
-    }
-    /* NOTREACHED */
-}
+                /* char *
+                * inet_ntop(af, src, dst, size)
+                *	convert a network format address to presentation format.
+                * return:
+                *	pointer to presentation format address (`dst'), or NULL (see errno).
+                * author:
+                *	Paul Vixie, 1996.
+                */
+                const char *
+                    inet_ntop(int af, const void *src, char *dst, socklen_t size)
+                {
+                    switch (af) {
+                    case AF_INET:
+                        return (inet_ntop4((u_char*)src, dst, size));
+                    case AF_INET6:
+                        return (inet_ntop6((u_char*)src, dst, size));
+                    default:
+                        // __set_errno(EAFNOSUPPORT);
+                        errno = EAFNOSUPPORT;
+                        return (NULL);
+                    }
+                    /* NOTREACHED */
+                }
 
-/* const char *
-* inet_ntop4(src, dst, size)
-*	format an IPv4 address
-* return:
-*	`dst' (as a const)
-* notes:
-*	(1) uses no statics
-*	(2) takes a u_char* not an in_addr as input
-* author:
-*	Paul Vixie, 1996.
-*/
-static const char *
-    inet_ntop4(const u_char *src, char *dst, socklen_t size)
-{
-    static const char fmt[] = "%u.%u.%u.%u";
-    char tmp[sizeof "255.255.255.255"];
+                /* const char *
+                * inet_ntop4(src, dst, size)
+                *	format an IPv4 address
+                * return:
+                *	`dst' (as a const)
+                * notes:
+                *	(1) uses no statics
+                *	(2) takes a u_char* not an in_addr as input
+                * author:
+                *	Paul Vixie, 1996.
+                */
+                static const char *
+                    inet_ntop4(const u_char *src, char *dst, socklen_t size)
+                {
+                    static const char fmt[] = "%u.%u.%u.%u";
+                    char tmp[sizeof "255.255.255.255"];
 
-    if (SPRINTF((tmp, fmt, src[0], src[1], src[2], src[3])) >= size) {
-        errno = (ENOSPC);
-        return (NULL);
-    }
-    return strcpy(dst, tmp);
-}
+                    if (SPRINTF((tmp, fmt, src[0], src[1], src[2], src[3])) >= size) {
+                        errno = (ENOSPC);
+                        return (NULL);
+                    }
+                    return strcpy(dst, tmp);
+                }
 
-/* const char *
-* inet_ntop6(src, dst, size)
-*	convert IPv6 binary address into presentation (printable) format
-* author:
-*	Paul Vixie, 1996.
-*/
-static const char *
-    inet_ntop6(const u_char *src, char *dst, socklen_t size)
-{
-    /*
-    * Note that int32_t and int16_t need only be "at least" large enough
-    * to contain a value of the specified size.  On some systems, like
-    * Crays, there is no such thing as an integer variable with 16 bits.
-    * Keep this in mind if you think this function should have been coded
-    * to use pointer overlays.  All the world's not a VAX.
-    */
-    char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"], *tp;
-    struct { int base, len; } best, cur;
-    u_int words[NS_IN6ADDRSZ / NS_INT16SZ];
-    int i;
+                /* const char *
+                * inet_ntop6(src, dst, size)
+                *	convert IPv6 binary address into presentation (printable) format
+                * author:
+                *	Paul Vixie, 1996.
+                */
+                static const char *
+                    inet_ntop6(const u_char *src, char *dst, socklen_t size)
+                {
+                    /*
+                    * Note that int32_t and int16_t need only be "at least" large enough
+                    * to contain a value of the specified size.  On some systems, like
+                    * Crays, there is no such thing as an integer variable with 16 bits.
+                    * Keep this in mind if you think this function should have been coded
+                    * to use pointer overlays.  All the world's not a VAX.
+                    */
+                    char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"], *tp;
+                    struct { int base, len; } best, cur;
+                    u_int words[NS_IN6ADDRSZ / NS_INT16SZ];
+                    int i;
 
-    /*
-    * Preprocess:
-    *	Copy the input (bytewise) array into a wordwise array.
-    *	Find the longest run of 0x00's in src[] for :: shorthanding.
-    */
-    memset(words, '\0', sizeof words);
-    for (i = 0; i < NS_IN6ADDRSZ; i += 2)
-        words[i / 2] = (src[i] << 8) | src[i + 1];
-    best.base = -1;
-    cur.base = -1;
-    best.len = 0;
-    cur.len = 0;
-    for (i = 0; i < (NS_IN6ADDRSZ / NS_INT16SZ); i++) {
-        if (words[i] == 0) {
-            if (cur.base == -1)
-                cur.base = i, cur.len = 1;
-            else
-                cur.len++;
-        }
-        else {
-            if (cur.base != -1) {
-                if (best.base == -1 || cur.len > best.len)
-                    best = cur;
-                cur.base = -1;
-            }
-        }
-    }
-    if (cur.base != -1) {
-        if (best.base == -1 || cur.len > best.len)
-            best = cur;
-    }
-    if (best.base != -1 && best.len < 2)
-        best.base = -1;
+                    /*
+                    * Preprocess:
+                    *	Copy the input (bytewise) array into a wordwise array.
+                    *	Find the longest run of 0x00's in src[] for :: shorthanding.
+                    */
+                    memset(words, '\0', sizeof words);
+                    for (i = 0; i < NS_IN6ADDRSZ; i += 2)
+                        words[i / 2] = (src[i] << 8) | src[i + 1];
+                    best.base = -1;
+                    cur.base = -1;
+                    best.len = 0;
+                    cur.len = 0;
+                    for (i = 0; i < (NS_IN6ADDRSZ / NS_INT16SZ); i++) {
+                        if (words[i] == 0) {
+                            if (cur.base == -1)
+                                cur.base = i, cur.len = 1;
+                            else
+                                cur.len++;
+                        }
+                        else {
+                            if (cur.base != -1) {
+                                if (best.base == -1 || cur.len > best.len)
+                                    best = cur;
+                                cur.base = -1;
+                            }
+                        }
+                    }
+                    if (cur.base != -1) {
+                        if (best.base == -1 || cur.len > best.len)
+                            best = cur;
+                    }
+                    if (best.base != -1 && best.len < 2)
+                        best.base = -1;
 
-    /*
-    * Format the result.
-    */
-    tp = tmp;
-    for (i = 0; i < (NS_IN6ADDRSZ / NS_INT16SZ); i++) {
-        /* Are we inside the best run of 0x00's? */
-        if (best.base != -1 && i >= best.base &&
-            i < (best.base + best.len)) {
-            if (i == best.base)
-                *tp++ = ':';
-            continue;
-        }
-        /* Are we following an initial run of 0x00s or any real hex? */
-        if (i != 0)
-            *tp++ = ':';
-        /* Is this address an encapsulated IPv4? */
-        if (i == 6 && best.base == 0 &&
-            (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) {
-            if (!inet_ntop4(src + 12, tp, static_cast<socklen_t>(sizeof tmp - (tp - tmp))))
-                return (NULL);
-            tp += strlen(tp);
-            break;
-        }
-        tp += SPRINTF((tp, "%x", words[i]));
-    }
-    /* Was it a trailing run of 0x00's? */
-    if (best.base != -1 && (best.base + best.len) ==
-        (NS_IN6ADDRSZ / NS_INT16SZ))
-        *tp++ = ':';
-    *tp++ = '\0';
+                    /*
+                    * Format the result.
+                    */
+                    tp = tmp;
+                    for (i = 0; i < (NS_IN6ADDRSZ / NS_INT16SZ); i++) {
+                        /* Are we inside the best run of 0x00's? */
+                        if (best.base != -1 && i >= best.base &&
+                            i < (best.base + best.len)) {
+                            if (i == best.base)
+                                *tp++ = ':';
+                            continue;
+                        }
+                        /* Are we following an initial run of 0x00s or any real hex? */
+                        if (i != 0)
+                            *tp++ = ':';
+                        /* Is this address an encapsulated IPv4? */
+                        if (i == 6 && best.base == 0 &&
+                            (best.len == 6 || (best.len == 5 && words[5] == 0xffff))) {
+                            if (!inet_ntop4(src + 12, tp, static_cast<socklen_t>(sizeof tmp - (tp - tmp))))
+                                return (NULL);
+                            tp += strlen(tp);
+                            break;
+                        }
+                        tp += SPRINTF((tp, "%x", words[i]));
+                    }
+                    /* Was it a trailing run of 0x00's? */
+                    if (best.base != -1 && (best.base + best.len) ==
+                        (NS_IN6ADDRSZ / NS_INT16SZ))
+                        *tp++ = ':';
+                    *tp++ = '\0';
 
-    /*
-    * Check for overflow, copy, and we're done.
-    */
-    if ((socklen_t)(tp - tmp) > size) {
-        errno = (ENOSPC);
-        return (NULL);
-    }
-    return strcpy(dst, tmp);
-}
+                    /*
+                    * Check for overflow, copy, and we're done.
+                    */
+                    if ((socklen_t)(tp - tmp) > size) {
+                        errno = (ENOSPC);
+                        return (NULL);
+                    }
+                    return strcpy(dst, tmp);
+                }
 
-/////////////////// inet_pton ///////////////////
+                /////////////////// inet_pton ///////////////////
 
-/*
-* WARNING: Don't even consider trying to compile this on a system where
-* sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
-*/
+                /*
+                * WARNING: Don't even consider trying to compile this on a system where
+                * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
+                */
 
-static int inet_pton4(const char *src, u_char *dst);
-static int inet_pton6(const char *src, u_char *dst);
+                static int inet_pton4(const char *src, u_char *dst);
+                static int inet_pton6(const char *src, u_char *dst);
 
-/* int
-* inet_pton(af, src, dst)
-*	convert from presentation format (which usually means ASCII printable)
-*	to network format (which is usually some kind of binary format).
-* return:
-*	1 if the address was valid for the specified address family
-*	0 if the address wasn't valid (`dst' is untouched in this case)
-*	-1 if some other error occurred (`dst' is untouched in this case, too)
-* author:
-*	Paul Vixie, 1996.
-*/
-int
-    inet_pton(int af, const char *src, void *dst)
-{
-    switch (af) {
-    case AF_INET:
-        return (inet_pton4(src, (u_char*)dst));
-    case AF_INET6:
-        return (inet_pton6(src, (u_char*)dst));
-    default:
-        errno = (EAFNOSUPPORT);
-        return (-1);
-    }
-    /* NOTREACHED */
-}
+                /* int
+                * inet_pton(af, src, dst)
+                *	convert from presentation format (which usually means ASCII printable)
+                *	to network format (which is usually some kind of binary format).
+                * return:
+                *	1 if the address was valid for the specified address family
+                *	0 if the address wasn't valid (`dst' is untouched in this case)
+                *	-1 if some other error occurred (`dst' is untouched in this case, too)
+                * author:
+                *	Paul Vixie, 1996.
+                */
+                int
+                    inet_pton(int af, const char *src, void *dst)
+                {
+                    switch (af) {
+                    case AF_INET:
+                        return (inet_pton4(src, (u_char*)dst));
+                    case AF_INET6:
+                        return (inet_pton6(src, (u_char*)dst));
+                    default:
+                        errno = (EAFNOSUPPORT);
+                        return (-1);
+                    }
+                    /* NOTREACHED */
+                }
 
-/* int
-* inet_pton4(src, dst)
-*	like inet_aton() but without all the hexadecimal, octal (with the
-*	exception of 0) and shorthand.
-* return:
-*	1 if `src' is a valid dotted quad, else 0.
-* notice:
-*	does not touch `dst' unless it's returning 1.
-* author:
-*	Paul Vixie, 1996.
-*/
-static int
-    inet_pton4(const char *src, u_char *dst)
-{
-    int saw_digit, octets, ch;
-    u_char tmp[NS_INADDRSZ], *tp;
+                /* int
+                * inet_pton4(src, dst)
+                *	like inet_aton() but without all the hexadecimal, octal (with the
+                *	exception of 0) and shorthand.
+                * return:
+                *	1 if `src' is a valid dotted quad, else 0.
+                * notice:
+                *	does not touch `dst' unless it's returning 1.
+                * author:
+                *	Paul Vixie, 1996.
+                */
+                static int
+                    inet_pton4(const char *src, u_char *dst)
+                {
+                    int saw_digit, octets, ch;
+                    u_char tmp[NS_INADDRSZ], *tp;
 
-    saw_digit = 0;
-    octets = 0;
-    *(tp = tmp) = 0;
-    while ((ch = *src++) != '\0') {
+                    saw_digit = 0;
+                    octets = 0;
+                    *(tp = tmp) = 0;
+                    while ((ch = *src++) != '\0') {
 
-        if (ch >= '0' && ch <= '9') {
-            u_int newv = *tp * 10 + (ch - '0');
+                        if (ch >= '0' && ch <= '9') {
+                            u_int newv = *tp * 10 + (ch - '0');
 
-            if (saw_digit && *tp == 0)
-                return (0);
-            if (newv > 255)
-                return (0);
-            *tp = newv;
-            if (!saw_digit) {
-                if (++octets > 4)
-                    return (0);
-                saw_digit = 1;
-            }
-        }
-        else if (ch == '.' && saw_digit) {
-            if (octets == 4)
-                return (0);
-            *++tp = 0;
-            saw_digit = 0;
-        }
-        else
-            return (0);
-    }
-    if (octets < 4)
-        return (0);
-    memcpy(dst, tmp, NS_INADDRSZ);
-    return (1);
-}
+                            if (saw_digit && *tp == 0)
+                                return (0);
+                            if (newv > 255)
+                                return (0);
+                            *tp = newv;
+                            if (!saw_digit) {
+                                if (++octets > 4)
+                                    return (0);
+                                saw_digit = 1;
+                            }
+                        }
+                        else if (ch == '.' && saw_digit) {
+                            if (octets == 4)
+                                return (0);
+                            *++tp = 0;
+                            saw_digit = 0;
+                        }
+                        else
+                            return (0);
+                    }
+                    if (octets < 4)
+                        return (0);
+                    memcpy(dst, tmp, NS_INADDRSZ);
+                    return (1);
+                }
 
-/* int
-* inet_pton6(src, dst)
-*	convert presentation level address to network order binary form.
-* return:
-*	1 if `src' is a valid [RFC1884 2.2] address, else 0.
-* notice:
-*	(1) does not touch `dst' unless it's returning 1.
-*	(2) :: in a full address is silently ignored.
-* credit:
-*	inspired by Mark Andrews.
-* author:
-*	Paul Vixie, 1996.
-*/
-static int
-    inet_pton6(const char *src, u_char *dst)
-{
-    static const char xdigits[] = "0123456789abcdef";
-    u_char tmp[NS_IN6ADDRSZ], *tp, *endp, *colonp;
-    const char *curtok;
-    int ch, saw_xdigit;
-    u_int val;
+                /* int
+                * inet_pton6(src, dst)
+                *	convert presentation level address to network order binary form.
+                * return:
+                *	1 if `src' is a valid [RFC1884 2.2] address, else 0.
+                * notice:
+                *	(1) does not touch `dst' unless it's returning 1.
+                *	(2) :: in a full address is silently ignored.
+                * credit:
+                *	inspired by Mark Andrews.
+                * author:
+                *	Paul Vixie, 1996.
+                */
+                static int
+                    inet_pton6(const char *src, u_char *dst)
+                {
+                    static const char xdigits[] = "0123456789abcdef";
+                    u_char tmp[NS_IN6ADDRSZ], *tp, *endp, *colonp;
+                    const char *curtok;
+                    int ch, saw_xdigit;
+                    u_int val;
 
-    tp = (u_char*)memset(tmp, '\0', NS_IN6ADDRSZ);
-    endp = tp + NS_IN6ADDRSZ;
-    colonp = NULL;
-    /* Leading :: requires some special handling. */
-    if (*src == ':')
-        if (*++src != ':')
-            return (0);
-    curtok = src;
-    saw_xdigit = 0;
-    val = 0;
-    while ((ch = tolower(*src++)) != '\0') {
-        const char *pch;
+                    tp = (u_char*)memset(tmp, '\0', NS_IN6ADDRSZ);
+                    endp = tp + NS_IN6ADDRSZ;
+                    colonp = NULL;
+                    /* Leading :: requires some special handling. */
+                    if (*src == ':')
+                        if (*++src != ':')
+                            return (0);
+                    curtok = src;
+                    saw_xdigit = 0;
+                    val = 0;
+                    while ((ch = tolower(*src++)) != '\0') {
+                        const char *pch;
 
-        pch = strchr(xdigits, ch);
-        if (pch != NULL) {
-            val <<= 4;
-            val |= (pch - xdigits);
-            if (val > 0xffff)
-                return (0);
-            saw_xdigit = 1;
-            continue;
-        }
-        if (ch == ':') {
-            curtok = src;
-            if (!saw_xdigit) {
-                if (colonp)
-                    return (0);
-                colonp = tp;
-                continue;
-            }
-            else if (*src == '\0') {
-                return (0);
-            }
-            if (tp + NS_INT16SZ > endp)
-                return (0);
-            *tp++ = (u_char)(val >> 8) & 0xff;
-            *tp++ = (u_char)val & 0xff;
-            saw_xdigit = 0;
-            val = 0;
-            continue;
-        }
-        if (ch == '.' && ((tp + NS_INADDRSZ) <= endp) &&
-            inet_pton4(curtok, tp) > 0) {
-            tp += NS_INADDRSZ;
-            saw_xdigit = 0;
-            break;	/* '\0' was seen by inet_pton4(). */
-        }
-        return (0);
-    }
-    if (saw_xdigit) {
-        if (tp + NS_INT16SZ > endp)
-            return (0);
-        *tp++ = (u_char)(val >> 8) & 0xff;
-        *tp++ = (u_char)val & 0xff;
-    }
-    if (colonp != NULL) {
-        /*
-        * Since some memmove()'s erroneously fail to handle
-        * overlapping regions, we'll do the shift by hand.
-        */
-        const auto n = tp - colonp;
-        int i;
+                        pch = strchr(xdigits, ch);
+                        if (pch != NULL) {
+                            val <<= 4;
+                            val |= (pch - xdigits);
+                            if (val > 0xffff)
+                                return (0);
+                            saw_xdigit = 1;
+                            continue;
+                        }
+                        if (ch == ':') {
+                            curtok = src;
+                            if (!saw_xdigit) {
+                                if (colonp)
+                                    return (0);
+                                colonp = tp;
+                                continue;
+                            }
+                            else if (*src == '\0') {
+                                return (0);
+                            }
+                            if (tp + NS_INT16SZ > endp)
+                                return (0);
+                            *tp++ = (u_char)(val >> 8) & 0xff;
+                            *tp++ = (u_char)val & 0xff;
+                            saw_xdigit = 0;
+                            val = 0;
+                            continue;
+                        }
+                        if (ch == '.' && ((tp + NS_INADDRSZ) <= endp) &&
+                            inet_pton4(curtok, tp) > 0) {
+                            tp += NS_INADDRSZ;
+                            saw_xdigit = 0;
+                            break;	/* '\0' was seen by inet_pton4(). */
+                        }
+                        return (0);
+                    }
+                    if (saw_xdigit) {
+                        if (tp + NS_INT16SZ > endp)
+                            return (0);
+                        *tp++ = (u_char)(val >> 8) & 0xff;
+                        *tp++ = (u_char)val & 0xff;
+                    }
+                    if (colonp != NULL) {
+                        /*
+                        * Since some memmove()'s erroneously fail to handle
+                        * overlapping regions, we'll do the shift by hand.
+                        */
+                        const auto n = tp - colonp;
+                        int i;
 
-        if (tp == endp)
-            return (0);
-        for (i = 1; i <= n; i++) {
-            endp[-i] = colonp[n - i];
-            colonp[n - i] = 0;
-        }
-        tp = endp;
-    }
-    if (tp != endp)
-        return (0);
-    memcpy(dst, tmp, NS_IN6ADDRSZ);
-    return (1);
-}
-};
-};
-};
+                        if (tp == endp)
+                            return (0);
+                        for (i = 1; i <= n; i++) {
+                            endp[-i] = colonp[n - i];
+                            colonp[n - i] = 0;
+                        }
+                        tp = endp;
+                    }
+                    if (tp != endp)
+                        return (0);
+                    memcpy(dst, tmp, NS_IN6ADDRSZ);
+                    return (1);
+                }
+            };
+        };
+    };
 };
 
 int xxsocket::getipsv(void)
@@ -549,72 +549,114 @@ int xxsocket::getipsv(void)
 
 int xxsocket::xpconnect(const char* hostname, u_short port)
 {
-    auto ep = xxsocket::resolve(hostname, port);
-    auto flags = getipsv();
+    std::vector<ip::endpoint> endpoints;
+    if (!xxsocket::resolve(endpoints, hostname, port))
+        return -1;
 
-    switch (ep.af())
-    {
-    case AF_INET:
-        if (flags & ipsv_ipv4) {
-            return pconnect(ep);
+    auto flags = getipsv();
+    int error = -1;
+    for (auto& ep : endpoints) {
+        switch (ep.af())
+        {
+        case AF_INET:
+            if (flags & ipsv_ipv4) {
+                error = pconnect(ep);
+            }
+            else if (flags & ipsv_ipv6) {
+                std::vector<ip::endpoint> endpoints_v6;
+                if (xxsocket::resolve_v6(endpoints_v6, hostname, port))
+                {
+                    for (auto& epv6 : endpoints)
+                    {
+                        if (pconnect(epv6) == 0)
+                            return 0;
+                    }
+                }
+            }
+            break;
+        case AF_INET6:
+            if (flags & ipsv_ipv6) {
+                error = pconnect(ep);
+            }
+            break;
         }
-        else if (flags & ipsv_ipv6) {
-            return pconnect(xxsocket::resolve_v6(hostname, port));
-        }
-        break;
-    case AF_INET6:
-        if (flags & ipsv_ipv6) {
-            return pconnect(ep);
-        }
-        break;
+        if (error == 0)
+            return 0;
     }
 
-    // not support.
     return -1;
 }
 
 int xxsocket::xpconnect_n(const char* hostname, u_short port, long timeout_sec)
 {
-    auto ep = xxsocket::resolve(hostname, port);
-    auto flags = getipsv();
+    std::vector<ip::endpoint> endpoints;
+    if (!xxsocket::resolve(endpoints, hostname, port))
+        return -1;
 
-    switch (ep.af())
-    {
-    case AF_INET:
-        if (flags & ipsv_ipv4) {
-            return pconnect_n(ep, timeout_sec);
+    auto flags = getipsv();
+    for (auto& ep : endpoints) {
+        int error = -1;
+        switch (ep.af())
+        {
+        case AF_INET:
+            if (flags & ipsv_ipv4) {
+                error = pconnect_n(ep, timeout_sec);
+            }
+            else if (flags & ipsv_ipv6) {
+                std::vector<ip::endpoint> endpoints_v6;
+                if (xxsocket::resolve_v6(endpoints_v6, hostname, port))
+                {
+                    for (auto& epv6 : endpoints)
+                    {
+                        if (pconnect_n(epv6, timeout_sec) == 0)
+                            return 0;
+                    }
+                }
+            }
+            break;
+        case AF_INET6:
+            if (flags & ipsv_ipv6) {
+                error = pconnect_n(ep, timeout_sec);
+            }
+            break;
         }
-        else if (flags & ipsv_ipv6) {
-            return pconnect_n(xxsocket::resolve_v6(hostname, port), timeout_sec);
-        }
-        break;
-    case AF_INET6:
-        if (flags & ipsv_ipv6) {
-            return pconnect_n(ep, timeout_sec);
-        }
-        break;
+        if (error == 0)
+            return 0;
     }
 
-    // not support.
     return -1;
 }
 
 int xxsocket::pconnect(const char* hostname, u_short port)
 {
-    auto ep = xxsocket::resolve(hostname, port);
-    if (this->reopen(ep.af()))
+    std::vector<ip::endpoint> endpoints;
+    if (!xxsocket::resolve(endpoints, hostname, port))
+        return -1;
+
+    for (auto& ep : endpoints)
     {
-        return this->connect(ep);
+        if (this->reopen(ep.af()))
+        {
+            if (0 == this->connect(ep))
+                return 0;
+        }
     }
     return -1;
 }
 
 int xxsocket::pconnect_n(const char* hostname, u_short port, long timeout_sec)
 {
-    auto ep = xxsocket::resolve(hostname, port);
-    if (this->reopen(ep.af()))
+    std::vector<ip::endpoint> endpoints;
+    if (!xxsocket::resolve(endpoints, hostname, port))
+        return -1;
+
+    for (auto& ep : endpoints)
     {
-        return this->connect_n(ep, timeout_sec);
+        if (this->reopen(ep.af()))
+        {
+            if (0 == this->connect_n(ep, timeout_sec))
+                return 0;
+        }
     }
     return -1;
 }
@@ -682,6 +724,38 @@ ip::endpoint xxsocket::resolve(const char* hostname, unsigned short port)
     return ep;
 }
 
+bool xxsocket::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
+{
+    addrinfo hint;
+    memset(&hint, 0x0, sizeof(hint));
+
+    addrinfo* answerlist = nullptr;
+    getaddrinfo(hostname, nullptr, &hint, &answerlist);
+    if (nullptr == answerlist)
+        return false;
+
+    for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next) {
+        ip::endpoint ep;
+        memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
+        switch (answer->ai_family)
+        {
+        case AF_INET:
+            ep.in4_.sin_port = htons(port);
+            endpoints.push_back(ep);
+            break;
+        case AF_INET6:
+            ep.in6_.sin6_port = htons(port);
+            endpoints.push_back(ep);
+            break;
+        default:;
+        }
+    }
+
+    freeaddrinfo(answerlist);
+
+    return true;
+}
+
 ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
 {
     ip::endpoint ep;
@@ -700,7 +774,7 @@ ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
     memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
     switch (answer->ai_family)
     {
-    case AF_INET6:
+    case AF_INET6: // Must be AF_INET6
         ep.in6_.sin6_port = htons(port);
         break;
     default:;
@@ -709,6 +783,36 @@ ip::endpoint xxsocket::resolve_v6(const char* hostname, unsigned short port)
     freeaddrinfo(answer);
 
     return ep;
+}
+
+bool xxsocket::resolve_v6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
+{
+    addrinfo hint;
+    memset(&hint, 0x0, sizeof(hint));
+    hint.ai_family = AF_INET6;
+    hint.ai_flags = AI_V4MAPPED;
+
+    addrinfo* answerlist = nullptr;
+    getaddrinfo(hostname, nullptr, &hint, &answerlist);
+    if (nullptr == answerlist)
+        return false;
+
+    for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next) {
+        ip::endpoint ep;
+        memcpy(&ep, answer->ai_addr, answer->ai_addrlen);
+        switch (answer->ai_family)
+        { // Must be AF_INET6
+        case AF_INET6:
+            ep.in6_.sin6_port = htons(port);
+            endpoints.push_back(ep);
+            break;
+        default:;
+        }
+    }
+
+    freeaddrinfo(answerlist);
+
+    return true;
 }
 
 xxsocket::xxsocket(void) : fd(bad_sock)
@@ -1027,12 +1131,12 @@ done:
         xxsocket::set_last_errno(error);
         return (-1);
     }
-    
+
     /* restore file status flags */
 #ifdef _MSC_VER
     set_nonblocking(s, false);
 #else
-    ::fcntl(s, F_SETFL, flags); 
+    ::fcntl(s, F_SETFL, flags);
 #endif
     return (0);
 }

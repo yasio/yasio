@@ -20,13 +20,13 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
 void test_https_connect()
 {
     xxsocket tcpcli;
-    auto epv6 = xxsocket::resolve("www.baidu.com", 443);
-    tcpcli.open(epv6.af());
+   // auto epv6 = xxsocket::resolve("www.baidu.com", 443);
+    int n = tcpcli.xpconnect_n("www.baidu.com", 443, 3);
     auto flag = tcpcli.getipsv();
     printf("ip protocol support flag is:%d\n", flag);
-    if (tcpcli.connect_n(epv6, 3/* connect timeout: 3 seconds*/) == 0)
+    if (n == 0)
     {
-        printf("connect https server success.");
+        printf("connect https server success, [%s] --> [%s]", tcpcli.local_endpoint().to_string().c_str(), tcpcli.peer_endpoint().to_string().c_str());
     }
     else {
         printf("connect failed, code:%d,info:%s", xxsocket::get_last_errno(), xxsocket::get_error_msg(xxsocket::get_last_errno()));

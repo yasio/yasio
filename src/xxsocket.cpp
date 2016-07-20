@@ -1022,18 +1022,18 @@ int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep, timeval* t
     else
         return -1;
 done:
-#ifdef _MSC_VER
-    set_nonblocking(s, false);
-#else
-    ::fcntl(s, F_SETFL, flags);  /* restore file status flags */
-#endif
-
     if (error != 0) {
         ::closesocket(s); /* just in case */
         xxsocket::set_last_errno(error);
         return (-1);
     }
-
+    
+    /* restore file status flags */
+#ifdef _MSC_VER
+    set_nonblocking(s, false);
+#else
+    ::fcntl(s, F_SETFL, flags); 
+#endif
     return (0);
 }
 

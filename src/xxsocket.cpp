@@ -609,36 +609,20 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port, long timeout_sec)
 
 int xxsocket::pconnect(const char* hostname, u_short port)
 {
-    std::vector<ip::endpoint> endpoints;
-    if (!xxsocket::resolve(endpoints, hostname, port))
-        return -1;
-
-    for (auto& ep : endpoints)
-    {
-        if (this->reopen(ep.af()))
-        {
-            if (0 == this->connect(ep))
-                return 0;
-        }
-    }
-    return -1;
+    int error = -1;
+    xxsocket::resolve_i([&](const ip::endpoint& ep) {
+        return 0 == (error = pconnect(ep));
+    }, hostname, port);
+    return error;
 }
 
 int xxsocket::pconnect_n(const char* hostname, u_short port, long timeout_sec)
 {
-    std::vector<ip::endpoint> endpoints;
-    if (!xxsocket::resolve(endpoints, hostname, port))
-        return -1;
-
-    for (auto& ep : endpoints)
-    {
-        if (this->reopen(ep.af()))
-        {
-            if (0 == this->connect_n(ep, timeout_sec))
-                return 0;
-        }
-    }
-    return -1;
+    int error = -1;
+    xxsocket::resolve_i([&](const ip::endpoint& ep) {
+        return 0 == (error = pconnect_n(ep, timeout_sec));
+    }, hostname, port);
+    return error;
 }
 
 int xxsocket::pconnect(const ip::endpoint& ep)

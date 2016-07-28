@@ -31,10 +31,8 @@ SOFTWARE.
 #include <stdio.h>
 #endif
 
-#if !defined(_WIN32)
-#if !defined(ANDROID)
+#if !defined(_WIN32) && !defined(ANDROID)
 #include <ifaddrs.h>
-#endif
 #endif
 
 #if !defined(_WIN32) || defined(_WINSTORE)

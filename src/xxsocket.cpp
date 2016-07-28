@@ -26,7 +26,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include "xxsocket.h"
-#include <fcntl.h>
 
 #ifdef _DEBUG
 #include <stdio.h>
@@ -36,21 +35,24 @@ SOFTWARE.
 #if !defined(ANDROID)
 #include <ifaddrs.h>
 #endif
+#endif
+
+#if !defined(_WIN32) || defined(_WINSTORE)
 
 #ifndef IN_CLASSB_NET
 #define	IN_CLASSB_NET		0xffff0000
 #endif
 
 #ifndef IN_LOOPBACK
-#define IN_LOOPBACK(i)		(((u_int32_t)(i) & 0xff000000) == 0x7f000000)
+#define IN_LOOPBACK(i)		(((uint32_t)(i) & 0xff000000) == 0x7f000000)
 #endif
 
 #ifndef IN_LINKLOCALNETNUM
-#define IN_LINKLOCALNETNUM	(u_int32_t)0xA9FE0000 /* 169.254.0.0 */
+#define IN_LINKLOCALNETNUM	(uint32_t)0xA9FE0000 /* 169.254.0.0 */
 #endif
 
 #ifndef IN_LINKLOCAL
-#define IN_LINKLOCAL(i)		(((u_int32_t)(i) & IN_CLASSB_NET) == IN_LINKLOCALNETNUM)
+#define IN_LINKLOCAL(i)		(((uint32_t)(i) & IN_CLASSB_NET) == IN_LINKLOCALNETNUM)
 #endif
 
 #ifndef IN4_IS_ADDR_LOOPBACK
@@ -88,7 +90,9 @@ namespace compat {
 #ifdef SPRINTF_CHAR
 # define SPRINTF(x) strlen(sprintf/**/x)
 #else
+#ifndef SPRINTF
 # define SPRINTF(x) (/*(size_t)*/sprintf x)
+#endif
 #endif
 
 /*
@@ -1417,7 +1421,7 @@ int xxsocket::set_keepalive(int flag, int idle, int interval, int probes)
 
 int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interval, int probes)
 {
-#if defined(_WIN32) && !defined(WP8) && !defined(WINRT)
+#if defined(_WIN32) && !defined(WP8) && !defined(_WINSTORE)
     tcp_keepalive buffer_in;
     buffer_in.onoff = flag;
     buffer_in.keepalivetime = idle;
@@ -1435,17 +1439,12 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
 #else
     int errcnt = 0;
     errcnt += set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag);
-    //errcnt += set_optval(s, SOL_TCP, TCP_KEEPIDLE, idle);
-    //errcnt += set_optval(s, SOL_TCP, TCP_KEEPINTVL, interval);
-    //errcnt += set_optval(s, SOL_TCP, TCP_KEEPCNT, probes);
+    // errcnt += set_optval(s, SOL_TCP, TCP_KEEPIDLE, idle);
+    // errcnt += set_optval(s, SOL_TCP, TCP_KEEPINTVL, interval);
+    // errcnt += set_optval(s, SOL_TCP, TCP_KEEPCNT, probes);
     return errcnt;
 #endif
 }
-
-//int xxsocket::ioctl(long cmd, u_long* argp) const
-//{
-//    return ::ioctlsocket(this->fd, cmd, argp);
-//}
 
 xxsocket::operator socket_native_type(void) const
 {
@@ -1471,13 +1470,13 @@ void xxsocket::close(void)
     }
 }
 
-#if defined(_WINSTORE) || defined(WINRT)
+#if defined(_WINSTORE)
 #undef _naked_mark
 #define _naked_mark
 #endif
 void _naked_mark xxsocket::init_ws32_lib(void)
 {
-#if defined(_WIN32) && !defined(_WIN64) && !defined(WINRT)
+#if defined(_WIN32) && !defined(_WIN64) && !defined(_WINSTORE)
     _asm ret;
 #else
     return;

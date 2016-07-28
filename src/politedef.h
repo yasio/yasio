@@ -58,7 +58,7 @@
 typedef unsigned long u_long;
 typedef long long llong;
 typedef unsigned long long u_llong;
-#if /*defined(__cxx11) || */defined(__GNUC__)
+#if defined(__cxx11) || defined(__GNUC__)
 #include <stdint.h>
 #else
 typedef signed __int8 int8_t;

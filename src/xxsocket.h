@@ -60,7 +60,6 @@ typedef int socklen_t;
 #else
 #include <unistd.h>
 #include <signal.h>
-#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -80,6 +79,7 @@ typedef int socklen_t;
 typedef int socket_native_type;
 #undef socket
 #endif
+#include <fcntl.h> // common platform header
 
 // redefine socket error code for posix api
 #ifdef _WIN32

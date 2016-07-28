@@ -892,13 +892,13 @@ public:
         hint.ai_flags = flags;
 
         addrinfo* answerlist = nullptr;
-        char service[sizeof "65535"] = { '\0' };
-        const char* ptrs = nullptr;
+        char buffer[sizeof "65535"] = { '\0' };
+        const char* service = nullptr;
         if (port > 0) {
-            sprintf(service, "%u", port); // It's enough for unsigned short, so use sprintf ok.
-            ptrs = service;
+            sprintf(buffer, "%u", port); // It's enough for unsigned short, so use sprintf ok.
+            service = buffer;
         }
-        getaddrinfo(hostname, ptrs, &hint, &answerlist);
+        getaddrinfo(hostname, service, &hint, &answerlist);
         if (nullptr == answerlist)
             return false;
 

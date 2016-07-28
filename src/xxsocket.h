@@ -892,11 +892,13 @@ public:
         hint.ai_flags = flags;
 
         addrinfo* answerlist = nullptr;
-        std::string service;
+        char service[sizeof "65535"] = { '\0' };
+        const char* ptrs = nullptr;
         if (port > 0) {
-            service = std::to_string(port);
+            snprintf(service, sizeof(service), "%u", port);
+            ptrs = service;
         }
-        getaddrinfo(hostname, !service.empty() ? service.c_str() : nullptr, &hint, &answerlist);
+        getaddrinfo(hostname, ptrs, &hint, &answerlist);
         if (nullptr == answerlist)
             return false;
 

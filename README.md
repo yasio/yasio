@@ -21,3 +21,5 @@ void test_connect()
    }
 }
 ```
+
+#pitfall: For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: C/C++ --> Advance -->'Forced Include File' to it(such as pch.h).

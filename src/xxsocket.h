@@ -895,7 +895,7 @@ public:
         char service[sizeof "65535"] = { '\0' };
         const char* ptrs = nullptr;
         if (port > 0) {
-            snprintf(service, sizeof(service), "%u", port);
+            sprintf(service, "%u", port); // It's enough for unsigned short, so use sprintf ok.
             ptrs = service;
         }
         getaddrinfo(hostname, ptrs, &hint, &answerlist);

@@ -979,13 +979,13 @@ int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
 
 int xxsocket::connect_n(const char* addr, u_short port, long timeout_sec)
 {
-    auto timeout = make_tv(timeout_sec);
+    timeval timeout{ timeout_sec, 0 };
     return connect_n(addr, port, &timeout);
 }
 
 int xxsocket::connect_n(const ip::endpoint& ep, long timeout_sec)
 {
-    auto timeout = make_tv(timeout_sec);
+    timeval timeout{ timeout_sec, 0 };
     return connect_n(ep, &timeout);
 }
 
@@ -1079,7 +1079,7 @@ int xxsocket::send(const void* buf, int len, int flags) const
 
 int xxsocket::send_n(const void* buf, int len, long timeout_sec, int flags)
 {
-    auto timeout = make_tv(timeout_sec);
+    timeval timeout{ timeout_sec, 0 };
     return send_n(this->fd, buf, len, &timeout, flags);
 }
 
@@ -1160,7 +1160,7 @@ int xxsocket::recv(void* buf, int len, int flags) const
 
 int xxsocket::recv_n(void* buf, int len, long timeout_sec, int flags) const
 {
-    auto timeout = make_tv(timeout_sec);
+    timeval timeout{ timeout_sec, 0 };
     return recv_n(this->fd, buf, len, &timeout, flags);
 }
 

@@ -184,9 +184,7 @@ namespace purelib {
 
 namespace inet {
 
-#define _make_value(b1,b2,b3,b4) ( ( ((uint32_t)(b4) << 24) & 0xff000000 ) | ( ((uint32_t)(b3) << 16) & 0x00ff0000 ) | ( ((uint32_t)(b2) << 8) & 0x0000ff00 ) | ( (uint32_t)(b1) & 0x000000ff ) )
-
-
+// #define _make_dotted_decimal(b1,b2,b3,b4) ( ( ((uint32_t)(b4) << 24) & 0xff000000 ) | ( ((uint32_t)(b3) << 16) & 0x00ff0000 ) | ( ((uint32_t)(b2) << 8) & 0x0000ff00 ) | ( (uint32_t)(b1) & 0x000000ff ) )
 
 static const socket_native_type bad_sock = (socket_native_type)-1;
 static const u_long blocking = 0;
@@ -442,15 +440,6 @@ public:
 };
 
 };
-
-inline
-timeval make_tv(uint32_t sec, uint32_t usec = 0)
-{
-    timeval tv;
-    tv.tv_sec = sec;
-    tv.tv_usec = usec;
-    return tv;
-}
 
 // supported internet protocol flags
 enum {

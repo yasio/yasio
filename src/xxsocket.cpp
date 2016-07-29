@@ -67,7 +67,7 @@ SOFTWARE.
 #pragma warning(disable: 4996)
 
 using namespace purelib;
-using namespace purelib::net;
+using namespace purelib::inet;
 
 #ifdef _WIN32
 #undef gai_strerror

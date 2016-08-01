@@ -42,6 +42,55 @@ struct MsgHeader {
     std::string get_formated_string(void) const;
 };
 
+struct LoginReq : public MsgBase {
+    std::string             username;
+    std::string             password;
+
+    obinarystream encode(void)  const override;
+
+    // decode return the remain bytes of buffer.
+    int decode(const char* data, int len) override;
+
+    int get_id() const override { return CID_LOGIN_REQ; };
+
+    const char* get_className() const override { return "LoginReq"; };
+
+    std::string get_formated_string(void) const;
+};
+
+struct LoginResp : public MsgBase {
+    bool                    succeed;
+    int32_t                 session;
+    std::string             append_info;
+
+    obinarystream encode(void)  const override;
+
+    // decode return the remain bytes of buffer.
+    int decode(const char* data, int len) override;
+
+    int get_id() const override { return CID_LOGIN_RESP; };
+
+    const char* get_className() const override { return "LoginResp"; };
+
+    std::string get_formated_string(void) const;
+};
+
+struct LocalErrorResp : public MsgBase {
+    int16_t                 error_code;
+    std::string             error_msg;
+
+    obinarystream encode(void)  const override;
+
+    // decode return the remain bytes of buffer.
+    int decode(const char* data, int len) override;
+
+    int get_id() const override { return CID_LOCAL_ERROR_INFO; };
+
+    const char* get_className() const override { return "LocalErrorResp"; };
+
+    std::string get_formated_string(void) const;
+};
+
 struct MsgPeerEndpointReq : public MsgBase {
     uint32_t                user_id;
 

@@ -33,7 +33,7 @@ typedef unsigned long DWORD;
 
 #    define __threadlocal __declspec(thread)
 #    define thread_native_type DWORD
-#    define this_thread GetCurrentThreadId
+// #    define this_thread GetCurrentThreadId
 
 #elif defined(__linux)
 

@@ -23,7 +23,7 @@ namespace inet {
 class xxappl_pdu
 {
 public:
-    xxappl_pdu(std::vector<char>&& right, const xxappl_pdu_sent_callback_t& callback)
+    xxappl_pdu(std::vector<char>&& right, const xxappl_pdu_send_callback_t& callback)
     {
         data_ = std::move(right);
         offset_ = 0;
@@ -32,7 +32,7 @@ public:
     }
     std::vector<char>          data_; // sending data
     size_t                     offset_; // offset
-    xxappl_pdu_sent_callback_t on_sent_;
+    xxappl_pdu_send_callback_t on_sent_;
     long long                  timestamp_; // In milliseconds
 };
 
@@ -84,11 +84,55 @@ xxtcp_client::~xxtcp_client()
     }
 }
 
+void xxtcp_client::set_timeouts(long timeo_connect, long timeo_send)
+{
+    this->connect_timeout_ = timeo_connect;
+    this->send_timeout_ = timeo_send;
+}
+
 void xxtcp_client::set_endpoint(const char* address, const char* addressv6, u_short port)
 {
     this->address_ = address;
     this->addressv6_ = address;
     this->port_ = port;
+}
+
+void xxtcp_client::set_callbacks(
+    decode_pdu_length_func decode_length_func,
+    build_error_func build_error_pdu_func,
+    const xxappl_pdu_recv_callback_t& callback)
+{
+    this->decode_pdu_length_ = decode_length_func;
+    this->on_received_pdu_ = callback;
+    this->build_error_pdu_ = build_error_pdu_func;
+}
+
+bool xxtcp_client::collect_received_pdu() {
+    if (this->recv_queue_.empty())
+        return false;
+
+    std::unique_lock<std::mutex> autolock(this->recv_queue_mtx_);
+    if (!this->recv_queue_.empty()) {
+        auto packet = std::move(this->recv_queue_.front());
+        this->recv_queue_.pop();
+
+        if (this->recv_queue_.empty()) {
+            autolock.unlock();
+            // CCSCHTASKS->pauseTarget(this);
+        }
+        else
+            autolock.unlock();
+
+        if (this->on_received_pdu_ != nullptr)
+            this->on_received_pdu_(std::move(packet));
+
+        return true;
+    }
+    else {
+        autolock.unlock();
+        // CCSCHTASKS->pauseTarget(this);
+        return false;
+    }
 }
 
 void xxtcp_client::start_service(int working_counter)
@@ -109,6 +153,10 @@ void xxtcp_client::start_service(int working_counter)
     }
 }
 
+void xxtcp_client::set_connect_listener(const connect_listener& listener)
+{
+    this->connect_listener_ = listener;
+}
 
 void xxtcp_client::wait_connect_notify()
 {
@@ -172,9 +220,9 @@ void xxtcp_client::service()
             }
 
             /*
-            ** check and handle readable sockets
+            ** check and handle error sockets
             */
-            for (auto i = 0; i < excepfds_.fd_count; ++i) {
+            for (auto i = 0; i < excep_set.fd_count; ++i) {
                 if (excepfds_.fd_array[i] == this->impl_)
                 {
                     goto _L_error;
@@ -216,22 +264,22 @@ void xxtcp_client::service()
                     }
                 }
             }
-        }
 
-        // perform write operations
-        if (!do_write(this))
-        { // TODO: check would block? for client, may be unnecessory.
-            goto _L_error;
-        }
+            // perform write operations
+            if (!do_write(this))
+            { // TODO: check would block? for client, may be unnecessory.
+                goto _L_error;
+            }
 
-        if (this->p2p_channel1_.connected_) {
-            if (!do_write(&p2p_channel1_))
-                p2p_channel1_.reset();
-        }
+            if (this->p2p_channel1_.connected_) {
+                if (!do_write(&p2p_channel1_))
+                    p2p_channel1_.reset();
+            }
 
-        if (this->p2p_channel1_.connected_) {
-            if (!do_write(&p2p_channel2_))
-                p2p_channel2_.reset();
+            if (this->p2p_channel1_.connected_) {
+                if (!do_write(&p2p_channel2_))
+                    p2p_channel2_.reset();
+            }
         }
 
         // Avoid high Occupation CPU
@@ -274,8 +322,10 @@ void xxtcp_client::handle_error(void)
         // INETLOG("local close the connection!");
     }
 
-    this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
-    move_received_pdu(this);
+    if (this->build_error_pdu_) {
+        this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
+        move_received_pdu(this);
+    }
 }
 
 void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -314,13 +364,13 @@ void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
     }
 }
 
-void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_sent_callback_t& callback)
+void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_send_callback_t& callback)
 {
     if (this->impl_.is_open())
     {
         auto pdu = new xxappl_pdu(std::move(data), callback);
-
-        std::unique_lock<std::mutex> autolock(send_queue_mtx_);
+        
+        std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
         send_queue_.push(pdu);
     }
     else {
@@ -350,7 +400,7 @@ bool xxtcp_client::connect(void)
         connect_failed_ = false;
     }
 
-    //INETLOG("connecting server %s:%u...", address.c_str(), port);
+    INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
     //impl.open();
     //auto ep = xxsocket::resolve(this->address.c_str(), this->port);
 
@@ -374,9 +424,9 @@ bool xxtcp_client::connect(void)
         FD_ZERO(&excepfds_);
 
         auto fd = impl_.native_handle();
-        register_descriptor(fd, socket_event_read | socket_event_except);
+        register_descriptor(fd, socket_event_read | socket_event_write | socket_event_except);
 
-        std::unique_lock<std::mutex> autolock(send_queue_mtx_);
+        std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
         std::queue<xxappl_pdu*> emptypduQueue;
         this->send_queue_.swap(emptypduQueue);
 
@@ -389,7 +439,7 @@ bool xxtcp_client::connect(void)
 
         this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-        // INETLOG("connect server: %s:%u succeed.", address.c_str(), port);
+        INET_LOG("connect server: %s:%u succeed.", address_.c_str(), port_);
 
 #if 0 // provided as API
         auto endp = this->impl_.local_endpoint();
@@ -422,12 +472,10 @@ bool xxtcp_client::connect(void)
         connect_failed_ = true;
         int ec = xxsocket::get_last_errno();
         if (this->connect_listener_ != nullptr) {
-            /* CCRUNONGL([this, ec] {
-                    connectListener(false, ec);
-                });*/
+            this->connect_listener_(false, ec);
         }
 
-        // INETLOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address.c_str(), port, ec, xxsocket::get_error_msg(ec));
+        INET_LOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address_.c_str(), port_, ec, xxsocket::get_error_msg(ec));
 
         return false;
     }
@@ -443,7 +491,7 @@ bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
         if (!ctx->impl_.is_open())
             break;
 
-        std::unique_lock<std::mutex> autolock(ctx->send_queue_mtx_);
+        std::unique_lock<std::recursive_mutex> autolock(ctx->send_queue_mtx_);
         if (!ctx->send_queue_.empty()) {
             auto& v = ctx->send_queue_.front();
             auto bytes_left = v->data_.size() - v->offset_;

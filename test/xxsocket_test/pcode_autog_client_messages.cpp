@@ -56,6 +56,99 @@ std::string MsgHeader::get_formated_string(void) const
     return ss.str();
 }
 
+obinarystream LoginReq::encode(void) const
+{
+    /// create message header stream.
+    auto obs = pcode_autog_begin_encode(CID_LOGIN_REQ);
+
+    /// encode message fields.
+    obs.write_v(this->username);
+    obs.write_v(this->password);
+    return std::move(obs);
+}
+
+int LoginReq::decode(const char* data, int len)
+{
+    ibinarystream ibs;
+    ibs.vassign(data, len);
+
+    ibs.read_v(this->username);
+    ibs.read_v(this->password);
+    return ibs.remain();
+}
+
+std::string LoginReq::get_formated_string(void) const
+{
+    std::stringstream ss;
+    ss << "LoginReq:\n";
+    ss << strfmt("username", this->username << '\n', '-');
+    ss << strfmt("password", this->password << '\n', '-');
+    return ss.str();
+}
+
+obinarystream LoginResp::encode(void) const
+{
+    /// create message header stream.
+    auto obs = pcode_autog_begin_encode(CID_LOGIN_RESP);
+
+    /// encode message fields.
+    obs.write_i(this->succeed);
+    obs.write_i(this->session);
+    obs.write_v(this->append_info);
+    return std::move(obs);
+}
+
+int LoginResp::decode(const char* data, int len)
+{
+    ibinarystream ibs;
+    ibs.vassign(data, len);
+
+    ibs.read_i(this->succeed);
+    ibs.read_i(this->session);
+    ibs.read_v(this->append_info);
+    return ibs.remain();
+}
+
+std::string LoginResp::get_formated_string(void) const
+{
+    std::stringstream ss;
+    ss << "LoginResp:\n";
+    ss << strfmt("succeed", (int)this->succeed << '\n', '-');
+    ss << strfmt("session", this->session << '\n', '-');
+    ss << strfmt("append_info", this->append_info << '\n', '-');
+    return ss.str();
+}
+
+obinarystream LocalErrorResp::encode(void) const
+{
+    /// create message header stream.
+    auto obs = pcode_autog_begin_encode(CID_LOCAL_ERROR_INFO);
+
+    /// encode message fields.
+    obs.write_i(this->error_code);
+    obs.write_v(this->error_msg);
+    return std::move(obs);
+}
+
+int LocalErrorResp::decode(const char* data, int len)
+{
+    ibinarystream ibs;
+    ibs.vassign(data, len);
+
+    ibs.read_i(this->error_code);
+    ibs.read_v(this->error_msg);
+    return ibs.remain();
+}
+
+std::string LocalErrorResp::get_formated_string(void) const
+{
+    std::stringstream ss;
+    ss << "LocalErrorResp:\n";
+    ss << strfmt("error_code", this->error_code << '\n', '-');
+    ss << strfmt("error_msg", this->error_msg << '\n', '-');
+    return ss.str();
+}
+
 obinarystream MsgPeerEndpointReq::encode(void) const
 {
     /// create message header stream.
@@ -167,6 +260,9 @@ MsgBase* messages::temp_create_message(int command_id)
 
 static int internal_message_ctor_table_preinit(void)
 {
+    s_table_message_ctor[CID_LOGIN_REQ]= []()->MsgBase*{ return new(s_allocp) LoginReq(); };
+    s_table_message_ctor[CID_LOGIN_RESP]= []()->MsgBase*{ return new(s_allocp) LoginResp(); };
+    s_table_message_ctor[CID_LOCAL_ERROR_INFO]= []()->MsgBase*{ return new(s_allocp) LocalErrorResp(); };
     s_table_message_ctor[CID_MSG_PEER_ENDPOINT_REQ]= []()->MsgBase*{ return new(s_allocp) MsgPeerEndpointReq(); };
     s_table_message_ctor[CID_MSG_PEER_ENDPOINT_RESP]= []()->MsgBase*{ return new(s_allocp) MsgPeerEndpointResp(); };
     s_table_message_ctor[CID_MSG_GET_FRIENDLIST_REQ]= []()->MsgBase*{ return new(s_allocp) MsgGetFriendListReq(); };

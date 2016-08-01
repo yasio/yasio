@@ -10,7 +10,7 @@
 #define _POLITEDEF_H_
 
 #ifndef _POLITE_VERSION
-#define _POLITE_VERSION "1.0.1"
+#define _POLITE_VERSION "1.0.16"
 #endif
 
 #if defined(_MSC_VER)
@@ -245,6 +245,14 @@ namespace polite = ::purelib;
 
 #if _MSC_VER >= 1700
 #define _HAS_STD_THREAD 1
+#endif
+
+#if !defined(__WORDSIZE)
+#if defined(_M_X64) || defined(_WIN64) || defined(__LP64__) || defined(_LP64) || defined(__x86_64) 
+#define __WORDSIZE 64
+#else
+#define __WORDSIZE 32
+#endif
 #endif
 
 #endif /* _POLITEDEF_H_ */

@@ -209,7 +209,7 @@ void xxtcp_client::service()
 
             if (nfds == -1)
             {
-                INET_LOG("select failed, error code: %d\n", GetLastError());
+                INET_LOG("select failed, error code: %d\n", xxsocket::get_last_errno());
                 msleep(TIMER_DURATION);
                 continue;            // select again
             }

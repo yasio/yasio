@@ -143,10 +143,10 @@ void xxtcp_client::start_service(int working_counter)
         this->working_counter_ = working_counter;
         for (auto i = 0; i < working_counter; ++i) {
             std::thread t([this] {
-                // INETLOG("xxtcp_client thread running...");
+                INET_LOG("xxtcp_client work thread running...");
                 this->service();
                 --working_counter_;
-                //cocos2d::log("p2s thread exited.");
+                INET_LOG("xxtcp_client work thread thread exited.");
             });
             t.detach();
         }
@@ -209,7 +209,7 @@ void xxtcp_client::service()
 
             if (nfds == -1)
             {
-                // log("select failed, error code: %d\n", GetLastError());
+                INET_LOG("select failed, error code: %d\n", xxsocket::get_last_errno());
                 msleep(TIMER_DURATION);
                 continue;            // select again
             }
@@ -267,7 +267,7 @@ void xxtcp_client::service()
                         }
                     }
                     else {
-                        printf("P2P: The connection local --> peer established. \n");
+                        INET_LOG("P2P: The connection local --> peer established. \n");
                         this->p2p_channel1_.connected_ = true;
                     }
                 }
@@ -335,7 +335,7 @@ void xxtcp_client::handle_error(void)
         impl_.close();
     }
     else {
-        // INETLOG("local close the connection!");
+        INET_LOG("local close the connection!");
     }
 
     if (this->build_error_pdu_) {
@@ -390,13 +390,13 @@ void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_send_ca
         send_queue_.push(pdu);
     }
     else {
-        // cocos2d::log("xxtcp_client::send failed, The connection not ok!!!");
+        INET_LOG("xxtcp_client::send failed, The connection not ok!!!");
     }
 }
 
 void xxtcp_client::move_received_pdu(xxp2p_io_ctx* ctx)
 {
-    //cocos2d::log("moveReceivedpdu...");
+    INET_LOG("move_received_pdu...");
 
     std::unique_lock<std::mutex> autolock(recv_queue_mtx_);
     recv_queue_.push(std::move(ctx->receiving_pdu_));
@@ -428,7 +428,7 @@ bool xxtcp_client::connect(void)
     }
     else if (flags & ipsv_ipv6)
     { // client is IPV6_Only
-        //cocos2d::log("Client needs a ipv6 server address to connect!");
+        INET_LOG("Client needs a ipv6 server address to connect!");
         ret = impl_.pconnect_n(this->addressv6_.c_str(), this->port_, this->connect_timeout_);
     }
     if (ret == 0)
@@ -572,7 +572,7 @@ bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
             if (n == -1)
                 n = 0;
 
-            // INETLOG("xxtcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + offset);
+            INET_LOG("xxtcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
 
             if (ctx->expected_pdu_length_ == -1) { // decode length
                 if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->expected_pdu_length_))
@@ -639,7 +639,7 @@ bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
             socket_error_ = xxsocket::get_last_errno();
             if (SHOULD_CLOSE_0(n, socket_error_)) {
                 if (n == 0) {
-                    //INETLOG("server close the connection!");
+                    INET_LOG("server close the connection!");
                 }
                 break;
             }

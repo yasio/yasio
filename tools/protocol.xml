@@ -41,7 +41,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
   </header>
 
   <structures>
-    <!-->
+    
     <structure name="UserInfo">
       <field name="user_id" type="uint32_t" />
       <field name="user_name" type="std::string" />
@@ -50,47 +50,32 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="hero_lv" type="uint16_t" />
       <field name="hero_hp" type="uint32_t" />
       <field name="hero_mp" type="uint32_t" />
-    </structure>-->
+    </structure>
     
   </structures>
 
   <messages>
     
-    <!--<message name="MsgHeader" is_header="1" >
-      <field name="length" type="uint16_t" />
-      <field name="command_id" type="uint16_t" />
-      <field name="version"  type="uint16_t" />
-      <field name="reserved" type="uint16_t" />
-      <field name="reserved2" type="uint64_t" />
-    </message>-->
-
     <message name="MsgHeader" is_header="1" >
       <field name="length" type="uint16_t" />
       <field name="command_id" type="uint16_t" />
+      <field name="version"  type="uint16_t" />
+      <field name="reserved" type="uint16_t" /> <!-- magic number For packet check, such as 0x5a5a-->
+      <field name="reserved2" type="uint64_t" /> <!-- May be timestamp -->
     </message>
 
-    <message name="MsgPacket" command_id="CID_MSG_PACKET = 1" mode="encode|decode" >
-      <field name="content" type="std::string" />
-    </message>
-
-     <message name="LocalErrorResp" command_id="CID_LOCAL_ERROR_INFO = 0x7fff" mode="encode|decode">
-      <field name="error_code" type="int16_t" />
-      <field name="error_msg" type="std::string" />
-    </message>
-
-    <!-->
-     <message name="LoginReq" command_id="CID_LOGIN_REQ = 101" mode="encode|decode">
+     <message name="LoginReq" command_id="CID_LOGIN_REQ = 101" mode="encode|decode">	<!-- 登陆请求 -->
       <field name="username" type="std::string" />
       <field name="password" type="std::string" />
     </message>
 
-    <message name="LoginResp" command_id="CID_LOGIN_RESP = 102" mode="encode|decode">	
+    <message name="LoginResp" command_id="CID_LOGIN_RESP = 102" mode="encode|decode">	<!-- 登陆响应 -->
       <field name="succeed" type="bool" />
       <field name="session" type="int32_t" />
-      <field name="append_info" type="std::string" />
+      <field name="append_info" type="std::string" /> <!--如果自定义json格式则可增加附加字符串, 自行解析和编码-->
     </message>
 
-    <message name="LocalErrorResp" command_id="CID_LOCAL_ERROR_INFO = 0x7fff" mode="encode|decode">
+    <message name="LocalErrorResp" command_id="CID_LOCAL_ERROR_INFO = 0x7fff" mode="encode|decode">	<!-- 网络出错 -->
       <field name="error_code" type="int16_t" />
       <field name="error_msg" type="std::string" />
     </message>
@@ -115,7 +100,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="result" type="int8_t" />
       <field name="user_id" type="uint32_t" />
       <field name="friends" type="std::vector&lt;UserInfo&gt;" />
-    </message>-->
+    </message>
     
   </messages>
   

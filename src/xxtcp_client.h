@@ -12,10 +12,9 @@
 #include <atomic>
 #include <queue>
 
-// User can define this macro to cocos2d::log
-// such as: INET_LOG(format, ...) cocos2d::log((format),##__VA_ARGS__)
-#define _USING_IN_COCOS2DX 1
-#if defined(_USING_IN_COCOS2DX)
+#define _USING_IN_COCOS2DX 0
+#if _USING_IN_COCOS2DX
+#include "cocos2d.h"
 #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
 #else
 #define INET_LOG(format, ...) fprintf(stdout,(format "\n"),##__VA_ARGS__)

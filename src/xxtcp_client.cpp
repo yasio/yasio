@@ -222,16 +222,24 @@ void xxtcp_client::service()
             /*
             ** check and handle error sockets
             */
+#if 0
             for (auto i = 0; i < excep_set.fd_count; ++i) {
                 if (excepfds_.fd_array[i] == this->impl_)
                 {
                     goto _L_error;
                 }
             }
+#else
+            if (FD_ISSET(this->impl_.native_handle(), &excep_set))
+            { // exception occured
+                goto _L_error;
+            }
+#endif
 
             /*
             ** check and handle readable sockets
             */
+#if 0
             for (auto i = 0; i < read_set.fd_count; ++i) {
                 const auto readfd = read_set.fd_array[i];
                 if (readfd == this->p2p_acceptor_)
@@ -264,6 +272,14 @@ void xxtcp_client::service()
                     }
                 }
             }
+#else
+            if (FD_ISSET(this->impl_.native_handle(), &read_set))
+            { // can read socket data
+                if (!do_read(this))
+                    goto _L_error;
+                idle_ = false;
+            }
+#endif
 
             // perform write operations
             if (!do_write(this))

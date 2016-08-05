@@ -15,3 +15,12 @@ firstly, add aditionnal includes path "Root Of boost.asio.1.0.161 Directory" to 
 #3.Currently Win32, Android and Apple(OS X/iOS) compile succeed.
 
 #4.Please open c++11 flags(-std=c++11) for Android compile.
+
+
+BOOST_ASIO_DISABLE_DEV_POLL: Explicitly disables /dev/poll support on Solaris, forcing the use of a select-based implementation. 
+BOOST_ASIO_DISABLE_EPOLL: Explicitly disables epoll support on Linux, forcing the use of a select-based implementation. 
+BOOST_ASIO_DISABLE_EVENTFD: Explicitly disables eventfd support on Linux, forcing the use of a pipe to interrupt blocked epoll/select system calls. 
+BOOST_ASIO_DISABLE_KQUEUE: Explicitly disables kqueue support on Mac OS X and BSD variants, forcing the use of a select-based implementation. 
+BOOST_ASIO_DISABLE_IOCP: Explicitly disables I/O completion ports support on Windows, forcing the use of a select-based implementation. 
+
+More detail: http://think-async.com/Asio/boost_asio_1_10_6/doc/html/boost_asio/using.html

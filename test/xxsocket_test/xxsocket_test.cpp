@@ -1,6 +1,8 @@
 #include "xxsocket.h"
 #include "xxtcp_client.h"
 #include "pcode_autog_client_messages.h"
+#include "http_client.hpp"
+
 #if defined(_WIN32)
 #define sleep(sec) Sleep(sec * 1000)
 #define msleep(msec) Sleep(msec)
@@ -26,6 +28,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
     return hdr.encode();
 }
 
+#if 0
 // 解析消息长度
 bool decode_pdu_length(const char* data, size_t datalen, int& len)
 {
@@ -144,6 +147,8 @@ void test_https_connect()
 
 int main(int, char**)
 {
+    std::string respData = send_http_req("http://x-studio365.com");
+    
     // test_https_connect();
     test_tcp_service();
 
@@ -154,3 +159,4 @@ int main(int, char**)
     return 0;
 }
 
+#endif

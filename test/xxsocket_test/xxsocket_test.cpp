@@ -101,8 +101,10 @@ void test_tcp_service()
             });
         }
     });
-    tcpcli->set_callbacks(decode_pdu_length, build_error_msg, on_recv_msg);
-    tcpcli->set_endpoint("127.0.0.1", "", 6001); // 先设置为登陆服务器
+    tcpcli->set_callbacks(decode_pdu_length, build_error_msg, on_recv_msg, [] (const vdcallback_t& callb) {
+        callb();
+    });
+    tcpcli->set_endpoint("www.baidu.com", "", 443); // 先设置为登陆服务器
     tcpcli->start_service();
     auto start = std::chrono::steady_clock::now();
     printf("3秒后开始连接服务器...\n");

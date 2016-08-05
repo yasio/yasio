@@ -68,7 +68,7 @@ namespace purelib {
             int                        error = 0;
 
             std::recursive_mutex       send_queue_mtx_;
-            std::queue<xxappl_pdu*>    send_queue_;
+            std::deque<xxappl_pdu*>    send_queue_;
 
             void                       reset();
         };

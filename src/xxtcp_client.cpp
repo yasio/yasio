@@ -1,6 +1,6 @@
 #include "oslib.h"
 #include "xxtcp_client.h"
-
+#include "object_pool.h"
 
 #ifdef _WIN32
 #define msleep(msec) Sleep((msec))
@@ -36,18 +36,31 @@ public:
     size_t                     offset_; // offset
     xxappl_pdu_send_callback_t on_sent_;
     long long                  timestamp_; // In milliseconds
+
+    static void * operator new(size_t /*size*/)
+    {
+        return get_pool().get();
+    }
+
+    static void operator delete(void *p)
+    {
+        get_pool().release(p);
+    }
+
+    static purelib::gc::object_pool<xxappl_pdu>& get_pool()
+    {
+        static purelib::gc::object_pool<xxappl_pdu> s_pool;
+        return s_pool;
+    }
 };
 
 void xxp2p_io_ctx::reset()
 {
     connected_ = false;
     receiving_pdu_.clear();
-    maxfdp_ = 0;
     offset_ = 0;
     expected_pdu_length_ = -1;
     error = 0;
-    std::queue<xxappl_pdu*> empty_queue;
-    send_queue_.swap(empty_queue);
 
     if (this->impl_.is_open()) {
         this->impl_.close();
@@ -69,6 +82,7 @@ xxtcp_client::xxtcp_client() : app_exiting_(false),
     FD_ZERO(&writefds_);
     FD_ZERO(&excepfds_);
 
+    maxfdp_ = 0;
     reset();
 }
 
@@ -347,6 +361,13 @@ void xxtcp_client::handle_error(void)
         this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
         move_received_pdu(this);
     }
+
+    std::lock_guard<std::recursive_mutex> lk(this->send_queue_mtx_);
+    if (!send_queue_.empty()) {
+        for (auto pdu : send_queue_)
+            delete pdu;
+        send_queue_.clear();
+    }
 }
 
 void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -394,7 +415,7 @@ void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_send_ca
         auto pdu = new xxappl_pdu(std::move(data), callback);
         
         std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
-        send_queue_.push(pdu);
+        send_queue_.push_back(pdu);
     }
     else {
         INET_LOG("xxtcp_client::send failed, The connection not ok!!!");
@@ -444,10 +465,6 @@ bool xxtcp_client::connect(void)
         FD_ZERO(&excepfds_);
 
         register_descriptor(impl_.native_handle(), socket_event_read | socket_event_write | socket_event_except);
-
-        std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
-        std::queue<xxappl_pdu*> emptypduQueue;
-        this->send_queue_.swap(emptypduQueue);
 
         impl_.set_nonblocking(true);
 
@@ -516,11 +533,11 @@ bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
             auto bytes_left = v->data_.size() - v->offset_;
             n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
             if (n == bytes_left) { // All pdu bytes sent.
-                ctx->send_queue_.pop();
+                ctx->send_queue_.pop_front();
                 this->call_tsf_([v] {
-                    if (v->onSend != nullptr)
-                        v->onSend(ErrorCode::ERR_OK);
-                    v->release();
+                    if (v->on_sent_ != nullptr)
+                        v->on_sent_(ErrorCode::ERR_OK);
+                    delete v;
                 });
             }
             else if (n > 0) { // TODO: add time
@@ -530,22 +547,22 @@ bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
                     v->offset_ += n;
                 }
                 else { // send timeout
-                    ctx->send_queue_.pop();
+                    ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
-                        if (v->onSend)
-                            v->onSend(ErrorCode::ERR_SEND_TIMEOUT);
-                        v->release();
+                        if (v->on_sent_)
+                            v->on_sent_(ErrorCode::ERR_SEND_TIMEOUT);
+                        delete v;
                     });
                 }
             }
             else { // n <= 0, TODO: add time
                 socket_error_ = xxsocket::get_last_errno();
                 if (SHOULD_CLOSE_1(n, socket_error_)) {
-                    ctx->send_queue_.pop();
+                    ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
-                        if (v->onSend)
-                            v->onSend(ErrorCode::ERR_CONNECTION_LOST);
-                        v->release();
+                        if (v->on_sent_)
+                            v->on_sent_(ErrorCode::ERR_CONNECTION_LOST);
+                        delete v;
                     });
 
                     break;

@@ -48,6 +48,8 @@ namespace purelib {
             socket_event_except = 4,
         };
 
+        typedef std::function<void()> void_callback_t;
+
         class xxappl_pdu; // application layer protocol data unit.
 
         typedef std::function<void(ErrorCode)> xxappl_pdu_send_callback_t;
@@ -95,11 +97,12 @@ namespace purelib {
             // set endpoint of server.
             void       set_endpoint(const char* address, const char* addressv6, u_short port);
 
-            // set callbacks
+            // set callbacks, required API, must call by user
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
                 build_error_func build_error_pdu_func,
-                const xxappl_pdu_recv_callback_t& callback);
+                const xxappl_pdu_recv_callback_t& callback, 
+                const std::function<void(const void_callback_t&)>& threadsafe_call); 
 
             void       set_connect_listener(const connect_listener& listener);
 
@@ -186,6 +189,7 @@ namespace purelib {
             xxappl_pdu_recv_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;
             build_error_func        build_error_pdu_;
+            std::function<void(const void_callback_t&)> call_tsf_;
 
             bool                    idle_;
 

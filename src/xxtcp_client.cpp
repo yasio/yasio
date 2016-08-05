@@ -18,6 +18,8 @@
 
 #define MAX_PDU_LEN 16384
 
+#define CALL_TSF(stmt) this->call_tsf_([=]{(stmt);});
+
 namespace purelib {
 namespace inet {
 class xxappl_pdu
@@ -101,11 +103,13 @@ void xxtcp_client::set_endpoint(const char* address, const char* addressv6, u_sh
 void xxtcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
     build_error_func build_error_pdu_func,
-    const xxappl_pdu_recv_callback_t& callback)
+    const xxappl_pdu_recv_callback_t& callback, 
+    const std::function<void(const void_callback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
     this->on_received_pdu_ = callback;
     this->build_error_pdu_ = build_error_pdu_func;
+    this->call_tsf_ = threadsafe_call;
 }
 
 bool xxtcp_client::collect_received_pdu() {
@@ -415,13 +419,10 @@ bool xxtcp_client::connect(void)
 {
     if (connect_failed_)
     {
-        // simpleHttpReqServerIP();
         connect_failed_ = false;
     }
 
     INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
-    //impl.open();
-    //auto ep = xxsocket::resolve(this->address.c_str(), this->port);
 
     int ret = -1;
     this->connected_ = false;
@@ -455,7 +456,7 @@ bool xxtcp_client::connect(void)
         offset_ = 0;
         receiving_pdu_.clear();
 
-        this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+        this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
         INET_LOG("connect server: %s:%u succeed.", address_.c_str(), port_);
 
@@ -481,7 +482,7 @@ bool xxtcp_client::connect(void)
 #endif
 
         if (this->connect_listener_ != nullptr) {
-            this->connect_listener_(true, 0);
+            CALL_TSF(this->connect_listener_(true, 0));
         }
 
         return true;
@@ -490,7 +491,7 @@ bool xxtcp_client::connect(void)
         connect_failed_ = true;
         int ec = xxsocket::get_last_errno();
         if (this->connect_listener_ != nullptr) {
-            this->connect_listener_(false, ec);
+            CALL_TSF(this->connect_listener_(false, ec));
         }
 
         INET_LOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address_.c_str(), port_, ec, xxsocket::get_error_msg(ec));
@@ -516,11 +517,11 @@ bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
             n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop();
-                /*CCRUNONGL([v] {
+                this->call_tsf_([v] {
                     if (v->onSend != nullptr)
                         v->onSend(ErrorCode::ERR_OK);
                     v->release();
-                });*/
+                });
             }
             else if (n > 0) { // TODO: add time
                 if ((millitime() - v->timestamp_) < (send_timeout_ * 1000))
@@ -530,22 +531,22 @@ bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
                 }
                 else { // send timeout
                     ctx->send_queue_.pop();
-                    /*CCRUNONGL([v] {
+                    this->call_tsf_([v] {
                         if (v->onSend)
                             v->onSend(ErrorCode::ERR_SEND_TIMEOUT);
                         v->release();
-                    });*/
+                    });
                 }
             }
             else { // n <= 0, TODO: add time
                 socket_error_ = xxsocket::get_last_errno();
                 if (SHOULD_CLOSE_1(n, socket_error_)) {
                     ctx->send_queue_.pop();
-                    /*CCRUNONGL([v] {
+                    this->call_tsf_([v] {
                         if (v->onSend)
                             v->onSend(ErrorCode::ERR_CONNECTION_LOST);
                         v->release();
-                    });*/
+                    });
 
                     break;
                 }

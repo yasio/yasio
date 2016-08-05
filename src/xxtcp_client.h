@@ -17,7 +17,7 @@
 #include "cocos2d.h"
 #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
 #else
-#define INET_LOG(format, ...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
+#define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
 #endif
 
 namespace purelib {
@@ -180,6 +180,7 @@ namespace purelib {
 
 
             // socket event set
+            int maxfdp_;
             fd_set readfds_, writefds_, excepfds_;
             connect_listener        connect_listener_;
             xxappl_pdu_recv_callback_t on_received_pdu_;

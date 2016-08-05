@@ -40,6 +40,7 @@ void xxp2p_io_ctx::reset()
 {
     connected_ = false;
     receiving_pdu_.clear();
+    maxfdp_ = 0;
     offset_ = 0;
     expected_pdu_length_ = -1;
     error = 0;
@@ -205,7 +206,7 @@ void xxtcp_client::service()
             memcpy(&write_set, &writefds_, sizeof(fd_set));
             memcpy(&excep_set, &excepfds_, sizeof(fd_set));
 
-            int nfds = ::select(0, &read_set, &write_set, &excep_set, &timeout);
+            int nfds = ::select(maxfdp_, &read_set, &write_set, &excep_set, &timeout);
 
             if (nfds == -1)
             {
@@ -360,6 +361,8 @@ void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
     {
         FD_SET(fd, &this->excepfds_);
     }
+
+    maxfdp_ = static_cast<int>(fd) + 1;
 }
 
 void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
@@ -439,8 +442,7 @@ bool xxtcp_client::connect(void)
         FD_ZERO(&writefds_);
         FD_ZERO(&excepfds_);
 
-        auto fd = impl_.native_handle();
-        register_descriptor(fd, socket_event_read | socket_event_write | socket_event_except);
+        register_descriptor(impl_.native_handle(), socket_event_read | socket_event_write | socket_event_except);
 
         std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
         std::queue<xxappl_pdu*> emptypduQueue;

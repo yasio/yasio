@@ -48,7 +48,7 @@ namespace purelib {
             socket_event_except = 4,
         };
 
-        typedef std::function<void()> void_callback_t;
+        typedef std::function<void()> vdcallback_t;
 
         class xxappl_pdu; // application layer protocol data unit.
 
@@ -98,11 +98,19 @@ namespace purelib {
             void       set_endpoint(const char* address, const char* addressv6, u_short port);
 
             // set callbacks, required API, must call by user
+            /*
+              threadsafe_call: for cocos2d-x should be:
+              [](const vdcallback_t& callback) {
+                  cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{
+                      callback();
+                  });
+              }
+            */
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
                 build_error_func build_error_pdu_func,
                 const xxappl_pdu_recv_callback_t& callback, 
-                const std::function<void(const void_callback_t&)>& threadsafe_call); 
+                const std::function<void(const vdcallback_t&)>& threadsafe_call); 
 
             void       set_connect_listener(const connect_listener& listener);
 
@@ -189,7 +197,7 @@ namespace purelib {
             xxappl_pdu_recv_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;
             build_error_func        build_error_pdu_;
-            std::function<void(const void_callback_t&)> call_tsf_;
+            std::function<void(const vdcallback_t&)> call_tsf_;
 
             bool                    idle_;
 

@@ -104,7 +104,7 @@ void xxtcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
     build_error_func build_error_pdu_func,
     const xxappl_pdu_recv_callback_t& callback, 
-    const std::function<void(const void_callback_t&)>& threadsafe_call)
+    const std::function<void(const vdcallback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
     this->on_received_pdu_ = callback;

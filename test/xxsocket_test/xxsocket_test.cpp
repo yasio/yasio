@@ -110,10 +110,10 @@ void test_tcp_service()
     printf("3秒后开始连接服务器...\n");
     while (1) {
         
-        bool received = tcpcli->collect_received_pdu();
-        if (!received) {
+        // bool received = tcpcli->collect_received_pdu();
+        //if (!received) {
             msleep(1); // 模拟cocos2d-x主线程
-        }
+        //}
 
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
         if (elapsed.count() == 3)

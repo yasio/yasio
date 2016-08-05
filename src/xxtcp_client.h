@@ -90,8 +90,10 @@ namespace purelib {
             xxtcp_client();
             ~xxtcp_client();
 
+#if 0 // unneeded
             // must be call on main thread(such cocos2d-x opengl thread)
             bool       collect_received_pdu();
+#endif
 
             // set endpoint of server.
             void       set_endpoint(const char* address, const char* addressv6, u_short port);

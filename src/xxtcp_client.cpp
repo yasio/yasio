@@ -126,6 +126,7 @@ void xxtcp_client::set_callbacks(
     this->call_tsf_ = threadsafe_call;
 }
 
+#if 0
 bool xxtcp_client::collect_received_pdu() {
     if (this->recv_queue_.empty())
         return false;
@@ -153,6 +154,7 @@ bool xxtcp_client::collect_received_pdu() {
         return false;
     }
 }
+#endif
 
 void xxtcp_client::start_service(int working_counter)
 {
@@ -426,9 +428,12 @@ void xxtcp_client::move_received_pdu(xxp2p_io_ctx* ctx)
 {
     INET_LOG("move_received_pdu...");
 
-    std::unique_lock<std::mutex> autolock(recv_queue_mtx_);
-    recv_queue_.push(std::move(ctx->receiving_pdu_));
-    autolock.unlock();
+    //std::unique_lock<std::mutex> autolock(recv_queue_mtx_);
+    //recv_queue_.push(std::move(ctx->receiving_pdu_));
+    //autolock.unlock();
+    this->call_tsf_([pdu = std::move(ctx->receiving_pdu_), this]() mutable -> void {
+        this->on_received_pdu_(std::move(pdu));
+    });
 
     ctx->expected_pdu_length_ = -1;
 

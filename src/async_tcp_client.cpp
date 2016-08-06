@@ -619,6 +619,8 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                         ctx->offset_ += n;
                     }
                     else { // ok
+                        ctx->receiving_pdu_.reserve(ctx->expected_pdu_length_); // #perfomance, avoid memory reallocte.
+
                         auto bytes_transferred = n + ctx->offset_;
                         ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(ctx->expected_pdu_length_, bytes_transferred));
                         if (bytes_transferred >= expected_pdu_length_)

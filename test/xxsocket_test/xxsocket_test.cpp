@@ -1,5 +1,5 @@
 #include "xxsocket.h"
-#include "xxtcp_client.h"
+#include "async_tcp_client.h"
 #include "pcode_autog_client_messages.h"
 #include "http_client.hpp"
 
@@ -11,7 +11,7 @@
 using namespace purelib::inet;
 
 //////////////////////////////////////////////
-// xxtcp_client: 业务无关的基于tcp的二进制协议服务
+// async_tcp_client: 业务无关的基于tcp的二进制协议服务
 // 以下为必须接口,仅展现用法, 建议封装成一个业务单例,例如NetworManager
 #define PACKET_HEADER_LENGTH sizeof(messages::MsgHeader)
 #define PACKET_MAGIC_NUMBER 0x5a5a
@@ -121,16 +121,16 @@ void test_tcp_service()
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
         auto seconds = elapsed.count();
         if (seconds > 0) {
-            if (seconds == 3000)
+            if (seconds >= 3000 && seconds < 6000)
             {
                 /*
                 这里只通知连接一次,如果连接失败,tcpcli线程会挂起,直到再次调用notify_connect
                 */
                 tcpcli->notify_connect();
 
-                printf("3秒后发送一条消息...\n");
+                // printf("3秒后发送一条消息...\n");
             }
-            else if (seconds == 6000)
+            else if (seconds > 6000 && seconds % 3000 == 0)
             {
                 std::vector<char> msg;
                 msg.resize(sizeof("hello world\r\n"));

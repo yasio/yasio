@@ -150,9 +150,9 @@
     <ClCompile Include="..\..\src\ibinarystream.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\oslib.cpp" />
-    <ClCompile Include="..\..\src\xxselect_interrupter.cpp" />
+    <ClCompile Include="..\..\src\select_interrupter.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="..\..\src\xxtcp_client.cpp" />
+    <ClCompile Include="..\..\src\async_tcp_client.cpp" />
     <ClCompile Include="async_client.cpp" />
     <ClCompile Include="pcode_autog_client_messages.cpp" />
     <ClCompile Include="xxsocket_test.cpp" />
@@ -161,9 +161,9 @@
     <ClInclude Include="..\..\src\ibinarystream.h" />
     <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\oslib.h" />
-    <ClInclude Include="..\..\src\xxselect_interrupter.hpp" />
+    <ClInclude Include="..\..\src\select_interrupter.h" />
     <ClInclude Include="..\..\src\xxsocket.h" />
-    <ClInclude Include="..\..\src\xxtcp_client.h" />
+    <ClInclude Include="..\..\src\async_tcp_client.h" />
     <ClInclude Include="pcode_autog_client_constants.h" />
     <ClInclude Include="pcode_autog_client_includes.h" />
     <ClInclude Include="pcode_autog_client_messages.h" />

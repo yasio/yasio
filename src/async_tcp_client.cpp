@@ -1,5 +1,5 @@
 #include "oslib.h"
-#include "xxtcp_client.h"
+#include "async_tcp_client.h"
 #include "object_pool.h"
 
 #ifdef _WIN32
@@ -22,10 +22,10 @@
 
 namespace purelib {
 namespace inet {
-class xxappl_pdu
+class appl_pdu
 {
 public:
-    xxappl_pdu(std::vector<char>&& right, const xxappl_pdu_send_callback_t& callback)
+    appl_pdu(std::vector<char>&& right, const appl_pdu_send_callback_t& callback)
     {
         data_ = std::move(right);
         offset_ = 0;
@@ -34,7 +34,7 @@ public:
     }
     std::vector<char>          data_; // sending data
     size_t                     offset_; // offset
-    xxappl_pdu_send_callback_t on_sent_;
+    appl_pdu_send_callback_t on_sent_;
     long long                  timestamp_; // In milliseconds
 
     static void * operator new(size_t /*size*/)
@@ -47,14 +47,14 @@ public:
         get_pool().release(p);
     }
 
-    static purelib::gc::object_pool<xxappl_pdu>& get_pool()
+    static purelib::gc::object_pool<appl_pdu>& get_pool()
     {
-        static purelib::gc::object_pool<xxappl_pdu> s_pool;
+        static purelib::gc::object_pool<appl_pdu> s_pool;
         return s_pool;
     }
 };
 
-void xxp2p_io_ctx::reset()
+void p2p_io_ctx::reset()
 {
     connected_ = false;
     receiving_pdu_.clear();
@@ -67,7 +67,7 @@ void xxp2p_io_ctx::reset()
     }
 }
 
-xxtcp_client::xxtcp_client() : app_exiting_(false),
+async_tcp_client::async_tcp_client() : app_exiting_(false),
     thread_started_(false),
     interrupter_(),
     address_("192.168.1.104"),
@@ -87,7 +87,7 @@ xxtcp_client::xxtcp_client() : app_exiting_(false),
     reset();
 }
 
-xxtcp_client::~xxtcp_client()
+async_tcp_client::~async_tcp_client()
 {
     app_exiting_ = true;
 
@@ -102,23 +102,23 @@ xxtcp_client::~xxtcp_client()
     }
 }
 
-void xxtcp_client::set_timeouts(long timeo_connect, long timeo_send)
+void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
 {
     this->connect_timeout_ = timeo_connect;
     this->send_timeout_ = timeo_send;
 }
 
-void xxtcp_client::set_endpoint(const char* address, const char* addressv6, u_short port)
+void async_tcp_client::set_endpoint(const char* address, const char* addressv6, u_short port)
 {
     this->address_ = address;
     this->addressv6_ = address;
     this->port_ = port;
 }
 
-void xxtcp_client::set_callbacks(
+void async_tcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
     build_error_func build_error_pdu_func,
-    const xxappl_pdu_recv_callback_t& callback, 
+    const appl_pdu_recv_callback_t& callback, 
     const std::function<void(const vdcallback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
@@ -128,7 +128,7 @@ void xxtcp_client::set_callbacks(
 }
 
 #if 0
-bool xxtcp_client::collect_received_pdu() {
+bool async_tcp_client::collect_received_pdu() {
     if (this->recv_queue_.empty())
         return false;
 
@@ -157,7 +157,7 @@ bool xxtcp_client::collect_received_pdu() {
 }
 #endif
 
-void xxtcp_client::start_service(int working_counter)
+void async_tcp_client::start_service(int working_counter)
 {
     if (!thread_started_) {
         thread_started_ = true;
@@ -165,28 +165,28 @@ void xxtcp_client::start_service(int working_counter)
         this->working_counter_ = working_counter;
         for (auto i = 0; i < working_counter; ++i) {
             std::thread t([this] {
-                INET_LOG("xxtcp_client thread running...");
+                INET_LOG("async_tcp_client thread running...");
                 this->service();
                 --working_counter_;
-                INET_LOG("xxtcp_client thread exited.");
+                INET_LOG("async_tcp_client thread exited.");
             });
             t.detach();
         }
     }
 }
 
-void xxtcp_client::set_connect_listener(const connect_listener& listener)
+void async_tcp_client::set_connect_listener(const connect_listener& listener)
 {
     this->connect_listener_ = listener;
 }
 
-void xxtcp_client::wait_connect_notify()
+void async_tcp_client::wait_connect_notify()
 {
     std::unique_lock<std::mutex> autolock(connect_notify_mtx_);
     connect_notify_cv_.wait(autolock); // wait 1 minutes, if no notify, wakeup self.
 }
 
-void xxtcp_client::service()
+void async_tcp_client::service()
 {
 #if defined(_WIN32) && !defined(WINRT)
     timeBeginPeriod(1);
@@ -344,19 +344,19 @@ void xxtcp_client::service()
 #endif
 }
 
-void xxtcp_client::close()
+void async_tcp_client::close()
 {
     if (impl_.is_open())
         impl_.close();
 }
 
-void xxtcp_client::notify_connect()
+void async_tcp_client::notify_connect()
 {
     std::unique_lock<std::mutex> autolock(connect_notify_mtx_);
     connect_notify_cv_.notify_one();
 }
 
-void xxtcp_client::handle_error(void)
+void async_tcp_client::handle_error(void)
 {
     socket_error_ = xxsocket::get_last_errno();
     const char* errs = xxsocket::get_error_msg(socket_error_);
@@ -381,7 +381,7 @@ void xxtcp_client::handle_error(void)
     }
 }
 
-void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
+void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
 {
     if ((flags & socket_event_read) != 0)
     {
@@ -401,7 +401,7 @@ void xxtcp_client::register_descriptor(const socket_native_type fd, int flags)
     maxfdp_ = static_cast<int>(fd) + 1;
 }
 
-void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
+void async_tcp_client::unregister_descriptor(const socket_native_type fd, int flags)
 {
     if ((flags & socket_event_read) != 0)
     {
@@ -419,11 +419,11 @@ void xxtcp_client::unregister_descriptor(const socket_native_type fd, int flags)
     }
 }
 
-void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_send_callback_t& callback)
+void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback)
 {
     if (this->impl_.is_open())
     {
-        auto pdu = new xxappl_pdu(std::move(data), callback);
+        auto pdu = new appl_pdu(std::move(data), callback);
         
         std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
         send_queue_.push_back(pdu);
@@ -431,11 +431,11 @@ void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_send_ca
         interrupter_.interrupt();
     }
     else {
-        INET_LOG("xxtcp_client::send failed, The connection not ok!!!");
+        INET_LOG("async_tcp_client::send failed, The connection not ok!!!");
     }
 }
 
-void xxtcp_client::move_received_pdu(xxp2p_io_ctx* ctx)
+void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
 {
     INET_LOG("move_received_pdu...");
 
@@ -453,7 +453,7 @@ void xxtcp_client::move_received_pdu(xxp2p_io_ctx* ctx)
 }
 
 
-bool xxtcp_client::connect(void)
+bool async_tcp_client::connect(void)
 {
     if (connect_failed_)
     {
@@ -535,7 +535,7 @@ bool xxtcp_client::connect(void)
     }
 }
 
-bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
+bool async_tcp_client::do_write(p2p_io_ctx* ctx)
 {
     bool bRet = false;
 
@@ -596,7 +596,7 @@ bool xxtcp_client::do_write(xxp2p_io_ctx* ctx)
     return bRet;
 }
 
-bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
+bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 {
     bool bRet = false;
     do {
@@ -610,7 +610,7 @@ bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
             if (n == -1)
                 n = 0;
 
-            INET_LOG("xxtcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
+            INET_LOG("async_tcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
 
             if (ctx->expected_pdu_length_ == -1) { // decode length
                 if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->expected_pdu_length_))
@@ -690,7 +690,7 @@ bool xxtcp_client::do_read(xxp2p_io_ctx* ctx)
     return bRet;
 }
 
-void xxtcp_client::p2p_open()
+void async_tcp_client::p2p_open()
 {
     if (is_connected()) {
         if (this->p2p_acceptor_.reopen())
@@ -702,7 +702,7 @@ void xxtcp_client::p2p_open()
     }
 }
 
-bool xxtcp_client::p2p_do_accept(void)
+bool async_tcp_client::p2p_do_accept(void)
 {
     if (this->p2p_channel2_.impl_.is_open())
     { // Just ignore other connect request for 1 <<-->> 1 connections.
@@ -715,7 +715,7 @@ bool xxtcp_client::p2p_do_accept(void)
     return this->p2p_channel2_.impl_.is_open();
 }
 #if 0
-void xxtcp_client::dispatchResponseCallbacks(float delta)
+void async_tcp_client::dispatchResponseCallbacks(float delta)
 {
     std::unique_lock<std::mutex> autolock(this->recvQueueMtx);
     if (!this->recvQueue.empty()) {

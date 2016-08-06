@@ -39,10 +39,10 @@
     <ClCompile Include="xxsocket_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\xxselect_interrupter.cpp">
+    <ClCompile Include="..\..\src\select_interrupter.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\xxtcp_client.cpp">
+    <ClCompile Include="..\..\src\async_tcp_client.cpp">
       <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>
@@ -71,10 +71,10 @@
     <ClInclude Include="..\..\src\obinarystream.h">
       <Filter>lib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\xxselect_interrupter.hpp">
+    <ClInclude Include="..\..\src\async_tcp_client.h">
       <Filter>lib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\xxtcp_client.h">
+    <ClInclude Include="..\..\src\select_interrupter.h">
       <Filter>lib</Filter>
     </ClInclude>
   </ItemGroup>

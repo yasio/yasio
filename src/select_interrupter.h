@@ -1,5 +1,5 @@
 //
-// detail/socket_select_interrupter.hpp
+// select_interrupter.h
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
@@ -7,36 +7,35 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
-
-#ifndef BOOST_ASIO_DETAIL_XXSOCKET_SELECT_INTERRUPTER_HPP
-#define BOOST_ASIO_DETAIL_XXSOCKET_SELECT_INTERRUPTER_HPP
+#ifndef _XXSOCKET_SELECT_INTERRUPTER_HPP_
+#define _XXSOCKET_SELECT_INTERRUPTER_HPP_
 #include "xxsocket.h"
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#define BOOST_ASIO_DECL
+#define XXSOCKET_DECL
 
 namespace purelib {
 namespace inet {
 
-    class xxselect_interrupter
+    class select_interrupter
 {
 public:
   // Constructor.
-    BOOST_ASIO_DECL xxselect_interrupter();
+  XXSOCKET_DECL select_interrupter();
 
   // Destructor.
-    BOOST_ASIO_DECL ~xxselect_interrupter();
+  XXSOCKET_DECL ~select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  BOOST_ASIO_DECL void recreate();
+  XXSOCKET_DECL void recreate();
 
   // Interrupt the select call.
-  BOOST_ASIO_DECL void interrupt();
+  XXSOCKET_DECL void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  BOOST_ASIO_DECL bool reset();
+  XXSOCKET_DECL bool reset();
 
   // Get the read descriptor to be passed to select.
   socket_native_type read_descriptor() const
@@ -46,10 +45,10 @@ public:
 
 private:
   // Open the descriptors. Throws on error.
-  BOOST_ASIO_DECL void open_descriptors();
+  XXSOCKET_DECL void open_descriptors();
 
   // Close the descriptors.
-  BOOST_ASIO_DECL void close_descriptors();
+  XXSOCKET_DECL void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single
@@ -66,9 +65,5 @@ private:
 } // namespace inet
 } // namespace purelib
 
-
-#if 1
-// # include "xxselect_interrupter.ipp"
-#endif // defined(BOOST_ASIO_HEADER_ONLY)
 
 #endif // BOOST_ASIO_DETAIL_SOCKET_SELECT_INTERRUPTER_HPP

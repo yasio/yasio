@@ -1,5 +1,5 @@
-#ifndef _XXTCP_CLIENT_H_
-#define _XXTCP_CLIENT_H_
+#ifndef _async_tcp_client_H_
+#define _async_tcp_client_H_
 #include "xxsocket.h"
 #include "endian_portable.h"
 #include "singleton.h"
@@ -10,7 +10,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <queue>
-#include "xxselect_interrupter.hpp"
+#include "select_interrupter.h"
 
 #define _USING_IN_COCOS2DX 0
 #if _USING_IN_COCOS2DX
@@ -50,12 +50,12 @@ namespace purelib {
 
         typedef std::function<void()> vdcallback_t;
 
-        class xxappl_pdu; // application layer protocol data unit.
+        class appl_pdu; // application layer protocol data unit.
 
-        typedef std::function<void(ErrorCode)> xxappl_pdu_send_callback_t;
-        typedef std::function<void(std::vector<char>&&)> xxappl_pdu_recv_callback_t;
+        typedef std::function<void(ErrorCode)> appl_pdu_send_callback_t;
+        typedef std::function<void(std::vector<char>&&)> appl_pdu_recv_callback_t;
 
-        struct xxp2p_io_ctx
+        struct p2p_io_ctx
         {
             xxsocket                   impl_;
             bool                       connected_;
@@ -68,15 +68,15 @@ namespace purelib {
             int                        error = 0;
 
             std::recursive_mutex       send_queue_mtx_;
-            std::deque<xxappl_pdu*>    send_queue_;
+            std::deque<appl_pdu*>    send_queue_;
 
             void                       reset();
         };
 
         // A tcp client support P2P
-        class xxtcp_client : public xxp2p_io_ctx
+        class async_tcp_client : public p2p_io_ctx
         {
-            friend struct xxp2p_io_ctx;
+            friend struct p2p_io_ctx;
         public:
 
             // End user pdu decode length func
@@ -88,8 +88,8 @@ namespace purelib {
             typedef std::function<void(bool succeed, int ec)> connect_listener;
 
         public:
-            xxtcp_client();
-            ~xxtcp_client();
+            async_tcp_client();
+            ~async_tcp_client();
 
 #if 0 // unneeded
             // must be call on main thread(such cocos2d-x opengl thread)
@@ -111,7 +111,7 @@ namespace purelib {
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
                 build_error_func build_error_pdu_func,
-                const xxappl_pdu_recv_callback_t& callback, 
+                const appl_pdu_recv_callback_t& callback, 
                 const std::function<void(const vdcallback_t&)>& threadsafe_call); 
 
             void       set_connect_listener(const connect_listener& listener);
@@ -135,7 +135,7 @@ namespace purelib {
             ErrorCode  get_errorno(void) { return error_; }
 
             // post a async send request.
-            void       async_send(std::vector<char>&& data, const xxappl_pdu_send_callback_t& callback = nullptr);
+            void       async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback = nullptr);
 
 
             // ***********  p2p support *****************
@@ -162,9 +162,9 @@ namespace purelib {
 
             void       service(void);
 
-            bool       do_write(xxp2p_io_ctx*);
-            bool       do_read(xxp2p_io_ctx*);
-            void       move_received_pdu(xxp2p_io_ctx*); // move received properly pdu to recv queue
+            bool       do_write(p2p_io_ctx*);
+            bool       do_read(p2p_io_ctx*);
+            void       move_received_pdu(p2p_io_ctx*); // move received properly pdu to recv queue
 
             void       handle_error(void); // TODO: add errorcode parameter
 
@@ -192,13 +192,13 @@ namespace purelib {
             std::condition_variable connect_notify_cv_;
 
             // select interrupter
-            xxselect_interrupter    interrupter_;
+            select_interrupter    interrupter_;
 
             // socket event set
             int maxfdp_;
             fd_set readfds_, writefds_, excepfds_;
             connect_listener        connect_listener_;
-            xxappl_pdu_recv_callback_t on_received_pdu_;
+            appl_pdu_recv_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;
             build_error_func        build_error_pdu_;
             std::function<void(const vdcallback_t&)> call_tsf_;
@@ -213,11 +213,11 @@ namespace purelib {
             // p2p support
             xxsocket                p2p_acceptor_; // p2p: the acceptor for connections: peer-->local
             ip::endpoint            p2p_peer_endpoint_; // p2p: this should tell by server
-            xxp2p_io_ctx            p2p_channel1_; // p2p: connection: local ---> peer
-            xxp2p_io_ctx            p2p_channel2_; // p2p: connection: peer ---> local 
-        }; // xxtcp_client
+            p2p_io_ctx              p2p_channel1_; // p2p: connection: local ---> peer
+            p2p_io_ctx              p2p_channel2_; // p2p: connection: peer ---> local 
+        }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */
 #endif
 
-#define tcpcli purelib::gc::singleton<purelib::inet::xxtcp_client>::instance()
+#define tcpcli purelib::gc::singleton<purelib::inet::async_tcp_client>::instance()

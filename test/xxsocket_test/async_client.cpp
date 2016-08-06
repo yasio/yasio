@@ -15,8 +15,8 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <thread>
-#include "xxselect_interrupter.hpp"
-#include "xxtcp_client.h"
+#include "select_interrupter.h"
+#include "async_tcp_client.h"
 
 using boost::asio::ip::tcp;
 

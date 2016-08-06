@@ -28,7 +28,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
     return hdr.encode();
 }
 
-#if 1
+#if 0
 // 解析消息长度
 bool decode_pdu_length(const char* data, size_t datalen, int& len)
 {

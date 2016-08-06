@@ -26,7 +26,8 @@ public:
   client(boost::asio::io_service& io_service,
       const std::string& server, const std::string& path)
     : resolver_(io_service),
-      socket_(io_service)
+      socket_(io_service),
+      timeout_check_timer_(io_service)
   {
     // Form the request. We specify the "Connection: close" header so that the
     // server will close the socket after transmitting the response. This will
@@ -96,6 +97,8 @@ private:
       }
   }
 
+  boost::asio::deadline_timer timeout_check_timer_;
+
   void handle_write_request(const boost::system::error_code& err)
   {
     if (!err)
@@ -108,16 +111,28 @@ private:
             boost::asio::placeholders::error));
 
       std::thread t([=](){
-          printf("等待5秒发送数据\n");
+          printf("睡眠5秒后开启定时器\n");
           Sleep(5000);
 
-          std::ostream request_stream(&request_);
-          request_stream << "Hello Server!!!\r\n";
+          // boost::asio::deadline_timer timeer;
+          printf("开启定时器60秒后发送数据\n");
+          this->timeout_check_timer_.expires_from_now(boost::posix_time::seconds(60));
+          this->timeout_check_timer_.async_wait([this](const boost::system::error_code& ec) {
+              if (!ec) {
+                 // LOG_TRACE_ALL("check timout, thread id:%u\n", this_thread());
+                  printf("定时器就绪!\n");
+#if 0
+                  //thelib::asy::scoped_rlock<thelib::asy::thread_rwlock> guard(rwlock_);
+                  std::ostream request_stream(&request_);
+                  request_stream << "Hello Server!!!\r\n";
 
-          auto fd = socket_.native_handle();
-          boost::asio::async_write(socket_, request_,
-              boost::bind(&client::handle_write_request_other_thread, this,
-              boost::asio::placeholders::error));
+                  auto fd = socket_.native_handle();
+                  boost::asio::async_write(socket_, request_,
+                      boost::bind(&client::handle_write_request_other_thread, this,
+                      boost::asio::placeholders::error));
+#endif
+              }
+          });
       });
       t.detach();
     }
@@ -214,7 +229,7 @@ private:
   boost::asio::streambuf response_;
 };
 
-#if 0
+#if 1
 int main(int argc, char* argv[])
 {
   try
@@ -226,8 +241,6 @@ int main(int argc, char* argv[])
       std::cout << "  async_client www.boost.org /LICENSE_1_0.txt\n";
       return 1;
     }
-
-    purelib::inet::xxselect_interrupter interrupt;
 
     boost::asio::io_service io_service;
     client c(io_service, argv[1], argv[2]);

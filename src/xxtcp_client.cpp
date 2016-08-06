@@ -220,8 +220,8 @@ void xxtcp_client::service()
         {
             idle_ = true;
 
-            timeout.tv_sec = 0; // 5 minutes
-            timeout.tv_usec = 10 * 1000;     // 10 milliseconds
+            timeout.tv_sec = 5 * 60; // 5 minutes
+            timeout.tv_usec = 0;     // 10 milliseconds
 
             memcpy(&read_set, &readfds_, sizeof(fd_set));
             memcpy(&write_set, &writefds_, sizeof(fd_set));
@@ -299,14 +299,22 @@ void xxtcp_client::service()
             { // can read socket data
                 if (!do_read(this))
                     goto _L_error;
+
                 idle_ = false;
             }
 #endif
-
-            // perform write operations
-            if (!do_write(this))
-            { // TODO: check would block? for client, may be unnecessory.
-                goto _L_error;
+            if (FD_ISSET(this->interrupter_.read_descriptor(), &read_set)) {
+                INET_LOG("select actived, have data to write!");
+                // perform write operations
+                if (do_write(this))
+                { // TODO: check would block? for client, may be unnecessory.
+                    if (this->send_queue_.empty()) {
+                        interrupter_.reset();
+                    }
+                }
+                else {
+                    goto _L_error;
+                }
             }
 
             if (this->p2p_channel1_.connected_) {
@@ -321,9 +329,9 @@ void xxtcp_client::service()
         }
 
         // Avoid high Occupation CPU
-        if (idle_) {
-            msleep(1);
-        }
+        //if (idle_) {
+        //    msleep(1);
+        //}
 
         continue;
 
@@ -419,6 +427,8 @@ void xxtcp_client::async_send(std::vector<char>&& data, const xxappl_pdu_send_ca
         
         std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
         send_queue_.push_back(pdu);
+
+        interrupter_.interrupt();
     }
     else {
         INET_LOG("xxtcp_client::send failed, The connection not ok!!!");
@@ -471,7 +481,8 @@ bool xxtcp_client::connect(void)
         FD_ZERO(&writefds_);
         FD_ZERO(&excepfds_);
 
-        register_descriptor(impl_.native_handle(), socket_event_read | socket_event_write | socket_event_except);
+        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+        register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);
 
         impl_.set_nonblocking(true);
 

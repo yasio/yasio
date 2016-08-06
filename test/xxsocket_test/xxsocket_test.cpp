@@ -28,7 +28,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
     return hdr.encode();
 }
 
-#if 0
+#if 1
 // 解析消息长度
 bool decode_pdu_length(const char* data, size_t datalen, int& len)
 {
@@ -107,7 +107,7 @@ void test_tcp_service()
     tcpcli->set_callbacks(decode_pdu_length, build_error_msg, on_recv_msg, [] (const vdcallback_t& callb) {
         callb();
     });
-    tcpcli->set_endpoint("www.baidu.com", "", 443); // 先设置为登陆服务器
+    tcpcli->set_endpoint("127.0.0.1", "", 443); // 先设置为登陆服务器
     tcpcli->start_service();
     auto start = std::chrono::steady_clock::now();
     printf("3秒后开始连接服务器...\n");
@@ -118,13 +118,25 @@ void test_tcp_service()
             msleep(1); // 模拟cocos2d-x主线程
         //}
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start);
-        if (elapsed.count() == 3)
-        {
-            /*
-            这里只通知连接一次,如果连接失败,tcpcli线程会挂起,直到再次调用notify_connect
-            */
-            tcpcli->notify_connect();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+        auto seconds = elapsed.count();
+        if (seconds > 0) {
+            if (seconds == 3000)
+            {
+                /*
+                这里只通知连接一次,如果连接失败,tcpcli线程会挂起,直到再次调用notify_connect
+                */
+                tcpcli->notify_connect();
+
+                printf("3秒后发送一条消息...\n");
+            }
+            else if (seconds == 6000)
+            {
+                std::vector<char> msg;
+                msg.resize(sizeof("hello world\r\n"));
+                memcpy(&msg.front(), "hello world\r\n", sizeof("hello world\r\n") - 1);
+                tcpcli->async_send(std::move(msg));
+            }
         }
     }
 }
@@ -147,7 +159,7 @@ void test_https_connect()
 
 int main(int, char**)
 {
-    std::string respData = send_http_req("http://x-studio365.com");
+    // std::string respData = send_http_req("http://x-studio365.com");
     
     // test_https_connect();
     test_tcp_service();

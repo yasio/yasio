@@ -16,6 +16,7 @@
 #include <boost/bind.hpp>
 #include <thread>
 #include "xxselect_interrupter.hpp"
+#include "xxtcp_client.h"
 
 using boost::asio::ip::tcp;
 
@@ -213,6 +214,7 @@ private:
   boost::asio::streambuf response_;
 };
 
+#if 0
 int main(int argc, char* argv[])
 {
   try
@@ -238,3 +240,4 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+#endif

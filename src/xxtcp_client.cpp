@@ -69,6 +69,7 @@ void xxp2p_io_ctx::reset()
 
 xxtcp_client::xxtcp_client() : app_exiting_(false),
     thread_started_(false),
+    interrupter_(),
     address_("192.168.1.104"),
     port_(8001),
     connect_timeout_(3),
@@ -431,7 +432,8 @@ void xxtcp_client::move_received_pdu(xxp2p_io_ctx* ctx)
     //std::unique_lock<std::mutex> autolock(recv_queue_mtx_);
     //recv_queue_.push(std::move(ctx->receiving_pdu_));
     //autolock.unlock();
-    this->call_tsf_([pdu = std::move(ctx->receiving_pdu_), this]() mutable -> void {
+    auto pdu = ctx->receiving_pdu_; // make a copy
+    this->call_tsf_([pdu, this]() mutable -> void {
         this->on_received_pdu_(std::move(pdu));
     });
 

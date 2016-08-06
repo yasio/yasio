@@ -735,7 +735,7 @@ bool xxsocket::resolve_v6(std::vector<ip::endpoint>& endpoints, const char* host
     }, hostname, port, AF_INET6, AI_V4MAPPED);
 }
 
-xxsocket::xxsocket(void) : fd(bad_sock)
+xxsocket::xxsocket(void) : fd(invalid_socket)
 {
 }
 
@@ -743,7 +743,7 @@ xxsocket::xxsocket(socket_native_type h) : fd(h)
 {
 }
 
-xxsocket::xxsocket(xxsocket&& right) : fd(bad_sock)
+xxsocket::xxsocket(xxsocket&& right) : fd(invalid_socket)
 {
     swap(right);
 }
@@ -761,7 +761,7 @@ xxsocket& xxsocket::operator=(xxsocket&& right)
     return swap(right);
 }
 
-xxsocket::xxsocket(int af, int type, int protocol) : fd(bad_sock)
+xxsocket::xxsocket(int af, int type, int protocol) : fd(invalid_socket)
 {
     open(af, type, protocol);
 }
@@ -776,14 +776,14 @@ xxsocket& xxsocket::swap(xxsocket& who)
     // avoid fd missing
     if (!is_open()) {
         this->fd = who.fd;
-        who.fd = bad_sock;
+        who.fd = invalid_socket;
     }
     return *this;
 }
 
 bool xxsocket::open(int af, int type, int protocol)
 {
-    if (bad_sock == this->fd)
+    if (invalid_socket == this->fd)
     {
         this->fd = ::socket(af, type, protocol);
     }
@@ -800,7 +800,7 @@ bool xxsocket::reopen(int af, int type, int protocol)
 bool xxsocket::open_ex(int af, int type, int protocol)
 {
 #if !defined(WP8)
-    if (bad_sock == this->fd)
+    if (invalid_socket == this->fd)
     {
         this->fd = ::WSASocket(af, type, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 
@@ -887,13 +887,13 @@ void xxsocket::translate_sockaddrs(
 
 bool xxsocket::is_open(void) const
 {
-    return this->fd != bad_sock;
+    return this->fd != invalid_socket;
 }
 
 socket_native_type xxsocket::release(void)
 {
     socket_native_type result = this->fd;
-    this->fd = bad_sock;
+    this->fd = invalid_socket;
     return result;
 }
 
@@ -997,7 +997,7 @@ int xxsocket::connect_n(const char* addr, u_short port, timeval* timeout)
 int xxsocket::connect_n(const ip::endpoint& ep, timeval* timeout)
 {
     if (xxsocket::connect_n(this->fd, ep, timeout) != 0) {
-        this->fd = bad_sock;
+        this->fd = invalid_socket;
         return -1;
     }
     return 0;
@@ -1464,7 +1464,7 @@ void xxsocket::close(void)
     if (is_open())
     {
         ::closesocket(this->fd);
-        this->fd = bad_sock;
+        this->fd = invalid_socket;
     }
 }
 

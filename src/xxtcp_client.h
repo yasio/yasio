@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <queue>
+#include "xxselect_interrupter.hpp"
 
 #define _USING_IN_COCOS2DX 0
 #if _USING_IN_COCOS2DX
@@ -190,6 +191,8 @@ namespace purelib {
             std::mutex              connect_notify_mtx_;
             std::condition_variable connect_notify_cv_;
 
+            // select interrupter
+            xxselect_interrupter    interrupter_;
 
             // socket event set
             int maxfdp_;

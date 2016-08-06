@@ -14,7 +14,8 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-
+#include <thread>
+#include "xxselect_interrupter.hpp"
 
 using boost::asio::ip::tcp;
 
@@ -37,28 +38,33 @@ public:
 
     // Start an asynchronous resolve to translate the server and service names
     // into a list of endpoints.
-    tcp::resolver::query query(server, "http");
+    /*tcp::resolver::query query(server, "http");
     resolver_.async_resolve(query,
         boost::bind(&client::handle_resolve, this,
           boost::asio::placeholders::error,
-          boost::asio::placeholders::iterator));
+          boost::asio::placeholders::iterator));*/
+    handle_resolve();
   }
 
 private:
-  void handle_resolve(const boost::system::error_code& err,
-      tcp::resolver::iterator endpoint_iterator)
+  void handle_resolve(/*const boost::system::error_code& err,
+      tcp::resolver::iterator endpoint_iterator*/)
   {
-    if (!err)
+    if (1)
     {
+        
+        tcp::resolver::query query("127.0.0.1", "https");
+        tcp::resolver::iterator iterator = resolver_.resolve(query);
+        // v.address(boost::asio::ip::address_v4())
       // Attempt a connection to each endpoint in the list until we
       // successfully establish a connection.
-      boost::asio::async_connect(socket_, endpoint_iterator,
+        boost::asio::async_connect(socket_, iterator,
           boost::bind(&client::handle_connect, this,
             boost::asio::placeholders::error));
     }
     else
     {
-      std::cout << "Error: " << err.message() << "\n";
+      // std::cout << "Error: " << err.message() << "\n";
     }
   }
 
@@ -77,6 +83,18 @@ private:
     }
   }
 
+  void handle_write_request_other_thread(const boost::system::error_code& err)
+  {
+      if (!err)
+      {
+          printf("其它线程发送完成.\n");
+      }
+      else
+      {
+          std::cout << "其它线程发送错误: " << err.message() << "\n";
+      }
+  }
+
   void handle_write_request(const boost::system::error_code& err)
   {
     if (!err)
@@ -87,6 +105,20 @@ private:
       boost::asio::async_read_until(socket_, response_, "\r\n",
           boost::bind(&client::handle_read_status_line, this,
             boost::asio::placeholders::error));
+
+      std::thread t([=](){
+          printf("等待5秒发送数据\n");
+          Sleep(5000);
+
+          std::ostream request_stream(&request_);
+          request_stream << "Hello Server!!!\r\n";
+
+          auto fd = socket_.native_handle();
+          boost::asio::async_write(socket_, request_,
+              boost::bind(&client::handle_write_request_other_thread, this,
+              boost::asio::placeholders::error));
+      });
+      t.detach();
     }
     else
     {
@@ -192,6 +224,8 @@ int main(int argc, char* argv[])
       std::cout << "  async_client www.boost.org /LICENSE_1_0.txt\n";
       return 1;
     }
+
+    purelib::inet::xxselect_interrupter interrupt;
 
     boost::asio::io_service io_service;
     client c(io_service, argv[1], argv[2]);

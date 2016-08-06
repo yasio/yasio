@@ -186,7 +186,7 @@ namespace inet {
 
 // #define _make_dotted_decimal(b1,b2,b3,b4) ( ( ((uint32_t)(b4) << 24) & 0xff000000 ) | ( ((uint32_t)(b3) << 16) & 0x00ff0000 ) | ( ((uint32_t)(b2) << 8) & 0x0000ff00 ) | ( (uint32_t)(b1) & 0x000000ff ) )
 
-static const socket_native_type bad_sock = (socket_native_type)-1;
+static const socket_native_type invalid_socket = (socket_native_type)-1;
 static const u_long blocking = 0;
 static const u_long nonblocking = 1;
 
@@ -387,6 +387,22 @@ public:
             this->in6_.sin6_family = AF_INET6;
             compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
             this->in6_.sin6_port = htons(port);
+        }
+    }
+
+    void address(const char* addr)
+    {
+        /*
+        * Windows XP no inet_pton or inet_ntop
+        */
+        if (strchr(addr, ':') == nullptr)
+        { // ipv4
+            this->in4_.sin_family = AF_INET;
+            compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
+        }
+        else { // ipv6
+            this->in6_.sin6_family = AF_INET6;
+            compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
         }
     }
 

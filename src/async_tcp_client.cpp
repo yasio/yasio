@@ -132,7 +132,7 @@ size_t async_tcp_client::get_received_pdu_count(void) const
     return recv_queue_.size();
 }
 
-void async_tcp_client::collect_received_pdu(int count) {
+void async_tcp_client::dispatch_received_pdu(int count) {
     assert(this->on_received_pdu_ != nullptr);
 
     if (this->recv_queue_.empty())

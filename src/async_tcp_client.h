@@ -91,10 +91,10 @@ namespace purelib {
             async_tcp_client();
             ~async_tcp_client();
 
-#if 0 // unneeded
+            size_t     get_received_pdu_count(void) const;
+
             // must be call on main thread(such cocos2d-x opengl thread)
-            bool       collect_received_pdu();
-#endif
+            void       collect_received_pdu(int count = 1);
 
             // set endpoint of server.
             void       set_endpoint(const char* address, const char* addressv6, u_short port);

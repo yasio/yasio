@@ -127,35 +127,24 @@ void async_tcp_client::set_callbacks(
     this->call_tsf_ = threadsafe_call;
 }
 
-#if 0
-bool async_tcp_client::collect_received_pdu() {
-    if (this->recv_queue_.empty())
-        return false;
+size_t async_tcp_client::get_received_pdu_count(void) const
+{
+    return recv_queue_.size();
+}
 
-    std::unique_lock<std::mutex> autolock(this->recv_queue_mtx_);
-    if (!this->recv_queue_.empty()) {
+void async_tcp_client::collect_received_pdu(int count) {
+    assert(this->on_received_pdu_ != nullptr);
+
+    if (this->recv_queue_.empty())
+        return;
+
+    std::lock_guard<std::mutex> autolock(this->recv_queue_mtx_);
+    do {
         auto packet = std::move(this->recv_queue_.front());
         this->recv_queue_.pop();
-
-        if (this->recv_queue_.empty()) {
-            autolock.unlock();
-            // CCSCHTASKS->pauseTarget(this);
-        }
-        else
-            autolock.unlock();
-
-        if (this->on_received_pdu_ != nullptr)
-            this->on_received_pdu_(std::move(packet));
-
-        return true;
-    }
-    else {
-        autolock.unlock();
-        // CCSCHTASKS->pauseTarget(this);
-        return false;
-    }
+        this->on_received_pdu_(std::move(packet));
+    } while (!this->recv_queue_.empty() && --count > 0);
 }
-#endif
 
 void async_tcp_client::start_service(int working_counter)
 {
@@ -439,13 +428,13 @@ void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
 {
     INET_LOG("move_received_pdu...");
 
-    //std::unique_lock<std::mutex> autolock(recv_queue_mtx_);
-    //recv_queue_.push(std::move(ctx->receiving_pdu_));
-    //autolock.unlock();
-    auto pdu = ctx->receiving_pdu_; // make a copy
-    this->call_tsf_([pdu, this]() mutable -> void {
-        this->on_received_pdu_(std::move(pdu));
-    });
+    recv_queue_mtx_.lock();
+    recv_queue_.push(std::move(ctx->receiving_pdu_)); // no data copy
+    recv_queue_mtx_.unlock();
+    //auto pdu = ctx->receiving_pdu_; // make a copy
+    //this->call_tsf_([pdu, this]() mutable -> void {
+    //    this->on_received_pdu_(std::move(pdu));
+    //});
 
     ctx->expected_pdu_length_ = -1;
 

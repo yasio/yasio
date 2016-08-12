@@ -207,16 +207,19 @@ void async_tcp_client::service()
 
         for (; !app_exiting_;)
         {
-            timeout.tv_sec = 10; // 5 minutes
-            timeout.tv_usec = 0;     // 10 milliseconds
+            timeout.tv_sec = 5 * 60; // 5 minutes
+            timeout.tv_usec = 0;     // 0 milliseconds
 
             memcpy(&read_set, &readfds_, sizeof(fd_set));
             memcpy(&write_set, &writefds_, sizeof(fd_set));
             memcpy(&excep_set, &excepfds_, sizeof(fd_set));
 
-            while (this->offset_ > 0) { // @pitfall: If read buffer has data, needs proccess firstly
+            if (this->offset_ > 0) { // @pitfall: If read buffer has data, needs proccess firstly
                 if (!do_read(this))
                     goto _L_error;
+
+                timeout.tv_sec = 0;
+                timeout.tv_usec = 1000; // @wait only 1 millisecond, Let write operation has oppotunite to perform.
             }
 
             int nfds = ::select(maxfdp_, &read_set, &write_set, &excep_set, &timeout);

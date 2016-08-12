@@ -79,9 +79,9 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     idle_(true),
     connect_failed_(false)
 {
-    FD_ZERO(&readfds_);
-    FD_ZERO(&writefds_);
-    FD_ZERO(&excepfds_);
+    FD_ZERO(&fdss_[read_op]);
+    FD_ZERO(&fdss_[write_op]);
+    FD_ZERO(&fdss_[read_op]);
 
     maxfdp_ = 0;
     reset();
@@ -202,7 +202,7 @@ void async_tcp_client::service()
 
 
         // event loop
-        fd_set read_set, write_set, excep_set;
+        fd_set fdss[3];
         timeval timeout;
 
         for (; !app_exiting_;)
@@ -210,9 +210,7 @@ void async_tcp_client::service()
             timeout.tv_sec = 5 * 60; // 5 minutes
             timeout.tv_usec = 0;     // 0 milliseconds
 
-            memcpy(&read_set, &readfds_, sizeof(fd_set));
-            memcpy(&write_set, &writefds_, sizeof(fd_set));
-            memcpy(&excep_set, &excepfds_, sizeof(fd_set));
+            memcpy(&fdss, fdss_, sizeof(fdss_));
 
             if (this->offset_ > 0) { // @pitfall: If read buffer has data, needs proccess firstly
                 if (!do_read(this))
@@ -222,7 +220,7 @@ void async_tcp_client::service()
                 timeout.tv_usec = 1000; // @wait only 1 millisecond, Let write operation has opportunity to perform.
             }
 
-            int nfds = ::select(maxfdp_, &read_set, &write_set, &excep_set, &timeout);
+            int nfds = ::select(maxfdp_, &(fdss[read_op]), &(fdss[write_op]), &(fdss[except_op]), &timeout);
 
             if (nfds == -1)
             {
@@ -247,7 +245,7 @@ void async_tcp_client::service()
                 }
             }
 #else
-            if (FD_ISSET(this->impl_.native_handle(), &excep_set))
+            if (FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
             { // exception occured
                 goto _L_error;
             }
@@ -290,14 +288,14 @@ void async_tcp_client::service()
                 }
             }
 #else
-            if (FD_ISSET(this->impl_.native_handle(), &read_set))
+            if (FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
             { // can read socket data
                 if (!do_read(this))
                     goto _L_error;
             }
 #endif
 
-            if (FD_ISSET(this->interrupter_.read_descriptor(), &read_set)) {
+            if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
                 INET_LOG("select actived, have data to write!");
                 // perform write operations
                 if (do_write(this))
@@ -374,17 +372,17 @@ void async_tcp_client::register_descriptor(const socket_native_type fd, int flag
 {
     if ((flags & socket_event_read) != 0)
     {
-        FD_SET(fd, &this->readfds_);
+        FD_SET(fd, &(fdss_[read_op]));
     }
 
     if ((flags & socket_event_write) != 0)
     {
-        FD_SET(fd, &this->writefds_);
+        FD_SET(fd, &(fdss_[write_op]));
     }
 
     if ((flags & socket_event_except) != 0)
     {
-        FD_SET(fd, &this->excepfds_);
+        FD_SET(fd, &(fdss_[except_op]));
     }
 
     maxfdp_ = static_cast<int>(fd) + 1;
@@ -394,17 +392,17 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
 {
     if ((flags & socket_event_read) != 0)
     {
-        FD_CLR(fd, &this->readfds_);
+        FD_CLR(fd, &(fdss_[read_op]));
     }
 
     if ((flags & socket_event_write) != 0)
     {
-        FD_CLR(fd, &this->writefds_);
+        FD_CLR(fd, &(fdss_[write_op]));
     }
 
     if ((flags & socket_event_except) != 0)
     {
-        FD_CLR(fd, &this->excepfds_);
+        FD_CLR(fd, &(fdss_[except_op]));
     }
 }
 
@@ -466,9 +464,9 @@ bool async_tcp_client::connect(void)
     { // connect succeed, reset fds
         this->connected_ = true;
 
-        FD_ZERO(&readfds_);
-        FD_ZERO(&writefds_);
-        FD_ZERO(&excepfds_);
+        FD_ZERO(&fdss_[read_op]);
+        FD_ZERO(&fdss_[write_op]);
+        FD_ZERO(&fdss_[except_op]);
 
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
         register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);

@@ -28,7 +28,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
     return hdr.encode();
 }
 
-#if 0
+#if 1
 // 解析消息长度
 bool decode_pdu_length(const char* data, size_t datalen, int& len)
 {
@@ -90,6 +90,7 @@ void test_tcp_service()
     tcpcli->set_connect_listener([](bool succeed, int error) {
         if (succeed) 
         { // 连接成功, 则可发起登陆协议,这里
+#if 0
             messages::LoginReq req;
             req.username = "helloworld";
             req.password = "helloworld";
@@ -102,6 +103,7 @@ void test_tcp_service()
 
                 }
             });
+#endif
         }
     });
     tcpcli->set_callbacks(decode_pdu_length, build_error_msg, on_recv_msg, [] (const vdcallback_t& callb) {
@@ -111,6 +113,7 @@ void test_tcp_service()
     tcpcli->start_service();
     auto start = std::chrono::steady_clock::now();
     printf("3秒后开始连接服务器...\n");
+    bool sent = false;
     while (1) {
         
         // bool received = tcpcli->collect_received_pdu();
@@ -130,12 +133,22 @@ void test_tcp_service()
 
                 // printf("3秒后发送一条消息...\n");
             }
-            else if (seconds > 6000 && seconds % 3000 == 0)
+            else if (seconds > 6000 && seconds % 2000 == 0)
             {
-                std::vector<char> msg;
-                msg.resize(sizeof("hello world\r\n"));
-                memcpy(&msg.front(), "hello world\r\n", sizeof("hello world\r\n") - 1);
-                tcpcli->async_send(std::move(msg));
+                if (1) {
+                    std::vector<char> msg;
+                    msg.resize(sizeof("hello world\r\n"));
+                    memcpy(&msg.front(), "hello world\r\n", sizeof("hello world\r\n") - 1);
+                    tcpcli->async_send(std::move(msg));
+
+                    msg.resize(sizeof("hello world\r\n"));
+                    memcpy(&msg.front(), "hello world\r\n", sizeof("hello world\r\n") - 1);
+                    tcpcli->async_send(std::move(msg));
+                    sent = true;
+                }
+                else {
+
+                }
             }
         }
     }

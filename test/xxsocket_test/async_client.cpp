@@ -229,7 +229,7 @@ private:
   boost::asio::streambuf response_;
 };
 
-#if 1
+#if 0
 int main(int argc, char* argv[])
 {
   try

@@ -16,7 +16,7 @@
 #define RECONNECT_DELAY 5000 // 5000 millseconds
 #define TIMER_DURATION 100 // 100 miliseconds
 
-#define MAX_PDU_LEN 16384
+#define MAX_PDU_LEN SZ(10, M)
 
 #define CALL_TSF(stmt) this->call_tsf_([=]{(stmt);});
 
@@ -207,14 +207,17 @@ void async_tcp_client::service()
 
         for (; !app_exiting_;)
         {
-            idle_ = true;
-
-            timeout.tv_sec = 5 * 60; // 5 minutes
+            timeout.tv_sec = 10; // 5 minutes
             timeout.tv_usec = 0;     // 10 milliseconds
 
             memcpy(&read_set, &readfds_, sizeof(fd_set));
             memcpy(&write_set, &writefds_, sizeof(fd_set));
             memcpy(&excep_set, &excepfds_, sizeof(fd_set));
+
+            while (this->offset_ > 0) { // @pitfall: If read buffer has data, needs proccess firstly
+                if (!do_read(this))
+                    goto _L_error;
+            }
 
             int nfds = ::select(maxfdp_, &read_set, &write_set, &excep_set, &timeout);
 
@@ -288,10 +291,9 @@ void async_tcp_client::service()
             { // can read socket data
                 if (!do_read(this))
                     goto _L_error;
-
-                idle_ = false;
             }
 #endif
+
             if (FD_ISSET(this->interrupter_.read_descriptor(), &read_set)) {
                 INET_LOG("select actived, have data to write!");
                 // perform write operations
@@ -316,11 +318,6 @@ void async_tcp_client::service()
                     p2p_channel2_.reset();
             }
         }
-
-        // Avoid high Occupation CPU
-        //if (idle_) {
-        //    msleep(1);
-        //}
 
         continue;
 

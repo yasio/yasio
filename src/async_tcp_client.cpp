@@ -219,7 +219,7 @@ void async_tcp_client::service()
                     goto _L_error;
 
                 timeout.tv_sec = 0;
-                timeout.tv_usec = 1000; // @wait only 1 millisecond, Let write operation has oppotunite to perform.
+                timeout.tv_usec = 1000; // @wait only 1 millisecond, Let write operation has opportunity to perform.
             }
 
             int nfds = ::select(maxfdp_, &read_set, &write_set, &excep_set, &timeout);

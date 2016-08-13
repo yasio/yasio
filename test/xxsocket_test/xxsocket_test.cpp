@@ -172,6 +172,15 @@ void test_https_connect()
 
 int main(int, char**)
 {
+    std::set<int> set;
+    set.insert(2016);
+
+    sorted_multilist<int, std::greater<int>> sortedList;
+
+    for(int i= 0; i < 10; ++i)
+        sortedList.insert(rand() % 100);
+    
+    sortedList.remove(69);
     // std::string respData = send_http_req("http://x-studio365.com");
     
     // test_https_connect();

@@ -55,7 +55,7 @@ private:
     if (1)
     {
         
-        tcp::resolver::query query("127.0.0.1", "https");
+        tcp::resolver::query query("127.0.0.1", "http");
         tcp::resolver::iterator iterator = resolver_.resolve(query);
         // v.address(boost::asio::ip::address_v4())
       // Attempt a connection to each endpoint in the list until we
@@ -116,7 +116,7 @@ private:
 
           // boost::asio::deadline_timer timeer;
           printf("开启定时器60秒后发送数据\n");
-          this->timeout_check_timer_.expires_from_now(boost::posix_time::seconds(60));
+          this->timeout_check_timer_.expires_from_now(boost::posix_time::seconds(600));
           this->timeout_check_timer_.async_wait([this](const boost::system::error_code& ec) {
               if (!ec) {
                  // LOG_TRACE_ALL("check timout, thread id:%u\n", this_thread());
@@ -229,7 +229,7 @@ private:
   boost::asio::streambuf response_;
 };
 
-#if 0
+#if 0   
 int main(int argc, char* argv[])
 {
   try

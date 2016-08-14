@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\deadline_timer.cpp" />
     <ClCompile Include="..\..\src\ibinarystream.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\oslib.cpp" />
@@ -158,6 +159,7 @@
     <ClCompile Include="xxsocket_test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\deadline_timer.h" />
     <ClInclude Include="..\..\src\ibinarystream.h" />
     <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\oslib.h" />

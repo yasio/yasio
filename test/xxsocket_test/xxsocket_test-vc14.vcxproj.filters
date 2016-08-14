@@ -45,6 +45,9 @@
     <ClCompile Include="..\..\src\async_tcp_client.cpp">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\deadline_timer.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\xxsocket.h">
@@ -75,6 +78,9 @@
       <Filter>lib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\select_interrupter.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\deadline_timer.h">
       <Filter>lib</Filter>
     </ClInclude>
   </ItemGroup>

@@ -60,11 +60,11 @@ std::vector<char> build_error_msg(int errorcode, const char* errormsg)
 
 // 收到完整的一个消息包, 可用于编解码
 void on_recv_msg(std::vector<char>&& data)
-{ 
+{
     messages::MsgHeader hdr;
     int offset = hdr.decode(data.data(), data.size());
     auto msg = messages::temp_create_message(hdr.command_id);
-    switch (msg->get_id() )
+    switch (msg->get_id())
     { //
     case CID_LOCAL_ERROR_INFO:
         printf("网络出错,需要重连!\n");
@@ -80,15 +80,15 @@ void on_recv_msg(std::vector<char>&& data)
             tcpcli->set_endpoint("192.168.199.246", "", 20001);
             tcpcli->notify_connect();
         }
-        ;}
-        break;
+        ; }
+                         break;
     }
 }
 
 void test_tcp_service()
 {
     tcpcli->set_connect_listener([](bool succeed, int error) {
-        if (succeed) 
+        if (succeed)
         { // 连接成功, 则可发起登陆协议,这里
 #if 0
             messages::LoginReq req;
@@ -104,52 +104,40 @@ void test_tcp_service()
                 }
             });
 #endif
-        }
-    });
-    tcpcli->set_callbacks(decode_pdu_length, build_error_msg, on_recv_msg, [] (const vdcallback_t& callb) {
-        callb();
-    });
-    tcpcli->set_endpoint("127.0.0.1", "", 443); // 先设置为登陆服务器
-    tcpcli->start_service();
-    auto start = std::chrono::steady_clock::now();
-    printf("3秒后开始连接服务器...\n");
-    bool sent = false;
-    while (1) {
-        
-        // bool received = tcpcli->collect_received_pdu();
-        //if (!received) {
-            msleep(1); // 模拟cocos2d-x主线程
-        //}
-
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
-        auto seconds = elapsed.count();
-        if (seconds > 0) {
-            if (seconds >= 3000 && seconds < 6000)
-            {
-                /*
-                这里只通知连接一次,如果连接失败,tcpcli线程会挂起,直到再次调用notify_connect
-                */
-                tcpcli->notify_connect();
-
-                // printf("3秒后发送一条消息...\n");
-            }
-            else if (seconds > 6000 && seconds % 2000 == 0)
-            {
-                if (1) {
+            auto timer = std::shared_ptr<deadline_timer>(new deadline_timer());
+            timer->expires_from_now(std::chrono::seconds(3), true);
+            timer->async_wait([](bool cancelled) {
+                if (!cancelled) {
+                    printf("循环定时器,每3秒触发一次.\n");
+#if 1
                     std::vector<char> msg;
                     msg.resize(sizeof("hello world\r\n"));
                     memcpy(&msg.front(), "hello world\r\n", sizeof("hello world\r\n") - 1);
                     tcpcli->async_send(std::move(msg));
-
-                    msg.resize(sizeof("hello world\r\n"));
-                    memcpy(&msg.front(), "hello world\r\n", sizeof("hello world\r\n") - 1);
-                    tcpcli->async_send(std::move(msg));
-                    sent = true;
+#endif
                 }
-                else {
+            });
+        }
+    });
+    tcpcli->set_callbacks(decode_pdu_length, build_error_msg, on_recv_msg, [](const vdcallback_t& callb) {
+        callb();
+    });
+    tcpcli->set_endpoint("127.0.0.1", "", 80); // 先设置为登陆服务器
+    tcpcli->start_service();
+    auto start = std::chrono::steady_clock::now();
+    printf("3秒后开始连接服务器...\n");
+    bool notify = false;
+    while (1) {
 
-                }
-            }
+        // bool received = tcpcli->collect_received_pdu();
+        //if (!received) {
+        msleep(1); // 模拟cocos2d-x主线程
+    //}
+
+        if (!notify)
+        {
+            tcpcli->notify_connect();
+            notify = true;
         }
     }
 }
@@ -157,7 +145,7 @@ void test_tcp_service()
 void test_https_connect()
 {
     xxsocket client;
-   // auto epv6 = xxsocket::resolve("www.baidu.com", 443);
+    // auto epv6 = xxsocket::resolve("www.baidu.com", 443);
     int n = client.xpconnect_n("127.0.0.1", 6001, 3);
     auto flag = client.getipsv();
     printf("ip protocol support flag is:%d\n", flag);
@@ -172,17 +160,8 @@ void test_https_connect()
 
 int main(int, char**)
 {
-    std::set<int> set;
-    set.insert(2016);
-
-    sorted_multilist<int, std::greater<int>> sortedList;
-
-    for(int i= 0; i < 10; ++i)
-        sortedList.insert(rand() % 100);
-    
-    sortedList.remove(69);
     // std::string respData = send_http_req("http://x-studio365.com");
-    
+
     // test_https_connect();
     test_tcp_service();
 

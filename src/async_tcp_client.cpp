@@ -212,14 +212,14 @@ void async_tcp_client::service()
                     goto _L_error;
 
                 // @wait only 1 millisecond, Let write operation has opportunity to perform.
-                set_timeout(timeout, 1000);
+                set_wait_timeout(timeout, 1000);
             }
             else {
-                set_timeout(timeout, MAX_WAIT_DURATION);
+                set_wait_timeout(timeout, MAX_WAIT_DURATION);
             }
 
             int nfds = ::select(maxfdp_, &(fdss[read_op]), &(fdss[write_op]), &(fdss[except_op]), &timeout);
-
+           
             if (nfds == -1)
             {
                 INET_LOG("select failed, error code: %d\n", xxsocket::get_last_errno());
@@ -228,6 +228,7 @@ void async_tcp_client::service()
 
             if (nfds == 0)
             {
+                perform_timeout_timers();
                 continue;
             }
 
@@ -293,7 +294,6 @@ void async_tcp_client::service()
 #endif
 
             if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
-                INET_LOG("select actived, have data to write!");
                 // perform write operations
                 if (do_write(this))
                 { // TODO: check would block? for client, may be unnecessory.
@@ -680,30 +680,66 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
     return bRet;
 }
 
-per_timer_data*  async_tcp_client::async_wait(const std::function<void(bool cancelled)>& callback,
-    const std::chrono::milliseconds& duration,
-    bool loop)
-{
-    auto timer = new per_timer_data;
-    timer->callback = callback;
-    timer->loop = loop;
-    timer->expires_from_now(duration);
+void async_tcp_client::schedule_timer(deadline_timer* timer)
+{ 
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+    if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
+        return;
 
-    this->timer_queue_.insert(timer);
+    this->timer_queue_.push_back(timer);
+    
+    std::sort(this->timer_queue_.begin(), this->timer_queue_.end(), [](deadline_timer* lhs, deadline_timer* rhs) {
+        return lhs->wait_duration() > rhs->wait_duration();
+    });
 
     interrupter_.interrupt();
+}
 
-    return timer;
+void async_tcp_client::cancel_timer(deadline_timer* timer)
+{
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+
+    auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
+    if (iter != timer_queue_.end()) {
+        timer->callback_(true);
+        timer_queue_.erase(iter);
+    }
 }
 
 void async_tcp_client::perform_timeout_timers()
 {
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
 
+    std::vector<deadline_timer*> loop_timers;
+    while (!this->timer_queue_.empty())
+    {
+        auto earliest = timer_queue_.back();
+        if (earliest->expired())
+        {
+            timer_queue_.pop_back();
+            earliest->callback_(false);
+            if (earliest->loop_) {
+                earliest->expires_from_now();
+                loop_timers.push_back(earliest);
+            }
+        } 
+        else {
+            break;
+        }
+    }
+
+    if (!loop_timers.empty()) {
+        this->timer_queue_.insert(this->timer_queue_.end(), loop_timers.begin(), loop_timers.end());
+        std::sort(this->timer_queue_.begin(), this->timer_queue_.end(), [](deadline_timer* lhs, deadline_timer* rhs) {
+            return lhs->wait_duration() > rhs->wait_duration();
+        });
+    }
 }
 
-void  async_tcp_client::set_timeout(timeval& tv, long long max_duration)
+void  async_tcp_client::set_wait_timeout(timeval& tv, long long max_duration)
 {
     auto usec = this->wait_duration_usec(max_duration);
+    
     tv.tv_sec = usec / 1000000;
     tv.tv_usec = usec % 1000000;
 }
@@ -711,14 +747,14 @@ void  async_tcp_client::set_timeout(timeval& tv, long long max_duration)
 long long  async_tcp_client::wait_duration_usec(long long usec)
 {
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.front() : nullptr;
-    std::chrono::microseconds max_duration(usec); // microseconds
+    std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {
-        auto duration = earliest->get_duration();
-        if (duration < max_duration)
-            max_duration = duration;
+        auto duration = earliest->wait_duration();
+        if (min_duration > duration)
+            min_duration = duration;
     }
 
-    return  max_duration.count();
+    return  min_duration.count();
 }
 
 void async_tcp_client::p2p_open()

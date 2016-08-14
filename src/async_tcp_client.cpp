@@ -746,7 +746,7 @@ void  async_tcp_client::set_wait_timeout(timeval& tv, long long max_duration)
 
 long long  async_tcp_client::wait_duration_usec(long long usec)
 {
-    auto earliest = !this->timer_queue_.empty() ? timer_queue_.front() : nullptr;
+    auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {
         auto duration = earliest->wait_duration();

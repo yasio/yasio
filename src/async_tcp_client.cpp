@@ -463,8 +463,6 @@ bool async_tcp_client::connect(void)
     }
     if (ret == 0)
     { // connect succeed, reset fds
-        this->connected_ = true;
-
         FD_ZERO(&fdss_[read_op]);
         FD_ZERO(&fdss_[write_op]);
         FD_ZERO(&fdss_[except_op]);
@@ -478,6 +476,7 @@ bool async_tcp_client::connect(void)
         error_ = ErrorCode::ERR_OK;
         offset_ = 0;
         receiving_pdu_.clear();
+        recv_queue_.clear();
 
         this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
@@ -504,6 +503,7 @@ bool async_tcp_client::connect(void)
         }
 #endif
 
+        this->connected_ = true;
         if (this->connect_listener_ != nullptr) {
             CALL_TSF(this->connect_listener_(true, 0));
         }

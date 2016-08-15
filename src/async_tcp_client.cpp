@@ -1,4 +1,32 @@
-#include "oslib.h"
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store universal app
+// version: 2.2
+//////////////////////////////////////////////////////////////////////////////////////////
+/*
+The MIT License (MIT)
+
+Copyright (c) 2012-2016 halx99
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+//#include "oslib.h"
 #include "async_tcp_client.h"
 
 #ifdef _WIN32
@@ -23,17 +51,20 @@ namespace inet {
 class appl_pdu
 {
 public:
-    appl_pdu(std::vector<char>&& right, const appl_pdu_send_callback_t& callback)
+    appl_pdu(std::vector<char>&& right, const appl_pdu_send_callback_t& callback, const std::chrono::microseconds& duration)
     {
         data_ = std::move(right);
         offset_ = 0;
         on_sent_ = callback;
-        timestamp_ = ::millitime();
+        expire_time_ = std::chrono::steady_clock::now() + duration;
+    }
+    bool expired() const {
+        return (expire_time_ - std::chrono::steady_clock::now()).count() < 0;
     }
     std::vector<char>          data_; // sending data
     size_t                     offset_; // offset
-    appl_pdu_send_callback_t on_sent_;
-    long long                  timestamp_; // In milliseconds
+    appl_pdu_send_callback_t   on_sent_;
+    std::chrono::time_point<std::chrono::steady_clock>  expire_time_; // In milliseconds
 
     static void * operator new(size_t /*size*/)
     {
@@ -411,7 +442,7 @@ void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_
 {
     if (this->impl_.is_open())
     {
-        auto pdu = new appl_pdu(std::move(data), callback);
+        auto pdu = new appl_pdu(std::move(data), callback, std::chrono::seconds(this->send_timeout_));
         
         std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
         send_queue_.push_back(pdu);
@@ -547,7 +578,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 });
             }
             else if (n > 0) { // TODO: add time
-                if ((millitime() - v->timestamp_) < (send_timeout_ * 1000))
+                if (!v->expired())
                 { // change offset, remain data will send next time.
                     // v->data_.erase(v->data_.begin(), v->data_.begin() + n);
                     v->offset_ += n;
@@ -746,7 +777,7 @@ void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
             min_duration = duration;
     }
 
-    auto usec = min_duration.count();
+    usec = min_duration.count();
 
     tv.tv_sec = usec / 1000000;
     tv.tv_usec = usec % 1000000;

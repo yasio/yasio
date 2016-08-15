@@ -60,7 +60,7 @@ namespace purelib {
             TCP_P2P_SERVER, // peer --> local
         };
 
-        enum app_error_code {
+        enum error_number {
             ERR_OK, // NO ERROR
             ERR_CONNECT_FAILED, // connect failed
             ERR_CONNECT_TIMEOUT, // connect timeout
@@ -83,7 +83,7 @@ namespace purelib {
 
         class appl_pdu; // application layer protocol data unit.
 
-        typedef std::function<void(app_error_code)> appl_pdu_send_callback_t;
+        typedef std::function<void(error_number)> appl_pdu_send_callback_t;
         typedef std::function<void(std::vector<char>&&)> appl_pdu_recv_callback_t;
 
         struct p2p_io_ctx
@@ -116,7 +116,7 @@ namespace purelib {
             typedef bool(*decode_pdu_length_func)(const char* data, size_t datalen, int& len);
 
             // BuildErrorInfoFunc
-            typedef std::vector<char>(*build_error_func)(int app_error_code, const char* errormsg);
+            typedef std::vector<char>(*build_error_func)(int error_number, const char* errormsg);
 
             typedef std::function<void(bool succeed, int ec)> connect_listener;
 
@@ -165,7 +165,7 @@ namespace purelib {
             bool       is_connected(void) const { return this->connected_; }
 
             // Gets network error code
-            app_error_code  get_errorno(void) { return error_; }
+            error_number  get_errorno(void) { return error_; }
 
             // post a async send request.
             void       async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback = nullptr);
@@ -206,7 +206,7 @@ namespace purelib {
             bool       do_read(p2p_io_ctx*);
             void       move_received_pdu(p2p_io_ctx*); // move received properly pdu to recv queue
 
-            void       handle_error(void); // TODO: add app_error_code parameter
+            void       handle_error(void); // TODO: add error_number parameter
 
         private:
             bool                    app_exiting_;
@@ -216,7 +216,7 @@ namespace purelib {
             std::string             addressv6_;
             u_short                 port_;
 
-            app_error_code               error_;
+            error_number               error_;
 
             int                     socket_error_;
 

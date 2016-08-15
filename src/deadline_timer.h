@@ -64,6 +64,18 @@ public:
         expire_time_ = std::chrono::steady_clock::now() + this->duration_;
     }
 
+    /* @pitfall: The callback will called at service thread, you should make sure the threadsafe
+     such as, if use at cocos2d-x, and need operate cocos2d-x(OpenGL) objects, you should do as follow:
+     async_wait([](bool cancelled){
+         if(!cancelled) {
+             cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([](){
+                 // ... operate cocos2d-x objects
+             });
+         }
+     });
+
+     @If use for network heartbeat, you can send heartbeat message to server at the callback directly.
+     */
     void async_wait(const std::function<void(bool cancelled)>& callback);
 
     void cancel();

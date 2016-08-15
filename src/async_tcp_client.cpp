@@ -324,18 +324,21 @@ void async_tcp_client::service()
 
             if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
                 // perform write operations
-                if (do_write(this))
-                { // TODO: check would block? for client, may be unnecessory.
-                    if (this->send_queue_.empty()) {
-                        interrupter_.reset();
+                if (!this->send_queue_.empty()){
+                    if (do_write(this))
+                    { // TODO: check would block? for client, may be unnecessory.
+                        if (this->send_queue_.empty()) {
+                            interrupter_.reset();
+                        }
+                    }
+                    else {
+                        goto _L_error;
                     }
                 }
-                else {
-                    goto _L_error;
-                } 
+                else { // new timer scheduled, only need reset interrupter
+                    interrupter_.reset(); // perform_timeout_timers();
+                }
             }
-
-            perform_timeout_timers();
 
             if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
@@ -770,6 +773,8 @@ void async_tcp_client::perform_timeout_timers()
 
 void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {

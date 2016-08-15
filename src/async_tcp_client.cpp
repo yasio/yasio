@@ -785,8 +785,13 @@ void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 
     usec = min_duration.count();
 
-    tv.tv_sec = usec / 1000000;
-    tv.tv_usec = usec % 1000000;
+    if (usec > 0) {
+        tv.tv_sec = usec / 1000000;
+        tv.tv_usec = usec % 1000000;
+    }
+    else {
+        ::memset(&tv, 0x0, sizeof(tv));
+    }
 }
 
 void async_tcp_client::p2p_open()

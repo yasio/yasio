@@ -212,10 +212,10 @@ void async_tcp_client::service()
                     goto _L_error;
 
                 // @wait only 1 millisecond, Let write operation has opportunity to perform.
-                set_wait_timeout(timeout, 1000);
+                get_wait_duration(timeout, 1000);
             }
             else {
-                set_wait_timeout(timeout, MAX_WAIT_DURATION);
+                get_wait_duration(timeout, MAX_WAIT_DURATION);
             }
 
             int nfds = ::select(maxfdp_, &(fdss[read_op]), &(fdss[write_op]), &(fdss[except_op]), &timeout);
@@ -736,15 +736,7 @@ void async_tcp_client::perform_timeout_timers()
     }
 }
 
-void  async_tcp_client::set_wait_timeout(timeval& tv, long long max_duration)
-{
-    auto usec = this->wait_duration_usec(max_duration);
-    
-    tv.tv_sec = usec / 1000000;
-    tv.tv_usec = usec % 1000000;
-}
-
-long long  async_tcp_client::wait_duration_usec(long long usec)
+void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     std::chrono::microseconds min_duration(usec); // microseconds
@@ -754,7 +746,10 @@ long long  async_tcp_client::wait_duration_usec(long long usec)
             min_duration = duration;
     }
 
-    return  min_duration.count();
+    auto usec = min_duration.count();
+
+    tv.tv_sec = usec / 1000000;
+    tv.tv_usec = usec % 1000000;
 }
 
 void async_tcp_client::p2p_open()

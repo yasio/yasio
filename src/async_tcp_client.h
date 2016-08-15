@@ -163,8 +163,8 @@ namespace purelib {
 
         private:
             void       perform_timeout_timers(); // ALL timer expired
-            void       set_wait_timeout(timeval& tv, long long max_duration);
-            long long  wait_duration_usec(long long usec);
+
+            void       get_wait_duration(timeval& tv, long long usec);
 
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);

@@ -25,8 +25,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-//#include "oslib.h"
 #include "async_tcp_client.h"
 
 #ifdef _WIN32
@@ -44,7 +42,7 @@ SOFTWARE.
 
 #define MAX_PDU_LEN SZ(10, M)
 
-#define CALL_TSF(stmt) this->call_tsf_([=]{(stmt);});
+#define TSF_CALL(stmt) this->call_tsf_([=]{(stmt);});
 
 namespace purelib {
 namespace inet {
@@ -539,7 +537,7 @@ bool async_tcp_client::connect(void)
 
         this->connected_ = true;
         if (this->connect_listener_ != nullptr) {
-            CALL_TSF(this->connect_listener_(true, 0));
+            TSF_CALL(this->connect_listener_(true, 0));
         }
 
         return true;
@@ -548,7 +546,7 @@ bool async_tcp_client::connect(void)
         connect_failed_ = true;
         int ec = xxsocket::get_last_errno();
         if (this->connect_listener_ != nullptr) {
-            CALL_TSF(this->connect_listener_(false, ec));
+            TSF_CALL(this->connect_listener_(false, ec));
         }
 
         INET_LOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address_.c_str(), port_, ec, xxsocket::get_error_msg(ec));
@@ -751,7 +749,7 @@ void async_tcp_client::perform_timeout_timers()
         if (earliest->expired())
         {
             timer_queue_.pop_back();
-            earliest->callback_(false);
+            TSF_CALL(earliest->callback_(false));
             if (earliest->loop_) {
                 earliest->expires_from_now();
                 loop_timers.push_back(earliest);

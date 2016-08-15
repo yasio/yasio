@@ -236,7 +236,7 @@ namespace purelib {
 
             // timer support
             std::vector<deadline_timer*> timer_queue_;
-            std::recursive_mutex         timer_queue__mtx_;
+            std::recursive_mutex         timer_queue_mtx_;
 
             // socket event set
             int maxfdp_;

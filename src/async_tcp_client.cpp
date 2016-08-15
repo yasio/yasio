@@ -717,7 +717,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 
 void async_tcp_client::schedule_timer(deadline_timer* timer)
 { 
-    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
     if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
         return;
 
@@ -732,7 +732,7 @@ void async_tcp_client::schedule_timer(deadline_timer* timer)
 
 void async_tcp_client::cancel_timer(deadline_timer* timer)
 {
-    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
 
     auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
     if (iter != timer_queue_.end()) {
@@ -743,7 +743,7 @@ void async_tcp_client::cancel_timer(deadline_timer* timer)
 
 void async_tcp_client::perform_timeout_timers()
 {
-    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
 
     std::vector<deadline_timer*> loop_timers;
     while (!this->timer_queue_.empty())
@@ -773,7 +773,7 @@ void async_tcp_client::perform_timeout_timers()
 
 void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
-    std::lock_guard<std::recursive_mutex> lk(this->timer_queue__mtx_);
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
 
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     std::chrono::microseconds min_duration(usec); // microseconds

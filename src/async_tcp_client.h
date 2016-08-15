@@ -211,6 +211,7 @@ namespace purelib {
         private:
             bool                    app_exiting_;
             bool                    thread_started_;
+            std::thread             worker_thread_;
 
             std::string             address_;
             std::string             addressv6_;
@@ -257,8 +258,6 @@ namespace purelib {
 
             bool                    suspended_ = false;
             long long               total_connect_times_ = 0;
-
-            std::atomic<int>        working_counter_; // service working counter, default: 1
 
             // p2p support
             xxsocket                p2p_acceptor_; // p2p: the acceptor for connections: peer-->local

@@ -28,14 +28,10 @@ SOFTWARE.
 #include "async_tcp_client.h"
 
 #ifdef _WIN32
-#define msleep(msec) Sleep((msec))
-#define sleep(sec) msleep((sec) * 1000)
 #if !defined(WINRT)
 #include <MMSystem.h>
 #pragma comment(lib, "winmm.lib")
 #endif
-#else
-#define msleep(msec) usleep((msec) * 1000)
 #endif
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
@@ -124,9 +120,9 @@ async_tcp_client::~async_tcp_client()
     close();
 
     this->connect_notify_cv_.notify_all();
-    while (working_counter_ > 0) { // wait all workers exited
-        msleep(1);
-    }
+    
+    if (this->worker_thread_.joinable())
+        this->worker_thread_.join();
 }
 
 void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
@@ -173,21 +169,15 @@ void async_tcp_client::dispatch_received_pdu(int count) {
     } while (!this->recv_queue_.empty() && --count > 0);
 }
 
-void async_tcp_client::start_service(int working_counter)
+void async_tcp_client::start_service(int /*working_counter*/)
 {
     if (!thread_started_) {
         thread_started_ = true;
-        //  this->scheduleCollectResponse();    //
-        this->working_counter_ = working_counter;
-        for (auto i = 0; i < working_counter; ++i) {
-            std::thread t([this] {
-                INET_LOG("async_tcp_client thread running...");
-                this->service();
-                --working_counter_;
-                INET_LOG("async_tcp_client thread exited.");
-            });
-            t.detach();
-        }
+        worker_thread_ = std::thread([this] {
+            INET_LOG("async_tcp_client thread running...");
+            this->service();
+            INET_LOG("async_tcp_client thread exited.");
+        });
     }
 }
 

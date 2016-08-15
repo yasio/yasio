@@ -43,6 +43,12 @@ void deadline_timer::async_wait(const std::function<void(bool cancelled)>& callb
     this->callback_ = callback;
     tcpcli->schedule_timer(this);
 }
+
+void deadline_timer::cancel()
+{
+    tcpcli->cancel_timer(this);
+}
+
 }
 }
 #endif

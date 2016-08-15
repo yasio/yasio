@@ -43,7 +43,13 @@ namespace inet {
 class deadline_timer {
 public:
     ~deadline_timer();
-
+    deadline_timer()
+    {
+    }
+    deadline_timer(const std::chrono::microseconds& duration, bool loop = false)
+    {
+        expires_from_now(duration, loop);
+    }
 
     void expires_from_now(const std::chrono::microseconds& duration, bool loop = false)
     {
@@ -59,6 +65,8 @@ public:
     }
 
     void async_wait(const std::function<void(bool cancelled)>& callback);
+
+    void cancel();
 
     bool expired() const
     {

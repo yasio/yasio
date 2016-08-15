@@ -397,6 +397,9 @@ void async_tcp_client::handle_error(void)
         send_queue_.clear();
     }
 
+    // @Notify all timers are cancelled.
+    for (auto& timer : timer_queue_)
+        timer->callback_(true); 
     this->timer_queue_.clear();
 }
 

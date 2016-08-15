@@ -104,7 +104,7 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     connect_timeout_(3),
     send_timeout_(3),
     decode_pdu_length_(nullptr),
-    error_(ErrorCode::ERR_OK),
+    error_(app_error_code::ERR_OK),
     idle_(true),
     connect_failed_(false)
 {
@@ -507,7 +507,7 @@ bool async_tcp_client::connect(void)
         impl_.set_nonblocking(true);
 
         expected_pdu_length_ = -1;
-        error_ = ErrorCode::ERR_OK;
+        error_ = app_error_code::ERR_OK;
         offset_ = 0;
         receiving_pdu_.clear();
         recv_queue_.clear();
@@ -576,7 +576,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 ctx->send_queue_.pop_front();
                 this->call_tsf_([v] {
                     if (v->on_sent_ != nullptr)
-                        v->on_sent_(ErrorCode::ERR_OK);
+                        v->on_sent_(app_error_code::ERR_OK);
                     delete v;
                 });
             }
@@ -590,7 +590,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
                         if (v->on_sent_)
-                            v->on_sent_(ErrorCode::ERR_SEND_TIMEOUT);
+                            v->on_sent_(app_error_code::ERR_SEND_TIMEOUT);
                         delete v;
                     });
                 }
@@ -601,7 +601,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
                         if (v->on_sent_)
-                            v->on_sent_(ErrorCode::ERR_CONNECTION_LOST);
+                            v->on_sent_(app_error_code::ERR_CONNECTION_LOST);
                         delete v;
                     });
 
@@ -660,7 +660,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                     }
                 }
                 else {
-                    error_ = ErrorCode::ERR_DPL_ILLEGAL_PDU;
+                    error_ = app_error_code::ERR_DPL_ILLEGAL_PDU;
                     break;
                 }
             }
@@ -668,7 +668,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
                 if ((receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                 {
-                    error_ = ErrorCode::ERR_PDU_TOO_LONG;
+                    error_ = app_error_code::ERR_PDU_TOO_LONG;
                     break;
                 }
                 else {

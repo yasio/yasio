@@ -44,7 +44,6 @@ SOFTWARE.
 #include "select_interrupter.h"
 #include "deadline_timer.h"
 
-#define _USING_IN_COCOS2DX 0
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
 #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
@@ -55,13 +54,13 @@ SOFTWARE.
 namespace purelib {
 
     namespace inet {
-        enum P2PChannelType {
+        enum {
             TCP_P2P_UNKNOWN = -1,
             TCP_P2P_CLIENT = 1, // local --> peer
             TCP_P2P_SERVER, // peer --> local
         };
 
-        enum ErrorCode {
+        enum app_error_code {
             ERR_OK, // NO ERROR
             ERR_CONNECT_FAILED, // connect failed
             ERR_CONNECT_TIMEOUT, // connect timeout
@@ -84,14 +83,14 @@ namespace purelib {
 
         class appl_pdu; // application layer protocol data unit.
 
-        typedef std::function<void(ErrorCode)> appl_pdu_send_callback_t;
+        typedef std::function<void(app_error_code)> appl_pdu_send_callback_t;
         typedef std::function<void(std::vector<char>&&)> appl_pdu_recv_callback_t;
 
         struct p2p_io_ctx
         {
             xxsocket                   impl_;
             bool                       connected_;
-            P2PChannelType             channel_type_ = TCP_P2P_UNKNOWN;
+            int                        channel_type_ = TCP_P2P_UNKNOWN;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
 
@@ -117,7 +116,7 @@ namespace purelib {
             typedef bool(*decode_pdu_length_func)(const char* data, size_t datalen, int& len);
 
             // BuildErrorInfoFunc
-            typedef std::vector<char>(*build_error_func)(int errorcode, const char* errormsg);
+            typedef std::vector<char>(*build_error_func)(int app_error_code, const char* errormsg);
 
             typedef std::function<void(bool succeed, int ec)> connect_listener;
 
@@ -166,7 +165,7 @@ namespace purelib {
             bool       is_connected(void) const { return this->connected_; }
 
             // Gets network error code
-            ErrorCode  get_errorno(void) { return error_; }
+            app_error_code  get_errorno(void) { return error_; }
 
             // post a async send request.
             void       async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback = nullptr);
@@ -207,7 +206,7 @@ namespace purelib {
             bool       do_read(p2p_io_ctx*);
             void       move_received_pdu(p2p_io_ctx*); // move received properly pdu to recv queue
 
-            void       handle_error(void); // TODO: add errorcode parameter
+            void       handle_error(void); // TODO: add app_error_code parameter
 
         private:
             bool                    app_exiting_;
@@ -217,7 +216,7 @@ namespace purelib {
             std::string             addressv6_;
             u_short                 port_;
 
-            ErrorCode               error_;
+            app_error_code               error_;
 
             int                     socket_error_;
 

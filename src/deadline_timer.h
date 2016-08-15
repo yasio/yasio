@@ -31,12 +31,19 @@ SOFTWARE.
 #include <chrono>
 #include <functional>
 
+#if defined(_MSC_VER) && _MSC_VER < 1900
+typedef std::chrono::time_point<std::chrono::system_clock> compatible_timepoint_t;
+#else
+typedef std::chrono::time_point<std::chrono::steady_clock> compatible_timepoint_t;
+#endif
+
 namespace purelib
 {
 namespace inet {
 class deadline_timer {
 public:
     ~deadline_timer();
+
 
     void expires_from_now(const std::chrono::microseconds& duration, bool loop = false)
     {
@@ -65,7 +72,7 @@ public:
 
     bool loop_;
     std::chrono::microseconds duration_;
-    std::chrono::time_point<std::chrono::steady_clock> expire_time_;
+    compatible_timepoint_t expire_time_;
     std::function<void(bool cancelled)> callback_;
 };
 }

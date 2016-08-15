@@ -64,7 +64,7 @@ public:
     std::vector<char>          data_; // sending data
     size_t                     offset_; // offset
     appl_pdu_send_callback_t   on_sent_;
-    std::chrono::time_point<std::chrono::steady_clock>  expire_time_; // In milliseconds
+    compatible_timepoint_t     expire_time_;
 
     static void * operator new(size_t /*size*/)
     {

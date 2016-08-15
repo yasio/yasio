@@ -32,28 +32,27 @@ SOFTWARE.
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#define XXSOCKET_DECL
 
 namespace purelib {
 namespace inet {
 
-    class select_interrupter
+    class socket_select_interrupter
 {
 public:
   // Constructor.
-  XXSOCKET_DECL select_interrupter();
+  _XXSOCKET_INLINE socket_select_interrupter();
 
   // Destructor.
-  XXSOCKET_DECL ~select_interrupter();
+  _XXSOCKET_INLINE ~socket_select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  XXSOCKET_DECL void recreate();
+  _XXSOCKET_INLINE void recreate();
 
   // Interrupt the select call.
-  XXSOCKET_DECL void interrupt();
+  _XXSOCKET_INLINE void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  XXSOCKET_DECL bool reset();
+  _XXSOCKET_INLINE bool reset();
 
   // Get the read descriptor to be passed to select.
   socket_native_type read_descriptor() const
@@ -63,10 +62,10 @@ public:
 
 private:
   // Open the descriptors. Throws on error.
-  XXSOCKET_DECL void open_descriptors();
+  _XXSOCKET_INLINE void open_descriptors();
 
   // Close the descriptors.
-  XXSOCKET_DECL void close_descriptors();
+  _XXSOCKET_INLINE void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single
@@ -82,5 +81,7 @@ private:
 
 } // namespace inet
 } // namespace purelib
+
+#include "socket_select_interrupter.ipp"
 
 #endif // BOOST_ASIO_DETAIL_SOCKET_SELECT_INTERRUPTER_HPP

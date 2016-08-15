@@ -31,24 +31,25 @@ SOFTWARE.
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
-#include "select_interrupter.h"
+// #include "select_interrupter.h"
 
 namespace purelib {
 namespace inet {
 
-select_interrupter::select_interrupter()
+socket_select_interrupter::socket_select_interrupter()
 {
     open_descriptors();
 }
 
-void select_interrupter::open_descriptors()
+void socket_select_interrupter::open_descriptors()
 {
     xxsocket acceptor(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     acceptor.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
+    int error = 0;
     ip::endpoint ep("127.0.0.1", 0);
 
-    acceptor.bind(ep);
+    error = acceptor.bind(ep);
     ep = acceptor.local_endpoint();
     // Some broken firewalls on Windows will intermittently cause getsockname to
     // return 0.0.0.0 when the socket is actually bound to 127.0.0.1. We
@@ -56,10 +57,10 @@ void select_interrupter::open_descriptors()
     // addr.sin_addr.s_addr = socket_ops::host_to_network_long(INADDR_LOOPBACK);
     // cp.address("127.0.0.1");
     ep.address("127.0.0.1");
-    acceptor.listen();
+    error = acceptor.listen();
 
     xxsocket client(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    client.connect(ep);
+    error = client.connect(ep);
 
     auto server = acceptor.accept();
 
@@ -73,12 +74,12 @@ void select_interrupter::open_descriptors()
     write_descriptor_ = client.release();
 }
 
-select_interrupter::~select_interrupter()
+socket_select_interrupter::~socket_select_interrupter()
 {
     close_descriptors();
 }
 
-void select_interrupter::close_descriptors()
+void socket_select_interrupter::close_descriptors()
 {
     if (read_descriptor_ != invalid_socket)
         ::closesocket(read_descriptor_);
@@ -87,7 +88,7 @@ void select_interrupter::close_descriptors()
         ::closesocket(write_descriptor_);
 }
 
-void select_interrupter::recreate()
+void socket_select_interrupter::recreate()
 {
     close_descriptors();
 
@@ -97,12 +98,12 @@ void select_interrupter::recreate()
     open_descriptors();
 }
 
-void select_interrupter::interrupt()
+void socket_select_interrupter::interrupt()
 {
     xxsocket::send_i(write_descriptor_, "\0", 1);
 }
 
-bool select_interrupter::reset()
+bool socket_select_interrupter::reset()
 {
     char buffer[1024];
     int bytes_read = xxsocket::recv_i(read_descriptor_, buffer, sizeof(buffer), 0);

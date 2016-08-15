@@ -41,7 +41,7 @@ SOFTWARE.
 #include <set>
 #include <algorithm>
 #include "object_pool.h"
-#include "select_interrupter.h"
+#include "select_interrupter.hpp"
 #include "deadline_timer.h"
 
 #if _USING_IN_COCOS2DX

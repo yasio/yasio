@@ -16,6 +16,9 @@
     <Filter Include="lib">
       <UniqueIdentifier>{39c57de0-8673-419c-b036-ef9cff8275e2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="lib\interrupter">
+      <UniqueIdentifier>{a2c256b0-b7b7-4a2d-8321-80b2df80fac5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\xxsocket.cpp">
@@ -43,9 +46,6 @@
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\deadline_timer.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\select_interrupter.cpp">
       <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,11 +77,31 @@
     <ClInclude Include="..\..\src\async_tcp_client.h">
       <Filter>lib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\select_interrupter.h">
-      <Filter>lib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\deadline_timer.h">
       <Filter>lib</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp">
+      <Filter>lib\interrupter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\pipe_select_interrupter.hpp">
+      <Filter>lib\interrupter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\socket_select_interrupter.hpp">
+      <Filter>lib\interrupter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\select_interrupter.hpp">
+      <Filter>lib\interrupter</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\eventfd_select_interrupter.ipp">
+      <Filter>lib\interrupter</Filter>
+    </None>
+    <None Include="..\..\src\pipe_select_interrupter.ipp">
+      <Filter>lib\interrupter</Filter>
+    </None>
+    <None Include="..\..\src\socket_select_interrupter.ipp">
+      <Filter>lib\interrupter</Filter>
+    </None>
   </ItemGroup>
 </Project>

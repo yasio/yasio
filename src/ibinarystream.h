@@ -19,7 +19,9 @@ public:
     ibinarystream& operator=(ibinarystream&& right) = delete;
 
     template<typename _Nty>
-    int read_i(_Nty& ov);
+    void read_i(_Nty& ov);
+    void read_i(float& ov);
+    void read_i(double& ov);
 
     int read_v(std::string& ov);
     int read_v(void* ov, int len);
@@ -39,10 +41,22 @@ protected:
 };
 
 template <typename _Nty>
-inline int ibinarystream::read_i(_Nty & ov)
+inline void ibinarystream::read_i(_Nty & ov)
 {
     ov = purelib::endian::ntohv(*((_Nty*)(ptr_)));
-    return consume(sizeof(_Nty));
+    consume(sizeof(_Nty));
+}
+
+inline void ibinarystream::read_i(float& ov)
+{
+    ov = ntohf(*((uint32_t*)(ptr_)));
+    consume(sizeof(ov));
+}
+
+inline void ibinarystream::read_i(double& ov)
+{
+    ov = ntohd(*((uint64_t*)(ptr_)));
+    consume(sizeof(uint64_t));
 }
 
 #endif

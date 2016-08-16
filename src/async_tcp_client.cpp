@@ -382,18 +382,20 @@ void async_tcp_client::handle_error(void)
     }
 
     // @Clear all sending messages
-    std::lock_guard<std::recursive_mutex> lk(this->send_queue_mtx_);
+    this->send_queue_mtx_.lock();
     if (!send_queue_.empty()) {
         for (auto pdu : send_queue_)
             delete pdu;
         send_queue_.clear();
     }
+    this->send_queue_mtx_.unlock();
 
     // @Notify all timers are cancelled.
-    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
+    this->timer_queue_mtx_.lock();
     for (auto& timer : timer_queue_)
         timer->callback_(true); 
     this->timer_queue_.clear();
+    this->timer_queue_mtx_.unlock();
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -762,9 +764,10 @@ void async_tcp_client::perform_timeout_timers()
 
 void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
-    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
-
+    this->timer_queue_mtx_.lock();
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
+	this->timer_queue_mtx_.unlock();
+	
     std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {
         auto duration = earliest->wait_duration();

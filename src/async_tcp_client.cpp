@@ -381,6 +381,7 @@ void async_tcp_client::handle_error(void)
         move_received_pdu(this);
     }
 
+    // @Clear all sending messages
     std::lock_guard<std::recursive_mutex> lk(this->send_queue_mtx_);
     if (!send_queue_.empty()) {
         for (auto pdu : send_queue_)
@@ -389,6 +390,7 @@ void async_tcp_client::handle_error(void)
     }
 
     // @Notify all timers are cancelled.
+    std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
     for (auto& timer : timer_queue_)
         timer->callback_(true); 
     this->timer_queue_.clear();
@@ -453,16 +455,10 @@ void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
     INET_LOG("move_received_pdu...");
 
     recv_queue_mtx_.lock();
-    recv_queue_.push_back(std::move(ctx->receiving_pdu_)); // no data copy
+    recv_queue_.push_back(std::move(ctx->receiving_pdu_)); // without data copy
     recv_queue_mtx_.unlock();
-    //auto pdu = ctx->receiving_pdu_; // make a copy
-    //this->call_tsf_([pdu, this]() mutable -> void {
-    //    this->on_received_pdu_(std::move(pdu));
-    //});
 
     ctx->expected_pdu_length_ = -1;
-
-    // CCSCHTASKS->resumeTarget(this);
 }
 
 
@@ -733,6 +729,9 @@ void async_tcp_client::cancel_timer(deadline_timer* timer)
 
 void async_tcp_client::perform_timeout_timers()
 {
+    if (timer_queue_.empty())
+        return;
+
     std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
 
     std::vector<deadline_timer*> loop_timers;
@@ -808,29 +807,6 @@ bool async_tcp_client::p2p_do_accept(void)
     this->p2p_channel2_.impl_ = this->p2p_acceptor_.accept();
     return this->p2p_channel2_.impl_.is_open();
 }
-#if 0
-void async_tcp_client::dispatchResponseCallbacks(float delta)
-{
-    std::unique_lock<std::mutex> autolock(this->recvQueueMtx);
-    if (!this->recvQueue.empty()) {
-        auto pdu = std::move(this->recvQueue.front());
-        this->recvQueue.pop();
 
-        if (this->recvQueue.empty()) {
-            autolock.unlock();
-            //CCSCHTASKS->pauseTarget(this);
-        }
-        else
-            autolock.unlock();
-
-        if (onRecvpdu != nullptr)
-            this->onRecvpdu(std::move(pdu));
-    }
-    else {
-        autolock.unlock();
-        //CCSCHTASKS->pauseTarget(this);
-    }
-}
-#endif
 } /* namespace purelib::net */
 } /* namespace purelib */

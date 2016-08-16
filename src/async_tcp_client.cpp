@@ -385,6 +385,8 @@ void async_tcp_client::handle_error(void)
         INET_LOG("local close the connection!");
     }
 
+    connected_ = false;
+
     if (this->build_error_pdu_) {
         this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
         move_received_pdu(this);

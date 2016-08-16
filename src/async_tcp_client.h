@@ -155,6 +155,8 @@ namespace purelib {
             // start async socket service
             void       start_service(int working_counter = 1);
 
+            void       set_connect_wait_timeout(long seconds = -1/*-1: disable auto connect */);
+
             // notify tcp_client to connect server
             void       notify_connect();
 
@@ -231,6 +233,7 @@ namespace purelib {
 
             std::mutex              connect_notify_mtx_;
             std::condition_variable connect_notify_cv_;
+            long                    connect_wait_timeout_;
 
             // select interrupter
             select_interrupter      interrupter_;

@@ -100,7 +100,8 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     decode_pdu_length_(nullptr),
     error_(error_number::ERR_OK),
     idle_(true),
-    connect_failed_(false)
+    connect_failed_(false),
+    connect_wait_timeout_(-1)
 {
     FD_ZERO(&fdss_[read_op]);
     FD_ZERO(&fdss_[write_op]);
@@ -186,10 +187,18 @@ void async_tcp_client::set_connect_listener(const connect_listener& listener)
     this->connect_listener_ = listener;
 }
 
+void  async_tcp_client::set_connect_wait_timeout(long seconds = -1/*-1: disable auto connect */)
+{
+    this->connect_wait_timeout_ = seconds;
+}
+
 void async_tcp_client::wait_connect_notify()
 {
     std::unique_lock<std::mutex> autolock(connect_notify_mtx_);
-    connect_notify_cv_.wait(autolock); // wait 1 minutes, if no notify, wakeup self.
+    if (connect_wait_timeout_ == -1)
+        connect_notify_cv_.wait(autolock);
+    else
+        connect_notify_cv_.wait_for(autolock, std::chrono::seconds(connect_wait_timeout_));
 }
 
 void async_tcp_client::service()

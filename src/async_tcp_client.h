@@ -115,8 +115,8 @@ namespace purelib {
             // End user pdu decode length func
             typedef bool(*decode_pdu_length_func)(const char* data, size_t datalen, int& len);
 
-            // BuildErrorInfoFunc
-            typedef std::vector<char>(*build_error_func)(int error_number, const char* errormsg);
+            // connection_lost_callback_t
+            typedef std::function<void(int error_number, const char* errormsg)> connection_lost_callback_t;
 
             typedef std::function<void(bool succeed, int ec)> connect_listener;
 
@@ -143,7 +143,7 @@ namespace purelib {
             */
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
-                build_error_func build_error_pdu_func,
+                const connection_lost_callback_t& on_connection_lost,
                 const appl_pdu_recv_callback_t& callback,
                 const std::function<void(const vdcallback_t&)>& threadsafe_call);
 
@@ -254,7 +254,7 @@ namespace purelib {
             connect_listener        connect_listener_;
             appl_pdu_recv_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;
-            build_error_func        build_error_pdu_;
+            connection_lost_callback_t  on_connection_lost_;
             std::function<void(const vdcallback_t&)> call_tsf_;
 
             bool                    idle_;

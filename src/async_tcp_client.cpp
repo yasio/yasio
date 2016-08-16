@@ -141,13 +141,13 @@ void async_tcp_client::set_endpoint(const char* address, const char* addressv6, 
 
 void async_tcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
-    build_error_func build_error_pdu_func,
+    const connection_lost_callback_t& on_connection_lost,
     const appl_pdu_recv_callback_t& callback, 
     const std::function<void(const vdcallback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
     this->on_received_pdu_ = callback;
-    this->build_error_pdu_ = build_error_pdu_func;
+    this->on_connection_lost_ = on_connection_lost;
     this->call_tsf_ = threadsafe_call;
 }
 
@@ -187,7 +187,7 @@ void async_tcp_client::set_connect_listener(const connect_listener& listener)
     this->connect_listener_ = listener;
 }
 
-void  async_tcp_client::set_connect_wait_timeout(long seconds = -1/*-1: disable auto connect */)
+void  async_tcp_client::set_connect_wait_timeout(long seconds/*-1: disable auto connect */)
 {
     this->connect_wait_timeout_ = seconds;
 }
@@ -376,7 +376,6 @@ void async_tcp_client::notify_connect()
 void async_tcp_client::handle_error(void)
 {
     socket_error_ = xxsocket::get_last_errno();
-    const char* errs = xxsocket::get_error_msg(socket_error_);
 
     if (impl_.is_open()) {
         impl_.close();
@@ -387,9 +386,9 @@ void async_tcp_client::handle_error(void)
 
     connected_ = false;
 
-    if (this->build_error_pdu_) {
-        this->receiving_pdu_ = build_error_pdu_(socket_error_, errs);;
-        move_received_pdu(this);
+    // @Notify connection lost
+    if (this->on_connection_lost_) {
+        TSF_CALL(on_connection_lost_(socket_error_, xxsocket::get_error_msg(socket_error_)));
     }
 
     // @Clear all sending messages

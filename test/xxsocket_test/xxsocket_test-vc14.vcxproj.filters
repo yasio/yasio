@@ -36,16 +36,19 @@
     <ClCompile Include="..\..\src\obinarystream.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="async_client.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="xxsocket_test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\async_tcp_client.cpp">
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\deadline_timer.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="xxsocket_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sendmail.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libb64.cpp">
       <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>

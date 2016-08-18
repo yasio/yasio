@@ -149,12 +149,13 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\deadline_timer.cpp" />
     <ClCompile Include="..\..\src\ibinarystream.cpp" />
+    <ClCompile Include="..\..\src\libb64.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\oslib.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
     <ClCompile Include="..\..\src\async_tcp_client.cpp" />
-    <ClCompile Include="async_client.cpp" />
     <ClCompile Include="pcode_autog_client_messages.cpp" />
+    <ClCompile Include="sendmail.cpp" />
     <ClCompile Include="xxsocket_test.cpp" />
   </ItemGroup>
   <ItemGroup>

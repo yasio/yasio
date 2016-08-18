@@ -1,11 +1,10 @@
-#include "stdafx.h"
-#include <purelib/xxsocket.h>
-#include "purelib/utils/timestamp.h"
-#include "purelib/utils/nsconv.h"
+#include "xxsocket.h"
+#include "timestamp.h"
+#include "nsconv.h"
 // #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "purelib/utils/libb64.h"
+#include "libb64.h"
 //#include "cocos2d.h"
 //#include "HttpClient.h"
 //#include "detail/VXToolHal.h"
@@ -13,6 +12,7 @@
 //
 //USING_NS_CC;
 //using namespace cocos2d::network;
+#include <sstream>
 
 const unsigned char Base64ValTab[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #ifndef _WIN32
@@ -24,6 +24,38 @@ const unsigned char Base64ValTab[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn
 
 using namespace purelib::inet;
 
+static uint8_t hex2uchr(const uint8_t hex)
+{
+    return hex > 9 ? (hex - 10 + 'A') : (hex + '0');
+}
+
+static std::string urlencode(const std::string& input)
+{
+    std::string output;
+    for (size_t ix = 0; ix < input.size(); ix++)
+    {
+        uint8_t buf[4];
+        memset(buf, 0, 4);
+        if (isalnum((uint8_t)input[ix]))
+        {
+            buf[0] = input[ix];
+        }
+        else if ( isspace((uint8_t)input[ix] ) )
+        {
+            buf[0] = '+';
+        }
+        else
+        {
+            buf[0] = '%';
+            buf[1] = ::hex2uchr((uint8_t)input[ix] >> 4);
+            buf[2] = ::hex2uchr((uint8_t)input[ix] % 16);
+        }
+        output += (char *)buf;
+    }
+    return std::move(output);
+};
+
+#if 0
 //获取系统版本
 BOOL internalGetOSName(CString& csOsName)
 {
@@ -329,6 +361,7 @@ BOOL internalGetOSName(CString& csOsName)
     }
     return TRUE;
 }
+#endif
 
 #if 1
 void printRecv(xxsocket& s)
@@ -492,6 +525,72 @@ void sendmail(const char* subject, const std::string& content)
 
 #endif
 
+void http_sendemail(const std::string& mailto, const std::string& subject, const std::string& message)
+{
+    // post data
+    std::stringstream datass;
+    datass << "_token=6OU2b4P2Mad8udXN2pTKU56Q0hF7jASrroZVXGMy"
+        << "&emailTo=" << mailto
+        << "&replyTo="
+        << "&subject=" << subject
+        << "&message=" << urlencode(message);
+
+    auto data = datass.str();
+
+    // construct http package: Internet Explorer 11(11.51.14393.0 Update: 11.0.34(KB3175443) Windows 10(10.0.14393.82)
+    std::stringstream ss;
+    ss << "POST /send HTTP/1.1\r\n";
+    ss << "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\r\n";
+    ss << "Accept: application/json, text/javascript, */*; q=0.01\r\n";
+    ss << "X-Requested-With: XMLHttpRequest\r\n";
+    ss << "Referer: http://send-email.org/\r\n";
+    ss << "Accept-Language: zh-Hans-CN,zh-Hans;q=0.8,en-US;q=0.5,en;q=0.3\r\n";
+    ss << "Accept-Encoding: gzip, deflate\r\n";
+    // Chrome, Internet Explorer 11 is: User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko\r\n
+    ss << "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\n";
+
+    ss << "Host: send-email.org\r\n";
+    ss << "Content-Length: " << data.size() << "\r\n";
+    ss << "DNT: 1\r\n";
+    ss << "Connection: Keep-Alive\r\n";
+    ss << "Cache-Control: no-cache\r\n";
+    ss << "Cookie: _ga=GA1.2.1544911637.1471488460; _gat=1\r\n";
+    ss << "Origin: http://send-email.org\r\n";
+    ss << "\r\n";
+    
+    ss << data;
+
+    auto requestData = ss.str();
+
+    xxsocket httpcli;
+    if (httpcli.xpconnect_n("send-email.org", 80, 5) != 0)
+    {
+        OutputDebugString(L"connect send-email.org failed!\n");
+        return;
+    }
+
+    if (httpcli.send_n(requestData.c_str(), requestData.size(), 5) <= 0)
+    {
+        OutputDebugString(L"send request to send-email.org failed!\n");
+        return;
+    }
+
+    std::string responseData;
+    if (!httpcli.read_until(responseData, "\r\n\r\n", 4))
+    {
+        OutputDebugString(L"recv response from send-email.org failed!\n");
+        return;
+    }
+
+    responseData.push_back('\n');
+    OutputDebugStringA("response data:");
+    OutputDebugStringA(responseData.c_str());
+
+    httpcli.shutdown();
+    httpcli.close();
+}
+
+#if 0
 void submit_crash_log(const char* content)
 {
     CString osName;
@@ -506,12 +605,6 @@ void submit_crash_log(const char* content)
 #if 0
     sendmail(ctimestamp(), (platformInfo + content));
 #else
-	sendmail("smtp.163.com",25,
-		"xml3sexy@163.com",
-		"262381263aK,",
-		"xml3sexy@163.com",
-		"crash_logs@163.com",
-		ctimestamp(),
-        (platformInfo + content).c_str());
 #endif
 }
+#endif

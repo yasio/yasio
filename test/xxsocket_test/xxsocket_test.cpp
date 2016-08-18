@@ -162,9 +162,9 @@ int main(int, char**)
 {
     // std::string respData = send_http_req("http://x-studio365.com");
 
-    extern void http_sendemail(const std::string& mailto, const std::string& subject, const std::string& message);
+    extern void http_sendemail(const std::string& mailto, const std::string& subject, std::string&& message);
 
-    http_sendemail("88888888@qq.com", "ckkjgj", "gfjjihuijwiofoiw\r\ngfkjkghd whitespace test:,");
+    http_sendemail("88888888@qq.com", "ckkjgj", "gfjjihuijwiofoiw\ngfkjkghd whitespace test:,");
 
     // test_https_connect();
     test_tcp_service();

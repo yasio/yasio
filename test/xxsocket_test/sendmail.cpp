@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "libb64.h"
+
 //#include "cocos2d.h"
 //#include "HttpClient.h"
 //#include "detail/VXToolHal.h"
@@ -21,7 +22,7 @@ const unsigned char Base64ValTab[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn
 #define AVal(x) Base64ValTab[x]
 
 //#pragma comment (lib,"ws2_32.lib") 
-
+using namespace purelib;
 using namespace purelib::inet;
 
 static uint8_t hex2uchr(const uint8_t hex)
@@ -525,8 +526,11 @@ void sendmail(const char* subject, const std::string& content)
 
 #endif
 
-void http_sendemail(const std::string& mailto, const std::string& subject, const std::string& message)
+void http_sendemail(const std::string& mailto, const std::string& subject, std::string&& message)
 {
+    nsc::replace(message, "\r\n", "<br />");
+    nsc::replace(message, "\n", "<br />");
+
     // post data
     std::stringstream datass;
     datass << "_token=6OU2b4P2Mad8udXN2pTKU56Q0hF7jASrroZVXGMy"

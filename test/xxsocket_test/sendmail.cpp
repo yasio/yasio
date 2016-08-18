@@ -551,15 +551,15 @@ void http_sendemail(const std::string& mailto, const std::string& subject, std::
     ss << "Accept-Language: zh-Hans-CN,zh-Hans;q=0.8,en-US;q=0.5,en;q=0.3\r\n";
     ss << "Accept-Encoding: gzip, deflate\r\n";
     // Chrome, Internet Explorer 11 is: User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko\r\n
-    ss << "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\n";
-
+    // ss << "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\n";
+    ss << "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko\r\n";
     ss << "Host: send-email.org\r\n";
     ss << "Content-Length: " << data.size() << "\r\n";
     ss << "DNT: 1\r\n";
-    ss << "Connection: Keep-Alive\r\n";
+    ss << "Connection: Keep-Alive\r\n"; // Close
     ss << "Cache-Control: no-cache\r\n";
     ss << "Cookie: _ga=GA1.2.1544911637.1471488460; _gat=1\r\n";
-    ss << "Origin: http://send-email.org\r\n";
+    // ss << "Origin: http://send-email.org\r\n";
     ss << "\r\n";
     
     ss << data;
@@ -590,6 +590,7 @@ void http_sendemail(const std::string& mailto, const std::string& subject, std::
     OutputDebugStringA("response data:");
     OutputDebugStringA(responseData.c_str());
 
+    Sleep(2000);
     httpcli.shutdown();
     httpcli.close();
 }

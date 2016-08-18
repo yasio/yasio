@@ -364,7 +364,8 @@ BOOL internalGetOSName(CString& csOsName)
 }
 #endif
 
-#if 1
+// smtp send mail, could not use
+#if 0
 void printRecv(xxsocket& s)
 {
 	char recvBuff[1024*8];
@@ -392,7 +393,7 @@ int EncodingBase64(const char * pInput, int ilen, char * pOutput)
 
 enum SendResult {errorusername,ok}; 
 
-SendResult sendmail(const char * smtpServer,int port, const char* username, const char * password,const char* from, const char * to, const char * subject,const char * body)
+int smtp_sendmail(const char * smtpServer,int port, const char* username, const char * password,const char* from, const char * to, const char * subject,const char * body)
 {
     xxsocket tcpcli;
     if (tcpcli.xpconnect_n(smtpServer, port, 3.0f) != 0)
@@ -434,7 +435,7 @@ SendResult sendmail(const char * smtpServer,int port, const char* username, cons
 
 	printRecv(tcpcli);
 
-    n = sprintf(buffer,"RCPT TO: <%s>\r\n",to);
+    n = sprintf(buffer,"RCPT TO:<%s>\r\n",to);
     tcpcli.send(buffer, n);
 
 	printRecv(tcpcli);
@@ -445,7 +446,7 @@ SendResult sendmail(const char * smtpServer,int port, const char* username, cons
 	printRecv(tcpcli);
 
     //DATA head
-    n = sprintf(buffer,"Subject: %s\r\n\r\n",subject);
+    n = sprintf(buffer,"Subject:%s\r\n\r\n",subject);
 	
     tcpcli.send(buffer, n);
 
@@ -462,68 +463,6 @@ SendResult sendmail(const char * smtpServer,int port, const char* username, cons
     tcpcli.close();
 	return ok;
 }
-#endif
-
-#if 0
-
-static void internalDispatchHttpResponse(const std::function<void()>& response)
-{
-    thal->runOnMainUIThread([=] {
-        response();
-    });
-}
-
-namespace cocos2d {
-    namespace wext {
-        void CC_DLL setCustomHttpResponseDispatcher(const std::function<void(const std::function<void()>&)>& dispatcher);
-    };
-};
-
-void sendmail(const char* subject, const std::string& content)
-{
-    wext::setCustomHttpResponseDispatcher(internalDispatchHttpResponse);
-
-    HttpRequest* send_mail = new HttpRequest();
-    send_mail->setUrl("http://send-email.org/send");
-    auto headers = send_mail->getHeaders();
-    headers.push_back("Connection: keep-alive");
-    // headers.push_back("Content-Length: 119");
-    headers.push_back("Accept: application/json, text/javascript, */*; q=0.01");
-    headers.push_back("Origin: http://send-email.org");
-    headers.push_back("X-Requested-With: XMLHttpRequest");
-    headers.push_back("User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36");
-    headers.push_back("Content-Type: application/x-www-form-urlencoded; charset=UTF-8");
-    headers.push_back("Referer: http://send-email.org/");
-    headers.push_back("Accept-Encoding: gzip, deflate");
-    headers.push_back("Accept-Language: zh-CN,zh;q=0.8");
-    headers.push_back("Cookie: _ga=GA1.2.233452701.1470649501; _gat=1");
-    send_mail->setHeaders(headers);
-    send_mail->setRequestType(HttpRequest::Type::POST);
-    std::string mail_content = "_token=6OU2b4P2Mad8udXN2pTKU56Q0hF7jASrroZVXGMy&emailTo=262381263%40qq.com&replyTo=&subject=";
-    
-    mail_content.append(crypto::http::b64enc((unmanaged_string)subject));
-    mail_content.append("&message=");
-    mail_content.append(crypto::http::urlencode(content));
-
-    send_mail->setRequestData(mail_content.c_str(), mail_content.size());
-    send_mail->setResponseCallback([=](HttpClient* client, HttpResponse* response) {
-        auto resp = response->getResponseData();
-        resp->push_back('\0');
-        const char* content = resp->data();
-        if (response) {
-            auto responseCode = response->getResponseCode();
-
-            if (responseCode == 200) {
-                cocos2d::log("send mail ok!");
-            }
-        }
-    });
-    HttpClient::getInstance()->setTimeoutForConnect(3);
-    HttpClient::getInstance()->setTimeoutForRead(2);
-    HttpClient::getInstance()->sendImmediate(send_mail);
-    send_mail->release();
-}
-
 #endif
 
 void http_sendemail(const std::string& mailto, const std::string& subject, std::string&& message)

@@ -164,6 +164,10 @@ int main(int, char**)
 
     extern void http_sendemail(const std::string& mailto, const std::string& subject, std::string&& message);
 
+    // 163 mail always response: 554 DT:SPM 163 smtp14,EsCowACH_vF0S7VXPsvDCg--.19895S2 1471499125,...
+    int smtp_sendmail(const char * smtpServer, int port, const char* username, const char * password, const char* from, const char * to, const char * subject, const char * body);
+  
+    // could send 5 mails per hour
     http_sendemail("88888888@qq.com", "ckkjgj", "gfjjihuijwiofoiw\ngfkjkghd whitespace new 20160818 12:08,");
 
     // test_https_connect();

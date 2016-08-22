@@ -35,7 +35,6 @@ namespace purelib {
 namespace inet {
 deadline_timer::~deadline_timer()
 {
-    tcpcli->cancel_timer(this);
 }
 
 void deadline_timer::async_wait(const std::function<void(bool cancelled)>& callback)

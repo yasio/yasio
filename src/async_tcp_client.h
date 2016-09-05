@@ -44,13 +44,6 @@ SOFTWARE.
 #include "select_interrupter.hpp"
 #include "deadline_timer.h"
 
-#if _USING_IN_COCOS2DX
-#include "cocos2d.h"
-#define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
-#else
-#define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
-#endif
-
 namespace purelib {
 
     namespace inet {

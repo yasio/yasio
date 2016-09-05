@@ -27,6 +27,15 @@ SOFTWARE.
 */
 #include "async_tcp_client.h"
 
+#define _USING_IN_COCOS2DX 0
+
+#if _USING_IN_COCOS2DX
+#include "cocos2d.h"
+#define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
+#else
+#define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
+#endif
+
 #ifdef _WIN32
 #if !defined(WINRT)
 #include <MMSystem.h>
@@ -776,8 +785,8 @@ void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
     this->timer_queue_mtx_.lock();
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
-	this->timer_queue_mtx_.unlock();
-	
+    this->timer_queue_mtx_.unlock();
+    
     std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {
         auto duration = earliest->wait_duration();

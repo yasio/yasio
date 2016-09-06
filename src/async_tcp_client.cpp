@@ -262,7 +262,10 @@ void async_tcp_client::service()
            
             if (nfds == -1)
             {
-                INET_LOG("select failed, error code: %d\n", xxsocket::get_last_errno());
+                int ec = xxsocket::get_last_errno();
+                INET_LOG("select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
+                if (!this->impl_.is_open())
+                    goto _L_error;
                 continue;            // try select again
             }
 
@@ -371,6 +374,9 @@ void async_tcp_client::handle_error(void)
         timer->callback_(true); 
     this->timer_queue_.clear();
     this->timer_queue_mtx_.unlock();
+
+    interrupter_.reset();
+    timer_interrupter_.reset();
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -464,9 +470,6 @@ bool async_tcp_client::connect(void)
         FD_ZERO(&fdss_[read_op]);
         FD_ZERO(&fdss_[write_op]);
         FD_ZERO(&fdss_[except_op]);
-
-        interrupter_.reset();
-        timer_interrupter_.reset();
 
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
         register_descriptor(timer_interrupter_.read_descriptor(), socket_event_read);

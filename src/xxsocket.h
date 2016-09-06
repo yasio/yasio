@@ -120,7 +120,8 @@ typedef int socket_native_type;
 #undef EUSERS                  
 #undef EDQUOT                  
 #undef ESTALE                  
-#undef EREMOTE                 
+#undef EREMOTE 
+#undef EBADF
 
 #define EWOULDBLOCK             WSAEWOULDBLOCK
 #define EINPROGRESS             WSAEINPROGRESS
@@ -159,6 +160,7 @@ typedef int socket_native_type;
 #define EDQUOT                  WSAEDQUOT
 #define ESTALE                  WSAESTALE
 #define EREMOTE                 WSAEREMOTE
+#define EBADF                   WSAEBADF
 
 #endif
 

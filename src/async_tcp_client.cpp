@@ -259,20 +259,28 @@ void async_tcp_client::service()
             }
 
             int nfds = ::select(maxfdp_, &(fdss[read_op]), &(fdss[write_op]), &(fdss[except_op]), &timeout);
-           
             if (nfds == -1)
             {
                 int ec = xxsocket::get_last_errno();
-                INET_LOG("select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
-                if (!this->impl_.is_open())
+                INET_LOG("socket.select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
+                if (ec == EBADF || !this->impl_.is_open()) {
                     goto _L_error;
-                continue;            // try select again
+                }
+                continue; // try select again.
             }
-
+           
             if (nfds == 0)
             {
                 perform_timeout_timers();
                 continue;
+            }
+
+            // we should check whether the connection have exception before any operations.
+            if(FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
+            {
+                int ec = xxsocket::get_last_errno();
+                INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
+                goto _L_error;
             }
 
             if (FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
@@ -301,12 +309,6 @@ void async_tcp_client::service()
                 timer_interrupter_.reset();
             }
 
-            if (FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
-            { // exception occured
-                goto _L_error;
-            }
-
-
             /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
                     p2p_channel1_.reset();
@@ -331,8 +333,12 @@ void async_tcp_client::service()
 
 void async_tcp_client::close()
 {
-    if (impl_.is_open())
+    if (impl_.is_open()) {
+        impl_.shutdown();
         impl_.close();
+    }
+
+    interrupter_.interrupt();
 }
 
 void async_tcp_client::notify_connect()

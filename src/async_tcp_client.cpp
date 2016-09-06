@@ -48,7 +48,7 @@ SOFTWARE.
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 
-#define BUSY_DELAY 1000 // 1 millisecond
+#define MAX_BUSY_DELAY 1000 // 1 millisecond
 
 #define MAX_PDU_LEN SZ(10, M)
 
@@ -249,16 +249,9 @@ void async_tcp_client::service()
         {
             memcpy(&fdss, fdss_, sizeof(fdss_));
 
-            if (this->offset_ > 0) { // @pitfall: If read buffer has data, needs proccess firstly
-                if (!do_read(this))
-                    goto _L_error;
 
-                // @wait only 1 millisecond, Let write operation has opportunity to perform.
-                get_wait_duration(timeout, 1000);
-            }
-            else {
-                get_wait_duration(timeout, MAX_WAIT_DURATION);
-            }
+            // @pitfall: If still have data to read, only wait 1 millseconds.
+            get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
 
             int nfds = ::select(maxfdp_, &(fdss[read_op]), &(fdss[write_op]), &(fdss[except_op]), &timeout);
             if (nfds == -1)
@@ -291,7 +284,7 @@ void async_tcp_client::service()
             }
 
             // perform read operations
-            if (FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
+            if (this->offset_ > 0 || FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
             { // can read socket data
                 if (!do_read(this))
                     goto _L_error;

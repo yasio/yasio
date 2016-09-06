@@ -263,13 +263,7 @@ void async_tcp_client::service()
                 }
                 continue; // try select again.
             }
-           
-            if (nfds == 0)
-            {
-                perform_timeout_timers();
-                continue;
-            }
-
+            
             // we should check whether the connection have exception before any operations.
             if(FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
             {
@@ -297,6 +291,9 @@ void async_tcp_client::service()
                     goto _L_error;
                 }
             }
+            
+            if(nfds == 0)
+                perform_timeout_timers();
 
             /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))

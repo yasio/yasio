@@ -48,6 +48,8 @@ SOFTWARE.
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 
+#define BUSY_DELAY 1000 // 1 millisecond
+
 #define MAX_PDU_LEN SZ(10, M)
 
 #define TSF_CALL(stmt) this->call_tsf_([=]{(stmt);});
@@ -756,6 +758,7 @@ void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
     	return;
     }
     this->send_queue_mtx_.unlock();
+
     this->timer_queue_mtx_.lock();
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     this->timer_queue_mtx_.unlock();

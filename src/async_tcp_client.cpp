@@ -27,14 +27,17 @@ SOFTWARE.
 */
 #include "async_tcp_client.h"
 
+
 #define _USING_IN_COCOS2DX 0
 
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
-#define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
+// #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
+#define INET_LOG(format,...) cocos2d::log((format), ##__VA_ARGS__)
 #else
 #define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
 #endif
+
 
 #ifdef _WIN32
 #if !defined(WINRT)
@@ -269,66 +272,11 @@ void async_tcp_client::service()
                 continue;
             }
 
-            /*
-            ** check and handle error sockets
-            */
-#if 0
-            for (auto i = 0; i < excep_set.fd_count; ++i) {
-                if (excepfds_.fd_array[i] == this->impl_)
-                {
-                    goto _L_error;
-                }
-            }
-#else
-            if (FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
-            { // exception occured
-                goto _L_error;
-            }
-#endif
-
-            /*
-            ** check and handle readable sockets
-            */
-#if 0
-            for (auto i = 0; i < read_set.fd_count; ++i) {
-                const auto readfd = read_set.fd_array[i];
-                if (readfd == this->p2p_acceptor_)
-                { // process p2p connect request from peer
-                    p2p_do_accept();
-                }
-                else if (readfd == this->impl_)
-                {
-                    if (!do_read(this))
-                        goto _L_error;
-                    idle_ = false;
-                }
-                else if (readfd == this->p2p_channel2_.impl_) {
-                    if (!do_read(&this->p2p_channel2_))
-                    { // read failed
-                        this->p2p_channel2_.reset();
-                    }
-                }
-                else if (readfd == this->p2p_channel1_.impl_) {
-                    if (this->p2p_channel1_.connected_)
-                    {
-                        if (!do_read(&this->p2p_channel1_))
-                        { // read failed
-                            this->p2p_channel2_.reset();
-                        }
-                    }
-                    else {
-                        printf("P2P: The connection local --> peer established. \n");
-                        this->p2p_channel1_.connected_ = true;
-                    }
-                }
-            }
-#else
             if (FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
             { // can read socket data
                 if (!do_read(this))
                     goto _L_error;
             }
-#endif
 
             if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
                 // perform write operations
@@ -343,12 +291,20 @@ void async_tcp_client::service()
                         goto _L_error;
                     }
                 }
-                else { // new timer scheduled, only need reset interrupter
-                    interrupter_.reset(); // perform_timeout_timers();
-                }
             }
 
-            if (this->p2p_channel1_.connected_) {
+            if (FD_ISSET(this->timer_interrupter_.read_descriptor(), &(fdss[read_op])))
+            { // new timer scheduled, only need reset interrupter
+                timer_interrupter_.reset();
+            }
+
+            if (FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
+            { // exception occured
+                goto _L_error;
+            }
+
+
+            /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
                     p2p_channel1_.reset();
             }
@@ -356,7 +312,7 @@ void async_tcp_client::service()
             if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel2_))
                     p2p_channel2_.reset();
-            }
+            }*/
         }
 
         continue;
@@ -509,7 +465,11 @@ bool async_tcp_client::connect(void)
         FD_ZERO(&fdss_[write_op]);
         FD_ZERO(&fdss_[except_op]);
 
+        interrupter_.reset();
+        timer_interrupter_.reset();
+
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+        register_descriptor(timer_interrupter_.read_descriptor(), socket_event_read);
         register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);
 
         impl_.set_nonblocking(true);
@@ -583,6 +543,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
                 this->call_tsf_([v] {
+                    INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", v->data_.size());
                     if (v->on_sent_ != nullptr)
                         v->on_sent_(error_number::ERR_OK);
                     delete v;
@@ -597,6 +558,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 else { // send timeout
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
+                        INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", v->data_.size());
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_SEND_TIMEOUT);
                         delete v;
@@ -734,7 +696,7 @@ void async_tcp_client::schedule_timer(deadline_timer* timer)
         return lhs->wait_duration() > rhs->wait_duration();
     });
 
-    interrupter_.interrupt();
+    timer_interrupter_.interrupt();
 }
 
 void async_tcp_client::cancel_timer(deadline_timer* timer)

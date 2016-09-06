@@ -283,30 +283,24 @@ void async_tcp_client::service()
                 goto _L_error;
             }
 
+            if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
+                // reset only
+                interrupter_.reset();
+            }
+
+            // perform read operations
             if (FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
             { // can read socket data
                 if (!do_read(this))
                     goto _L_error;
             }
 
-            if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
-                // perform write operations
-                if (!this->send_queue_.empty()){
-                    if (do_write(this))
-                    { // TODO: check would block? for client, may be unnecessory.
-                        if (this->send_queue_.empty()) {
-                            interrupter_.reset();
-                        }
-                    }
-                    else {
-                        goto _L_error;
-                    }
+            // perform write operations
+            if (!this->send_queue_.empty()){
+                if (!do_write(this))
+                { // TODO: check would block? for client, may be unnecessory.
+                    goto _L_error;
                 }
-            }
-
-            if (FD_ISSET(this->timer_interrupter_.read_descriptor(), &(fdss[read_op])))
-            { // new timer scheduled, only need reset interrupter
-                timer_interrupter_.reset();
             }
 
             /*if (this->p2p_channel1_.connected_) {
@@ -382,7 +376,6 @@ void async_tcp_client::handle_error(void)
     this->timer_queue_mtx_.unlock();
 
     interrupter_.reset();
-    timer_interrupter_.reset();
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -478,7 +471,6 @@ bool async_tcp_client::connect(void)
         FD_ZERO(&fdss_[except_op]);
 
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-        register_descriptor(timer_interrupter_.read_descriptor(), socket_event_read);
         register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);
 
         impl_.set_nonblocking(true);
@@ -705,7 +697,7 @@ void async_tcp_client::schedule_timer(deadline_timer* timer)
         return lhs->wait_duration() > rhs->wait_duration();
     });
 
-    timer_interrupter_.interrupt();
+    interrupter_.interrupt();
 }
 
 void async_tcp_client::cancel_timer(deadline_timer* timer)
@@ -753,7 +745,17 @@ void async_tcp_client::perform_timeout_timers()
 }
 
 void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
-{
+{    
+    // If send_queue_ not empty, we should perform it immediately.
+	// so set socket.select timeout to ZERO.
+    this->send_queue_mtx_.lock();
+    if(!this->send_queue_.empty())
+    {
+    	this->send_queue_mtx_.unlock();
+    	::memset(&tv, 0x0, sizeof(tv));
+    	return;
+    }
+    this->send_queue_mtx_.unlock();
     this->timer_queue_mtx_.lock();
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     this->timer_queue_mtx_.unlock();

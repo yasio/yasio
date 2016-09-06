@@ -230,7 +230,6 @@ namespace purelib {
 
             // select interrupter
             select_interrupter      interrupter_;
-            select_interrupter      timer_interrupter_;
 
             // timer support
             std::vector<deadline_timer*> timer_queue_;

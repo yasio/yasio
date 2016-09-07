@@ -242,18 +242,22 @@ void async_tcp_client::service()
 
 
         // event loop
-        fd_set fdss[3];
+        // fd_set fdss[3];
         timeval timeout;
 
         for (; !app_exiting_;)
         {
-            memcpy(&fdss, fdss_, sizeof(fdss_));
-
+            set_descriptors(); // memcpy(&fdss, fdss_, sizeof(fdss_));
 
             // @pitfall: If still have data to read, only wait 1 millseconds.
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
 
-            int nfds = ::select(maxfdp_, &(fdss[read_op]), &(fdss[write_op]), &(fdss[except_op]), &timeout);
+            INET_LOG("socket.select waiting... %ld milliseconds", timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+            
+            int nfds = ::select(10000, &(fdss_[read_op]), nullptr, nullptr, &timeout);
+
+            INET_LOG("socket.select waked up, retval=%d", nfds);
+
             if (nfds == -1)
             {
                 int ec = xxsocket::get_last_errno();
@@ -261,9 +265,24 @@ void async_tcp_client::service()
                 if (ec == EBADF || !this->impl_.is_open()) {
                     goto _L_error;
                 }
+
+                clear_descriptors();
                 continue; // try select again.
             }
+
+            if (nfds == 0) {
+                INET_LOG("socket.select is timeout, do perform_timeout_timers()");
+                perform_timeout_timers();
+            }
+            // Reset the interrupter.
+            else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fdss_[read_op])))
+            {
+                bool was_interrupt = interrupter_.reset();
+                INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
+                --nfds;
+            }
             
+#if 0
             // we should check whether the connection have exception before any operations.
             if(FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
             {
@@ -271,29 +290,26 @@ void async_tcp_client::service()
                 INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
                 goto _L_error;
             }
-
-            if (FD_ISSET(this->interrupter_.read_descriptor(), &(fdss[read_op]))) {
-                // reset only
-                interrupter_.reset();
-            }
-
-            // perform read operations
-            if (this->offset_ > 0 || FD_ISSET(this->impl_.native_handle(), &(fdss[read_op])))
-            { // can read socket data
-                if (!do_read(this))
+#endif
+            if (nfds > 0 || this->offset_ > 0) {
+                INET_LOG("perform read operation...");
+                if (!do_read(this)) {
+                    INET_LOG("do read failed...");
                     goto _L_error;
+                }
             }
 
             // perform write operations
             if (!this->send_queue_.empty()){
+            	INET_LOG("perform write operation...");
                 if (!do_write(this))
                 { // TODO: check would block? for client, may be unnecessory.
+                	INET_LOG("do write failed...");
                     goto _L_error;
                 }
             }
-            
-            if(nfds == 0)
-                perform_timeout_timers();
+
+            clear_descriptors();
 
             /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
@@ -370,6 +386,18 @@ void async_tcp_client::handle_error(void)
     interrupter_.reset();
 }
 
+void async_tcp_client::set_descriptors()
+{
+    FD_SET(this->impl_, &fdss_[read_op]);
+    FD_SET(this->interrupter_.read_descriptor(), &fdss_[read_op]);
+}
+
+void async_tcp_client::clear_descriptors()
+{
+    FD_CLR(this->impl_, &fdss_[read_op]);
+    FD_CLR(this->interrupter_.read_descriptor(), &fdss_[read_op]);
+}
+
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
 {
     if ((flags & socket_event_read) != 0)
@@ -414,10 +442,13 @@ void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_
     {
         auto pdu = new appl_pdu(std::move(data), callback, std::chrono::seconds(this->send_timeout_));
         
-        std::unique_lock<std::recursive_mutex> autolock(send_queue_mtx_);
+        send_queue_mtx_.lock();
         send_queue_.push_back(pdu);
+        send_queue_mtx_.unlock();
 
         interrupter_.interrupt();
+
+        INET_LOG("async_tcp_client::async_send --> push a message to send_queue_ ok.");
     }
     else {
         INET_LOG("async_tcp_client::send failed, The connection not ok!!!");
@@ -462,8 +493,10 @@ bool async_tcp_client::connect(void)
         FD_ZERO(&fdss_[write_op]);
         FD_ZERO(&fdss_[except_op]);
 
-        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-        register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);
+        INET_LOG("interrupter readfd:%d", interrupter_.read_descriptor());
+
+        //register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+        //register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);
 
         impl_.set_nonblocking(true);
 
@@ -689,7 +722,8 @@ void async_tcp_client::schedule_timer(deadline_timer* timer)
         return lhs->wait_duration() > rhs->wait_duration();
     });
 
-    interrupter_.interrupt();
+    if (timer == *this->timer_queue_.begin())
+        interrupter_.interrupt();
 }
 
 void async_tcp_client::cancel_timer(deadline_timer* timer)

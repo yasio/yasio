@@ -282,7 +282,7 @@ void async_tcp_client::service()
             
 #if 0
             // we should check whether the connection have exception before any operations.
-            if(FD_ISSET(this->impl_.native_handle(), &(fdss[except_op])))
+            if(FD_ISSET(this->impl_.native_handle(), &(fds_array[except_op])))
             {
                 int ec = xxsocket::get_last_errno();
                 INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
@@ -474,9 +474,9 @@ bool async_tcp_client::connect(void)
     }
     if (ret == 0)
     { // connect succeed, reset fds
-        FD_ZERO(&fdss_[read_op]);
-        FD_ZERO(&fdss_[write_op]);
-        FD_ZERO(&fdss_[except_op]);
+        FD_ZERO(&fds_array_[read_op]);
+        FD_ZERO(&fds_array_[write_op]);
+        FD_ZERO(&fds_array_[except_op]);
 
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
         register_descriptor(impl_.native_handle(), socket_event_read);

@@ -188,9 +188,6 @@ namespace purelib {
 
             void       get_wait_duration(timeval& tv, long long usec);
 
-            void       set_descriptors();
-            void       clear_descriptors();
-
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);
 

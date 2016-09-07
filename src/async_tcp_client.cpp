@@ -242,12 +242,12 @@ void async_tcp_client::service()
 
 
         // event loop
-        // fd_set fdss[3];
+        fd_set fdss[3];
         timeval timeout;
 
         for (; !app_exiting_;)
         {
-            set_descriptors(); // memcpy(&fdss, fdss_, sizeof(fdss_));
+            ::memcpy(&fdss, fdss_, sizeof(fdss_));
 
             // @pitfall: If still have data to read, only wait 1 millseconds.
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
@@ -265,8 +265,6 @@ void async_tcp_client::service()
                 if (ec == EBADF || !this->impl_.is_open()) {
                     goto _L_error;
                 }
-
-                clear_descriptors();
                 continue; // try select again.
             }
 
@@ -308,8 +306,6 @@ void async_tcp_client::service()
                     goto _L_error;
                 }
             }
-
-            clear_descriptors();
 
             /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
@@ -386,18 +382,6 @@ void async_tcp_client::handle_error(void)
     interrupter_.reset();
 }
 
-void async_tcp_client::set_descriptors()
-{
-    FD_SET(this->impl_, &fdss_[read_op]);
-    FD_SET(this->interrupter_.read_descriptor(), &fdss_[read_op]);
-}
-
-void async_tcp_client::clear_descriptors()
-{
-    FD_CLR(this->impl_, &fdss_[read_op]);
-    FD_CLR(this->interrupter_.read_descriptor(), &fdss_[read_op]);
-}
-
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
 {
     if ((flags & socket_event_read) != 0)
@@ -415,7 +399,8 @@ void async_tcp_client::register_descriptor(const socket_native_type fd, int flag
         FD_SET(fd, &(fdss_[except_op]));
     }
 
-    maxfdp_ = static_cast<int>(fd) + 1;
+    if(maxfdp_ < static_cast<int>(fd) + 1)
+        maxfdp_ = static_cast<int>(fd) + 1;
 }
 
 void async_tcp_client::unregister_descriptor(const socket_native_type fd, int flags)
@@ -493,10 +478,8 @@ bool async_tcp_client::connect(void)
         FD_ZERO(&fdss_[write_op]);
         FD_ZERO(&fdss_[except_op]);
 
-        INET_LOG("interrupter readfd:%d", interrupter_.read_descriptor());
-
-        //register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-        //register_descriptor(impl_.native_handle(), socket_event_read | socket_event_except);
+        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+        register_descriptor(impl_.native_handle(), socket_event_read);
 
         impl_.set_nonblocking(true);
 
@@ -508,7 +491,7 @@ bool async_tcp_client::connect(void)
 
         this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
-        INET_LOG("connect server: %s:%u succeed.", address_.c_str(), port_);
+        INET_LOG("connect server: %s:%u succeed, fd=%d interrupterfd=%d", address_.c_str(), port_, impl_.native_handle(), interrupter_.read_descriptor());
 
 #if 0 // provided as API
         auto endp = this->impl_.local_endpoint();

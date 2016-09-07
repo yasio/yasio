@@ -247,7 +247,7 @@ void async_tcp_client::service()
 
         for (; !app_exiting_;)
         {
-            ::memcpy(&fds_array, fds_array_, sizeof(fds_array_));
+            ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
 
             // @pitfall: If still have data to read, only wait 1 millseconds.
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);

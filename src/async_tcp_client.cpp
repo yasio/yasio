@@ -252,9 +252,9 @@ void async_tcp_client::service()
             // @pitfall: If still have data to read, only wait 1 millseconds.
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
 
-            INET_LOG("socket.select waiting... %ld milliseconds", timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
             
-            int nfds = ::select(10000, &(fdss_[read_op]), nullptr, nullptr, &timeout);
+            int nfds = ::select(maxfdp_, &(fdss_[read_op]), nullptr, nullptr, &timeout);
 
             INET_LOG("socket.select waked up, retval=%d", nfds);
 
@@ -491,7 +491,7 @@ bool async_tcp_client::connect(void)
 
         this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
-        INET_LOG("connect server: %s:%u succeed, fd=%d interrupterfd=%d", address_.c_str(), port_, impl_.native_handle(), interrupter_.read_descriptor());
+        INET_LOG("connect server: %s:%u succeed, fd=%d interrupter_fd=%d", address_.c_str(), port_, impl_.native_handle(), interrupter_.read_descriptor());
 
 #if 0 // provided as API
         auto endp = this->impl_.local_endpoint();

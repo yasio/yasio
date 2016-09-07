@@ -301,7 +301,7 @@ void async_tcp_client::service()
             if (!this->send_queue_.empty()){
             	INET_LOG("perform write operation...");
                 if (!do_write(this))
-                { // TODO: check would block? for client, may be unnecessory.
+                { // TODO: check would block? for client, may be unnecessary.
                 	INET_LOG("do write failed...");
                     goto _L_error;
                 }

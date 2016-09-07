@@ -117,9 +117,9 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     connect_failed_(false),
     connect_wait_timeout_(-1)
 {
-    FD_ZERO(&fdss_[read_op]);
-    FD_ZERO(&fdss_[write_op]);
-    FD_ZERO(&fdss_[read_op]);
+    FD_ZERO(&fds_array_[read_op]);
+    FD_ZERO(&fds_array_[write_op]);
+    FD_ZERO(&fds_array_[read_op]);
 
     maxfdp_ = 0;
     reset();
@@ -242,19 +242,19 @@ void async_tcp_client::service()
 
 
         // event loop
-        fd_set fdss[3];
+        fd_set fds_array[3];
         timeval timeout;
 
         for (; !app_exiting_;)
         {
-            ::memcpy(&fdss, fdss_, sizeof(fdss_));
+            ::memcpy(&fds_array, fds_array_, sizeof(fds_array_));
 
             // @pitfall: If still have data to read, only wait 1 millseconds.
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
 
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
             
-            int nfds = ::select(maxfdp_, &(fdss_[read_op]), nullptr, nullptr, &timeout);
+            int nfds = ::select(maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
 
             INET_LOG("socket.select waked up, retval=%d", nfds);
 
@@ -273,7 +273,7 @@ void async_tcp_client::service()
                 perform_timeout_timers();
             }
             // Reset the interrupter.
-            else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fdss_[read_op])))
+            else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
             {
                 bool was_interrupt = interrupter_.reset();
                 INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
@@ -386,17 +386,17 @@ void async_tcp_client::register_descriptor(const socket_native_type fd, int flag
 {
     if ((flags & socket_event_read) != 0)
     {
-        FD_SET(fd, &(fdss_[read_op]));
+        FD_SET(fd, &(fds_array_[read_op]));
     }
 
     if ((flags & socket_event_write) != 0)
     {
-        FD_SET(fd, &(fdss_[write_op]));
+        FD_SET(fd, &(fds_array_[write_op]));
     }
 
     if ((flags & socket_event_except) != 0)
     {
-        FD_SET(fd, &(fdss_[except_op]));
+        FD_SET(fd, &(fds_array_[except_op]));
     }
 
     if(maxfdp_ < static_cast<int>(fd) + 1)
@@ -407,17 +407,17 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
 {
     if ((flags & socket_event_read) != 0)
     {
-        FD_CLR(fd, &(fdss_[read_op]));
+        FD_CLR(fd, &(fds_array_[read_op]));
     }
 
     if ((flags & socket_event_write) != 0)
     {
-        FD_CLR(fd, &(fdss_[write_op]));
+        FD_CLR(fd, &(fds_array_[write_op]));
     }
 
     if ((flags & socket_event_except) != 0)
     {
-        FD_CLR(fd, &(fdss_[except_op]));
+        FD_CLR(fd, &(fds_array_[except_op]));
     }
 }
 

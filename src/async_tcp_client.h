@@ -242,7 +242,7 @@ namespace purelib {
                 write_op,
                 except_op,
             };
-            fd_set fdss_[3];
+            fd_set fds_array_[3];
             // fd_set readfds_, writefds_, excepfds_;
             connect_listener        connect_listener_;
             appl_pdu_recv_callback_t on_received_pdu_;

@@ -32,8 +32,7 @@ SOFTWARE.
 
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
-// #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
-#define INET_LOG(format,...) cocos2d::log((format), ##__VA_ARGS__)
+#define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
 #else
 #define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
 #endif
@@ -552,7 +551,8 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
                 this->call_tsf_([v] {
-                    INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", v->data_.size());
+					auto packetSize = v->data_.size();
+					INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
                     if (v->on_sent_ != nullptr)
                         v->on_sent_(error_number::ERR_OK);
                     delete v;
@@ -567,7 +567,8 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 else { // send timeout
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
-                        INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", v->data_.size());
+						auto packetSize = v->data_.size();
+						INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_SEND_TIMEOUT);
                         delete v;

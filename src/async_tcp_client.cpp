@@ -134,7 +134,7 @@ async_tcp_client::~async_tcp_client()
     close();
 
     this->connect_notify_cv_.notify_all();
-    
+
     if (this->worker_thread_.joinable())
         this->worker_thread_.join();
 }
@@ -155,7 +155,7 @@ void async_tcp_client::set_endpoint(const char* address, const char* addressv6, 
 void async_tcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
     const connection_lost_callback_t& on_connection_lost,
-    const appl_pdu_recv_callback_t& callback, 
+    const appl_pdu_recv_callback_t& callback,
     const std::function<void(const vdcallback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
@@ -223,7 +223,7 @@ void async_tcp_client::service()
     if (this->suspended_)
         return;
 
-    while (!app_exiting_) 
+    while (!app_exiting_)
     {
         bool connection_ok = impl_.is_open();
 
@@ -252,7 +252,7 @@ void async_tcp_client::service()
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
 
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-            
+
             int nfds = ::select(maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
 
             INET_LOG("socket.select waked up, retval=%d", nfds);
@@ -278,10 +278,10 @@ void async_tcp_client::service()
                 INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
                 --nfds;
             }
-            
+
 #if 0
             // we should check whether the connection have exception before any operations.
-            if(FD_ISSET(this->impl_.native_handle(), &(fds_array[except_op])))
+            if (FD_ISSET(this->impl_.native_handle(), &(fds_array[except_op])))
             {
                 int ec = xxsocket::get_last_errno();
                 INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
@@ -297,11 +297,11 @@ void async_tcp_client::service()
             }
 
             // perform write operations
-            if (!this->send_queue_.empty()){
-            	INET_LOG("perform write operation...");
+            if (!this->send_queue_.empty()) {
+                INET_LOG("perform write operation...");
                 if (!do_write(this))
                 { // TODO: check would block? for client, may be unnecessary.
-                	INET_LOG("do write failed...");
+                    INET_LOG("do write failed...");
                     goto _L_error;
                 }
             }
@@ -374,7 +374,7 @@ void async_tcp_client::handle_error(void)
     // @Notify all timers are cancelled.
     this->timer_queue_mtx_.lock();
     for (auto& timer : timer_queue_)
-        timer->callback_(true); 
+        timer->callback_(true);
     this->timer_queue_.clear();
     this->timer_queue_mtx_.unlock();
 
@@ -398,7 +398,7 @@ void async_tcp_client::register_descriptor(const socket_native_type fd, int flag
         FD_SET(fd, &(fds_array_[except_op]));
     }
 
-    if(maxfdp_ < static_cast<int>(fd) + 1)
+    if (maxfdp_ < static_cast<int>(fd) + 1)
         maxfdp_ = static_cast<int>(fd) + 1;
 }
 
@@ -425,7 +425,7 @@ void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_
     if (this->impl_.is_open())
     {
         auto pdu = new appl_pdu(std::move(data), callback, std::chrono::seconds(this->send_timeout_));
-        
+
         send_queue_mtx_.lock();
         send_queue_.push_back(pdu);
         send_queue_mtx_.unlock();
@@ -551,8 +551,8 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
                 this->call_tsf_([v] {
-					auto packetSize = v->data_.size();
-					INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
+                    auto packetSize = v->data_.size();
+                    INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
                     if (v->on_sent_ != nullptr)
                         v->on_sent_(error_number::ERR_OK);
                     delete v;
@@ -567,8 +567,8 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 else { // send timeout
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
-						auto packetSize = v->data_.size();
-						INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
+                        auto packetSize = v->data_.size();
+                        INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_SEND_TIMEOUT);
                         delete v;
@@ -695,13 +695,13 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 }
 
 void async_tcp_client::schedule_timer(deadline_timer* timer)
-{ 
+{
     std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
     if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
         return;
 
     this->timer_queue_.push_back(timer);
-    
+
     std::sort(this->timer_queue_.begin(), this->timer_queue_.end(), [](deadline_timer* lhs, deadline_timer* rhs) {
         return lhs->wait_duration() > rhs->wait_duration();
     });
@@ -740,7 +740,7 @@ void async_tcp_client::perform_timeout_timers()
                 earliest->expires_from_now();
                 loop_timers.push_back(earliest);
             }
-        } 
+        }
         else {
             break;
         }
@@ -755,22 +755,22 @@ void async_tcp_client::perform_timeout_timers()
 }
 
 void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
-{    
+{
     // If send_queue_ not empty, we should perform it immediately.
-	// so set socket.select timeout to ZERO.
+    // so set socket.select timeout to ZERO.
     this->send_queue_mtx_.lock();
-    if(!this->send_queue_.empty())
+    if (!this->send_queue_.empty())
     {
-    	this->send_queue_mtx_.unlock();
-    	::memset(&tv, 0x0, sizeof(tv));
-    	return;
+        this->send_queue_mtx_.unlock();
+        ::memset(&tv, 0x0, sizeof(tv));
+        return;
     }
     this->send_queue_mtx_.unlock();
 
     this->timer_queue_mtx_.lock();
     auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
     this->timer_queue_mtx_.unlock();
-    
+
     std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {
         auto duration = earliest->wait_duration();

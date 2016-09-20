@@ -30,6 +30,8 @@ SOFTWARE.
 
 #define _USING_IN_COCOS2DX 0
 
+#define INET_ENABLE_VERBOSE_LOG 0
+
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
 #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
@@ -250,13 +252,13 @@ void async_tcp_client::service()
 
             // @pitfall: If still have data to read, only wait 1 millseconds.
             get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
-
+#if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-
+#endif
             int nfds = ::select(maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
-
+#if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
-
+#endif
             if (nfds == -1)
             {
                 int ec = xxsocket::get_last_errno();
@@ -268,14 +270,17 @@ void async_tcp_client::service()
             }
 
             if (nfds == 0) {
+#if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("socket.select is timeout, do perform_timeout_timers()");
-                perform_timeout_timers();
+#endif
             }
             // Reset the interrupter.
             else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
             {
                 bool was_interrupt = interrupter_.reset();
+#if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
+#endif
                 --nfds;
             }
 
@@ -289,22 +294,28 @@ void async_tcp_client::service()
             }
 #endif
             if (nfds > 0 || this->offset_ > 0) {
+#if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("perform read operation...");
+#endif
                 if (!do_read(this)) {
-                    INET_LOG("do read failed...");
+                    // INET_LOG("do read failed...");
                     goto _L_error;
                 }
             }
 
             // perform write operations
             if (!this->send_queue_.empty()) {
+#if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("perform write operation...");
+#endif
                 if (!do_write(this))
                 { // TODO: check would block? for client, may be unnecessary.
-                    INET_LOG("do write failed...");
+                    // INET_LOG("do write failed...");
                     goto _L_error;
                 }
             }
+
+			perform_timeout_timers();
 
             /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
@@ -431,8 +442,6 @@ void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_
         send_queue_mtx_.unlock();
 
         interrupter_.interrupt();
-
-        INET_LOG("async_tcp_client::async_send --> push a message to send_queue_ ok.");
     }
     else {
         INET_LOG("async_tcp_client::send failed, The connection not ok!!!");
@@ -441,8 +450,9 @@ void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_
 
 void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
 {
+#if INET_ENABLE_VERBOSE_LOG
     INET_LOG("move_received_pdu...");
-
+#endif
     recv_queue_mtx_.lock();
     recv_queue_.push_back(std::move(ctx->receiving_pdu_)); // without data copy
     recv_queue_mtx_.unlock();
@@ -551,8 +561,10 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
                 this->call_tsf_([v] {
+#if INET_ENABLE_VERBOSE_LOG
                     auto packetSize = v->data_.size();
                     INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
+#endif
                     if (v->on_sent_ != nullptr)
                         v->on_sent_(error_number::ERR_OK);
                     delete v;
@@ -567,8 +579,10 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 else { // send timeout
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
+#if INET_ENABLE_VERBOSE_LOG
                         auto packetSize = v->data_.size();
                         INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
+#endif
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_SEND_TIMEOUT);
                         delete v;
@@ -579,6 +593,11 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 socket_error_ = xxsocket::get_last_errno();
                 if (SHOULD_CLOSE_1(n, socket_error_)) {
                     ctx->send_queue_.pop_front();
+
+					int ec = socket_error_;
+					std::string errormsg = xxsocket::get_error_msg(ec);
+					INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+
                     this->call_tsf_([v] {
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_CONNECTION_LOST);
@@ -611,9 +630,9 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 
             if (n == -1)
                 n = 0;
-
-            INET_LOG("async_tcp_client::doRead --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
-
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("async_tcp_client::do_read --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
+#endif
             if (ctx->expected_pdu_length_ == -1) { // decode length
                 if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->expected_pdu_length_))
                 {
@@ -680,9 +699,15 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
         else {
             socket_error_ = xxsocket::get_last_errno();
             if (SHOULD_CLOSE_0(n, socket_error_)) {
+				int ec = socket_error_;
+				std::string errormsg = xxsocket::get_error_msg(ec);
+
                 if (n == 0) {
-                    INET_LOG("server close the connection!");
+                    INET_LOG("async_tcp_client::do_read failed, the server close the connection, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
                 }
+				else {
+					INET_LOG("async_tcp_client::do_read failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+				}
                 break;
             }
         }

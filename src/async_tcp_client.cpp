@@ -315,7 +315,7 @@ void async_tcp_client::service()
                 }
             }
 
-			perform_timeout_timers();
+            perform_timeout_timers();
 
             /*if (this->p2p_channel1_.connected_) {
                 if (!do_write(&p2p_channel1_))
@@ -594,9 +594,9 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 if (SHOULD_CLOSE_1(n, socket_error_)) {
                     ctx->send_queue_.pop_front();
 
-					int ec = socket_error_;
-					std::string errormsg = xxsocket::get_error_msg(ec);
-					INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+                    int ec = socket_error_;
+                    std::string errormsg = xxsocket::get_error_msg(ec);
+                    INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
 
                     this->call_tsf_([v] {
                         if (v->on_sent_)
@@ -699,15 +699,15 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
         else {
             socket_error_ = xxsocket::get_last_errno();
             if (SHOULD_CLOSE_0(n, socket_error_)) {
-				int ec = socket_error_;
-				std::string errormsg = xxsocket::get_error_msg(ec);
+                int ec = socket_error_;
+                std::string errormsg = xxsocket::get_error_msg(ec);
 
                 if (n == 0) {
                     INET_LOG("async_tcp_client::do_read failed, the server close the connection, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
                 }
-				else {
-					INET_LOG("async_tcp_client::do_read failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
-				}
+                else {
+                    INET_LOG("async_tcp_client::do_read failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+                }
                 break;
             }
         }

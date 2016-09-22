@@ -384,8 +384,8 @@ void async_tcp_client::handle_error(void)
 
     // @Notify all timers are cancelled.
     this->timer_queue_mtx_.lock();
-    for (auto& timer : timer_queue_)
-        timer->callback_(true);
+    //for (auto& timer : timer_queue_)
+    //    timer->callback_(true);
     this->timer_queue_.clear();
     this->timer_queue_mtx_.unlock();
 
@@ -596,7 +596,9 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
 
                     int ec = socket_error_;
                     std::string errormsg = xxsocket::get_error_msg(ec);
-                    INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+
+                    int timestamp = time(NULL);
+                    INET_LOG("[%d]async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
 
                     this->call_tsf_([v] {
                         if (v->on_sent_)
@@ -701,12 +703,12 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
             if (SHOULD_CLOSE_0(n, socket_error_)) {
                 int ec = socket_error_;
                 std::string errormsg = xxsocket::get_error_msg(ec);
-
+                int timestamp = time(NULL);
                 if (n == 0) {
-                    INET_LOG("async_tcp_client::do_read failed, the server close the connection, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+                    INET_LOG("[%d]async_tcp_client::do_read failed, the server close the connection, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
                 }
                 else {
-                    INET_LOG("async_tcp_client::do_read failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, ec, errormsg.c_str());
+                    INET_LOG("[%d]async_tcp_client::do_read failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
                 }
                 break;
             }

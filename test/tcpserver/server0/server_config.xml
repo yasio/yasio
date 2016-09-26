@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<server_config version="1.0.9">
+  
+  <thread_mpool_size>100M</thread_mpool_size>
+  <thread_count>16</thread_count>
+  <heartbeat_interval>10</heartbeat_interval>
+  <heartbeat_timeout>20</heartbeat_timeout>
+  <heartbeat_check_interval>20</heartbeat_check_interval>
+
+  <network_config>
+    <send_buffer_size>64k</send_buffer_size>
+    <recv_buffer_size>64k</recv_buffer_size>
+  </network_config>
+  
+  <game_config>
+    <game_count_down>5s</game_count_down>
+    <game_time>189</game_time>
+    <initial_evalue_toplimit>100</initial_evalue_toplimit>
+    <initial_gold_capacity>10000</initial_gold_capacity>
+    <evalue_diff>10</evalue_diff>
+    <gold_capacity_diff>1000</gold_capacity_diff>
+    <level_exp_factor_0></level_exp_factor_0> <!--d-->
+    <level_exp_factor_1>0</level_exp_factor_1> <!--a1-->
+    <level_exp_factor_2>500</level_exp_factor_2> <!--a2-->
+    <level_exp_factor_3>1500</level_exp_factor_3> <!--a3-->
+    <best_player_award_base>10</best_player_award_base>
+    <hall_mark_up_factor>0.05</hall_mark_up_factor>
+    <injured_comfort_evalue>5</injured_comfort_evalue>
+  </game_config>
+
+  <!--service config-->
+  <service_def>
+    <item_use_cd_initial>3000ms</item_use_cd_initial>
+    <item_use_cd_min>1000ms</item_use_cd_min>
+    <item_use_cd_reduce>20ms</item_use_cd_reduce>
+    <vip_item_cd_rebate>0</vip_item_cd_rebate>
+    <vip_cost_rebate>75</vip_cost_rebate>
+    <common_donate_def>
+      <donate_count value="1" />
+    </common_donate_def>
+
+    <vip_donate_def>
+      <week_vip donate_count="3" />
+      <month_vip donate_count="5" />
+      <year_vip donate_count="9" />
+    </vip_donate_def>
+  
+</service_def>
+  
+  <!-- database config -->
+  <database_config database="piefromsky" ip="127.0.0.1" port="3306" user="root" password="polang10000" />
+
+
+  <!-- widgets config 物品70%, 道具30%-->
+  <widgets>	
+    <widget id="1" name="pie" gold_plus="1" exp_plus="1" evalue_plus="1" occurs="200" />
+    <widget id="3" name="steamed stuffed bun" gold_plus="2" exp_plus="1" evalue_plus="3" occurs="170" />
+    <widget id="2" name="species"  gold_plus="5" exp_plus="5" evalue_plus="5" occurs="150" />
+    <widget id="5" name="sapphire"  gold_plus="8" exp_plus="8" evalue_plus="8" occurs="90" />
+    <widget id="65" name="doggy poo"  gold_plus="-2" exp_plus="1" evalue_plus="6" occurs="90" />
+    <!--<widget id="4" name="deep-fried dough sticks"  gold_plus="1" exp_plus="1" evalue_plus="4" occurs="115" />-->
+    <!--<widget id="66" name="cockroach" gold_plus="-2" exp_plus="1" evalue_plus="7" occurs="50" />-->
+    
+    <!--follow is item-->
+    <widget id="128" name="banana skin" exp_plus="1" evalue_plus="1" hit_gold_plus="35" evalue_cost="15" damage_type="1" occurs="50" effect_mask="32" />
+    <widget id="129" name="antiskid shoe" exp_plus="1" evalue_plus="1" evalue_cost="10" occurs="30" effect_mask="32" />
+
+    <widget id="130" name="wolf dog" exp_plus="1" evalue_plus="1" hit_gold_plus="30" evalue_cost="12" damage_type="1" occurs="50" effect_mask="16" />
+    <widget id="131" name="bone" exp_plus="1" evalue_plus="1" evalue_cost="9" occurs="20" effect_mask="16" />
+
+    <widget id="132" name="bomb" exp_plus="1" evalue_plus="1" hit_gold_plus="20" evalue_cost="20" damage_type="2" affect_range="70" occurs="50" effect_mask="64" />
+    <widget id="133" name="bulletproof vest" exp_plus="1" evalue_plus="1" evalue_cost="15" occurs="20" effect_mask="64" />
+
+    <widget id="135" name="chestnut" exp_plus="1" evalue_plus="1" hit_gold_plus="15" evalue_cost="15" damage_type="2" affect_range="70" occurs="50" effect_mask="4" />
+    <widget id="136" name="sachet" exp_plus="1" evalue_plus="1" evalue_cost="10" occurs="20" effect_mask="128" />
+
+    <widget id="134" name="invincible armor" exp_plus="1" evalue_plus="1" evalue_cost="50" occurs="10" effect_mask="2" />
+  </widgets>
+
+</server_config>

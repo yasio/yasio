@@ -2,15 +2,9 @@
 #ifndef _OBJECT_POOL_H_
 #define _OBJECT_POOL_H_
 #include "politedef.h"
-#if defined(_ENABLE_MULTITHREAD)
-#include "thread_synch.h"
-#endif
 #include <assert.h>
 
 namespace purelib {
-#if defined(_ENABLE_MULTITHREAD)
-using namespace asy;
-#endif
 namespace gc {
 
 template<typename _Ty, size_t _ElemCount = 512>
@@ -40,10 +34,6 @@ public:
 
     ~object_pool(void)
     {
-#if defined(_ENABLE_MULTITHREAD)
-        scoped_lock<thread_mutex> guard(this->_Mylock);
-#endif
-
         this->purge();
     }
 
@@ -100,7 +90,7 @@ public:
     }
 
 	void delete_object(void* _Ptr)
-	{
+	
 		((_Ty*)_Ptr)->~_Ty(); // call the destructor
 		release(_Ptr);
 	}
@@ -109,10 +99,6 @@ public:
     // for example: _Ty* obj = new(pool.get()) _Ty(arg1,arg2,...);
     void* get(void) 
     {
-#if defined(_ENABLE_MULTITHREAD)
-        scoped_lock<thread_mutex>  guard(this->_Mylock);
-#endif
-
         if (nullptr == this->_Myhead) 
         { 
             this->_Enlarge(); 
@@ -127,9 +113,6 @@ public:
     {
 #ifdef _DEBUG
         //::memset(_Ptr, 0x00, sizeof(_Ty));
-#endif
-#if defined(_ENABLE_MULTITHREAD)
-        scoped_lock<thread_mutex>  guard(this->_Mylock);
 #endif
 
         free_link_node* ptr = reinterpret_cast<free_link_node*>(_Ptr);
@@ -165,9 +148,6 @@ private:
 private:
     free_link        _Myhead; // link to free head
     chunk_link       _Mychunk; // chunk link
-#if defined(_ENABLE_MULTITHREAD)
-    thread_mutex     _Mylock;  // thread mutex
-#endif
     size_t           _Mycount; // allocated count 
 };
 

@@ -575,14 +575,17 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 { // change offset, remain data will send next time.
                     // v->data_.erase(v->data_.begin(), v->data_.begin() + n);
                     v->offset_ += n;
+                    int temp_left = v->data_.size() - v->offset_;
+                    int timestamp = time(NULL);
+                    INET_LOG("=======> [%d]send not complete %d bytes remained, %dbytes was sent!", timestamp, temp_left, n);
                 }
                 else { // send timeout
                     ctx->send_queue_.pop_front();
                     this->call_tsf_([v] {
-#if INET_ENABLE_VERBOSE_LOG
+
                         auto packetSize = v->data_.size();
                         INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
-#endif
+
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_SEND_TIMEOUT);
                         delete v;
@@ -662,6 +665,8 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 }
                 else {
                     error_ = error_number::ERR_DPL_ILLEGAL_PDU;
+                    int timestamp = time(NULL);
+                    INET_LOG("[%d]async_tcp_client::do_read error, decode length of pdu failed!", timestamp);
                     break;
                 }
             }
@@ -670,6 +675,8 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 if ((receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                 {
                     error_ = error_number::ERR_PDU_TOO_LONG;
+                    int timestamp = time(NULL);
+                    INET_LOG("[%d]async_tcp_client::do_read error, The length of pdu too long!", timestamp);
                     break;
                 }
                 else {
@@ -705,10 +712,10 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 std::string errormsg = xxsocket::get_error_msg(ec);
                 int timestamp = time(NULL);
                 if (n == 0) {
-                    INET_LOG("[%d]async_tcp_client::do_read failed, the server close the connection, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("[%d]async_tcp_client::do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
                 }
                 else {
-                    INET_LOG("[%d]async_tcp_client::do_read failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("[%d]async_tcp_client::do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
                 }
                 break;
             }

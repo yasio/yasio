@@ -44,8 +44,9 @@ public:
   /// Start the first asynchronous operation for the connection.
   void start();
 
-  /// Stop all asynchronous operations associated with the connection.
-  void stop();
+  void shutdown();
+
+  void handle_close(int op = 1/*1:read, 2:write*/);
 
   /// get socket
   boost::asio::ip::tcp::socket& get_socket();
@@ -77,7 +78,6 @@ public:
 
   bool unpack(int n);
 
-  void handle_close(int op = 1/*1:read, 2:write*/);
 private:
   /// Perform an asynchronous read operation.
   void do_read_packet(size_t offset = 0);

@@ -46,14 +46,11 @@ public:
     // 进入战场, 启动心跳检查
     void handle_enter_battle(request& req);
 
-    // 战斗数据改变
-    void handle_vsdata_change(request& req);
-
     /// 战斗心跳
     void handle_heartbeat(request& req);
 
-    // 切换回合
-    void handle_turn_over_notify(request& req);
+    // 处理转发通知请求
+    void handle_forward(request& req);
 
     /// The directory containing the files to be served.
     // std::string doc_root_;

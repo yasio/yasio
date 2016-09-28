@@ -166,7 +166,7 @@ namespace tcp {
             void reset()
             {
                 expected_size_ = -1;
-                receiving_pdu_.clear();
+                packet_.clear();
             }
 
             char                   buffer_[1024];
@@ -174,7 +174,7 @@ namespace tcp {
 
             messages::MsgHeader    header_;
             int                    expected_size_; // 期望包总字节数
-            buffer_type receiving_pdu_;
+            buffer_type            packet_; // The whole packet, contains header & body.
         };
 
     } // namespace server

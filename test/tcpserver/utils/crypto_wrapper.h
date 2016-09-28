@@ -170,7 +170,7 @@ namespace crypto {
 					key,
 					keybits);
 
-				inout.resize(outlen);
+				inout.resize(outlen + offset);
 			}
 		}
 

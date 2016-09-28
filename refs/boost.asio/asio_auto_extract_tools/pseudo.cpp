@@ -6,4 +6,5 @@
 #include <boost/asio/write.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/exception/all.hpp>
 

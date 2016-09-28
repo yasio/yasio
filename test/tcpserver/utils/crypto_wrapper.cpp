@@ -1,5 +1,5 @@
-#define _ZLIB_SUPPORT 1
-#define MD6_SUPPORT 1
+// #define _ZLIB_SUPPORT 1
+// #define MD6_SUPPORT 1
 
 #if defined(_WIN32)
 #ifdef _ZLIB_SUPPORT
@@ -9,7 +9,7 @@
 #pragma comment(lib, "zlib.lib")
 #endif
 #else
-#include "zlib.h"
+// #include "zlib.h"
 #endif
 #endif
 #include <assert.h>
@@ -19,7 +19,7 @@
 #endif
 #include <algorithm>
 #include <fstream>
-#include "xxfsutility.h"
+// #include "xxfsutility.h"
 
 #define HASH_FILE_BUFF_SIZE 1024
 
@@ -29,6 +29,7 @@
 
 using namespace purelib;
 
+#ifdef _ZLIB_SUPPORT
 template<typename _ByteSeqCont>
 _ByteSeqCont zlib_compress(const unmanaged_string& in, int level)
 {
@@ -377,6 +378,9 @@ std::string crypto::hash::md5raw(const unmanaged_string& plaintext)
     return std::string(ciphertext, sizeof(ciphertext));
 }
 
+#endif
+
+#if 0
 std::string crypto::hash::fmd5(const char* filename)
 {
     FILE* fp = fopen(filename, "rb");
@@ -416,6 +420,8 @@ std::string crypto::hash::fmd5(const char* filename)
 
     return std::move(result);
 }
+
+#endif
 
 #if defined(MD6_SUPPORT)
 std::string crypto::hash::md6(const std::string& plaintext)
@@ -561,6 +567,8 @@ std::string crypto::http::urldecode(const unmanaged_string& ciphertext)
 
     return std::move(result);
 }
+
+#ifdef ZLIB_SUPPORT
 // appended zlib_inflate func
 managed_cstring crypto::zlib::abi::_inflate(const unmanaged_string& compr)
 { // inflate
@@ -624,3 +632,5 @@ _L_end:
 
     return std::move(output);
 }
+
+#endif

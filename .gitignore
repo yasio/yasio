@@ -1,3 +1,5 @@
+ignored
+ignored/*.*
 *.pdb
 *.idb
 *.log

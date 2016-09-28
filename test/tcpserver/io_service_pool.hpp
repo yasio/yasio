@@ -36,9 +36,9 @@ public:
   /// Stop all io_service objects in the pool.
   void stop();
 
-  static void thread_init();
+  static void thread_ctx_init();
 
-  static void thread_cleanup();
+  static void thread_ctx_cleanup();
 
   /// Get an io_service to use.
   boost::asio::io_service& get_io_service();

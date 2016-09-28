@@ -58,7 +58,7 @@
 #error AES is disabled.
 #endif
 
-#define _HAS_OSSL 1
+#define _HAS_OSSL 0
 #define _OSSL_USE_DLL 0
 
 #if _HAS_OSSL

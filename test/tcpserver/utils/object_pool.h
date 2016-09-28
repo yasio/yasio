@@ -8,13 +8,13 @@ namespace purelib {
 namespace gc {
 
 template<typename _Ty, size_t _ElemCount = 512>
-class object_pool 
+class object_pool
 {
     static const size_t elem_size = sz_align(sizeof(_Ty), sizeof(void*));
 
     typedef struct free_link_node
-    { 
-        free_link_node* next; 
+    {
+        free_link_node* next;
     } *free_link;
 
     typedef struct chunk_link_node
@@ -39,26 +39,26 @@ public:
 
     void cleanup(void)
     {
-        if(this->_Mychunk == nullptr) {
+        if (this->_Mychunk == nullptr) {
             return;
         }
 
         free_link_node* prev = nullptr;
         chunk_link_node* chunk = this->_Mychunk;
-        for (; chunk != nullptr; chunk = chunk->next) 
+        for (; chunk != nullptr; chunk = chunk->next)
         {
-            char* begin     = chunk->data; 
-            char* rbegin    = begin + (_ElemCount - 1) * elem_size; 
+            char* begin = chunk->data;
+            char* rbegin = begin + (_ElemCount - 1) * elem_size;
 
-            if(prev != nullptr)
+            if (prev != nullptr)
                 prev->next = reinterpret_cast<free_link>(begin);
-            for (char* ptr = begin; ptr < rbegin; ptr += elem_size )
-            { 
+            for (char* ptr = begin; ptr < rbegin; ptr += elem_size)
+            {
                 reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + elem_size);
-            } 
+            }
 
-            prev = reinterpret_cast <free_link_node*>(rbegin); 
-        } 
+            prev = reinterpret_cast <free_link_node*>(rbegin);
+        }
 
         this->_Myhead = reinterpret_cast<free_link_node*>(this->_Mychunk->data);
         this->_Mycount = 0;
@@ -67,7 +67,7 @@ public:
     void purge(void)
     {
         chunk_link_node* ptr = this->_Mychunk;
-        while (ptr != nullptr) 
+        while (ptr != nullptr)
         {
             chunk_link_node* deleting = ptr;
             ptr = ptr->next;
@@ -89,19 +89,20 @@ public:
         return new (get()) _Ty(args...);
     }
 
-	void delete_object(void* _Ptr)
-	
-		((_Ty*)_Ptr)->~_Ty(); // call the destructor
-		release(_Ptr);
-	}
+    void delete_object(void* _Ptr)
+    {
+
+        ((_Ty*)_Ptr)->~_Ty(); // call the destructor
+        release(_Ptr);
+    }
 
     // if the type is not pod, you may be use placement new to call the constructor,
     // for example: _Ty* obj = new(pool.get()) _Ty(arg1,arg2,...);
-    void* get(void) 
+    void* get(void)
     {
-        if (nullptr == this->_Myhead) 
-        { 
-            this->_Enlarge(); 
+        if (nullptr == this->_Myhead)
+        {
+            this->_Enlarge();
         }
         free_link_node* ptr = this->_Myhead;
         this->_Myhead = ptr->next;
@@ -126,23 +127,23 @@ private:
     {
         static_assert(_ElemCount > 0, "Invalid Element Count");
 
-        chunk_link new_chunk  = (chunk_link)malloc(sizeof(chunk_link_node)); 
+        chunk_link new_chunk = (chunk_link)malloc(sizeof(chunk_link_node));
 #ifdef _DEBUG
         ::memset(new_chunk, 0x00, sizeof(chunk_link_node));
 #endif
-        new_chunk->next = this->_Mychunk; 
-        this->_Mychunk  = new_chunk; 
+        new_chunk->next = this->_Mychunk;
+        this->_Mychunk = new_chunk;
 
-        char* begin     = this->_Mychunk->data; 
-        char* rbegin    = begin + (_ElemCount - 1) * elem_size; 
+        char* begin = this->_Mychunk->data;
+        char* rbegin = begin + (_ElemCount - 1) * elem_size;
 
-        for (char* ptr = begin; ptr < rbegin; ptr += elem_size )
-        { 
+        for (char* ptr = begin; ptr < rbegin; ptr += elem_size)
+        {
             reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + elem_size);
-        } 
+        }
 
-        reinterpret_cast <free_link_node*>(rbegin)->next = nullptr; 
-        this->_Myhead = reinterpret_cast<free_link_node*>(begin); 
+        reinterpret_cast <free_link_node*>(rbegin)->next = nullptr;
+        this->_Myhead = reinterpret_cast<free_link_node*>(begin);
     }
 
 private:
@@ -152,7 +153,7 @@ private:
 };
 
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector
-template<class _Ty, size_t _ElemCount = SZ(8,k) / sizeof(_Ty)>
+template<class _Ty, size_t _ElemCount = SZ(8, k) / sizeof(_Ty)>
 class object_pool_allocator
 {	// generic allocator for objects of class _Ty
 public:
@@ -234,20 +235,20 @@ public:
 #ifdef __cxx0x
     void construct(pointer _Ptr, _Ty&& _Val)
     {	// construct object at _Ptr with value _Val
-        new ((void*)_Ptr) _Ty(std:: forward<_Ty>(_Val));
+        new ((void*)_Ptr) _Ty(std::forward<_Ty>(_Val));
     }
 
     template<class _Other>
     void construct(pointer _Ptr, _Other&& _Val)
     {	// construct object at _Ptr with value _Val
-        new ((void*)_Ptr) _Ty(std:: forward<_Other>(_Val));
+        new ((void*)_Ptr) _Ty(std::forward<_Other>(_Val));
     }
 
     template<class _Objty,
-    class... _Types>
+        class... _Types>
         void construct(_Objty *_Ptr, _Types&&... _Args)
     {	// construct _Objty(_Types...) at _Ptr
-        ::new ((void *)_Ptr) _Objty(std:: forward<_Types>(_Args)...);
+        ::new ((void *)_Ptr) _Objty(std::forward<_Types>(_Args)...);
     }
 #endif
 
@@ -259,26 +260,26 @@ public:
 
     size_type max_size() const throw()
     {	// estimate maximum array size
-        size_type _Count = (size_type)(-1) / sizeof (_Ty);
+        size_type _Count = (size_type)(-1) / sizeof(_Ty);
         return (0 < _Count ? _Count : 1);
     }
 
-// private:
+    // private:
     static object_pool<_Ty, _ElemCount> _Mempool;
 };
 
 template<class _Ty,
-class _Other> inline
+    class _Other> inline
     bool operator==(const object_pool_allocator<_Ty>&,
-    const object_pool_allocator<_Other>&) throw()
+        const object_pool_allocator<_Other>&) throw()
 {	// test for allocator equality
     return (true);
 }
 
 template<class _Ty,
-class _Other> inline
+    class _Other> inline
     bool operator!=(const object_pool_allocator<_Ty>& _Left,
-    const object_pool_allocator<_Other>& _Right) throw()
+        const object_pool_allocator<_Other>& _Right) throw()
 {	// test for allocator inequality
     return (!(_Left == _Right));
 }

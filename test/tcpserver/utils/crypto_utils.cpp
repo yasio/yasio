@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include "crypto_utils.h"
 
-#define MD6_SUPPORT 1
+// #define MD6_SUPPORT 0
 
 #if defined(MD6_SUPPORT)
 #include "md6.h"

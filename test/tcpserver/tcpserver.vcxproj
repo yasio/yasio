@@ -147,19 +147,41 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="connection.cpp" />
+    <ClCompile Include="connection_manager.cpp" />
+    <ClCompile Include="ibinarystream.cpp" />
     <ClCompile Include="io_service_pool.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="obinarystream.cpp" />
+    <ClCompile Include="pcode_autog_server_messages.cpp" />
     <ClCompile Include="request_handler.cpp" />
     <ClCompile Include="server.cpp" />
     <ClCompile Include="server_logger.cpp" />
+    <ClCompile Include="tls.cpp" />
+    <ClCompile Include="utils\aes_core.cpp" />
+    <ClCompile Include="utils\crypto_utils.cpp" />
+    <ClCompile Include="utils\crypto_wrapper.cpp" />
+    <ClCompile Include="utils\libb64.cpp" />
+    <ClCompile Include="utils\oslib.cpp" />
+    <ClCompile Include="utils\xxsocket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="connection.hpp" />
     <ClInclude Include="connection_manager.hpp" />
+    <ClInclude Include="ibinarystream.h" />
     <ClInclude Include="io_service_pool.hpp" />
+    <ClInclude Include="obinarystream.h" />
+    <ClInclude Include="pcode_autog_server_constants.h" />
+    <ClInclude Include="pcode_autog_server_includes.h" />
+    <ClInclude Include="pcode_autog_server_messages.h" />
+    <ClInclude Include="pcode_autog_server_structures.h" />
+    <ClInclude Include="request.hpp" />
     <ClInclude Include="request_handler.hpp" />
     <ClInclude Include="server.hpp" />
     <ClInclude Include="server_logger.hpp" />
+    <ClInclude Include="tls.hpp" />
+    <ClInclude Include="utils\crypto_utils.h" />
+    <ClInclude Include="utils\crypto_wrapper.h" />
+    <ClInclude Include="utils\mempool2.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

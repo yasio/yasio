@@ -23,12 +23,15 @@ namespace tcp {
 namespace server {
 
 class connection_manager;
-
+class connection;
 /// Represents a single connection from a client.
 class connection
   : public std::enable_shared_from_this<connection>
 {
 public:
+
+  typedef std::shared_ptr<connection> connection_ptr;
+
   connection(const connection&)/* = delete*/;
   connection& operator=(const connection&)/* = delete*/;
 
@@ -50,30 +53,42 @@ public:
   const char* get_address(void) const;
   unsigned short get_port(void) const;
 
+  void  do_timeout_wait(); // 执行超时检查
+  void  cancel_timeout_wait(); // 取消超时检查
+
   inline time_t expire_time(void) const 
   {
       return expire_msec_;
   }
+
+  void expire_from_now();
+
   inline void expire_time(time_t expire_msec)
   {
       expire_msec_ = expire_msec;
   }
 
-  void close();
+  void handle_request();
 
+
+  void send(buffer_type&& buffer);
+
+  void send_to_peer(const buffer_type& buffer);
+
+  bool unpack(int n);
+
+  void handle_close(int op = 1/*1:read, 2:write*/);
 private:
   /// Perform an asynchronous read operation.
-  void do_read_head(size_t offset = 0);
+  void do_read_packet(size_t offset = 0);
 
-  /// Do remain http content
-  void do_read_content(void);
-
-  /// Perform an asynchronous write operation.
-  void do_write();
+  bool stopped_ = false;
 
   /// Strand to ensure the connection's handlers are not called concurrently.
   /// Use io_service_pool do not need it.
   /// boost::asio::io_service::strand strand_;
+
+  boost::asio::deadline_timer timeout_check_timer_;
 
   /// Socket for the connection.
   boost::asio::ip::tcp::socket socket_;
@@ -85,26 +100,29 @@ private:
   request_handler request_handler_;
 
   /// Buffer for incoming data.
-  std::array<char, 1024> buffer_;
   // char buffer_[8192];
 
   /// The incoming request.
-  request request_;
+  request ctx_;
 
   /// The reply to be sent back to the client.
   // reply reply_;
 
   /// total bytes transferred
-  size_t  total_bytes_received_; // http package total
+  size_t  total_bytes_received_; // 
 
   char    v4_address_[32];
 
   unsigned short port_;
 
   time_t  expire_msec_; // message expire timestamp_ milliseconds
+
+public:
+    std::weak_ptr<connection> peer_;
+
 };
 
-typedef std::shared_ptr<connection> connection_ptr;
+typedef connection::connection_ptr connection_ptr;
 
 } // namespace server
 } // namespace http

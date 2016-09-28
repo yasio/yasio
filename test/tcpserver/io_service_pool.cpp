@@ -14,11 +14,13 @@
 #include <thread>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
-// #include <boost/exception/all.hpp>
+#include <boost/exception/all.hpp>
 //#include "thelib/utils/container_helper.h"
 //#include "mysql_client.hpp"
 #include "server_logger.hpp"
 // #include "thelib/utils/cjson.h"
+#include "tls.hpp"
+#define thread_self GetCurrentThreadId
 
 namespace tcp {
 namespace server {
@@ -62,13 +64,13 @@ void io_service_pool::start(void)
 
 void io_service_pool::run(boost::asio::io_service& io_service)
 {
-    thread_init();
+    thread_ctx_init();
 
     LOG_WARN_ALL("the thread started, id:%u", thread_self());
 
     if(++counter_ == io_services_.size())
     {
-        LOG_WARN_ALL("the tinyflower server started.");
+        LOG_WARN_ALL("the tcp server started.");
     }
 
     try {
@@ -76,16 +78,16 @@ void io_service_pool::run(boost::asio::io_service& io_service)
     }
     catch(const std::exception& e)
     { // TODO: boost::diagnostic_information: need all #include <boost/exception/all.hpp>
-        // LOG_ERROR("the thread:%u exit exception, detail:%s, boost::asio say:%s", thread_self(), e.what(), boost::diagnostic_information(e).c_str());
+        LOG_ERROR("the thread:%u exit exception, detail:%s, boost::asio say:%s", thread_self(), e.what(), boost::diagnostic_information(e).c_str());
     }
 
-    thread_cleanup();
+    thread_ctx_cleanup();
 
     LOG_WARN_ALL("the thread stopped, id:%u", thread_self());
 
     if(--counter_ == 0) 
     {
-        LOG_WARN_ALL("%s", "the tinyflower server stopped.");
+        LOG_WARN_ALL("%s", "the tcp server stopped.");
     }
 }
 
@@ -96,12 +98,14 @@ void io_service_pool::stop()
     io_services_[i]->stop();
 }
 
-void io_service_pool::thread_init(void)
+void io_service_pool::thread_ctx_init(void)
 {
+   // tls_ctx_init();
 }
 
-void io_service_pool::thread_cleanup(void)
+void io_service_pool::thread_ctx_cleanup(void)
 {
+   // tls_ctx_end();
 }
 
 boost::asio::io_service& io_service_pool::get_io_service()

@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 #include <exception>
-#include "endian_portable.h"
+#include "utils/endian_portable.h"
 
 class ibinarystream
 {

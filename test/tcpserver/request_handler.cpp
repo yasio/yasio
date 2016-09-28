@@ -33,7 +33,7 @@ static const char* encrypt_key = "ZQnNQmA1iIQ3z3ukoPoATdE88OJ0qsMm";
 
 enum { information_lifetime = 60 };
 
-enum { send_power_interval = tt(6,h) };
+enum { send_power_interval = tt(6, h) };
 
 enum request_type {
     request_type_reg_new_user_id = 1,
@@ -66,10 +66,10 @@ enum response_number {
     request_expired,
     invited_user_not_exist,
     peer_already_invite_you,
-    you_are_already_friends, 
-    donot_reinvite_friend, 
+    you_are_already_friends,
+    donot_reinvite_friend,
     cannot_invite_self,
-    invalid_request, 
+    invalid_request,
     invalid_user_id, /* the user_id must be validate except account bind */
     ios_verify_receipt_failed,
     you_are_in_challenging,
@@ -82,7 +82,7 @@ enum response_number {
 using namespace tcp::server;
 
 /// initialize handler table
-typedef std::unordered_map<request_type, void (request_handler::*)(message*)> request_handler_table_type;
+typedef std::unordered_map<request_type, void (request_handler::*)(request&)> request_handler_table_type;
 static request_handler_table_type  local_handler_tab;
 namespace {
     struct handler_table_initializer
@@ -91,7 +91,7 @@ namespace {
         {
             local_handler_tab.insert(std::make_pair(request_type_reg_new_user_id, &request_handler::handle_vsdata_change));
             local_handler_tab.insert(std::make_pair(request_type_account_bind, &request_handler::handle_heartbeat));
-            
+
         }
         ~handler_table_initializer(void)
         {
@@ -103,8 +103,8 @@ namespace {
 };
 
 
-request_handler::request_handler(const connection& peer)
-    : peer_(peer)
+request_handler::request_handler(connection& client)
+    : client_(client)
 {
 }
 
@@ -127,33 +127,69 @@ bool request_handler::handle_request(request& req) // read file only
     }*/
 
     // Fill out the reply to be sent to the client.
- 
+
     //std::string plaintext = "";
+#if 0 // 转发服务器, 无需解密包体
     size_t len = 0;
-    if(req.content_.size() > 0 && req.content_.size() % 16 == 0)
-        crypto::aes::decrypt(req.content_,  encrypt_key);
-    
-    req.content_.resize(len);
-   
-    auto target = local_handler_tab.find((request_type)11010/*msg_id*/);
-    if(target != local_handler_tab.end())
+    if (req.receiving_pdu_.size() > 0 && req.receiving_pdu_.size() % 16 == 0)
+        crypto::aes::decrypt(req.receiving_pdu_, encrypt_key);
+
+    req.receiving_pdu_.resize(len);
+    auto target = local_handler_tab.find((request_type)req.header_.command_id);
+    if (target != local_handler_tab.end())
     {
-       ( this->*(target->second) )(nullptr/*msg*/);
+        (this->*(target->second))(nullptr/*msg*/);
 
-       /*std::string& buffer = rep.content;
-       buffer.resize(sizeof(uint32_t));
-       buffer.append(response.toString());
-       char* sizebuf = &buffer.front();
-       crypto::aes::pkcs(buffer, buffer.size() - sizeof(uint32_t), AES_BLOCK_SIZE);
-       crypto::aes::cbc_encrypt(buffer.c_str() + sizeof(uint32_t),
-           buffer.size() - sizeof(uint32_t),
-           &buffer.front() + sizeof(uint32_t),
-           buffer.size() - sizeof(uint32_t), 
-           encrypt_key);
-       *( (uint32_t*)(sizebuf) ) = htonl(buffer.size() - sizeof(uint32_t));*/
 
-       return true;
+        return true;
+    }
+#endif
+    // LOG_WARN_ALL("A message received, command_id:%d", req.header_.command_id);
+
+    switch (req.header_.command_id)
+    {
+    case CID_ENTERB_BATTLESCENE_NOTIFY:
+        handle_enter_battle(req);
+        break;
+    case CID_VERSUSDATA_CHANGED_NOTIFY:
+        handle_vsdata_change(req);
+        break;
+    case CID_BATTLE_HEARTBEAT_REQ:
+        handle_heartbeat(req);
+        break;
+    case CID_TURN_OVER_NOTIFY:
+        handle_turn_over_notify(req);
+        break;
+    case 11021:
+        // client_.get_peer()->send(std::move(req.receiving_pdu_));
+        break;
+    default:
+        ; // return false;
     }
 
-    return false;
+    req.reset();
+
+    return true;
 }
+
+void request_handler::handle_enter_battle(request& req)
+{
+    client_.do_timeout_wait();
+}
+
+void request_handler::handle_vsdata_change(request& req)
+{
+    //client_.send_to_peer(req.receiving_pdu_);
+}
+
+void request_handler::handle_turn_over_notify(request& req)
+{
+    //client_.send_to_peer(req.receiving_pdu_);
+}
+
+void request_handler::handle_heartbeat(request& req)
+{
+    LOG_WARN_ALL("received heartbeat from:%s, : %.3lf", client_.get_address(), req.header_.reserved2 / 1000.0);
+    client_.cancel_timeout_wait();
+}
+

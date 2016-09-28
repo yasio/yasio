@@ -33,7 +33,7 @@ public:
     request_handler& operator=(const request_handler&)/* = delete*/;
 
     /// Construct with a directory containing files to be served.
-    explicit request_handler(const connection& peer);
+    explicit request_handler(connection& peer);
 
     /// Handle a request and produce a reply.
     bool handle_request(request& req);
@@ -43,15 +43,21 @@ public:
 
 public:
 
-    // register new user id
-    void handle_vsdata_change(message*);
+    // 进入战场, 启动心跳检查
+    void handle_enter_battle(request& req);
 
-    /// handle bind account
-    void handle_heartbeat(message*);
+    // 战斗数据改变
+    void handle_vsdata_change(request& req);
+
+    /// 战斗心跳
+    void handle_heartbeat(request& req);
+
+    // 切换回合
+    void handle_turn_over_notify(request& req);
 
     /// The directory containing the files to be served.
     // std::string doc_root_;
-    const connection& peer_;
+    connection& client_;
 };
 
 } // namespace server

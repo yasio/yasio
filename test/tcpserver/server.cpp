@@ -17,17 +17,16 @@
 // #include "mysql_client.hpp"
 #include "server_logger.hpp"
 #include "utils/object_pool.h"
-
-typedef object_pool<tcp::server::connection, SZ(2,M) / sizeof(tcp::server::connection)> connection_pool_t;
-connection_pool_t connection_pool;
+#include "tls.hpp"
 
 namespace tcp {
 namespace server {
 
 static void deleter (connection* ptr) 
 {  
-    connection_pool.release(ptr);
-} 
+    delete ptr;
+    // gls_release_connection(ptr);
+}
 
 server::server(const std::string& address, const std::string& port,
       size_t io_service_pool_size)
@@ -89,7 +88,7 @@ void server::do_accept()
         {
             connection_manager_.start(
                 std::shared_ptr<connection>(
-                new(connection_pool.get()) connection(std::move(socket_), connection_manager_), 
+                new/*(gls_get_connection())*/ connection(std::move(socket_), connection_manager_), 
                 deleter ) );
         }
 

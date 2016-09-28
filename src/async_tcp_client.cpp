@@ -113,7 +113,7 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     connect_timeout_(3),
     send_timeout_(3),
     decode_pdu_length_(nullptr),
-    error_(error_number::ERR_OK),
+    error_number_(error_number::ERR_OK),
     idle_(true),
     connect_failed_(false),
     connect_wait_timeout_(-1)
@@ -310,22 +310,11 @@ void async_tcp_client::service()
 #endif
                 if (!do_write(this))
                 { // TODO: check would block? for client, may be unnecessary.
-                    // INET_LOG("do write failed...");
                     goto _L_error;
                 }
             }
 
             perform_timeout_timers();
-
-            /*if (this->p2p_channel1_.connected_) {
-                if (!do_write(&p2p_channel1_))
-                    p2p_channel1_.reset();
-            }
-
-            if (this->p2p_channel1_.connected_) {
-                if (!do_write(&p2p_channel2_))
-                    p2p_channel2_.reset();
-            }*/
         }
 
         continue;
@@ -357,8 +346,6 @@ void async_tcp_client::notify_connect()
 
 void async_tcp_client::handle_error(void)
 {
-    socket_error_ = xxsocket::get_last_errno();
-
     if (impl_.is_open()) {
         impl_.close();
     }
@@ -370,7 +357,8 @@ void async_tcp_client::handle_error(void)
 
     // @Notify connection lost
     if (this->on_connection_lost_) {
-        TSF_CALL(on_connection_lost_(socket_error_, xxsocket::get_error_msg(socket_error_)));
+        int ec = error_number_;
+        TSF_CALL(on_connection_lost_(ec, xxsocket::get_error_msg(ec)));
     }
 
     // @Clear all sending messages
@@ -493,7 +481,7 @@ bool async_tcp_client::connect(void)
         impl_.set_nonblocking(true);
 
         expected_pdu_length_ = -1;
-        error_ = error_number::ERR_OK;
+        error_number_ = error_number::ERR_OK;
         offset_ = 0;
         receiving_pdu_.clear();
         recv_queue_.clear();
@@ -593,11 +581,11 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 }
             }
             else { // n <= 0, TODO: add time
-                socket_error_ = xxsocket::get_last_errno();
-                if (SHOULD_CLOSE_1(n, socket_error_)) {
+                error_number_ = xxsocket::get_last_errno();
+                if (SHOULD_CLOSE_1(n, error_number_)) {
                     ctx->send_queue_.pop_front();
 
-                    int ec = socket_error_;
+                    int ec = error_number_;
                     std::string errormsg = xxsocket::get_error_msg(ec);
 
                     int timestamp = time(NULL);
@@ -664,7 +652,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                     }
                 }
                 else {
-                    error_ = error_number::ERR_DPL_ILLEGAL_PDU;
+                    error_number_ = error_number::ERR_DPL_ILLEGAL_PDU;
                     int timestamp = time(NULL);
                     INET_LOG("[%d]async_tcp_client::do_read error, decode length of pdu failed!", timestamp);
                     break;
@@ -674,7 +662,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
                 if ((receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                 {
-                    error_ = error_number::ERR_PDU_TOO_LONG;
+                    error_number_ = error_number::ERR_PDU_TOO_LONG;
                     int timestamp = time(NULL);
                     INET_LOG("[%d]async_tcp_client::do_read error, The length of pdu too long!", timestamp);
                     break;
@@ -706,9 +694,9 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
             this->idle_ = false;
         }
         else {
-            socket_error_ = xxsocket::get_last_errno();
-            if (SHOULD_CLOSE_0(n, socket_error_)) {
-                int ec = socket_error_;
+            error_number_ = xxsocket::get_last_errno();
+            if (SHOULD_CLOSE_0(n, error_number_)) {
+                int ec = error_number_;
                 std::string errormsg = xxsocket::get_error_msg(ec);
                 int timestamp = time(NULL);
                 if (n == 0) {

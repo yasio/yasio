@@ -55,7 +55,7 @@ namespace purelib {
 
         enum error_number {
             ERR_OK, // NO ERROR
-            ERR_CONNECT_FAILED, // connect failed
+            ERR_CONNECT_FAILED = -201, // connect failed
             ERR_CONNECT_TIMEOUT, // connect timeout
             ERR_SEND_FAILED, // send error, failed
             ERR_SEND_TIMEOUT, // send timeout
@@ -160,7 +160,7 @@ namespace purelib {
             bool       is_connected(void) const { return this->connected_; }
 
             // Gets network error code
-            error_number  get_errorno(void) { return error_; }
+            error_number  get_errorno(void) { return static_cast<error_number>(error_number_); }
 
             // post a async send request.
             void       async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback = nullptr);
@@ -212,9 +212,7 @@ namespace purelib {
             std::string             addressv6_;
             u_short                 port_;
 
-            error_number               error_;
-
-            int                     socket_error_;
+            int                     error_number_; // socket_error( >= -1) & application error(0 or < -1)
 
             int                     connect_timeout_;
             int                     send_timeout_;

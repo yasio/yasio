@@ -303,6 +303,7 @@ void async_tcp_client::service()
                 }
             }
 
+            send_queue_mtx_.lock();
             // perform write operations
             if (!this->send_queue_.empty()) {
 #if INET_ENABLE_VERBOSE_LOG
@@ -310,11 +311,13 @@ void async_tcp_client::service()
 #endif
                 if (!do_write(this))
                 { // TODO: check would block? for client, may be unnecessary.
+                    send_queue_mtx_.unlock();
                     goto _L_error;
                 }
             }
-
-            perform_timeout_timers();
+            send_queue_mtx_.unlock();
+			
+			perform_timeout_timers();
         }
 
         continue;
@@ -344,6 +347,14 @@ void async_tcp_client::notify_connect()
     connect_notify_cv_.notify_one();
 }
 
+void async_tcp_client::switch_endpoint(const char* address, u_short port)
+{
+	this->address_ = address;
+	this->port_ = port;
+	this->switching_ = true;
+	close();
+}
+
 void async_tcp_client::handle_error(void)
 {
     if (impl_.is_open()) {
@@ -358,7 +369,7 @@ void async_tcp_client::handle_error(void)
     // @Notify connection lost
     if (this->on_connection_lost_) {
         int ec = error_number_;
-        TSF_CALL(on_connection_lost_(ec, xxsocket::get_error_msg(ec)));
+		TSF_CALL(on_connection_lost_(!this->switching_ ? socket_error_ : -200, xxsocket::get_error_msg(ec)));
     }
 
     // @Clear all sending messages
@@ -513,8 +524,11 @@ bool async_tcp_client::connect(void)
 
         this->connected_ = true;
         if (this->connect_listener_ != nullptr) {
-            TSF_CALL(this->connect_listener_(true, 0));
+			auto switching = this->switching_;
+			TSF_CALL(this->connect_listener_(true, !switching ? 0 : -200));
         }
+
+		this->switching_ = false;
 
         return true;
     }
@@ -522,10 +536,12 @@ bool async_tcp_client::connect(void)
         connect_failed_ = true;
         int ec = xxsocket::get_last_errno();
         if (this->connect_listener_ != nullptr) {
-            TSF_CALL(this->connect_listener_(false, ec));
+			TSF_CALL(this->connect_listener_(false, !this->switching_ ? ec : -200));
         }
 
         INET_LOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address_.c_str(), port_, ec, xxsocket::get_error_msg(ec));
+
+		this->switching_ = false;
 
         return false;
     }
@@ -541,7 +557,6 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
         if (!ctx->impl_.is_open())
             break;
 
-        std::unique_lock<std::recursive_mutex> autolock(ctx->send_queue_mtx_);
         if (!ctx->send_queue_.empty()) {
             auto& v = ctx->send_queue_.front();
             auto bytes_left = v->data_.size() - v->offset_;
@@ -602,7 +617,6 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
             }
             idle_ = false;
         }
-        autolock.unlock();
 
         bRet = true;
     } while (false);

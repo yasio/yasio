@@ -125,6 +125,8 @@ namespace purelib {
             // set endpoint of server.
             void       set_endpoint(const char* address, const char* addressv6, u_short port);
 
+			void       switch_endpoint(const char* address, u_short port);
+
             // set callbacks, required API, must call by user
             /*
               threadsafe_call: for cocos2d-x should be:
@@ -204,6 +206,7 @@ namespace purelib {
             void       handle_error(void); // TODO: add error_number parameter
 
         private:
+			bool                    switching_ = false;
             bool                    app_exiting_;
             bool                    thread_started_;
             std::thread             worker_thread_;

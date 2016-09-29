@@ -369,7 +369,7 @@ void async_tcp_client::handle_error(void)
     // @Notify connection lost
     if (this->on_connection_lost_) {
         int ec = error_number_;
-		TSF_CALL(on_connection_lost_(!this->switching_ ? socket_error_ : -200, xxsocket::get_error_msg(ec)));
+        TSF_CALL(on_connection_lost_(!this->switching_ ? ec : -200, xxsocket::get_error_msg(ec)));
     }
 
     // @Clear all sending messages

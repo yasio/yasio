@@ -617,7 +617,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
         if (!ctx->impl_.is_open())
             break;
 
-        int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(buffer_) - ctx->offset_);
+        int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(ctx->buffer_) - ctx->offset_);
 
         if (n > 0 || (n == -1 && ctx->offset_ != 0)) {
 
@@ -637,10 +637,10 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 
                         auto bytes_transferred = n + ctx->offset_;
                         ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(ctx->expected_pdu_length_, bytes_transferred));
-                        if (bytes_transferred >= expected_pdu_length_)
+                        if (bytes_transferred >= ctx->expected_pdu_length_)
                         { // pdu received properly
                             ctx->offset_ = bytes_transferred - ctx->expected_pdu_length_; // set offset to bytes of remain buffer
-                            if (offset_ > 0)  // move remain data to head of buffer and hold offset.
+                            if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset.
                                 ::memmove(ctx->buffer_, ctx->buffer_ + ctx->expected_pdu_length_, offset_);
 
                             // move properly pdu to ready queue, GL thread will retrieve it.
@@ -660,7 +660,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
             }
             else { // recv remain pdu data
                 auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
-                if ((receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
+                if ((ctx->receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                 {
                     error_number_ = error_number::ERR_PDU_TOO_LONG;
                     int timestamp = time(NULL);
@@ -675,7 +675,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                         ctx->offset_ = bytes_transferred - bytes_needed; // set offset to bytes of remain buffer
                         if (ctx->offset_ >= 0)
                         { // pdu received properly
-                            if (offset_ > 0)  // move remain data to head of buffer and hold offset.
+                            if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset.
                                 ::memmove(ctx->buffer_, ctx->buffer_ + bytes_needed, ctx->offset_);
 
                             // move properly pdu to ready queue, GL thread will retrieve it.

@@ -317,18 +317,17 @@ void luax_vpusharg(lua_State* L, int& carg, int& narg, void* arg)
 }
 
 /// cocos2d-x object support
-#define LUAX_VCALL_ADD_ANY_SUPPORT(type,prefix) \
+#define LUAX_VCALL_ADD_ANY_SUPPORT(type,prefix,ltype) \
 	inline \
 	void luax_vpusharg(lua_State* L, int& carg, int& narg, type* arg) \
 { \
 	++carg; \
 if (lua_checkstack(L, 1)) \
-	object_to_luaval<type>(L,prefix #type, arg),/*tolua_pushuserdata(L, arg),*/ ++narg; \
+	object_to_luaval<type>(L,prefix ltype, arg),/*tolua_pushuserdata(L, arg),*/ ++narg; \
 }
 
-#define LUAX_VCALL_ADD_CUSTOM_SUPPORT(type) LUAX_VCALL_ADD_ANY_SUPPORT(type, "zysj.")
-#define LUAX_VCALL_ADD_CCOBJ_SUPPORT(type) LUAX_VCALL_ADD_ANY_SUPPORT(type, "cc.")
-#define LUAX_VCALL_ADD_CCUI_SUPPORT(type) LUAX_VCALL_ADD_ANY_SUPPORT(type, "ccui.")
+#define LUAX_VCALL_ADD_CCOBJ_SUPPORT(type) LUAX_VCALL_ADD_ANY_SUPPORT(type,"cc.", #type)
+#define LUAX_VCALL_ADD_CCUI_SUPPORT(type,ltype) LUAX_VCALL_ADD_ANY_SUPPORT(type,"ccui.",ltype)
 
 template<typename _Ty, typename..._Args> inline
 void luax_vpusharg(lua_State* L, int& carg, int& narg, _Ty arg1, const _Args&...args)
@@ -585,7 +584,7 @@ void luax_vcall(const ref_ptr<LuaFunc>& refid, const _Args&...args)
 template<typename _Result, typename..._Args> inline
 _Result luax_vxcall(const ref_ptr<LuaFunc>& refid, const _Args&...args)
 {
-    return luax_dovxcall(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
+    return luax_dovxcall<_Result>(luax_rawgeti(refid->Id()), luax_refid2a(refid->Id()), args...);
 }
 
 // Lua object func call helpers
@@ -604,7 +603,7 @@ void luax_vcall(const ref_ptr<LuaObj>& lobj, const char* objfunc, const _Args&..
 template<typename _Result, typename..._Args> inline
 _Result luax_vxcall(const ref_ptr<LuaObj>& lobj, const char* objfunc, const _Args&...args)
 {
-    return luax_dovxcall(luax_getobjfield(lobj->Id(), objfunc), objfunc, args...);
+    return luax_dovxcall<_Result>(luax_getobjfield(lobj->Id(), objfunc), objfunc, args...);
 }
 /* End of Lua object func call helpers */
 

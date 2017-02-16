@@ -36,7 +36,32 @@ SOFTWARE.
 #include "cocos2d.h"
 #define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
 #else
+#if defined(_WIN32)
+static void odprintf(const char* format, ...) {
+    va_list	args;
+    va_start(args, format);
+    int len = _vscprintf(format, args);
+    if (len > 0) {
+        len += (1 + 2);
+        char* buf = (char*)malloc(len);
+        if (buf) {
+            len = vsprintf_s(buf, len, format, args);
+            if (len > 0) {
+                while (len && isspace(buf[len - 1])) len--;
+                buf[len++] = '\r';
+                buf[len++] = '\n';
+                buf[len] = 0;
+                OutputDebugStringA(buf);
+            }
+            free(buf);
+        }
+        va_end(args);
+    }
+}
+#define INET_LOG(format,...) odprintf((format "\r\n"),##__VA_ARGS__) // fprintf(stdout,(format "\n"),##__VA_ARGS__)
+#else
 #define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
+#endif
 #endif
 
 

@@ -74,8 +74,6 @@ static void odprintf(const char* format, ...) {
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 
-#define MAX_BUSY_DELAY 1000 // 1 millisecond
-
 #define MAX_PDU_LEN SZ(10, M)
 
 #define TSF_CALL(stmt) this->call_tsf_([=]{(stmt);});
@@ -274,16 +272,25 @@ void async_tcp_client::service()
         for (; !app_exiting_;)
         {
             ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
+            int nfds = 0;
 
-            // @pitfall: If still have data to read, only wait 1 millseconds.
-            get_wait_duration(timeout, this->offset_ > 0 ? MAX_BUSY_DELAY : MAX_WAIT_DURATION);
+            if (this->offset_ < 0) {
+                get_wait_duration(timeout, MAX_WAIT_DURATION);
 #if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+                INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
-            int nfds = ::select(maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
+                nfds = ::select(maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
 #if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("socket.select waked up, retval=%d", nfds);
+                INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
+            }
+            else
+            { /* @Optimize, Immediately, If there is still have data to read, no need t call select,
+               However, the connection exception will detected through do_read or do_write, but it's ok.
+              */
+                nfds = 2;
+            }
+
             if (nfds == -1)
             {
                 int ec = xxsocket::get_last_errno();

@@ -274,7 +274,7 @@ void async_tcp_client::service()
             ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
             int nfds = 0;
 
-            if (this->offset_ < 0) {
+            if (this->offset_ <= 0) {
                 get_wait_duration(timeout, MAX_WAIT_DURATION);
 #if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
@@ -348,8 +348,7 @@ void async_tcp_client::service()
                 }
             }
             send_queue_mtx_.unlock();
-			
-			perform_timeout_timers();
+            perform_timeout_timers();
         }
 
         continue;

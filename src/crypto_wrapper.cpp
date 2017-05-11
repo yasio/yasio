@@ -43,7 +43,7 @@ _ByteSeqCont zlib_compress(const unmanaged_string& in, int level)
     {
         out.resize(destLen);
     }
-    return std::move(out);
+    return out;
 }
 
 template<typename _ByteSeqCont>
@@ -68,7 +68,7 @@ _ByteSeqCont zlib_deflate(const unmanaged_string& in, int level)
 
     err = deflateInit(&d_stream, level);
     if (err != Z_OK) // TODO: log somthing
-        return std::move(output);
+        return output;
 
     output.reserve(in.size());
 
@@ -90,7 +90,7 @@ _ByteSeqCont zlib_deflate(const unmanaged_string& in, int level)
         case Z_MEM_ERROR:
             deflateEnd(&d_stream);
             output.clear();
-            return std::move(output);
+            return output;
         }
 
         // not enough buffer ?
@@ -109,7 +109,7 @@ _ByteSeqCont zlib_deflate(const unmanaged_string& in, int level)
         output.clear();
     }
 
-    return std::move(output);
+    return output;
 }
 
 template<typename _ByteSeqCont>
@@ -132,7 +132,7 @@ _ByteSeqCont zlib_inflate(const unmanaged_string& compr)
     _ByteSeqCont output;
     err = inflateInit(&d_stream);
     if (err != Z_OK) // TODO: log somthing
-        return std::move(output);
+        return output;
     // CHECK_ERR(err, "inflateInit");
 
     output.reserve(compr.size() << 2);
@@ -173,7 +173,7 @@ _L_end:
         output.clear();
     }
 
-    return std::move(output);
+    return output;
 }
 
 // inflate alias
@@ -204,7 +204,7 @@ _ByteSeqCont zlib_gzcompr(const unmanaged_string& in, int level)
     _ByteSeqCont output;
     err = deflateInit2(&d_stream, level, Z_DEFLATED, MAX_WBITS + 16, MAX_MEM_LEVEL - 1, Z_DEFAULT_STRATEGY);
     if (err != Z_OK) // TODO: log somthing
-        return std::move(output);
+        return output;
 
     for (;;)
     {
@@ -242,7 +242,7 @@ _L_end:
         output.clear();
     }
 
-    return std::move(output);
+    return output;
 }
 
 template<typename _ByteSeqCont>
@@ -265,7 +265,7 @@ _ByteSeqCont zlib_gzuncompr(const unmanaged_string& compr)
     _ByteSeqCont output;
     err = inflateInit2(&d_stream, MAX_WBITS + 16);
     if (err != Z_OK) // TODO: log somthing
-        return std::move(output);
+        return output;
     // CHECK_ERR(err, "inflateInit");
     output.reserve(compr.size() << 2);
 
@@ -306,7 +306,7 @@ _L_end:
         output.clear();
     }
 
-    return std::move(output);
+    return output;
 }
 
 std::string crypto::zlib::compress(const unmanaged_string& in, int level)
@@ -414,7 +414,7 @@ std::string crypto::hash::fmd5(const char* filename)
 
     hexs2chars(hash, sizeof(hash), &result.front(), result.size());
 
-    return std::move(result);
+    return (result);
 }
 
 #if defined(MD6_SUPPORT)
@@ -425,7 +425,7 @@ std::string crypto::hash::md6(const std::string& plaintext)
 
     ::md6chars(plaintext.c_str(), plaintext.length(), &result.front(), 64);
 
-    return std::move(result); // std::string(ciphertext, sizeof(ciphertext));
+    return (result); // std::string(ciphertext, sizeof(ciphertext));
 }
 
 std::string crypto::hash::md6raw(const std::string& plaintext)
@@ -434,7 +434,7 @@ std::string crypto::hash::md6raw(const std::string& plaintext)
 
     ::md6(plaintext.c_str(), plaintext.length(), &result.front(), 64);
 
-    return std::move(result);
+    return (result);
 }
 
 
@@ -480,7 +480,7 @@ std::string crypto::hash::fmd6(const char* filename, int hashByteLen)
 
     hexs2chars(hash, hashByteLen, &result.front(), result.size());
 
-    return std::move(result);
+    return (result);
 }
 #endif /* MD6_SUPPORT */
 
@@ -493,7 +493,7 @@ std::string crypto::http::b64dec(const unmanaged_string& ciphertext)
     int r1 = base64_decode_block(ciphertext.c_str(), ciphertext.length(), &plaintext.front(), &state);
 
     plaintext.resize(r1);
-    return std::move(plaintext);
+    return (plaintext);
 }
 
 std::string crypto::http::b64enc(const unmanaged_string&  plaintext)
@@ -506,7 +506,7 @@ std::string crypto::http::b64enc(const unmanaged_string&  plaintext)
     int r2 = base64_encode_blockend(wrptr + r1, &state);
 
     ciphertext.resize(r1 + r2);
-    return std::move(ciphertext);
+    return (ciphertext);
 }
 
 std::string crypto::http::urlencode(const unmanaged_string& input)
@@ -532,7 +532,7 @@ std::string crypto::http::urlencode(const unmanaged_string& input)
         }
         output += (char *)buf;
     }
-    return std::move(output);
+    return (output);
 };
 
 std::string crypto::http::urldecode(const unmanaged_string& ciphertext)
@@ -559,7 +559,7 @@ std::string crypto::http::urldecode(const unmanaged_string& ciphertext)
         result += (char)ch;
     }
 
-    return std::move(result);
+    return (result);
 }
 // appended zlib_inflate func
 managed_cstring crypto::zlib::abi::_inflate(const unmanaged_string& compr)
@@ -581,7 +581,7 @@ managed_cstring crypto::zlib::abi::_inflate(const unmanaged_string& compr)
     managed_cstring output;
     err = inflateInit(&d_stream);
     if (err != Z_OK) // TODO: log somthing
-        return std::move(output);
+        return (output);
     // CHECK_ERR(err, "inflateInit");
 
     output.reserve(compr.size() << 2);
@@ -622,5 +622,5 @@ _L_end:
         output.clear();
     }
 
-    return std::move(output);
+    return (output);
 }

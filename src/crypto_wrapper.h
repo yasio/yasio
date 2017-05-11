@@ -97,7 +97,7 @@ namespace crypto {
 				out.size(),
 				key,
 				keybits);
-			return std::move(out);
+			return out;
 		}
 
 		template<CipherMode cipherMode = CipherMode::CBC, typename _ByteSeqCont = std::string>
@@ -112,7 +112,7 @@ namespace crypto {
 				key,
 				keybits);
 			out.resize(outlen);
-			return std::move(out);
+			return out;
 		}
 
 		template<CipherMode cipherMode = CipherMode::CBC, PaddingMode paddingMode = PaddingMode::PKCS7, typename _ByteSeqCont = std::string>
@@ -126,7 +126,7 @@ namespace crypto {
 				in.size(),
 				key,
 				keybits);
-			return std::move(in);
+			return in;
 		}
 
 		template<CipherMode cipherMode = CipherMode::CBC, typename _ByteSeqCont = std::string>
@@ -140,7 +140,7 @@ namespace crypto {
 				key,
 				keybits);
 			in.resize(outlen);
-			return std::move(in);
+			return in;
 		}
 
 		/// wrappers, strongly encrypt, low speed; false: use ECB: fast speed,  light-weighted encrypt

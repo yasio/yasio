@@ -173,7 +173,7 @@ void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
 void async_tcp_client::set_endpoint(const char* address, const char* addressv6, u_short port)
 {
     this->address_ = address;
-    this->addressv6_ = address;
+    this->addressv6_ = addressv6;
     this->port_ = port;
 }
 
@@ -802,7 +802,9 @@ void async_tcp_client::perform_timeout_timers()
         if (earliest->expired())
         {
             timer_queue_.pop_back();
-            TSF_CALL(earliest->callback_(false));
+            auto tmpcallback = earliest->callback_;
+            TSF_CALL(tmpcallback(false));
+//            TSF_CALL(earliest->callback_(false));
             if (earliest->loop_) {
                 earliest->expires_from_now();
                 loop_timers.push_back(earliest);

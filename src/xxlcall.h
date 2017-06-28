@@ -526,7 +526,7 @@ _Result luax_dovxcall(int top, const char* func, const _Args&...args)
 _L_end:
     lua_settop(L, top); // resume stack
 
-    return std::move(result);
+    return result;
 }
 
 template<typename _Result, typename..._Args> inline
@@ -713,7 +713,7 @@ _Ty luax_vgetval(const char* field, const _Ty& default_value = _Ty())
 
     lua_settop(L, top); // resume stack
 
-    return std::move(result);
+    return result;
 
 err_exit:
     lua_settop(L, top); // resume stack

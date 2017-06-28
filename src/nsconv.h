@@ -291,7 +291,7 @@ std::vector<std::basic_string<_Elem>> split(const _Elem* s, const _Elem delim)
     nsc::split(s, delim, [&output](const _Elem* start, const _Elem* end)->void{
         output.push_back(std::basic_string<_Elem>(start, end));
     });
-    return std::move(output);
+    return output;
 }
 
 template<typename _Elem> inline
@@ -301,7 +301,7 @@ std::vector<std::basic_string<_Elem>> split(const _Elem* s, const _Elem* delims)
 	nsc::split(s, delims, [&output](const _Elem* start, const _Elem* end)->void{
 		output.push_back(std::basic_string<_Elem>(start, end));
     });
-    return std::move(output);
+    return output;
 }
 
 template<typename _Elem, typename _Fty> inline
@@ -451,7 +451,7 @@ static std::string bin2hex(const std::string& binary /*charstring also regard as
         }
     }
 
-    return std::move(result);
+    return result;
 }
 
 // translate hexstring to binary
@@ -495,7 +495,7 @@ static std::string hex2bin(const std::string& hexstring, int delim = -1, bool pr
         }
     }
 
-    return result.size() >= 2 ? std::move(result) : "";
+    return result.size() >= 2 ? result : "";
 }
 
 static std::string bin2dec(const std::string& binary /*charstring also regard as binary in C/C++*/, int delim = -1)
@@ -521,7 +521,7 @@ static std::string bin2dec(const std::string& binary /*charstring also regard as
         }
     }
 
-    return std::move(result);
+    return result;
 }
 
 template<typename _Elem> inline
@@ -660,7 +660,7 @@ inline std::string transcode(const wchar_t* wcb, code_page cp = code_page_acp)
     std::string buffer(buffersize, '\0');
     WideCharToMultiByte(cp, 0, wcb, -1, &buffer.front(), buffersize, NULL, NULL);
     buffer.resize(buffersize - 1);
-    return  std::move(buffer);
+    return  buffer;
 }
 
 inline std::string transcode(const std::wstring& wcb, code_page cp = code_page_acp)
@@ -669,7 +669,7 @@ inline std::string transcode(const std::wstring& wcb, code_page cp = code_page_a
     std::string buffer(buffersize, '\0');
     WideCharToMultiByte(cp, 0, wcb.c_str(), -1, &buffer.front(), buffersize, NULL, NULL);
     buffer.resize(buffersize - 1);
-    return  std::move(buffer);
+    return buffer;
 }
 
 inline std::wstring transcode(const char* mcb, code_page cp = code_page_acp)
@@ -678,7 +678,7 @@ inline std::wstring transcode(const char* mcb, code_page cp = code_page_acp)
     std::wstring buffer(buffersize, '\0');
     MultiByteToWideChar(cp, 0, mcb, -1, &buffer.front(), buffersize);
     buffer.resize(buffersize - 1);
-    return std::move(buffer);
+    return buffer;
 }
 
 inline std::wstring transcode(const std::string& mcb, code_page cp = code_page_acp)
@@ -687,7 +687,7 @@ inline std::wstring transcode(const std::string& mcb, code_page cp = code_page_a
     std::wstring buffer(buffersize, '\0');
     MultiByteToWideChar(cp, 0, mcb.c_str(), -1, &buffer.front(), buffersize);
     buffer.resize(buffersize - 1);
-    return std::move(buffer);
+    return buffer;
 }
 
 inline std::string to_utf8(const char* ascii_text)

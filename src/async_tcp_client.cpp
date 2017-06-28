@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2016 halx99
+Copyright (c) 2012-2017 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -335,9 +335,9 @@ void async_tcp_client::service()
                 }
             }
 
-            send_queue_mtx_.lock();
             // perform write operations
             if (!this->send_queue_.empty()) {
+                send_queue_mtx_.lock();
 #if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("perform write operation...");
 #endif
@@ -346,8 +346,10 @@ void async_tcp_client::service()
                     send_queue_mtx_.unlock();
                     goto _L_error;
                 }
+
+                send_queue_mtx_.unlock();
             }
-            send_queue_mtx_.unlock();
+            
             perform_timeout_timers();
         }
 
@@ -404,20 +406,25 @@ void async_tcp_client::handle_error(void)
     }
 
     // @Clear all sending messages
-    this->send_queue_mtx_.lock();
+    
     if (!send_queue_.empty()) {
+        this->send_queue_mtx_.lock();
+
         for (auto pdu : send_queue_)
             delete pdu;
         send_queue_.clear();
+
+        this->send_queue_mtx_.unlock();
     }
-    this->send_queue_mtx_.unlock();
 
     // @Notify all timers are cancelled.
-    this->timer_queue_mtx_.lock();
-    //for (auto& timer : timer_queue_)
-    //    timer->callback_(true);
-    this->timer_queue_.clear();
-    this->timer_queue_mtx_.unlock();
+    if (!this->timer_queue_.empty()) {
+        this->timer_queue_mtx_.lock();
+        //for (auto& timer : timer_queue_)
+        //    timer->callback_(true);
+        this->timer_queue_.clear();
+        this->timer_queue_mtx_.unlock();
+    }
 
     interrupter_.reset();
 }
@@ -790,7 +797,7 @@ void async_tcp_client::cancel_timer(deadline_timer* timer)
 
 void async_tcp_client::perform_timeout_timers()
 {
-    if (timer_queue_.empty())
+    if (this->timer_queue_.empty())
         return;
 
     std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
@@ -827,18 +834,18 @@ void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
     // If send_queue_ not empty, we should perform it immediately.
     // so set socket.select timeout to ZERO.
-    this->send_queue_mtx_.lock();
     if (!this->send_queue_.empty())
     {
-        this->send_queue_mtx_.unlock();
         ::memset(&tv, 0x0, sizeof(tv));
         return;
     }
-    this->send_queue_mtx_.unlock();
 
-    this->timer_queue_mtx_.lock();
-    auto earliest = !this->timer_queue_.empty() ? timer_queue_.back() : nullptr;
-    this->timer_queue_mtx_.unlock();
+    deadline_timer* earliest = nullptr;
+    if (!this->timer_queue_.empty()) {
+        this->timer_queue_mtx_.lock();
+        earliest = timer_queue_.back();
+        this->timer_queue_mtx_.unlock();
+    }
 
     std::chrono::microseconds min_duration(usec); // microseconds
     if (earliest != nullptr) {

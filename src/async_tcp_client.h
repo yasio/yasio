@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.5
+// version: 2.3.7
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -188,7 +188,9 @@ namespace purelib {
         private:
             void       perform_timeout_timers(); // ALL timer expired
 
-            void       get_wait_duration(timeval& tv, long long usec);
+            long long  get_wait_duration(timeval& tv, long long usec);
+
+            int        do_select(fd_set* fds_array,timeval& timeout);
 
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);

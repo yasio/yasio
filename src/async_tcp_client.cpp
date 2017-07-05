@@ -275,24 +275,7 @@ void async_tcp_client::service()
         for (; !app_exiting_;)
         {
             ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
-            int nfds = 0;
-
-            if (this->offset_ <= 0) {
-                get_wait_duration(timeout, MAX_WAIT_DURATION);
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-#endif
-                nfds = ::select(maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("socket.select waked up, retval=%d", nfds);
-#endif
-            }
-            else
-            { /* @Optimize, Immediately, If there is still have data to read, no need t call select,
-               However, the connection exception will detected through do_read or do_write, but it's ok.
-              */
-                nfds = 2;
-            }
+            int nfds = do_select(fds_array, timeout);
 
             if (nfds == -1)
             {
@@ -833,13 +816,34 @@ void async_tcp_client::perform_timeout_timers()
     }
 }
 
+int async_tcp_client::do_select(fd_set* fds_array, timeval& timeout)
+{
+    /* 
+    @Optimize, set default nfds is 2, make sure do_read & do_write event chould be perform when no need to call socket.select
+    However, the connection exception will detected through do_read or do_write, but it's ok.
+    */
+    int nfds = 2; 
+    if (this->offset_ <= 0) {
+        if (get_wait_duration(timeout, MAX_WAIT_DURATION) > 0) {
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+#endif
+            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("socket.select waked up, retval=%d", nfds);
+#endif
+        }
+    }
+
+    return nfds;
+}
+
 long long  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
     // If send_queue_ not empty, we should perform it immediately.
     // so set socket.select timeout to ZERO.
     if (!this->send_queue_.empty())
     {
-        ::memset(&tv, 0x0, sizeof(tv));
         return 0;
     }
 
@@ -862,9 +866,6 @@ long long  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
     if (usec > 0) {
         tv.tv_sec = usec / 1000000;
         tv.tv_usec = usec % 1000000;
-    }
-    else {
-        ::memset(&tv, 0x0, sizeof(tv));
     }
     
     return usec;

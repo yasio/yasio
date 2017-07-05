@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.5
+// version: 2.3.7
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -833,14 +833,14 @@ void async_tcp_client::perform_timeout_timers()
     }
 }
 
-void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
+long long  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
 {
     // If send_queue_ not empty, we should perform it immediately.
     // so set socket.select timeout to ZERO.
     if (!this->send_queue_.empty())
     {
         ::memset(&tv, 0x0, sizeof(tv));
-        return;
+        return 0;
     }
 
     deadline_timer* earliest = nullptr;
@@ -866,6 +866,8 @@ void  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
     else {
         ::memset(&tv, 0x0, sizeof(tv));
     }
+    
+    return usec;
 }
 
 void async_tcp_client::p2p_open()

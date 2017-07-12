@@ -22,7 +22,7 @@ obinarystream::~obinarystream()
 {
 }
 
-std::vector<char> obinarystream::move()
+std::vector<char> obinarystream::take_buffer()
 {
 	return std::move(buffer_);
 };
@@ -82,18 +82,10 @@ void obinarystream::write_array(const void* v, int vl)
 	}
 }
 
-void obinarystream::set_length()
+void obinarystream::update_length()
 {
 	modify_i<uint16_t>(0, static_cast<uint16_t>(buffer_.size()));
 }
-
-//void ibinarystream::write_binarybuf(const obinarystream & buf)
-//{
-//    auto size = buf.buffer_.size();
-//    buffer_.append((const char*)&size, sizeof(size));
-//    if (size != 0)
-//        buffer_.append(buf.buffer_.c_str(), size);
-//}
 
 void obinarystream::save(const char * filename)
 {

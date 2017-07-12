@@ -41,18 +41,7 @@ obinarystream& obinarystream::operator=(obinarystream&& right)
 
 void obinarystream::write_v(const std::string & value)
 {
-	auto size = value.size();
-	auto l = purelib::endian::htonv(static_cast<uint16_t>(size));
-
-	auto append_size = sizeof(l) + size;
-
-	auto offset = buffer_.size();
-	buffer_.resize(offset + append_size);
-
-	::memcpy(buffer_.data() + offset, &l, sizeof(l));
-	if (size > 0) {
-		::memcpy(buffer_.data() + offset + sizeof l, value.c_str(), size);
-	}
+	write_v(value.c_str(), value.size);
 }
 
 void obinarystream::write_v(const void* v, int size)

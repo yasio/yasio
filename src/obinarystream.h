@@ -15,7 +15,7 @@ public:
     obinarystream& operator=(const obinarystream& right);
     obinarystream& operator=(obinarystream&& right);
 
-    std::vector<char> move();
+    std::vector<char> take_buffer();
 
     template<typename _Nty>
     size_t write_i(const _Nty value);
@@ -29,12 +29,10 @@ public:
 
     void write_array(const std::string&);
     void write_array(const void* v, int vl);
+    
+    void update_length();
 
-    /*void write_binarybuf(const obinarystream&);
-    obinarystream read_binarybuf(void);*/
-    void set_length();
-
-    size_t length() { return buffer_.size(); }
+    size_t length() const { return buffer_.size(); }
     const std::vector<char>& buffer() const { return buffer_; }
     std::vector<char>& buffer() { return buffer_; }
     char* offsetp(size_t offset = 0) { return &buffer_.front() + offset; }

@@ -26,6 +26,8 @@ public:
     template<typename _LenT = uint16_t>
     int read_v(std::string& ov)
     {
+        LENGTH_STATIC_ASSERT(_LenT);
+
         _LenT n = purelib::endian::ntohv(*(_LenT*)(ptr_));
 
         (void)consume(sizeof(n));
@@ -42,6 +44,8 @@ public:
     template<typename _LenT = uint16_t>
     int read_v(void* ov, int len)
     {
+        LENGTH_STATIC_ASSERT(_LenT);
+
         _LenT n = purelib::endian::ntohv(*(_LenT*)(ptr_));
 
         (void)consume(sizeof(n));

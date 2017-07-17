@@ -28,6 +28,8 @@ public:
     template<typename _LenT = uint16_t>
     void write_v(const void* v, int size)
     {
+        LENGTH_STATIC_ASSERT(_LenT);
+
         auto l = purelib::endian::htonv(static_cast<_LenT>(size));
 
         auto append_size = sizeof(l) + size;
@@ -45,6 +47,8 @@ public:
     template<typename _LenT = uint16_t>
     void finish()
     {
+        LENGTH_STATIC_ASSERT(_LenT);
+
         modify_i<_LenT>(0, static_cast<_LenT>(buffer_.size()));
     }
 

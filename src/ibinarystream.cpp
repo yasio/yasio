@@ -42,9 +42,8 @@ int ibinarystream::read_bytes(void* oav, int len)
 int ibinarystream::consume(size_t size)
 {
     ptr_ += size;
-    remain_ -= size;
+    remain_ -= static_cast<int>(size);
     if (remain_ < 0) // == 0, packet decode complete.
         throw std::logic_error("packet error, data insufficiently!");
     return remain_;
 }
-

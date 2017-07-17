@@ -41,12 +41,12 @@ obinarystream& obinarystream::operator=(obinarystream&& right)
 
 void obinarystream::write_v(const std::string & value)
 {
-	write_v(value.c_str(), value.size);
+	write_v(value.c_str(), static_cast<int>(value.size()));
 }
 
 void obinarystream::write_bytes(const std::string& v)
 {
-    write_bytes(v.c_str(), v.size());
+    write_bytes(v.c_str(), static_cast<int>(v.size()));
 }
 
 void obinarystream::write_bytes(const void* v, int vl)
@@ -60,7 +60,7 @@ void obinarystream::write_bytes(const void* v, int vl)
 
 void obinarystream::save(const char * filename)
 {
-	//    fsutil::write_file_data(filename, buffer_.data(), buffer_.size());
+	// fsutil::write_file_data(filename, buffer_.data(), buffer_.size());
 	std::ofstream fout;
 	fout.open(filename, std::ios::binary);
 	fout.write(&this->buffer_.front(), this->length());

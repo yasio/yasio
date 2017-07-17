@@ -25,12 +25,28 @@ public:
 
     void write_v(const std::string&);
 
-    void write_v(const void* v, int vl);
+    template<typename _LenT = uint16_t>
+    void write_v(const void* v, int size)
+    {
+        auto l = purelib::endian::htonv(static_cast<_LenT>(size));
 
-    void write_array(const std::string&);
-    void write_array(const void* v, int vl);
+        auto append_size = sizeof(l) + size;
+        auto offset = buffer_.size();
+        buffer_.resize(offset + append_size);
+
+        ::memcpy(buffer_.data() + offset, &l, sizeof(l));
+        if (size > 0)
+            ::memcpy(buffer_.data() + offset + sizeof l, v, size);
+    }
+
+    void write_bytes(const std::string&);
+    void write_bytes(const void* v, int vl);
     
-    void update_length();
+    template<typename _LenT = uint16_t>
+    void finish()
+    {
+        modify_i<_LenT>(0, static_cast<_LenT>(buffer_.size()));
+    }
 
     size_t length() const { return buffer_.size(); }
     const std::vector<char>& buffer() const { return buffer_; }

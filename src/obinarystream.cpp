@@ -44,36 +44,18 @@ void obinarystream::write_v(const std::string & value)
 	write_v(value.c_str(), value.size);
 }
 
-void obinarystream::write_v(const void* v, int size)
+void obinarystream::write_bytes(const std::string& v)
 {
-	auto l = purelib::endian::htonv(static_cast<uint16_t>(size));
-
-	auto append_size = sizeof(l) + size;
-	auto offset = buffer_.size();
-	buffer_.resize(offset + append_size);
-
-	::memcpy(buffer_.data() + offset, &l, sizeof(l));
-	if (size > 0)
-		::memcpy(buffer_.data() + offset + sizeof l, v, size);
+    write_bytes(v.c_str(), v.size());
 }
 
-void obinarystream::write_array(const std::string& v)
-{
-    write_array(v.c_str(), v.size());
-}
-
-void obinarystream::write_array(const void* v, int vl)
+void obinarystream::write_bytes(const void* v, int vl)
 {
 	if (vl > 0) {
 		auto offset = buffer_.size();
 		buffer_.resize(buffer_.size() + vl);
 		::memcpy(buffer_.data() + offset, v, vl);
 	}
-}
-
-void obinarystream::update_length()
-{
-	modify_i<uint16_t>(0, static_cast<uint16_t>(buffer_.size()));
 }
 
 void obinarystream::save(const char * filename)

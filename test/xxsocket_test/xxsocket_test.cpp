@@ -55,14 +55,14 @@ std::vector<char> build_error_msg(int errorcode, const char* errormsg)
     error.error_code = errorcode;
     error.error_msg = errormsg;
     auto msg = error.encode();
-    return msg.move();
+    return msg.take_buffer();
 }
 
 // 收到完整的一个消息包, 可用于编解码
 void on_recv_msg(std::vector<char>&& data)
 {
     messages::MsgHeader hdr;
-    int offset = hdr.decode(data.data(), data.size());
+    int offset = hdr.decode(data.data(), static_cast<int>(data.size()));
     auto msg = messages::temp_create_message(hdr.command_id);
     switch (msg->get_id())
     { //

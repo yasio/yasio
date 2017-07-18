@@ -13,7 +13,7 @@ public:
     ibinarystream(const ibinarystream& right) = delete;
     ibinarystream(ibinarystream&& right) = delete;
 
-    void vassign(const char* data, int size);
+    void assign(const char* data, int size);
 
     ibinarystream& operator=(const ibinarystream& right) = delete;
     ibinarystream& operator=(ibinarystream&& right) = delete;
@@ -23,11 +23,46 @@ public:
     void read_i(float& ov);
     void read_i(double& ov);
 
-    int read_v(std::string& ov);
-    int read_v(void* ov, int len);
+    template<typename _LenT = uint16_t>
+    int read_v(std::string& ov)
+    {
+        LENGTH_STATIC_ASSERT(_LenT);
 
-    int read_array(std::string& oav, int len);
-    int read_array(void* oav, int len);
+        _LenT n = purelib::endian::ntohv(*(_LenT*)(ptr_));
+
+        (void)consume(sizeof(n));
+
+        if (n > 0) {
+            ov.resize(n);
+            ::memcpy(&ov.front(), ptr_, n);
+            return consume(n);
+        }
+
+        return remain_;
+    }
+
+    template<typename _LenT = uint16_t>
+    int read_v(void* ov, int len)
+    {
+        LENGTH_STATIC_ASSERT(_LenT);
+
+        _LenT n = purelib::endian::ntohv(*(_LenT*)(ptr_));
+
+        (void)consume(sizeof(n));
+
+        if (n > 0) {
+            // ov.resize(n);
+            if (len < n)
+                n = len;
+            ::memcpy(ov, ptr_, n);
+            return consume(n);
+        }
+
+        return remain_;
+    }
+
+    int read_bytes(std::string& oav, int len);
+    int read_bytes(void* oav, int len);
 
     inline int remain(void) { return remain_;  }
 

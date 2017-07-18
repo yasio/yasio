@@ -22,7 +22,7 @@ obinarystream::~obinarystream()
 {
 }
 
-std::vector<char> obinarystream::move()
+std::vector<char> obinarystream::take_buffer()
 {
 	return std::move(buffer_);
 };
@@ -41,39 +41,15 @@ obinarystream& obinarystream::operator=(obinarystream&& right)
 
 void obinarystream::write_v(const std::string & value)
 {
-	auto size = value.size();
-	auto l = purelib::endian::htonv(static_cast<uint16_t>(size));
-
-	auto append_size = sizeof(l) + size;
-
-	auto offset = buffer_.size();
-	buffer_.resize(offset + append_size);
-
-	::memcpy(buffer_.data() + offset, &l, sizeof(l));
-	if (size > 0) {
-		::memcpy(buffer_.data() + offset + sizeof l, value.c_str(), size);
-	}
+	write_v(value.c_str(), static_cast<int>(value.size()));
 }
 
-void obinarystream::write_v(const void* v, int size)
+void obinarystream::write_bytes(const std::string& v)
 {
-	auto l = purelib::endian::htonv(static_cast<uint16_t>(size));
-
-	auto append_size = sizeof(l) + size;
-	auto offset = buffer_.size();
-	buffer_.resize(offset + append_size);
-
-	::memcpy(buffer_.data() + offset, &l, sizeof(l));
-	if (size > 0)
-		::memcpy(buffer_.data() + offset + sizeof l, v, size);
+    write_bytes(v.c_str(), static_cast<int>(v.size()));
 }
 
-void obinarystream::write_array(const std::string& v)
-{
-    write_array(v.c_str(), v.size());
-}
-
-void obinarystream::write_array(const void* v, int vl)
+void obinarystream::write_bytes(const void* v, int vl)
 {
 	if (vl > 0) {
 		auto offset = buffer_.size();
@@ -82,22 +58,9 @@ void obinarystream::write_array(const void* v, int vl)
 	}
 }
 
-void obinarystream::set_length()
-{
-	modify_i<uint16_t>(0, static_cast<uint16_t>(buffer_.size()));
-}
-
-//void ibinarystream::write_binarybuf(const obinarystream & buf)
-//{
-//    auto size = buf.buffer_.size();
-//    buffer_.append((const char*)&size, sizeof(size));
-//    if (size != 0)
-//        buffer_.append(buf.buffer_.c_str(), size);
-//}
-
 void obinarystream::save(const char * filename)
 {
-	//    fsutil::write_file_data(filename, buffer_.data(), buffer_.size());
+	// fsutil::write_file_data(filename, buffer_.data(), buffer_.size());
 	std::ofstream fout;
 	fout.open(filename, std::ios::binary);
 	fout.write(&this->buffer_.front(), this->length());

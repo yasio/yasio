@@ -160,6 +160,9 @@ int64_t ntohv(int64_t value)
 
 }; // namespace thelib
 
+#define LENGTH_FIELD_TYPE uint16_t
+#define LENGTH_STATIC_ASSERT(t) static_assert(sizeof(t) == sizeof(LENGTH_FIELD_TYPE), "error: binarystream read_v/write_v: the length field size must equal to the macro define: LENGTH_FIELD_TYPE!")
+
 #endif
 /*
 * Copyright (c) 2012-2015 by X.D. Guo  ALL RIGHTS RESERVED.

@@ -7,62 +7,30 @@
 
 ibinarystream::ibinarystream()
 {
-    this->vassign(nullptr, 0);
+    this->assign(nullptr, 0);
 }
 
 ibinarystream::ibinarystream(const char* data, int size)
 {
-    this->vassign(data, size);
+    this->assign(data, size);
 }
 
-void ibinarystream::vassign(const char* data, int size)
+void ibinarystream::assign(const char* data, int size)
 {
     ptr_ = data;
     remain_ = size;
 }
 
-int ibinarystream::read_v(std::string& ov)
-{
-    uint16_t n = ntohs(*(uint16_t*)(ptr_));
-
-    (void)consume(sizeof(n));
-
-    if (n > 0) {
-        ov.resize(n);
-        ::memcpy(&ov.front(), ptr_, n);
-        return consume(n);
-    }
-
-    return remain_;
-}
-
-int ibinarystream::read_v(void* ov, int len)
-{
-    uint16_t n = ntohs(*(uint16_t*)(ptr_));
-
-    (void)consume(sizeof(n));
-
-    if (n > 0) {
-        // ov.resize(n);
-        if (len < n)
-            n = len;
-        ::memcpy(ov, ptr_, n);
-        return consume(n);
-    }
-
-    return remain_;
-}
-
-int ibinarystream::read_array(std::string& oav, int len)
+int ibinarystream::read_bytes(std::string& oav, int len)
 {
     if (len > 0) {
         oav.resize(len);
-        return read_array(&oav.front(), len);
+        return read_bytes(&oav.front(), len);
     }
     return 0;
 }
 
-int ibinarystream::read_array(void* oav, int len)
+int ibinarystream::read_bytes(void* oav, int len)
 {
     if (len > 0) {
         ::memcpy(oav, ptr_, len);
@@ -74,9 +42,8 @@ int ibinarystream::read_array(void* oav, int len)
 int ibinarystream::consume(size_t size)
 {
     ptr_ += size;
-    remain_ -= size;
+    remain_ -= static_cast<int>(size);
     if (remain_ < 0) // == 0, packet decode complete.
         throw std::logic_error("packet error, data insufficiently!");
     return remain_;
 }
-

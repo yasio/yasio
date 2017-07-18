@@ -15,7 +15,7 @@ public:
     obinarystream& operator=(const obinarystream& right);
     obinarystream& operator=(obinarystream&& right);
 
-    std::vector<char> move();
+    std::vector<char> take_buffer();
 
     template<typename _Nty>
     size_t write_i(const _Nty value);
@@ -25,16 +25,34 @@ public:
 
     void write_v(const std::string&);
 
-    void write_v(const void* v, int vl);
+    template<typename _LenT = uint16_t>
+    void write_v(const void* v, int size)
+    {
+        LENGTH_STATIC_ASSERT(_LenT);
 
-    void write_array(const std::string&);
-    void write_array(const void* v, int vl);
+        auto l = purelib::endian::htonv(static_cast<_LenT>(size));
 
-    /*void write_binarybuf(const obinarystream&);
-    obinarystream read_binarybuf(void);*/
-    void set_length();
+        auto append_size = sizeof(l) + size;
+        auto offset = buffer_.size();
+        buffer_.resize(offset + append_size);
 
-    size_t length() { return buffer_.size(); }
+        ::memcpy(buffer_.data() + offset, &l, sizeof(l));
+        if (size > 0)
+            ::memcpy(buffer_.data() + offset + sizeof l, v, size);
+    }
+
+    void write_bytes(const std::string&);
+    void write_bytes(const void* v, int vl);
+    
+    template<typename _LenT = uint16_t>
+    void finish()
+    {
+        LENGTH_STATIC_ASSERT(_LenT);
+
+        modify_i<_LenT>(0, static_cast<_LenT>(buffer_.size()));
+    }
+
+    size_t length() const { return buffer_.size(); }
     const std::vector<char>& buffer() const { return buffer_; }
     std::vector<char>& buffer() { return buffer_; }
     char* offsetp(size_t offset = 0) { return &buffer_.front() + offset; }

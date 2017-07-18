@@ -16,3 +16,5 @@ ignored/*.*
 *.pch
 *.opendb
 *.suo
+/.vs
+/.vs

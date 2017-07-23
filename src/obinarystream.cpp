@@ -6,7 +6,7 @@
 
 obinarystream::obinarystream(size_t buffersize)
 {
-	buffer_.reserve(buffersize);
+    buffer_.reserve(buffersize);
 }
 
 obinarystream::obinarystream(const obinarystream& right) : buffer_(right.buffer_)
@@ -39,32 +39,58 @@ obinarystream& obinarystream::operator=(obinarystream&& right)
 	return *this;
 }
 
-void obinarystream::write_v(const std::string & value)
+size_t obinarystream::write_v(const std::string & value)
 {
-	write_v(value.c_str(), static_cast<int>(value.size()));
+	return write_v(value.c_str(), static_cast<int>(value.size()));
 }
 
-void obinarystream::write_bytes(const std::string& v)
+size_t obinarystream::write_v16(const std::string& value)
 {
-    write_bytes(v.c_str(), static_cast<int>(v.size()));
+    return write_v16(value.c_str(), static_cast<int>(value.size()));
 }
 
-void obinarystream::write_bytes(const void* v, int vl)
+size_t obinarystream::write_v32(const std::string& value)
+{
+    return write_v32(value.c_str(), static_cast<int>(value.size()));
+}
+
+size_t obinarystream::write_v(const void* v, int size)
+{
+    return write_vv<LENGTH_FIELD_TYPE>(v, size);
+}
+
+size_t obinarystream::write_v16(const void* v, int size)
+{
+    return write_vv<uint16_t>(v, size);
+}
+
+size_t obinarystream::write_v32(const void* v, int size)
+{
+    return write_vv<uint32_t>(v, size);
+}
+
+size_t obinarystream::write_bytes(const std::string& v)
+{
+    return write_bytes(v.c_str(), static_cast<int>(v.size()));
+}
+
+size_t obinarystream::write_bytes(const void* v, int vl)
 {
 	if (vl > 0) {
 		auto offset = buffer_.size();
 		buffer_.resize(buffer_.size() + vl);
 		::memcpy(buffer_.data() + offset, v, vl);
 	}
+	return buffer_.size();
 }
 
 void obinarystream::save(const char * filename)
 {
-	// fsutil::write_file_data(filename, buffer_.data(), buffer_.size());
-	std::ofstream fout;
-	fout.open(filename, std::ios::binary);
-	fout.write(&this->buffer_.front(), this->length());
-	fout.close();
+    std::ofstream fout;
+    fout.open(filename, std::ios::binary);
+    if (!this->buffer_.empty())
+        fout.write(&this->buffer_.front(), this->length());
+    fout.close();
 }
 //
 //void obinarystream::compress(size_t offset/* header maybe */)

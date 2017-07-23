@@ -23,34 +23,16 @@ public:
     size_t write_i(float);
     size_t write_i(double);
 
-    void write_v(const std::string&);
-
-    template<typename _LenT = uint16_t>
-    void write_v(const void* v, int size)
-    {
-        LENGTH_STATIC_ASSERT(_LenT);
-
-        auto l = purelib::endian::htonv(static_cast<_LenT>(size));
-
-        auto append_size = sizeof(l) + size;
-        auto offset = buffer_.size();
-        buffer_.resize(offset + append_size);
-
-        ::memcpy(buffer_.data() + offset, &l, sizeof(l));
-        if (size > 0)
-            ::memcpy(buffer_.data() + offset + sizeof l, v, size);
-    }
-
-    void write_bytes(const std::string&);
-    void write_bytes(const void* v, int vl);
+    size_t write_v(const std::string&);
+    size_t write_v16(const std::string&);
+    size_t write_v32(const std::string&);
     
-    template<typename _LenT = uint16_t>
-    void finish()
-    {
-        LENGTH_STATIC_ASSERT(_LenT);
+    size_t write_v(const void* v, int size);
+    size_t write_v16(const void* v, int size);
+    size_t write_v32(const void* v, int size);
 
-        modify_i<_LenT>(0, static_cast<_LenT>(buffer_.size()));
-    }
+    size_t write_bytes(const std::string&);
+    size_t write_bytes(const void* v, int vl);
 
     size_t length() const { return buffer_.size(); }
     const std::vector<char>& buffer() const { return buffer_; }
@@ -62,6 +44,21 @@ public:
 
     void compress(size_t offset = 0 /* header maybe */);
 
+    template<typename _LenT>
+    size_t write_vv(const void* v, int size)
+    {
+        auto l = purelib::endian::htonv(static_cast<_LenT>(size));
+
+        auto append_size = sizeof(l) + size;
+        auto offset = buffer_.size();
+        buffer_.resize(offset + append_size);
+
+        ::memcpy(buffer_.data() + offset, &l, sizeof(l));
+        if (size > 0)
+            ::memcpy(buffer_.data() + offset + sizeof l, v, size);
+			
+	    return buffer_.size();
+    }
 public:
     void save(const char* filename);
 

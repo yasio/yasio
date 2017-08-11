@@ -289,7 +289,7 @@ object_pool<_Ty, _ElemCount> object_pool_allocator<_Ty, _ElemCount>::_Mempool;
 
 // stl string 
 // TEMPLATE CLASS buffer_pool_allocator, can't used by std::vector
-template<class _Ty, size_t _BufferSize = 128, size_t _ElemCount = 128>
+template<class _Ty, size_t _BufferSize = 128, size_t _ElemCount = SZ(512,k) / _BufferSize>
 class buffer_pool_allocator
 {	// generic allocator for objects of class _Ty
 private:

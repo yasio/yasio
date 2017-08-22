@@ -187,10 +187,10 @@ int strtrim(_Elem* _Str, int _StrLen)
     }
     _Elem* _Ptr = _Str - 1;
 
-    while( !_Is_visible_char(*(++_Ptr)) && --_StrLen ) ;
+    while(::iswspace(*(++_Ptr)) && --_StrLen ) ;
 
     if(_StrLen > 0) {
-        while( !_Is_visible_char(_Ptr[_StrLen - 1]) ) --_StrLen ;
+        while(::iswspace(_Ptr[_StrLen - 1]) ) --_StrLen ;
         _Ptr[_StrLen] = (_Elem)'\0';
     }
 

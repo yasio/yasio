@@ -35,8 +35,11 @@ public:
     size_t write_bytes(const void* v, int vl);
 
     size_t length() const { return buffer_.size(); }
+    const char* data() const { return buffer_.data(); }
+
     const std::vector<char>& buffer() const { return buffer_; }
     std::vector<char>& buffer() { return buffer_; }
+    
     char* offsetp(size_t offset = 0) { return &buffer_.front() + offset; }
 
     template<typename _Nty>

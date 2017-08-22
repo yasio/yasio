@@ -11,12 +11,12 @@
 #include <string.h>
 #include <vector>
 #include <tuple>
-#include <stdlib.h>
-#include <stdio.h>
+#include<stdlib.h>
+#include<stdio.h>
 
 #include <wchar.h>
 
-// #include "unreal_string.h"
+#include "unreal_string.h"
 
 namespace purelib {
 
@@ -95,7 +95,7 @@ std::wstring& to_wstring(const _Nty& numeral, std::wstring& text, ios_flag radix
 
 // convert string[std::string/std::wstring] to numeric[char/short/int/long/long long/float/double].
 template<typename _Nty, typename _Elem> inline
-_Nty to_numeric(const std::basic_string<_Elem>& text, ios_flag radix = std::dec)
+_Nty to_numeric(const unreal_string<_Elem, pseudo_cleaner<_Elem> >& text, ios_flag radix = std::dec)
 { 
     _Nty numeral = _Nty();
     std::basic_stringstream<_Elem> swaper;
@@ -107,7 +107,7 @@ _Nty to_numeric(const std::basic_string<_Elem>& text, ios_flag radix = std::dec)
 }
 
 template<typename _Nty, typename _Elem> inline
-_Nty& to_numeric(const std::basic_string<_Elem>& text, _Nty& numeral, ios_flag radix = std::dec)
+_Nty& to_numeric(const unreal_string<_Elem, pseudo_cleaner<_Elem> >& text, _Nty& numeral, ios_flag radix = std::dec)
 {
     std::basic_stringstream<_Elem> swaper;
 	swaper.precision(16);
@@ -157,14 +157,14 @@ size_t strtrim(_Elem* _Str)
 
     _Elem* _Ptr = _Str - 1;
 
-    while( !_Is_visible_char(*(++_Ptr)) && *_Ptr ) ;
+    while(::iswspace(*(++_Ptr)) && *_Ptr ) ;
 
     _Elem* _First = _Ptr;
     _Elem* _Last = _Ptr;
     if(*_Ptr) {
         while(*(++_Ptr))
         {
-            if(_Is_visible_char(*_Ptr)) {
+            if(::iswspace(*_Ptr)) {
                 _Last = _Ptr;
             }
         }
@@ -195,7 +195,7 @@ int strtrim(_Elem* _Str, int _StrLen)
     }
 
     if(_Ptr != _Str) {
-        ::memmove(_Str, _Ptr, _StrLen);
+        ::memmove(_Str, _Ptr, _StrLen << ((sizeof(_Elem) >> 1)));
         _Str[_StrLen] = (_Elem)'\0';
     }
 
@@ -205,7 +205,7 @@ int strtrim(_Elem* _Str, int _StrLen)
 template<typename _Elem>
 std::basic_string<_Elem>& strtrim(std::basic_string<_Elem>& _String)
 {
-    _String.resize(strtrim(const_cast<_Elem*>(_String.c_str()), _String.length()));
+    _String.resize(strtrim(&_String.front(), _String.length()));
     return _String;
 }
 
@@ -217,12 +217,13 @@ std::basic_string<_Elem>& strtrim(std::basic_string<_Elem>&& _String)
 }
 #endif
 
+
 /* 
-* nsc::split API (override+6)
+* nsc::fast_split API (override+6)
 * op prototype: [](const char* start, const char* end){}
 */
 template<typename _Elem, typename _Fty> inline
-void split(const _Elem* s, const _Elem delim, const _Fty& op)
+void fast_split(const _Elem* s, const _Elem delim, const _Fty& op)
 {
     const _Elem* _Start = s; // the start of every string
     const _Elem* _Ptr = s;   // source string iterator
@@ -242,7 +243,48 @@ void split(const _Elem* s, const _Elem delim, const _Fty& op)
 }
 
 template<typename _Elem, typename _Fty> inline
-void split(const _Elem* s, size_t slen, const _Elem* delims, size_t dlen, const _Fty& op)
+void fast_split(const _Elem* s, size_t slen, const _Elem delim, const _Fty& op)
+{
+    const _Elem* _Start = s; // the start of every string
+    const _Elem* _Ptr = s;   // source string iterator
+    while (*_Ptr != '\0' && slen > 0)
+    {
+        if (delim == *_Ptr/* && _Ptr != _Start*/)
+        {
+            if (_Ptr != _Start)
+                op(_Start, _Ptr);
+            _Start = _Ptr + 1;
+        }
+        ++_Ptr;
+        --slen;
+    }
+    if (_Start != _Ptr) {
+        op(_Start, _Ptr);
+    }
+}
+
+template<typename _Elem, typename _Fty> inline
+void fast_split(const _Elem* s, const _Elem* e, const _Elem delim, const _Fty& op)
+{
+    const _Elem* _Start = s; // the start of every string
+    const _Elem* _Ptr = s;   // source string iterator
+    while (*_Ptr != '\0' && _Ptr != e)
+    {
+        if (delim == *_Ptr/* && _Ptr != _Start*/)
+        {
+            if (_Ptr != _Start)
+                op(_Start, _Ptr);
+            _Start = _Ptr + 1;
+        }
+        ++_Ptr;
+    }
+    if (_Start != _Ptr) {
+        op(_Start, _Ptr);
+    }
+}
+
+template<typename _Elem, typename _Fty> inline
+void fast_split(const _Elem* s, size_t slen, const _Elem* delims, size_t dlen, const _Fty& op)
 {
     const _Elem* _Start = s; // the start of every string
     const _Elem* _Ptr = s;   // source string iterator
@@ -262,25 +304,24 @@ void split(const _Elem* s, size_t slen, const _Elem* delims, size_t dlen, const 
 }
 
 template<typename _Elem, typename _Fty> inline
-void split(const _Elem* s, const _Elem* delims, const _Fty& op)
+void fast_split(const _Elem* s, const _Elem* delims, const _Fty& op)
 {
-	split(s, strlen(s), delims, strlen(delims), op);
+    fast_split(s, strlen(s), delims, strlen(delims), op);
 }
-
 template<typename _Elem, typename _Fty> inline
-void split(const std::basic_string<_Elem>& s, const _Elem* delims, const _Fty& op)
+void fast_split(const std::basic_string<_Elem>& s, const _Elem* delims, const _Fty& op)
 {
 	size_t start = 0;
 	size_t last = s.find_first_of(delims, start);
 	while (last != std::basic_string<_Elem>::npos)
 	{
 		if (last > start)
-			op(&s[start], &s[last - start]);
+			op(&s[start], &s[last]);
 		last = s.find_first_of(delims, start = last + 1);
 	}
 	if (start < s.size())
 	{
-		op(&s(start), &s.back());
+		op(&s[start], &s.front() + s.size());
 	}
 }
 
@@ -288,28 +329,81 @@ template<typename _Elem> inline
 std::vector<std::basic_string<_Elem>> split(const _Elem* s, const _Elem delim)
 {
     std::vector<std::basic_string<_Elem> > output;
-    nsc::split(s, delim, [&output](const _Elem* start, const _Elem* end)->void{
+    nsc::fast_split(s, delim, [&output](const _Elem* start, const _Elem* end)->void{
         output.push_back(std::basic_string<_Elem>(start, end));
     });
-    return output;
+    return (output);
 }
 
 template<typename _Elem> inline
 std::vector<std::basic_string<_Elem>> split(const _Elem* s, const _Elem* delims)
 {
     std::vector<std::basic_string<_Elem> > output;
-	nsc::split(s, delims, [&output](const _Elem* start, const _Elem* end)->void{
+	nsc::fast_split(s, delims, [&output](const _Elem* start, const _Elem* end)->void{
 		output.push_back(std::basic_string<_Elem>(start, end));
     });
-    return output;
+    return (output);
+}
+
+template<typename _Elem> inline
+std::vector<std::basic_string<_Elem>> split(const std::basic_string<_Elem>& s, const char* delim)
+{
+    std::vector< std::basic_string<_Elem> > output;
+    nsc::fast_split(s, delim, [&output](const _Elem* start, const _Elem* end)->void {
+		output.push_back(std::basic_string<_Elem>(start, end));
+    });
+    return (output);
 }
 
 template<typename _Elem, typename _Fty> inline
-void _Dir_split(_Elem* s, const _Fty& op) // will convert '\\' to '/'
+void split_breakif(const _Elem* s, const _Elem delim, _Fty op)
+{
+	const _Elem* _Start = s; // the start of every string
+	const _Elem* _Ptr = s;   // source string iterator
+	while (*_Ptr != '\0')
+	{
+		if (delim == *_Ptr/* && _Ptr != _Start*/)
+		{
+			if (_Ptr != _Start)
+				if (op(_Start, _Ptr - _Start))
+					break;
+			_Start = _Ptr + 1;
+		}
+		++_Ptr;
+	}
+	if (_Start != _Ptr) {
+		op(_Start, _Ptr - _Start);
+	}
+}
+
+template<typename _Elem, typename _Fty> inline
+void split_breakif(const _Elem* s, const _Elem* delims, _Fty op)
+{
+	const _Elem* _Start = s; // the start of every string
+	const _Elem* _Ptr = s;   // source string iterator
+	size_t      _Lend = strlen(delims);
+	while ((_Ptr = strstr(_Ptr, delims)) != nullptr)
+	{
+		if (_Ptr != _Start)
+		{
+			if (op(std::basic_string<_Elem>(_Start, _Ptr)))
+				break;
+		}
+		_Start = _Ptr + _Lend;
+		_Ptr += _Lend;
+	}
+	if (*_Start) {
+		op(std::basic_string<_Elem>(_Start));
+	}
+}
+
+template<typename _Elem, typename _Fty> inline
+void _Dir_split(_Elem* s, size_t size, const _Fty& op) // will convert '\\' to '/'
 {
 	_Elem* _Start = s; // the start of every string
 	_Elem* _Ptr = s;   // source string iterator
-	while (*_Ptr != '\0')
+	auto _Endptr = s + size;
+	while (_Ptr < _Endptr)
 	{
 		if ('\\' == *_Ptr || '/' == *_Ptr)
 		{
@@ -334,14 +428,28 @@ void _Dir_split(_Elem* s, const _Fty& op) // will convert '\\' to '/'
 	}
 }
 
-template<typename _Elem, typename _Fty> inline
-void dir_split(std::basic_string<_Elem>& s, const _Fty& op) // will convert '\\' to '/'
+template< typename _Fty> inline
+void dir_split(unmanaged_string& s, const _Fty& op) // will convert '\\' to '/'
 {
-	_Dir_split(&s.front(), op);
+	_Dir_split(s.data(), s.size(), op);
 }
 
-template<typename _Elem, typename _Fty> inline
-void dir_split(std::basic_string<_Elem>&& s, const _Fty& op) // will convert '\\' to '/'
+
+template< typename _Fty> inline
+void dir_split(unmanaged_wstring& s, const _Fty& op) // will convert '\\' to '/'
+{
+	_Dir_split(s.data(), s.size(), op);
+}
+
+template< typename _Fty> inline
+void dir_split(unmanaged_string&& s, const _Fty& op) // will convert '\\' to '/'
+{
+	dir_split(s, op);
+}
+
+
+template< typename _Fty> inline
+void dir_split(unmanaged_wstring&& s, const _Fty& op) // will convert '\\' to '/'
 {
 	dir_split(s, op);
 }
@@ -654,41 +762,79 @@ enum code_page {
     code_page_utf8 = CP_UTF8
 };
 
-inline std::string transcode(const wchar_t* wcb, code_page cp = code_page_acp)
+inline std::string transcode(const wchar_t* wcb, UINT cp = code_page_acp)
 {
+    if (wcslen(wcb) == 0)
+        return "";
     int buffersize = WideCharToMultiByte(cp, 0, wcb, -1, NULL, 0, NULL, NULL);
-    std::string buffer(buffersize, '\0');
+    std::string buffer(buffersize - 1, '\0');
     WideCharToMultiByte(cp, 0, wcb, -1, &buffer.front(), buffersize, NULL, NULL);
-    buffer.resize(buffersize - 1);
-    return  buffer;
+    return buffer;
 }
 
-inline std::string transcode(const std::wstring& wcb, code_page cp = code_page_acp)
+inline std::string transcode(const std::wstring& wcb, UINT cp = code_page_acp)
 {
+    if (wcb.empty())
+        return "";
     int buffersize = WideCharToMultiByte(cp, 0, wcb.c_str(), -1, NULL, 0, NULL, NULL);
-    std::string buffer(buffersize, '\0');
+    std::string buffer(buffersize - 1, '\0');
     WideCharToMultiByte(cp, 0, wcb.c_str(), -1, &buffer.front(), buffersize, NULL, NULL);
-    buffer.resize(buffersize - 1);
     return buffer;
 }
 
-inline std::wstring transcode(const char* mcb, code_page cp = code_page_acp)
+inline std::wstring transcode(const char* mcb, UINT cp = code_page_acp)
 {
+    if (strlen(mcb) == 0)
+        return L"";
+
     int buffersize = MultiByteToWideChar(cp, 0, mcb, -1, NULL, 0);
-    std::wstring buffer(buffersize, '\0');
+    std::wstring buffer(buffersize - 1, '\0');
     MultiByteToWideChar(cp, 0, mcb, -1, &buffer.front(), buffersize);
-    buffer.resize(buffersize - 1);
     return buffer;
 }
 
-inline std::wstring transcode(const std::string& mcb, code_page cp = code_page_acp)
+inline std::wstring transcode(const std::string& mcb, UINT cp = code_page_acp)
 {
+    if (mcb.empty())
+        return L"";
     int buffersize = MultiByteToWideChar(cp, 0, mcb.c_str(), -1, NULL, 0);
-    std::wstring buffer(buffersize, '\0');
+    std::wstring buffer(buffersize - 1, '\0');
     MultiByteToWideChar(cp, 0, mcb.c_str(), -1, &buffer.front(), buffersize);
-    buffer.resize(buffersize - 1);
     return buffer;
 }
+
+#if defined(_AFX)
+inline std::string transcode(const CString& wcb, UINT cp = CP_ACP)
+{
+    if (wcb.IsEmpty())
+        return "";
+    int buffersize = WideCharToMultiByte(cp, 0, wcb.GetString(), -1, NULL, 0, NULL, NULL);
+    std::string buffer(buffersize - 1, '\0');
+    WideCharToMultiByte(cp, 0, wcb.GetString(), -1, &buffer.front(), buffersize, NULL, NULL);
+    return buffer;
+}
+
+inline CString& transcode(const char* mcb, CString& buffer, UINT cp = CP_ACP)
+{
+    if (strlen(mcb) == 0)
+        return buffer;
+
+    int buffersize = MultiByteToWideChar(cp, 0, mcb, -1, NULL, 0);
+    MultiByteToWideChar(cp, 0, mcb, -1, buffer.GetBuffer(buffersize), buffersize);
+    buffer.ReleaseBufferSetLength(buffersize - 1);
+    return buffer;
+}
+inline CString& transcode(const std::string& mcb, CString& buffer, UINT cp = CP_ACP)
+{
+    if (mcb.empty())
+        return buffer;
+
+    int buffersize = MultiByteToWideChar(cp, 0, mcb.c_str(), -1, NULL, 0);
+    MultiByteToWideChar(cp, 0, mcb.c_str(), -1, buffer.GetBuffer(buffersize), buffersize);
+    buffer.ReleaseBufferSetLength(buffersize - 1);
+    return buffer;
+}
+#endif
 
 inline std::string to_utf8(const char* ascii_text)
 {
@@ -699,8 +845,6 @@ inline std::string to_ascii(const char* utf8_text)
 {
     return transcode(transcode(utf8_text, code_page_utf8).c_str());
 }
-
-#ifndef WINRT
 
 /* utils GUID
 **
@@ -714,7 +858,7 @@ inline void create_guid(LPTSTR outs)
     _GUID guid;
     CoCreateGuid(&guid);
 
-    wsprintf(outs, TEXT("%08X-%04X-%04X-%04X-%04X%08X"), 
+    wsprintf(outs, TEXT("%08X-%04X-%04X-%04X-%04X%08X"),
         guid.Data1,
         guid.Data2,
         guid.Data3,
@@ -729,14 +873,13 @@ inline void create_guid_v2(LPTSTR outs)
     _GUID guid;
     CoCreateGuid(&guid);
 
-    wsprintf(outs, TEXT("%08X%04X%04X%016I64X"), 
+    wsprintf(outs, TEXT("%08X%04X%04X%016I64X"),
         guid.Data1,
         guid.Data2,
         guid.Data3,
         __bswap64(*(reinterpret_cast<unsigned __int64*>(guid.Data4)))
         );
 }
-
 
 template<typename _Elem> inline
 std::basic_string<_Elem> create_guid(void)
@@ -801,8 +944,6 @@ std::basic_string<_Elem> create_guid_v3(void)
 
 #endif
 
-#endif
-
 
 }; // namespace: purelib::nsconv
 
@@ -810,7 +951,7 @@ std::basic_string<_Elem> create_guid_v3(void)
 
 #endif /* _NSCONV_ */
 /*
-* Copyright (c) 2012-2014 by xseekerj  ALL RIGHTS RESERVED.
+* Copyright (c) 2012-2017 by halx99  ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
 **/
 

@@ -756,6 +756,11 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 
 void async_tcp_client::schedule_timer(deadline_timer* timer)
 {
+    // pitfall: this service only hold the weak pointer of the timer object, so before dispose the timer object
+    // need call cancel_timer to cancel it.
+    if(tiemr == nullptr)
+        return;
+    
     std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
     if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
         return;
@@ -824,7 +829,10 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& timeout)
     */
     int nfds = 2; 
     if (this->offset_ <= 0) {
-        if (get_wait_duration(timeout, MAX_WAIT_DURATION) > 0) {
+        auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
+        if (wait_duration > 0) {
+            tv.tv_sec = wait_duration / 1000000;
+            tv.tv_usec = wait_duration % 1000000;
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
@@ -838,7 +846,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& timeout)
     return nfds;
 }
 
-long long  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
+long long  async_tcp_client::get_wait_duration(long long usec)
 {
     // If send_queue_ not empty, we should perform it immediately.
     // so set socket.select timeout to ZERO.
@@ -846,29 +854,21 @@ long long  async_tcp_client::get_wait_duration(timeval& tv, long long usec)
     {
         return 0;
     }
-
-    deadline_timer* earliest = nullptr;
-    if (!this->timer_queue_.empty()) {
-        this->timer_queue_mtx_.lock();
-        earliest = timer_queue_.back();
-        this->timer_queue_mtx_.unlock();
-    }
-
-    std::chrono::microseconds min_duration(usec); // microseconds
-    if (earliest != nullptr) {
-        auto duration = earliest->wait_duration();
-        if (min_duration > duration)
-            min_duration = duration;
-    }
-
-    usec = min_duration.count();
-
-    if (usec > 0) {
-        tv.tv_sec = usec / 1000000;
-        tv.tv_usec = usec % 1000000;
+    
+    if(this->timer_queue_.empty())
+    {
+        return usec;
     }
     
-    return usec;
+    std::lock_guard<std::mutex> autolock(this->timer_queue_mtx_);
+    deadline_timer* earliest = timer_queue_.back();
+    
+    // microseconds
+    auto duration = earliest->wait_duration();
+    if (std::chrono::microseconds(usec) > duration)
+        return duration.count;
+    else
+        return usec;
 }
 
 void async_tcp_client::p2p_open()

@@ -188,7 +188,7 @@ namespace purelib {
         private:
             void       perform_timeout_timers(); // ALL timer expired
 
-            long long  get_wait_duration(timeval& tv, long long usec);
+            long long  get_wait_duration(long long usec);
 
             int        do_select(fd_set* fds_array,timeval& timeout);
 

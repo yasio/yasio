@@ -758,7 +758,7 @@ void async_tcp_client::schedule_timer(deadline_timer* timer)
 {
     // pitfall: this service only hold the weak pointer of the timer object, so before dispose the timer object
     // need call cancel_timer to cancel it.
-    if(tiemr == nullptr)
+    if(timer == nullptr)
         return;
     
     std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
@@ -821,7 +821,7 @@ void async_tcp_client::perform_timeout_timers()
     }
 }
 
-int async_tcp_client::do_select(fd_set* fds_array, timeval& timeout)
+int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
 {
     /* 
     @Optimize, set default nfds is 2, make sure do_read & do_write event chould be perform when no need to call socket.select
@@ -836,7 +836,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& timeout)
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
-            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &timeout);
+            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &tv);
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
@@ -860,13 +860,13 @@ long long  async_tcp_client::get_wait_duration(long long usec)
         return usec;
     }
     
-    std::lock_guard<std::mutex> autolock(this->timer_queue_mtx_);
+    std::lock_guard<std::recursive_mutex> autolock(this->timer_queue_mtx_);
     deadline_timer* earliest = timer_queue_.back();
     
     // microseconds
     auto duration = earliest->wait_duration();
     if (std::chrono::microseconds(usec) > duration)
-        return duration.count;
+        return duration.count();
     else
         return usec;
 }

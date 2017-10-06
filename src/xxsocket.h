@@ -564,6 +564,8 @@ public:
     int set_nonblocking(bool nonblocking) const;
     static int set_nonblocking(socket_native_type s, bool nonblocking);
 
+    bool is_nonblocking() const;
+
 
     /* @brief: Set this socket io mode to blocking
     ** @params: 

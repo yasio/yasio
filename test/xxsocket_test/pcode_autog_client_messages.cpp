@@ -34,7 +34,7 @@ obinarystream MsgHeader::encode(void) const
 int MsgHeader::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_i(this->length);
     ibs.read_i(this->command_id);
@@ -70,7 +70,7 @@ obinarystream LoginReq::encode(void) const
 int LoginReq::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_v(this->username);
     ibs.read_v(this->password);
@@ -101,7 +101,7 @@ obinarystream LoginResp::encode(void) const
 int LoginResp::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_i(this->succeed);
     ibs.read_i(this->session);
@@ -133,7 +133,7 @@ obinarystream LocalErrorResp::encode(void) const
 int LocalErrorResp::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_i(this->error_code);
     ibs.read_v(this->error_msg);
@@ -162,7 +162,7 @@ obinarystream MsgPeerEndpointReq::encode(void) const
 int MsgPeerEndpointReq::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_i(this->user_id);
     return ibs.remain();
@@ -179,7 +179,7 @@ std::string MsgPeerEndpointReq::get_formated_string(void) const
 int MsgPeerEndpointResp::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_i(this->user_id);
     ibs.read_v(this->addr);
@@ -218,7 +218,7 @@ std::string MsgGetFriendListReq::get_formated_string(void) const
 int MsgGetFriendListResp::decode(const char* data, int len)
 {
     ibinarystream ibs;
-    ibs.vassign(data, len);
+    ibs.assign(data, len);
 
     ibs.read_i(this->result);
     ibs.read_i(this->user_id);

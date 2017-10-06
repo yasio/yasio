@@ -913,6 +913,16 @@ int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
     return ::ioctlsocket(s, FIONBIO, &argp);
 }
 
+bool xxsocket::is_nonblocking() const
+{
+#if defined(_WIN32)
+    return true;
+#else
+    int flags = ::fcntl(s, F_GETFL, 0);
+    return flags & O_NONBLOCK;
+#endif
+}
+
 int xxsocket::bind(const char* addr, unsigned short port) const
 {
     ip::endpoint local(addr, port);

@@ -161,6 +161,10 @@ void test_https_connect()
 int main(int, char**)
 {
     // std::string respData = send_http_req("http://x-studio365.com");
+    xxsocket client;
+    client.open();
+
+    bool check = client.is_nonblocking();
 
     extern void http_sendemail(const std::string& mailto, const std::string& subject, std::string&& message);
 

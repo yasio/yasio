@@ -27,6 +27,8 @@ SOFTWARE.
 */
 #include "xxsocket.h"
 
+#define ENABLE_IPSV_CACHE 1
+
 #ifdef _DEBUG
 #include <stdio.h>
 #endif
@@ -451,7 +453,8 @@ static int
     return (1);
 }}}}};
 
-int xxsocket::getipsv(void)
+static
+int getipsv_internal(void)
 {
     int flags = 0;
 #if defined(_WIN32) // I test so many times, currently only windows support use getaddrinfo to get local ip address(not loopback or linklocal)
@@ -543,6 +546,16 @@ int xxsocket::getipsv(void)
 #endif
 
     return flags;
+}
+
+int xxsocket::getipsv(void)
+{
+#if ENABLE_IPSV_CACHE
+    static auto flags = getipsv_internal();
+    return flags;
+#else
+    return getipsv_internal();
+#endif
 }
 
 int xxsocket::xpconnect(const char* hostname, u_short port)

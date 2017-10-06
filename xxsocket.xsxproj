@@ -1149,5 +1149,6 @@
     <item>.x-studio365</item>
   </inspect-dirs>
   <ssheets/>
+  <debug-options/>
 </Project>
 

@@ -7,7 +7,7 @@ The MIT License (MIT)
 
 Copyright (c) 2012-2017 halx99
 
-HAL: Hardware Abstract Layer
+HAL: Hardware Abstraction Layer
 x99: Intel X99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

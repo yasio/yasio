@@ -918,7 +918,7 @@ bool xxsocket::is_nonblocking() const
 #if defined(_WIN32)
     return true;
 #else
-    int flags = ::fcntl(s, F_GETFL, 0);
+    int flags = ::fcntl(this->fd, F_GETFL, 0);
     return flags & O_NONBLOCK;
 #endif
 }
@@ -1063,7 +1063,7 @@ done:
     }
 
     /* restore file status flags */
-#ifdef _MSC_VER
+#ifdef _WIN32
     set_nonblocking(s, false);
 #else
     ::fcntl(s, F_SETFL, flags);

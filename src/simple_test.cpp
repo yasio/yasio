@@ -8,10 +8,10 @@ int main(int, char**)
 
     s.open();
 
-    printf("fd:%d, nonblocking: %s", s.native_handle(), s.is_nonblocking() ? "true" : "false");
+    printf("fd:%d, nonblocking: %s\n", s.native_handle(), s.is_nonblocking() ? "true" : "false");
     s.set_nonblocking(true);
 
-    printf("fd:%d, nonblocking: %s", s.native_handle(), s.is_nonblocking() ? "true" : "false");
+    printf("fd:%d, nonblocking: %s\n", s.native_handle(), s.is_nonblocking() ? "true" : "false");
     s.close();
 
     return 0;

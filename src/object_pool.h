@@ -45,7 +45,7 @@ public:
 
         free_link_node* linkend = nullptr;
         chunk_link_node* chunk = this->_Mychunk;
-        for (; chunk != nullptr; chunk = chunk->next)
+        do
         {
             char* begin = chunk->data;
             char* rbegin = begin + (_ElemCount - 1) * element_size;
@@ -59,7 +59,9 @@ public:
             {
                 reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size);
             }
-        }
+            
+            chunk = chunk->next;
+        } while (chunk != nullptr);
 
         linkend->next = nullptr;
 
@@ -69,12 +71,12 @@ public:
 
     void purge(void)
     {
-        chunk_link_node* ptr = this->_Mychunk;
-        while (ptr != nullptr)
+        chunk_link_node** pptr = &this->_Mychunk;
+        while (*pptr != nullptr)
         {
-            chunk_link_node* deleting = ptr;
-            ptr = ptr->next;
-            free(deleting);
+            auto entry = *pptr;
+            *pptr = entry->next;
+            free(entry);
         }
         _Myhead = nullptr;
         _Mychunk = nullptr;

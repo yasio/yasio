@@ -43,22 +43,25 @@ public:
             return;
         }
 
-        free_link_node* prev = nullptr;
+        free_link_node* linkend = nullptr;
         chunk_link_node* chunk = this->_Mychunk;
         for (; chunk != nullptr; chunk = chunk->next)
         {
             char* begin = chunk->data;
             char* rbegin = begin + (_ElemCount - 1) * elem_size;
 
-            if (prev != nullptr)
-                prev->next = reinterpret_cast<free_link>(begin);
+            if(linkend != nullptr)
+                linkend->next = reinterpret_cast <free_link_node*>(begin);
+            
+            linkend = reinterpret_cast <free_link_node*>(rbegin);
+
             for (char* ptr = begin; ptr < rbegin; ptr += elem_size)
             {
                 reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + elem_size);
             }
-
-            prev = reinterpret_cast <free_link_node*>(rbegin);
         }
+
+        linkend->next = nullptr;
 
         this->_Myhead = reinterpret_cast<free_link_node*>(this->_Mychunk->data);
         this->_Mycount = 0;

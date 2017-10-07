@@ -10,7 +10,7 @@ namespace gc {
 template<typename _Ty, size_t _ElemCount = 512>
 class object_pool
 {
-    static const size_t elem_size = sz_align(sizeof(_Ty), sizeof(void*));
+    static const size_t element_size = sz_align(sizeof(_Ty), sizeof(void*));
 
     typedef struct free_link_node
     {
@@ -19,7 +19,7 @@ class object_pool
 
     typedef struct chunk_link_node
     {
-        char             data[elem_size * _ElemCount];
+        char             data[element_size * _ElemCount];
         chunk_link_node* next;
     } *chunk_link;
 
@@ -48,16 +48,16 @@ public:
         for (; chunk != nullptr; chunk = chunk->next)
         {
             char* begin = chunk->data;
-            char* rbegin = begin + (_ElemCount - 1) * elem_size;
+            char* rbegin = begin + (_ElemCount - 1) * element_size;
 
             if(linkend != nullptr)
                 linkend->next = reinterpret_cast <free_link_node*>(begin);
             
             linkend = reinterpret_cast <free_link_node*>(rbegin);
 
-            for (char* ptr = begin; ptr < rbegin; ptr += elem_size)
+            for (char* ptr = begin; ptr < rbegin; ptr += element_size)
             {
-                reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + elem_size);
+                reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size);
             }
         }
 
@@ -138,11 +138,11 @@ private:
         this->_Mychunk = new_chunk;
 
         char* begin = this->_Mychunk->data;
-        char* rbegin = begin + (_ElemCount - 1) * elem_size;
+        char* rbegin = begin + (_ElemCount - 1) * element_size;
 
-        for (char* ptr = begin; ptr < rbegin; ptr += elem_size)
+        for (char* ptr = begin; ptr < rbegin; ptr += element_size)
         {
-            reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + elem_size);
+            reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size);
         }
 
         reinterpret_cast <free_link_node*>(rbegin)->next = nullptr;

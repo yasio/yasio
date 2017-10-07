@@ -23,8 +23,8 @@ class object_pool
         chunk_link_node* next;
     } *chunk_link;
 
-    object_pool(const object_pool&);
-    void operator= (const object_pool&);
+    object_pool(const object_pool&) = delete;
+    void operator= (const object_pool&) = delete;
 
 public:
     object_pool(void) : _Myhead(nullptr), _Mychunk(nullptr), _Mycount(0)

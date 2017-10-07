@@ -71,15 +71,13 @@ public:
 
     void purge(void)
     {
-        chunk_link_node** pptr = &this->_Mychunk;
-        while (*pptr != nullptr)
+        chunk_link_node *p, **q = &this->_Mychunk;
+        while (p = *q)
         {
-            auto entry = *pptr;
-            *pptr = entry->next;
-            free(entry);
+            *q = p->next;
+            free(p);
         }
         _Myhead = nullptr;
-        _Mychunk = nullptr;
         _Mycount = 0;
     }
 

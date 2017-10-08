@@ -4,12 +4,17 @@
 #include "politedef.h"
 #include <assert.h>
 
+#pragma warning(push)
+#pragma warning(disable:4200)
+
 namespace purelib {
 namespace gc {
 
 template<typename _Ty, size_t _ElemCount = 512>
 class object_pool
 {
+#define FL_BEGIN(chunk) reinterpret_cast <free_link_node*>(chunk->data)
+
     static const size_t element_size = sz_align(sizeof(_Ty), sizeof(void*));
 
     typedef struct free_link_node
@@ -42,30 +47,20 @@ public:
         if (this->_Mychunk == nullptr) {
             return;
         }
-
-        free_link_node* linkend = nullptr;
+ 
         chunk_link_node* chunk = this->_Mychunk;
-        do
+        free_link_node* linkend = _Tidy(chunk);
+
+        while (chunk = chunk->next)
         {
-            char* begin = chunk->data;
-            char* rbegin = begin + (_ElemCount - 1) * element_size;
+            linkend->next = FL_BEGIN(chunk);
 
-            if(linkend != nullptr)
-                linkend->next = reinterpret_cast <free_link_node*>(begin);
-            
-            linkend = reinterpret_cast <free_link_node*>(rbegin);
-
-            for (char* ptr = begin; ptr < rbegin; ptr += element_size)
-            {
-                reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size);
-            }
-            
-            chunk = chunk->next;
-        } while (chunk != nullptr);
+            linkend = _Tidy(chunk);
+        }
 
         linkend->next = nullptr;
 
-        this->_Myhead = reinterpret_cast<free_link_node*>(this->_Mychunk->data);
+        this->_Myhead = FL_BEGIN(this->_Mychunk);
         this->_Mycount = 0;
     }
 
@@ -87,26 +82,31 @@ public:
     }
 
     template<typename..._Args>
-    _Ty* new_object(const _Args&...args)
+    _Ty* construct(const _Args&...args)
     {
         return new (get()) _Ty(args...);
     }
 
-    void delete_object(void* _Ptr)
+    void destroy(void* _Ptr)
     {
 
         ((_Ty*)_Ptr)->~_Ty(); // call the destructor
         release(_Ptr);
     }
 
-    // if the type is not pod, you may be use placement new to call the constructor,
-    // for example: _Ty* obj = new(pool.get()) _Ty(arg1,arg2,...);
     void* get(void)
     {
-        if (nullptr == this->_Myhead)
+        if (this->_Myhead != nullptr)
         {
-            this->_Enlarge();
+            return geti();
         }
+        
+        _Enlarge();
+        return geti();
+    }
+
+    void* geti(void)
+    {
         free_link_node* ptr = this->_Myhead;
         this->_Myhead = ptr->next;
         ++_Mycount;
@@ -134,19 +134,24 @@ private:
 #ifdef _DEBUG
         ::memset(new_chunk, 0x00, sizeof(chunk_link_node));
 #endif
+        _Tidy(new_chunk)->next = nullptr;
+
+        this->_Myhead = FL_BEGIN(new_chunk);
+
         new_chunk->next = this->_Mychunk;
         this->_Mychunk = new_chunk;
+    }
 
-        char* begin = this->_Mychunk->data;
-        char* rbegin = begin + (_ElemCount - 1) * element_size;
+    static free_link_node* _Tidy(chunk_link chunk)
+    {
+        char* rbegin = chunk->data + (_ElemCount - 1) * element_size;
 
-        for (char* ptr = begin; ptr < rbegin; ptr += element_size)
+        for (char* ptr = chunk->data; ptr < rbegin; ptr += element_size)
         {
             reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size);
         }
 
-        reinterpret_cast <free_link_node*>(rbegin)->next = nullptr;
-        this->_Myhead = reinterpret_cast<free_link_node*>(begin);
+        return reinterpret_cast <free_link_node*>(rbegin);
     }
 
 private:
@@ -446,6 +451,7 @@ template<class _Ty, size_t _BufferSize, size_t _ElemCount>
 }; // namespace: purelib::gc
 }; // namespace: purelib
 
+#pragma warning(pop)
 
 #endif
 /*

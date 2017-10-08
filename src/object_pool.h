@@ -1,6 +1,9 @@
 // object_pool.h: a simple object pool implementation
 #ifndef _OBJECT_POOL_H_
 #define _OBJECT_POOL_H_
+
+#define OBJECT_POOL_HEADER_ONLY
+
 #include "politedef.h"
 #include <assert.h>
 
@@ -10,75 +13,87 @@
 namespace purelib {
 namespace gc {
 
+#define POOL_ESTIMATE_SIZE(element_type) sz_align(sizeof(element_type), sizeof(void*))
+
+namespace detail {
+    class object_pool
+    {
+        typedef struct free_link_node
+        {
+            free_link_node* next;
+        } *free_link;
+
+        typedef struct chunk_link_node
+        {
+            chunk_link_node* next;
+            char data[0];
+        } *chunk_link;
+
+        object_pool(const object_pool&) = delete;
+        void operator= (const object_pool&) = delete;
+
+    public:
+        object_pool(size_t element_size, size_t element_count);
+
+        ~object_pool(void);
+
+        void purge(void);
+
+        void cleanup(void);
+
+        void* get(void);
+        void release(void* _Ptr);
+
+    private:
+        void* allocate_from_chunk(void);
+        void* allocate_from_process_heap(void);
+        
+        free_link_node* tidy_chunk(chunk_link chunk);
+
+    private:
+        free_link        free_link_; // link to free head
+        chunk_link       chunk_; // chunk link
+        const size_t     element_size_;
+        const size_t     element_count_;
+
+#if defined(_DEBUG)
+        size_t           allocated_count_; // allocated count 
+#endif
+    };
+
+#define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE,ELEMENT_COUNT) \
+public: \
+    static void * operator new(size_t /*size*/) \
+    { \
+        return get_pool().get(); \
+    } \
+    \
+    static void * operator new(size_t /*size*/, std::nothrow_t) \
+    { \
+        return get_pool().get(); \
+    } \
+    \
+    static void operator delete(void *p) \
+    { \
+        get_pool().release(p); \
+    } \
+    \
+    static purelib::gc::detail::object_pool& get_pool() \
+    { \
+        static purelib::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
+        return s_pool; \
+    }
+};
+
 template<typename _Ty, size_t _ElemCount = 512>
-class object_pool
+class object_pool : public detail::object_pool
 {
-#define FL_BEGIN(chunk) reinterpret_cast <free_link_node*>(chunk->data)
-
-    static const size_t element_size = sz_align(sizeof(_Ty), sizeof(void*));
-
-    typedef struct free_link_node
-    {
-        free_link_node* next;
-    } *free_link;
-
-    typedef struct chunk_link_node
-    {
-        chunk_link_node* next;
-        char data[0];
-    } *chunk_link;
-
     object_pool(const object_pool&) = delete;
     void operator= (const object_pool&) = delete;
 
 public:
-    object_pool(void) : _Myhead(nullptr), _Mychunk(nullptr), _Mycount(0)
+    object_pool(void) : detail::object_pool(POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
     {
-        this->_Enlarge();
-    }
-
-    ~object_pool(void)
-    {
-        this->purge();
-    }
-
-    void cleanup(void)
-    {
-        if (this->_Mychunk == nullptr) {
-            return;
-        }
- 
-        chunk_link_node* chunk = this->_Mychunk;
-        free_link_node* linkend = _Tidy(chunk);
-
-        while (chunk = chunk->next)
-        {
-            linkend->next = FL_BEGIN(chunk);
-
-            linkend = _Tidy(chunk);
-        }
-
-        linkend->next = nullptr;
-
-        this->_Myhead = FL_BEGIN(this->_Mychunk);
-        this->_Mycount = 0;
-    }
-
-    void purge(void)
-    {
-        chunk_link_node *p, **q = &this->_Mychunk;
-        while (p = *q)
-        {
-            *q = p->next;
-            free(p);
-        }
-        _Myhead = nullptr;
-        _Mycount = 0;
-    }
-
-    size_t count(void) const
-    {
-        return _Mycount;
     }
 
     template<typename..._Args>
@@ -93,67 +108,6 @@ public:
         ((_Ty*)_Ptr)->~_Ty(); // call the destructor
         release(_Ptr);
     }
-
-    void* get(void)
-    {
-        if (this->_Myhead != nullptr)
-        {
-            return geti();
-        }
-        
-        _Enlarge();
-        return geti();
-    }
-
-    void* geti(void)
-    {
-        free_link_node* ptr = this->_Myhead;
-        this->_Myhead = ptr->next;
-        ++_Mycount;
-        return reinterpret_cast<void*>(ptr);
-    }
-
-    void release(void* _Pt)
-    {    
-        free_link_node* ptr = reinterpret_cast<free_link_node*>(_Ptr);
-        ptr->next = this->_Myhead;
-        this->_Myhead = ptr;
-        --_Mycount;
-    }
-
-private:
-    void _Enlarge(void)
-    {
-        static_assert(_ElemCount > 0, "Invalid Element Count");
-
-        chunk_link new_chunk = (chunk_link)malloc(sizeof(chunk_link_node) + element_size * _ElemCount);
-#ifdef _DEBUG
-        ::memset(new_chunk, 0x00, sizeof(chunk_link_node));
-#endif
-        _Tidy(new_chunk)->next = nullptr;
-
-        this->_Myhead = FL_BEGIN(new_chunk);
-
-        new_chunk->next = this->_Mychunk;
-        this->_Mychunk = new_chunk;
-    }
-
-    static free_link_node* _Tidy(chunk_link chunk)
-    {
-        char* rbegin = chunk->data + (_ElemCount - 1) * element_size;
-
-        for (char* ptr = chunk->data; ptr < rbegin; ptr += element_size)
-        {
-            reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size);
-        }
-
-        return reinterpret_cast <free_link_node*>(rbegin);
-    }
-
-private:
-    free_link        _Myhead; // link to free head
-    chunk_link       _Mychunk; // chunk link
-    size_t           _Mycount; // allocated count 
 };
 
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector
@@ -446,6 +400,10 @@ template<class _Ty, size_t _BufferSize, size_t _ElemCount>
 
 }; // namespace: purelib::gc
 }; // namespace: purelib
+
+#if defined(OBJECT_POOL_HEADER_ONLY)
+#include "object_pool.cpp"
+#endif
 
 #pragma warning(pop)
 

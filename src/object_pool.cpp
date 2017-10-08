@@ -15,10 +15,13 @@ namespace detail {
 
 #define POOL_FL_BEGIN(chunk) reinterpret_cast <free_link_node*>(chunk->data)
 
-object_pool::object_pool(size_t element_size, size_t element_count) : free_link_(nullptr),
-    chunk_(nullptr),
-    element_size_(element_size),
-    element_count_(element_count)
+object_pool::object_pool(size_t element_size, size_t element_count) : free_link_(nullptr)
+    ,chunk_(nullptr)
+    ,element_size_(element_size)
+    ,element_count_(element_count)
+#ifdef _DEBUG
+    ,allocated_count_(0)
+#endif
 {
 #if OBJECT_POOL_PREALLOCATE
     release(allocate_from_process_heap()); // preallocate
@@ -58,7 +61,7 @@ void object_pool::cleanup(void)
 void object_pool::purge(void)
 {
     chunk_link_node *p, **q = &this->chunk_;
-    while (p = *q)
+    while ((p = *q) != nullptr)
     {
         *q = p->next;
         free(p);

@@ -1,9 +1,12 @@
+// object_pool.h: a simple object pool implementation
 #if !defined(_OBJECT_POOL_CPP_)
 #define _OBJECT_POOL_CPP_
 
 #if !defined(OBJECT_POOL_HEADER_ONLY)
 #include "object_pool.h"
 #endif
+
+#define OBJECT_POOL_PREALLOCATE 1
 
 namespace purelib {
 namespace gc {
@@ -17,6 +20,9 @@ object_pool::object_pool(size_t element_size, size_t element_count) : free_link_
     element_size_(element_size),
     element_count_(element_count)
 {
+#if OBJECT_POOL_PREALLOCATE
+    release(allocate_from_process_heap());
+#endif 
 }
 
 object_pool::~object_pool(void)
@@ -33,7 +39,7 @@ void object_pool::cleanup(void)
     chunk_link_node* chunk = this->chunk_;
     free_link_node* linkend = this->tidy_chunk(chunk);
 
-    while (chunk = chunk->next)
+    while ((chunk = chunk->next) != nullptr)
     {
         linkend->next = POOL_FL_BEGIN(chunk);
 
@@ -98,7 +104,7 @@ void* object_pool::allocate_from_process_heap(void)
     new_chunk->next = this->chunk_;
     this->chunk_ = new_chunk;
 
-    // allocate one object
+    // allocate 1 object
     auto ptr = POOL_FL_BEGIN(new_chunk);
     this->free_link_ = ptr->next;
 

@@ -113,12 +113,8 @@ public:
         return reinterpret_cast<void*>(ptr);
     }
 
-    void release(void* _Ptr)
-    {
-#ifdef _DEBUG
-        //::memset(_Ptr, 0x00, sizeof(_Ty));
-#endif
-
+    void release(void* _Pt)
+    {    
         free_link_node* ptr = reinterpret_cast<free_link_node*>(_Ptr);
         ptr->next = this->_Myhead;
         this->_Myhead = ptr;

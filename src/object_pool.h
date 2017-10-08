@@ -19,8 +19,8 @@ class object_pool
 
     typedef struct chunk_link_node
     {
-        char             data[element_size * _ElemCount];
         chunk_link_node* next;
+        char data[0];
     } *chunk_link;
 
     object_pool(const object_pool&) = delete;
@@ -130,7 +130,7 @@ private:
     {
         static_assert(_ElemCount > 0, "Invalid Element Count");
 
-        chunk_link new_chunk = (chunk_link)malloc(sizeof(chunk_link_node));
+        chunk_link new_chunk = (chunk_link)malloc(sizeof(chunk_link_node) + element_size * _ElemCount);
 #ifdef _DEBUG
         ::memset(new_chunk, 0x00, sizeof(chunk_link_node));
 #endif

@@ -2,10 +2,16 @@
 #ifndef _OBJECT_POOL_H_
 #define _OBJECT_POOL_H_
 
-#define OBJECT_POOL_HEADER_ONLY
-
 #include "politedef.h"
 #include <assert.h>
+
+#define OBJECT_POOL_HEADER_ONLY
+
+#if defined(OBJECT_POOL_HEADER_ONLY)
+#define OBJECT_POOL_DECL inline
+#else
+#define OBJECT_POOL_DECL
+#endif
 
 #pragma warning(push)
 #pragma warning(disable:4200)
@@ -33,22 +39,22 @@ namespace detail {
         void operator= (const object_pool&) = delete;
 
     public:
-        object_pool(size_t element_size, size_t element_count);
+        OBJECT_POOL_DECL object_pool(size_t element_size, size_t element_count);
 
-        ~object_pool(void);
+        OBJECT_POOL_DECL ~object_pool(void);
 
-        void purge(void);
+        OBJECT_POOL_DECL void purge(void);
 
-        void cleanup(void);
+        OBJECT_POOL_DECL void cleanup(void);
 
-        void* get(void);
-        void release(void* _Ptr);
+        OBJECT_POOL_DECL void* get(void);
+        OBJECT_POOL_DECL void release(void* _Ptr);
 
     private:
-        void* allocate_from_chunk(void);
-        void* allocate_from_process_heap(void);
+        OBJECT_POOL_DECL void* allocate_from_chunk(void);
+        OBJECT_POOL_DECL void* allocate_from_process_heap(void);
         
-        free_link_node* tidy_chunk(chunk_link chunk);
+        OBJECT_POOL_DECL free_link_node* tidy_chunk(chunk_link chunk);
 
     private:
         free_link        free_link_; // link to free head
@@ -60,7 +66,7 @@ namespace detail {
         size_t           allocated_count_; // allocated count 
 #endif
     };
-
+    
 #define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE,ELEMENT_COUNT) \
 public: \
     static void * operator new(size_t /*size*/) \
@@ -79,6 +85,35 @@ public: \
     } \
     \
     static purelib::gc::detail::object_pool& get_pool() \
+    { \
+        static purelib::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
+        return s_pool; \
+    }
+
+#define DECLARE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE) \
+public: \
+    static void * operator new(size_t /*size*/); \
+    static void * operator new(size_t /*size*/, std::nothrow_t); \
+    static void operator delete(void *p); \
+    static purelib::gc::detail::object_pool& get_pool();
+    
+#define IMPLEMENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE,ELEMENT_COUNT) \
+    void * ELEMENT_TYPE::operator new(size_t /*size*/) \
+    { \
+        return get_pool().get(); \
+    } \
+    \
+    void * ELEMENT_TYPE::operator new(size_t /*size*/, std::nothrow_t) \
+    { \
+        return get_pool().get(); \
+    } \
+    \
+    void ELEMENT_TYPE::operator delete(void *p) \
+    { \
+        get_pool().release(p); \
+    } \
+    \
+    purelib::gc::detail::object_pool& ELEMENT_TYPE::get_pool() \
     { \
         static purelib::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
         return s_pool; \

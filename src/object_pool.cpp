@@ -60,6 +60,9 @@ void object_pool::cleanup(void)
 
 void object_pool::purge(void)
 {
+    if (this->chunk_ == nullptr)
+        return;
+    
     chunk_link_node *p, **q = &this->chunk_;
     while ((p = *q) != nullptr)
     {

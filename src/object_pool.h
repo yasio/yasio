@@ -1,4 +1,4 @@
-// object_pool.h: a simple object pool implementation
+// object_pool.h: a simple & high-performance object pool implementation
 #ifndef _OBJECT_POOL_H_
 #define _OBJECT_POOL_H_
 

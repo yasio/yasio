@@ -1,4 +1,4 @@
-// object_pool.cpp: a simple object pool implementation
+// object_pool.cpp: a simple & high-performance object pool implementation
 #if !defined(_OBJECT_POOL_CPP_)
 #define _OBJECT_POOL_CPP_
 

@@ -24,7 +24,7 @@ object_pool::object_pool(size_t element_size, size_t element_count) : free_link_
 #endif
 {
 #if OBJECT_POOL_PREALLOCATE
-    release(allocate_from_process_heap()); // preallocate
+    release(allocate_from_process_heap()); // preallocate 1 chunk
 #endif 
 }
 

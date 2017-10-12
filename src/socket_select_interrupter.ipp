@@ -68,7 +68,7 @@ void socket_select_interrupter::open_descriptors()
     client.set_optval(IPPROTO_TCP, TCP_NODELAY, 1);
 
     server.set_nonblocking(true);
-    client.set_optval(IPPROTO_TCP, TCP_NODELAY, 1);
+    server.set_optval(IPPROTO_TCP, TCP_NODELAY, 1);
 
     read_descriptor_ = server.release();
     write_descriptor_ = client.release();

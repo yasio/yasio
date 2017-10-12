@@ -553,8 +553,8 @@ public:
     /** Gets the socket fd value **/
     socket_native_type native_handle(void) const;
 
-    // release fd only;
-    socket_native_type release(void);
+    // Detach fd only;
+    socket_native_type detach(void);
 
     /* @brief: Set this socket io mode to nonblocking
     ** @params: 

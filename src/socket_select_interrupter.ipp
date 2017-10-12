@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.2
+// version: 2.3.9
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -70,8 +70,8 @@ void socket_select_interrupter::open_descriptors()
     server.set_nonblocking(true);
     server.set_optval(IPPROTO_TCP, TCP_NODELAY, 1);
 
-    read_descriptor_ = server.release();
-    write_descriptor_ = client.release();
+    read_descriptor_ = server.detach();
+    write_descriptor_ = client.detach();
 }
 
 socket_select_interrupter::~socket_select_interrupter()

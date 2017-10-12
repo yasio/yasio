@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.7
+// version: 2.3.9
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -903,7 +903,7 @@ bool xxsocket::is_open(void) const
     return this->fd != invalid_socket;
 }
 
-socket_native_type xxsocket::release(void)
+socket_native_type xxsocket::detach(void)
 {
     socket_native_type result = this->fd;
     this->fd = invalid_socket;

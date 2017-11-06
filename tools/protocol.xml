@@ -11,6 +11,8 @@ mode:
     decodelua: generate decode lua table to c++ message.
     decode: generate decode only,
     all: generate all
+    lua.encode: pure lua binary protocol
+    lua.decode: pure lua binary protocol
     
 c++ protocol header code header:
 

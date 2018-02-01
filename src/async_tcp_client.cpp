@@ -5,10 +5,10 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2017 halx99
+Copyright (c) 2012-2018 HALX99
 
 HAL: Hardware Abstraction Layer
-x99: Intel X99
+X99: Intel X99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -247,9 +247,6 @@ void async_tcp_client::service()
 #if defined(_WIN32) && !defined(WINRT)
     timeBeginPeriod(1);
 #endif
-
-    if (this->suspended_)
-        return;
 
     while (!app_exiting_)
     {

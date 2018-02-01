@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2017 halx99
+Copyright (c) 2012-2018 HALX99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -254,8 +254,6 @@ namespace purelib {
             std::function<void(const vdcallback_t&)> call_tsf_;
 
             bool                    idle_;
-
-            bool                    suspended_ = false;
             long long               total_connect_times_ = 0;
 
             // p2p support

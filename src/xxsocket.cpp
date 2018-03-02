@@ -1562,7 +1562,7 @@ namespace {
     {
         ws2_32_gc(void)
         {
-            WSADATA dat;
+            WSADATA dat = {0};
             WSAStartup(0x0202, &dat);
         }
         ~ws2_32_gc(void)

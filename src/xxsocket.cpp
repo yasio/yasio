@@ -784,13 +784,9 @@ xxsocket::~xxsocket(void)
     close();
 }
 
-xxsocket& xxsocket::swap(xxsocket& who)
+xxsocket& xxsocket::swap(xxsocket& rhs)
 {
-    // avoid fd missing
-    if (!is_open()) {
-        this->fd = who.fd;
-        who.fd = invalid_socket;
-    }
+    std::swap(this->fd, rhs.fd);
     return *this;
 }
 

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.7
+// version: 2.3.9
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -29,7 +29,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include "async_tcp_client.h"
-
+#include <limits>
 
 #define _USING_IN_COCOS2DX 0
 
@@ -137,7 +137,7 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     address_("192.168.1.104"),
     port_(8001),
     connect_timeout_(3),
-    send_timeout_(3),
+    send_timeout_((std::numeric_limits<int>::max)()),
     decode_pdu_length_(nullptr),
     error_number_(error_number::ERR_OK),
     idle_(true),
@@ -182,11 +182,13 @@ void async_tcp_client::set_endpoint(const char* address, const char* addressv6, 
 
 void async_tcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
+    const connect_listener& listener,
     const connection_lost_callback_t& on_connection_lost,
     const appl_pdu_recv_callback_t& callback,
     const std::function<void(const vdcallback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
+    this->connect_listener_ = listener;
     this->on_received_pdu_ = callback;
     this->on_connection_lost_ = on_connection_lost;
     this->call_tsf_ = threadsafe_call;

@@ -1,11 +1,11 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.7
+// version: 2.3.9
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2018 HALX99
+Copyright (c) 2012-2018 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -138,6 +138,7 @@ namespace purelib {
             */
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
+                const connect_listener& listener,
                 const connection_lost_callback_t& on_connection_lost,
                 const appl_pdu_recv_callback_t& callback,
                 const std::function<void(const vdcallback_t&)>& threadsafe_call);

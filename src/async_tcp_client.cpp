@@ -101,21 +101,7 @@ public:
     appl_pdu_send_callback_t   on_sent_;
     compatible_timepoint_t     expire_time_;
 
-    static void * operator new(size_t /*size*/)
-    {
-        return get_pool().get();
-    }
-
-    static void operator delete(void *p)
-    {
-        get_pool().release(p);
-    }
-
-    static purelib::gc::object_pool<appl_pdu>& get_pool()
-    {
-        static purelib::gc::object_pool<appl_pdu> s_pool;
-        return s_pool;
-    }
+    DEFINE_OBJECT_POOL_ALLOCATION(appl_pdu, 512)
 };
 
 void p2p_io_ctx::reset()
@@ -134,7 +120,7 @@ void p2p_io_ctx::reset()
 async_tcp_client::async_tcp_client() : app_exiting_(false),
     thread_started_(false),
     interrupter_(),
-    address_("192.168.1.104"),
+    address_("0.0.0.0"),
     port_(8001),
     connect_timeout_(3),
     send_timeout_((std::numeric_limits<int>::max)()),

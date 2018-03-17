@@ -1101,7 +1101,6 @@ done:
 
 int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep) 
 {
-    int n, error = 0;
 #ifdef _WIN32
     set_nonblocking(s, true);
 #else

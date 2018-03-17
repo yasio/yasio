@@ -44,6 +44,10 @@ SOFTWARE.
 #include "select_interrupter.hpp"
 #include "deadline_timer.h"
 
+#if !defined(_ARRAYSIZE)
+#define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
+#endif
+
 namespace purelib {
 
     namespace inet {
@@ -86,11 +90,19 @@ namespace purelib {
         typedef std::function<void(error_number)> appl_pdu_send_callback_t;
         typedef std::function<void(std::vector<char>&&)> appl_pdu_recv_callback_t;
 
-        struct p2p_io_ctx
+
+        struct channel_endpoint
+        {
+            std::string                address_;
+            std::string                addressv6_;
+            u_short                    port_;
+        };
+
+        struct channel_context
         {
             xxsocket                   impl_;
-            channel_state              channel_state_; // 0: IDLE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
-            int                        channel_type_ = TCP_CLIENT;
+            channel_state              state_; // 0: IDLE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+            int                        type_ = TCP_CLIENT;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
 
@@ -107,13 +119,17 @@ namespace purelib {
 
             bool                       report_error_;
             bool                       reconnecting_;
+
+            size_t                     index_;
+
+            compatible_timepoint_t     connect_expire_time_;
             void                       reset();
         };
 
         class deadline_timer;
 
         // A tcp client support P2P
-        class async_tcp_client : public p2p_io_ctx
+        class async_tcp_client
         {
             friend struct p2p_io_ctx;
         public:
@@ -121,61 +137,55 @@ namespace purelib {
             // End user pdu decode length func
             typedef bool(*decode_pdu_length_func)(const char* data, size_t datalen, int& len);
 
-            // connection_lost_callback_t
-            typedef std::function<void(int error, const char* errormsg)> connection_lost_callback_t;
-
-            typedef std::function<void(bool succeed, int ec)> connect_listener;
+            // connection callbacks
+            typedef std::function<void(size_t channel_index, int error, const char* errormsg)> connection_lost_callback_t;
+            typedef std::function<void(size_t channel_index, bool succeed, int ec)> connect_response_callback_t;
 
         public:
             async_tcp_client();
             ~async_tcp_client();
+
+            // start async socket service
+            void       start_service(const channel_endpoint* channel_eps, int channel_count = 1);
+
+            void       set_endpoint(size_t channel_index, const char* address, const char* addressv6, u_short port);
 
             size_t     get_received_pdu_count(void) const;
 
             // must be call on main thread(such cocos2d-x opengl thread)
             void       dispatch_received_pdu(int count = 1);
 
-            // set endpoint of server.
-            void       set_endpoint(const char* address, const char* addressv6, u_short port);
-
             // set callbacks, required API, must call by user
             /*
               threadsafe_call: for cocos2d-x should be:
               [](const vdcallback_t& callback) {
-                  cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{
-                      callback();
-                  });
+                  cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread(callback);
               }
             */
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
-                const connect_listener& listener,
+                const connect_response_callback_t& on_connect_result,
                 const connection_lost_callback_t& on_connection_lost,
-                const appl_pdu_recv_callback_t& callback,
+                const appl_pdu_recv_callback_t& on_pdu_recv,
                 const std::function<void(const vdcallback_t&)>& threadsafe_call);
-
-            void       set_connect_listener(const connect_listener& listener);
 
             // set connect and send timeouts.
             void       set_timeouts(long timeo_connect, long timeo_send);
 
-            // start async socket service
-            void       start_service(int working_counter = 1);
-
             // notify tcp_client to connect server
-            void       async_connect(int channel = 0);
+            void       async_connect(size_t channel_index = 0);
 
             // close tcp_client
-            void       close();
+            void       close(size_t channel_index = 0);
 
             // Whether the client-->server connection  established.
-            bool       is_connected(void) const { return this->channel_state_ == channel_state::CONNECTED; }
+            bool       is_connected(size_t cahnnel_index) const;
 
             // Gets network error code
             error_number  get_errorno(void) { return static_cast<error_number>(error_number_); }
 
             // post a async send request.
-            void       async_send(std::vector<char>&& data, int channel = 0, const appl_pdu_send_callback_t& callback = nullptr);
+            void       async_send(std::vector<char>&& data, size_t channel_index = 0, const appl_pdu_send_callback_t& callback = nullptr);
 
             // timer support
             void       schedule_timer(deadline_timer*);
@@ -187,6 +197,7 @@ namespace purelib {
             long long  get_wait_duration(long long usec);
 
             int        do_select(fd_set* fds_array,timeval& timeout);
+            void       do_connect(fd_set* fds_array, channel_context*);
 
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);
@@ -195,14 +206,23 @@ namespace purelib {
 
             void       service(void);
 
-            void       process_connect_request(p2p_io_ctx*);
+            std::chrono::microseconds get_connect_wait_duration(channel_context*);
+            std::chrono::microseconds process_connect_request(channel_context*);
 
-            void       do_connect(p2p_io_ctx*);
-            bool       do_write(p2p_io_ctx*);
-            bool       do_read(p2p_io_ctx*);
-            void       move_received_pdu(p2p_io_ctx*); // move received properly pdu to recv queue
+            bool       do_write(channel_context*);
+            bool       do_read(channel_context*);
+            void       move_received_pdu(channel_context*); // move received properly pdu to recv queue
 
-            void       handle_error(void); // TODO: add error_number parameter
+            void       handle_error(channel_context*); // TODO: add error_number parameter
+
+
+            // new/delete client socket connection channel
+            // please call this at initialization, don't new channel at runtime dynmaically:
+            // because this API is not thread safe.
+            void       new_channel(const std::string& address, const std::string& addressv6, u_short port);
+
+            // Clear all channels after service exit.
+            void       clear_channels(); // destroy all channels
 
         private:
             bool                    app_exiting_;
@@ -211,11 +231,14 @@ namespace purelib {
 
             int                     error_number_; // socket_error( >= -1) & application error(0 or < -1)
 
-            int                     connect_timeout_;
+            long long               connect_timeout_;
             int                     send_timeout_;
 
             std::mutex              recv_queue_mtx_;
             std::deque<std::vector<char>> recv_queue_; // the recev_queue_ for connections: local-->server, local-->peer, peer-->local 
+
+
+            std::vector<channel_context*> channels_;
 
             // select interrupter
             select_interrupter      interrupter_;
@@ -232,11 +255,12 @@ namespace purelib {
                 except_op,
             };
             fd_set fds_array_[3];
-            // fd_set readfds_, writefds_, excepfds_;
-            connect_listener        connect_listener_;
-            appl_pdu_recv_callback_t on_received_pdu_;
+
+            // callbacks
             decode_pdu_length_func  decode_pdu_length_;
+            connect_response_callback_t  on_connect_resposne_;
             connection_lost_callback_t  on_connection_lost_;
+            appl_pdu_recv_callback_t on_received_pdu_;
             std::function<void(const vdcallback_t&)> tsf_call_;
         }; // async_tcp_client
     }; /* namspace purelib::net */

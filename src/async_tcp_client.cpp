@@ -33,7 +33,7 @@ SOFTWARE.
 
 #define _USING_IN_COCOS2DX 0
 
-#define INET_ENABLE_VERBOSE_LOG 1
+#define INET_ENABLE_VERBOSE_LOG 0
 
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
@@ -104,15 +104,16 @@ public:
     DEFINE_OBJECT_POOL_ALLOCATION(appl_pdu, 512)
 };
 
-void p2p_io_ctx::reset()
+void channel_context::reset()
 {
-    channel_state_ = channel_state::IDLE;
+    state_ = channel_state::IDLE;
     receiving_pdu_.clear();
     offset_ = 0;
     expected_pdu_length_ = -1;
     error = 0;
     report_error_ = true;
     reconnecting_ = false;
+    index_ = static_cast<size_t>(-1);
     if (this->impl_.is_open()) {
         this->impl_.close();
     }
@@ -121,7 +122,7 @@ void p2p_io_ctx::reset()
 async_tcp_client::async_tcp_client() : app_exiting_(false),
     thread_started_(false),
     interrupter_(),
-    connect_timeout_(3),
+    connect_timeout_(3LL * 1000 * 1000),
     send_timeout_((std::numeric_limits<int>::max)()),
     decode_pdu_length_(nullptr),
     error_number_(error_number::ERR_OK)
@@ -131,7 +132,6 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
     FD_ZERO(&fds_array_[read_op]);
 
     maxfdp_ = 0;
-    reset();
 }
 
 async_tcp_client::~async_tcp_client()
@@ -142,31 +142,46 @@ async_tcp_client::~async_tcp_client()
 
     if (this->worker_thread_.joinable())
         this->worker_thread_.join();
+
+    clear_channels();
 }
 
 void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
 {
-    this->connect_timeout_ = timeo_connect;
+    this->connect_timeout_ = static_cast<long long>(timeo_connect) * 1000 * 1000;
     this->send_timeout_ = timeo_send;
 }
 
-void async_tcp_client::set_endpoint(const char* address, const char* addressv6, u_short port)
+void  async_tcp_client::new_channel(const std::string& address, const std::string& addressv6, u_short port)
 {
-    this->address_ = address;
-    this->addressv6_ = addressv6;
-    this->port_ = port;
+    auto channel = new channel_context();
+    channel->reset();
+    channel->address_ = address;
+    channel->addressv6_ = addressv6;
+    channel->port_ = port;
+    channel->index_ = this->channels_.size();
+    this->channels_.push_back(channel);
+}
+
+void async_tcp_client::clear_channels()
+{
+    for (auto iter = channels_.begin(); iter != channels_.end(); ) {
+        (*iter)->impl_.close();
+        delete *(iter);
+        channels_.erase(iter++);
+    }
 }
 
 void async_tcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
-    const connect_listener& listener,
+    const connect_response_callback_t& on_connect_response,
     const connection_lost_callback_t& on_connection_lost,
-    const appl_pdu_recv_callback_t& callback,
+    const appl_pdu_recv_callback_t& on_pdu_recv,
     const std::function<void(const vdcallback_t&)>& threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
-    this->connect_listener_ = listener;
-    this->on_received_pdu_ = callback;
+    this->on_connect_resposne_ = on_connect_response;
+    this->on_received_pdu_ = on_pdu_recv;
     this->on_connection_lost_ = on_connection_lost;
     this->tsf_call_ = threadsafe_call;
 }
@@ -190,9 +205,19 @@ void async_tcp_client::dispatch_received_pdu(int count) {
     } while (!this->recv_queue_.empty() && --count > 0);
 }
 
-void async_tcp_client::start_service(int /*working_counter*/)
+void async_tcp_client::start_service(const channel_endpoint* channel_eps, int channel_count)
 {
     if (!thread_started_) {
+        if (channel_count <= 0)
+            return;
+
+        // Initialize channels
+        for (auto i = 0; i < channel_count; ++i)
+        {
+            auto& channel_ep = channel_eps[i];
+            new_channel(channel_ep.address_, channel_ep.addressv6_, channel_ep.port_);
+        }
+
         thread_started_ = true;
         worker_thread_ = std::thread([this] {
             INET_LOG("async_tcp_client thread running...");
@@ -202,9 +227,16 @@ void async_tcp_client::start_service(int /*working_counter*/)
     }
 }
 
-void async_tcp_client::set_connect_listener(const connect_listener& listener)
+void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, const char* addressv6, u_short port)
 {
-    this->connect_listener_ = listener;
+    // Gets channel
+    if (channel_index >= channels_.size())
+        return;
+    auto channel = channels_[channel_index];
+
+    channel->address_ = address;
+    channel->addressv6_ = addressv6;
+    channel->port_ = port;
 }
 
 void async_tcp_client::service()
@@ -221,16 +253,46 @@ void async_tcp_client::service()
 
     for (; !app_exiting_;)
     {
-        process_connect_request(this);
+        int nfds = static_cast<int>(channels_.size());
+        std::chrono::microseconds wait_duration(MAX_WAIT_DURATION);
+        int pending_connects = 0;
+        for (auto channel : channels_) {
+            switch (channel->state_) {
+            case channel_state::REQUEST_CONNECT:
+                wait_duration = (std::min)(wait_duration, process_connect_request(channel));
+                --nfds;
+                ++pending_connects;
+                break;
+            case channel_state::CONNECTED:
+                if (channel->send_queue_.empty() && channel->offset_ <= 0) --nfds;
+                break;
+            case channel_state::CONNECTING:
+                wait_duration = (std::min)(wait_duration, get_connect_wait_duration(channel));
+                --nfds;
+                ++pending_connects;
+                break;
+            default:--nfds;
+            }
+        }
 
-        ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
-        int nfds = do_select(fds_array, timeout);
-
+        auto wait_duration_usec = wait_duration.count();
+        if (nfds <= 0 || wait_duration.count() > 0) {
+            auto wait_duration = get_wait_duration(pending_connects == 0 ? MAX_WAIT_DURATION : wait_duration_usec);
+            if (wait_duration > 0) {
+                timeout.tv_sec = static_cast<long>(wait_duration / 1000000);
+                timeout.tv_usec = static_cast<long>(wait_duration % 1000000);
+                ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
+                nfds = do_select(fds_array, timeout);
+            }
+            else {
+                nfds = 2;
+            }
+        }
         if (nfds == -1)
         {
             int ec = xxsocket::get_last_errno();
             INET_LOG("socket.select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
-            if (ec == EBADF || !this->impl_.is_open()) {
+            if (ec == EBADF) {
                 goto _L_error;
             }
             continue; // try select again.
@@ -259,41 +321,42 @@ void async_tcp_client::service()
             // goto _L_error; // TODO: handle_error for impl_
         }
 #endif
-        // do connect
-        if(nfds > 0)
-            do_connect(this);
-
-        if (nfds > 0 || this->offset_ > 0) {
-#if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("perform read operation...");
-#endif
-            if (!do_read(this)) {
-                // INET_LOG("do read failed...");
-                // goto _L_error; // TODO: handle_error for impl_
-            }
-        }
-
-        // perform write operations
-        if (!this->send_queue_.empty()) {
-            send_queue_mtx_.lock();
-#if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("perform write operation...");
-#endif
-            if (!do_write(this))
-            { // TODO: check would block? for client, may be unnecessary.
-                send_queue_mtx_.unlock();
-                // goto _L_error; // TODO: handle_error for impl_
+        for (auto channel : channels_) {
+            // do connect
+            if (channel->state_ == channel_state::CONNECTING) {
+                do_connect(fds_array, channel);
             }
 
-            send_queue_mtx_.unlock();
+            if (nfds > 0 || channel->offset_ > 0) {
+#if INET_ENABLE_VERBOSE_LOG
+                INET_LOG("perform read operation...");
+#endif
+                if (!do_read(channel)) {
+                    // INET_LOG("do read failed...");
+                    handle_error(channel); // goto _L_error; // TODO: handle_error for impl_
+                }
+            }
+
+            // perform write operations
+            if (!channel->send_queue_.empty()) {
+                channel->send_queue_mtx_.lock();
+#if INET_ENABLE_VERBOSE_LOG
+                INET_LOG("perform write operation...");
+#endif
+                if (!do_write(channel))
+                { // TODO: check would block? for client, may be unnecessary.
+                    channel->send_queue_mtx_.unlock();
+                    handle_error(channel); // goto _L_error; // TODO: handle_error for impl_
+                }
+
+                channel->send_queue_mtx_.unlock();
+            }
         }
             
         perform_timeout_timers();
     }
 
 _L_error:
-     handle_error();
-
      unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
 
 #if defined(_WIN32) && !defined(WINRT)
@@ -301,92 +364,120 @@ _L_error:
 #endif
 }
 
-void async_tcp_client::process_connect_request(p2p_io_ctx* ctx)
+std::chrono::microseconds async_tcp_client::get_connect_wait_duration(channel_context* channel)
 {
-    if (ctx->channel_state_ != channel_state::REQUEST_CONNECT) return;
-
-    INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
-
-    int ret = -1;
-    ctx->channel_state_ = channel_state::CONNECTING;
-    int flags = xxsocket::getipsv();
-    if (flags & ipsv_ipv4) {
-        ret = ctx->impl_.pconnect_n(this->address_.c_str(), this->port_);
-    }
-    else if (flags & ipsv_ipv6)
-    { // client is IPV6_Only
-        INET_LOG("Client needs a ipv6 server address to connect!");
-        ret = ctx->impl_.pconnect_n(this->addressv6_.c_str(), this->port_);
+    if (channel->state_ == channel_state::CONNECTING) {
+        return std::chrono::duration_cast<std::chrono::microseconds>(channel->connect_expire_time_ - std::chrono::steady_clock::now());
     }
 
-    if (ret < 0)
-    { // connect succeed, reset fds
-        error = xxsocket::get_last_errno();
-        if (error != EINPROGRESS && error != EWOULDBLOCK) {
-            ctx->channel_state_ = channel_state::IDLE;
-            return;
+    return std::chrono::microseconds(0);
+}
+
+std::chrono::microseconds async_tcp_client::process_connect_request(channel_context* ctx)
+{
+    assert(ctx->state_ == channel_state::REQUEST_CONNECT);
+    if (ctx->state_ == channel_state::REQUEST_CONNECT)
+    {
+        auto timestamp = time(NULL);
+        INET_LOG("[%lld]connecting server %s:%u...", timestamp, ctx->address_.c_str(), ctx->port_);
+
+        int ret = -1;
+        ctx->state_ = channel_state::CONNECTING;
+        int flags = xxsocket::getipsv();
+        if (flags & ipsv_ipv4) {
+            ret = ctx->impl_.pconnect_n(ctx->address_.c_str(), ctx->port_);
         }
-        register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+        else if (flags & ipsv_ipv6)
+        { // client is IPV6_Only
+            INET_LOG("Client needs a ipv6 server address to connect!");
+            ret = ctx->impl_.pconnect_n(ctx->addressv6_.c_str(), ctx->port_);
+        }
 
-        ctx->impl_.set_nonblocking(true);
+        if (ret < 0)
+        { // connect succeed, reset fds
+            ctx->connect_expire_time_ = std::chrono::steady_clock::now() + std::chrono::microseconds(this->connect_timeout_);
+            ctx->error = xxsocket::get_last_errno();
+            if (ctx->error != EINPROGRESS && ctx->error != EWOULDBLOCK) {
+                ctx->state_ = channel_state::IDLE;
+                return std::chrono::microseconds(0);
+            }
+            register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
 
-        ctx->expected_pdu_length_ = -1;
-        error_number_ = error_number::ERR_OK;
-        ctx->offset_ = 0;
-        ctx->receiving_pdu_.clear();
-        // recv_queue_.clear();
+            ctx->impl_.set_nonblocking(true);
 
-        ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
+            ctx->expected_pdu_length_ = -1;
+            error_number_ = error_number::ERR_OK;
+            ctx->offset_ = 0;
+            ctx->receiving_pdu_.clear();
+
+            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
+
+            return get_connect_wait_duration(ctx);
+        }
+        else if (ret == 0) { // connect server succed immidiately.
+            ctx->state_ = channel_state::CONNECTED;
+            ctx->connect_expire_time_ = std::chrono::steady_clock::now();
+        }
+        else
+            ctx->connect_expire_time_ = std::chrono::steady_clock::now();
     }
-    else if(ret == 0) { // connect server succed immidiately.
-        ctx->channel_state_ = channel_state::CONNECTED;
+
+    return std::chrono::microseconds(0);
+}
+
+void async_tcp_client::close(size_t channel_index)
+{
+    // Gets channel
+    if (channel_index >= channels_.size())
+        return;
+    auto channel = channels_[channel_index];
+
+    if (channel->impl_.is_open()) {
+        channel->impl_.close();
+        interrupter_.interrupt();
     }
 }
 
-void async_tcp_client::close()
+void async_tcp_client::async_connect(size_t channel_index)
 {
-    if (impl_.is_open()) {
-        impl_.shutdown();
-        impl_.close();
-    }
+    // Gets channel
+    if (channel_index >= channels_.size())
+        return;
+    auto channel = channels_[channel_index];
+
+    channel->state_ = channel_state::REQUEST_CONNECT;
 
     interrupter_.interrupt();
 }
 
-void async_tcp_client::async_connect(int channel)
+void async_tcp_client::handle_error(channel_context* channel)
 {
-    this->channel_state_ = channel_state::REQUEST_CONNECT;
-    this->interrupter_.interrupt();
-}
-
-void async_tcp_client::handle_error(void)
-{
-    if (impl_.is_open()) {
-        unregister_descriptor(impl_.native_handle(), socket_event_read | socket_event_write | socket_event_except);
-        impl_.close();
+    if (channel->impl_.is_open()) {
+        unregister_descriptor(channel->impl_.native_handle(), socket_event_read | socket_event_write);
+        channel->impl_.close();
     }
     else {
         INET_LOG("local close the connection!");
     }
 
-    channel_state_ = channel_state::IDLE;
+    channel->state_ = channel_state::IDLE;
 
     // @Notify connection lost
     if (this->on_connection_lost_) {
         int ec = error_number_;
-        TSF_CALL(on_connection_lost_(ec, xxsocket::get_error_msg(ec)));
+        TSF_CALL(on_connection_lost_(channel->index_, ec, xxsocket::get_error_msg(ec)));
     }
 
     // @Clear all sending messages
     
-    if (!send_queue_.empty()) {
-        this->send_queue_mtx_.lock();
+    if (!channel->send_queue_.empty()) {
+        channel->send_queue_mtx_.lock();
 
-        for (auto pdu : send_queue_)
+        for (auto pdu : channel->send_queue_)
             delete pdu;
-        send_queue_.clear();
+        channel->send_queue_.clear();
 
-        this->send_queue_mtx_.unlock();
+        channel->send_queue_mtx_.unlock();
     }
 
     // @Notify all timers are cancelled.
@@ -440,15 +531,20 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
     }
 }
 
-void async_tcp_client::async_send(std::vector<char>&& data, int channel, const appl_pdu_send_callback_t& callback)
+void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index, const appl_pdu_send_callback_t& callback)
 {
-    if (this->impl_.is_open())
+    // Gets channel
+    if (channel_index >= channels_.size())
+        return;
+    auto channel = channels_[channel_index];
+
+    if (channel->impl_.is_open())
     {
         auto pdu = new appl_pdu(std::move(data), callback, std::chrono::seconds(this->send_timeout_));
 
-        send_queue_mtx_.lock();
-        send_queue_.push_back(pdu);
-        send_queue_mtx_.unlock();
+        channel->send_queue_mtx_.lock();
+        channel->send_queue_.push_back(pdu);
+        channel->send_queue_mtx_.unlock();
 
         interrupter_.interrupt();
     }
@@ -457,7 +553,7 @@ void async_tcp_client::async_send(std::vector<char>&& data, int channel, const a
     }
 }
 
-void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
+void async_tcp_client::move_received_pdu(channel_context* ctx)
 {
 #if INET_ENABLE_VERBOSE_LOG
     INET_LOG("move_received_pdu...");
@@ -469,110 +565,53 @@ void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
     ctx->expected_pdu_length_ = -1;
 }
 
-
-bool async_tcp_client::connect(void)
-{ // unused
-    INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
-
-    int ret = -1;
-    channel_state_ = channel_state::IDLE;
-    int flags = xxsocket::getipsv();
-    if (flags & ipsv_ipv4) {
-        ret = impl_.pconnect_n(this->address_.c_str(), this->port_, this->connect_timeout_);
-    }
-    else if (flags & ipsv_ipv6)
-    { // client is IPV6_Only
-        INET_LOG("Client needs a ipv6 server address to connect!");
-        ret = impl_.pconnect_n(this->addressv6_.c_str(), this->port_, this->connect_timeout_);
-    }
-    if (ret == 0)
-    { // connect succeed, reset fds
-        FD_ZERO(&fds_array_[read_op]);
-        FD_ZERO(&fds_array_[write_op]);
-        FD_ZERO(&fds_array_[except_op]);
-
-        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-        register_descriptor(impl_.native_handle(), socket_event_read);
-
-        impl_.set_nonblocking(true);
-
-        expected_pdu_length_ = -1;
-        error_number_ = error_number::ERR_OK;
-        offset_ = 0;
-        receiving_pdu_.clear();
-        recv_queue_.clear();
-
-        this->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
-
-        INET_LOG("connect server: %s:%u succeed, fd=%d interrupter_fd=%d", address_.c_str(), port_, impl_.native_handle(), interrupter_.read_descriptor());
-
-#if 0 // provided as API
-        auto endp = this->impl_.local_endpoint();
-        // INETLOG("local endpoint: %s", endp.to_string().c_str());
-
-        if (p2p_acceptor_.reopen())
-        { // start p2p listener
-            if (p2p_acceptor_.bind(endp) == 0)
-            {
-                if (p2p_acceptor_.listen() == 0)
-                {
-                    // set socket to async
-                    p2p_acceptor_.set_nonblocking(true);
-
-                    // register p2p's peer connect event
-                    register_descriptor(p2p_acceptor_, socket_event_read);
-                    // INETLOG("listening at local %s successfully.", endp.to_string().c_str());
-                }
-            }
-        }
-#endif
-
-        channel_state_ = channel_state::IDLE;
-        if (this->connect_listener_ != nullptr) {
-			TSF_CALL(this->connect_listener_(true, 0));
-        }
-
-        return true;
-    }
-    else { // connect server failed.
-        int ec = xxsocket::get_last_errno();
-        if (this->connect_listener_ != nullptr) {
-			TSF_CALL(this->connect_listener_(false, ec ));
-        }
-
-        INET_LOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address_.c_str(), port_, ec, xxsocket::get_error_msg(ec));
-
-        return false;
-    }
-}
-
-void async_tcp_client::do_connect(p2p_io_ctx* ctx)
+void async_tcp_client::do_connect(fd_set* fds_array, channel_context* ctx)
 {
-    if (ctx->channel_state_ == channel_state::CONNECTING)
+    if (ctx->state_ == channel_state::CONNECTING)
     {
         int error = -1;
-        if (FD_ISSET(ctx->impl_.native_handle(), &fds_array_[write_op])
-            || FD_ISSET(ctx->impl_.native_handle(), &fds_array_[read_op])) {
+        if (FD_ISSET(ctx->impl_.native_handle(), &fds_array[write_op])
+            || FD_ISSET(ctx->impl_.native_handle(), &fds_array[read_op])) {
             socklen_t len = sizeof(error);
             if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0)
                 error = (-1);  /* Solaris pending error */
         }
 
         if (error == 0) {
-            ctx->channel_state_ = channel_state::CONNECTED;
+            ctx->state_ = channel_state::CONNECTED;
             unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
+
+            auto timestamp = time(NULL);
+            INET_LOG("[%lld]connect server %s:%u succeed.", timestamp, ctx->address_.c_str(), ctx->port_);
+            
+            // TODO: send connect succeed event
         }
         else {
-            ctx->impl_.close(); /* just in case */
-            xxsocket::set_last_errno(error);
-            // TODO: send connect failed event
+            // Check whether expire
+            auto wait_duration = get_connect_wait_duration(ctx);
+            if (wait_duration.count() <= 0) { // connect failed
+                unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+                ctx->impl_.close(); /* just in case */
+                ctx->state_ = channel_state::IDLE;
+                xxsocket::set_last_errno(error);
+
+                auto timestamp = time(NULL);
+                INET_LOG("[%lld]connect server %s:%u failed, error(%d)!", timestamp, ctx->address_.c_str(), ctx->port_, error);
+
+                // TODO: send connect failed event
+            }
+#if INET_ENABLE_VERBOSE_LOG
+            else {
+                INET_LOG("continue waiting connection: [local] --> [%s:%u] to establish...", ctx->address_.c_str(), ctx->port_);
+            }
+#endif
         }
     }
 }
 
-bool async_tcp_client::do_write(p2p_io_ctx* ctx)
+bool async_tcp_client::do_write(channel_context* ctx)
 {
-    if (ctx->channel_state_ != channel_state::CONNECTED)
+    if (ctx->state_ != channel_state::CONNECTED)
         return true;
 
     bool bRet = false;
@@ -649,9 +688,9 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
     return bRet;
 }
 
-bool async_tcp_client::do_read(p2p_io_ctx* ctx)
+bool async_tcp_client::do_read(channel_context* ctx)
 {
-    if (ctx->channel_state_ != channel_state::CONNECTED)
+    if (ctx->state_ != channel_state::CONNECTED)
         return true;
 
     bool bRet = false;
@@ -683,7 +722,7 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                         { // pdu received properly
                             ctx->offset_ = bytes_transferred - ctx->expected_pdu_length_; // set offset to bytes of remain buffer
                             if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset.
-                                ::memmove(ctx->buffer_, ctx->buffer_ + ctx->expected_pdu_length_, offset_);
+                                ::memmove(ctx->buffer_, ctx->buffer_ + ctx->expected_pdu_length_, ctx->offset_);
 
                             // move properly pdu to ready queue, GL thread will retrieve it.
                             move_received_pdu(ctx);
@@ -829,34 +868,19 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
     @Optimize, set default nfds is 2, make sure do_read & do_write event chould be perform when no need to call socket.select
     However, the connection exception will detected through do_read or do_write, but it's ok.
     */
-    int nfds = 2; 
-    if (this->offset_ <= 0) {
-        auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
-        if (wait_duration > 0) {
-            tv.tv_sec = static_cast<long>(wait_duration / 1000000);
-            tv.tv_usec = static_cast<long>(wait_duration % 1000000);
 #if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, tv.tv_sec * 1000 + tv.tv_usec / 1000);
+    INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, tv.tv_sec * 1000 + tv.tv_usec / 1000);
 #endif
-            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &tv);
+    int nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &tv);
 #if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("socket.select waked up, retval=%d", nfds);
+    INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
-        }
-    }
 
     return nfds;
 }
 
 long long  async_tcp_client::get_wait_duration(long long usec)
 {
-    // If send_queue_ not empty, we should perform it immediately.
-    // so set socket.select timeout to ZERO.
-    if (!this->send_queue_.empty())
-    {
-        return 0;
-    }
-    
     if(this->timer_queue_.empty())
     {
         return usec;

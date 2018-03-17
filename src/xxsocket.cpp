@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.9
+// version: 3.0
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -640,6 +640,16 @@ int xxsocket::pconnect_n(const char* hostname, u_short port, long timeout_sec)
     return error;
 }
 
+int xxsocket::pconnect_n(const char* hostname, u_short port)
+{
+    int error = -1;
+    xxsocket::resolve_i([&](const ip::endpoint& ep) {
+        (error = pconnect_n(ep));
+        return true;
+    }, hostname, port);
+    return error;
+}
+
 int xxsocket::pconnect(const ip::endpoint& ep)
 {
     if (this->reopen(ep.af()))
@@ -654,6 +664,15 @@ int xxsocket::pconnect_n(const ip::endpoint& ep, long timeout_sec)
     if (this->reopen(ep.af()))
     {
         return this->connect_n(ep, timeout_sec);
+    }
+    return -1;
+}
+
+int xxsocket::pconnect_n(const ip::endpoint& ep)
+{
+    if (this->reopen(ep.af()))
+    {
+        return xxsocket::connect_n(this->fd, ep);
     }
     return -1;
 }
@@ -1078,6 +1097,19 @@ done:
     ::fcntl(s, F_SETFL, flags);
 #endif
     return (0);
+}
+
+int xxsocket::connect_n(socket_native_type s, const ip::endpoint& ep) 
+{
+    int n, error = 0;
+#ifdef _WIN32
+    set_nonblocking(s, true);
+#else
+    int flags = ::fcntl(s, F_GETFL, 0);
+    ::fcntl(s, F_SETFL, flags | O_NONBLOCK);
+#endif
+
+    return xxsocket::connect(s, ep);
 }
 
 int xxsocket::send(const void* buf, int len, int flags) const

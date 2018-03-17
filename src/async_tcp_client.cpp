@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.9
+// version: 3.0-developing
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -33,7 +33,7 @@ SOFTWARE.
 
 #define _USING_IN_COCOS2DX 0
 
-#define INET_ENABLE_VERBOSE_LOG 0
+#define INET_ENABLE_VERBOSE_LOG 1
 
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
@@ -106,7 +106,7 @@ public:
 
 void p2p_io_ctx::reset()
 {
-    connected_ = false;
+    channel_state_ = channel_state::IDLE;
     receiving_pdu_.clear();
     offset_ = 0;
     expected_pdu_length_ = -1;
@@ -120,7 +120,7 @@ void p2p_io_ctx::reset()
 async_tcp_client::async_tcp_client() : app_exiting_(false),
     thread_started_(false),
     interrupter_(),
-    address_("0.0.0.0"),
+    address_("192.168.1.104"),
     port_(8001),
     connect_timeout_(3),
     send_timeout_((std::numeric_limits<int>::max)()),
@@ -141,9 +141,6 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
 async_tcp_client::~async_tcp_client()
 {
     app_exiting_ = true;
-
-    // shutdown_p2p_chancel();
-    this->p2p_acceptor_.close();
 
     close();
 
@@ -236,103 +233,134 @@ void async_tcp_client::service()
     timeBeginPeriod(1);
 #endif
 
-    while (!app_exiting_)
+    // event loop
+    fd_set fds_array[3];
+    timeval timeout;
+
+    register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+
+    for (; !app_exiting_;)
     {
-        bool connection_ok = impl_.is_open();
+        process_connect_request(this);
 
-        if (!connection_ok)
-        { // if no connect, wait connect notify.
-            if (total_connect_times_ >= 0)
-                wait_connect_notify();
-            ++total_connect_times_;
-            connection_ok = this->connect();
-            if (!connection_ok) { /// connect failed, waiting connect notify
-                // reconnClock = clock(); never use clock api on android platform
-                continue;
-            }
-        }
+        ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
+        int nfds = do_select(fds_array, timeout);
 
-
-        // event loop
-        fd_set fds_array[3];
-        timeval timeout;
-
-        for (; !app_exiting_;)
+        if (nfds == -1)
         {
-            ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
-            int nfds = do_select(fds_array, timeout);
-
-            if (nfds == -1)
-            {
-                int ec = xxsocket::get_last_errno();
-                INET_LOG("socket.select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
-                if (ec == EBADF || !this->impl_.is_open()) {
-                    goto _L_error;
-                }
-                continue; // try select again.
-            }
-
-            if (nfds == 0) {
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("socket.select is timeout, do perform_timeout_timers()");
-#endif
-            }
-            // Reset the interrupter.
-            else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
-            {
-                bool was_interrupt = interrupter_.reset();
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
-#endif
-                --nfds;
-            }
-
-#if 0
-            // we should check whether the connection have exception before any operations.
-            if (FD_ISSET(this->impl_.native_handle(), &(fds_array[except_op])))
-            {
-                int ec = xxsocket::get_last_errno();
-                INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
+            int ec = xxsocket::get_last_errno();
+            INET_LOG("socket.select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
+            if (ec == EBADF || !this->impl_.is_open()) {
                 goto _L_error;
             }
-#endif
-            if (nfds > 0 || this->offset_ > 0) {
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("perform read operation...");
-#endif
-                if (!do_read(this)) {
-                    // INET_LOG("do read failed...");
-                    goto _L_error;
-                }
-            }
-
-            // perform write operations
-            if (!this->send_queue_.empty()) {
-                send_queue_mtx_.lock();
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("perform write operation...");
-#endif
-                if (!do_write(this))
-                { // TODO: check would block? for client, may be unnecessary.
-                    send_queue_mtx_.unlock();
-                    goto _L_error;
-                }
-
-                send_queue_mtx_.unlock();
-            }
-            
-            perform_timeout_timers();
+            continue; // try select again.
         }
 
-        continue;
+        if (nfds == 0) {
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("socket.select is timeout, do perform_timeout_timers()");
+#endif
+        }
+        // Reset the interrupter.
+        else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
+        {
+            bool was_interrupt = interrupter_.reset();
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
+#endif
+            --nfds;
+        }
+#if 0
+        // we should check whether the connection have exception before any operations.
+        if (FD_ISSET(this->impl_.native_handle(), &(fds_array[except_op])))
+        {
+            int ec = xxsocket::get_last_errno();
+            INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
+            // goto _L_error; // TODO: handle_error for impl_
+        }
+#endif
+        // do connect
+        if(nfds > 0)
+            do_connect(this);
 
-    _L_error:
-        handle_error();
+        if (nfds > 0 || this->offset_ > 0) {
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("perform read operation...");
+#endif
+            if (!do_read(this)) {
+                // INET_LOG("do read failed...");
+                // goto _L_error; // TODO: handle_error for impl_
+            }
+        }
+
+        // perform write operations
+        if (!this->send_queue_.empty()) {
+            send_queue_mtx_.lock();
+#if INET_ENABLE_VERBOSE_LOG
+            INET_LOG("perform write operation...");
+#endif
+            if (!do_write(this))
+            { // TODO: check would block? for client, may be unnecessary.
+                send_queue_mtx_.unlock();
+                // goto _L_error; // TODO: handle_error for impl_
+            }
+
+            send_queue_mtx_.unlock();
+        }
+            
+        perform_timeout_timers();
     }
+
+_L_error:
+     handle_error();
+
+     unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
 
 #if defined(_WIN32) && !defined(WINRT)
     timeEndPeriod(1);
 #endif
+}
+
+void async_tcp_client::process_connect_request(p2p_io_ctx* ctx)
+{
+    if (ctx->channel_state_ != channel_state::REQUEST_CONNECT) return;
+
+    INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
+
+    int ret = -1;
+    ctx->channel_state_ = channel_state::CONNECTING;
+    int flags = xxsocket::getipsv();
+    if (flags & ipsv_ipv4) {
+        ret = ctx->impl_.pconnect_n(this->address_.c_str(), this->port_);
+    }
+    else if (flags & ipsv_ipv6)
+    { // client is IPV6_Only
+        INET_LOG("Client needs a ipv6 server address to connect!");
+        ret = ctx->impl_.pconnect_n(this->addressv6_.c_str(), this->port_);
+    }
+
+    if (ret < 0)
+    { // connect succeed, reset fds
+        error = xxsocket::get_last_errno();
+        if (error != EINPROGRESS && error != EWOULDBLOCK) {
+            ctx->channel_state_ = channel_state::IDLE;
+            return;
+        }
+        register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+
+        ctx->impl_.set_nonblocking(true);
+
+        ctx->expected_pdu_length_ = -1;
+        error_number_ = error_number::ERR_OK;
+        ctx->offset_ = 0;
+        ctx->receiving_pdu_.clear();
+        // recv_queue_.clear();
+
+        ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
+    }
+    else if(ret == 0) { // connect server succed immidiately.
+        ctx->channel_state_ = channel_state::CONNECTED;
+    }
 }
 
 void async_tcp_client::close()
@@ -348,7 +376,9 @@ void async_tcp_client::close()
 void async_tcp_client::notify_connect()
 {
     std::unique_lock<std::mutex> autolock(connect_notify_mtx_);
+    this->channel_state_ = channel_state::REQUEST_CONNECT;
     connect_notify_cv_.notify_one();
+    this->interrupter_.interrupt();
 }
 
 void async_tcp_client::switch_endpoint(const char* address, u_short port)
@@ -362,13 +392,14 @@ void async_tcp_client::switch_endpoint(const char* address, u_short port)
 void async_tcp_client::handle_error(void)
 {
     if (impl_.is_open()) {
+        unregister_descriptor(impl_.native_handle(), socket_event_read | socket_event_write | socket_event_except);
         impl_.close();
     }
     else {
         INET_LOG("local close the connection!");
     }
 
-    connected_ = false;
+    channel_state_ = channel_state::IDLE;
 
     // @Notify connection lost
     if (this->on_connection_lost_) {
@@ -479,7 +510,7 @@ bool async_tcp_client::connect(void)
     INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
 
     int ret = -1;
-    this->connected_ = false;
+    channel_state_ = channel_state::IDLE;
     int flags = xxsocket::getipsv();
     if (flags & ipsv_ipv4) {
         ret = impl_.pconnect_n(this->address_.c_str(), this->port_, this->connect_timeout_);
@@ -531,7 +562,7 @@ bool async_tcp_client::connect(void)
         }
 #endif
 
-        this->connected_ = true;
+        channel_state_ = channel_state::IDLE;
         if (this->connect_listener_ != nullptr) {
 			auto switching = this->switching_;
 			TSF_CALL(this->connect_listener_(true, !switching ? 0 : -200));
@@ -556,8 +587,35 @@ bool async_tcp_client::connect(void)
     }
 }
 
+void async_tcp_client::do_connect(p2p_io_ctx* ctx)
+{
+    if (ctx->channel_state_ == channel_state::CONNECTING)
+    {
+        int error = -1;
+        if (FD_ISSET(ctx->impl_.native_handle(), &fds_array_[write_op])
+            || FD_ISSET(ctx->impl_.native_handle(), &fds_array_[read_op])) {
+            socklen_t len = sizeof(error);
+            if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0)
+                error = (-1);  /* Solaris pending error */
+        }
+
+        if (error == 0) {
+            ctx->channel_state_ = channel_state::CONNECTED;
+            unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
+        }
+        else {
+            ctx->impl_.close(); /* just in case */
+            xxsocket::set_last_errno(error);
+            // TODO: send connect failed event
+        }
+    }
+}
+
 bool async_tcp_client::do_write(p2p_io_ctx* ctx)
 {
+    if (ctx->channel_state_ != channel_state::CONNECTED)
+        return true;
+
     bool bRet = false;
 
     do {
@@ -588,8 +646,8 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                     // v->data_.erase(v->data_.begin(), v->data_.begin() + n);
                     v->offset_ += n;
                     int temp_left = v->data_.size() - v->offset_;
-                    int timestamp = time(NULL);
-                    INET_LOG("=======> [%d]send not complete %d bytes remained, %dbytes was sent!", timestamp, temp_left, n);
+                    auto timestamp = static_cast<long long>(time(NULL));
+                    INET_LOG("=======> [%lld]send not complete %d bytes remained, %dbytes was sent!", timestamp, temp_left, n);
                 }
                 else { // send timeout
                     ctx->send_queue_.pop_front();
@@ -612,8 +670,8 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                     int ec = error_number_;
                     std::string errormsg = xxsocket::get_error_msg(ec);
 
-                    int timestamp = time(NULL);
-                    INET_LOG("[%d]async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    auto timestamp = static_cast<long long>(time(NULL));
+                    INET_LOG("[%lld]async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
 
                     this->call_tsf_([v] {
                         if (v->on_sent_)
@@ -635,6 +693,9 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
 
 bool async_tcp_client::do_read(p2p_io_ctx* ctx)
 {
+    if (ctx->channel_state_ != channel_state::CONNECTED)
+        return true;
+
     bool bRet = false;
     do {
         if (!ctx->impl_.is_open())
@@ -676,8 +737,8 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 }
                 else {
                     error_number_ = error_number::ERR_DPL_ILLEGAL_PDU;
-                    int timestamp = time(NULL);
-                    INET_LOG("[%d]async_tcp_client::do_read error, decode length of pdu failed!", timestamp);
+                    auto timestamp = static_cast<long long>(time(NULL));
+                    INET_LOG("[%lld]async_tcp_client::do_read error, decode length of pdu failed!", timestamp);
                     break;
                 }
             }
@@ -686,8 +747,8 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                 if ((ctx->receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                 {
                     error_number_ = error_number::ERR_PDU_TOO_LONG;
-                    int timestamp = time(NULL);
-                    INET_LOG("[%d]async_tcp_client::do_read error, The length of pdu too long!", timestamp);
+                    auto timestamp = static_cast<long long>(time(NULL));
+                    INET_LOG("[%lld]async_tcp_client::do_read error, The length of pdu too long!", timestamp);
                     break;
                 }
                 else {
@@ -721,12 +782,12 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
             if (SHOULD_CLOSE_0(n, error_number_)) {
                 int ec = error_number_;
                 std::string errormsg = xxsocket::get_error_msg(ec);
-                int timestamp = time(NULL);
+                auto timestamp = static_cast<long long>(time(NULL));
                 if (n == 0) {
-                    INET_LOG("[%d]async_tcp_client::do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("[%lld]async_tcp_client::do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
                 }
                 else {
-                    INET_LOG("[%d]async_tcp_client::do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("[%lld]async_tcp_client::do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
                 }
                 break;
             }
@@ -816,12 +877,12 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
     if (this->offset_ <= 0) {
         auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
         if (wait_duration > 0) {
-            tv.tv_sec = wait_duration / 1000000;
-            tv.tv_usec = wait_duration % 1000000;
+            tv.tv_sec = static_cast<long>(wait_duration / 1000000);
+            tv.tv_usec = static_cast<long>(wait_duration % 1000000);
 #if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, tv.tv_sec * 1000 + tv.tv_usec / 1000);
 #endif
-            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), nullptr, nullptr, &tv);
+            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &tv);
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
@@ -854,31 +915,6 @@ long long  async_tcp_client::get_wait_duration(long long usec)
         return duration.count();
     else
         return usec;
-}
-
-void async_tcp_client::p2p_open()
-{
-    if (is_connected()) {
-        if (this->p2p_acceptor_.reopen())
-        {
-            this->p2p_acceptor_.bind(this->impl_.local_endpoint());
-            this->p2p_acceptor_.listen(1); // We just listen one connection for p2p
-            register_descriptor(this->p2p_acceptor_, socket_event_read);
-        }
-    }
-}
-
-bool async_tcp_client::p2p_do_accept(void)
-{
-    if (this->p2p_channel2_.impl_.is_open())
-    { // Just ignore other connect request for 1 <<-->> 1 connections.
-        this->p2p_acceptor_.accept().close();
-        return true;
-    }
-
-    this->idle_ = false;
-    this->p2p_channel2_.impl_ = this->p2p_acceptor_.accept();
-    return this->p2p_channel2_.impl_.is_open();
 }
 
 } /* namespace purelib::net */

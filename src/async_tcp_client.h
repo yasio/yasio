@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.9
+// version: 3.0-developing
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -53,6 +53,13 @@ namespace purelib {
             TCP_P2P_SERVER, // peer --> local
         };
 
+        enum class channel_state {
+            IDLE,
+            REQUEST_CONNECT,
+            CONNECTING,
+            CONNECTED,
+        };
+
         enum error_number {
             ERR_OK, // NO ERROR
             ERR_CONNECT_FAILED = -201, // connect failed
@@ -82,7 +89,7 @@ namespace purelib {
         struct p2p_io_ctx
         {
             xxsocket                   impl_;
-            bool                       connected_;
+            channel_state              channel_state_; // 0: IDLE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
             int                        channel_type_ = TCP_P2P_UNKNOWN;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
@@ -160,7 +167,7 @@ namespace purelib {
             void       close();
 
             // Whether the client-->server connection  established.
-            bool       is_connected(void) const { return this->connected_; }
+            bool       is_connected(void) const { return this->channel_state_ == channel_state::CONNECTED; }
 
             // Gets network error code
             error_number  get_errorno(void) { return static_cast<error_number>(error_number_); }
@@ -202,6 +209,9 @@ namespace purelib {
 
             void       service(void);
 
+            void       process_connect_request(p2p_io_ctx*);
+
+            void       do_connect(p2p_io_ctx*);
             bool       do_write(p2p_io_ctx*);
             bool       do_read(p2p_io_ctx*);
             void       move_received_pdu(p2p_io_ctx*); // move received properly pdu to recv queue
@@ -242,8 +252,8 @@ namespace purelib {
             // socket event set
             int maxfdp_;
             enum {
-                read_op,
-                write_op,
+                read_op, // for async read and write(trigger by interrupt)
+                write_op, // for async connect
                 except_op,
             };
             fd_set fds_array_[3];
@@ -256,12 +266,6 @@ namespace purelib {
 
             bool                    idle_;
             long long               total_connect_times_ = 0;
-
-            // p2p support
-            xxsocket                p2p_acceptor_; // p2p: the acceptor for connections: peer-->local
-            ip::endpoint            p2p_peer_endpoint_; // p2p: this should tell by server
-            p2p_io_ctx              p2p_channel1_; // p2p: connection: local ---> peer
-            p2p_io_ctx              p2p_channel2_; // p2p: connection: peer ---> local 
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

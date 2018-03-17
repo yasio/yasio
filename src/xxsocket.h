@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 2.3.9
+// version: 3.0
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -485,10 +485,12 @@ public: /// portable connect APIs
     // easy to connect a server ipv4 or ipv6.
     int pconnect(const char* hostname, u_short port);
     int pconnect_n(const char* hostname, u_short port, long timeout_sec);
+    int pconnect_n(const char* hostname, u_short port);
 
     // easy to connect a server ipv4 or ipv6.
     int pconnect(const ip::endpoint& ep);
     int pconnect_n(const ip::endpoint& ep, long timeout_sec);
+    int pconnect_n(const ip::endpoint& ep);
 
     // easy to create a tcp ipv4 or ipv6 server socket.
     int pserv(const char* addr, u_short port);
@@ -658,6 +660,7 @@ public:
 
     static int connect_n(socket_native_type s,const char* addr, u_short port, timeval* timeout);
     static int connect_n(socket_native_type s, const ip::endpoint& ep, timeval* timeout);
+    static int connect_n(socket_native_type s, const ip::endpoint& ep);
     
     /* @brief: Sends data on this connected socket
     ** @params: omit

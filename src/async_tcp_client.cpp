@@ -433,7 +433,7 @@ void async_tcp_client::close(size_t channel_index)
     auto channel = channels_[channel_index];
 
     if (channel->impl_.is_open()) {
-        channel->impl_.close();
+        channel->impl_.shutdown();
         interrupter_.interrupt();
     }
 }

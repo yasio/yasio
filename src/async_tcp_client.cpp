@@ -79,7 +79,7 @@ static void odprintf(const char* format, ...) {
 
 #define MAX_PDU_LEN SZ(10, M)
 
-#define TSF_CALL(stmt) this->call_tsf_([=]{(stmt);});
+#define TSF_CALL(stmt) this->tsf_call_([=]{(stmt);});
 
 namespace purelib {
 namespace inet {
@@ -111,7 +111,8 @@ void p2p_io_ctx::reset()
     offset_ = 0;
     expected_pdu_length_ = -1;
     error = 0;
-
+    report_error_ = true;
+    reconnecting_ = false;
     if (this->impl_.is_open()) {
         this->impl_.close();
     }
@@ -120,15 +121,10 @@ void p2p_io_ctx::reset()
 async_tcp_client::async_tcp_client() : app_exiting_(false),
     thread_started_(false),
     interrupter_(),
-    address_("192.168.1.104"),
-    port_(8001),
     connect_timeout_(3),
     send_timeout_((std::numeric_limits<int>::max)()),
     decode_pdu_length_(nullptr),
-    error_number_(error_number::ERR_OK),
-    idle_(true),
-    connect_failed_(false),
-    connect_wait_timeout_(-1)
+    error_number_(error_number::ERR_OK)
 {
     FD_ZERO(&fds_array_[read_op]);
     FD_ZERO(&fds_array_[write_op]);
@@ -143,8 +139,6 @@ async_tcp_client::~async_tcp_client()
     app_exiting_ = true;
 
     close();
-
-    this->connect_notify_cv_.notify_all();
 
     if (this->worker_thread_.joinable())
         this->worker_thread_.join();
@@ -174,7 +168,7 @@ void async_tcp_client::set_callbacks(
     this->connect_listener_ = listener;
     this->on_received_pdu_ = callback;
     this->on_connection_lost_ = on_connection_lost;
-    this->call_tsf_ = threadsafe_call;
+    this->tsf_call_ = threadsafe_call;
 }
 
 size_t async_tcp_client::get_received_pdu_count(void) const
@@ -211,20 +205,6 @@ void async_tcp_client::start_service(int /*working_counter*/)
 void async_tcp_client::set_connect_listener(const connect_listener& listener)
 {
     this->connect_listener_ = listener;
-}
-
-void  async_tcp_client::set_connect_wait_timeout(long seconds/*-1: disable auto connect */)
-{
-    this->connect_wait_timeout_ = seconds;
-}
-
-void async_tcp_client::wait_connect_notify()
-{
-    std::unique_lock<std::mutex> autolock(connect_notify_mtx_);
-    if (connect_wait_timeout_ == -1)
-        connect_notify_cv_.wait(autolock);
-    else
-        connect_notify_cv_.wait_for(autolock, std::chrono::seconds(connect_wait_timeout_));
 }
 
 void async_tcp_client::service()
@@ -373,20 +353,10 @@ void async_tcp_client::close()
     interrupter_.interrupt();
 }
 
-void async_tcp_client::notify_connect()
+void async_tcp_client::async_connect(int channel)
 {
-    std::unique_lock<std::mutex> autolock(connect_notify_mtx_);
     this->channel_state_ = channel_state::REQUEST_CONNECT;
-    connect_notify_cv_.notify_one();
     this->interrupter_.interrupt();
-}
-
-void async_tcp_client::switch_endpoint(const char* address, u_short port)
-{
-	this->address_ = address;
-	this->port_ = port;
-	this->switching_ = true;
-	close();
 }
 
 void async_tcp_client::handle_error(void)
@@ -404,7 +374,7 @@ void async_tcp_client::handle_error(void)
     // @Notify connection lost
     if (this->on_connection_lost_) {
         int ec = error_number_;
-        TSF_CALL(on_connection_lost_(!this->switching_ ? ec : -200, xxsocket::get_error_msg(ec)));
+        TSF_CALL(on_connection_lost_(ec, xxsocket::get_error_msg(ec)));
     }
 
     // @Clear all sending messages
@@ -470,7 +440,7 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
     }
 }
 
-void async_tcp_client::async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback)
+void async_tcp_client::async_send(std::vector<char>&& data, int channel, const appl_pdu_send_callback_t& callback)
 {
     if (this->impl_.is_open())
     {
@@ -501,12 +471,7 @@ void async_tcp_client::move_received_pdu(p2p_io_ctx* ctx)
 
 
 bool async_tcp_client::connect(void)
-{
-    if (connect_failed_)
-    {
-        connect_failed_ = false;
-    }
-
+{ // unused
     INET_LOG("connecting server %s:%u...", address_.c_str(), port_);
 
     int ret = -1;
@@ -564,24 +529,18 @@ bool async_tcp_client::connect(void)
 
         channel_state_ = channel_state::IDLE;
         if (this->connect_listener_ != nullptr) {
-			auto switching = this->switching_;
-			TSF_CALL(this->connect_listener_(true, !switching ? 0 : -200));
+			TSF_CALL(this->connect_listener_(true, 0));
         }
-
-		this->switching_ = false;
 
         return true;
     }
     else { // connect server failed.
-        connect_failed_ = true;
         int ec = xxsocket::get_last_errno();
         if (this->connect_listener_ != nullptr) {
-			TSF_CALL(this->connect_listener_(false, !this->switching_ ? ec : -200));
+			TSF_CALL(this->connect_listener_(false, ec ));
         }
 
         INET_LOG("connect server: %s:%u failed, error code:%d, error msg:%s!", address_.c_str(), port_, ec, xxsocket::get_error_msg(ec));
-
-		this->switching_ = false;
 
         return false;
     }
@@ -630,7 +589,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
             n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
-                this->call_tsf_([v] {
+                this->tsf_call_([v] {
 #if INET_ENABLE_VERBOSE_LOG
                     auto packetSize = v->data_.size();
                     INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
@@ -651,7 +610,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                 }
                 else { // send timeout
                     ctx->send_queue_.pop_front();
-                    this->call_tsf_([v] {
+                    this->tsf_call_([v] {
 
                         auto packetSize = v->data_.size();
                         INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
@@ -673,7 +632,7 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                     auto timestamp = static_cast<long long>(time(NULL));
                     INET_LOG("[%lld]async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
 
-                    this->call_tsf_([v] {
+                    this->tsf_call_([v] {
                         if (v->on_sent_)
                             v->on_sent_(error_number::ERR_CONNECTION_LOST);
                         delete v;
@@ -682,7 +641,6 @@ bool async_tcp_client::do_write(p2p_io_ctx* ctx)
                     break;
                 }
             }
-            idle_ = false;
         }
 
         bRet = true;
@@ -774,8 +732,6 @@ bool async_tcp_client::do_read(p2p_io_ctx* ctx)
                     }
                 }
             }
-
-            this->idle_ = false;
         }
         else {
             error_number_ = xxsocket::get_last_errno();

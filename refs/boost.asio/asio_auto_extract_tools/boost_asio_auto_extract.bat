@@ -13,7 +13,7 @@ call "%programdir%\Microsoft Visual Studio 12.0\VC\vcvarsall.bat"
 setlocal enabledelayedexpansion
 
 :L_Loop
-cl /nologo /O2 /W0 /EHsc  /c /I"%boost_asio_dir%" /D_WIN32 /D_DEBUG /DBOOST_ERROR_CODE_HEADER_ONLY /DBOOST_SYSTEM_NO_DEPRECATED /DBOOST_SYSTEM_NO_LIB /DBOOST_DATE_TIME_NO_LIB /DBOOST_REGEX_NO_LIB /DBOOST_ASIO_DISABLE_IOCP pseudo.cpp 1>compile_error.txt
+cl /nologo /O2 /W0 /EHsc  /c /I"%boost_asio_dir%" /D_WIN32 /D_DEBUG /DBOOST_ERROR_CODE_HEADER_ONLY /DBOOST_SYSTEM_NO_DEPRECATED /DBOOST_SYSTEM_NO_LIB /DBOOST_DATE_TIME_NO_LIB /DBOOST_REGEX_NO_LIB /DBOOST_ASIO_DISABLE_IOCP /DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE pseudo.cpp 1>compile_error.txt
 set error_code=%errorlevel%
 
 if %error_code% == 2 (

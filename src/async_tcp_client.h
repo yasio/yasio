@@ -47,8 +47,8 @@ SOFTWARE.
 namespace purelib {
 
     namespace inet {
-        enum {
-            TCP_P2P_UNKNOWN = -1,
+        enum channel_type {
+            TCP_CLIENT = 0,
             TCP_P2P_CLIENT = 1, // local --> peer
             TCP_P2P_SERVER, // peer --> local
         };
@@ -90,7 +90,7 @@ namespace purelib {
         {
             xxsocket                   impl_;
             channel_state              channel_state_; // 0: IDLE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
-            int                        channel_type_ = TCP_P2P_UNKNOWN;
+            int                        channel_type_ = TCP_CLIENT;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
 
@@ -101,6 +101,12 @@ namespace purelib {
             std::recursive_mutex       send_queue_mtx_;
             std::deque<appl_pdu*>      send_queue_;
 
+            std::string                address_;
+            std::string                addressv6_;
+            u_short                    port_;
+
+            bool                       report_error_;
+            bool                       reconnecting_;
             void                       reset();
         };
 
@@ -132,8 +138,6 @@ namespace purelib {
             // set endpoint of server.
             void       set_endpoint(const char* address, const char* addressv6, u_short port);
 
-			void       switch_endpoint(const char* address, u_short port);
-
             // set callbacks, required API, must call by user
             /*
               threadsafe_call: for cocos2d-x should be:
@@ -158,10 +162,8 @@ namespace purelib {
             // start async socket service
             void       start_service(int working_counter = 1);
 
-            void       set_connect_wait_timeout(long seconds = -1/*-1: disable auto connect */);
-
             // notify tcp_client to connect server
-            void       notify_connect();
+            void       async_connect(int channel = 0);
 
             // close tcp_client
             void       close();
@@ -173,21 +175,7 @@ namespace purelib {
             error_number  get_errorno(void) { return static_cast<error_number>(error_number_); }
 
             // post a async send request.
-            void       async_send(std::vector<char>&& data, const appl_pdu_send_callback_t& callback = nullptr);
-
-
-            // ***********  p2p support *****************
-            // open p2p by local endpoint of "server --> local connection"
-            void       p2p_open();
-
-            // peer connect request detected by 'select', peer --> local connection established.
-            bool       p2p_do_accept(void);
-
-            // try to connect peer. local --> peer connection
-            void       p2p_async_connect(const ip::endpoint& ep);
-
-            // shutdown p2p, TODO: implement
-            void       p2p_shutdown(void);
+            void       async_send(std::vector<char>&& data, int channel = 0, const appl_pdu_send_callback_t& callback = nullptr);
 
             // timer support
             void       schedule_timer(deadline_timer*);
@@ -203,8 +191,6 @@ namespace purelib {
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);
 
-            void       wait_connect_notify();
-
             bool       connect(void);
 
             void       service(void);
@@ -219,28 +205,17 @@ namespace purelib {
             void       handle_error(void); // TODO: add error_number parameter
 
         private:
-			bool                    switching_ = false;
             bool                    app_exiting_;
             bool                    thread_started_;
             std::thread             worker_thread_;
-
-            std::string             address_;
-            std::string             addressv6_;
-            u_short                 port_;
 
             int                     error_number_; // socket_error( >= -1) & application error(0 or < -1)
 
             int                     connect_timeout_;
             int                     send_timeout_;
 
-            bool                    connect_failed_;
-
             std::mutex              recv_queue_mtx_;
             std::deque<std::vector<char>> recv_queue_; // the recev_queue_ for connections: local-->server, local-->peer, peer-->local 
-
-            std::mutex              connect_notify_mtx_;
-            std::condition_variable connect_notify_cv_;
-            long                    connect_wait_timeout_;
 
             // select interrupter
             select_interrupter      interrupter_;
@@ -262,10 +237,7 @@ namespace purelib {
             appl_pdu_recv_callback_t on_received_pdu_;
             decode_pdu_length_func  decode_pdu_length_;
             connection_lost_callback_t  on_connection_lost_;
-            std::function<void(const vdcallback_t&)> call_tsf_;
-
-            bool                    idle_;
-            long long               total_connect_times_ = 0;
+            std::function<void(const vdcallback_t&)> tsf_call_;
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

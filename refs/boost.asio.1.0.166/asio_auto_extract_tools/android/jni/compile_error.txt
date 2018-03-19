@@ -1,0 +1,1 @@
+/develop/inetlibs/boost.asio.1.0.166\boost/smart_ptr/detail/sp_counted_base.hpp:45:11: fatal error: 'boost/smart_ptr/detail/sp_counted_base_clang.hpp' file not found

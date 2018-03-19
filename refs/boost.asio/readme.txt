@@ -16,7 +16,7 @@ firstly, add aditionnal includes path "Root Of boost.asio.1.0.161 Directory" to 
 
 #4.Please open c++11 flags(-std=c++11) for Android compile.
 
-
+#5.Other macro options:
 BOOST_ASIO_DISABLE_DEV_POLL: Explicitly disables /dev/poll support on Solaris, forcing the use of a select-based implementation. 
 BOOST_ASIO_DISABLE_EPOLL: Explicitly disables epoll support on Linux, forcing the use of a select-based implementation. 
 BOOST_ASIO_DISABLE_EVENTFD: Explicitly disables eventfd support on Linux, forcing the use of a pipe to interrupt blocked epoll/select system calls. 

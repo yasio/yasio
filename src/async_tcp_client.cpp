@@ -114,12 +114,13 @@ void channel_context::reset()
     report_error_ = true;
     reconnecting_ = false;
     index_ = static_cast<size_t>(-1);
+    resolve_ready_ = false;
     if (this->impl_.is_open()) {
         this->impl_.close();
     }
 }
 
-async_tcp_client::async_tcp_client() : app_exiting_(false),
+async_tcp_client::async_tcp_client() : stopping_(false),
     thread_started_(false),
     interrupter_(),
     connect_timeout_(3LL * 1000 * 1000),
@@ -136,14 +137,31 @@ async_tcp_client::async_tcp_client() : app_exiting_(false),
 
 async_tcp_client::~async_tcp_client()
 {
-    app_exiting_ = true;
+    stop_service();
+}
 
-    close();
+void async_tcp_client::stop_service()
+{
+    if (thread_started_) {
+        stopping_ = true;
 
-    if (this->worker_thread_.joinable())
-        this->worker_thread_.join();
+        this->resolver_ops_mtx_.lock();
+        this->resolver_ops_.clear();
+        this->resolver_ops_mtx_.unlock();
+        this->resolver_ops_cv_.notify_all();
+        if (this->resolver_thread_.joinable())
+            this->resolver_thread_.join();
 
-    clear_channels();
+        close();
+
+        if (this->worker_thread_.joinable())
+            this->worker_thread_.join();
+
+        clear_channels();
+
+        unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
+        thread_started_ = false;
+    }
 }
 
 void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
@@ -152,7 +170,7 @@ void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
     this->send_timeout_ = timeo_send;
 }
 
-void  async_tcp_client::new_channel(const std::string& address, const std::string& addressv6, u_short port)
+channel_context* async_tcp_client::new_channel(const std::string& address, const std::string& addressv6, u_short port)
 {
     auto channel = new channel_context();
     channel->reset();
@@ -161,6 +179,7 @@ void  async_tcp_client::new_channel(const std::string& address, const std::strin
     channel->port_ = port;
     channel->index_ = this->channels_.size();
     this->channels_.push_back(channel);
+    return channel;
 }
 
 void async_tcp_client::clear_channels()
@@ -211,14 +230,22 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         if (channel_count <= 0)
             return;
 
+        stopping_ = false;
+        thread_started_ = true;
+
+        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+
+        resolver_thread_ = std::thread([this] {
+            this->resolve_service();
+        });
+
         // Initialize channels
         for (auto i = 0; i < channel_count; ++i)
         {
             auto& channel_ep = channel_eps[i];
-            new_channel(channel_ep.address_, channel_ep.addressv6_, channel_ep.port_);
+            async_resolve(new_channel(channel_ep.address_, channel_ep.addressv6_, channel_ep.port_));
         }
 
-        thread_started_ = true;
         worker_thread_ = std::thread([this] {
             INET_LOG("async_tcp_client thread running...");
             this->service();
@@ -249,9 +276,7 @@ void async_tcp_client::service()
     fd_set fds_array[3];
     timeval timeout;
 
-    register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-
-    for (; !app_exiting_;)
+    for (; !stopping_;)
     {
         int nfds = static_cast<int>(channels_.size());
         std::chrono::microseconds wait_duration(MAX_WAIT_DURATION);
@@ -259,9 +284,12 @@ void async_tcp_client::service()
         for (auto channel : channels_) {
             switch (channel->state_) {
             case channel_state::REQUEST_CONNECT:
-                wait_duration = (std::min)(wait_duration, process_connect_request(channel));
-                --nfds;
-                ++pending_connects;
+                if (channel->resolve_ready_) {
+                    wait_duration = (std::min)(wait_duration, process_connect_request(channel));
+                    --nfds;
+                    ++pending_connects;
+                }
+                else --nfds;
                 break;
             case channel_state::CONNECTED:
                 if (channel->send_queue_.empty() && channel->offset_ <= 0) --nfds;
@@ -285,6 +313,7 @@ void async_tcp_client::service()
                 nfds = do_select(fds_array, timeout);
             }
             else {
+                ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
                 nfds = 2;
             }
         }
@@ -364,6 +393,43 @@ _L_error:
 #endif
 }
 
+void  async_tcp_client::resolve_service(void)
+{
+    for (; !stopping_;)
+    {
+        std::unique_lock<std::mutex> lk(this->resolver_ops_mtx_);
+        this->resolver_ops_cv_.wait(lk, [this] {return stopping_ || !this->resolver_ops_.empty(); });
+
+        if (!stopping_) {
+            auto ctx = this->resolver_ops_.front();
+            this->resolver_ops_.pop_front();
+            lk.unlock();
+
+            int flags = xxsocket::getipsv();
+            if (flags & ipsv_ipv4) {
+                ctx->endpoint_ = xxsocket::resolve(ctx->address_.c_str(), ctx->port_);
+                ctx->resolve_ready_ = true;
+            }
+            else if (flags & ipsv_ipv6)
+            { // client is IPV6_Only
+                INET_LOG("Client needs a ipv6 server address to connect!");
+                ctx->endpoint_ = xxsocket::resolve(ctx->addressv6_.c_str(), ctx->port_);
+                ctx->resolve_ready_ = true;
+            }
+
+            if (ctx->resolve_ready_ && ctx->state_ == channel_state::REQUEST_CONNECT)
+                this->interrupter_.interrupt();
+        }
+    }
+}
+
+void async_tcp_client::async_resolve(channel_context* ctx)
+{
+    std::unique_lock<std::mutex> lk(this->resolver_ops_mtx_);
+    this->resolver_ops_.push_back(ctx);
+    this->resolver_ops_cv_.notify_one();
+}
+
 std::chrono::microseconds async_tcp_client::get_connect_wait_duration(channel_context* channel)
 {
     if (channel->state_ == channel_state::CONNECTING) {
@@ -383,15 +449,7 @@ std::chrono::microseconds async_tcp_client::process_connect_request(channel_cont
 
         int ret = -1;
         ctx->state_ = channel_state::CONNECTING;
-        int flags = xxsocket::getipsv();
-        if (flags & ipsv_ipv4) {
-            ret = ctx->impl_.pconnect_n(ctx->address_.c_str(), ctx->port_);
-        }
-        else if (flags & ipsv_ipv6)
-        { // client is IPV6_Only
-            INET_LOG("Client needs a ipv6 server address to connect!");
-            ret = ctx->impl_.pconnect_n(ctx->addressv6_.c_str(), ctx->port_);
-        }
+        ret = ctx->impl_.pconnect_n(ctx->addressv6_.c_str(), ctx->port_);
 
         if (ret < 0)
         { // connect succeed, reset fds

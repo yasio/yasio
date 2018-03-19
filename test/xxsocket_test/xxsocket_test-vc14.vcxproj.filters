@@ -27,9 +27,6 @@
     <ClCompile Include="..\..\src\oslib.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="pcode_autog_client_messages.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\ibinarystream.cpp">
       <Filter>lib</Filter>
     </ClCompile>
@@ -42,14 +39,11 @@
     <ClCompile Include="..\..\src\deadline_timer.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="xxsocket_test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sendmail.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\libb64.cpp">
       <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="simple_test.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -58,18 +52,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\oslib.h">
       <Filter>lib</Filter>
-    </ClInclude>
-    <ClInclude Include="pcode_autog_client_constants.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pcode_autog_client_includes.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pcode_autog_client_messages.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pcode_autog_client_structures.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ibinarystream.h">
       <Filter>lib</Filter>

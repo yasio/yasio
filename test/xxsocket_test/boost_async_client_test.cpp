@@ -7,6 +7,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
+#define BOOST_ASIO_DISABLE_IOCP 1
 
 #include <iostream>
 #include <istream>
@@ -40,27 +41,27 @@ public:
 
     // Start an asynchronous resolve to translate the server and service names
     // into a list of endpoints.
-    /*tcp::resolver::query query(server, "http");
+    tcp::resolver::query query(server, "http");
     resolver_.async_resolve(query,
         boost::bind(&client::handle_resolve, this,
           boost::asio::placeholders::error,
-          boost::asio::placeholders::iterator));*/
-    handle_resolve();
+          boost::asio::placeholders::iterator));
+    // handle_resolve();
   }
 
 private:
-  void handle_resolve(/*const boost::system::error_code& err,
-      tcp::resolver::iterator endpoint_iterator*/)
+  void handle_resolve(const boost::system::error_code& err,
+      tcp::resolver::iterator endpoint_iterator)
   {
-    if (1)
+    if (!err)
     {
         
-        tcp::resolver::query query("127.0.0.1", "http");
-        tcp::resolver::iterator iterator = resolver_.resolve(query);
+        //tcp::resolver::query query("127.0.0.1", "http");
+        //tcp::resolver::iterator iterator = resolver_.resolve(query);
         // v.address(boost::asio::ip::address_v4())
       // Attempt a connection to each endpoint in the list until we
       // successfully establish a connection.
-        boost::asio::async_connect(socket_, iterator,
+        boost::asio::async_connect(socket_, endpoint_iterator,
           boost::bind(&client::handle_connect, this,
             boost::asio::placeholders::error));
     }
@@ -229,7 +230,7 @@ private:
   boost::asio::streambuf response_;
 };
 
-#if 0   
+#if 1   
 int main(int argc, char* argv[])
 {
   try

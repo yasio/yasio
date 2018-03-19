@@ -38,6 +38,7 @@ SOFTWARE.
 #include <condition_variable>
 #include <atomic>
 #include <queue>
+#include <list>
 #include <set>
 #include <algorithm>
 #include "object_pool.h"
@@ -117,6 +118,9 @@ namespace purelib {
             std::string                addressv6_;
             u_short                    port_;
 
+            ip::endpoint               endpoint_;
+            bool                       resolve_ready_;
+
             bool                       report_error_;
             bool                       reconnecting_;
 
@@ -147,6 +151,8 @@ namespace purelib {
 
             // start async socket service
             void       start_service(const channel_endpoint* channel_eps, int channel_count = 1);
+
+            void       stop_service();
 
             void       set_endpoint(size_t channel_index, const char* address, const char* addressv6, u_short port);
 
@@ -179,7 +185,7 @@ namespace purelib {
             void       close(size_t channel_index = 0);
 
             // Whether the client-->server connection  established.
-            bool       is_connected(size_t cahnnel_index) const;
+            bool       is_connected(size_t cahnnel_index = 0) const;
 
             // Gets network error code
             error_number  get_errorno(void) { return static_cast<error_number>(error_number_); }
@@ -202,9 +208,9 @@ namespace purelib {
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);
 
-            bool       connect(void);
-
             void       service(void);
+
+            void       resolve_service(void);
 
             std::chrono::microseconds get_connect_wait_duration(channel_context*);
             std::chrono::microseconds process_connect_request(channel_context*);
@@ -215,17 +221,18 @@ namespace purelib {
 
             void       handle_error(channel_context*); // TODO: add error_number parameter
 
+            void       async_resolve(channel_context*);
 
             // new/delete client socket connection channel
             // please call this at initialization, don't new channel at runtime dynmaically:
             // because this API is not thread safe.
-            void       new_channel(const std::string& address, const std::string& addressv6, u_short port);
+            channel_context*  new_channel(const std::string& address, const std::string& addressv6, u_short port);
 
             // Clear all channels after service exit.
             void       clear_channels(); // destroy all channels
 
         private:
-            bool                    app_exiting_;
+            bool                    stopping_;
             bool                    thread_started_;
             std::thread             worker_thread_;
 
@@ -262,6 +269,13 @@ namespace purelib {
             connection_lost_callback_t  on_connection_lost_;
             appl_pdu_recv_callback_t on_received_pdu_;
             std::function<void(const vdcallback_t&)> tsf_call_;
+
+            // resolver thread
+            std::thread resolver_thread_;
+            std::list<channel_context*> resolver_ops_;
+            std::mutex resolver_ops_mtx_;
+            std::condition_variable resolver_ops_cv_;
+
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

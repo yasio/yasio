@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -29,26 +29,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -154,9 +154,7 @@
     <ClCompile Include="..\..\src\oslib.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
     <ClCompile Include="..\..\src\async_tcp_client.cpp" />
-    <ClCompile Include="pcode_autog_client_messages.cpp" />
-    <ClCompile Include="sendmail.cpp" />
-    <ClCompile Include="xxsocket_test.cpp" />
+    <ClCompile Include="simple_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\deadline_timer.h" />
@@ -169,10 +167,6 @@
     <ClInclude Include="..\..\src\socket_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\xxsocket.h" />
     <ClInclude Include="..\..\src\async_tcp_client.h" />
-    <ClInclude Include="pcode_autog_client_constants.h" />
-    <ClInclude Include="pcode_autog_client_includes.h" />
-    <ClInclude Include="pcode_autog_client_messages.h" />
-    <ClInclude Include="pcode_autog_client_structures.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\eventfd_select_interrupter.ipp" />

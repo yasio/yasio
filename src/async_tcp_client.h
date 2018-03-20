@@ -59,10 +59,17 @@ namespace purelib {
         };
 
         enum class channel_state {
-            IDLE,
+            INACTIVE,
             REQUEST_CONNECT,
             CONNECTING,
             CONNECTED,
+        };
+
+        enum class resolve_state {
+            IDLE,
+            DIRTY,
+            READY,
+            FAILED = -1,
         };
 
         enum error_number {
@@ -76,6 +83,7 @@ namespace purelib {
             ERR_CONNECTION_LOST, // connection lost
             ERR_PDU_TOO_LONG, // pdu too long
             ERR_DPL_ILLEGAL_PDU, // decode pdu error.
+            ERR_RESOLVE_HOST_FAILED, // resolve host failed.
         };
 
         enum {
@@ -97,19 +105,20 @@ namespace purelib {
             std::string                address_;
             std::string                addressv6_;
             u_short                    port_;
+            bool                       auto_reconnect_ = false;
         };
 
         struct channel_context
         {
             xxsocket                   impl_;
-            channel_state              state_; // 0: IDLE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+            channel_state              state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
             int                        type_ = TCP_CLIENT;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
 
             std::vector<char>          receiving_pdu_;
             int                        expected_pdu_length_ = -1;
-            int                        error = 0;
+            int                        error_ = 0; // socket error(>= -1), application error(< -1)
 
             std::recursive_mutex       send_queue_mtx_;
             std::deque<appl_pdu*>      send_queue_;
@@ -119,9 +128,9 @@ namespace purelib {
             u_short                    port_;
 
             ip::endpoint               endpoint_;
-            bool                       resolve_ready_;
+            resolve_state              resolve_state_;
 
-            bool                       report_error_;
+            bool                       auto_reconnect_;
 
             size_t                     index_;
 
@@ -158,7 +167,7 @@ namespace purelib {
             size_t     get_received_pdu_count(void) const;
 
             // must be call on main thread(such cocos2d-x opengl thread)
-            void       dispatch_received_pdu(int count = 1);
+            void       dispatch_received_pdu(int count = 512);
 
             // set callbacks, required API, must call by user
             /*
@@ -177,17 +186,17 @@ namespace purelib {
             // set connect and send timeouts.
             void       set_timeouts(long timeo_connect, long timeo_send);
 
-            // notify tcp_client to connect server
+            // start a async connect at specific channel
             void       async_connect(size_t channel_index = 0);
 
             // close tcp_client
             void       close(size_t channel_index = 0);
 
-            // Whether the client-->server connection  established.
+            // Whether the client-->server connection established.
             bool       is_connected(size_t cahnnel_index = 0) const;
 
-            // Gets network error code
-            error_number  get_errorno(void) { return static_cast<error_number>(error_number_); }
+            // Gets last network error code
+            error_number  get_errorno(void) { return static_cast<error_number>(error_); }
 
             // post a async send request.
             void       async_send(std::vector<char>&& data, size_t channel_index = 0, const appl_pdu_send_callback_t& callback = nullptr);
@@ -205,7 +214,9 @@ namespace purelib {
 
             int        do_select(fd_set* fds_array,timeval& timeout);
 
-            void       check_connect_completion(fd_set* fds_array, channel_context*);
+            void       do_connect_completion(fd_set* fds_array, channel_context*);
+
+            void       handle_connect_succeed(channel_context*, int error);
             void       handle_connect_failed(channel_context*, int error);
 
             void       register_descriptor(const socket_native_type fd, int flags);
@@ -228,17 +239,19 @@ namespace purelib {
             // new/delete client socket connection channel
             // please call this at initialization, don't new channel at runtime dynmaically:
             // because this API is not thread safe.
-            channel_context*  new_channel(const std::string& address, const std::string& addressv6, u_short port);
+            channel_context*  new_channel(const channel_endpoint& ep);
 
             // Clear all channels after service exit.
             void       clear_channels(); // destroy all channels
 
+            int        set_errorno(channel_context* ctx, int error);
+
+            // ensure event fd unregistered & closed.
+            bool       cleanup_descriptor(channel_context* ctx);
         private:
             bool                    stopping_;
             bool                    thread_started_;
             std::thread             worker_thread_;
-
-            int                     error_number_; // socket_error( >= -1) & application error(0 or < -1)
 
             long long               connect_timeout_;
             int                     send_timeout_;
@@ -246,8 +259,8 @@ namespace purelib {
             std::mutex              recv_queue_mtx_;
             std::deque<std::vector<char>> recv_queue_; // the recev_queue_ for connections: local-->server, local-->peer, peer-->local 
 
-
             std::vector<channel_context*> channels_;
+            int                     error_; // record last error number, socket error(>= -1), application error(< -1)
 
             // select interrupter
             select_interrupter      interrupter_;

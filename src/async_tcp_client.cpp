@@ -30,40 +30,73 @@ SOFTWARE.
 */
 #include "async_tcp_client.h"
 #include <limits>
+#include <stdarg.h>
+#include <string>
 
 #define _USING_IN_COCOS2DX 0
 
 #define INET_ENABLE_VERBOSE_LOG 0
 
-#if _USING_IN_COCOS2DX
-#include "cocos2d.h"
-#define INET_LOG(format,...) cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=]{cocos2d::log((format), ##__VA_ARGS__);})
-#else
-#if defined(_WIN32)
-static void odprintf(const char* format, ...) {
-    va_list	args;
-    va_start(args, format);
-    int len = _vscprintf(format, args);
-    if (len > 0) {
-        len += (1 + 2);
-        char* buf = (char*)malloc(len);
-        if (buf) {
-            len = vsprintf_s(buf, len, format, args);
-            if (len > 0) {
-                while (len && isspace(buf[len - 1])) len--;
-                buf[len++] = '\r';
-                buf[len++] = '\n';
-                buf[len] = 0;
-                OutputDebugStringA(buf);
-            }
-            free(buf);
-        }
+namespace {
+    /*--- This is a C++ universal sprintf in the future.
+    **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is different
+    **      VS2013 or Unix-Like System will return -1 when buffer not enough, but VS2015/2017 will return the actural needed length for buffer at this station
+    **      The _vsnprintf behavior is compatible API which always return -1 when buffer isn't enough at VS2013/2015/2017
+    **      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later, AND it's also standard-compliant, see reference: http://www.cplusplus.com/reference/cstdio/vsnprintf/
+    */
+    std::string _string_format(const char* format, ...)
+    {
+#define CC_VSNPRINTF_BUFFER_LENGTH 512
+        va_list args;
+        std::string buffer(CC_VSNPRINTF_BUFFER_LENGTH, '\0');
+
+        va_start(args, format);
+        int nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
         va_end(args);
+
+        if (nret >= 0) {
+            if ((unsigned int)nret < buffer.length()) {
+                buffer.resize(nret);
+            }
+            else if ((unsigned int)nret > buffer.length()) { // VS2015/2017 or later Visual Studio Version
+                buffer.resize(nret);
+
+                va_start(args, format);
+                nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
+                va_end(args);
+
+                assert(nret == buffer.length());
+            }
+            // else equals, do nothing.
+        }
+        else { // less or equal VS2013 and Unix System glibc implement.
+            do {
+                buffer.resize(buffer.length() * 3 / 2);
+
+                va_start(args, format);
+                nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
+                va_end(args);
+
+            } while (nret < 0);
+
+            buffer.resize(nret);
+        }
+
+        return buffer;
     }
 }
-#define INET_LOG(format,...) odprintf((format "\r\n"),##__VA_ARGS__) // fprintf(stdout,(format "\n"),##__VA_ARGS__)
+
+#if _USING_IN_COCOS2DX
+#include "cocos2d.h"
+#define INET_LOG(format,...) do {
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__);
+   cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); });
+} while(false)
 #else
-#define INET_LOG(format,...) fprintf(stdout,(format "\n"),##__VA_ARGS__)
+#if defined(_WIN32)
+#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__).c_str())
+#else
+#define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__)
 #endif
 #endif
 
@@ -106,14 +139,15 @@ public:
 
 void channel_context::reset()
 {
-    state_ = channel_state::IDLE;
+    state_ = channel_state::INACTIVE;
     receiving_pdu_.clear();
     offset_ = 0;
     expected_pdu_length_ = -1;
-    error = 0;
-    report_error_ = true;
+    error_ = 0;
+    resolve_state_ = resolve_state::IDLE;
+    auto_reconnect_ = false;
     index_ = static_cast<size_t>(-1);
-    resolve_ready_ = false;
+
     if (this->impl_.is_open()) {
         this->impl_.close();
     }
@@ -125,7 +159,7 @@ async_tcp_client::async_tcp_client() : stopping_(false),
     connect_timeout_(3LL * 1000 * 1000),
     send_timeout_((std::numeric_limits<int>::max)()),
     decode_pdu_length_(nullptr),
-    error_number_(error_number::ERR_OK)
+    error_(error_number::ERR_OK)
 {
     FD_ZERO(&fds_array_[read_op]);
     FD_ZERO(&fds_array_[write_op]);
@@ -144,12 +178,13 @@ void async_tcp_client::stop_service()
     if (thread_started_) {
         stopping_ = true;
 
-        this->resolver_ops_mtx_.lock();
-        this->resolver_ops_.clear();
-        this->resolver_ops_mtx_.unlock();
         this->resolver_ops_cv_.notify_all();
         if (this->resolver_thread_.joinable())
             this->resolver_thread_.join();
+
+        this->resolver_ops_mtx_.lock();
+        this->resolver_ops_.clear();
+        this->resolver_ops_mtx_.unlock();
 
         for (auto ctx : channels_)
         {
@@ -157,8 +192,8 @@ void async_tcp_client::stop_service()
                 ctx->impl_.shutdown();
             }
         }
-        interrupter_.interrupt();
 
+        interrupter_.interrupt();
         if (this->worker_thread_.joinable())
             this->worker_thread_.join();
 
@@ -175,13 +210,14 @@ void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
     this->send_timeout_ = timeo_send;
 }
 
-channel_context* async_tcp_client::new_channel(const std::string& address, const std::string& addressv6, u_short port)
+channel_context* async_tcp_client::new_channel(const channel_endpoint& ep)
 {
     auto ctx = new channel_context();
     ctx->reset();
-    ctx->address_ = address;
-    ctx->addressv6_ = addressv6;
-    ctx->port_ = port;
+    ctx->address_ = ep.address_;
+    ctx->addressv6_ = ep.addressv6_;
+    ctx->port_ = ep.port_;
+    ctx->auto_reconnect_ = ep.auto_reconnect_;
     ctx->index_ = this->channels_.size();
     this->channels_.push_back(ctx);
     return ctx;
@@ -248,7 +284,11 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         for (auto i = 0; i < channel_count; ++i)
         {
             auto& channel_ep = channel_eps[i];
-            async_resolve(new_channel(channel_ep.address_, channel_ep.addressv6_, channel_ep.port_));
+            auto ctx = new_channel(channel_ep);
+            ctx->auto_reconnect_ = channel_ep.auto_reconnect_;
+            if (channel_ep.port_ > 0) {
+                async_resolve(ctx);
+            }
         }
 
         worker_thread_ = std::thread([this] {
@@ -270,7 +310,7 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
     ctx->addressv6_ = addressv6;
     ctx->port_ = port;
 
-    ctx->resolve_ready_ = false;
+    ctx->resolve_state_ = ctx->port_ > 0 ? resolve_state::DIRTY : resolve_state::IDLE;
 }
 
 void async_tcp_client::service()
@@ -314,37 +354,35 @@ void async_tcp_client::service()
             --nfds;
         }
 
-        if (nfds > 0) {
-            for (auto ctx : channels_) {
-                // do connect
-                if (ctx->state_ == channel_state::CONNECTING) {
-                    check_connect_completion(fds_array, ctx);
+        for (auto ctx : channels_) {
+            // do connect
+            if (ctx->state_ == channel_state::CONNECTING) {
+                do_connect_completion(fds_array, ctx);
+            }
+            else if (ctx->state_ == channel_state::CONNECTED) {
+                if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
+#if INET_ENABLE_VERBOSE_LOG
+                    INET_LOG("perform read operation...");
+#endif
+                    if (!do_read(ctx)) {
+                        INET_LOG("do read for %s failed!", ctx->address_.c_str());
+                        handle_error(ctx);
+                    }
                 }
-                else if (ctx->state_ == channel_state::CONNECTED) {
-                    if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
-#if INET_ENABLE_VERBOSE_LOG
-                        INET_LOG("perform read operation...");
-#endif
-                        if (!do_read(ctx)) {
-                            INET_LOG("do read for %s failed!", ctx->address_.c_str());
-                            handle_error(ctx);
-                        }
-                    }
 
-                    // perform write operations
-                    if (!ctx->send_queue_.empty()) {
-                        ctx->send_queue_mtx_.lock();
+                // perform write operations
+                if (!ctx->send_queue_.empty()) {
+                    ctx->send_queue_mtx_.lock();
 #if INET_ENABLE_VERBOSE_LOG
-                        INET_LOG("perform write operation...");
+                    INET_LOG("perform write operation...");
 #endif
-                        if (!do_write(ctx))
-                        { // TODO: check would block? for client, may be unnecessary.
-                            ctx->send_queue_mtx_.unlock();
-                            handle_error(ctx);
-                        }
-
+                    if (!do_write(ctx))
+                    { // TODO: check would block? for client, may be unnecessary.
                         ctx->send_queue_mtx_.unlock();
+                        handle_error(ctx);
                     }
+
+                    ctx->send_queue_mtx_.unlock();
                 }
             }
         }
@@ -370,19 +408,27 @@ void  async_tcp_client::resolve_service(void)
             this->resolver_ops_.pop_front();
             lk.unlock();
 
+            bool succeed = false;
             int flags = xxsocket::getipsv();
             if (flags & ipsv_ipv4) {
                 ctx->endpoint_ = xxsocket::resolve(ctx->address_.c_str(), ctx->port_);
-                ctx->resolve_ready_ = true;
+                succeed = ctx->endpoint_.port() > 0;
             }
             else if (flags & ipsv_ipv6)
             { // client is IPV6_Only
-                INET_LOG("Client needs a ipv6 server address to connect!");
+                INET_LOG("async_tcp_client::resolve_service ---> needs a ipv6 server address to connect!");
                 ctx->endpoint_ = xxsocket::resolve(ctx->addressv6_.c_str(), ctx->port_);
-                ctx->resolve_ready_ = true;
+                succeed = ctx->endpoint_.port() > 0;
             }
 
-            if (ctx->resolve_ready_ && ctx->state_ == channel_state::REQUEST_CONNECT)
+            ctx->resolve_state_ = succeed ? resolve_state::READY : resolve_state::FAILED;
+
+            this->set_errorno(ctx, xxsocket::get_last_errno());
+            if (!succeed) {
+                INET_LOG("async_tcp_client::resolve_service ---> resolve failed, ec:%d, detail:%s", error_, xxsocket::get_error_msg(error_));
+            }
+
+            if (succeed && ctx->state_ == channel_state::REQUEST_CONNECT)
                 this->interrupter_.interrupt();
         }
     }
@@ -410,48 +456,40 @@ long long async_tcp_client::non_blocking_connect(channel_context* ctx)
     assert(ctx->state_ == channel_state::REQUEST_CONNECT);
     if (ctx->state_ == channel_state::REQUEST_CONNECT)
     {
-        if (ctx->impl_.is_open()) { // do cleanup if possible
-            unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-            ctx->impl_.close();
+        if (ctx->impl_.is_open()) { // cleanup descriptor if possible
+            cleanup_descriptor(ctx);
         }
 
-        auto timestamp = time(NULL);
-        INET_LOG("[%lld]connecting server %s:%u...", timestamp, ctx->address_.c_str(), ctx->port_);
+        INET_LOG("connecting server %s:%u...", ctx->address_.c_str(), ctx->port_);
 
-        int ret = -1;
         ctx->state_ = channel_state::CONNECTING;
-        ret = ctx->impl_.pconnect_n(ctx->endpoint_);
+        int ret = ctx->impl_.pconnect_n(ctx->endpoint_);
 
         if (ret < 0)
-        { // connect succeed, reset fds
-            ctx->connect_expire_time_ = std::chrono::steady_clock::now() + std::chrono::microseconds(this->connect_timeout_);
-            ctx->error = xxsocket::get_last_errno();
-            if (ctx->error != EINPROGRESS && ctx->error != EWOULDBLOCK) {
-                ctx->state_ = channel_state::IDLE;
-                INET_LOG("[%lld]connect server %s:%u failed!", timestamp, ctx->address_.c_str(), ctx->port_);
+        { // setup no blocking connect
+            int error = xxsocket::get_last_errno();
+            if (error != EINPROGRESS && error != EWOULDBLOCK) {
+                this->handle_connect_failed(ctx, error);
                 return MAX_WAIT_DURATION;
             }
-            register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+            else {
+                this->set_errorno(ctx, error);
 
-            ctx->impl_.set_nonblocking(true);
+                register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
-            ctx->expected_pdu_length_ = -1;
-            error_number_ = error_number::ERR_OK;
-            ctx->offset_ = 0;
-            ctx->receiving_pdu_.clear();
-
-            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
-
-            return get_connect_wait_duration(ctx);
+                ctx->expected_pdu_length_ = -1;
+                ctx->offset_ = 0;
+                ctx->receiving_pdu_.clear();
+                ctx->connect_expire_time_ = std::chrono::steady_clock::now() + std::chrono::microseconds(this->connect_timeout_);
+                return get_connect_wait_duration(ctx);
+            }
         }
         else if (ret == 0) { // connect server succed immidiately.
-            ctx->state_ = channel_state::CONNECTED;
-            register_descriptor(ctx->impl_.native_handle(), socket_event_read);
-            ctx->connect_expire_time_ = std::chrono::steady_clock::now();
-            INET_LOG("[%lld]connect server %s:%u succeed(immidiately).", timestamp, ctx->address_.c_str(), ctx->port_);
+            handle_connect_succeed(ctx, error_number::ERR_OK);
         }
         else // MAY NEVER GO HERE
-            ctx->connect_expire_time_ = std::chrono::steady_clock::now();
+            this->handle_connect_failed(ctx, ctx->error_);
     }
 
     return MAX_WAIT_DURATION;
@@ -486,13 +524,19 @@ void async_tcp_client::async_connect(size_t channel_index)
         return;
     auto ctx = channels_[channel_index];
 
+    if (ctx->port_ == 0) {
+        INET_LOG("async_connect --> invalid port(must be > 0), please call set_endpoint to set a valid endpoint!");
+        return;
+    }
+
     if (ctx->state_ == channel_state::REQUEST_CONNECT || 
         ctx->state_ == channel_state::CONNECTING) 
     { // in-progress, do nothing
+        INET_LOG("async_connect --> the connect request is already in progress!");
         return;
     } 
 
-    if (!ctx->resolve_ready_) {
+    if (ctx->resolve_state_ != resolve_state::READY) {
         async_resolve(ctx);
     }
     ctx->state_ = channel_state::REQUEST_CONNECT;
@@ -504,21 +548,16 @@ void async_tcp_client::async_connect(size_t channel_index)
 
 void async_tcp_client::handle_error(channel_context* ctx)
 {
-    if (ctx->impl_.is_open()) {
-        unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-        ctx->impl_.close();
-    }
-    else {
+    if (!cleanup_descriptor(ctx)) {
         INET_LOG("local close the connection!");
     }
 
     // @Notify connection lost
     if (this->on_connection_lost_ && ctx->state_ == channel_state::CONNECTED) {
-        int ec = error_number_;
-        TSF_CALL(on_connection_lost_(ctx->index_, ec, xxsocket::get_error_msg(ec)));
+        TSF_CALL(on_connection_lost_(ctx->index_, ctx->error_, xxsocket::get_error_msg(ctx->error_)));
     }
 
-    ctx->state_ = channel_state::IDLE;
+    ctx->state_ = channel_state::INACTIVE;
 
     // @Clear all sending messages
     if (!ctx->send_queue_.empty()) {
@@ -538,6 +577,11 @@ void async_tcp_client::handle_error(channel_context* ctx)
         //    timer->callback_(true);
         this->timer_queue_.clear();
         this->timer_queue_mtx_.unlock();
+    }
+
+    if (!this->stopping_ && ctx->auto_reconnect_) {
+        INET_LOG("reconnect endpoint automatically...");
+        async_connect(ctx->index_);
     }
 }
 
@@ -614,7 +658,7 @@ void async_tcp_client::move_received_pdu(channel_context* ctx)
     ctx->expected_pdu_length_ = -1;
 }
 
-void async_tcp_client::check_connect_completion(fd_set* fds_array, channel_context* ctx)
+void async_tcp_client::do_connect_completion(fd_set* fds_array, channel_context* ctx)
 {
     if (ctx->state_ == channel_state::CONNECTING)
     {
@@ -623,41 +667,46 @@ void async_tcp_client::check_connect_completion(fd_set* fds_array, channel_conte
             || FD_ISSET(ctx->impl_.native_handle(), &fds_array[read_op])) {
             socklen_t len = sizeof(error);
             if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >= 0 && error == 0) {
-
-                ctx->state_ = channel_state::CONNECTED;
-                unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
-
-                auto timestamp = time(NULL);
-                auto local_endpoint = ctx->impl_.local_endpoint();
-                INET_LOG("[%lld]connect server %s:%u succeed, local endpoint[%s]", timestamp, ctx->address_.c_str(), ctx->port_, local_endpoint.to_string().c_str());
-                TSF_CALL(this->on_connect_resposne_(ctx->index_, true, error));
+                handle_connect_succeed(ctx, error);
             }
             else {
-                handle_connect_failed(ctx, error);
+                handle_connect_failed(ctx, ERR_CONNECT_FAILED);
             }
         }
         else { // Check whether connect is timeout.
             auto wait_duration = get_connect_wait_duration(ctx);
             if (wait_duration <= 0) { // connect failed
-                handle_connect_failed(ctx, error);
+                handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
             } // else INET_LOG("continue waiting connection: [local] --> [%s:%u] to establish...", ctx->address_.c_str(), ctx->port_);
         }
     }
 }
 
+void async_tcp_client::handle_connect_succeed(channel_context* ctx, int error) 
+{
+    ctx->state_ = channel_state::CONNECTED;
+    unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
+
+    this->set_errorno(ctx, error);
+    TSF_CALL(this->on_connect_resposne_(ctx->index_, true, error));
+    INET_LOG("connect server %s:%u succeed, local endpoint[%s]", ctx->address_.c_str(), ctx->port_, ctx->impl_.local_endpoint().to_string().c_str());
+}
+
 void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
 {
-    if (ctx->impl_.is_open()) {
-        unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-        ctx->impl_.close(); /* just in case */
-        ctx->state_ = channel_state::IDLE;
-        xxsocket::set_last_errno(error);
+    cleanup_descriptor(ctx);
 
-        auto timestamp = time(NULL);
-        INET_LOG("[%lld]connect server %s:%u failed, error(%d)!", timestamp, ctx->address_.c_str(), ctx->port_, error);
+    ctx->state_ = channel_state::INACTIVE;
+    this->set_errorno(ctx, error);
 
-        TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
-    }  
+    TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
+
+    INET_LOG("connect server %s:%u failed, error(%d)!", ctx->address_.c_str(), ctx->port_, error); 
+
+    if (!this->stopping_ && ctx->auto_reconnect_ && error != ERR_RESOLVE_HOST_FAILED) {
+        INET_LOG("reconnect endpoint automatically...");
+        async_connect(ctx->index_);
+    }
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)
@@ -695,8 +744,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
                     // v->data_.erase(v->data_.begin(), v->data_.begin() + n);
                     v->offset_ += n;
                     int temp_left = v->data_.size() - v->offset_;
-                    auto timestamp = static_cast<long long>(time(NULL));
-                    INET_LOG("=======> [%lld]send not complete %d bytes remained, %dbytes was sent!", timestamp, temp_left, n);
+                    INET_LOG("send not complete %d bytes remained, %dbytes was sent!", temp_left, n);
                 }
                 else { // send timeout
                     ctx->send_queue_.pop_front();
@@ -712,15 +760,11 @@ bool async_tcp_client::do_write(channel_context* ctx)
                 }
             }
             else { // n <= 0, TODO: add time
-                error_number_ = xxsocket::get_last_errno();
-                if (SHOULD_CLOSE_1(n, error_number_)) {
+                set_errorno(ctx, xxsocket::get_last_errno());
+                if (SHOULD_CLOSE_1(n, error_)) {
                     ctx->send_queue_.pop_front();
 
-                    int ec = error_number_;
-                    std::string errormsg = xxsocket::get_error_msg(ec);
-
-                    auto timestamp = static_cast<long long>(time(NULL));
-                    INET_LOG("[%lld]async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, error_, xxsocket::get_error_msg(error_));
 
                     this->tsf_call_([v] {
                         if (v->on_sent_)
@@ -784,9 +828,8 @@ bool async_tcp_client::do_read(channel_context* ctx)
                     }
                 }
                 else {
-                    error_number_ = error_number::ERR_DPL_ILLEGAL_PDU;
-                    auto timestamp = static_cast<long long>(time(NULL));
-                    INET_LOG("[%lld]async_tcp_client::do_read error, decode length of pdu failed!", timestamp);
+                    set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
+                    INET_LOG("%s", "async_tcp_client::do_read error, decode length of pdu failed!");
                     break;
                 }
             }
@@ -794,9 +837,8 @@ bool async_tcp_client::do_read(channel_context* ctx)
                 auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
                 if ((ctx->receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
                 {
-                    error_number_ = error_number::ERR_PDU_TOO_LONG;
-                    auto timestamp = static_cast<long long>(time(NULL));
-                    INET_LOG("[%lld]async_tcp_client::do_read error, The length of pdu too long!", timestamp);
+                    set_errorno(ctx, error_number::ERR_PDU_TOO_LONG);
+                    INET_LOG("%s", "async_tcp_client::do_read error, The length of pdu too long!");
                     break;
                 }
                 else {
@@ -824,16 +866,14 @@ bool async_tcp_client::do_read(channel_context* ctx)
             }
         }
         else {
-            error_number_ = xxsocket::get_last_errno();
-            if (SHOULD_CLOSE_0(n, error_number_)) {
-                int ec = error_number_;
-                std::string errormsg = xxsocket::get_error_msg(ec);
-                auto timestamp = static_cast<long long>(time(NULL));
+            this->set_errorno(ctx, xxsocket::get_last_errno());
+            if (SHOULD_CLOSE_0(n, error_)) {
+                const char* errormsg = xxsocket::get_error_msg(error_);
                 if (n == 0) {
-                    INET_LOG("[%lld]async_tcp_client::do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("async_tcp_client::do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", n, error_, errormsg);
                 }
                 else {
-                    INET_LOG("[%lld]async_tcp_client::do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", timestamp, n, ec, errormsg.c_str());
+                    INET_LOG("async_tcp_client::do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, error_, errormsg);
                 }
                 break;
             }
@@ -928,8 +968,11 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
             if (!ctx->send_queue_.empty()) ++nfds; // write event
             break;
         case channel_state::REQUEST_CONNECT:
-            if (ctx->resolve_ready_) {
+            if (ctx->resolve_state_ == resolve_state::READY) {
                 wait_duration = (std::min)(wait_duration, non_blocking_connect(ctx));
+            }
+            else if(ctx->resolve_state_ == resolve_state::FAILED) {
+                handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
             }
             break;
         case channel_state::CONNECTING:
@@ -977,6 +1020,23 @@ long long  async_tcp_client::get_wait_duration(long long usec)
         return duration.count();
     else
         return usec;
+}
+
+bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
+{
+    if (ctx->impl_.is_open()) {
+        unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+        ctx->impl_.close();
+        return true;
+    }
+    return false;
+}
+
+int async_tcp_client::set_errorno(channel_context* ctx, int error)
+{
+    ctx->error_ = error;
+    error_ = error;
+    return error;
 }
 
 } /* namespace purelib::net */

@@ -11,8 +11,7 @@ int main(int, char**)
 {
     purelib::inet::channel_endpoint endpoints[] = {
         { "172.31.238.193", "172.31.238.193", 8888 },
-        // { "www.x-studio365.com", "www.x-studio365.com", 80 },
-        //{ "www.baidu.com", "www.baidu.com", 443 },
+        { "www.baidu.com", "www.baidu.com", 443 },
         //{ "www.tencent.com", "www.x-studio365.com", 443 },
     };
     tcpcli->start_service(endpoints, _ARRAYSIZE(endpoints));

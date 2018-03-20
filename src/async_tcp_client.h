@@ -122,7 +122,6 @@ namespace purelib {
             bool                       resolve_ready_;
 
             bool                       report_error_;
-            bool                       reconnecting_;
 
             size_t                     index_;
 

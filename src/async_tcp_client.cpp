@@ -112,7 +112,6 @@ void channel_context::reset()
     expected_pdu_length_ = -1;
     error = 0;
     report_error_ = true;
-    reconnecting_ = false;
     index_ = static_cast<size_t>(-1);
     resolve_ready_ = false;
     if (this->impl_.is_open()) {
@@ -270,6 +269,8 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
     ctx->address_ = address;
     ctx->addressv6_ = addressv6;
     ctx->port_ = port;
+
+    ctx->resolve_ready_ = false;
 }
 
 void async_tcp_client::service()
@@ -284,7 +285,6 @@ void async_tcp_client::service()
 
     for (; !stopping_;)
     {
-        ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
         int nfds = do_select(fds_array, timeout);
 
         if (stopping_) break;
@@ -410,6 +410,11 @@ long long async_tcp_client::non_blocking_connect(channel_context* ctx)
     assert(ctx->state_ == channel_state::REQUEST_CONNECT);
     if (ctx->state_ == channel_state::REQUEST_CONNECT)
     {
+        if (ctx->impl_.is_open()) { // do cleanup if possible
+            unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+            ctx->impl_.close();
+        }
+
         auto timestamp = time(NULL);
         INET_LOG("[%lld]connecting server %s:%u...", timestamp, ctx->address_.c_str(), ctx->port_);
 
@@ -461,8 +466,17 @@ void async_tcp_client::close(size_t channel_index)
 
     if (ctx->impl_.is_open()) {
         ctx->impl_.shutdown();
-        interrupter_.interrupt();
+        // interrupter_.interrupt();
     }
+}
+
+bool async_tcp_client::is_connected(size_t channel_index) const
+{
+    // Gets channel
+    if (channel_index >= channels_.size())
+        return false;
+    auto ctx = channels_[channel_index];
+    return ctx->state_ == channel_state::CONNECTED;
 }
 
 void async_tcp_client::async_connect(size_t channel_index)
@@ -472,9 +486,20 @@ void async_tcp_client::async_connect(size_t channel_index)
         return;
     auto ctx = channels_[channel_index];
 
-    ctx->state_ = channel_state::REQUEST_CONNECT;
+    if (ctx->state_ == channel_state::REQUEST_CONNECT || 
+        ctx->state_ == channel_state::CONNECTING) 
+    { // in-progress, do nothing
+        return;
+    } 
 
-    interrupter_.interrupt();
+    if (!ctx->resolve_ready_) {
+        async_resolve(ctx);
+    }
+    ctx->state_ = channel_state::REQUEST_CONNECT;
+    if (ctx->impl_.is_open()) {
+        ctx->impl_.shutdown();
+    }
+    else interrupter_.interrupt();
 }
 
 void async_tcp_client::handle_error(channel_context* ctx)
@@ -487,16 +512,15 @@ void async_tcp_client::handle_error(channel_context* ctx)
         INET_LOG("local close the connection!");
     }
 
-    ctx->state_ = channel_state::IDLE;
-
     // @Notify connection lost
-    if (this->on_connection_lost_) {
+    if (this->on_connection_lost_ && ctx->state_ == channel_state::CONNECTED) {
         int ec = error_number_;
         TSF_CALL(on_connection_lost_(ctx->index_, ec, xxsocket::get_error_msg(ec)));
     }
 
+    ctx->state_ = channel_state::IDLE;
+
     // @Clear all sending messages
-    
     if (!ctx->send_queue_.empty()) {
         ctx->send_queue_mtx_.lock();
 
@@ -515,8 +539,6 @@ void async_tcp_client::handle_error(channel_context* ctx)
         this->timer_queue_.clear();
         this->timer_queue_mtx_.unlock();
     }
-
-    interrupter_.reset();
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -606,8 +628,9 @@ void async_tcp_client::check_connect_completion(fd_set* fds_array, channel_conte
                 unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
 
                 auto timestamp = time(NULL);
-                INET_LOG("[%lld]connect server %s:%u succeed.", timestamp, ctx->address_.c_str(), ctx->port_);
-                // TODO: send connect succeed event
+                auto local_endpoint = ctx->impl_.local_endpoint();
+                INET_LOG("[%lld]connect server %s:%u succeed, local endpoint[%s]", timestamp, ctx->address_.c_str(), ctx->port_, local_endpoint.to_string().c_str());
+                TSF_CALL(this->on_connect_resposne_(ctx->index_, true, error));
             }
             else {
                 handle_connect_failed(ctx, error);
@@ -632,7 +655,8 @@ void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
 
         auto timestamp = time(NULL);
         INET_LOG("[%lld]connect server %s:%u failed, error(%d)!", timestamp, ctx->address_.c_str(), ctx->port_, error);
-        // TODO: send connect failed event
+
+        TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
     }  
 }
 
@@ -915,6 +939,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
         }
     }
 
+    ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
     if (nfds <= 0) {
         wait_duration = get_wait_duration(wait_duration);
         if (wait_duration > 0) {
@@ -927,6 +952,9 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
+        }
+        else {
+            nfds = static_cast<int>(channels_.size()) << 1;
         }
     }
 

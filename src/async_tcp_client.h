@@ -142,6 +142,21 @@ namespace purelib {
         class deadline_timer;
 
         // A tcp client support P2P
+        /*
+        Usage:
+        purelib::inet::channel_endpoint endpoints[] = {
+            { "172.31.238.193", "172.31.238.193", 8888 },
+            { "www.baidu.com", "www.baidu.com", 443 },
+            //{ "www.tencent.com", "www.x-studio365.com", 443 },
+        };
+        tcpcli->start_service(endpoints, _ARRAYSIZE(endpoints));
+
+        tcpcli->set_callbacks(decode_pdu_length,
+            [](size_t, bool, int) {},
+            [](size_t, int error, const char* errormsg) {printf("The connection is lost %d, %s", error, errormsg); },
+            [](std::vector<char>&&) {},
+            [](const vdcallback_t& callback) {callback(); });
+        */
         class async_tcp_client
         {
             friend struct p2p_io_ctx;

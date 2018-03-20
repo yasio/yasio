@@ -149,10 +149,6 @@ void channel_context::reset()
     resolve_state_ = resolve_state::IDLE;
     auto_reconnect_ = false;
     index_ = static_cast<size_t>(-1);
-
-    if (this->impl_.is_open()) {
-        this->impl_.close();
-    }
 }
 
 async_tcp_client::async_tcp_client() : stopping_(false),

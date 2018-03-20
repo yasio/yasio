@@ -202,8 +202,12 @@ namespace purelib {
 
             long long  get_wait_duration(long long usec);
 
+            long long  non_blocking_connect(channel_context*);
+
             int        do_select(fd_set* fds_array,timeval& timeout);
-            void       do_connect(fd_set* fds_array, channel_context*);
+
+            void       check_connect_completion(fd_set* fds_array, channel_context*);
+            void       handle_connect_failed(channel_context*, int error);
 
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);
@@ -212,9 +216,8 @@ namespace purelib {
 
             void       resolve_service(void);
 
-            std::chrono::microseconds get_connect_wait_duration(channel_context*);
-            std::chrono::microseconds process_connect_request(channel_context*);
-
+            long long  get_connect_wait_duration(channel_context*);
+            
             bool       do_write(channel_context*);
             bool       do_read(channel_context*);
             void       move_received_pdu(channel_context*); // move received properly pdu to recv queue

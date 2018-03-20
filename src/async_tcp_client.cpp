@@ -152,7 +152,13 @@ void async_tcp_client::stop_service()
         if (this->resolver_thread_.joinable())
             this->resolver_thread_.join();
 
-        close();
+        for (auto ctx : channels_)
+        {
+            if (ctx->impl_.is_open()) {
+                ctx->impl_.shutdown();
+            }
+        }
+        interrupter_.interrupt();
 
         if (this->worker_thread_.joinable())
             this->worker_thread_.join();
@@ -172,14 +178,14 @@ void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
 
 channel_context* async_tcp_client::new_channel(const std::string& address, const std::string& addressv6, u_short port)
 {
-    auto channel = new channel_context();
-    channel->reset();
-    channel->address_ = address;
-    channel->addressv6_ = addressv6;
-    channel->port_ = port;
-    channel->index_ = this->channels_.size();
-    this->channels_.push_back(channel);
-    return channel;
+    auto ctx = new channel_context();
+    ctx->reset();
+    ctx->address_ = address;
+    ctx->addressv6_ = addressv6;
+    ctx->port_ = port;
+    ctx->index_ = this->channels_.size();
+    this->channels_.push_back(ctx);
+    return ctx;
 }
 
 void async_tcp_client::clear_channels()
@@ -187,7 +193,7 @@ void async_tcp_client::clear_channels()
     for (auto iter = channels_.begin(); iter != channels_.end(); ) {
         (*iter)->impl_.close();
         delete *(iter);
-        channels_.erase(iter++);
+        iter = channels_.erase(iter);
     }
 }
 
@@ -256,14 +262,14 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
 
 void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, const char* addressv6, u_short port)
 {
-    // Gets channel
+    // Gets channel context
     if (channel_index >= channels_.size())
         return;
-    auto channel = channels_[channel_index];
+    auto ctx = channels_[channel_index];
 
-    channel->address_ = address;
-    channel->addressv6_ = addressv6;
-    channel->port_ = port;
+    ctx->address_ = address;
+    ctx->addressv6_ = addressv6;
+    ctx->port_ = port;
 }
 
 void async_tcp_client::service()
@@ -278,51 +284,17 @@ void async_tcp_client::service()
 
     for (; !stopping_;)
     {
-        int nfds = static_cast<int>(channels_.size());
-        std::chrono::microseconds wait_duration(MAX_WAIT_DURATION);
-        int pending_connects = 0;
-        for (auto channel : channels_) {
-            switch (channel->state_) {
-            case channel_state::REQUEST_CONNECT:
-                if (channel->resolve_ready_) {
-                    wait_duration = (std::min)(wait_duration, process_connect_request(channel));
-                    --nfds;
-                    ++pending_connects;
-                }
-                else --nfds;
-                break;
-            case channel_state::CONNECTED:
-                if (channel->send_queue_.empty() && channel->offset_ <= 0) --nfds;
-                break;
-            case channel_state::CONNECTING:
-                wait_duration = (std::min)(wait_duration, get_connect_wait_duration(channel));
-                --nfds;
-                ++pending_connects;
-                break;
-            default:--nfds;
-            }
-        }
+        ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
+        int nfds = do_select(fds_array, timeout);
 
-        auto wait_duration_usec = wait_duration.count();
-        if (nfds <= 0 || wait_duration.count() > 0) {
-            auto wait_duration = get_wait_duration(pending_connects == 0 ? MAX_WAIT_DURATION : wait_duration_usec);
-            if (wait_duration > 0) {
-                timeout.tv_sec = static_cast<long>(wait_duration / 1000000);
-                timeout.tv_usec = static_cast<long>(wait_duration % 1000000);
-                ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
-                nfds = do_select(fds_array, timeout);
-            }
-            else {
-                ::memcpy(&fds_array, this->fds_array_, sizeof(this->fds_array_));
-                nfds = 2;
-            }
-        }
+        if (stopping_) break;
+
         if (nfds == -1)
         {
             int ec = xxsocket::get_last_errno();
             INET_LOG("socket.select failed, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
             if (ec == EBADF) {
-                goto _L_error;
+                goto _L_end;
             }
             continue; // try select again.
         }
@@ -341,53 +313,46 @@ void async_tcp_client::service()
 #endif
             --nfds;
         }
-#if 0
-        // we should check whether the connection have exception before any operations.
-        if (FD_ISSET(this->impl_.native_handle(), &(fds_array[except_op])))
-        {
-            int ec = xxsocket::get_last_errno();
-            INET_LOG("socket.select exception triggered, error code: %d, error msg:%s\n", ec, xxsocket::get_error_msg(ec));
-            // goto _L_error; // TODO: handle_error for impl_
-        }
-#endif
-        for (auto channel : channels_) {
-            // do connect
-            if (channel->state_ == channel_state::CONNECTING) {
-                do_connect(fds_array, channel);
-            }
 
-            if (nfds > 0 || channel->offset_ > 0) {
-#if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("perform read operation...");
-#endif
-                if (!do_read(channel)) {
-                    // INET_LOG("do read failed...");
-                    handle_error(channel); // goto _L_error; // TODO: handle_error for impl_
+        if (nfds > 0) {
+            for (auto ctx : channels_) {
+                // do connect
+                if (ctx->state_ == channel_state::CONNECTING) {
+                    check_connect_completion(fds_array, ctx);
                 }
-            }
-
-            // perform write operations
-            if (!channel->send_queue_.empty()) {
-                channel->send_queue_mtx_.lock();
+                else if (ctx->state_ == channel_state::CONNECTED) {
+                    if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
 #if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("perform write operation...");
+                        INET_LOG("perform read operation...");
 #endif
-                if (!do_write(channel))
-                { // TODO: check would block? for client, may be unnecessary.
-                    channel->send_queue_mtx_.unlock();
-                    handle_error(channel); // goto _L_error; // TODO: handle_error for impl_
-                }
+                        if (!do_read(ctx)) {
+                            INET_LOG("do read for %s failed!", ctx->address_.c_str());
+                            handle_error(ctx);
+                        }
+                    }
 
-                channel->send_queue_mtx_.unlock();
+                    // perform write operations
+                    if (!ctx->send_queue_.empty()) {
+                        ctx->send_queue_mtx_.lock();
+#if INET_ENABLE_VERBOSE_LOG
+                        INET_LOG("perform write operation...");
+#endif
+                        if (!do_write(ctx))
+                        { // TODO: check would block? for client, may be unnecessary.
+                            ctx->send_queue_mtx_.unlock();
+                            handle_error(ctx);
+                        }
+
+                        ctx->send_queue_mtx_.unlock();
+                    }
+                }
             }
         }
             
         perform_timeout_timers();
     }
 
-_L_error:
-     unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
-
+_L_end:
 #if defined(_WIN32) && !defined(WINRT)
     timeEndPeriod(1);
 #endif
@@ -430,16 +395,17 @@ void async_tcp_client::async_resolve(channel_context* ctx)
     this->resolver_ops_cv_.notify_one();
 }
 
-std::chrono::microseconds async_tcp_client::get_connect_wait_duration(channel_context* channel)
+long long async_tcp_client::get_connect_wait_duration(channel_context* ctx)
 {
-    if (channel->state_ == channel_state::CONNECTING) {
-        return std::chrono::duration_cast<std::chrono::microseconds>(channel->connect_expire_time_ - std::chrono::steady_clock::now());
+    assert(ctx->state_ == channel_state::CONNECTING);
+    if (ctx->state_ == channel_state::CONNECTING) {
+        return std::chrono::duration_cast<std::chrono::microseconds>(ctx->connect_expire_time_ - std::chrono::steady_clock::now()).count();
     }
 
-    return std::chrono::microseconds(0);
+    return MAX_WAIT_DURATION;
 }
 
-std::chrono::microseconds async_tcp_client::process_connect_request(channel_context* ctx)
+long long async_tcp_client::non_blocking_connect(channel_context* ctx)
 {
     assert(ctx->state_ == channel_state::REQUEST_CONNECT);
     if (ctx->state_ == channel_state::REQUEST_CONNECT)
@@ -449,7 +415,7 @@ std::chrono::microseconds async_tcp_client::process_connect_request(channel_cont
 
         int ret = -1;
         ctx->state_ = channel_state::CONNECTING;
-        ret = ctx->impl_.pconnect_n(ctx->addressv6_.c_str(), ctx->port_);
+        ret = ctx->impl_.pconnect_n(ctx->endpoint_);
 
         if (ret < 0)
         { // connect succeed, reset fds
@@ -457,7 +423,8 @@ std::chrono::microseconds async_tcp_client::process_connect_request(channel_cont
             ctx->error = xxsocket::get_last_errno();
             if (ctx->error != EINPROGRESS && ctx->error != EWOULDBLOCK) {
                 ctx->state_ = channel_state::IDLE;
-                return std::chrono::microseconds(0);
+                INET_LOG("[%lld]connect server %s:%u failed!", timestamp, ctx->address_.c_str(), ctx->port_);
+                return MAX_WAIT_DURATION;
             }
             register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
 
@@ -474,24 +441,26 @@ std::chrono::microseconds async_tcp_client::process_connect_request(channel_cont
         }
         else if (ret == 0) { // connect server succed immidiately.
             ctx->state_ = channel_state::CONNECTED;
+            register_descriptor(ctx->impl_.native_handle(), socket_event_read);
             ctx->connect_expire_time_ = std::chrono::steady_clock::now();
+            INET_LOG("[%lld]connect server %s:%u succeed(immidiately).", timestamp, ctx->address_.c_str(), ctx->port_);
         }
-        else
+        else // MAY NEVER GO HERE
             ctx->connect_expire_time_ = std::chrono::steady_clock::now();
     }
 
-    return std::chrono::microseconds(0);
+    return MAX_WAIT_DURATION;
 }
 
 void async_tcp_client::close(size_t channel_index)
 {
-    // Gets channel
+    // Gets channel context
     if (channel_index >= channels_.size())
         return;
-    auto channel = channels_[channel_index];
+    auto ctx = channels_[channel_index];
 
-    if (channel->impl_.is_open()) {
-        channel->impl_.shutdown();
+    if (ctx->impl_.is_open()) {
+        ctx->impl_.shutdown();
         interrupter_.interrupt();
     }
 }
@@ -501,41 +470,41 @@ void async_tcp_client::async_connect(size_t channel_index)
     // Gets channel
     if (channel_index >= channels_.size())
         return;
-    auto channel = channels_[channel_index];
+    auto ctx = channels_[channel_index];
 
-    channel->state_ = channel_state::REQUEST_CONNECT;
+    ctx->state_ = channel_state::REQUEST_CONNECT;
 
     interrupter_.interrupt();
 }
 
-void async_tcp_client::handle_error(channel_context* channel)
+void async_tcp_client::handle_error(channel_context* ctx)
 {
-    if (channel->impl_.is_open()) {
-        unregister_descriptor(channel->impl_.native_handle(), socket_event_read | socket_event_write);
-        channel->impl_.close();
+    if (ctx->impl_.is_open()) {
+        unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+        ctx->impl_.close();
     }
     else {
         INET_LOG("local close the connection!");
     }
 
-    channel->state_ = channel_state::IDLE;
+    ctx->state_ = channel_state::IDLE;
 
     // @Notify connection lost
     if (this->on_connection_lost_) {
         int ec = error_number_;
-        TSF_CALL(on_connection_lost_(channel->index_, ec, xxsocket::get_error_msg(ec)));
+        TSF_CALL(on_connection_lost_(ctx->index_, ec, xxsocket::get_error_msg(ec)));
     }
 
     // @Clear all sending messages
     
-    if (!channel->send_queue_.empty()) {
-        channel->send_queue_mtx_.lock();
+    if (!ctx->send_queue_.empty()) {
+        ctx->send_queue_mtx_.lock();
 
-        for (auto pdu : channel->send_queue_)
+        for (auto pdu : ctx->send_queue_)
             delete pdu;
-        channel->send_queue_.clear();
+        ctx->send_queue_.clear();
 
-        channel->send_queue_mtx_.unlock();
+        ctx->send_queue_mtx_.unlock();
     }
 
     // @Notify all timers are cancelled.
@@ -594,15 +563,15 @@ void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index
     // Gets channel
     if (channel_index >= channels_.size())
         return;
-    auto channel = channels_[channel_index];
+    auto ctx = channels_[channel_index];
 
-    if (channel->impl_.is_open())
+    if (ctx->impl_.is_open())
     {
         auto pdu = new appl_pdu(std::move(data), callback, std::chrono::seconds(this->send_timeout_));
 
-        channel->send_queue_mtx_.lock();
-        channel->send_queue_.push_back(pdu);
-        channel->send_queue_mtx_.unlock();
+        ctx->send_queue_mtx_.lock();
+        ctx->send_queue_.push_back(pdu);
+        ctx->send_queue_mtx_.unlock();
 
         interrupter_.interrupt();
     }
@@ -623,7 +592,7 @@ void async_tcp_client::move_received_pdu(channel_context* ctx)
     ctx->expected_pdu_length_ = -1;
 }
 
-void async_tcp_client::do_connect(fd_set* fds_array, channel_context* ctx)
+void async_tcp_client::check_connect_completion(fd_set* fds_array, channel_context* ctx)
 {
     if (ctx->state_ == channel_state::CONNECTING)
     {
@@ -631,40 +600,40 @@ void async_tcp_client::do_connect(fd_set* fds_array, channel_context* ctx)
         if (FD_ISSET(ctx->impl_.native_handle(), &fds_array[write_op])
             || FD_ISSET(ctx->impl_.native_handle(), &fds_array[read_op])) {
             socklen_t len = sizeof(error);
-            if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0)
-                error = (-1);  /* Solaris pending error */
-        }
+            if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >= 0 && error == 0) {
 
-        if (error == 0) {
-            ctx->state_ = channel_state::CONNECTED;
-            unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
-
-            auto timestamp = time(NULL);
-            INET_LOG("[%lld]connect server %s:%u succeed.", timestamp, ctx->address_.c_str(), ctx->port_);
-            
-            // TODO: send connect succeed event
-        }
-        else {
-            // Check whether expire
-            auto wait_duration = get_connect_wait_duration(ctx);
-            if (wait_duration.count() <= 0) { // connect failed
-                unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-                ctx->impl_.close(); /* just in case */
-                ctx->state_ = channel_state::IDLE;
-                xxsocket::set_last_errno(error);
+                ctx->state_ = channel_state::CONNECTED;
+                unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
 
                 auto timestamp = time(NULL);
-                INET_LOG("[%lld]connect server %s:%u failed, error(%d)!", timestamp, ctx->address_.c_str(), ctx->port_, error);
-
-                // TODO: send connect failed event
+                INET_LOG("[%lld]connect server %s:%u succeed.", timestamp, ctx->address_.c_str(), ctx->port_);
+                // TODO: send connect succeed event
             }
-#if INET_ENABLE_VERBOSE_LOG
             else {
-                INET_LOG("continue waiting connection: [local] --> [%s:%u] to establish...", ctx->address_.c_str(), ctx->port_);
+                handle_connect_failed(ctx, error);
             }
-#endif
+        }
+        else { // Check whether connect is timeout.
+            auto wait_duration = get_connect_wait_duration(ctx);
+            if (wait_duration <= 0) { // connect failed
+                handle_connect_failed(ctx, error);
+            } // else INET_LOG("continue waiting connection: [local] --> [%s:%u] to establish...", ctx->address_.c_str(), ctx->port_);
         }
     }
+}
+
+void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
+{
+    if (ctx->impl_.is_open()) {
+        unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+        ctx->impl_.close(); /* just in case */
+        ctx->state_ = channel_state::IDLE;
+        xxsocket::set_last_errno(error);
+
+        auto timestamp = time(NULL);
+        INET_LOG("[%lld]connect server %s:%u failed, error(%d)!", timestamp, ctx->address_.c_str(), ctx->port_, error);
+        // TODO: send connect failed event
+    }  
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)
@@ -880,7 +849,8 @@ void async_tcp_client::cancel_timer(deadline_timer* timer)
 
     auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
     if (iter != timer_queue_.end()) {
-        timer->callback_(true);
+        auto callback = timer->callback_;
+        callback(true);
         timer_queue_.erase(iter);
     }
 }
@@ -899,9 +869,8 @@ void async_tcp_client::perform_timeout_timers()
         if (earliest->expired())
         {
             timer_queue_.pop_back();
-            auto tmpcallback = earliest->callback_;
-            TSF_CALL(tmpcallback(false));
-//            TSF_CALL(earliest->callback_(false));
+            auto callback = earliest->callback_;
+            callback(false);
             if (earliest->loop_) {
                 earliest->expires_from_now();
                 loop_timers.push_back(earliest);
@@ -922,17 +891,44 @@ void async_tcp_client::perform_timeout_timers()
 
 int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
 {
-    /* 
-    @Optimize, set default nfds is 2, make sure do_read & do_write event chould be perform when no need to call socket.select
+    /*
+    @Optimize, set default nfds is 2 * n(channel count), make sure do_read & do_write event chould be perform when no need to call socket.select
     However, the connection exception will detected through do_read or do_write, but it's ok.
     */
+    int nfds = 0;
+    long long wait_duration = MAX_WAIT_DURATION;
+    for (auto ctx : channels_) {
+        switch (ctx->state_) {
+        case channel_state::CONNECTED:
+            if (ctx->offset_ > 0) ++nfds; // read event; enumlate edge-triggered mode
+            if (!ctx->send_queue_.empty()) ++nfds; // write event
+            break;
+        case channel_state::REQUEST_CONNECT:
+            if (ctx->resolve_ready_) {
+                wait_duration = (std::min)(wait_duration, non_blocking_connect(ctx));
+            }
+            break;
+        case channel_state::CONNECTING:
+            wait_duration = (std::min)(wait_duration, get_connect_wait_duration(ctx));
+            break;
+        default:;
+        }
+    }
+
+    if (nfds <= 0) {
+        wait_duration = get_wait_duration(wait_duration);
+        if (wait_duration > 0) {
+            tv.tv_sec = static_cast<long>(wait_duration / 1000000);
+            tv.tv_usec = static_cast<long>(wait_duration % 1000000);
 #if INET_ENABLE_VERBOSE_LOG
-    INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, tv.tv_sec * 1000 + tv.tv_usec / 1000);
+            INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
-    int nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &tv);
+            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &tv);
 #if INET_ENABLE_VERBOSE_LOG
-    INET_LOG("socket.select waked up, retval=%d", nfds);
+            INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
+        }
+    }
 
     return nfds;
 }

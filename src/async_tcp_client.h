@@ -84,6 +84,7 @@ namespace purelib {
             ERR_PDU_TOO_LONG, // pdu too long
             ERR_DPL_ILLEGAL_PDU, // decode pdu error.
             ERR_RESOLVE_HOST_FAILED, // resolve host failed.
+            ERR_INVALID_PORT, // invalid port
         };
 
         enum {
@@ -234,7 +235,7 @@ namespace purelib {
 
             void       handle_error(channel_context*); // TODO: add error_number parameter
 
-            void       async_resolve(channel_context*);
+            bool       async_resolve(channel_context*);
 
             // new/delete client socket connection channel
             // please call this at initialization, don't new channel at runtime dynmaically:

@@ -33,6 +33,8 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
+#define ENABLE_AUTO_RECONNECT 0
+
 #define _USING_IN_COCOS2DX 0
 
 #define INET_ENABLE_VERBOSE_LOG 0
@@ -434,11 +436,17 @@ void  async_tcp_client::resolve_service(void)
     }
 }
 
-void async_tcp_client::async_resolve(channel_context* ctx)
+bool async_tcp_client::async_resolve(channel_context* ctx)
 {
+    if (ctx->port_ == 0) {
+        ctx->resolve_state_ = resolve_state::IDLE;
+        return false;
+    }
+
     std::unique_lock<std::mutex> lk(this->resolver_ops_mtx_);
     this->resolver_ops_.push_back(ctx);
     this->resolver_ops_cv_.notify_one();
+    return true;
 }
 
 long long async_tcp_client::get_connect_wait_duration(channel_context* ctx)
@@ -524,11 +532,6 @@ void async_tcp_client::async_connect(size_t channel_index)
         return;
     auto ctx = channels_[channel_index];
 
-    if (ctx->port_ == 0) {
-        INET_LOG("async_connect --> invalid port(must be > 0), please call set_endpoint to set a valid endpoint!");
-        return;
-    }
-
     if (ctx->state_ == channel_state::REQUEST_CONNECT || 
         ctx->state_ == channel_state::CONNECTING) 
     { // in-progress, do nothing
@@ -537,7 +540,10 @@ void async_tcp_client::async_connect(size_t channel_index)
     } 
 
     if (ctx->resolve_state_ != resolve_state::READY) {
-        async_resolve(ctx);
+        if (!async_resolve(ctx)) {
+            handle_connect_failed(ctx, ERR_INVALID_PORT);
+            return;
+        }
     }
     ctx->state_ = channel_state::REQUEST_CONNECT;
     if (ctx->impl_.is_open()) {
@@ -579,10 +585,12 @@ void async_tcp_client::handle_error(channel_context* ctx)
         this->timer_queue_mtx_.unlock();
     }
 
+#if ENABLE_AUTO_RECONNECT
     if (!this->stopping_ && ctx->auto_reconnect_) {
         INET_LOG("reconnect endpoint automatically...");
         async_connect(ctx->index_);
     }
+#endif
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -703,10 +711,12 @@ void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
 
     INET_LOG("connect server %s:%u failed, error(%d)!", ctx->address_.c_str(), ctx->port_, error); 
 
-    if (!this->stopping_ && ctx->auto_reconnect_ && error != ERR_RESOLVE_HOST_FAILED) {
+#if ENABLE_AUTO_RECONNECT
+    if (!this->stopping_ && ctx->auto_reconnect_ && error != ERR_RESOLVE_HOST_FAILED && ctx->port_ > 0) {
         INET_LOG("reconnect endpoint automatically...");
         async_connect(ctx->index_);
     }
+#endif
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)
@@ -973,7 +983,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
             }
             else if(ctx->resolve_state_ == resolve_state::FAILED) {
                 handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
-            }
+            } // DIRTY,IDLE do nothing
             break;
         case channel_state::CONNECTING:
             wait_duration = (std::min)(wait_duration, get_connect_wait_duration(ctx));

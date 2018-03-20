@@ -40,15 +40,12 @@ typedef std::chrono::time_point<std::chrono::steady_clock> compatible_timepoint_
 namespace purelib
 {
 namespace inet {
+class async_tcp_client;
 class deadline_timer {
 public:
     ~deadline_timer();
-    deadline_timer()
+    deadline_timer(async_tcp_client& service) : service_(service)
     {
-    }
-    deadline_timer(const std::chrono::microseconds& duration, bool loop = false)
-    {
-        expires_from_now(duration, loop);
     }
 
     void expires_from_now(const std::chrono::microseconds& duration, bool loop = false)
@@ -79,6 +76,7 @@ public:
     }
 
     bool loop_;
+    async_tcp_client& service_;
     std::chrono::microseconds duration_;
     compatible_timepoint_t expire_time_;
     std::function<void(bool cancelled)> callback_;

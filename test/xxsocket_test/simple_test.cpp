@@ -22,7 +22,7 @@ int main(int, char**)
         [](std::vector<char>&&) {},
         [](const vdcallback_t& callback) {callback(); });
 
-    deadline_timer t;
+    deadline_timer t(*tcpcli);
     t.expires_from_now(std::chrono::microseconds(std::chrono::seconds(20)), true);
 
     t.async_wait([](bool) {

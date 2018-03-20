@@ -40,12 +40,12 @@ deadline_timer::~deadline_timer()
 void deadline_timer::async_wait(const std::function<void(bool cancelled)>& callback)
 {
     this->callback_ = callback;
-    tcpcli->schedule_timer(this);
+    this->service_.schedule_timer(this);
 }
 
 void deadline_timer::cancel()
 {
-    tcpcli->cancel_timer(this);
+    this->service_.cancel_timer(this);
 }
 
 }

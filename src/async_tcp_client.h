@@ -130,9 +130,7 @@ namespace purelib {
 
             ip::endpoint               endpoint_;
             resolve_state              resolve_state_;
-
-            bool                       auto_reconnect_;
-
+            
             size_t                     index_;
 
             compatible_timepoint_t     connect_expire_time_;

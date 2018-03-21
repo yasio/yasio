@@ -400,6 +400,8 @@ void async_tcp_client::service()
 _L_end:
 #if defined(_WIN32) && !defined(WINRT)
     timeEndPeriod(1);
+#else
+    (void)0; // ONLY for xcode compiler happy.
 #endif
 }
 

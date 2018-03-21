@@ -157,7 +157,6 @@ namespace purelib {
         */
         class async_tcp_client
         {
-            friend struct p2p_io_ctx;
         public:
 
             // End user pdu decode length func

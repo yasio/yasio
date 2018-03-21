@@ -106,7 +106,6 @@ namespace purelib {
             std::string                address_;
             std::string                addressv6_;
             u_short                    port_;
-            bool                       auto_reconnect_ = false;
         };
 
         struct channel_context

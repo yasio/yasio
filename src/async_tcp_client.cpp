@@ -355,11 +355,7 @@ void async_tcp_client::service()
         }
 
         for (auto ctx : channels_) {
-            // do connect
-            if (ctx->state_ == channel_state::CONNECTING) {
-                do_connect_completion(fds_array, ctx);
-            }
-            else if (ctx->state_ == channel_state::CONNECTED) {
+            if (ctx->state_ == channel_state::CONNECTED) {
                 if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
 #if INET_ENABLE_VERBOSE_LOG
                     INET_LOG("perform read operation...");
@@ -384,6 +380,9 @@ void async_tcp_client::service()
 
                     ctx->send_queue_mtx_.unlock();
                 }
+            }
+            else if (ctx->state_ == channel_state::CONNECTING)  {
+                do_connect_completion(fds_array, ctx);
             }
         }
             

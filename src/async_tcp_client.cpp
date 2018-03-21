@@ -168,6 +168,7 @@ async_tcp_client::async_tcp_client() : stopping_(false),
     FD_ZERO(&fds_array_[read_op]);
 
     maxfdp_ = 0;
+    nfds_ = 0;
 }
 
 async_tcp_client::~async_tcp_client()
@@ -190,6 +191,7 @@ void async_tcp_client::stop_service()
 
         for (auto ctx : channels_)
         {
+            cancel_connect_timeout_timer(ctx);
             if (ctx->impl_.is_open()) {
                 ctx->impl_.shutdown();
             }
@@ -380,9 +382,15 @@ void async_tcp_client::service()
 
                     ctx->send_queue_mtx_.unlock();
                 }
+
+                if (!ctx->send_queue_.empty()) ++this->nfds_;
+                if (ctx->offset_ > 0)++this->nfds_;
             }
-            else if (ctx->state_ == channel_state::CONNECTING)  {
-                do_connect_completion(fds_array, ctx);
+            else if (ctx->state_ == channel_state::REQUEST_CONNECT) {
+                do_nonblocking_connect(ctx);
+            }
+            else if (ctx->state_ == channel_state::CONNECTING) {
+                do_nonblocking_connect_completion(fds_array, ctx);
             }
         }
             
@@ -446,58 +454,73 @@ bool async_tcp_client::async_resolve(channel_context* ctx)
     return true;
 }
 
-long long async_tcp_client::get_connect_wait_duration(channel_context* ctx)
-{
-    assert(ctx->state_ == channel_state::CONNECTING);
-    if (ctx->state_ == channel_state::CONNECTING) {
-        return std::chrono::duration_cast<std::chrono::microseconds>(ctx->connect_expire_time_ - std::chrono::steady_clock::now()).count();
-    }
-
-    return MAX_WAIT_DURATION;
-}
-
-long long async_tcp_client::non_blocking_connect(channel_context* ctx)
+void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
 {
     assert(ctx->state_ == channel_state::REQUEST_CONNECT);
+
     if (ctx->state_ == channel_state::REQUEST_CONNECT)
     {
-        if (ctx->impl_.is_open()) { // cleanup descriptor if possible
-            cleanup_descriptor(ctx);
-        }
+        if (ctx->resolve_state_ == resolve_state::READY) {
 
-        INET_LOG("connecting server %s:%u...", ctx->address_.c_str(), ctx->port_);
-
-        ctx->state_ = channel_state::CONNECTING;
-        int ret = ctx->impl_.pconnect_n(ctx->endpoint_);
-
-        if (ret < 0)
-        { // setup no blocking connect
-            int error = xxsocket::get_last_errno();
-            if (error != EINPROGRESS && error != EWOULDBLOCK) {
-                this->handle_connect_failed(ctx, error);
-                return MAX_WAIT_DURATION;
+            if (ctx->impl_.is_open()) { // cleanup descriptor if possible
+                cleanup_descriptor(ctx);
             }
-            else {
-                this->set_errorno(ctx, error);
 
-                register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
+            INET_LOG("connecting server %s:%u...", ctx->address_.c_str(), ctx->port_);
 
-                ctx->expected_pdu_length_ = -1;
-                ctx->offset_ = 0;
-                ctx->receiving_pdu_.clear();
-                ctx->connect_expire_time_ = std::chrono::steady_clock::now() + std::chrono::microseconds(this->connect_timeout_);
-                return get_connect_wait_duration(ctx);
+            ctx->state_ = channel_state::CONNECTING;
+            int ret = ctx->impl_.pconnect_n(ctx->endpoint_);
+
+            if (ret < 0)
+            { // setup no blocking connect
+                int error = xxsocket::get_last_errno();
+                if (error != EINPROGRESS && error != EWOULDBLOCK) {
+                    this->handle_connect_failed(ctx, error);
+                    return;
+                }
+                else {
+                    this->set_errorno(ctx, error);
+
+                    register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+                    ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
+
+                    ctx->expected_pdu_length_ = -1;
+                    ctx->offset_ = 0;
+                    ctx->receiving_pdu_.clear();
+
+                    start_connect_timeout_timer(ctx);
+                }
             }
+            else if (ret == 0) { // connect server succed immidiately.
+                handle_connect_succeed(ctx, error_number::ERR_OK);
+            }
+            else // MAY NEVER GO HERE
+                this->handle_connect_failed(ctx, ctx->error_);
         }
-        else if (ret == 0) { // connect server succed immidiately.
-            handle_connect_succeed(ctx, error_number::ERR_OK);
-        }
-        else // MAY NEVER GO HERE
-            this->handle_connect_failed(ctx, ctx->error_);
+        else if (ctx->resolve_state_ == resolve_state::FAILED) {
+            handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED); 
+        } // DIRTY,IDLE do nothing
     }
+}
 
-    return MAX_WAIT_DURATION;
+void async_tcp_client::start_connect_timeout_timer(channel_context* ctx)
+{
+    ctx->connect_timeout_timer_ = new deadline_timer(*this);
+    ctx->connect_timeout_timer_->expires_from_now(std::chrono::microseconds(this->connect_timeout_));
+    ctx->connect_timeout_timer_->async_wait([this, ctx](bool cancelled) {
+        if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
+            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+        }
+    });
+}
+
+void async_tcp_client::cancel_connect_timeout_timer(channel_context* ctx)
+{
+    if (ctx->connect_timeout_timer_ != nullptr) {
+        ctx->connect_timeout_timer_->cancel();
+        delete ctx->connect_timeout_timer_;
+        ctx->connect_timeout_timer_ = nullptr;
+    }
 }
 
 void async_tcp_client::close(size_t channel_index)
@@ -656,7 +679,7 @@ void async_tcp_client::move_received_pdu(channel_context* ctx)
     ctx->expected_pdu_length_ = -1;
 }
 
-void async_tcp_client::do_connect_completion(fd_set* fds_array, channel_context* ctx)
+void async_tcp_client::do_nonblocking_connect_completion(fd_set* fds_array, channel_context* ctx)
 {
     if (ctx->state_ == channel_state::CONNECTING)
     {
@@ -666,16 +689,21 @@ void async_tcp_client::do_connect_completion(fd_set* fds_array, channel_context*
             socklen_t len = sizeof(error);
             if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >= 0 && error == 0) {
                 handle_connect_succeed(ctx, error);
+                cancel_connect_timeout_timer(ctx);
             }
             else {
                 handle_connect_failed(ctx, ERR_CONNECT_FAILED);
+                cancel_connect_timeout_timer(ctx);
             }
         }
         else { // Check whether connect is timeout.
+#if 0 // Will check by deadline_timer automatically
             auto wait_duration = get_connect_wait_duration(ctx);
             if (wait_duration <= 0) { // connect failed
                 handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+                cancel_connect_timeout_timer(ctx);
             } // else INET_LOG("continue waiting connection: [local] --> [%s:%u] to establish...", ctx->address_.c_str(), ctx->port_);
+#endif
         }
     }
 }
@@ -949,35 +977,14 @@ void async_tcp_client::perform_timeout_timers()
 int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
 {
     /*
-    @Optimize, set default nfds is 2 * n(channel count), make sure do_read & do_write event chould be perform when no need to call socket.select
+    @Optimize, swap nfds, make sure do_read & do_write event chould be perform when no need to call socket.select
     However, the connection exception will detected through do_read or do_write, but it's ok.
     */
     int nfds = 0;
-    long long wait_duration = MAX_WAIT_DURATION;
-    for (auto ctx : channels_) {
-        switch (ctx->state_) {
-        case channel_state::CONNECTED:
-            if (ctx->offset_ > 0) ++nfds; // read event; enumlate edge-triggered mode
-            if (!ctx->send_queue_.empty()) ++nfds; // write event
-            break;
-        case channel_state::REQUEST_CONNECT:
-            if (ctx->resolve_state_ == resolve_state::READY) {
-                wait_duration = (std::min)(wait_duration, non_blocking_connect(ctx));
-            }
-            else if(ctx->resolve_state_ == resolve_state::FAILED) {
-                handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
-            } // DIRTY,IDLE do nothing
-            break;
-        case channel_state::CONNECTING:
-            wait_duration = (std::min)(wait_duration, get_connect_wait_duration(ctx));
-            break;
-        default:;
-        }
-    }
-
+    std::swap(nfds, this->nfds_);
     ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
     if (nfds <= 0) {
-        wait_duration = get_wait_duration(wait_duration);
+        auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
         if (wait_duration > 0) {
             tv.tv_sec = static_cast<long>(wait_duration / 1000000);
             tv.tv_usec = static_cast<long>(wait_duration % 1000000);

@@ -132,7 +132,7 @@ namespace purelib {
             
             size_t                     index_;
 
-            compatible_timepoint_t     connect_expire_time_;
+            deadline_timer*            connect_timeout_timer_ = nullptr;
             void                       reset();
         };
 
@@ -222,11 +222,13 @@ namespace purelib {
 
             long long  get_wait_duration(long long usec);
 
-            long long  non_blocking_connect(channel_context*);
-
             int        do_select(fd_set* fds_array,timeval& timeout);
 
-            void       do_connect_completion(fd_set* fds_array, channel_context*);
+            void       do_nonblocking_connect(channel_context*);
+            void       do_nonblocking_connect_completion(fd_set* fds_array, channel_context*);
+
+            void       start_connect_timeout_timer(channel_context*);
+            void       cancel_connect_timeout_timer(channel_context*);
 
             void       handle_connect_succeed(channel_context*, int error);
             void       handle_connect_failed(channel_context*, int error);
@@ -238,8 +240,6 @@ namespace purelib {
 
             void       resolve_service(void);
 
-            long long  get_connect_wait_duration(channel_context*);
-            
             bool       do_write(channel_context*);
             bool       do_read(channel_context*);
             void       move_received_pdu(channel_context*); // move received properly pdu to recv queue
@@ -290,6 +290,9 @@ namespace purelib {
             };
             fd_set fds_array_[3];
 
+            // Optimize record incomplete works
+            int nfds_;
+
             // callbacks
             decode_pdu_length_func  decode_pdu_length_;
             connect_response_callback_t  on_connect_resposne_;
@@ -302,7 +305,6 @@ namespace purelib {
             std::list<channel_context*> resolver_ops_;
             std::mutex resolver_ops_mtx_;
             std::condition_variable resolver_ops_cv_;
-
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

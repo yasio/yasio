@@ -33,8 +33,6 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
-#define ENABLE_AUTO_RECONNECT 0
-
 #define _USING_IN_COCOS2DX 0
 
 #define INET_ENABLE_VERBOSE_LOG 0
@@ -580,13 +578,6 @@ void async_tcp_client::handle_error(channel_context* ctx)
         this->timer_queue_.clear();
         this->timer_queue_mtx_.unlock();
     }
-
-#if ENABLE_AUTO_RECONNECT
-    if (!this->stopping_ && ctx->auto_reconnect_) {
-        INET_LOG("reconnect endpoint automatically...");
-        async_connect(ctx->index_);
-    }
-#endif
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -706,13 +697,6 @@ void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
     TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
 
     INET_LOG("connect server %s:%u failed, error(%d)!", ctx->address_.c_str(), ctx->port_, error); 
-
-#if ENABLE_AUTO_RECONNECT
-    if (!this->stopping_ && ctx->auto_reconnect_ && error != ERR_RESOLVE_HOST_FAILED && ctx->port_ > 0) {
-        INET_LOG("reconnect endpoint automatically...");
-        async_connect(ctx->index_);
-    }
-#endif
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)

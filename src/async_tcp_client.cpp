@@ -88,10 +88,17 @@ namespace {
 
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
-#define INET_LOG(format,...) do {
-   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__);
-   cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); });
+#if COCOS2D_VERSION >= 0x00030000
+#define INET_LOG(format,...) do { \
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
+   cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); }); \
 } while(false)
+#else
+#define INET_LOG(format,...) do { \
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
+   cocos2d::CCDirector::sharedDirector()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::CCLog("%s", msg.c_str()); }); \
+} while(false)
+#endif
 #else
 #if defined(_WIN32)
 #define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__).c_str())

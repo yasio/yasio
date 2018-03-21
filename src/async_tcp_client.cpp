@@ -152,7 +152,6 @@ void channel_context::reset()
     expected_pdu_length_ = -1;
     error_ = 0;
     resolve_state_ = resolve_state::IDLE;
-    auto_reconnect_ = false;
     index_ = static_cast<size_t>(-1);
 }
 
@@ -220,7 +219,6 @@ channel_context* async_tcp_client::new_channel(const channel_endpoint& ep)
     ctx->address_ = ep.address_;
     ctx->addressv6_ = ep.addressv6_;
     ctx->port_ = ep.port_;
-    ctx->auto_reconnect_ = ep.auto_reconnect_;
     ctx->index_ = this->channels_.size();
     this->channels_.push_back(ctx);
     return ctx;
@@ -288,7 +286,6 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         {
             auto& channel_ep = channel_eps[i];
             auto ctx = new_channel(channel_ep);
-            ctx->auto_reconnect_ = channel_ep.auto_reconnect_;
             if (channel_ep.port_ > 0) {
                 async_resolve(ctx);
             }

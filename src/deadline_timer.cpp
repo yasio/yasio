@@ -45,8 +45,10 @@ void deadline_timer::async_wait(const std::function<void(bool cancelled)>& callb
 
 void deadline_timer::cancel()
 {
-    this->service_.cancel_timer(this);
-    this->expire();
+    if (!expired()) {
+        this->service_.cancel_timer(this);
+        this->expire();
+    }
 }
 
 }

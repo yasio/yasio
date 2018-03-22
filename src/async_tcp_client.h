@@ -90,6 +90,7 @@ namespace purelib {
             ERR_PDU_TOO_LONG, // pdu too long
             ERR_DPL_ILLEGAL_PDU, // decode pdu error.
             ERR_RESOLVE_HOST_FAILED, // resolve host failed.
+            ERR_RESOLVE_HOST_TIMEOUT, // resolve host ip timeout.
             ERR_INVALID_PORT, // invalid port
         };
 
@@ -226,6 +227,9 @@ namespace purelib {
             void       cancel_timer(deadline_timer*);
 
             void       interrupt();
+
+            // Add a event, don't call me, It's only for internal use
+            void       increase_ready_events();
         private:
             void       perform_timeout_timers(); // ALL timer expired
 
@@ -236,18 +240,14 @@ namespace purelib {
             void       do_nonblocking_connect(channel_context*);
             void       do_nonblocking_connect_completion(fd_set* fds_array, channel_context*);
 
-            void       start_connect_timeout_timer(channel_context*);
-            void       cancel_connect_timeout_timer(channel_context*);
-
             void       handle_connect_succeed(channel_context*, int error);
             void       handle_connect_failed(channel_context*, int error);
 
             void       register_descriptor(const socket_native_type fd, int flags);
             void       unregister_descriptor(const socket_native_type fd, int flags);
 
+            // The major async event-loop
             void       service(void);
-
-            void       resolve_service(void);
 
             bool       do_write(channel_context*);
             bool       do_read(channel_context*);
@@ -267,6 +267,8 @@ namespace purelib {
 
             // ensure event fd unregistered & closed.
             bool       cleanup_descriptor(channel_context* ctx);
+
+            int        swap_ready_events();
 
         private:
             bool                    stopping_;

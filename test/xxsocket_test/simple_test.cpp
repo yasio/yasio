@@ -13,7 +13,7 @@ int main(int, char**)
     std::vector<ip::endpoint> ipList;
     xxsocket::resolve_v6(ipList, "www.kernel.org");
     purelib::inet::channel_endpoint endpoints[] = {
-        // { "172.31.238.193", "172.31.238.193", 8888 },
+        { "172.31.238.193", "172.31.238.193", 8888 },
         { "www.kernel.org", "www.kernel.org", 443 },
         // { "www.baidu.com", "www.baidu.com", 443 },
         //{ "www.tencent.com", "www.x-studio365.com", 443 },
@@ -34,7 +34,8 @@ int main(int, char**)
     });
 
     Sleep(1000);
-    tcpcli->async_connect();
+    tcpcli->async_connect(0);
+    // tcpcli->async_connect(1);
 
     Sleep(5000);
     /*

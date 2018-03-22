@@ -147,7 +147,13 @@ namespace {
             INET_LOG("resolve failed, status:%d", status);
         }
 
-        ctx->resolve_state_ = ctx->endpoint_.port() > 0 ? resolve_state::READY : resolve_state::FAILED;
+        ctx->deadline_timer_.cancel();
+        bool succeed = ctx->endpoint_.port() > 0;
+        ctx->resolve_state_ = succeed ? resolve_state::READY : resolve_state::FAILED;
+        if (succeed && ctx->state_ == channel_state::REQUEST_CONNECT)
+        { // add event to event-loop, there are work TODO
+            ctx->deadline_timer_.service_.increase_ready_events();
+        }
     }
 }
 
@@ -201,6 +207,7 @@ async_tcp_client::async_tcp_client() : stopping_(false),
 
     maxfdp_ = 0;
     nfds_ = 0;
+    ares_ = nullptr;
 }
 
 async_tcp_client::~async_tcp_client()
@@ -215,7 +222,7 @@ void async_tcp_client::stop_service()
 
         for (auto ctx : channels_)
         {
-            cancel_connect_timeout_timer(ctx);
+            ctx->deadline_timer_.cancel();
             if (ctx->impl_.is_open()) {
                 ctx->impl_.shutdown();
             }
@@ -323,8 +330,8 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
 
         if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)
         {
-            // set dns servers
-            ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
+            // set dns servers, optional, comment follow code, ares also work well.
+            // ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
         }
         else
             INET_LOG("Initialize ares failed: %d!", ret);
@@ -361,7 +368,7 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
 }
 
 void async_tcp_client::service()
-{
+{ // The async event-loop
 #if defined(_WIN32) && !defined(WINRT)
     timeBeginPeriod(1);
 #endif
@@ -432,8 +439,8 @@ void async_tcp_client::service()
                     ctx->send_queue_mtx_.unlock();
                 }
 
-                if (!ctx->send_queue_.empty()) ++this->nfds_;
-                if (ctx->offset_ > 0)++this->nfds_;
+                if (!ctx->send_queue_.empty()) this->increase_ready_events();
+                if (ctx->offset_ > 0) this->increase_ready_events();
             }
             else if (ctx->state_ == channel_state::REQUEST_CONNECT) {
                 do_nonblocking_connect(ctx);
@@ -496,7 +503,12 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
                     ctx->offset_ = 0;
                     ctx->receiving_pdu_.clear();
 
-                    start_connect_timeout_timer(ctx);
+                    ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(this->connect_timeout_));
+                    ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+                        if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
+                            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+                        }
+                    });
                 }
             }
             else if (ret == 0) { // connect server succed immidiately.
@@ -507,7 +519,7 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
         }
         else if (ctx->resolve_state_ == resolve_state::FAILED) {
             handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED); 
-        } // DIRTY,IDLE do nothing
+        } // DIRTY,Try resolve address async, TODO: check whether plan ip address
         else if(ctx->resolve_state_ == resolve_state::DIRTY) {
             ctx->resolve_state_ = resolve_state::INPRROGRESS;
             int flags = xxsocket::getipsv();
@@ -519,75 +531,16 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
             else if (flags & ipsv_ipv6) {
                 hint.ai_family = AF_INET6;
             }
-            /*else {
-                hint.ai_family = AF_UNSPEC;
-            }*/
-            //hint.ai_flags = 0;
-            //const char* service = nullptr;
-            //char buffer[sizeof "65535"] = { '\0' };
-            //if (ctx->port_ > 0) {
-            //    sprintf(buffer, "%u", ctx->port_); // It's enough for unsigned short, so use sprintf ok.
-            //    service = buffer;
-            //}
             ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
             ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
-#if 0
-            /* Make a request */
-            // dns_queue(dns_, NULL, ctx->address_.c_str(), DNS_A_RECORD, dns_callback);
-            // register_descriptor(dns_get_fd(dns_), socket_event_read);
-            // GetAddrInfoExA()
-            ADDRINFOEX   Hints;
-            ZeroMemory(&Hints, sizeof(Hints));
-            Hints.ai_family = AF_UNSPEC;
-
-            wchar_t buffer[sizeof "65535"] = { '\0' };
-            const wchar_t* service = nullptr;
-            if (ctx->port_ > 0) {
-                swprintf(buffer, sizeof "65535",  L"%u", ctx->port_); // It's enough for unsigned short, so use sprintf ok.
-                service = buffer;
-            }
-
-            ctx->QueryResults = nullptr;
-            ctx->QueryCancelHandle = nullptr;
-            ZeroMemory(&ctx->QueryOverlapped, sizeof(ctx->QueryOverlapped));
-            ctx->endpoint_.zeroset();
-            auto Error = GetAddrInfoExW(transcode$IL(ctx->address_).c_str(),
-                service,
-                NS_DNS,
-                NULL,
-                &Hints,
-                &ctx->QueryResults,
-                NULL,
-                &ctx->QueryOverlapped,
-                QueryCompleteCallback,
-                &ctx->QueryCancelHandle);
-
-            if (Error != WSA_IO_PENDING)
-            {
-                QueryCompleteCallback(Error, 0, &ctx->QueryOverlapped);
-            }
-
-            // start resolve timer
-            // start_connect_timeout_timer(ctx);
-#endif
+            ctx->deadline_timer_.expires_from_now(std::chrono::seconds(5));
+            ctx->deadline_timer_.async_wait([=](bool cancelled) {
+                if (!cancelled) {
+                    ::ares_cancel(this->ares_); // It's seems not trigger socket close, why?
+                    handle_connect_failed(ctx, ERR_RESOLVE_HOST_TIMEOUT);
+                }
+            });
         }
-    }
-}
-
-void async_tcp_client::start_connect_timeout_timer(channel_context* ctx)
-{
-    ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(this->connect_timeout_));
-    ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-        if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
-            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
-        }
-    });
-}
-
-void async_tcp_client::cancel_connect_timeout_timer(channel_context* ctx)
-{
-    if (!ctx->deadline_timer_.expired()) {
-        ctx->deadline_timer_.cancel();
     }
 }
 
@@ -752,22 +705,14 @@ void async_tcp_client::do_nonblocking_connect_completion(fd_set* fds_array, chan
             socklen_t len = sizeof(error);
             if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >= 0 && error == 0) {
                 handle_connect_succeed(ctx, error);
-                cancel_connect_timeout_timer(ctx);
+                ctx->deadline_timer_.cancel();
             }
             else {
                 handle_connect_failed(ctx, ERR_CONNECT_FAILED);
-                cancel_connect_timeout_timer(ctx);
+                ctx->deadline_timer_.cancel();
             }
         }
-        else { // Check whether connect is timeout.
-#if 0 // Will check by deadline_timer automatically
-            auto wait_duration = get_connect_wait_duration(ctx);
-            if (wait_duration <= 0) { // connect failed
-                handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
-                cancel_connect_timeout_timer(ctx);
-            } // else INET_LOG("continue waiting connection: [local] --> [%s:%u] to establish...", ctx->address_.c_str(), ctx->port_);
-#endif
-        }
+        // else  ; // Check whether connect is timeout.
     }
 }
 
@@ -1043,8 +988,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
     @Optimize, swap nfds, make sure do_read & do_write event chould be perform when no need to call socket.select
     However, the connection exception will detected through do_read or do_write, but it's ok.
     */
-    int nfds = 0;
-    std::swap(nfds, this->nfds_);
+    int nfds = this->swap_ready_events();
     ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
     if (nfds <= 0) {
         auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
@@ -1093,6 +1037,18 @@ bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
         return true;
     }
     return false;
+}
+
+int async_tcp_client::swap_ready_events()
+{
+    int nfds = this->nfds_;
+    this->nfds_ = 0;
+    return nfds;
+}
+
+void async_tcp_client::increase_ready_events()
+{
+    ++this->nfds_;
 }
 
 void  async_tcp_client::interrupt()

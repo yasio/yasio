@@ -321,24 +321,10 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         };
         options.sock_state_cb_data = this;
 
-        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)  // ares 对channel 进行初始化  
+        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)
         {
             // set dns servers
             ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
-            /*s_ares_socket_functions.asocket = [](int af, int type, int protocol, void *) {return ::socket(af, type, protocol); };
-            s_ares_socket_functions.aconnect = [](ares_socket_t s, const struct sockaddr * name, ares_socklen_t namelen, void *) {return ::connect(s, name, namelen); };
-            s_ares_socket_functions.arecvfrom = [](ares_socket_t s, void * buf, size_t len, int flags, struct sockaddr * from, ares_socklen_t *fromlen, void *) {return (ares_ssize_t)::recvfrom(s, (char*)buf, len, flags, from, fromlen); };
-            s_ares_socket_functions.asendv = [](ares_socket_t s, const struct iovec *vec, int flags, void *) {return (ares_ssize_t)::send(s, (char*)vec->iov_base, static_cast<int>(vec->iov_len), flags); };
-            s_ares_socket_functions.aclose = [](ares_socket_t fd, void* user_data) ->int{
-                if (fd != invalid_socket) {
-                    auto service = (async_tcp_client*)user_data;
-                    if (service != nullptr)
-                        service->unregister_descriptor(fd, socket_event_read | socket_event_write | socket_event_except);
-                    return closesocket(fd);
-                }
-                return -1;
-            };
-            ::ares_set_socket_functions(ares_, &s_ares_socket_functions, this);*/
         }
         else
             INET_LOG("Initialize ares failed: %d!", ret);

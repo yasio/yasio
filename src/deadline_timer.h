@@ -44,15 +44,14 @@ class async_tcp_client;
 class deadline_timer {
 public:
     ~deadline_timer();
-    deadline_timer(async_tcp_client& service) : service_(service)
+    deadline_timer(async_tcp_client& service) : repeated_(false), service_(service)
     {
     }
 
-    void expires_from_now(const std::chrono::microseconds& duration, bool loop = false)
+    void expires_from_now(const std::chrono::microseconds& duration, bool repeated = false)
     {
         this->duration_ = duration;
-        this->loop_ = loop;
-
+        this->repeated_ = repeated;
         expire_time_ = std::chrono::steady_clock::now() + this->duration_;
     }
 
@@ -61,21 +60,31 @@ public:
         expire_time_ = std::chrono::steady_clock::now() + this->duration_;
     }
 
+    // Wait timer timeout or cancelled.
     void async_wait(const std::function<void(bool cancelled)>& callback);
 
+    // Cancel the timer
     void cancel();
 
+    // Check if timer is expired?
     bool expired() const
     {
         return wait_duration().count() <= 0;
     }
 
+    // Let timer expire immidlately
+    void expire()
+    {
+        expire_time_ = std::chrono::steady_clock::now() - duration_;
+    }
+
+    // Gets wait duration of timer.
     std::chrono::microseconds wait_duration() const
     {
         return std::chrono::duration_cast<std::chrono::microseconds>(expire_time_ - std::chrono::steady_clock::now());
     }
 
-    bool loop_;
+    bool repeated_;
     async_tcp_client& service_;
     std::chrono::microseconds duration_;
     compatible_timepoint_t expire_time_;

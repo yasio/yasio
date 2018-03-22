@@ -45,6 +45,11 @@ SOFTWARE.
 #include "select_interrupter.hpp"
 #include "deadline_timer.h"
 
+#define CARES_STATICLIB 1
+extern "C" {
+#include "c-ares/ares.h"
+}
+
 #if !defined(_ARRAYSIZE)
 #define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
@@ -68,6 +73,7 @@ namespace purelib {
         enum class resolve_state {
             IDLE,
             DIRTY,
+            INPRROGRESS,
             READY,
             FAILED = -1,
         };
@@ -100,7 +106,7 @@ namespace purelib {
         typedef std::function<void(error_number)> appl_pdu_send_callback_t;
         typedef std::function<void(std::vector<char>&&)> appl_pdu_recv_callback_t;
 
-
+        class async_tcp_client;
         struct channel_endpoint
         {
             std::string                address_;
@@ -110,6 +116,7 @@ namespace purelib {
 
         struct channel_context
         {
+            channel_context(async_tcp_client& service);
             xxsocket                   impl_;
             channel_state              state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
             int                        type_ = TCP_CLIENT;
@@ -132,7 +139,8 @@ namespace purelib {
             
             size_t                     index_;
 
-            deadline_timer*            connect_timeout_timer_ = nullptr;
+            // The deadline timer for resolve & connect
+            deadline_timer             deadline_timer_;
             void                       reset();
         };
 
@@ -217,6 +225,7 @@ namespace purelib {
             void       schedule_timer(deadline_timer*);
             void       cancel_timer(deadline_timer*);
 
+            void       interrupt();
         private:
             void       perform_timeout_timers(); // ALL timer expired
 
@@ -246,8 +255,6 @@ namespace purelib {
 
             void       handle_error(channel_context*); // TODO: add error_number parameter
 
-            bool       async_resolve(channel_context*);
-
             // new/delete client socket connection channel
             // please call this at initialization, don't new channel at runtime dynmaically:
             // because this API is not thread safe.
@@ -260,6 +267,7 @@ namespace purelib {
 
             // ensure event fd unregistered & closed.
             bool       cleanup_descriptor(channel_context* ctx);
+
         private:
             bool                    stopping_;
             bool                    thread_started_;
@@ -300,11 +308,9 @@ namespace purelib {
             appl_pdu_recv_callback_t on_received_pdu_;
             std::function<void(const vdcallback_t&)> tsf_call_;
 
-            // resolver thread
-            std::thread resolver_thread_;
-            std::list<channel_context*> resolver_ops_;
-            std::mutex resolver_ops_mtx_;
-            std::condition_variable resolver_ops_cv_;
+            // non blocking io dns resolve support
+            ares_channel ares_;    //
+            // struct dns	*dns_;
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

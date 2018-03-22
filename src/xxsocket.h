@@ -356,7 +356,12 @@ public:
 
     void assign(const addrinfo* info)
     {
-        ::memcpy(this, info->ai_addr, info->ai_addrlen);
+        this->assign(info->ai_addr, info->ai_addrlen);
+    }
+
+    void assign(const void* ai_addr, size_t ai_addrlen)
+    {
+        ::memcpy(this, ai_addr, ai_addrlen);
     }
 
     void assign(const sockaddr* addr)
@@ -390,6 +395,11 @@ public:
             compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
             this->in6_.sin6_port = htons(port);
         }
+    }
+
+    void zeroset()
+    {
+        ::memset(this, 0x0, sizeof(*this));
     }
 
     void address(const char* addr)
@@ -451,6 +461,10 @@ public:
     unsigned short port(void) const
     {
         return ntohs(in4_.sin_port);
+    }
+    void port(unsigned short value)
+    {
+        in4_.sin_port = htons(value);
     }
     sockaddr intri_;
     mutable sockaddr_in in4_;

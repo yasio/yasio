@@ -33,9 +33,55 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
+extern "C" {/* Structure for scatter/gather I/O. */
+    struct iovec
+    {
+        void *iov_base;  /* Pointer to data. */
+        size_t iov_len;  /* Length of data.  */
+    }; 
+}
+
 #define _USING_IN_COCOS2DX 0
 
 #define INET_ENABLE_VERBOSE_LOG 0
+
+#if _USING_IN_COCOS2DX
+#include "cocos2d.h"
+#if COCOS2D_VERSION >= 0x00030000
+#define INET_LOG(format,...) do { \
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
+   cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); }); \
+} while(false)
+#else
+#define INET_LOG(format,...) do { \
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
+   cocos2d::CCDirector::sharedDirector()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::CCLog("%s", msg.c_str()); }); \
+} while(false)
+#endif
+#else
+#if defined(_WIN32)
+#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__).c_str())
+#else
+#define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__)
+#endif
+#endif
+
+
+#ifdef _WIN32
+#if !defined(WINRT)
+#include <MMSystem.h>
+#pragma comment(lib, "winmm.lib")
+#endif
+#endif
+
+#define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
+
+#define MAX_PDU_LEN SZ(10, M)
+
+#define TSF_CALL(stmt) this->tsf_call_([=]{(stmt);});
+
+namespace purelib {
+namespace inet {
 
 namespace {
     /*--- This is a C++ universal sprintf in the future.
@@ -84,45 +130,27 @@ namespace {
 
         return buffer;
     }
+
+    static
+    void nonblocking_addrinfo_callback(void* arg, int status, addrinfo* answerlist)
+    {
+        auto ctx = (channel_context*)arg;
+        if (status == ARES_SUCCESS) {
+            if (answerlist != nullptr) {
+                ctx->endpoint_.assign(answerlist);
+                ctx->endpoint_.port(ctx->port_);
+                std::string ip = ctx->endpoint_.to_string();
+                INET_LOG("resolve succeed, status:%d, ip:%s", status, ip.c_str());
+            }
+        }
+        else {
+            INET_LOG("resolve failed, status:%d", status);
+        }
+
+        ctx->resolve_state_ = ctx->endpoint_.port() > 0 ? resolve_state::READY : resolve_state::FAILED;
+    }
 }
 
-#if _USING_IN_COCOS2DX
-#include "cocos2d.h"
-#if COCOS2D_VERSION >= 0x00030000
-#define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
-   cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); }); \
-} while(false)
-#else
-#define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
-   cocos2d::CCDirector::sharedDirector()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::CCLog("%s", msg.c_str()); }); \
-} while(false)
-#endif
-#else
-#if defined(_WIN32)
-#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__).c_str())
-#else
-#define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__)
-#endif
-#endif
-
-
-#ifdef _WIN32
-#if !defined(WINRT)
-#include <MMSystem.h>
-#pragma comment(lib, "winmm.lib")
-#endif
-#endif
-
-#define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
-
-#define MAX_PDU_LEN SZ(10, M)
-
-#define TSF_CALL(stmt) this->tsf_call_([=]{(stmt);});
-
-namespace purelib {
-namespace inet {
 class appl_pdu
 {
 public:
@@ -143,6 +171,10 @@ public:
 
     DEFINE_OBJECT_POOL_ALLOCATION(appl_pdu, 512)
 };
+
+channel_context::channel_context(async_tcp_client& service) : deadline_timer_(service)
+{
+}
 
 void channel_context::reset()
 {
@@ -181,14 +213,6 @@ void async_tcp_client::stop_service()
     if (thread_started_) {
         stopping_ = true;
 
-        this->resolver_ops_cv_.notify_all();
-        if (this->resolver_thread_.joinable())
-            this->resolver_thread_.join();
-
-        this->resolver_ops_mtx_.lock();
-        this->resolver_ops_.clear();
-        this->resolver_ops_mtx_.unlock();
-
         for (auto ctx : channels_)
         {
             cancel_connect_timeout_timer(ctx);
@@ -205,6 +229,11 @@ void async_tcp_client::stop_service()
 
         unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
         thread_started_ = false;
+
+        if (this->ares_ != nullptr) {
+            ::ares_destroy(this->ares_);
+            this->ares_ = nullptr;
+        }
     }
 }
 
@@ -216,7 +245,7 @@ void async_tcp_client::set_timeouts(long timeo_connect, long timeo_send)
 
 channel_context* async_tcp_client::new_channel(const channel_endpoint& ep)
 {
-    auto ctx = new channel_context();
+    auto ctx = new channel_context(*this);
     ctx->reset();
     ctx->address_ = ep.address_;
     ctx->addressv6_ = ep.addressv6_;
@@ -277,20 +306,51 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         stopping_ = false;
         thread_started_ = true;
 
-        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+        /* Initialize the library */
+        ::ares_library_init(ARES_LIB_INIT_ALL);
+        // dns_ = dns_init();
+        int ret = 0;
+        ares_options options;
+        options.sock_state_cb = [](void *service, ares_socket_t socket_fd, int readable,int writable) {
+            if (socket_fd != invalid_socket)
+            {
+                if (!readable && !writable) {
+                    ((async_tcp_client*)service)->unregister_descriptor(socket_fd, socket_event_read | socket_event_write);
+                }
+            }
+        };
+        options.sock_state_cb_data = this;
 
-        resolver_thread_ = std::thread([this] {
-            this->resolve_service();
-        });
+        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)  // ares 对channel 进行初始化  
+        {
+            // set dns servers
+            ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
+            /*s_ares_socket_functions.asocket = [](int af, int type, int protocol, void *) {return ::socket(af, type, protocol); };
+            s_ares_socket_functions.aconnect = [](ares_socket_t s, const struct sockaddr * name, ares_socklen_t namelen, void *) {return ::connect(s, name, namelen); };
+            s_ares_socket_functions.arecvfrom = [](ares_socket_t s, void * buf, size_t len, int flags, struct sockaddr * from, ares_socklen_t *fromlen, void *) {return (ares_ssize_t)::recvfrom(s, (char*)buf, len, flags, from, fromlen); };
+            s_ares_socket_functions.asendv = [](ares_socket_t s, const struct iovec *vec, int flags, void *) {return (ares_ssize_t)::send(s, (char*)vec->iov_base, static_cast<int>(vec->iov_len), flags); };
+            s_ares_socket_functions.aclose = [](ares_socket_t fd, void* user_data) ->int{
+                if (fd != invalid_socket) {
+                    auto service = (async_tcp_client*)user_data;
+                    if (service != nullptr)
+                        service->unregister_descriptor(fd, socket_event_read | socket_event_write | socket_event_except);
+                    return closesocket(fd);
+                }
+                return -1;
+            };
+            ::ares_set_socket_functions(ares_, &s_ares_socket_functions, this);*/
+        }
+        else
+            INET_LOG("Initialize ares failed: %d!", ret);
+
+        register_descriptor(interrupter_.read_descriptor(), socket_event_read);
 
         // Initialize channels
         for (auto i = 0; i < channel_count; ++i)
         {
             auto& channel_ep = channel_eps[i];
             auto ctx = new_channel(channel_ep);
-            if (channel_ep.port_ > 0) {
-                async_resolve(ctx);
-            }
+            ctx->resolve_state_ = channel_ep.port_ > 0 ? resolve_state::DIRTY : resolve_state::IDLE;
         }
 
         worker_thread_ = std::thread([this] {
@@ -311,8 +371,7 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
     ctx->address_ = address;
     ctx->addressv6_ = addressv6;
     ctx->port_ = port;
-
-    ctx->resolve_state_ = ctx->port_ > 0 ? resolve_state::DIRTY : resolve_state::IDLE;
+    ctx->resolve_state_ = port > 0 ? resolve_state::DIRTY : resolve_state::IDLE;
 }
 
 void async_tcp_client::service()
@@ -320,6 +379,9 @@ void async_tcp_client::service()
 #if defined(_WIN32) && !defined(WINRT)
     timeBeginPeriod(1);
 #endif
+
+    // Call once at startup
+    xxsocket::getipsv();
 
     // event loop
     fd_set fds_array[3];
@@ -356,6 +418,14 @@ void async_tcp_client::service()
             --nfds;
         }
 
+        ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
+        int n = ares_getsock(this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
+        if (n > 0) {
+            ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]);  // 有事件发生 交由ares 处理 
+            /*for (auto i = 0; i < n; ++i) {
+                unregister_descriptor(ares_socks[i], socket_event_read | socket_event_write);
+            }*/
+        }
         for (auto ctx : channels_) {
             if (ctx->state_ == channel_state::CONNECTED) {
                 if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
@@ -405,57 +475,6 @@ _L_end:
 #endif
 }
 
-void  async_tcp_client::resolve_service(void)
-{
-    for (; !stopping_;)
-    {
-        std::unique_lock<std::mutex> lk(this->resolver_ops_mtx_);
-        this->resolver_ops_cv_.wait(lk, [this] {return stopping_ || !this->resolver_ops_.empty(); });
-
-        if (!stopping_) {
-            auto ctx = this->resolver_ops_.front();
-            this->resolver_ops_.pop_front();
-            lk.unlock();
-
-            bool succeed = false;
-            int flags = xxsocket::getipsv();
-            if (flags & ipsv_ipv4) {
-                ctx->endpoint_ = xxsocket::resolve(ctx->address_.c_str(), ctx->port_);
-                succeed = ctx->endpoint_.port() > 0;
-            }
-            else if (flags & ipsv_ipv6)
-            { // client is IPV6_Only
-                INET_LOG("async_tcp_client::resolve_service ---> needs a ipv6 server address to connect!");
-                ctx->endpoint_ = xxsocket::resolve(ctx->addressv6_.c_str(), ctx->port_);
-                succeed = ctx->endpoint_.port() > 0;
-            }
-
-            ctx->resolve_state_ = succeed ? resolve_state::READY : resolve_state::FAILED;
-
-            this->set_errorno(ctx, xxsocket::get_last_errno());
-            if (!succeed) {
-                INET_LOG("async_tcp_client::resolve_service ---> resolve failed, ec:%d, detail:%s", error_, xxsocket::get_error_msg(error_));
-            }
-
-            if (succeed && ctx->state_ == channel_state::REQUEST_CONNECT)
-                this->interrupter_.interrupt();
-        }
-    }
-}
-
-bool async_tcp_client::async_resolve(channel_context* ctx)
-{
-    if (ctx->port_ == 0) {
-        ctx->resolve_state_ = resolve_state::IDLE;
-        return false;
-    }
-
-    std::unique_lock<std::mutex> lk(this->resolver_ops_mtx_);
-    this->resolver_ops_.push_back(ctx);
-    this->resolver_ops_cv_.notify_one();
-    return true;
-}
-
 void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
 {
     assert(ctx->state_ == channel_state::REQUEST_CONNECT);
@@ -502,14 +521,76 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
         else if (ctx->resolve_state_ == resolve_state::FAILED) {
             handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED); 
         } // DIRTY,IDLE do nothing
+        else if(ctx->resolve_state_ == resolve_state::DIRTY) {
+            ctx->resolve_state_ = resolve_state::INPRROGRESS;
+            int flags = xxsocket::getipsv();
+            addrinfo hint;
+            memset(&hint, 0x0, sizeof(hint));
+            if (flags & ipsv_ipv4) {
+                hint.ai_family = AF_INET;
+            }
+            else if (flags & ipsv_ipv6) {
+                hint.ai_family = AF_INET6;
+            }
+            /*else {
+                hint.ai_family = AF_UNSPEC;
+            }*/
+            //hint.ai_flags = 0;
+            //const char* service = nullptr;
+            //char buffer[sizeof "65535"] = { '\0' };
+            //if (ctx->port_ > 0) {
+            //    sprintf(buffer, "%u", ctx->port_); // It's enough for unsigned short, so use sprintf ok.
+            //    service = buffer;
+            //}
+            ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+            ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
+#if 0
+            /* Make a request */
+            // dns_queue(dns_, NULL, ctx->address_.c_str(), DNS_A_RECORD, dns_callback);
+            // register_descriptor(dns_get_fd(dns_), socket_event_read);
+            // GetAddrInfoExA()
+            ADDRINFOEX   Hints;
+            ZeroMemory(&Hints, sizeof(Hints));
+            Hints.ai_family = AF_UNSPEC;
+
+            wchar_t buffer[sizeof "65535"] = { '\0' };
+            const wchar_t* service = nullptr;
+            if (ctx->port_ > 0) {
+                swprintf(buffer, sizeof "65535",  L"%u", ctx->port_); // It's enough for unsigned short, so use sprintf ok.
+                service = buffer;
+            }
+
+            ctx->QueryResults = nullptr;
+            ctx->QueryCancelHandle = nullptr;
+            ZeroMemory(&ctx->QueryOverlapped, sizeof(ctx->QueryOverlapped));
+            ctx->endpoint_.zeroset();
+            auto Error = GetAddrInfoExW(transcode$IL(ctx->address_).c_str(),
+                service,
+                NS_DNS,
+                NULL,
+                &Hints,
+                &ctx->QueryResults,
+                NULL,
+                &ctx->QueryOverlapped,
+                QueryCompleteCallback,
+                &ctx->QueryCancelHandle);
+
+            if (Error != WSA_IO_PENDING)
+            {
+                QueryCompleteCallback(Error, 0, &ctx->QueryOverlapped);
+            }
+
+            // start resolve timer
+            // start_connect_timeout_timer(ctx);
+#endif
+        }
     }
 }
 
 void async_tcp_client::start_connect_timeout_timer(channel_context* ctx)
 {
-    ctx->connect_timeout_timer_ = new deadline_timer(*this);
-    ctx->connect_timeout_timer_->expires_from_now(std::chrono::microseconds(this->connect_timeout_));
-    ctx->connect_timeout_timer_->async_wait([this, ctx](bool cancelled) {
+    ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(this->connect_timeout_));
+    ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
         if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
             handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
         }
@@ -518,10 +599,8 @@ void async_tcp_client::start_connect_timeout_timer(channel_context* ctx)
 
 void async_tcp_client::cancel_connect_timeout_timer(channel_context* ctx)
 {
-    if (ctx->connect_timeout_timer_ != nullptr) {
-        ctx->connect_timeout_timer_->cancel();
-        delete ctx->connect_timeout_timer_;
-        ctx->connect_timeout_timer_ = nullptr;
+    if (!ctx->deadline_timer_.expired()) {
+        ctx->deadline_timer_.cancel();
     }
 }
 
@@ -561,12 +640,7 @@ void async_tcp_client::async_connect(size_t channel_index)
         return;
     } 
 
-    if (ctx->resolve_state_ != resolve_state::READY) {
-        if (!async_resolve(ctx)) {
-            handle_connect_failed(ctx, ERR_INVALID_PORT);
-            return;
-        }
-    }
+    ctx->resolve_state_ = resolve_state::DIRTY;
     ctx->state_ = channel_state::REQUEST_CONNECT;
     if (ctx->impl_.is_open()) {
         ctx->impl_.shutdown();
@@ -958,7 +1032,7 @@ void async_tcp_client::perform_timeout_timers()
             timer_queue_.pop_back();
             auto callback = earliest->callback_;
             callback(false);
-            if (earliest->loop_) {
+            if (earliest->repeated_) {
                 earliest->expires_from_now();
                 loop_timers.push_back(earliest);
             }
@@ -1032,6 +1106,11 @@ bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
         return true;
     }
     return false;
+}
+
+void  async_tcp_client::interrupt()
+{
+    interrupter_.interrupt();
 }
 
 int async_tcp_client::set_errorno(channel_context* ctx, int error)

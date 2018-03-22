@@ -1,4 +1,5 @@
 #include "async_tcp_client.h"
+#pragma comment(lib, R"(../../src/c-ares/vc/cares/lib-debug/libcaresd.lib)")
 
 using namespace purelib::inet;
 
@@ -9,10 +10,13 @@ bool decode_pdu_length(const char* data, size_t datalen, int& len)
 
 int main(int, char**)
 {
+    std::vector<ip::endpoint> ipList;
+    xxsocket::resolve_v6(ipList, "www.kernel.org");
     purelib::inet::channel_endpoint endpoints[] = {
-        { "172.31.238.193", "172.31.238.193", 8888 },
-        { "www.baidu.com", "www.baidu.com", 443 },
-        //{ "www.tencent.com", "www.tencent.com", 443 },
+        // { "172.31.238.193", "172.31.238.193", 8888 },
+        { "www.kernel.org", "www.kernel.org", 443 },
+        // { "www.baidu.com", "www.baidu.com", 443 },
+        //{ "www.tencent.com", "www.x-studio365.com", 443 },
     };
     tcpcli->start_service(endpoints, _ARRAYSIZE(endpoints));
 

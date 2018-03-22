@@ -321,7 +321,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         };
         options.sock_state_cb_data = this;
 
-        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)  // ares ¶Ôchannel ½øĞĞ³õÊ¼»¯  
+        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)  // ares å¯¹channel è¿›è¡Œåˆå§‹åŒ–  
         {
             // set dns servers
             ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
@@ -417,15 +417,8 @@ void async_tcp_client::service()
 #endif
             --nfds;
         }
-
-        ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
-        int n = ares_getsock(this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
-        if (n > 0) {
-            ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]);  // ÓĞÊÂ¼ş·¢Éú ½»ÓÉares ´¦Àí 
-            /*for (auto i = 0; i < n; ++i) {
-                unregister_descriptor(ares_socks[i], socket_event_read | socket_event_write);
-            }*/
-        }
+        
+        /// perform active channels
         for (auto ctx : channels_) {
             if (ctx->state_ == channel_state::CONNECTED) {
                 if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
@@ -463,7 +456,15 @@ void async_tcp_client::service()
                 do_nonblocking_connect_completion(fds_array, ctx);
             }
         }
-            
+        
+        /// perform domain resolve
+        ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
+        int n = ares_getsock(this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
+        if (n > 0) {
+            ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]); 
+        }
+        
+        /// perform timeout timers
         perform_timeout_timers();
     }
 

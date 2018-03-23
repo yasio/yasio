@@ -1,0 +1,11 @@
+nameserver 172.18.45.6
+sortlist 127.0.0.1/32 172.18.45.0/28 172.18.45.0/24
+search davenant.greenend.org.uk greenend.org.uk
+lwserver 127.0.0.1
+options timeout:1 attempts:30 rotate no-check-names inet6 edns0 wombat
+stoat
+options adns_checkc:freq zorkmid
+options adns_af:any adns_af:ipv6,ipv4,dampstring spong
+options adns_ignoreunkcfg wombat2
+stoat2
+options adns_af:any adns_af:ipv6,ipv4,dampstring2 spong2

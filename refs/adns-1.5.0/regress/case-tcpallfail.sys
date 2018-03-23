@@ -1,0 +1,63 @@
+adnstest anarres -0x400
+2/test.iwj.relativity.greenend.org.uk.
+ start 962142174.403028
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=4
+ +0.000120
+ fcntl fd=4 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000053
+ fcntl fd=4 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000034
+ socket domain=AF_INET type=SOCK_STREAM
+ socket=5
+ +0.000479
+ fcntl fd=5 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000036
+ fcntl fd=5 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000031
+ connect fd=5 addr=172.18.45.2:53
+ connect=EINPROGRESS
+ +0.000182
+ select max=6 rfds=[4] wfds=[5] efds=[] to=13.999272
+ select=1 rfds=[] wfds=[5] efds=[]
+ +0.000862
+ read fd=5 buflen=1
+ read=ECONNREFUSED
+ +0.000087
+ close fd=5
+ close=OK
+ +0.000109
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000103
+ socket domain=AF_INET type=SOCK_STREAM
+ socket=5
+ +0.000392
+ fcntl fd=5 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000037
+ fcntl fd=5 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000030
+ connect fd=5 addr=172.18.45.2:53
+ connect=EINPROGRESS
+ +0.000127
+ select max=6 rfds=[4] wfds=[5] efds=[] to=13.999414
+ select=1 rfds=[] wfds=[5] efds=[]
+ +0.000339
+ read fd=5 buflen=1
+ read=ECONNREFUSED
+ +0.000075
+ close fd=5
+ close=OK
+ +0.000084
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000000
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000098
+ close fd=4
+ close=OK
+ +0.000879

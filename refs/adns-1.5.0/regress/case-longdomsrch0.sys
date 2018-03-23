@@ -1,0 +1,15 @@
+adnstest ndots100
+:0x0|1 1/10rndrobwlxxxxxxxxxxlllantysiliogog.llanfairpwllgwyngyllgogerychwyrndrobwlxxxxxxxxxxlllantysiliogog.llanfairpwllgwyngyllgogerychwyrndrobwlxxxxxxxxxxlllantysiliogog.llanfairpwllgwyngyllgogerychwyrndrobwlxxxxxxxxxxlllantysiliogog.relativity.greenend.org.uk
+ start 951956073.321566
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=4
+ +0.000131
+ fcntl fd=4 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000056
+ fcntl fd=4 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000034
+ close fd=4
+ close=OK
+ +0.000340

@@ -1,0 +1,17 @@
+#! /usr/bin/perl
+
+@seq = sort { $a <=> $b } map { hex } @ARGV;
+
+while (<STDIN>) {
+  print;
+  if (/^ (sendto fd=\d+|recvfrom=OK) addr=([0-9.]+|\[0-9a-f:]+\]).*:53/) {
+    my $line = <STDIN>;
+    if ($line !~ /^     ([0-9a-f]{4})(.*)$/s) {
+      print $line;
+      next;
+    }
+    my $qq = hex $1;
+    for my $q (@seq) { $qq++ if $qq >= $q; }
+    printf "     %04x%s", ($qq & 0xffff), $2;
+  }
+}

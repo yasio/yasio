@@ -1,0 +1,5 @@
+adns debug: using nameserver 172.29.199.224
+stratocaster.distorted.org.uk flags 0 type 28 AAAA(-) submitted
+stratocaster.distorted.org.uk flags 0 type AAAA(-): OK; nrrs=1; cname=$; owner=$; ttl=14400
+ 2001:ba8:1d9:2::4
+rc=0

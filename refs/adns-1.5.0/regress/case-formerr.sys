@@ -1,0 +1,330 @@
+adnstest default
+:0x0|1 1/h.rndrobwlxxxxxxxxxxlllantysiliogogllanfairpwllgwyngyllgogerychw.relativity.greenend.org.uk.
+ start 951956380.814815
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=4
+ +0.000130
+ fcntl fd=4 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000056
+ fcntl fd=4 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000033
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000977
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999023
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000192
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000130
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000088
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998613
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01236
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000766
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999234
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000115
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000116
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000065
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998938
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01066
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000004
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.009983
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000688
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999312
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000113
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000114
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000065
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999020
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00961
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000702
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999298
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000113
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000114
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000066
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999005
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00753
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000714
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999286
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000117
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000117
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000069
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998983
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01199
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000182
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.009922
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000689
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999311
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000114
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000113
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000064
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999020
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00958
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000716
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999284
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000114
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000136
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000066
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998968
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01033
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000001
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.009977
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000669
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999331
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000113
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000115
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000065
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999038
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00943
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000720
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999280
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000113
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000114
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000065
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998988
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01009
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000703
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999297
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000134
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000115
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000066
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998982
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01006
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000760
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999240
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000120
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000116
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000070
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998934
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01050
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000816
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999184
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000124
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000120
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000074
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998866
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01045
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000888
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999112
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000127
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000119
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000072
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998794
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01003
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000840
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999160
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000297
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000124
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000077
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998662
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01614
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000276
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.010069
+ sendto fd=4 addr=172.18.45.6:53
+     311f0100 00010000 00000000 01683e72 6e64726f 62776c78 78787878 78787878
+     786c6c6c 616e7479 73696c69 6f676f67 6c6c616e 66616972 70776c6c 6777796e
+     67796c6c 676f6765 72796368 770a7265 6c617469 76697479 08677265 656e656e
+     64036f72 6702756b 00000100 01.
+ sendto=109
+ +0.000791
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.999209
+ select=1 rfds=[4] wfds=[] efds=[]
+ +0.000117
+ recvfrom fd=4 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8181 00010000 00000000.
+ +0.000271
+ recvfrom fd=4 buflen=512
+ recvfrom=EAGAIN
+ +0.000080
+ select max=5 rfds=[4] wfds=[] efds=[] to=1.998741
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-01357
+ select max=5 rfds=[4] wfds=[] efds=[] to=0.000098
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.009963
+ close fd=4
+ close=OK
+ +0.000234

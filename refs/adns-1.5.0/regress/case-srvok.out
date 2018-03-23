@@ -1,0 +1,7 @@
+_srv._tcp.test.iwj.relativity.greenend.org.uk SRV 10 66 10066 davenant.relativity.greenend.org.uk
+_srv._tcp.test.iwj.relativity.greenend.org.uk SRV 20 200 20200 norway.relativity.greenend.org.uk
+_srv._tcp.test.iwj.relativity.greenend.org.uk SRV 20 400 20400 anarres.relativity.greenend.org.uk
+_srv._tcp.test.iwj.relativity.greenend.org.uk SRV 20 100 20100 nxdomain.relativity.greenend.org.uk
+_jabber._tcp.jabber.org SRV 30 30 5269 jabber.org
+_sip._udp.voip.net.cam.ac.uk SRV 10 1 5060 sip.voip.net.cam.ac.uk
+rc=0

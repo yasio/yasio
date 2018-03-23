@@ -1,0 +1,18 @@
+adns debug: using nameserver 172.29.199.224
+maddr.dnserr.distorted.org.uk flags 0 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 0 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 0 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET 198.51.100.2
+ INET 198.51.100.1
+ INET 203.0.113.1
+ INET 203.0.113.2
+ INET 192.0.2.1
+ INET 192.0.2.2
+maddr.dnserr.distorted.org.uk flags 0 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET 203.0.113.1
+ INET 203.0.113.2
+ INET 192.0.2.1
+ INET 192.0.2.2
+rc=0

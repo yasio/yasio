@@ -377,7 +377,7 @@ public:
         }
     }
 
-    void assign(const char* addr, unsigned short port)
+    bool assign(const char* addr, unsigned short port)
     {
         ::memset(this, 0x0, sizeof(*this));
 
@@ -386,15 +386,22 @@ public:
         */
         if (strchr(addr, ':') == nullptr)
         { // ipv4
-            this->in4_.sin_family = AF_INET;
-            compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
-            this->in4_.sin_port = htons(port);
+            if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
+            {
+                this->in4_.sin_family = AF_INET;
+                this->in4_.sin_port = htons(port);
+                return true;
+            }
         }
         else { // ipv6
-            this->in6_.sin6_family = AF_INET6;
-            compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
-            this->in6_.sin6_port = htons(port);
+            if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1) {
+                this->in6_.sin6_family = AF_INET6;
+                this->in6_.sin6_port = htons(port);
+                return true;
+            }
         }
+
+        return false;
     }
 
     void zeroset()

@@ -1,0 +1,28 @@
+adns debug: using nameserver 172.18.45.6
+hyphen.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+dot.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+plus.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+slash.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+underscore.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+quote.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+backslash.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+null.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+space.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+hash.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+del.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+meta-null.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+meta-del.cname.test.iwj.relativity.greenend.org.uk flags 0 type 1 A(-) submitted
+hyphen.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a-b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+dot.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\.b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+plus.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a+b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+slash.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a/b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+underscore.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a_b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+quote.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\"b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+backslash.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\\b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+null.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\000b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+space.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\040b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+hash.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\#b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+del.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\177b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+meta-null.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\310b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+meta-del.cname.test.iwj.relativity.greenend.org.uk flags 0 type A(-): No such domain; nrrs=0; cname=a\377b.cname.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+rc=0

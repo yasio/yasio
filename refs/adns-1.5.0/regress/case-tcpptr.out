@@ -1,0 +1,6 @@
+adns debug: using nameserver 172.18.45.6
+6.45.18.172.in-addr.arpa flags 2 type 65548 PTR(checked) submitted
+adns debug: TCP connected (NS=172.18.45.6)
+6.45.18.172.in-addr.arpa flags 2 type PTR(checked): OK; nrrs=1; cname=$; owner=$; ttl=86400
+ davenant.relativity.greenend.org.uk
+rc=0

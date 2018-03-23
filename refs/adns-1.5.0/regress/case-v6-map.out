@@ -1,0 +1,11 @@
+adns debug: using nameserver 172.29.199.224
+distorted.org.uk flags 4096 type 65537 A(addr) submitted
+distorted.org.uk flags 4096 type 65551 MX(+addr) submitted
+distorted.org.uk flags 4096 type 65537 A(addr) submitted
+distorted.org.uk flags 4096 type MX(+addr): OK; nrrs=1; cname=$; owner=$; ttl=14400
+ 50 mail.distorted.org.uk ok 0 ok "OK" ( INET6 ::ffff:172.29.199.180 )
+distorted.org.uk flags 4096 type A(addr): OK; nrrs=1; cname=$; owner=$; ttl=14400
+ INET6 ::ffff:172.29.199.180
+distorted.org.uk flags 4096 type A(addr): OK; nrrs=1; cname=$; owner=$; ttl=14400
+ INET 172.29.199.180
+rc=0

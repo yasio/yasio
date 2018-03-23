@@ -1,0 +1,34 @@
+adns debug: using nameserver 2001:ba8:1d9::1
+www.distorted.org.uk flags 0 type 1 A(-) submitted
+www.distorted.org.uk flags 0 type 2 NS(raw) submitted
+www.distorted.org.uk flags 0 type 5 CNAME(-) submitted
+www.distorted.org.uk flags 0 type 6 SOA(raw) submitted
+www.distorted.org.uk flags 0 type 12 PTR(raw) submitted
+www.distorted.org.uk flags 0 type 13 HINFO(-) submitted
+www.distorted.org.uk flags 0 type 15 MX(raw) submitted
+www.distorted.org.uk flags 0 type 16 TXT(-) submitted
+www.distorted.org.uk flags 0 type 17 RP(raw) submitted
+www.distorted.org.uk flags 0 type 65537 A(addr) submitted
+www.distorted.org.uk flags 0 type 65538 NS(+addr) submitted
+www.distorted.org.uk flags 0 type 65548 PTR(checked) submitted
+www.distorted.org.uk flags 0 type 65551 MX(+addr) submitted
+www.distorted.org.uk flags 0 type 131078 SOA(822) submitted
+www.distorted.org.uk flags 0 type 131089 RP(822) submitted
+www.distorted.org.uk flags 0 type PTR(checked): Domain invalid for particular DNS query type; nrrs=0; cname=$; owner=$; ttl=604800
+www.distorted.org.uk flags 0 type A(-): OK; nrrs=1; cname=$; owner=$; ttl=14400
+ 172.29.199.180
+www.distorted.org.uk flags 0 type NS(raw): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type CNAME(-): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type SOA(raw): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type PTR(raw): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type HINFO(-): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type MX(raw): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type TXT(-): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type RP(raw): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type A(addr): OK; nrrs=1; cname=$; owner=$; ttl=14400
+ INET 172.29.199.180
+www.distorted.org.uk flags 0 type NS(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type SOA(822): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+www.distorted.org.uk flags 0 type RP(822): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+rc=0

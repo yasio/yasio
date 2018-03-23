@@ -1,0 +1,10 @@
+adns debug: using nameserver 172.18.45.6
+adns: <supplied configuration text>:5: unknown option `wombat'
+adns: <supplied configuration text>:6: unknown configuration directive `stoat'
+adns: <supplied configuration text>:7: unknown option `zorkmid'
+adns: <supplied configuration text>:8: option adns_af has bad value or entry `dampstring' (option must be `any', or list of `ipv4',`ipv6')
+adns: <supplied configuration text>:8: unknown option `spong'
+chiark.greenend.org.uk flags 0 type 1 A(-) submitted
+chiark.greenend.org.uk flags 0 type A(-): OK; nrrs=1; cname=$; owner=$; ttl=3600
+ 212.13.197.229
+rc=0

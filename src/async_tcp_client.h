@@ -71,10 +71,9 @@ namespace purelib {
         };
 
         enum class resolve_state {
-            IDLE,
+            READY,
             DIRTY,
             INPRROGRESS,
-            READY,
             FAILED = -1,
         };
 
@@ -267,6 +266,9 @@ namespace purelib {
 
             // ensure event fd unregistered & closed.
             bool       cleanup_descriptor(channel_context* ctx);
+
+            // Update resolve state for new endpoint set
+            void       update_resolve_state(channel_context* ctx);
 
             int        swap_ready_events();
 

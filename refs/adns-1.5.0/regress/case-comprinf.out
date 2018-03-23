@@ -1,0 +1,4 @@
+adns debug: using nameserver 172.18.45.6
+37.45.18.172.in-addr.arpa. flags 0 type 12 PTR(raw) submitted
+37.45.18.172.in-addr.arpa. flags 0 type PTR(raw): Found overly-long domain name; nrrs=0; cname=37.45.18.172.in-addr.arpa.test.iwj.relativity.greenend.org.uk; owner=$; ttl=60
+rc=0

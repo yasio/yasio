@@ -1,0 +1,8 @@
+adns debug: using nameserver 172.18.45.6
+00.45.18.172.in-addr.arpa flags 0 type 65548 PTR(checked) submitted
+6.945.18.172.in-addr.arpa flags 0 type 65548 PTR(checked) submitted
+4.0.0.0.g.0.0.0.0.0.0.0.0.0.0.0.2.0.0.0.9.d.1.0.8.a.b.0.1.0.0.2.ip6.arpa flags 0 type 65548 PTR(checked) submitted
+00.45.18.172.in-addr.arpa flags 0 type PTR(checked): Domain invalid for particular DNS query type; nrrs=0; cname=$; owner=$; ttl=604800
+6.945.18.172.in-addr.arpa flags 0 type PTR(checked): Domain invalid for particular DNS query type; nrrs=0; cname=$; owner=$; ttl=604800
+4.0.0.0.g.0.0.0.0.0.0.0.0.0.0.0.2.0.0.0.9.d.1.0.8.a.b.0.1.0.0.2.ip6.arpa flags 0 type PTR(checked): Domain invalid for particular DNS query type; nrrs=0; cname=$; owner=$; ttl=604800
+rc=0

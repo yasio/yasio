@@ -1,0 +1,90 @@
+./adnshost default -f
+
+ start 969129578.690081
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=6
+ +0.000809
+ fcntl fd=6 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000531
+ fcntl fd=6 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000512
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=null
+ select=1 rfds=[0] wfds=[] efds=[]
+ +17.-461569
+ read fd=0 buflen=40
+ read=OK
+     2d2d6173 796e6368 2d696420 34320a.
+ +0.000686
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=null
+ select=1 rfds=[0] wfds=[] efds=[]
+ +0.000915
+ read fd=0 buflen=40
+ read=OK
+     2d692031 37322e33 302e3230 362e3134 0a.
+ +0.000583
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 02313403 32303602 33300331 37320769 6e2d6164
+     64720461 72706100 000c0001.
+ sendto=44
+ +0.001629
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=1.998371
+ select=1 rfds=[6] wfds=[] efds=[]
+ +0.000910
+ recvfrom fd=6 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8580 00010001 00010001 02313403 32303602 33300331 37320769 6e2d6164
+     64720461 72706100 000c0001 c00c000c 00010000 003c002a 06323036 2d31340b
+     62726f6b 656e2d7a 6f6e6504 74657374 0763756c 74757265 05646f74 61740261
+     74000332 30360233 30033137 3207696e 2d616464 72046172 70610000 02000100
+     00003c00 20036e73 300a7265 6c617469 76697479 08677265 656e656e 64036f72
+     6702756b 00c08500 01000100 01518000 04ac122d 06.
+ +0.001417
+ sendto fd=6 addr=172.18.45.6:53
+     31200100 00010000 00000000 06323036 2d31340b 62726f6b 656e2d7a 6f6e6504
+     74657374 0763756c 74757265 05646f74 61740261 74000001 0001.
+ sendto=58
+ +0.001988
+ recvfrom fd=6 buflen=512
+ recvfrom=EAGAIN
+ +0.000537
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=1.996058
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-05146
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=0.001204
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.009951
+ sendto fd=6 addr=172.18.45.6:53
+     31200100 00010000 00000000 06323036 2d31340b 62726f6b 656e2d7a 6f6e6504
+     74657374 0763756c 74757265 05646f74 61740261 74000001 0001.
+ sendto=58
+ +0.001141
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=1.998859
+ select=1 rfds=[0] wfds=[] efds=[]
+ +0.551215
+ read fd=0 buflen=40
+ read=OK
+     2d2d6361 6e63656c 2d696420 34320a.
+ +0.000599
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=null
+ select=1 rfds=[6] wfds=[] efds=[]
+ +42.-794672
+ recvfrom fd=6 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     31208182 00010000 00000000 06323036 2d31340b 62726f6b 656e2d7a 6f6e6504
+     74657374 0763756c 74757265 05646f74 61740261 74000001 0001.
+ +0.000986
+ recvfrom fd=6 buflen=512
+ recvfrom=EAGAIN
+ +0.003836
+ select max=7 rfds=[0,6] wfds=[] efds=[] to=null
+ select=1 rfds=[0] wfds=[] efds=[]
+ +6.662470
+ read fd=0 buflen=40
+ read=OK
+     .
+ +0.000545
+ close fd=6
+ close=OK
+ +0.000686

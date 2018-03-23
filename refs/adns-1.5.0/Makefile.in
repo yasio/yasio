@@ -1,0 +1,93 @@
+# Makefile[.in] - top-level Makefile
+#  
+#  This file is part of adns, which is
+#    Copyright (C) 1997-2000,2003,2006,2014  Ian Jackson
+#    Copyright (C) 2014  Mark Wooding
+#    Copyright (C) 1999-2000,2003,2006  Tony Finch
+#    Copyright (C) 1991 Massachusetts Institute of Technology
+#  (See the file INSTALL for full details.)
+# 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3, or (at your option)
+#  any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation.
+
+include		./common.make
+
+# Remember to change ADNS_VERSION_STRING in client/client.h too, and
+# possibly library soname (MAJOR and MINOR in common.make.in).
+DISTVERSION=	1.5.0
+
+srcdir=		@srcdir@
+VPATH=		@srcdir@
+
+ENABLE_DYNAMIC=	@ENABLE_DYNAMIC@
+ifeq ($(ENABLE_DYNAMIC),elf)
+SUBDIRS_DYNAMIC=dynamic
+else
+SUBDIRS_DYNAMIC=
+endif
+
+WEBDIR=web
+
+SUBDIRS= src $(SUBDIRS_DYNAMIC) client regress
+
+all install uninstall clean distclean mostlyclean maintainer-clean distprep:
+	set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
+	$(MAKE) $@-here
+
+all-here install-here uninstall-here distprep-here:	README
+
+clean-here mostlyclean-here:
+		rm -f *~ ./#*# core *.orig *.rej adns-*.tar.gz
+		rm -rf dist_tmp web adnshost.txt
+
+distclean-here maintainer-clean-here:	clean-here
+	rm -f settings.make common.make
+	rm -f config.cache config.log config.status Makefile
+
+install-strip:
+	$(MAKE) INSTALL_PROGRAM_FLAGS=-s
+
+dist_tmp=dist_tmp/adns-$(DISTVERSION)
+dist:			distprep
+	rm -rf dist_tmp*
+	mkdir dist_tmp $(dist_tmp)
+	find \( -name .git -o -name dist_tmp* \) -prune -o -type d -print | \
+		sed -e 's#.*#mkdir -p $(dist_tmp)/&#' | sh
+	find \( -name .git -o -name dist_tmp* \) -prune -o -type f -print | \
+		sed -e 's#.*#ln & $(dist_tmp)/&#' | sh
+	$(MAKE) -C dist_tmp/adns-$(DISTVERSION) distclean
+	cd dist_tmp && tar cf ../$(dist_tmp).tar `basename $(dist_tmp)`
+	gzip -9 $(dist_tmp).tar
+	mv $(dist_tmp).tar.gz .
+
+adnshost.txt: all
+	client/adnshost_s --help >$@.tmp && mv -f $@.tmp $@
+
+web-install: adnshost.txt
+	test -e $(WEBDIR) || mkdir $(WEBDIR)
+	$(INSTALL_DATA) $(srcdir)/README.html $(WEBDIR)/
+	$(INSTALL_DATA) $(srcdir)/src/adns.h $(WEBDIR)/adns.h.txt
+	$(INSTALL_DATA) COPYING $(WEBDIR)/COPYING.txt
+	$(INSTALL_DATA) adnshost.txt $(WEBDIR)/
+
+check:			all
+	$(MAKE) -C regress check
+
+README:			README.html
+	lynx -dump -number_links -cfg=/dev/null $(srcdir)/README.html >README.tmp
+	mv -f README.tmp $(srcdir)/README
+
+TAGS info dvi:
+	# do nothing
+
+.PHONY: install #people with case-insensitive filesystems lose otherwise!

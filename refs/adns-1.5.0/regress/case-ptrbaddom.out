@@ -1,0 +1,7 @@
+adns debug: using nameserver 172.18.45.6
+37.45.18.172.in-addr.arpa.test.iwj.relativity.greenend.org.uk. flags 0 type 12 PTR(raw) submitted
+37.45.18.172.in-addr.arpa.test.iwj.relativity.greenend.org.uk. flags 0 type 65548 PTR(checked) submitted
+37.45.18.172.in-addr.arpa.test.iwj.relativity.greenend.org.uk. flags 0 type PTR(checked): Domain invalid for particular DNS query type; nrrs=0; cname=$; owner=$; ttl=604800
+37.45.18.172.in-addr.arpa.test.iwj.relativity.greenend.org.uk. flags 0 type PTR(raw): OK; nrrs=1; cname=$; owner=$; ttl=60
+ ptr.test.iwj.relativity.greenend.org.uk
+rc=0

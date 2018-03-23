@@ -1,0 +1,100 @@
+#!/bin/bash
+# This is for the benefit of the upstream maintainers of GNU adns
+#
+#  * Maybe rerun autoconf
+#  * Ensure changelog reflects changes
+#  * Ensure NEWS reflects changes
+#  * Maybe update MAJOR and/or MINOR in common.make.in
+#  * Update DISTVERSION in Makefile.in
+#  * Update ADNS_VERSION_STRING in client/client.h
+#  * Update version in ./changelog
+#  * Commit the result
+#
+#  * Run this script
+#      ./RELEASE-CHECKLIST [--real] <version>
+#
+#  * On chiark, maybe, replace ~ian/public-html/adns/current
+#    with symlink to web-$(version)
+#
+#  * On chiark, maybe, replace docs link (as directed by script)
+#
+#  * If not an rc release, put files on ftp.gnu.org
+#
+#  * Send release announcement (use last one as template)
+#
+#  * Update DISTVERSION, ADNS_VERSION_STRING and start new changelog entry
+
+set -e
+
+fail () { echo >&2 "$0: $*"; exit 16; }
+
+real=false
+if [ "x$1" = x--real ]; then
+	real=true; shift
+fi
+
+if [ $# != 1 ]; then fail "wrong # arguments"; fi
+wantversion="$1"
+
+version=`sed -n <Makefile.in 's/^DISTVERSION=[	]*//p'`
+
+if [ "x$version" != "x$wantversion" ]; then
+	fail "you say version $wantversion but tree is $version"
+fi
+
+gpgkey='-u 0x48B50D39'
+chiark=chiark:/u/ian/public-html/adns
+chiarkftp=$chiark/ftp
+
+x () { echo "----- $* -----"; "$@"; }
+wx () { if $real; then x "$@"; else echo "WOULD: $*"; fi; }
+
+x git clean -xdff
+x ./configure
+x make -j6
+x make check -j6
+x make dist
+rm -rf web
+x make web-install
+
+distdir=adns-$version
+distfile=$distdir.tar.gz
+x test -f $distfile
+
+rm -rf dist_tmp
+mkdir dist_tmp
+cd dist_tmp
+tar axf ../$distfile
+cd $distdir
+git init --quiet
+git fetch --quiet ../.. HEAD
+git add .
+git commit --quiet -m T
+git diff --exit-code FETCH_HEAD
+cd ../..
+
+tag=adns-${version//\~/-}
+webout=docs-$version
+
+wx gpg --detach-sign $distfile
+wx git tag -s $gpgkey -m "adns release $version" $tag
+wx git push origin $tag~0:master $tag
+
+distfiles="$distfile $distfile.sig"
+wx rsync -vP $distfiles $chiarkftp/
+
+wx rsync -rvP web/. $chiark/$webout
+
+wx sha256sum $distfiles
+
+if ! $real; then echo "NOT REAL"; exit 0; fi
+
+cat <<END
+
+TO UPDATE WEB PAGE DOCS:
+  ssh ${chiark%%:*}
+  cd ${chiark#*:}
+  rm -f docs.tmp
+  ln -s $webout docs.tmp
+  mv -Tf docs.tmp docs
+END

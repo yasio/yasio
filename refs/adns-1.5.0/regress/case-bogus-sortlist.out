@@ -1,0 +1,7 @@
+adns debug: using nameserver 172.18.45.6
+adns: <supplied configuration text>:2: prefix length 24 in sortlist overlaps address `198.51.100.1'
+adns: <supplied configuration text>:2: prefix length 10 in sortlist overlaps address `2001:db8:2::'
+adns: <supplied configuration text>:2: network address `255.0.0.0' in sortlist is not in classed ranges, must specify mask explicitly
+adns: <supplied configuration text>:2: mask length `33' invalid
+adns: <supplied configuration text>:2: mask length `129' invalid
+rc=2

@@ -1,0 +1,45 @@
+./adnshost default
+-t type5 pop.chiark.greenend.org.uk
+ start 1144369700.944069
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=6
+ +0.000074
+ fcntl fd=6 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000048
+ fcntl fd=6 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000040
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 03706f70 06636869 61726b08 67726565 6e656e64
+     036f7267 02756b00 00050001.
+ sendto=44
+ +0.000311
+ select max=7 rfds=[6] wfds=[] efds=[] to=1.999689
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00919
+ select max=7 rfds=[6] wfds=[] efds=[] to=0.000608
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000988
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 03706f70 06636869 61726b08 67726565 6e656e64
+     036f7267 02756b00 00050001.
+ sendto=44
+ +0.000264
+ select max=7 rfds=[6] wfds=[] efds=[] to=1.999736
+ select=1 rfds=[6] wfds=[] efds=[]
+ +0.004660
+ recvfrom fd=6 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8580 00010001 00020002 03706f70 06636869 61726b08 67726565 6e656e64
+     036f7267 02756b00 00050001 c00c0005 00010001 5180000f 0c736572 76696365
+     2d6e616d 65c010c0 17000200 01000151 80001103 6e73300a 72656c61 74697669
+     7479c017 c0170002 00010001 51800006 036e7331 c057c053 00010001 00015180
+     0004ac12 2d06c070 00010001 00015180 0004ac12 2d0b.
+ +0.000242
+ recvfrom fd=6 buflen=512
+ recvfrom=EAGAIN
+ +0.000074
+ close fd=6
+ close=OK
+ +0.000144

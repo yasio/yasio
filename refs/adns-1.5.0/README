@@ -1,0 +1,170 @@
+                                    GNU adns
+
+   Advanced, easy to use, asynchronous-capable DNS client library and
+   utilities.
+
+   adns is a resolver library for C (and C++) programs, and a collection
+   of useful DNS resolver utilities.
+
+C library
+
+   In contrast with the standard interfaces, gethostbyname et al and
+   libresolv, it has the following features:
+     * It is reasonably easy to use for simple programs which just want to
+       translate names to addresses, look up MX records, etc.
+     * It can be used in an asynchronous, non-blocking, manner. Many
+       queries can be handled simultaneously.
+     * Responses are decoded automatically into a natural representation
+       for a C program - there is no need to deal with DNS packet and
+       RRDATA formats.
+     * Sanity checking (eg, name syntax checking, reverse/forward
+       correspondence, CNAME pointing to CNAME) is performed automatically
+       by default.
+     * Time-to-live, CNAME and other similar information is returned in an
+       easy-to-use form, without getting in the way.
+     * There is no global state in the library; resolver state is an
+       opaque data structure which the client creates explicitly. A
+       program can have several instances of the resolver.
+     * Errors are reported to the application in a way that distinguishes
+       the various causes of failure properly.
+     * adns understands conventional resolv.conf, but this can overridden
+       by environment variables.
+     * Flexibility. For example, the application can tell adns to: ignore
+       environment variables (for setuid programs), disable hostname
+       syntax sanity checks to return arbitrary data, override or ignore
+       resolv.conf in favour of supplied configuration, etc.
+     * Believed to be correct ! For example, will correctly back off to
+       TCP in case of long replies or queries, or to other nameservers if
+       several are available. It has sensible handling of bad responses
+       etc.
+
+DNS utility programs
+
+   adns also comes with a number of utility programs for use from the
+   command line and in scripts:
+     * adnslogres is a much faster version of Apache's logresolv program.
+     * adnsresfilter is a filter which copies its input to its output,
+       replacing IP addresses by the corresponding names, without unduly
+       delaying the output. For example, you can usefully pipe the output
+       of netstat -n, tcpdump -ln, and the like, into it.
+     * adnshost is a general-purpose DNS lookup utility which can be used
+       easily in from the command line and from shell scripts to do simple
+       lookups. In a more advanced mode it can be used as a
+       general-purpose DNS helper program for scripting languages which
+       can invoke and communicate with subprocesses. See the [1]adnshost
+       usage message for a summary of its capabilities.
+
+Documentation
+
+   I'm afraid there is no manual yet. However, competent C programmers
+   should be able to use the library based on the [2]commented adns.h
+   header file, and the usage messages for the programs should be
+   sufficient.
+
+Feedback
+
+   I'd be pleased if you would let me know if you're using my library in
+   your project, and what you think of it.
+
+   Bug reports should be reported to the [3]GNU Debbugs. Send an email to
+   submit@debbugs.gnu.org and at the top of your email, in a paragraph of
+   its own, write the single line
+Package: adns
+
+   Your bug report will be published via to the adns-discuss list.
+
+   Feedback and discussion takes place on the adns-discuss list. You can
+   mail me privately at ijackson@chiark.greenend.org.uk.
+
+Mailinglists
+
+   I have set up mailinglists adns-announce and adns-discuss. The
+   announcements list is moderated and will contain only announcements of
+   important bugs, new versions, etc.
+
+   There are [4]archives and subscription web pages, or you can subscribe
+   by sending mail containing the word `subscribe' to
+   adns-announce-REQUEST@chiark.greenend.org.uk or
+   adns-discuss-REQUEST@chiark.greenend.org.uk.
+
+Documentation
+
+     * [5]adns.h API header file with documentation comments
+     * [6]usage message for adnshost
+
+Download and source code
+
+     * The [7]current release as a gzipped tarfile.
+     * [8]Previous versions and other files (including OpenPGP
+       signatures).
+     * [9]master git (version control) repository browser.
+
+   adns is also available from the [10]GNU Project FTP servers and their
+   [11]mirrors.
+
+Installation note
+
+   adns requires a real nameserver like BIND running on the same system or
+   a nearby one, which must be willing to provide `recursive service'.
+   I.e., adns is a `stub resolver'.
+
+   adns requires that your real nameserver is on the same machine, or
+   connected via a secure network, so that an attacker cannot fake the
+   replies to adns's queries.
+
+References and related projects
+
+     * [12]Python bindings by Andy Dustman.
+     * [13]liboop event loop library has a built-in binding for adns.
+     * [14]port to MS Visual Studio 6 C++ by Jarle Aase.
+
+Copyright and licensing
+
+   adns is Copyright 1997-2000,2003,2006,2014 Ian Jackson, Copyright 2014
+   Mark Wooding, Copyright 1999-2000,2003,2006 Tony Finch, and Copyright
+   (C) 1991 Massachusetts Institute of Technology.
+
+   adns is free software; you can redistribute it and/or modify it under
+   the terms of the GNU General Public License as published by the Free
+   Software Foundation; either version 3 of the License, or (at your
+   option) any later version.
+
+   This program and documentation is distributed in the hope that it will
+   be useful, but without any warranty; without even the implied warranty
+   of merchantability or fitness for a particular purpose. See the [15]GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License along
+   with adns, or one should be available above; if not, write to the
+   [16]Free Software Foundation or email ijackson@chiark.greenend.org.uk.
+     __________________________________________________________________
+
+   Ian Jackson / ijackson@chiark.greenend.org.uk.
+
+   [17]GNU home page; [18]chiark home page; [19]site or mirror home page
+
+   This web page is Copyright (C)1996-2005,2014 Ian Jackson. See the
+   [20]Copyright/acknowledgements.
+
+References
+
+   1. http://www.chiark.greenend.org.uk/~ian/adns/docs/adnshost.txt
+   2. http://www.chiark.greenend.org.uk/~ian/adns/docs/adns.h.txt
+   3. http://debbugs.gnu.org/
+   4. http://www.chiark.greenend.org.uk/mailman/listinfo
+   5. http://www.chiark.greenend.org.uk/~ian/adns/docs/adns.h.txt
+   6. http://www.chiark.greenend.org.uk/~ian/adns/docs/adnshost.txt
+   7. http://www.chiark.greenend.org.uk/~ian/adns/adns.tar.gz
+   8. http://www.chiark.greenend.org.uk/~ian/adns/ftp/
+   9. http://www.chiark.greenend.org.uk/ucgi/~ianmdlvl/git/adns.git/
+  10. http://www.gnu.org/
+  11. http://www.gnu.org/order/ftp.html
+  12. http://code.google.com/p/adns-python
+  13. http://www.lysator.liu.se/liboop/
+  14. http://adns.jgaa.com/
+  15. http://www.chiark.greenend.org.uk/~ian/adns/docs/COPYING.txt
+  16. http://www.fsf.org/
+  17. http://www.gnu.org/
+  18. http://www.chiark.greenend.org.uk/
+  19. file://localhost/
+  20. http://www.chiark.greenend.org.uk/~ian/sw-www-copy.html

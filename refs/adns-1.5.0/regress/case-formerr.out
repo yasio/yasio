@@ -1,0 +1,19 @@
+adns debug: using nameserver 172.18.45.6
+h.rndrobwlxxxxxxxxxxlllantysiliogogllanfairpwllgwyngyllgogerychw.relativity.greenend.org.uk. flags 1 type 1 A(-) submitted
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+adns warning: server cannot understand our query (Format Error) (NS=172.18.45.6)
+h.rndrobwlxxxxxxxxxxlllantysiliogogllanfairpwllgwyngyllgogerychw.relativity.greenend.org.uk. flags 1 type A(-): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+rc=0

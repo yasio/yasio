@@ -1,0 +1,5 @@
+adns debug: using nameserver 172.18.45.6
+4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2.0.0.0.9.D.1.0.8.A.B.0.1.0.0.2.IP6.ARPA flags 0 type 65548 PTR(checked) submitted
+4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2.0.0.0.9.D.1.0.8.A.B.0.1.0.0.2.IP6.ARPA flags 0 type PTR(checked): OK; nrrs=1; cname=$; owner=$; ttl=13516
+ stratocaster.colo.distorted.org.uk
+rc=0

@@ -1,0 +1,107 @@
+#!/bin/bash
+# usage: m1test <name> <initfile> [<initflags>] <queryargs>'
+# test recording script
+#
+#  This file is part of adns, which is
+#    Copyright (C) 1997-2000,2003,2006,2014  Ian Jackson
+#    Copyright (C) 2014  Mark Wooding
+#    Copyright (C) 1999-2000,2003,2006  Tony Finch
+#    Copyright (C) 1991 Massachusetts Institute of Technology
+#  (See the file INSTALL for full details.)
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3, or (at your option)
+#  any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation.
+
+set -e
+
+: ${srcdir=.}
+if [ $# -lt 3 ]
+then
+	echo >&2 \
+'usage: m1test <name> <initfile> [-<initflags>] ["<"]
+              [=<hrecord-command-args>] <queryargs>
+("<" means read input from case-<name>.in)'
+	exit 1
+fi
+
+case="$srcdir/case-$1"; shift
+initfile="$1"; shift
+
+hrecord="./adnstest_record"
+
+case "$1" in
+-*)	initflags="$1"; shift
+esac
+
+if test "x$1" = "x<"
+then
+	shift; exec <"$case.in"
+fi
+
+case "$1" in
+=*)	hrecord="`echo \"$1\" | sed -e 's/^=//'`"; shift
+esac
+
+if test ! -f "$hrecord" -a -f "${hrecord}_record"
+then
+	case "$hrecord" in
+	/*)	program="$hrecord"	;;
+	*)	program="./$hrecord"	;;
+	esac
+	hrecord="${program}_record"
+else
+	program="$(echo "$hrecord" | sed -e 's/ .*//; s/_record$//')"
+fi
+
+queryargs="$*"
+
+initstring="`cat $srcdir/init-$initfile.text`"
+xinitflagsf=$srcdir/$program-xinitflags.text
+if test -f $xinitflagsf
+then
+	useinitflags="$initflags $(cat $xinitflagsf)";
+else
+	useinitflags="$initflags /"
+fi
+
+echo $program $initfile $initflags >"$case.sys"
+echo "$queryargs" >>"$case.sys"
+
+EF_DISABLE_BANNER=1
+export EF_DISABLE_BANNER
+
+rm -f pipe.out pipe.err
+mknod pipe.out p
+mknod pipe.err p
+tee <pipe.out "$case.out" &
+tee_out=$!
+tee <pipe.err "$case.err" &
+tee_err=$!
+exec 4>pipe.out
+exec 5>pipe.err
+
+echo running hrecord $initflags "... $queryargs"
+set +e
+ADNS_TEST_OUT_FD=3 3>>"$case.sys" >&4 2>&5 \
+ $hrecord $useinitflags"$initstring" $queryargs
+rc=$?
+set -e
+
+echo "rc=$rc" >&4
+exec 4>&-
+exec 5>&-
+
+wait $tee_out
+wait $tee_err
+
+echo "exit status: $rc"

@@ -1,0 +1,4 @@
+adns debug: using nameserver 172.29.199.224
+4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2.0.0.0.9.d.1.0.8.b.d.0.1.0.0.2.ip6.arpa flags 0 type 65548 PTR(checked) submitted
+4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2.0.0.0.9.d.1.0.8.b.d.0.1.0.0.2.ip6.arpa flags 0 type PTR(checked): Inconsistent resource records in DNS; nrrs=0; cname=$; owner=$; ttl=14400
+rc=0

@@ -1,0 +1,164 @@
+adns debug: using nameserver 172.29.199.224
+maddr.dnserr.distorted.org.uk flags 0 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 0 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 0 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 0 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 0 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 0 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 0 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 0 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 1024 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 1024 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 1024 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 1024 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 1024 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 1024 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 1024 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 1024 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 2048 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 2048 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 2048 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 2048 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 2048 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 2048 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 2048 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 2048 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 3072 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 3072 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 3072 type 65537 A(addr) submitted
+maddr.dnserr.distorted.org.uk flags 3072 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 3072 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 3072 type 65551 MX(+addr) submitted
+mx.dnserr.distorted.org.uk flags 3072 type 65537 A(addr) submitted
+mx.dnserr.distorted.org.uk flags 3072 type 65551 MX(+addr) submitted
+maddr.dnserr.distorted.org.uk flags 0 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 0 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET 192.0.2.2
+ INET 203.0.113.1
+ INET 203.0.113.2
+ INET 192.0.2.1
+maddr.dnserr.distorted.org.uk flags 0 type A(addr): OK; nrrs=12; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET6 2001:db8:2::1
+ INET6 2001:db8:2::2
+ INET 203.0.113.1
+ INET 203.0.113.2
+ INET 192.0.2.1
+ INET 192.0.2.2
+ INET6 2001:db8:3::1
+ INET6 2001:db8:3::2
+ INET6 2001:db8:1::1
+ INET6 2001:db8:1::2
+maddr.dnserr.distorted.org.uk flags 0 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 0 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 0 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 1024 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 1024 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET 203.0.113.2
+ INET 192.0.2.1
+ INET 192.0.2.2
+ INET 203.0.113.1
+maddr.dnserr.distorted.org.uk flags 1024 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET 192.0.2.1
+ INET 192.0.2.2
+ INET 203.0.113.1
+ INET 203.0.113.2
+maddr.dnserr.distorted.org.uk flags 1024 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 1024 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 1024 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 2048 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 2048 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET6 2001:db8:2::2
+ INET6 2001:db8:2::1
+ INET6 2001:db8:3::1
+ INET6 2001:db8:3::2
+ INET6 2001:db8:1::1
+ INET6 2001:db8:1::2
+maddr.dnserr.distorted.org.uk flags 2048 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 2048 type A(addr): OK; nrrs=6; cname=$; owner=$; ttl=14400
+ INET6 2001:db8:2::1
+ INET6 2001:db8:2::2
+ INET6 2001:db8:3::1
+ INET6 2001:db8:3::2
+ INET6 2001:db8:1::1
+ INET6 2001:db8:1::2
+mx.dnserr.distorted.org.uk flags 2048 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 2048 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 3072 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 3072 type MX(+addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+maddr.dnserr.distorted.org.uk flags 3072 type A(addr): OK; nrrs=12; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET6 2001:db8:2::1
+ INET6 2001:db8:2::2
+ INET 203.0.113.2
+ INET 192.0.2.1
+ INET 192.0.2.2
+ INET 203.0.113.1
+ INET6 2001:db8:1::2
+ INET6 2001:db8:3::1
+ INET6 2001:db8:3::2
+ INET6 2001:db8:1::1
+maddr.dnserr.distorted.org.uk flags 3072 type A(addr): OK; nrrs=12; cname=$; owner=$; ttl=14400
+ INET 198.51.100.1
+ INET 198.51.100.2
+ INET6 2001:db8:2::1
+ INET6 2001:db8:2::2
+ INET 192.0.2.1
+ INET 192.0.2.2
+ INET 203.0.113.1
+ INET 203.0.113.2
+ INET6 2001:db8:3::1
+ INET6 2001:db8:3::2
+ INET6 2001:db8:1::1
+ INET6 2001:db8:1::2
+mx.dnserr.distorted.org.uk flags 3072 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 3072 type A(addr): No such data; nrrs=0; cname=$; owner=$; ttl=14400
+mx.dnserr.distorted.org.uk flags 0 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.2 INET 198.51.100.1 INET 203.0.113.1 INET 203.0.113.2 INET 192.0.2.1 INET 192.0.2.2 )
+ 69 a.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.16 )
+ 69 aaaa.dnserr.distorted.org.uk permfail 301 nodata "No such data" ( )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.17 )
+mx.dnserr.distorted.org.uk flags 0 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.1 INET 198.51.100.2 INET6 2001:db8:2::1 INET6 2001:db8:2::2 INET 203.0.113.1 INET 203.0.113.2 INET 192.0.2.1 INET 192.0.2.2 INET6 2001:db8:3::2 INET6 2001:db8:1::1 INET6 2001:db8:1::2 INET6 2001:db8:3::1 )
+ 69 a.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.16 )
+ 69 aaaa.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::1 )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.17 INET6 2001:db8::2 )
+mx.dnserr.distorted.org.uk flags 1024 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 a.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.16 )
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.1 INET 198.51.100.2 INET 192.0.2.2 INET 203.0.113.1 INET 203.0.113.2 INET 192.0.2.1 )
+ 69 aaaa.dnserr.distorted.org.uk permfail 301 nodata "No such data" ( )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.17 )
+mx.dnserr.distorted.org.uk flags 1024 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 a.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.16 )
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.1 INET 198.51.100.2 INET 203.0.113.1 INET 203.0.113.2 INET 192.0.2.1 INET 192.0.2.2 )
+ 69 aaaa.dnserr.distorted.org.uk permfail 301 nodata "No such data" ( )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.17 )
+mx.dnserr.distorted.org.uk flags 2048 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8:2::1 INET6 2001:db8:2::2 INET6 2001:db8:1::1 INET6 2001:db8:1::2 INET6 2001:db8:3::1 INET6 2001:db8:3::2 )
+ 69 aaaa.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::1 )
+ 69 a.dnserr.distorted.org.uk permfail 301 nodata "No such data" ( )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::2 )
+mx.dnserr.distorted.org.uk flags 2048 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8:2::1 INET6 2001:db8:2::2 INET6 2001:db8:1::2 INET6 2001:db8:3::1 INET6 2001:db8:3::2 INET6 2001:db8:1::1 )
+ 69 aaaa.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::1 )
+ 69 a.dnserr.distorted.org.uk permfail 301 nodata "No such data" ( )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::2 )
+mx.dnserr.distorted.org.uk flags 3072 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 a.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.16 )
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.1 INET 198.51.100.2 INET6 2001:db8:2::1 INET6 2001:db8:2::2 INET 192.0.2.2 INET 203.0.113.1 INET 203.0.113.2 INET 192.0.2.1 INET6 2001:db8:3::1 INET6 2001:db8:3::2 INET6 2001:db8:1::1 INET6 2001:db8:1::2 )
+ 69 aaaa.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::1 )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.17 INET6 2001:db8::2 )
+mx.dnserr.distorted.org.uk flags 3072 type MX(+addr): OK; nrrs=4; cname=$; owner=$; ttl=14400
+ 69 a.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.16 )
+ 69 maddr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.1 INET 198.51.100.2 INET6 2001:db8:2::2 INET6 2001:db8:2::1 INET 203.0.113.1 INET 203.0.113.2 INET 192.0.2.1 INET 192.0.2.2 INET6 2001:db8:3::1 INET6 2001:db8:3::2 INET6 2001:db8:1::1 INET6 2001:db8:1::2 )
+ 69 aaaa.dnserr.distorted.org.uk ok 0 ok "OK" ( INET6 2001:db8::1 )
+ 70 addr.dnserr.distorted.org.uk ok 0 ok "OK" ( INET 198.51.100.17 INET6 2001:db8::2 )
+rc=0

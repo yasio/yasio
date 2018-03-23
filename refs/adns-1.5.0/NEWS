@@ -1,0 +1,70 @@
+Changes in adns 1.5.0, since adns 1.4, are:
+
+ New features:
+
+ * This release provides full IPv6 support.  Applications can request
+   AAAA records (containing IPv6 addresses) as well as, or instead of,
+   A records (containing IPv4 addresses).  adns 1.5 can speak to
+   nameservers over IPv6.
+
+ * adns_addr2text and adns_text2addr: Convenient C functions for
+   converting between addresses and address literals.  These carry
+   less baggage than getaddrinfo and getnameinfo.
+
+ Bugfixes:
+
+ * We fix a crashing bug in adnslogres.  (Debian#392102.)
+
+ * Previously, parsing of some adns_specific options in resolv.conf
+   would go awry if multiple options were specified on the same line.
+   (Fixed since 1.5.0~rc0.)
+
+ * adns now knows to ignore more things in resolv.conf, rather than
+   warn about them, and there's also an option to disable all of these
+   warnings.  (Debian#411263.)  (Fixed since 1.5.0~rc0.)
+
+ * Previously, some harmless but wrong owner names for checked ptr
+   queries would be accepted; now they are rejected with `Domain
+   invalid for particular DNS query type'.
+
+ Other:
+
+ * There are some minor API/ABI changes and improvements, for future
+   proofing.
+
+ * There are also some build system, test suite and coding style
+   improvements.
+
+ * Licence is now GPLv3.
+
+Compatibility:
+
+  adns 1.5 is fully forwards API- and ABI-compatible with 1.4.
+
+  adns 1.5 is not backwards ABI-compatible, in the sense that
+  applications built against adns 1.5 but run with adns 1.4 may
+  experience `Function not implemented' errors, or `symbol lookup
+  error' due to undefined symbols.  But applications built against 1.4
+  will not experience data corruption due to ABI mismatches.
+
+  adns_r_addr queries (general `address' queries where the application
+  does not specify the kind of address) used to only return AF_INET
+  (IPv4) addresses.  To avoid surprising existing applications,
+  AF_INET6 (IPv6) addresses will be returned only if the application
+  explicitly states its support for handling a mixture of address
+  families in the results from adns_r_addr.  In a future version of
+  adns this will become the default.
+
+  adnshost and the other command-line utilities are fully forward- and
+  backward-compatible, except that in adns 1.5, adnshost will return
+  IPv6 as well as IPv4 information if simply asked for `addresses'.
+  Calling programs which did not ask for a specific address type ought
+  to cope with this.
+
+  The API in 1.5.0 also fixes a technical nonconformance to the C
+  specification.  On platforms where an `enum' type might be an
+  integer type whose size is bits is not a power of two, there could
+  be an incompatible ABI change between 1.4 and 1.5 - but we don't
+  think there are many (if any) such platforms which are sufficiently
+  POSIX-like for adns.   (Changed since 1.5.0~rc0.)
+

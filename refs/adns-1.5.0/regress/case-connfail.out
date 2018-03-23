@@ -1,0 +1,9 @@
+adns debug: using nameserver 172.18.45.36
+adns debug: using nameserver 172.18.45.6
+davenant.greenend.org.uk flags 2 type 1adns warning: TCP connection failed: connect: Socket operation on non-socket (NS=172.18.45.36)
+adns warning: TCP connection failed: connect: Socket operation on non-socket (NS=172.18.45.6)
+ A(-) submitted
+adns warning: TCP connection failed: connect: Socket operation on non-socket (NS=172.18.45.36)
+adns warning: TCP connection failed: connect: Socket operation on non-socket (NS=172.18.45.6)
+davenant.greenend.org.uk flags 2 type A(-): All nameservers failed; nrrs=0; cname=$; owner=$; ttl=604800
+rc=0

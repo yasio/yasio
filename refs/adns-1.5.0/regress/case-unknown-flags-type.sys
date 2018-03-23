@@ -1,0 +1,15 @@
+./adnstest default -0x4000
+:0x70000000|1 0x40080000/chiark.greenend.org.uk
+ start 1414182770.758670
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=6
+ +0.000142
+ fcntl fd=6 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000080
+ fcntl fd=6 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000060
+ close fd=6
+ close=OK
+ +0.000170

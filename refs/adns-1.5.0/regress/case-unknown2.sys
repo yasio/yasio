@@ -1,0 +1,66 @@
+./adnshost default
+-t type2 -Qq ucam.org.
+ start 1144369677.011111
+ socket domain=AF_INET type=SOCK_DGRAM
+ socket=6
+ +0.000083
+ fcntl fd=6 cmd=F_GETFL
+ fcntl=~O_NONBLOCK&...
+ +0.000049
+ fcntl fd=6 cmd=F_SETFL O_NONBLOCK|...
+ fcntl=OK
+ +0.000043
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 04756361 6d036f72 67000002 0001.
+ sendto=26
+ +0.000308
+ select max=7 rfds=[6] wfds=[] efds=[] to=1.999692
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00406
+ select max=7 rfds=[6] wfds=[] efds=[] to=0.000098
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000987
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 04756361 6d036f72 67000002 0001.
+ sendto=26
+ +0.000244
+ select max=7 rfds=[6] wfds=[] efds=[] to=1.999756
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00531
+ select max=7 rfds=[6] wfds=[] efds=[] to=0.000287
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000988
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 04756361 6d036f72 67000002 0001.
+ sendto=26
+ +0.000252
+ select max=7 rfds=[6] wfds=[] efds=[] to=1.999748
+ select=0 rfds=[] wfds=[] efds=[]
+ +2.-00540
+ select max=7 rfds=[6] wfds=[] efds=[] to=0.000288
+ select=0 rfds=[] wfds=[] efds=[]
+ +0.000989
+ sendto fd=6 addr=172.18.45.6:53
+     311f0100 00010000 00000000 04756361 6d036f72 67000002 0001.
+ sendto=26
+ +0.000237
+ select max=7 rfds=[6] wfds=[] efds=[] to=1.999763
+ select=1 rfds=[6] wfds=[] efds=[]
+ +1.961402
+ recvfrom fd=6 buflen=512
+ recvfrom=OK addr=172.18.45.6:53
+     311f8180 00010004 00040004 04756361 6d036f72 67000002 00010475 63616d03
+     6f726700 00020001 00054600 000c0663 68696172 6b026e73 c01ac01a 00020001
+     00054600 000b0863 68696d61 657261c0 35c01a00 02000100 05460000 08057261
+     70756ec0 35c01a00 02000100 05460000 09066265 636b6574 c035c01a 00020001
+     00054600 0002c02e c01a0002 00010005 46000002 c046c01a 00020001 00054600
+     0002c05d c01a0002 00010005 46000002 c071c02e 00010001 0001517c 0004c1c9
+     c8aac046 00010001 0001517c 0004836f 082ac05d 00010001 0001517c 0004836f
+     e86cc071 00010001 0001517c 0004cd86 e6ba.
+ +0.000366
+ recvfrom fd=6 buflen=512
+ recvfrom=EAGAIN
+ +0.000089
+ close fd=6
+ close=OK
+ +0.000187

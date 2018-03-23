@@ -189,7 +189,7 @@ void channel_context::reset()
     offset_ = 0;
     expected_pdu_length_ = -1;
     error_ = 0;
-    resolve_state_ = resolve_state::IDLE;
+    resolve_state_ = resolve_state::FAILED;
     index_ = static_cast<size_t>(-1);
 }
 
@@ -258,6 +258,7 @@ channel_context* async_tcp_client::new_channel(const channel_endpoint& ep)
     ctx->addressv6_ = ep.addressv6_;
     ctx->port_ = ep.port_;
     ctx->index_ = this->channels_.size();
+    update_resolve_state(ctx);
     this->channels_.push_back(ctx);
     return ctx;
 }
@@ -342,8 +343,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         for (auto i = 0; i < channel_count; ++i)
         {
             auto& channel_ep = channel_eps[i];
-            auto ctx = new_channel(channel_ep);
-            ctx->resolve_state_ = channel_ep.port_ > 0 ? resolve_state::DIRTY : resolve_state::IDLE;
+            (void)new_channel(channel_ep);
         }
 
         worker_thread_ = std::thread([this] {
@@ -364,7 +364,7 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
     ctx->address_ = address;
     ctx->addressv6_ = addressv6;
     ctx->port_ = port;
-    ctx->resolve_state_ = port > 0 ? resolve_state::DIRTY : resolve_state::IDLE;
+    update_resolve_state(ctx);
 }
 
 void async_tcp_client::service()
@@ -440,7 +440,6 @@ void async_tcp_client::service()
                 }
 
                 if (!ctx->send_queue_.empty()) this->increase_ready_events();
-                if (ctx->offset_ > 0) this->increase_ready_events();
             }
             else if (ctx->state_ == channel_state::REQUEST_CONNECT) {
                 do_nonblocking_connect(ctx);
@@ -519,8 +518,9 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
         }
         else if (ctx->resolve_state_ == resolve_state::FAILED) {
             handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED); 
-        } // DIRTY,Try resolve address async, TODO: check whether plan ip address
+        } // DIRTY,Try resolve address nonblocking
         else if(ctx->resolve_state_ == resolve_state::DIRTY) {
+            // Check wheter a ip addres, no need to resolve by dns
             ctx->resolve_state_ = resolve_state::INPRROGRESS;
             int flags = xxsocket::getipsv();
             addrinfo hint;
@@ -580,7 +580,7 @@ void async_tcp_client::async_connect(size_t channel_index)
         return;
     } 
 
-    ctx->resolve_state_ = resolve_state::DIRTY;
+    if (ctx->resolve_state_ != resolve_state::READY) update_resolve_state(ctx);
     ctx->state_ = channel_state::REQUEST_CONNECT;
     if (ctx->impl_.is_open()) {
         ctx->impl_.shutdown();
@@ -1037,6 +1037,18 @@ bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
         return true;
     }
     return false;
+}
+
+void  async_tcp_client::update_resolve_state(channel_context* ctx)
+{
+    if (ctx->port_ > 0) {
+        if (ctx->endpoint_.assign(ctx->address_.c_str(), ctx->port_) || ctx->endpoint_.assign(ctx->addressv6_.c_str(), ctx->port_))
+        {
+            ctx->resolve_state_ = resolve_state::READY;
+        }
+        else ctx->resolve_state_ = resolve_state::DIRTY;
+    }
+    else ctx->resolve_state_ = resolve_state::FAILED;
 }
 
 int async_tcp_client::swap_ready_events()

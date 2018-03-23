@@ -1,0 +1,33 @@
+adns debug: using nameserver 172.18.45.2
+test.iwj.relativity.greenend.org.uk. flags 2 type 1 A(-) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 2 NS(raw) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 5 CNAME(-) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 6 SOA(raw) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 12 PTR(raw) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 13 HINFO(-) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 15 MX(raw) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 16 TXT(-) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 17 RP(raw) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 65537 A(addr) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 65538 NS(+addr) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 65548 PTR(checked) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 65551 MX(+addr) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 131078 SOA(822) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type 131089 RP(822) submitted
+test.iwj.relativity.greenend.org.uk. flags 2 type PTR(checked): Domain invalid for particular DNS query type; nrrs=0; cname=$; owner=$; ttl=604800
+adns debug: TCP connected (NS=172.18.45.2)
+test.iwj.relativity.greenend.org.uk. flags 2 type A(-): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type NS(raw): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type CNAME(-): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type SOA(raw): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type PTR(raw): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type HINFO(-): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type MX(raw): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type TXT(-): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type RP(raw): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type NS(+addr): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type MX(+addr): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type SOA(822): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type RP(822): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+test.iwj.relativity.greenend.org.uk. flags 2 type A(addr): DNS query timed out; nrrs=0; cname=$; owner=$; ttl=604770
+rc=0

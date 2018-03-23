@@ -78,8 +78,8 @@ extern "C" {/* Structure for scatter/gather I/O. */
 #endif
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
-
-#define MAX_PDU_LEN SZ(10, M)
+#define ASYNC_RESOLVE_TIMEOUT 5 // 5 seconds
+#define MAX_PDU_LEN SZ(10, M) // max pdu length
 
 #define TSF_CALL(stmt) this->tsf_call_([=]{(stmt);});
 
@@ -143,20 +143,16 @@ namespace {
                 ctx->endpoint_.assign(answerlist);
                 ctx->endpoint_.port(ctx->port_);
                 std::string ip = ctx->endpoint_.to_string();
-                INET_LOG("resolve succeed, status:%d, ip:%s", status, ip.c_str());
+                INET_LOG("ares ---> resolve domain:%s succeed, ip:%s", ctx->address_.c_str(), ip.c_str());
             }
         }
         else {
-            INET_LOG("resolve failed, status:%d", status);
+            INET_LOG("ares ---> resolve domain: %s failed, status:%d", ctx->address_.c_str(), status);
         }
 
         ctx->deadline_timer_.cancel();
-        bool succeed = ctx->endpoint_.port() > 0;
-        ctx->resolve_state_ = succeed ? resolve_state::READY : resolve_state::FAILED;
-        if (succeed && ctx->state_ == channel_state::REQUEST_CONNECT)
-        { // add event to event-loop, there are work TODO
-            ctx->deadline_timer_.service_.increase_ready_events();
-        }
+        ctx->resolve_state_ = ctx->endpoint_.port() ? resolve_state::READY : resolve_state::FAILED;
+        ctx->deadline_timer_.service_.finish_async_resolve(ctx);
     }
 }
 
@@ -188,12 +184,21 @@ channel_context::channel_context(async_tcp_client& service) : deadline_timer_(se
 void channel_context::reset()
 {
     state_ = channel_state::INACTIVE;
+    
     receiving_pdu_.clear();
+    
     offset_ = 0;
-    expected_pdu_length_ = -1;
+    receiving_pdu_elen_ = -1;
+    ready_events_ = 0;
     error_ = 0;
     resolve_state_ = resolve_state::FAILED;
     index_ = static_cast<size_t>(-1);
+
+    send_queue_mtx_.lock();
+    send_queue_.clear();
+    send_queue_mtx_.unlock();
+
+    deadline_timer_.cancel();
 }
 
 async_tcp_client::async_tcp_client() : stopping_(false),
@@ -210,7 +215,9 @@ async_tcp_client::async_tcp_client() : stopping_(false),
 
     maxfdp_ = 0;
     nfds_ = 0;
+    async_resolve_count_ = 0;
     ares_ = nullptr;
+    ipsv_flags_ = 0;
 }
 
 async_tcp_client::~async_tcp_client()
@@ -258,7 +265,6 @@ channel_context* async_tcp_client::new_channel(const channel_endpoint& ep)
     auto ctx = new channel_context(*this);
     ctx->reset();
     ctx->address_ = ep.address_;
-    ctx->addressv6_ = ep.addressv6_;
     ctx->port_ = ep.port_;
     ctx->index_ = this->channels_.size();
     update_resolve_state(ctx);
@@ -322,6 +328,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         // dns_ = dns_init();
         int ret = 0;
         ares_options options;
+        options.timeout = 3000;
         options.sock_state_cb = [](void *service, ares_socket_t socket_fd, int readable,int writable) {
             if (socket_fd != invalid_socket)
             {
@@ -332,7 +339,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         };
         options.sock_state_cb_data = this;
 
-        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB)) == ARES_SUCCESS)
+        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB | ARES_OPT_TIMEOUTMS)) == ARES_SUCCESS)
         {
             // set dns servers, optional, comment follow code, ares also work well.
             // ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
@@ -365,7 +372,6 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
     auto ctx = channels_[channel_index];
 
     ctx->address_ = address;
-    ctx->addressv6_ = addressv6;
     ctx->port_ = port;
     update_resolve_state(ctx);
 }
@@ -377,7 +383,7 @@ void async_tcp_client::service()
 #endif
 
     // Call once at startup
-    xxsocket::getipsv();
+    this->ipsv_flags_ = xxsocket::getipsv();
 
     // event loop
     fd_set fds_array[3];
@@ -414,6 +420,15 @@ void async_tcp_client::service()
             --nfds;
         }
         
+        /// perform possible domain resolve requests.
+        if (this->async_resolve_count_ > 0) {
+            ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
+            int n = ares_getsock(this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
+            if (n > 0) {
+                ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]);
+            }
+        }
+
         /// perform active channels
         for (auto ctx : channels_) {
             if (ctx->state_ == channel_state::CONNECTED) {
@@ -422,8 +437,9 @@ void async_tcp_client::service()
                     INET_LOG("perform read operation...");
 #endif
                     if (!do_read(ctx)) {
-                        INET_LOG("do read for %s failed!", ctx->address_.c_str());
+                        INET_LOG("do read for %s failed, error code(%d), detail:%s", ctx->address_.c_str(), ctx->error_, xxsocket::get_error_msg(ctx->error_));
                         handle_error(ctx);
+                        continue;
                     }
                 }
 
@@ -435,14 +451,16 @@ void async_tcp_client::service()
 #endif
                     if (!do_write(ctx))
                     { // TODO: check would block? for client, may be unnecessary.
+                        INET_LOG("do write for %s failed, error code(%d), detail:%s", ctx->address_.c_str(), ctx->error_, xxsocket::get_error_msg(ctx->error_));
                         ctx->send_queue_mtx_.unlock();
                         handle_error(ctx);
+                        continue;
                     }
 
-                    ctx->send_queue_mtx_.unlock();
-                }
+                    if (!ctx->send_queue_.empty()) ++ctx->ready_events_;
 
-                if (!ctx->send_queue_.empty()) this->increase_ready_events();
+                    ctx->send_queue_mtx_.unlock();
+                } 
             }
             else if (ctx->state_ == channel_state::REQUEST_CONNECT) {
                 do_nonblocking_connect(ctx);
@@ -450,15 +468,10 @@ void async_tcp_client::service()
             else if (ctx->state_ == channel_state::CONNECTING) {
                 do_nonblocking_connect_completion(fds_array, ctx);
             }
+
+            this->swap_ready_events(ctx);
         }
-        
-        /// perform domain resolve
-        ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
-        int n = ares_getsock(this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
-        if (n > 0) {
-            ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]); 
-        }
-        
+
         /// perform timeout timers
         perform_timeout_timers();
     }
@@ -501,7 +514,7 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
                     register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
                     ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
-                    ctx->expected_pdu_length_ = -1;
+                    ctx->receiving_pdu_elen_ = -1;
                     ctx->offset_ = 0;
                     ctx->receiving_pdu_.clear();
 
@@ -524,25 +537,7 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
         } // DIRTY,Try resolve address nonblocking
         else if(ctx->resolve_state_ == resolve_state::DIRTY) {
             // Check wheter a ip addres, no need to resolve by dns
-            ctx->resolve_state_ = resolve_state::INPRROGRESS;
-            int flags = xxsocket::getipsv();
-            addrinfo hint;
-            memset(&hint, 0x0, sizeof(hint));
-            if (flags & ipsv_ipv4) {
-                hint.ai_family = AF_INET;
-            }
-            else if (flags & ipsv_ipv6) {
-                hint.ai_family = AF_INET6;
-            }
-            ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
-            ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
-            ctx->deadline_timer_.expires_from_now(std::chrono::seconds(5));
-            ctx->deadline_timer_.async_wait([=](bool cancelled) {
-                if (!cancelled) {
-                    ::ares_cancel(this->ares_); // It's seems not trigger socket close, why?
-                    handle_connect_failed(ctx, ERR_RESOLVE_HOST_TIMEOUT);
-                }
-            });
+            start_async_resolve(ctx);
         }
     }
 }
@@ -602,27 +597,8 @@ void async_tcp_client::handle_error(channel_context* ctx)
         TSF_CALL(on_connection_lost_(ctx->index_, ctx->error_, xxsocket::get_error_msg(ctx->error_)));
     }
 
-    ctx->state_ = channel_state::INACTIVE;
 
-    // @Clear all sending messages
-    if (!ctx->send_queue_.empty()) {
-        ctx->send_queue_mtx_.lock();
-
-        for (auto pdu : ctx->send_queue_)
-            delete pdu;
-        ctx->send_queue_.clear();
-
-        ctx->send_queue_mtx_.unlock();
-    }
-
-    // @Notify all timers are cancelled.
-    if (!this->timer_queue_.empty()) {
-        this->timer_queue_mtx_.lock();
-        //for (auto& timer : timer_queue_)
-        //    timer->callback_(true);
-        this->timer_queue_.clear();
-        this->timer_queue_mtx_.unlock();
-    }
+    ctx->reset();
 }
 
 void async_tcp_client::register_descriptor(const socket_native_type fd, int flags)
@@ -695,7 +671,7 @@ void async_tcp_client::move_received_pdu(channel_context* ctx)
     recv_queue_.push_back(std::move(ctx->receiving_pdu_)); // without data copy
     recv_queue_mtx_.unlock();
 
-    ctx->expected_pdu_length_ = -1;
+    ctx->receiving_pdu_elen_ = -1;
 }
 
 void async_tcp_client::do_nonblocking_connect_completion(fd_set* fds_array, channel_context* ctx)
@@ -834,23 +810,26 @@ bool async_tcp_client::do_read(channel_context* ctx)
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("async_tcp_client::do_read --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
 #endif
-            if (ctx->expected_pdu_length_ == -1) { // decode length
-                if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->expected_pdu_length_))
+            if (ctx->receiving_pdu_elen_ == -1) { // decode length
+                if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
                 {
-                    if (ctx->expected_pdu_length_ < 0) { // header insuff
+                    if (ctx->receiving_pdu_elen_ < 0) { // header insufficient, wait readfd ready at next event step.
                         ctx->offset_ += n;
                     }
                     else { // ok
-                        ctx->receiving_pdu_.reserve(ctx->expected_pdu_length_); // #perfomance, avoid memory reallocte.
+                        ctx->receiving_pdu_.reserve(ctx->receiving_pdu_elen_); // #perfomance, avoid memory reallocte.
 
                         auto bytes_transferred = n + ctx->offset_;
-                        ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(ctx->expected_pdu_length_, bytes_transferred));
-                        if (bytes_transferred >= ctx->expected_pdu_length_)
+                        ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(ctx->receiving_pdu_elen_, bytes_transferred));
+                        if (bytes_transferred >= ctx->receiving_pdu_elen_)
                         { // pdu received properly
-                            ctx->offset_ = bytes_transferred - ctx->expected_pdu_length_; // set offset to bytes of remain buffer
-                            if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset.
-                                ::memmove(ctx->buffer_, ctx->buffer_ + ctx->expected_pdu_length_, ctx->offset_);
-
+                            ctx->offset_ = bytes_transferred - ctx->receiving_pdu_elen_; // set offset to bytes of remain buffer
+                            if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset. 
+                            {
+                                ::memmove(ctx->buffer_, ctx->buffer_ + ctx->receiving_pdu_elen_, ctx->offset_);
+                                // not all data consumed, so add events for this context
+                                ++ctx->ready_events_;
+                            }
                             // move properly pdu to ready queue, GL thread will retrieve it.
                             move_received_pdu(ctx);
                         }
@@ -874,7 +853,7 @@ bool async_tcp_client::do_read(channel_context* ctx)
                     break;
                 }
                 else {
-                    auto bytes_needed = ctx->expected_pdu_length_ - static_cast<int>(ctx->receiving_pdu_.size()); // never equal zero or less than zero
+                    auto bytes_needed = ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()); // never equal zero or less than zero
                     if (bytes_needed > 0) {
                         ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(bytes_transferred, bytes_needed));
 
@@ -882,8 +861,10 @@ bool async_tcp_client::do_read(channel_context* ctx)
                         if (ctx->offset_ >= 0)
                         { // pdu received properly
                             if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset.
+                            {
                                 ::memmove(ctx->buffer_, ctx->buffer_ + bytes_needed, ctx->offset_);
-
+                                ++ctx->ready_events_;
+                            }
                             // move properly pdu to ready queue, GL thread will retrieve it.
                             move_received_pdu(ctx);
                         }
@@ -991,7 +972,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
     @Optimize, swap nfds, make sure do_read & do_write event chould be perform when no need to call socket.select
     However, the connection exception will detected through do_read or do_write, but it's ok.
     */
-    int nfds = this->swap_ready_events();
+    int nfds = this->flush_ready_events();
     ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
     if (nfds <= 0) {
         auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
@@ -1045,7 +1026,7 @@ bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
 void  async_tcp_client::update_resolve_state(channel_context* ctx)
 {
     if (ctx->port_ > 0) {
-        if (ctx->endpoint_.assign(ctx->address_.c_str(), ctx->port_) || ctx->endpoint_.assign(ctx->addressv6_.c_str(), ctx->port_))
+        if (ctx->endpoint_.assign(ctx->address_.c_str(), ctx->port_))
         {
             ctx->resolve_state_ = resolve_state::READY;
         }
@@ -1054,16 +1035,69 @@ void  async_tcp_client::update_resolve_state(channel_context* ctx)
     else ctx->resolve_state_ = resolve_state::FAILED;
 }
 
-int async_tcp_client::swap_ready_events()
+int async_tcp_client::flush_ready_events()
 {
     int nfds = this->nfds_;
     this->nfds_ = 0;
     return nfds;
 }
 
-void async_tcp_client::increase_ready_events()
+void  async_tcp_client::swap_ready_events(channel_context* ctx)
 {
-    ++this->nfds_;
+    this->nfds_ += ctx->ready_events_;
+    ctx->ready_events_ = 0;
+}
+
+void  async_tcp_client::start_async_resolve(channel_context* ctx)
+{ // Only call at event-loop thread, so no need to consider thread safe.
+    ctx->resolve_state_ = resolve_state::INPRROGRESS;
+    if(this->ipsv_flags_ == 0) 
+        this->ipsv_flags_ = xxsocket::getipsv();
+    
+    bool resolve_async = false;
+    addrinfo hint;
+    memset(&hint, 0x0, sizeof(hint));
+    if (this->ipsv_flags_ & ipsv_ipv4) {
+        resolve_async = true;
+        hint.ai_family = AF_INET;
+        ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+    }
+    else if (this->ipsv_flags_ & ipsv_ipv6) { // localhost is IPV6 ONLY network
+        // hint.ai_family = AF_INET6;
+        // hint.ai_flags = AI_ALL | AI_V4MAPPED;
+        //::ares_getaddrinfo(this->ares_, ctx->addressv6_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+        std::vector<ip::endpoint> eps;
+        bool succeed = xxsocket::resolve_v6(eps, ctx->address_.c_str(), ctx->port_) 
+            || xxsocket::resolve_v4to6(eps, ctx->address_.c_str(), ctx->port_);
+
+        if (succeed && !eps.empty()) {
+           ctx->endpoint_ = eps[0];
+           ctx->resolve_state_ = resolve_state::READY;
+           ++ctx->ready_events_;
+        }
+        else {
+            handle_connect_failed(ctx, ERR_RESOLVE_HOST_IPV6_REQUIRED);
+        }
+    }
+    
+    if (resolve_async != 0) {
+        ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
+
+        ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));
+        ctx->deadline_timer_.async_wait([=](bool cancelled) {
+            if (!cancelled) {
+                ::ares_cancel(this->ares_); // It's seems not trigger socket close, because ares_getaddrinfo has bug yet.
+                handle_connect_failed(ctx, ERR_RESOLVE_HOST_TIMEOUT);
+            }
+        });
+
+        ++this->async_resolve_count_;
+    }
+}
+
+void  async_tcp_client::finish_async_resolve(channel_context*)
+{ // Only call at event-loop thread, so no need to consider thread safe.
+    --this->async_resolve_count_;
 }
 
 void  async_tcp_client::interrupt()

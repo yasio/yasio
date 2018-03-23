@@ -90,7 +90,8 @@ namespace purelib {
             ERR_DPL_ILLEGAL_PDU, // decode pdu error.
             ERR_RESOLVE_HOST_FAILED, // resolve host failed.
             ERR_RESOLVE_HOST_TIMEOUT, // resolve host ip timeout.
-            ERR_INVALID_PORT, // invalid port
+            ERR_RESOLVE_HOST_IPV6_REQUIRED, // resolve host ip failed, a valid ipv6 host required.
+            ERR_INVALID_PORT, // invalid port.
         };
 
         enum {
@@ -110,7 +111,6 @@ namespace purelib {
         struct channel_endpoint
         {
             std::string                address_;
-            std::string                addressv6_;
             u_short                    port_;
         };
 
@@ -124,14 +124,13 @@ namespace purelib {
             int                        offset_ = 0; // recv buffer offset
 
             std::vector<char>          receiving_pdu_;
-            int                        expected_pdu_length_ = -1;
+            int                        receiving_pdu_elen_ = -1;
             int                        error_ = 0; // socket error(>= -1), application error(< -1)
-
+            int                        ready_events_ = 0;
             std::recursive_mutex       send_queue_mtx_;
             std::deque<appl_pdu*>      send_queue_;
 
             std::string                address_;
-            std::string                addressv6_;
             u_short                    port_;
 
             ip::endpoint               endpoint_;
@@ -227,8 +226,9 @@ namespace purelib {
 
             void       interrupt();
 
-            // Add a event, don't call me, It's only for internal use
-            void       increase_ready_events();
+            // Async resolve handlers, It's only for internal use
+            void       start_async_resolve(channel_context*);
+            void       finish_async_resolve(channel_context*);
         private:
             void       perform_timeout_timers(); // ALL timer expired
 
@@ -270,7 +270,9 @@ namespace purelib {
             // Update resolve state for new endpoint set
             void       update_resolve_state(channel_context* ctx);
 
-            int        swap_ready_events();
+            // @Optimize remember Application layer events to avoid call kernel API --> ::select
+            int        flush_ready_events();
+            void       swap_ready_events(channel_context* ctx);
 
         private:
             bool                    stopping_;
@@ -304,6 +306,7 @@ namespace purelib {
 
             // Optimize record incomplete works
             int nfds_;
+            int async_resolve_count_;
 
             // callbacks
             decode_pdu_length_func  decode_pdu_length_;
@@ -314,6 +317,8 @@ namespace purelib {
 
             // non blocking io dns resolve support
             ares_channel ares_;    //
+
+            int ipsv_flags_; // local network state
             // struct dns	*dns_;
         }; // async_tcp_client
     }; /* namspace purelib::net */

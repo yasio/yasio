@@ -903,26 +903,32 @@ public:
     static int get_last_errno(void);
     static void set_last_errno(int error);
     static const char* get_error_msg(int error);
-    
-    /// <summary>
-    /// Resolve as ipv4 or ipv6 endpoint, only return first available endpoint
-    /// </summary>
-    static ip::endpoint resolve(const char* hostname, unsigned short port = 0);
-    
-    /// <summary>
-    /// Force resolve as ipv6 endpoint, only return first available endpoint
-    /// </summary>
-    static ip::endpoint resolve_v6(const char* hostname, unsigned short port = 0);
 
     /// <summary>
-    /// Resolve as ipv4 or ipv6 endpoints
+    /// Resolve all as ipv4 or ipv6 endpoints
     /// </summary>
     static bool resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
 
     /// <summary>
-    /// Force resolve as ipv6 endpoints
+    /// Resolve as ipv4 address only.
+    /// </summary>
+    static bool resolve_v4(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
+
+    /// <summary>
+    /// Resolve as ipv6 address only.
     /// </summary>
     static bool resolve_v6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
+
+    /// <summary>
+    /// Resolve as ipv4 address only and convert to V4MAPPED format.
+    /// </summary>
+    static bool resolve_v4to6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
+
+
+    /// <summary>
+    /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
+    /// </summary>
+    static bool force_resolve_v6(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
 
     /// <summary>
     /// Resolve as ipv4 or ipv6 endpoints with callback

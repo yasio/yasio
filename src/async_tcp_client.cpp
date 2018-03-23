@@ -49,23 +49,26 @@ extern "C" {/* Structure for scatter/gather I/O. */
 #include "cocos2d.h"
 #if COCOS2D_VERSION >= 0x00030000
 #define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(nullptr)), ##__VA_ARGS__); \
    cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); }); \
 } while(false)
 #else
 #define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__); \
+   std::string msg = _string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(nullptr)), ##__VA_ARGS__); \
    cocos2d::CCDirector::sharedDirector()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::CCLog("%s", msg.c_str()); }); \
 } while(false)
 #endif
 #else
 #if defined(_WIN32)
-#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__).c_str())
+#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), static_cast<long long>(time(nullptr)), ##__VA_ARGS__).c_str())
+#elif defined(ANDROID) || defined(__ANDROID__)
+#include <jni.h>
+#include <android/log.h>
+#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "async tcp client", ("[%lld]" pszFormat), static_cast<long long>(time(nullptr)), ##__VA_ARGS__)
 #else
-#define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), static_cast<long long>(time(NULL)), ##__VA_ARGS__)
+#define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), static_cast<long long>(time(nullptr)), ##__VA_ARGS__)
 #endif
 #endif
-
 
 #ifdef _WIN32
 #if !defined(WINRT)

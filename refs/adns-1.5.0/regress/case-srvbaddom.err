@@ -1,6 +1,0 @@
-adns debug: using nameserver 172.18.45.6
-Error during DNS SRV lookup for srv.tcp.test.iwj.relativity.greenend.org.uk: Domain name is syntactically invalid
-Error during DNS SRV lookup for spong: Domain name is syntactically invalid
-_foo._bar does not exist
-_s*a._tcp.ucam.org does not exist
-Error during DNS SRV lookup for _s*a._tcp.pi&ckle.ucam.org: Domain name is syntactically invalid

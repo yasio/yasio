@@ -1,3 +1,0 @@
-nameserver 172.29.199.224
-sortlist 198.51.100.0/24 2001:db8:2::/48 0/0 ::/0
-search dnserr.distorted.org.uk distorted.org.uk

@@ -133,7 +133,7 @@ namespace purelib {
             std::string                address_;
             u_short                    port_;
 
-            ip::endpoint               endpoint_;
+            std::vector<ip::endpoint>  endpoints_;
             resolve_state              resolve_state_;
             
             size_t                     index_ = -1;

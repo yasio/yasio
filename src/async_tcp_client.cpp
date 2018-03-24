@@ -56,7 +56,7 @@ SOFTWARE.
 #elif defined(ANDROID) || defined(__ANDROID__)
 #include <jni.h>
 #include <android/log.h>
-#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "async tcp client", ("[%lld]" pszFormat), static_cast<long long>(time(nullptr)), ##__VA_ARGS__)
+#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "async tcp client", ("[%lld]" format), static_cast<long long>(time(nullptr)), ##__VA_ARGS__)
 #else
 #define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), static_cast<long long>(time(nullptr)), ##__VA_ARGS__)
 #endif
@@ -132,9 +132,12 @@ namespace {
         auto ctx = (channel_context*)arg;
         if (status == ARES_SUCCESS) {
             if (answerlist != nullptr) {
-                ctx->endpoint_.assign(answerlist);
-                ctx->endpoint_.port(ctx->port_);
-                std::string ip = ctx->endpoint_.to_string();
+                //ctx->endpoint_.assign(answerlist);
+                //ctx->endpoint_.port(ctx->port_);
+                ip::endpoint ep(answerlist);
+                ep.port(ctx->port_);
+                std::string ip = ep.to_string();
+                ctx->endpoints_.push_back(ep);
                 INET_LOG("ares ---> resolve domain:%s succeed, ip:%s", ctx->address_.c_str(), ip.c_str());
             }
         }
@@ -143,7 +146,7 @@ namespace {
         }
 
         ctx->deadline_timer_.cancel();
-        ctx->resolve_state_ = ctx->endpoint_.port() ? resolve_state::READY : resolve_state::FAILED;
+        ctx->resolve_state_ = !ctx->endpoints_.empty() ? resolve_state::READY : resolve_state::FAILED;
         ctx->deadline_timer_.service_.finish_async_resolve(ctx);
     }
 }
@@ -184,6 +187,8 @@ void channel_context::reset()
     ready_events_ = 0;
     error_ = 0;
     resolve_state_ = resolve_state::FAILED;
+
+    endpoints_.clear();
 
     send_queue_mtx_.lock();
     send_queue_.clear();
@@ -490,7 +495,7 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
             INET_LOG("connecting server %s:%u...", ctx->address_.c_str(), ctx->port_);
 
             ctx->state_ = channel_state::CONNECTING;
-            int ret = ctx->impl_.pconnect_n(ctx->endpoint_);
+            int ret = ctx->impl_.pconnect_n(ctx->endpoints_[0]);
 
             if (ret < 0)
             { // setup no blocking connect
@@ -1017,8 +1022,11 @@ bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
 void  async_tcp_client::update_resolve_state(channel_context* ctx)
 {
     if (ctx->port_ > 0) {
-        if (ctx->endpoint_.assign(ctx->address_.c_str(), ctx->port_))
+        ip::endpoint ep;
+        ctx->endpoints_.clear();
+        if (ep.assign(ctx->address_.c_str(), ctx->port_))
         {
+            ctx->endpoints_.push_back(ep);
             ctx->resolve_state_ = resolve_state::READY;
         }
         else ctx->resolve_state_ = resolve_state::DIRTY;
@@ -1042,6 +1050,7 @@ void  async_tcp_client::swap_ready_events(channel_context* ctx)
 void  async_tcp_client::start_async_resolve(channel_context* ctx)
 { // Only call at event-loop thread, so no need to consider thread safe.
     ctx->resolve_state_ = resolve_state::INPRROGRESS;
+    ctx->endpoints_.clear();
     if(this->ipsv_flags_ == 0) 
         this->ipsv_flags_ = xxsocket::getipsv();
     
@@ -1057,12 +1066,10 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
         // hint.ai_family = AF_INET6;
         // hint.ai_flags = AI_ALL | AI_V4MAPPED;
         //::ares_getaddrinfo(this->ares_, ctx->addressv6_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
-        std::vector<ip::endpoint> eps;
-        bool succeed = xxsocket::resolve_v6(eps, ctx->address_.c_str(), ctx->port_) 
-            || xxsocket::resolve_v4to6(eps, ctx->address_.c_str(), ctx->port_);
+        bool succeed = xxsocket::resolve_v6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
+            || xxsocket::resolve_v4to6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
 
-        if (succeed && !eps.empty()) {
-           ctx->endpoint_ = eps[0];
+        if (succeed && !ctx->endpoints_.empty()) {
            ctx->resolve_state_ = resolve_state::READY;
            ++ctx->ready_events_;
         }

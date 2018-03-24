@@ -1045,11 +1045,11 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     if(this->ipsv_flags_ == 0) 
         this->ipsv_flags_ = xxsocket::getipsv();
     
-    bool resolve_async = false;
+    bool noblocking = false;
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
     if (this->ipsv_flags_ & ipsv_ipv4) {
-        resolve_async = true;
+        noblocking = true;
         hint.ai_family = AF_INET;
         ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
     }
@@ -1071,7 +1071,7 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
         }
     }
     
-    if (resolve_async != 0) {
+    if (noblocking) {
         ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
 
         ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));

@@ -184,7 +184,6 @@ void channel_context::reset()
     ready_events_ = 0;
     error_ = 0;
     resolve_state_ = resolve_state::FAILED;
-    index_ = static_cast<size_t>(-1);
 
     send_queue_mtx_.lock();
     send_queue_.clear();

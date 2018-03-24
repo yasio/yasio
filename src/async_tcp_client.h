@@ -181,7 +181,7 @@ namespace purelib {
 
             void       stop_service();
 
-            void       set_endpoint(size_t channel_index, const char* address, const char* addressv6, u_short port);
+            void       set_endpoint(size_t channel_index, const char* address, u_short port);
 
             size_t     get_received_pdu_count(void) const;
 

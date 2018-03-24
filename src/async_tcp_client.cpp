@@ -33,14 +33,6 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
-extern "C" {/* Structure for scatter/gather I/O. */
-    struct iovec
-    {
-        void *iov_base;  /* Pointer to data. */
-        size_t iov_len;  /* Length of data.  */
-    }; 
-}
-
 #define _USING_IN_COCOS2DX 0
 
 #define INET_ENABLE_VERBOSE_LOG 0
@@ -364,7 +356,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
     }
 }
 
-void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, const char* addressv6, u_short port)
+void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, u_short port)
 {
     // Gets channel context
     if (channel_index >= channels_.size())

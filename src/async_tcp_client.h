@@ -136,7 +136,7 @@ namespace purelib {
             ip::endpoint               endpoint_;
             resolve_state              resolve_state_;
             
-            size_t                     index_;
+            size_t                     index_ = -1;
 
             // The deadline timer for resolve & connect
             deadline_timer             deadline_timer_;

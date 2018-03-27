@@ -583,7 +583,7 @@ int xxsocket::xpconnect(const char* hostname, u_short port)
     return error;
 }
 
-int xxsocket::xpconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& timeout)
+int xxsocket::xpconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& wtimeout)
 {
     auto flags = getipsv();
 
@@ -594,17 +594,17 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port, const std::chrono:
         {
         case AF_INET:
             if (flags & ipsv_ipv4) {
-                error = pconnect_n(ep, timeout);
+                error = pconnect_n(ep, wtimeout);
             }
             else if (flags & ipsv_ipv6) {
                 xxsocket::resolve_i([&](const ip::endpoint& ep6) {
-                    return 0 == (error = pconnect_n(ep6, timeout));
+                    return 0 == (error = pconnect_n(ep6, wtimeout));
                 }, hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
         case AF_INET6:
             if (flags & ipsv_ipv6) {
-                error = pconnect_n(ep, timeout);
+                error = pconnect_n(ep, wtimeout);
             }
             break;
         }
@@ -624,11 +624,11 @@ int xxsocket::pconnect(const char* hostname, u_short port)
     return error;
 }
 
-int xxsocket::pconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& timeout)
+int xxsocket::pconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& wtimeout)
 {
     int error = -1;
     xxsocket::resolve_i([&](const ip::endpoint& ep) {
-        return 0 == (error = pconnect_n(ep, timeout));
+        return 0 == (error = pconnect_n(ep, wtimeout));
     }, hostname, port);
     return error;
 }
@@ -652,11 +652,11 @@ int xxsocket::pconnect(const ip::endpoint& ep)
     return -1;
 }
 
-int xxsocket::pconnect_n(const ip::endpoint& ep, const std::chrono::microseconds& timeout)
+int xxsocket::pconnect_n(const ip::endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
     if (this->reopen(ep.af()))
     {
-        return this->connect_n(ep, timeout);
+        return this->connect_n(ep, wtimeout);
     }
     return -1;
 }
@@ -973,15 +973,15 @@ int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
     return ::connect(s, &ep.intri_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
 }
 
-int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& timeoutValue)
+int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
 {
-    timeval timeout{ static_cast<long>(timeoutValue.count() / 1000000), static_cast<long>(timeoutValue.count() % 1000000) };
+    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
     return connect_n(addr, port, &timeout);
 }
 
-int xxsocket::connect_n(const ip::endpoint& ep, const std::chrono::microseconds& timeoutValue)
+int xxsocket::connect_n(const ip::endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
-    timeval timeout{ timeoutValue.count() / 1000000, timeoutValue.count() % 1000000 };
+    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
     return connect_n(ep, &timeout);
 }
 
@@ -1085,9 +1085,9 @@ int xxsocket::send(const void* buf, int len, int flags) const
     return bytes_transferred;
 }
 
-int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& ctimeout, int flags)
+int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)
 {
-    timeval timeout{ ctimeout.count() / 1000000, ctimeout.count() % 1000000 };
+    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
     return send_n(this->fd, buf, len, &timeout, flags);
 }
 
@@ -1166,9 +1166,9 @@ int xxsocket::recv(void* buf, int len, int flags) const
     return bytes_transfrred;
 }
 
-int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& ctimeout, int flags) const
+int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags) const
 {
-    timeval timeout{ ctimeout.count() / 1000000, ctimeout.count() % 1000000 };
+    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
     return recv_n(this->fd, buf, len, &timeout, flags);
 }
 

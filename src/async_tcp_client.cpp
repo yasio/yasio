@@ -34,6 +34,9 @@ SOFTWARE.
 #include <string>
 
 #if _USE_ARES_LIB
+#if !defined(CARES_STATICLIB)
+#define CARES_STATICLIB 1
+#endif
 extern "C" {
 #include "c-ares/ares.h"
 }
@@ -220,7 +223,9 @@ async_tcp_client::async_tcp_client() : stopping_(false),
     maxfdp_ = 0;
     nfds_ = 0;
     async_resolve_count_ = 0;
+#if _USE_ARES_LIB
     ares_ = nullptr;
+#endif
     ipsv_flags_ = 0;
 }
 
@@ -250,11 +255,12 @@ void async_tcp_client::stop_service()
 
         unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
         thread_started_ = false;
-
+#if _USE_ARES_LIB
         if (this->ares_ != nullptr) {
-            ::ares_destroy(this->ares_);
+            ::ares_destroy((ares_channel)this->ares_);
             this->ares_ = nullptr;
         }
+#endif
     }
 }
 
@@ -343,7 +349,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         };
         options.sock_state_cb_data = this;
 
-        if ((ret = ::ares_init_options(&ares_, &options, ARES_OPT_SOCK_STATE_CB | ARES_OPT_TIMEOUTMS)) == ARES_SUCCESS)
+        if ((ret = ::ares_init_options((ares_channel*)&ares_, &options, ARES_OPT_SOCK_STATE_CB | ARES_OPT_TIMEOUTMS)) == ARES_SUCCESS)
         {
             // set dns servers, optional, comment follow code, ares also work well.
             // ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
@@ -428,9 +434,9 @@ void async_tcp_client::service()
         /// perform possible domain resolve requests.
         if (this->async_resolve_count_ > 0) {
             ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
-            int n = ares_getsock(this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
+            int n = ares_getsock((ares_channel)this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
             if (n > 0) {
-                ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]);
+                ::ares_process((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]);
             }
         }
 #endif
@@ -1069,11 +1075,11 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     bool succeed = false;
     if (this->ipsv_flags_ & ipsv_ipv4) {
 #if !_USE_ARES_LIB
-        succeed = xxsocket::resolve_v4(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
+        succeed = xxsocket::resolve_v4(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
 #else
         noblocking = true;
         hint.ai_family = AF_INET;
-        ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+        ::ares_getaddrinfo((ares_channel)this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
 #endif
     }
     else if (this->ipsv_flags_ & ipsv_ipv6) { // localhost is IPV6 ONLY network
@@ -1095,12 +1101,12 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     }
 #if _USE_ARES_LIB
     else { 
-        ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
+        ::ares_fds((ares_channel)this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
 
         ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));
         ctx->deadline_timer_.async_wait([=](bool cancelled) {
             if (!cancelled) {
-                ::ares_cancel(this->ares_); // It's seems not trigger socket close, because ares_getaddrinfo has bug yet.
+                ::ares_cancel((ares_channel)this->ares_); // It's seems not trigger socket close, because ares_getaddrinfo has bug yet.
                 handle_connect_failed(ctx, ERR_RESOLVE_HOST_TIMEOUT);
             }
         });

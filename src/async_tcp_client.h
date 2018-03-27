@@ -314,7 +314,7 @@ namespace purelib {
 
 #if _USE_ARES_LIB
             // non blocking io dns resolve support
-            ares_channel ares_;    //
+            void* ares_;    //
 #endif
             int ipsv_flags_; // local network state
         }; // async_tcp_client

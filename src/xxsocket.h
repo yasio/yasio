@@ -39,6 +39,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <sstream>
 #include <vector>
+#include <chrono>
 #include "politedef.h"
 
 #pragma warning(push)
@@ -501,16 +502,16 @@ public: /// portable connect APIs
     // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
     // for support ipv6 ONLY network.
     int xpconnect(const char* hostname, u_short port);
-    int xpconnect_n(const char* hostname, u_short port, long timeout_sec);
+    int xpconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& wtimeout);
 
     // easy to connect a server ipv4 or ipv6.
     int pconnect(const char* hostname, u_short port);
-    int pconnect_n(const char* hostname, u_short port, long timeout_sec);
+    int pconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& wtimeout);
     int pconnect_n(const char* hostname, u_short port);
 
     // easy to connect a server ipv4 or ipv6.
     int pconnect(const ip::endpoint& ep);
-    int pconnect_n(const ip::endpoint& ep, long timeout_sec);
+    int pconnect_n(const ip::endpoint& ep, const std::chrono::microseconds& wtimeout);
     int pconnect_n(const ip::endpoint& ep);
 
     // easy to create a tcp ipv4 or ipv6 server socket.
@@ -673,8 +674,8 @@ public:
     ** @returns: [0].succeed, [-1].failed
     */
 
-    int connect_n(const char* addr, u_short port, long timeout_sec);
-    int connect_n(const ip::endpoint& ep, long timeout_sec);
+    int connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout);
+    int connect_n(const ip::endpoint& ep, const std::chrono::microseconds& wtimeout);
 
     int connect_n(const char* addr, u_short port, timeval* timeout);
     int connect_n(const ip::endpoint& ep, timeval* timeout);
@@ -702,7 +703,7 @@ public:
     **         Oterwise, If retval <=0, mean error occured, and should close socket. 
     */
     int send_n(const void* buf, int len, timeval* timeout, int flags = 0);
-    int send_n(const void* buf, int len, long timeout_sec, int flags = 0);
+    int send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags = 0);
     static int send_n(socket_native_type s, const void* buf, int len, timeval* timeout, int flags = 0);
 
 
@@ -727,7 +728,7 @@ public:
     **         If no error occurs, send returns the total number of bytes recvived, 
     **         Oterwise, If retval <=0, mean error occured, and should close socket. 
     */
-    int recv_n(void* buf, int len, long timeout_sec, int flags = 0) const;
+    int recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags = 0) const;
     int recv_n(void* buf, int len, timeval* timeout, int flags = 0) const;
     static int recv_n(socket_native_type s, void* buf, int len, timeval* timeout, int flags = 0);
 

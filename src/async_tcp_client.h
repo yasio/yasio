@@ -45,10 +45,7 @@ SOFTWARE.
 #include "select_interrupter.hpp"
 #include "deadline_timer.h"
 
-#define CARES_STATICLIB 1
-extern "C" {
-#include "c-ares/ares.h"
-}
+#define _USE_ARES_LIB 0
 
 #if !defined(_ARRAYSIZE)
 #define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
@@ -315,11 +312,11 @@ namespace purelib {
             appl_pdu_recv_callback_t on_received_pdu_;
             std::function<void(const vdcallback_t&)> tsf_call_;
 
+#if _USE_ARES_LIB
             // non blocking io dns resolve support
             ares_channel ares_;    //
-
+#endif
             int ipsv_flags_; // local network state
-            // struct dns	*dns_;
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

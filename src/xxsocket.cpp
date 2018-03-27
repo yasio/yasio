@@ -31,6 +31,8 @@ SOFTWARE.
 #include <stdio.h>
 #endif
 
+#define TIME_GRANULARITY 1000000
+
 #if !defined(_WIN32) && !defined(ANDROID)
 #include <ifaddrs.h>
 #endif
@@ -975,13 +977,17 @@ int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
 
 int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
 {
-    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
+    timeval timeout;
+    timeout.tv_sec = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
+    timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
     return connect_n(addr, port, &timeout);
 }
 
 int xxsocket::connect_n(const ip::endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
-    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
+    timeval timeout;
+    timeout.tv_sec = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
+    timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
     return connect_n(ep, &timeout);
 }
 
@@ -1087,7 +1093,9 @@ int xxsocket::send(const void* buf, int len, int flags) const
 
 int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)
 {
-    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
+    timeval timeout;
+    timeout.tv_sec = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
+    timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
     return send_n(this->fd, buf, len, &timeout, flags);
 }
 
@@ -1168,7 +1176,9 @@ int xxsocket::recv(void* buf, int len, int flags) const
 
 int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags) const
 {
-    timeval timeout{ static_cast<long>(wtimeout.count() / 1000000), static_cast<long>(wtimeout.count() % 1000000) };
+    timeval timeout;
+    timeout.tv_sec = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
+    timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
     return recv_n(this->fd, buf, len, &timeout, flags);
 }
 

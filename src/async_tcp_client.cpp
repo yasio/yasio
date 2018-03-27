@@ -33,6 +33,12 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
+#if _USE_ARES_LIB
+extern "C" {
+#include "c-ares/ares.h"
+}
+#endif
+
 #define _USING_IN_COCOS2DX 0
 
 #define INET_ENABLE_VERBOSE_LOG 0
@@ -126,6 +132,7 @@ namespace {
         return buffer;
     }
 
+#if _USE_ARES_LIB
     static
     void nonblocking_addrinfo_callback(void* arg, int status, addrinfo* answerlist)
     {
@@ -149,6 +156,7 @@ namespace {
         ctx->resolve_state_ = !ctx->endpoints_.empty() ? resolve_state::READY : resolve_state::FAILED;
         ctx->deadline_timer_.service_.finish_async_resolve(ctx);
     }
+#endif
 }
 
 class appl_pdu
@@ -200,7 +208,7 @@ void channel_context::reset()
 async_tcp_client::async_tcp_client() : stopping_(false),
     thread_started_(false),
     interrupter_(),
-    connect_timeout_(3LL * 1000 * 1000),
+    connect_timeout_(5LL * 1000 * 1000),
     send_timeout_((std::numeric_limits<int>::max)()),
     decode_pdu_length_(nullptr),
     error_(error_number::ERR_OK)
@@ -318,10 +326,10 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
 
         stopping_ = false;
         thread_started_ = true;
-
+#if _USE_ARES_LIB
         /* Initialize the library */
         ::ares_library_init(ARES_LIB_INIT_ALL);
-        // dns_ = dns_init();
+
         int ret = 0;
         ares_options options;
         options.timeout = 3000;
@@ -342,7 +350,8 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         }
         else
             INET_LOG("Initialize ares failed: %d!", ret);
-
+#endif
+       
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
 
         // Initialize channels
@@ -415,7 +424,7 @@ void async_tcp_client::service()
 #endif
             --nfds;
         }
-        
+ #if _USE_ARES_LIB       
         /// perform possible domain resolve requests.
         if (this->async_resolve_count_ > 0) {
             ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
@@ -424,7 +433,7 @@ void async_tcp_client::service()
                 ::ares_process(this->ares_, &fds_array[read_op], &fds_array[write_op]);
             }
         }
-
+#endif
         /// perform active channels
         for (auto ctx : channels_) {
             if (ctx->state_ == channel_state::CONNECTED) {
@@ -710,7 +719,7 @@ void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
 
     TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
 
-    INET_LOG("connect server %s:%u failed, error(%d)!", ctx->address_.c_str(), ctx->port_, error); 
+    INET_LOG("connect server %s:%u failed, error code: %d, message: %s", ctx->address_.c_str(), ctx->port_, error, xxsocket::get_error_msg(error)); 
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)
@@ -1057,19 +1066,26 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     bool noblocking = false;
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
+    bool succeed = false;
     if (this->ipsv_flags_ & ipsv_ipv4) {
+#if !_USE_ARES_LIB
+        succeed = xxsocket::resolve_v4(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
+#else
         noblocking = true;
         hint.ai_family = AF_INET;
         ::ares_getaddrinfo(this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+#endif
     }
     else if (this->ipsv_flags_ & ipsv_ipv6) { // localhost is IPV6 ONLY network
         // hint.ai_family = AF_INET6;
         // hint.ai_flags = AI_ALL | AI_V4MAPPED;
         //::ares_getaddrinfo(this->ares_, ctx->addressv6_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
-        bool succeed = xxsocket::resolve_v6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
+        succeed = xxsocket::resolve_v6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
             || xxsocket::resolve_v4to6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
+    }
 
-        if (succeed && !ctx->endpoints_.empty()) {
+    if (!noblocking) {
+       if (succeed && !ctx->endpoints_.empty()) {
            ctx->resolve_state_ = resolve_state::READY;
            ++ctx->ready_events_;
         }
@@ -1077,8 +1093,8 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
             handle_connect_failed(ctx, ERR_RESOLVE_HOST_IPV6_REQUIRED);
         }
     }
-    
-    if (noblocking) {
+#if _USE_ARES_LIB
+    else { 
         ::ares_fds(this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
 
         ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));
@@ -1091,6 +1107,7 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
 
         ++this->async_resolve_count_;
     }
+#endif
 }
 
 void  async_tcp_client::finish_async_resolve(channel_context*)

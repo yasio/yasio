@@ -79,7 +79,7 @@ extern "C" {
 #endif
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
-#define ASYNC_RESOLVE_TIMEOUT 5 // 5 seconds
+#define ASYNC_RESOLVE_TIMEOUT 45 // 45 seconds
 #define MAX_PDU_LEN SZ(10, M) // max pdu length
 
 #define TSF_CALL(stmt) this->tsf_call_([=]{(stmt);});
@@ -137,22 +137,20 @@ namespace {
 
 #if _USE_ARES_LIB
     static
-    void nonblocking_addrinfo_callback(void* arg, int status, addrinfo* answerlist)
+    void ares_getaddrinfo_callback(void* arg, int status, addrinfo* answerlist)
     {
         auto ctx = (channel_context*)arg;
         if (status == ARES_SUCCESS) {
             if (answerlist != nullptr) {
-                //ctx->endpoint_.assign(answerlist);
-                //ctx->endpoint_.port(ctx->port_);
                 ip::endpoint ep(answerlist);
                 ep.port(ctx->port_);
                 std::string ip = ep.to_string();
                 ctx->endpoints_.push_back(ep);
-                INET_LOG("ares ---> resolve domain:%s succeed, ip:%s", ctx->address_.c_str(), ip.c_str());
+                INET_LOG("ares_getaddrinfo_callback ---> resolve %s succeed, ip:%s", ctx->address_.c_str(), ip.c_str());
             }
         }
         else {
-            INET_LOG("ares ---> resolve domain: %s failed, status:%d", ctx->address_.c_str(), status);
+            INET_LOG("ares_getaddrinfo_callback ---> resolve %s failed, status:%d", ctx->address_.c_str(), status);
         }
 
         ctx->deadline_timer_.cancel();
@@ -226,7 +224,7 @@ async_tcp_client::async_tcp_client() : stopping_(false),
 #if _USE_ARES_LIB
     ares_ = nullptr;
 #endif
-    ipsv_flags_ = 0;
+    ipsv_state_ = 0;
 }
 
 async_tcp_client::~async_tcp_client()
@@ -336,23 +334,13 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         /* Initialize the library */
         ::ares_library_init(ARES_LIB_INIT_ALL);
 
-        int ret = 0;
-        ares_options options;
-        options.timeout = 3000;
-        options.sock_state_cb = [](void *service, ares_socket_t socket_fd, int readable,int writable) {
-            if (socket_fd != invalid_socket)
-            {
-                if (!readable && !writable) {
-                    ((async_tcp_client*)service)->unregister_descriptor(socket_fd, socket_event_read | socket_event_write);
-                }
-            }
-        };
-        options.sock_state_cb_data = this;
+        int ret = ::ares_init((ares_channel*)&ares_);
 
-        if ((ret = ::ares_init_options((ares_channel*)&ares_, &options, ARES_OPT_SOCK_STATE_CB | ARES_OPT_TIMEOUTMS)) == ARES_SUCCESS)
+
+        if (ret == ARES_SUCCESS)
         {
             // set dns servers, optional, comment follow code, ares also work well.
-            // ::ares_set_servers_csv(ares_, "114.114.114.114,8.8.8.8");
+            // ::ares_set_servers_csv((ares_channel )ares_, "114.114.114.114,8.8.8.8");
         }
         else
             INET_LOG("Initialize ares failed: %d!", ret);
@@ -394,7 +382,7 @@ void async_tcp_client::service()
 #endif
 
     // Call once at startup
-    this->ipsv_flags_ = xxsocket::getipsv();
+    this->ipsv_state_ = xxsocket::getipsv();
 
     // event loop
     fd_set fds_array[3];
@@ -433,10 +421,17 @@ void async_tcp_client::service()
  #if _USE_ARES_LIB       
         /// perform possible domain resolve requests.
         if (this->async_resolve_count_ > 0) {
-            ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM];
-            int n = ares_getsock((ares_channel)this->ares_, ares_socks, _ARRAYSIZE(ares_socks));
-            if (n > 0) {
-                ::ares_process((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]);
+            ares_socket_t socks[ARES_GETSOCK_MAXNUM] = {0};
+            int bitmask = ares_getsock((ares_channel)this->ares_, socks, _ARRAYSIZE(socks));
+
+            for(int i =0 ; i < ARES_GETSOCK_MAXNUM; ++i) {
+                if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i)) {
+                    auto fd = socks[i];
+                    ::ares_process_fd((ares_channel) this->ares_,
+                                      FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD,
+                                      FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
+                } else
+                    break;
             }
         }
 #endif
@@ -977,7 +972,7 @@ void async_tcp_client::perform_timeout_timers()
     }
 }
 
-int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
+int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
 {
     /*
     @Optimize, swap nfds, make sure do_read & do_write event chould be perform when no need to call socket.select
@@ -988,12 +983,17 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& tv)
     if (nfds <= 0) {
         auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
         if (wait_duration > 0) {
-            tv.tv_sec = static_cast<long>(wait_duration / 1000000);
-            tv.tv_usec = static_cast<long>(wait_duration % 1000000);
+            maxtv.tv_sec = static_cast<long>(wait_duration / 1000000);
+            maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
-            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &tv);
+            timeval* pmaxtv = &maxtv;
+            if(this->async_resolve_count_ > 0 && ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0) {
+                struct timeval tv = {0};
+                pmaxtv = ::ares_timeout((ares_channel) this->ares_, &maxtv, &tv);
+            }
+            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, pmaxtv);
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
@@ -1066,30 +1066,35 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
 { // Only call at event-loop thread, so no need to consider thread safe.
     ctx->resolve_state_ = resolve_state::INPRROGRESS;
     ctx->endpoints_.clear();
-    if(this->ipsv_flags_ == 0) 
-        this->ipsv_flags_ = xxsocket::getipsv();
+    if (this->ipsv_state_ == 0)
+        this->ipsv_state_ = xxsocket::getipsv();
     
     bool noblocking = false;
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
     bool succeed = false;
-    if (this->ipsv_flags_ & ipsv_ipv4) {
+    if (this->ipsv_state_ & ipsv_ipv4) {
 #if !_USE_ARES_LIB
         succeed = xxsocket::resolve_v4(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
 #else
         noblocking = true;
         hint.ai_family = AF_INET;
-        ::ares_getaddrinfo((ares_channel)this->ares_, ctx->address_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+        ::ares_getaddrinfo((ares_channel)this->ares_, ctx->address_.c_str(), nullptr, &hint, ares_getaddrinfo_callback, ctx);
 #endif
     }
-    else if (this->ipsv_flags_ & ipsv_ipv6) { // localhost is IPV6 ONLY network
-        // hint.ai_family = AF_INET6;
-        // hint.ai_flags = AI_ALL | AI_V4MAPPED;
-        //::ares_getaddrinfo(this->ares_, ctx->addressv6_.c_str(), nullptr, &hint, nonblocking_addrinfo_callback, ctx);
+    else if (this->ipsv_state_ & ipsv_ipv6) { // localhost is IPV6 ONLY network
         succeed = xxsocket::resolve_v6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
             || xxsocket::resolve_v4to6(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
     }
-
+#if !_USE_ARES_LIB
+    if (succeed && !ctx->endpoints_.empty()) {
+        ctx->resolve_state_ = resolve_state::READY;
+        ++ctx->ready_events_;
+    }
+    else {
+        handle_connect_failed(ctx, ERR_RESOLVE_HOST_IPV6_REQUIRED);
+    }
+#else
     if (!noblocking) {
        if (succeed && !ctx->endpoints_.empty()) {
            ctx->resolve_state_ = resolve_state::READY;
@@ -1099,10 +1104,8 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
             handle_connect_failed(ctx, ERR_RESOLVE_HOST_IPV6_REQUIRED);
         }
     }
-#if _USE_ARES_LIB
-    else { 
-        ::ares_fds((ares_channel)this->ares_, &fds_array_[read_op], &fds_array_[write_op]);
-
+    else {
+        INET_LOG("start ares resolving for %s", ctx->address_.c_str());
         ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));
         ctx->deadline_timer_.async_wait([=](bool cancelled) {
             if (!cancelled) {

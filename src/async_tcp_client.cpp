@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 3.0-developing
+// version: 3.0
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -78,9 +78,10 @@ extern "C" {
 #endif
 #endif
 
-#define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 #define ASYNC_RESOLVE_TIMEOUT 45 // 45 seconds
-#define MAX_PDU_LEN SZ(10, M) // max pdu length
+
+#define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
+#define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M)) // max pdu buffer length, avoid large memory allocation when application layer decode a huge length filed.
 
 #define TSF_CALL(stmt) this->tsf_call_([=]{(stmt);});
 
@@ -163,11 +164,11 @@ namespace {
 class appl_pdu
 {
 public:
-    appl_pdu(std::vector<char>&& right, const appl_pdu_send_callback_t& callback, const std::chrono::microseconds& duration)
+    appl_pdu(std::vector<char>&& right, send_pdu_callback_t&& callback, const std::chrono::microseconds& duration)
     {
         data_ = std::move(right);
         offset_ = 0;
-        on_sent_ = callback;
+        on_sent_ = std::move(callback);
         expire_time_ = std::chrono::steady_clock::now() + duration;
     }
     bool expired() const {
@@ -175,7 +176,7 @@ public:
     }
     std::vector<char>          data_; // sending data
     size_t                     offset_; // offset
-    appl_pdu_send_callback_t   on_sent_;
+    send_pdu_callback_t        on_sent_;
     compatible_timepoint_t     expire_time_;
 
     DEFINE_OBJECT_POOL_ALLOCATION(appl_pdu, 512)
@@ -291,16 +292,16 @@ void async_tcp_client::clear_channels()
 
 void async_tcp_client::set_callbacks(
     decode_pdu_length_func decode_length_func,
-    const connect_response_callback_t& on_connect_response,
-    const connection_lost_callback_t& on_connection_lost,
-    const appl_pdu_recv_callback_t& on_pdu_recv,
-    const std::function<void(const vdcallback_t&)>& threadsafe_call)
+    connect_response_callback_t on_connect_response,
+    connection_lost_callback_t on_connection_lost,
+    recv_pdu_callback_t on_pdu_recv,
+    std::function<void(const vdcallback_t&)> threadsafe_call)
 {
     this->decode_pdu_length_ = decode_length_func;
-    this->on_connect_resposne_ = on_connect_response;
-    this->on_received_pdu_ = on_pdu_recv;
-    this->on_connection_lost_ = on_connection_lost;
-    this->tsf_call_ = threadsafe_call;
+    this->on_connect_resposne_ = std::move(on_connect_response);
+    this->on_recv_pdu_ = std::move(on_pdu_recv);
+    this->on_connection_lost_ = std::move(on_connection_lost);
+    this->tsf_call_ = std::move(threadsafe_call);
 }
 
 size_t async_tcp_client::get_received_pdu_count(void) const
@@ -309,7 +310,7 @@ size_t async_tcp_client::get_received_pdu_count(void) const
 }
 
 void async_tcp_client::dispatch_received_pdu(int count) {
-    assert(this->on_received_pdu_ != nullptr);
+    assert(this->on_recv_pdu_ != nullptr);
 
     if (this->recv_queue_.empty())
         return;
@@ -318,7 +319,7 @@ void async_tcp_client::dispatch_received_pdu(int count) {
     do {
         auto packet = std::move(this->recv_queue_.front());
         this->recv_queue_.pop_front();
-        this->on_received_pdu_(std::move(packet));
+        this->on_recv_pdu_(std::move(packet));
     } while (!this->recv_queue_.empty() && --count > 0);
 }
 
@@ -646,7 +647,7 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
     }
 }
 
-void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index, const appl_pdu_send_callback_t& callback)
+void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index, send_pdu_callback_t callback)
 {
     // Gets channel
     if (channel_index >= channels_.size())
@@ -655,7 +656,7 @@ void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index
 
     if (ctx->impl_.is_open())
     {
-        auto pdu = new appl_pdu(std::move(data), callback, std::chrono::seconds(this->send_timeout_));
+        auto pdu = new appl_pdu(std::move(data), std::move(callback), std::chrono::seconds(this->send_timeout_));
 
         ctx->send_queue_mtx_.lock();
         ctx->send_queue_.push_back(pdu);
@@ -674,9 +675,11 @@ void async_tcp_client::move_received_pdu(channel_context* ctx)
     INET_LOG("move_received_pdu...");
 #endif
     recv_queue_mtx_.lock();
-    recv_queue_.push_back(std::move(ctx->receiving_pdu_)); // without data copy
+    // Use std::move, so no need to call ctx->receiving_pdu_.shrink_to_fit to 
+    // avoid occupy large memory
+    recv_queue_.push_back(std::move(ctx->receiving_pdu_)); 
     recv_queue_mtx_.unlock();
-
+    
     ctx->receiving_pdu_elen_ = -1;
 }
 
@@ -819,29 +822,13 @@ bool async_tcp_client::do_read(channel_context* ctx)
             if (ctx->receiving_pdu_elen_ == -1) { // decode length
                 if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
                 {
-                    if (ctx->receiving_pdu_elen_ < 0) { // header insufficient, wait readfd ready at next event step.
-                        ctx->offset_ += n;
+                    if (ctx->receiving_pdu_elen_ > 0) 
+                    { // ok
+                        ctx->receiving_pdu_.reserve((std::min)(ctx->receiving_pdu_elen_, MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
+                        do_unpack(ctx, ctx->receiving_pdu_elen_, n);
                     }
-                    else { // ok
-                        ctx->receiving_pdu_.reserve(ctx->receiving_pdu_elen_); // #perfomance, avoid memory reallocte.
-
-                        auto bytes_transferred = n + ctx->offset_;
-                        ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(ctx->receiving_pdu_elen_, bytes_transferred));
-                        if (bytes_transferred >= ctx->receiving_pdu_elen_)
-                        { // pdu received properly
-                            ctx->offset_ = bytes_transferred - ctx->receiving_pdu_elen_; // set offset to bytes of remain buffer
-                            if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset. 
-                            {
-                                ::memmove(ctx->buffer_, ctx->buffer_ + ctx->receiving_pdu_elen_, ctx->offset_);
-                                // not all data consumed, so add events for this context
-                                ++ctx->ready_events_;
-                            }
-                            // move properly pdu to ready queue, GL thread will retrieve it.
-                            move_received_pdu(ctx);
-                        }
-                        else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                            ctx->offset_ = 0;
-                        }
+                    else { // header insufficient, wait readfd ready at next event step.
+                        ctx->offset_ += n;
                     }
                 }
                 else {
@@ -850,38 +837,8 @@ bool async_tcp_client::do_read(channel_context* ctx)
                     break;
                 }
             }
-            else { // recv remain pdu data
-                auto bytes_transferred = n + ctx->offset_;// bytes transferred at this time
-                if ((ctx->receiving_pdu_.size() + bytes_transferred) > MAX_PDU_LEN) // TODO: config MAX_PDU_LEN, now is 16384
-                {
-                    set_errorno(ctx, error_number::ERR_PDU_TOO_LONG);
-                    INET_LOG("%s", "async_tcp_client::do_read error, The length of pdu too long!");
-                    break;
-                }
-                else {
-                    auto bytes_needed = ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()); // never equal zero or less than zero
-                    if (bytes_needed > 0) {
-                        ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(bytes_transferred, bytes_needed));
-
-                        ctx->offset_ = bytes_transferred - bytes_needed; // set offset to bytes of remain buffer
-                        if (ctx->offset_ >= 0)
-                        { // pdu received properly
-                            if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset.
-                            {
-                                ::memmove(ctx->buffer_, ctx->buffer_ + bytes_needed, ctx->offset_);
-                                ++ctx->ready_events_;
-                            }
-                            // move properly pdu to ready queue, GL thread will retrieve it.
-                            move_received_pdu(ctx);
-                        }
-                        else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
-                            ctx->offset_ = 0;
-                        }
-                    }
-                    else {
-                        //assert(false);
-                    }
-                }
+            else { // process incompleted pdu
+                do_unpack(ctx, ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()), n);
             }
         }
         else {
@@ -903,6 +860,28 @@ bool async_tcp_client::do_read(channel_context* ctx)
     } while (false);
 
     return bRet;
+}
+
+void async_tcp_client::do_unpack(channel_context* ctx, int bytes_needed, int bytes_transferred)
+{
+    auto bytes_available = bytes_transferred + ctx->offset_;
+    ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(bytes_needed, bytes_available));
+
+    ctx->offset_ = bytes_available - bytes_needed; // set offset to bytes of remain buffer
+    if (ctx->offset_ >= 0)
+    { // pdu received properly
+        if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset. 
+        {
+            ::memmove(ctx->buffer_, ctx->buffer_ + ctx->receiving_pdu_elen_, ctx->offset_);
+            // not all data consumed, so add events for this context
+            ++ctx->ready_events_;
+        }
+        // move properly pdu to ready queue, GL thread will retrieve it.
+        move_received_pdu(ctx);
+    }
+    else { // all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data.
+        ctx->offset_ = 0;
+    }
 }
 
 void async_tcp_client::schedule_timer(deadline_timer* timer)
@@ -988,12 +967,17 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
+#if !_USE_ARES_LIB
+            nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
+#else
             timeval* pmaxtv = &maxtv;
             if(this->async_resolve_count_ > 0 && ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0) {
                 struct timeval tv = {0};
                 pmaxtv = ::ares_timeout((ares_channel) this->ares_, &maxtv, &tv);
             }
             nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, pmaxtv);
+#endif
+           
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif

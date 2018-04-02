@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 3.0-developing
+// version: 3.0
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -83,7 +83,6 @@ namespace purelib {
             ERR_RECV_FAILED, // recv failed
             ERR_NETWORK_UNREACHABLE, // wifi or 2,3,4G not open
             ERR_CONNECTION_LOST, // connection lost
-            ERR_PDU_TOO_LONG, // pdu too long
             ERR_DPL_ILLEGAL_PDU, // decode pdu error.
             ERR_RESOLVE_HOST_FAILED, // resolve host failed.
             ERR_RESOLVE_HOST_TIMEOUT, // resolve host ip timeout.
@@ -101,8 +100,8 @@ namespace purelib {
 
         class appl_pdu; // application layer protocol data unit.
 
-        typedef std::function<void(error_number)> appl_pdu_send_callback_t;
-        typedef std::function<void(std::vector<char>&&)> appl_pdu_recv_callback_t;
+        typedef std::function<void(error_number)> send_pdu_callback_t;
+        typedef std::function<void(std::vector<char>&&)> recv_pdu_callback_t;
 
         class async_tcp_client;
         struct channel_endpoint
@@ -194,10 +193,10 @@ namespace purelib {
             */
             void       set_callbacks(
                 decode_pdu_length_func decode_length_func,
-                const connect_response_callback_t& on_connect_result,
-                const connection_lost_callback_t& on_connection_lost,
-                const appl_pdu_recv_callback_t& on_pdu_recv,
-                const std::function<void(const vdcallback_t&)>& threadsafe_call);
+                connect_response_callback_t on_connect_result,
+                connection_lost_callback_t on_connection_lost,
+                recv_pdu_callback_t on_pdu_recv,
+                std::function<void(const vdcallback_t&)> threadsafe_call);
 
             // set connect and send timeouts.
             void       set_timeouts(long timeo_connect, long timeo_send);
@@ -215,7 +214,7 @@ namespace purelib {
             error_number  get_errorno(void) { return static_cast<error_number>(error_); }
 
             // post a async send request.
-            void       async_send(std::vector<char>&& data, size_t channel_index = 0, const appl_pdu_send_callback_t& callback = nullptr);
+            void       async_send(std::vector<char>&& data, size_t channel_index = 0, send_pdu_callback_t callback = nullptr);
 
             // timer support
             void       schedule_timer(deadline_timer*);
@@ -247,6 +246,7 @@ namespace purelib {
 
             bool       do_write(channel_context*);
             bool       do_read(channel_context*);
+            void       do_unpack(channel_context*, int bytes_needed, int bytes_transferred);
             void       move_received_pdu(channel_context*); // move received properly pdu to recv queue
 
             void       handle_error(channel_context*); // TODO: add error_number parameter
@@ -309,14 +309,14 @@ namespace purelib {
             decode_pdu_length_func  decode_pdu_length_;
             connect_response_callback_t  on_connect_resposne_;
             connection_lost_callback_t  on_connection_lost_;
-            appl_pdu_recv_callback_t on_received_pdu_;
+            recv_pdu_callback_t on_recv_pdu_;
             std::function<void(const vdcallback_t&)> tsf_call_;
 
 #if _USE_ARES_LIB
             // non blocking io dns resolve support
             void* ares_;    //
 #endif
-            int ipsv_flags_; // local network state
+            int ipsv_state_; // local network state
         }; // async_tcp_client
     }; /* namspace purelib::net */
 }; /* namespace purelib */

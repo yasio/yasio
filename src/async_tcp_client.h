@@ -38,8 +38,6 @@ SOFTWARE.
 #include <condition_variable>
 #include <atomic>
 #include <queue>
-#include <list>
-#include <set>
 #include <algorithm>
 #include "object_pool.h"
 #include "select_interrupter.hpp"

@@ -244,7 +244,7 @@ namespace purelib {
 
             bool       do_write(channel_context*);
             bool       do_read(channel_context*);
-            void       do_unpack(channel_context*, int bytes_needed, int bytes_transferred);
+            void       do_unpack(channel_context*, int bytes_expected, int bytes_transferred);
             void       move_received_pdu(channel_context*); // move received properly pdu to recv queue
 
             void       handle_error(channel_context*); // TODO: add error_number parameter

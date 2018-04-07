@@ -901,12 +901,12 @@ bool async_tcp_client::do_read(channel_context* ctx)
     return bRet;
 }
 
-void async_tcp_client::do_unpack(channel_context* ctx, int bytes_needed, int bytes_transferred)
+void async_tcp_client::do_unpack(channel_context* ctx, int bytes_expected, int bytes_transferred)
 {
     auto bytes_available = bytes_transferred + ctx->offset_;
-    ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(bytes_needed, bytes_available));
+    ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + (std::min)(bytes_expected, bytes_available));
 
-    ctx->offset_ = bytes_available - bytes_needed; // set offset to bytes of remain buffer
+    ctx->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
     if (ctx->offset_ >= 0)
     { // pdu received properly
         if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset. 

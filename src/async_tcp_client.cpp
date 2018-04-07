@@ -911,7 +911,7 @@ void async_tcp_client::do_unpack(channel_context* ctx, int bytes_expected, int b
     { // pdu received properly
         if (ctx->offset_ > 0)  // move remain data to head of buffer and hold offset. 
         {
-            ::memmove(ctx->buffer_, ctx->buffer_ + ctx->receiving_pdu_elen_, ctx->offset_);
+            ::memmove(ctx->buffer_, ctx->buffer_ + bytes_expected, ctx->offset_);
             // not all data consumed, so add events for this context
             ++ctx->ready_events_;
         }

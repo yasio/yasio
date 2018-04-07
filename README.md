@@ -5,7 +5,7 @@ support IPv6-only network.
 
 Usage:
 
-1. Only compile src\xxsocket.cpp src\xxsocket.h src\politedef.h with your project; For gcc, you must add --std=c++11 compile flag<br />
+1. Only compile src\xxsocket.cpp src\deadline_timer.cpp src\async_tcp_client.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
 2. demo code:
 ```
 #include "xxsocket.h"

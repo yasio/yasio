@@ -192,8 +192,12 @@ namespace {
         }  
     #pragma warning(pop)  
     }  
+#elif defined(ANDROID)
+    #define _set_thread_name(name) pthread_setname_np(pthread_self(), name)
+#elif defined(__APPLE__)
+    #define _set_thread_name(name) pthread_setname_np(name)
 #else
-    #define _set_thread_name pthread_setname_np
+    #define _set_thread_name(name)
 #endif
 }
 

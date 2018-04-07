@@ -1,108 +1,105 @@
+// HALX99: 2015~2018 V2.0
 #ifndef _FASTEST_CSV_PARSER_H_
 #define _FASTEST_CSV_PARSER_H_
 #include <set>
 #include <map>
 #include <vector>
 #include <unordered_map>
-#include "xxfsutility.h"
 
 class fastest_csv_parser
 {
 public:
-    // test & usage for csv parse
-    void parse_csv(const char* filename)
-    {
-        std::string buffer = fsutil::read_file_data(filename);
-
-        if (buffer.empty())
-            return;
-
-        const char* newl = buffer.c_str();
-
-        do {
-            std::vector<std::string> record;
-            newl = csv_parse_line(newl, [&record](const char* v_start, const char* v_end) {
-                std::string temp = std::string(v_start, v_end);
-                record.push_back(std::move(temp));
-            });
-            t_csv.push_back(std::move(record));
-        } while ((newl - buffer.c_str()) < buffer.size());
-    }
-    std::vector<std::vector<std::string>> t_csv;
-
-    /*
-    * op prototype: op(const char* v_start, const char* v_end)
-    */
-    template<const char _Delim, typename _Fty> inline
-        static const char* xsv_pase_line(const char* s, _Fty op)
-    {
-        enum {
-            normal, // new field
-            explicit_string_start,
-            explicit_string_ending,
-        } state;
-
-        state = normal;
-
-        const char* _Start = s; // the start of every string
-        const char* _Ptr = s;   // source string iterator
-        int _LLF = 1; // skip CRLF
-
-    _L_loop:
-        {
-            switch (*_Ptr)
-            {
-            case _Delim:
-                switch (state) {
-                case normal:
-                    if (_Start <= _Ptr)
-                        op(_Start, _Ptr);
-                    _Start = _Ptr + 1;
-                    break;
-                case explicit_string_ending:
-                    state = normal;
-                    _Start = _Ptr + 1;
-                    break;
-                default:; // explicit_string_start, do nothing
-                }
-                break;
-            case '\"':
-                if (state == normal) {
-                    state = explicit_string_start;
-                    ++_Start; // skip left '\"'
-                }
-                else { // field end by right '\"'
-                    if (_Start <= _Ptr)
-                        op(_Start, _Ptr);
-                    state = explicit_string_ending;
-                }
-                break;
-
-            case '\r':
-                _LLF = 2;
-            case '\n':
-            case '\0':
-                if (_Start <= _Ptr && state == normal) {
-                    op(_Start, _Ptr);
-                }
-                goto _L_end;
-                break;
-            }
-            ++_Ptr;
-            goto _L_loop;
-        }
-
-    _L_end:
-        return _Ptr + _LLF; // pointer to next line or after of null-termainted-charactor
-    }
-
+    
     /*
     * op prototype: op(const char* v_start, const char* v_end)
     */
     template<typename _Fty> inline
-        static const char* csv_parse_line(const char* s, _Fty op)
+        static	char* csv_parse_line(char* s, _Fty op)
     {
-        return xsv_pase_line<',', _Fty>(s, op);
+        // FSM
+        enum {
+            normal, // new field
+            quote_field,
+            quote_field_try_end,
+            quote_field_end,
+        } state;
+
+        state = normal;
+
+        char* _Start = s; // the start of every string
+        char* _Ptr = s;   // source string iterator
+        char* _Quote = nullptr;
+        int skipCRLF = 1;
+
+    _L_loop:
+        {
+			switch (*_Ptr)
+			{
+			case ',':
+				switch (state) {
+				case normal:
+					if (_Start <= _Ptr)
+						op(_Start, _Ptr);
+					_Start = _Ptr + 1;
+					break;
+                case quote_field_try_end:
+                    if (_Start < _Ptr)
+                        op(_Start, _Ptr - 1);
+                case quote_field_end:
+					state = normal;
+					_Start = _Ptr + 1; // skip the field end '\"'
+					break;
+				default:; // quote_field, do nothing
+				}
+
+				break;
+			case '\"':
+                switch (state) {
+                case normal:
+                    state = quote_field;
+                    ++_Start; // skip left '\"'
+                    break;
+                case quote_field: // field end by right '\"'
+                    _Quote = _Ptr;
+                    state = quote_field_try_end; // delay 1 loop to detect whether is a inner quote, not end for field
+                    break;
+                case quote_field_try_end:
+                    if (_Ptr - _Quote > 1) {
+                        state = quote_field_end;
+                        op(_Start, _Ptr);
+                    }
+                    else {
+                        state = quote_field;
+                    }
+                    break;
+                default:;
+                }
+                break;
+            case '\r':
+                skipCRLF = 2;
+            case '\n':
+            case '\0':
+                switch (state)
+                {
+                case normal:
+                    if (_Start <= _Ptr) 
+                        op(_Start, _Ptr);
+                    break;
+                case quote_field_try_end:
+                    if (_Start < _Ptr) 
+                        op(_Start, _Ptr - 1);
+                    break;
+                default:; // other state, do nothing, quote_field, invalid csv format
+                }
+                goto _L_end;
+            }
+            ++_Ptr;
+			
+            goto _L_loop;
+        }
+
+    _L_end:
+        return _Ptr + skipCRLF; // pointer to next line or after of null-termainted-charactor
     }
 };
 

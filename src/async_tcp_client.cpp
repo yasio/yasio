@@ -65,7 +65,7 @@ extern "C" {
 #elif defined(ANDROID) || defined(__ANDROID__)
 #include <jni.h>
 #include <android/log.h>
-#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "async tcp client", ("[%lld]" format), _high_clock(), ##__VA_ARGS__)
+#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "mini-asio", ("[%lld]" format), _high_clock(), ##__VA_ARGS__)
 #else
 #define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), _high_clock(), ##__VA_ARGS__)
 #endif

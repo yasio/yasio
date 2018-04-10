@@ -50,22 +50,22 @@ extern "C" {
 #include "cocos2d.h"
 #if COCOS2D_VERSION >= 0x00030000
 #define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[mini-asio][%lld] " format "\r\n"), _high_clock(), ##__VA_ARGS__); \
+   std::string msg = _string_format(("[mini-asio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__); \
    cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); }); \
 } while(false)
 #else
 #define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[mini-asio][%lld] " format "\r\n"), _high_clock(), ##__VA_ARGS__); \
+   std::string msg = _string_format(("[mini-asio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__); \
    cocos2d::CCDirector::sharedDirector()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::CCLog("%s", msg.c_str()); }); \
 } while(false)
 #endif
 #else
 #if defined(_WIN32)
-#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[mini-asio][%lld] " format "\r\n"), _high_clock(), ##__VA_ARGS__).c_str())
+#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[mini-asio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__).c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
 #include <jni.h>
 #include <android/log.h>
-#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "mini-asio", ("[%lld]" format), _high_clock(), ##__VA_ARGS__)
+#define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "mini-asio", ("[%lld]" format), _highp_clock(), ##__VA_ARGS__)
 #else
 #define INET_LOG(format,...) fprintf(stdout,("[mini-asio][%lld] " format "\n"), _high_clock(), ##__VA_ARGS__)
 #endif
@@ -157,7 +157,7 @@ namespace {
     }
 #endif
 
-    static long long _high_clock()
+    static long long _highp_clock()
     {
         auto duration = std::chrono::steady_clock::now().time_since_epoch();
         return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();

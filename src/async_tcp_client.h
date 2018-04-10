@@ -213,12 +213,14 @@ namespace purelib {
             // Gets last network error code
             error_number  get_errorno(void) { return static_cast<error_number>(error_); }
 
-#if _ENABLE_SEND_CB_SUPPORT
             // post a async send request.
-            void async_send(std::vector<char>&& data, size_t channel_index = 0, send_pdu_callback_t callback = nullptr);
-  #else
-            void async_send(std::vector<char>&& data, size_t channel_index = 0);
+            void async_send(std::vector<char>&& data 
+                            , size_t channel_index = 0 
+#if _ENABLE_SEND_CB_SUPPORT
+                            , send_pdu_callback_t callback = nullptr
 #endif
+                           );
+
             // timer support
             void       schedule_timer(deadline_timer*);
             void       cancel_timer(deadline_timer*);

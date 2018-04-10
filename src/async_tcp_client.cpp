@@ -204,11 +204,17 @@ namespace {
 class appl_pdu
 {
 public:
-    appl_pdu(std::vector<char>&& right, send_pdu_callback_t&& callback, const std::chrono::microseconds& duration)
+    appl_pdu(std::vector<char>&& right
+#if _ENABLE_SEND_CB_SUPPORT
+             , send_pdu_callback_t&& callback
+#endif
+             , const std::chrono::microseconds& duration)
     {
         data_ = std::move(right);
         offset_ = 0;
+#if _ENABLE_SEND_CB_SUPPORT
         on_sent_ = std::move(callback);
+#endif
         expire_time_ = std::chrono::steady_clock::now() + duration;
     }
     bool expired() const {
@@ -219,7 +225,9 @@ public:
     send_pdu_callback_t        on_sent_;
     compatible_timepoint_t     expire_time_;
 
+#if _USE_OBJECT_POOL
     DEFINE_OBJECT_POOL_ALLOCATION(appl_pdu, 512)
+#endif
 };
 
 channel_context::channel_context(async_tcp_client& service) : deadline_timer_(service)
@@ -690,7 +698,12 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
     }
 }
 
-void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index, send_pdu_callback_t callback)
+void async_tcp_client::async_send(std::vector<char>&& data
+, size_t channel_index
+#if _ENABLE_SEND_CB_SUPPORT
+, send_pdu_callback_t callback
+#endif
+)
 {
     // Gets channel
     if (channel_index >= channels_.size())
@@ -699,7 +712,11 @@ void async_tcp_client::async_send(std::vector<char>&& data, size_t channel_index
 
     if (ctx->impl_.is_open())
     {
-        auto pdu = new appl_pdu(std::move(data), std::move(callback), std::chrono::seconds(this->send_timeout_));
+        auto pdu = new appl_pdu(std::move(data)
+#if _ENABLE_SEND_CB_SUPPORT
+        , std::move(callback)
+#endif
+        , std::chrono::seconds(this->send_timeout_));
 
         ctx->send_queue_mtx_.lock();
         ctx->send_queue_.push_back(pdu);
@@ -788,15 +805,20 @@ bool async_tcp_client::do_write(channel_context* ctx)
             n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
             if (n == bytes_left) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
-                this->tsf_call_([v] {
+                auto packetSize = v->data_.size();
 #if INET_ENABLE_VERBOSE_LOG
-                    auto packetSize = v->data_.size();
-                    INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
+                INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
 #endif
-                    if (v->on_sent_ != nullptr)
-                        v->on_sent_(error_number::ERR_OK);
-                    delete v;
-                });
+
+#if _ENABLE_SEND_CB_SUPPORT
+                if(v->on_sent_) {
+                   auto send_cb = v->on_sent_;
+                   this->tsf_call_([send_cb] {
+                       send_cb(error_number::ERR_OK);
+                   });
+                }
+#endif
+                delete v;
             }
             else if (n > 0) { // TODO: add time
                 if (!v->expired())
@@ -826,11 +848,14 @@ bool async_tcp_client::do_write(channel_context* ctx)
 
                     INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, error_, xxsocket::get_error_msg(error_));
 
-                    this->tsf_call_([v] {
-                        if (v->on_sent_)
-                            v->on_sent_(error_number::ERR_CONNECTION_LOST);
-                        delete v;
-                    });
+#if _ENABLE_SEND_CB_SUPPORT
+                    if(v->on_sent_) {
+                       auto send_cb = v->on_sent_;
+                       this->tsf_call_([send_cb] {
+                           send_cb(error_number::ERR_OK);
+                       });
+                    }
+#endif
 
                     break;
                 }

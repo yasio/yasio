@@ -95,7 +95,7 @@ namespace {
     **      The _vsnprintf behavior is compatible API which always return -1 when buffer isn't enough at VS2013/2015/2017
     **      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later, AND it's also standard-compliant, see reference: http://www.cplusplus.com/reference/cstdio/vsnprintf/
     */
-    std::string _string_format(const char* format, ...)
+    static  std::string _string_format(const char* format, ...)
     {
 #define CC_VSNPRINTF_BUFFER_LENGTH 512
         va_list args;
@@ -137,8 +137,7 @@ namespace {
     }
 
 #if _USE_ARES_LIB
-    static
-    void ares_getaddrinfo_callback(void* arg, int status, addrinfo* answerlist)
+    static void ares_getaddrinfo_callback(void* arg, int status, addrinfo* answerlist)
     {
         auto ctx = (channel_context*)arg;
         if (status == ARES_SUCCESS) {
@@ -159,45 +158,45 @@ namespace {
         ctx->deadline_timer_.service_.finish_async_resolve(ctx);
     }
 #endif
-   
-    long long _high_clock()
+
+    static long long _high_clock()
     {
         auto duration = std::chrono::steady_clock::now().time_since_epoch();
         return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
     }
-    
+
 #if defined(_WIN32)
-    const DWORD MS_VC_EXCEPTION = 0x406D1388;  
-    #pragma pack(push,8)  
-    typedef struct tagTHREADNAME_INFO  
-    {  
+    const DWORD MS_VC_EXCEPTION = 0x406D1388;
+#pragma pack(push,8)  
+    typedef struct tagTHREADNAME_INFO
+    {
         DWORD dwType; // Must be 0x1000.  
         LPCSTR szName; // Pointer to name (in user addr space).  
         DWORD dwThreadID; // Thread ID (-1=caller thread).  
         DWORD dwFlags; // Reserved for future use, must be zero.  
-     } THREADNAME_INFO;  
-    #pragma pack(pop)  
-    void _set_thread_name(const char* threadName) {  
-        THREADNAME_INFO info;  
-        info.dwType = 0x1000;  
-        info.szName = threadName;  
+    } THREADNAME_INFO;
+#pragma pack(pop)  
+    void _set_thread_name(const char* threadName) {
+        THREADNAME_INFO info;
+        info.dwType = 0x1000;
+        info.szName = threadName;
         info.dwThreadID = GetCurrentThreadId(); // dwThreadID;  
-        info.dwFlags = 0;  
-    #pragma warning(push)  
-    #pragma warning(disable: 6320 6322)  
-        __try{  
-            RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);  
-        }  
-        __except (EXCEPTION_EXECUTE_HANDLER){  
-        }  
-    #pragma warning(pop)  
-    }  
+        info.dwFlags = 0;
+#pragma warning(push)  
+#pragma warning(disable: 6320 6322)  
+        __try {
+            RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+        }
+#pragma warning(pop)  
+    }
 #elif defined(ANDROID)
-    #define _set_thread_name(name) pthread_setname_np(pthread_self(), name)
+#define _set_thread_name(name) pthread_setname_np(pthread_self(), name)
 #elif defined(__APPLE__)
-    #define _set_thread_name(name) pthread_setname_np(name)
+#define _set_thread_name(name) pthread_setname_np(name)
 #else
-    #define _set_thread_name(name)
+#define _set_thread_name(name)
 #endif
 }
 
@@ -206,9 +205,9 @@ class appl_pdu
 public:
     appl_pdu(std::vector<char>&& right
 #if _ENABLE_SEND_CB_SUPPORT
-             , send_pdu_callback_t&& callback
+        , send_pdu_callback_t&& callback
 #endif
-             , const std::chrono::microseconds& duration)
+        , const std::chrono::microseconds& duration)
     {
         data_ = std::move(right);
         offset_ = 0;
@@ -237,9 +236,9 @@ channel_context::channel_context(async_tcp_client& service) : deadline_timer_(se
 void channel_context::reset()
 {
     state_ = channel_state::INACTIVE;
-    
+
     receiving_pdu_.clear();
-    
+
     offset_ = 0;
     receiving_pdu_elen_ = -1;
     ready_events_ = 0;
@@ -394,7 +393,7 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         else
             INET_LOG("Initialize ares failed: %d!", ret);
 #endif
-       
+
         register_descriptor(interrupter_.read_descriptor(), socket_event_read);
 
         // Initialize channels
@@ -428,7 +427,7 @@ void async_tcp_client::service()
 { // The async event-loop
     // Set Thread Name: mini async socket io
     _set_thread_name("mini-asio");
-    
+
 #if defined(_WIN32) && !defined(WINRT)
     timeBeginPeriod(1);
 #endif
@@ -470,19 +469,20 @@ void async_tcp_client::service()
 #endif
             --nfds;
         }
- #if _USE_ARES_LIB       
+#if _USE_ARES_LIB       
         /// perform possible domain resolve requests.
         if (this->async_resolve_count_ > 0) {
-            ares_socket_t socks[ARES_GETSOCK_MAXNUM] = {0};
+            ares_socket_t socks[ARES_GETSOCK_MAXNUM] = { 0 };
             int bitmask = ares_getsock((ares_channel)this->ares_, socks, _ARRAYSIZE(socks));
 
-            for(int i =0 ; i < ARES_GETSOCK_MAXNUM; ++i) {
+            for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i) {
                 if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i)) {
                     auto fd = socks[i];
-                    ::ares_process_fd((ares_channel) this->ares_,
-                                      FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD,
-                                      FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
-                } else
+                    ::ares_process_fd((ares_channel)this->ares_,
+                        FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD,
+                        FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
+                }
+                else
                     break;
             }
         }
@@ -518,7 +518,7 @@ void async_tcp_client::service()
                     if (!ctx->send_queue_.empty()) ++ctx->ready_events_;
 
                     ctx->send_queue_mtx_.unlock();
-                } 
+                }
             }
             else if (ctx->state_ == channel_state::REQUEST_CONNECT) {
                 do_nonblocking_connect(ctx);
@@ -591,9 +591,9 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
                 this->handle_connect_failed(ctx, ctx->error_);
         }
         else if (ctx->resolve_state_ == resolve_state::FAILED) {
-            handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED); 
+            handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
         } // DIRTY,Try resolve address nonblocking
-        else if(ctx->resolve_state_ == resolve_state::DIRTY) {
+        else if (ctx->resolve_state_ == resolve_state::DIRTY) {
             // Check wheter a ip addres, no need to resolve by dns
             start_async_resolve(ctx);
         }
@@ -629,12 +629,12 @@ void async_tcp_client::async_connect(size_t channel_index)
         return;
     auto ctx = channels_[channel_index];
 
-    if (ctx->state_ == channel_state::REQUEST_CONNECT || 
-        ctx->state_ == channel_state::CONNECTING) 
+    if (ctx->state_ == channel_state::REQUEST_CONNECT ||
+        ctx->state_ == channel_state::CONNECTING)
     { // in-progress, do nothing
         INET_LOG("async_connect --> the connect request is already in progress!");
         return;
-    } 
+    }
 
     if (ctx->resolve_state_ != resolve_state::READY) update_resolve_state(ctx);
     ctx->state_ = channel_state::REQUEST_CONNECT;
@@ -699,9 +699,9 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
 }
 
 void async_tcp_client::async_send(std::vector<char>&& data
-, size_t channel_index
+    , size_t channel_index
 #if _ENABLE_SEND_CB_SUPPORT
-, send_pdu_callback_t callback
+    , send_pdu_callback_t callback
 #endif
 )
 {
@@ -714,9 +714,9 @@ void async_tcp_client::async_send(std::vector<char>&& data
     {
         auto pdu = new appl_pdu(std::move(data)
 #if _ENABLE_SEND_CB_SUPPORT
-        , std::move(callback)
+            , std::move(callback)
 #endif
-        , std::chrono::seconds(this->send_timeout_));
+            , std::chrono::seconds(this->send_timeout_));
 
         ctx->send_queue_mtx_.lock();
         ctx->send_queue_.push_back(pdu);
@@ -737,9 +737,9 @@ void async_tcp_client::move_received_pdu(channel_context* ctx)
     recv_queue_mtx_.lock();
     // Use std::move, so no need to call ctx->receiving_pdu_.shrink_to_fit to 
     // avoid occupy large memory
-    recv_queue_.push_back(std::move(ctx->receiving_pdu_)); 
+    recv_queue_.push_back(std::move(ctx->receiving_pdu_));
     recv_queue_mtx_.unlock();
-    
+
     ctx->receiving_pdu_elen_ = -1;
 }
 
@@ -764,7 +764,7 @@ void async_tcp_client::do_nonblocking_connect_completion(fd_set* fds_array, chan
     }
 }
 
-void async_tcp_client::handle_connect_succeed(channel_context* ctx, int error) 
+void async_tcp_client::handle_connect_succeed(channel_context* ctx, int error)
 {
     ctx->state_ = channel_state::CONNECTED;
     unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
@@ -783,7 +783,7 @@ void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
 
     TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
 
-    INET_LOG("connect server %s:%u failed, error code: %d, message: %s", ctx->address_.c_str(), ctx->port_, error, xxsocket::get_error_msg(error)); 
+    INET_LOG("connect server %s:%u failed, error code: %d, message: %s", ctx->address_.c_str(), ctx->port_, error, xxsocket::get_error_msg(error));
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)
@@ -800,7 +800,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
             break;
 
         if (!ctx->send_queue_.empty()) {
-            auto& v = ctx->send_queue_.front();
+            auto v = ctx->send_queue_.front();
             auto bytes_left = v->data_.size() - v->offset_;
             n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
             if (n == bytes_left) { // All pdu bytes sent.
@@ -809,16 +809,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
 #if INET_ENABLE_VERBOSE_LOG
                 INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
 #endif
-
-#if _ENABLE_SEND_CB_SUPPORT
-                if(v->on_sent_) {
-                   auto send_cb = v->on_sent_;
-                   this->tsf_call_([send_cb] {
-                       send_cb(error_number::ERR_OK);
-                   });
-                }
-#endif
-                delete v;
+                handle_send_finished(v, error_number::ERR_OK);
             }
             else if (n > 0) { // TODO: add time
                 if (!v->expired())
@@ -830,15 +821,10 @@ bool async_tcp_client::do_write(channel_context* ctx)
                 }
                 else { // send timeout
                     ctx->send_queue_.pop_front();
-                    this->tsf_call_([v] {
 
-                        auto packetSize = v->data_.size();
-                        INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
-
-                        if (v->on_sent_)
-                            v->on_sent_(error_number::ERR_SEND_TIMEOUT);
-                        delete v;
-                    });
+                    auto packetSize = v->data_.size();
+                    INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
+                    handle_send_finished(v, error_number::ERR_SEND_TIMEOUT);
                 }
             }
             else { // n <= 0, TODO: add time
@@ -848,14 +834,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
 
                     INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, error_, xxsocket::get_error_msg(error_));
 
-#if _ENABLE_SEND_CB_SUPPORT
-                    if(v->on_sent_) {
-                       auto send_cb = v->on_sent_;
-                       this->tsf_call_([send_cb] {
-                           send_cb(error_number::ERR_OK);
-                       });
-                    }
-#endif
+                    handle_send_finished(v, error_number::ERR_OK);
 
                     break;
                 }
@@ -866,6 +845,21 @@ bool async_tcp_client::do_write(channel_context* ctx)
     } while (false);
 
     return bRet;
+}
+
+void async_tcp_client::handle_send_finished(appl_pdu* pdu, error_number error)
+{
+#if _ENABLE_SEND_CB_SUPPORT
+    this->tsf_call_([pdu] {
+        if (pdu->on_sent_)
+            pdu->on_sent_(error_number::ERR_OK);
+        delete pdu;
+    });
+#else
+    this->tsf_call_([pdu] {
+        delete pdu;
+    });
+#endif
 }
 
 bool async_tcp_client::do_read(channel_context* ctx)
@@ -890,7 +884,7 @@ bool async_tcp_client::do_read(channel_context* ctx)
             if (ctx->receiving_pdu_elen_ == -1) { // decode length
                 if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
                 {
-                    if (ctx->receiving_pdu_elen_ > 0) 
+                    if (ctx->receiving_pdu_elen_ > 0)
                     { // ok
                         ctx->receiving_pdu_.reserve((std::min)(ctx->receiving_pdu_elen_, MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
                         do_unpack(ctx, ctx->receiving_pdu_elen_, n);
@@ -956,9 +950,9 @@ void async_tcp_client::schedule_timer(deadline_timer* timer)
 {
     // pitfall: this service only hold the weak pointer of the timer object, so before dispose the timer object
     // need call cancel_timer to cancel it.
-    if(timer == nullptr)
+    if (timer == nullptr)
         return;
-    
+
     std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
     if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
         return;
@@ -1039,13 +1033,13 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
             nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
 #else
             timeval* pmaxtv = &maxtv;
-            if(this->async_resolve_count_ > 0 && ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0) {
-                struct timeval tv = {0};
-                pmaxtv = ::ares_timeout((ares_channel) this->ares_, &maxtv, &tv);
+            if (this->async_resolve_count_ > 0 && ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0) {
+                struct timeval tv = { 0 };
+                pmaxtv = ::ares_timeout((ares_channel)this->ares_, &maxtv, &tv);
             }
             nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, pmaxtv);
 #endif
-           
+
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
@@ -1060,14 +1054,14 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
 
 long long  async_tcp_client::get_wait_duration(long long usec)
 {
-    if(this->timer_queue_.empty())
+    if (this->timer_queue_.empty())
     {
         return usec;
     }
-    
+
     std::lock_guard<std::recursive_mutex> autolock(this->timer_queue_mtx_);
     deadline_timer* earliest = timer_queue_.back();
-    
+
     // microseconds
     auto duration = earliest->wait_duration();
     if (std::chrono::microseconds(usec) > duration)
@@ -1120,7 +1114,7 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     ctx->endpoints_.clear();
     if (this->ipsv_state_ == 0)
         this->ipsv_state_ = xxsocket::getipsv();
-    
+
     bool noblocking = false;
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
@@ -1148,9 +1142,9 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     }
 #else
     if (!noblocking) {
-       if (succeed && !ctx->endpoints_.empty()) {
-           ctx->resolve_state_ = resolve_state::READY;
-           ++ctx->ready_events_;
+        if (succeed && !ctx->endpoints_.empty()) {
+            ctx->resolve_state_ = resolve_state::READY;
+            ++ctx->ready_events_;
         }
         else {
             handle_connect_failed(ctx, ERR_RESOLVE_HOST_IPV6_REQUIRED);

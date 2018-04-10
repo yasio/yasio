@@ -61,7 +61,7 @@ public:
         if (n > 0) {
             // ov.resize(n);
             if (len < static_cast<int>(n))
-                n = len;
+                n = static_cast<_LenT>(len);
             return read_bytes(ov, n);
         }
 

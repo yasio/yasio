@@ -190,8 +190,8 @@ namespace inet {
 // #define _make_dotted_decimal(b1,b2,b3,b4) ( ( ((uint32_t)(b4) << 24) & 0xff000000 ) | ( ((uint32_t)(b3) << 16) & 0x00ff0000 ) | ( ((uint32_t)(b2) << 8) & 0x0000ff00 ) | ( (uint32_t)(b1) & 0x000000ff ) )
 
 static const socket_native_type invalid_socket = (socket_native_type)-1;
-static const u_long blocking = 0;
-static const u_long nonblocking = 1;
+//static const u_long blocking = 0;
+//static const u_long nonblocking = 1;
 
 
 namespace ip {

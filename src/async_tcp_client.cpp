@@ -50,24 +50,24 @@ extern "C" {
 #include "cocos2d.h"
 #if COCOS2D_VERSION >= 0x00030000
 #define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[%lld]" format "\r\n"), _high_clock(), ##__VA_ARGS__); \
+   std::string msg = _string_format(("[mini-asio][%lld] " format "\r\n"), _high_clock(), ##__VA_ARGS__); \
    cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::log("%s", msg.c_str()); }); \
 } while(false)
 #else
 #define INET_LOG(format,...) do { \
-   std::string msg = _string_format(("[%lld]" format "\r\n"), _high_clock(), ##__VA_ARGS__); \
+   std::string msg = _string_format(("[mini-asio][%lld] " format "\r\n"), _high_clock(), ##__VA_ARGS__); \
    cocos2d::CCDirector::sharedDirector()->getScheduler()->performFunctionInCocosThread([=] {cocos2d::CCLog("%s", msg.c_str()); }); \
 } while(false)
 #endif
 #else
 #if defined(_WIN32)
-#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[%lld]" format "\r\n"), _high_clock(), ##__VA_ARGS__).c_str())
+#define INET_LOG(format,...) OutputDebugStringA(_string_format(("[mini-asio][%lld] " format "\r\n"), _high_clock(), ##__VA_ARGS__).c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
 #include <jni.h>
 #include <android/log.h>
 #define INET_LOG(format,...) __android_log_print(ANDROID_LOG_DEBUG, "mini-asio", ("[%lld]" format), _high_clock(), ##__VA_ARGS__)
 #else
-#define INET_LOG(format,...) fprintf(stdout,("[%lld]" format "\n"), _high_clock(), ##__VA_ARGS__)
+#define INET_LOG(format,...) fprintf(stdout,("[mini-asio][%lld] " format "\n"), _high_clock(), ##__VA_ARGS__)
 #endif
 #endif
 
@@ -115,8 +115,6 @@ namespace {
                 va_start(args, format);
                 nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
                 va_end(args);
-
-                assert(nret == buffer.length());
             }
             // else equals, do nothing.
         }
@@ -146,11 +144,11 @@ namespace {
                 ep.port(ctx->port_);
                 std::string ip = ep.to_string();
                 ctx->endpoints_.push_back(ep);
-                INET_LOG("ares_getaddrinfo_callback ---> resolve %s succeed, ip:%s", ctx->address_.c_str(), ip.c_str());
+                INET_LOG("[index: %d] ares_getaddrinfo_callback: resolve %s succeed, ip:%s", ctx->index_, ctx->address_.c_str(), ip.c_str());
             }
         }
         else {
-            INET_LOG("ares_getaddrinfo_callback ---> resolve %s failed, status:%d", ctx->address_.c_str(), status);
+            INET_LOG("[index: %d] ares_getaddrinfo_callback: resolve %s failed, status:%d", ctx->index_, ctx->address_.c_str(), status);
         }
 
         ctx->deadline_timer_.cancel();
@@ -268,9 +266,9 @@ async_tcp_client::async_tcp_client() : stopping_(false),
 
     maxfdp_ = 0;
     nfds_ = 0;
-    async_resolve_count_ = 0;
 #if _USE_ARES_LIB
     ares_ = nullptr;
+    ares_count_ = 0;
 #endif
     ipsv_state_ = 0;
 }
@@ -404,9 +402,9 @@ void async_tcp_client::start_service(const channel_endpoint* channel_eps, int ch
         }
 
         worker_thread_ = std::thread([this] {
-            INET_LOG("async_tcp_client thread running...");
+            INET_LOG("thread running...");
             this->service();
-            INET_LOG("async_tcp_client thread exited.");
+            INET_LOG("thread exited.");
         });
     }
 }
@@ -463,15 +461,17 @@ void async_tcp_client::service()
         // Reset the interrupter.
         else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
         {
-            bool was_interrupt = interrupter_.reset();
 #if INET_ENABLE_VERBOSE_LOG
+            bool was_interrupt = interrupter_.reset();
             INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
+#else
+            interrupter_.reset();
 #endif
             --nfds;
         }
 #if _USE_ARES_LIB       
         /// perform possible domain resolve requests.
-        if (this->async_resolve_count_ > 0) {
+        if (this->ares_count_ > 0) {
             ares_socket_t socks[ARES_GETSOCK_MAXNUM] = { 0 };
             int bitmask = ares_getsock((ares_channel)this->ares_, socks, _ARRAYSIZE(socks));
 
@@ -490,13 +490,12 @@ void async_tcp_client::service()
         /// perform active channels
         for (auto ctx : channels_) {
             if (ctx->state_ == channel_state::CONNECTED) {
-                if (FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op])) || ctx->offset_ > 0) {
+                if (ctx->offset_ > 0 || FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op]))) {
 #if INET_ENABLE_VERBOSE_LOG
-                    INET_LOG("perform read operation...");
+                    INET_LOG("[index: %d] perform non-blocking read operation...", ctx->index_);
 #endif
                     if (!do_read(ctx)) {
-                        INET_LOG("do read for %s failed, error code(%d), detail:%s", ctx->address_.c_str(), ctx->error_, xxsocket::get_error_msg(ctx->error_));
-                        handle_error(ctx);
+                        handle_close(ctx, ctx->error_);
                         continue;
                     }
                 }
@@ -505,13 +504,12 @@ void async_tcp_client::service()
                 if (!ctx->send_queue_.empty()) {
                     ctx->send_queue_mtx_.lock();
 #if INET_ENABLE_VERBOSE_LOG
-                    INET_LOG("perform write operation...");
+                    INET_LOG("[index: %d] perform  non-blocking write operation...", ctx->index_);
 #endif
                     if (!do_write(ctx))
                     { // TODO: check would block? for client, may be unnecessary.
-                        INET_LOG("do write for %s failed, error code(%d), detail:%s", ctx->address_.c_str(), ctx->error_, xxsocket::get_error_msg(ctx->error_));
                         ctx->send_queue_mtx_.unlock();
-                        handle_error(ctx);
+                        handle_close(ctx, ctx->error_);
                         continue;
                     }
 
@@ -550,12 +548,15 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
     {
         if (ctx->resolve_state_ == resolve_state::READY) {
 
-            if (ctx->impl_.is_open()) { // cleanup descriptor if possible
-                cleanup_descriptor(ctx);
+            if (!ctx->impl_.is_open()) { // cleanup descriptor if possible
+                INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->address_.c_str(), ctx->port_);
             }
-
-            INET_LOG("connecting server %s:%u...", ctx->address_.c_str(), ctx->port_);
-
+            else
+            {
+                do_close(ctx);
+                INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->address_.c_str(), ctx->port_);
+            }
+            
             ctx->state_ = channel_state::CONNECTING;
             int ret = ctx->impl_.pconnect_n(ctx->endpoints_[0]);
 
@@ -608,8 +609,10 @@ void async_tcp_client::close(size_t channel_index)
     auto ctx = channels_[channel_index];
 
     if (ctx->impl_.is_open()) {
+        INET_LOG("[index: %d] closing the connection...", channel_index);
+        ctx->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
         ctx->impl_.shutdown();
-        // interrupter_.interrupt();
+        interrupter_.interrupt();
     }
 }
 
@@ -632,7 +635,7 @@ void async_tcp_client::async_connect(size_t channel_index)
     if (ctx->state_ == channel_state::REQUEST_CONNECT ||
         ctx->state_ == channel_state::CONNECTING)
     { // in-progress, do nothing
-        INET_LOG("async_connect --> the connect request is already in progress!");
+        INET_LOG("[index: %d] async_connect --> the connect request is already in progress!", channel_index);
         return;
     }
 
@@ -641,20 +644,18 @@ void async_tcp_client::async_connect(size_t channel_index)
     if (ctx->impl_.is_open()) {
         ctx->impl_.shutdown();
     }
-    else interrupter_.interrupt();
+
+    interrupter_.interrupt();
 }
 
-void async_tcp_client::handle_error(channel_context* ctx)
+void async_tcp_client::handle_close(channel_context* ctx, int error)
 {
-    if (!cleanup_descriptor(ctx)) {
-        INET_LOG("local close the connection!");
-    }
+    do_close(ctx);
 
     // @Notify connection lost
     if (this->on_connection_lost_ && ctx->state_ == channel_state::CONNECTED) {
-        TSF_CALL(on_connection_lost_(ctx->index_, ctx->error_, xxsocket::get_error_msg(ctx->error_)));
+        TSF_CALL(on_connection_lost_(ctx->index_, error, xxsocket::get_error_msg(error)));
     }
-
 
     ctx->reset();
 }
@@ -725,14 +726,14 @@ void async_tcp_client::async_send(std::vector<char>&& data
         interrupter_.interrupt();
     }
     else {
-        INET_LOG("async_tcp_client::send failed, The connection not ok!!!");
+        INET_LOG("[index: %d] send failed, The connection not ok!!!", channel_index);
     }
 }
 
 void async_tcp_client::move_received_pdu(channel_context* ctx)
 {
 #if INET_ENABLE_VERBOSE_LOG
-    INET_LOG("move_received_pdu...");
+    INET_LOG("[index: %d] A properly packet is ready from peer...", ctx->index_);
 #endif
     recv_queue_mtx_.lock();
     // Use std::move, so no need to call ctx->receiving_pdu_.shrink_to_fit to 
@@ -771,19 +772,19 @@ void async_tcp_client::handle_connect_succeed(channel_context* ctx, int error)
 
     this->set_errorno(ctx, error);
     TSF_CALL(this->on_connect_resposne_(ctx->index_, true, error));
-    INET_LOG("connect server %s:%u succeed, local endpoint[%s]", ctx->address_.c_str(), ctx->port_, ctx->impl_.local_endpoint().to_string().c_str());
+    INET_LOG("[index: %d] connect server %s:%u succeed, local endpoint[%s]", ctx->index_, ctx->address_.c_str(), ctx->port_, ctx->impl_.local_endpoint().to_string().c_str());
 }
 
 void async_tcp_client::handle_connect_failed(channel_context* ctx, int error)
 {
-    cleanup_descriptor(ctx);
+    do_close(ctx);
 
     ctx->state_ = channel_state::INACTIVE;
     this->set_errorno(ctx, error);
 
     TSF_CALL(this->on_connect_resposne_(ctx->index_, false, error));
 
-    INET_LOG("connect server %s:%u failed, error code: %d, message: %s", ctx->address_.c_str(), ctx->port_, error, xxsocket::get_error_msg(error));
+    INET_LOG("[index: %d] connect server %s:%u failed, error code: %d, message: %s", ctx->index_ , ctx->address_.c_str(), ctx->port_, error, xxsocket::get_error_msg(error));
 }
 
 bool async_tcp_client::do_write(channel_context* ctx)
@@ -801,13 +802,13 @@ bool async_tcp_client::do_write(channel_context* ctx)
 
         if (!ctx->send_queue_.empty()) {
             auto v = ctx->send_queue_.front();
-            auto bytes_left = v->data_.size() - v->offset_;
-            n = ctx->impl_.send_i(v->data_.data() + v->offset_, bytes_left);
-            if (n == bytes_left) { // All pdu bytes sent.
+            auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
+            n = ctx->impl_.send_i(v->data_.data() + v->offset_, outstanding_bytes);
+            if (n == outstanding_bytes) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
-                auto packetSize = v->data_.size();
 #if INET_ENABLE_VERBOSE_LOG
-                INET_LOG("async_tcp_client::do_write ---> A packet sent success, packet size:%d", packetSize);
+                auto packet_size = static_cast<int>(v->data_.size());
+                INET_LOG("[index: %d] do_write ok, A packet sent success, packet size:%d", ctx->index_, packet_size);
 #endif
                 handle_send_finished(v, error_number::ERR_OK);
             }
@@ -816,26 +817,21 @@ bool async_tcp_client::do_write(channel_context* ctx)
                 { // change offset, remain data will send next time.
                     // v->data_.erase(v->data_.begin(), v->data_.begin() + n);
                     v->offset_ += n;
-                    int temp_left = v->data_.size() - v->offset_;
-                    INET_LOG("send not complete %d bytes remained, %dbytes was sent!", temp_left, n);
+                    outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
+                    INET_LOG("[index: %d] do_write pending, send not complete %d bytes remained, %dbytes was sent!", ctx->index_, outstanding_bytes, n);
                 }
                 else { // send timeout
                     ctx->send_queue_.pop_front();
 
-                    auto packetSize = v->data_.size();
-                    INET_LOG("async_tcp_client::do_write ---> A packet sent timeout, packet size:%d", packetSize);
+                    auto packet_size = static_cast<int>(v->data_.size());
+                    INET_LOG("[index: %d] do_write timeout, A packet sent timeout, packet size:%d", ctx->index_, packet_size);
                     handle_send_finished(v, error_number::ERR_SEND_TIMEOUT);
                 }
             }
             else { // n <= 0, TODO: add time
                 set_errorno(ctx, xxsocket::get_last_errno());
                 if (SHOULD_CLOSE_1(n, error_)) {
-                    ctx->send_queue_.pop_front();
-
-                    INET_LOG("async_tcp_client::do_write failed, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, error_, xxsocket::get_error_msg(error_));
-
-                    handle_send_finished(v, error_number::ERR_OK);
-
+                    INET_LOG("[index: %d] do_write error, the connection should be closed, retval=%d, socket error:%d, detail:%s", ctx->index_, n, error_, xxsocket::get_error_msg(error_));
                     break;
                 }
             }
@@ -850,15 +846,30 @@ bool async_tcp_client::do_write(channel_context* ctx)
 void async_tcp_client::handle_send_finished(appl_pdu* pdu, error_number error)
 {
 #if _ENABLE_SEND_CB_SUPPORT
-    this->tsf_call_([pdu] {
+#if !_USE_OBJECT_POOL
+    if (pdu->on_sent_) {
+        auto send_cb = pdu->on_sent_;
+        this->tsf_call_([=] {
+            send_cb(error);
+        });   
+    }
+    delete pdu;
+#else
+    this->tsf_call_([=] {
         if (pdu->on_sent_)
-            pdu->on_sent_(error_number::ERR_OK);
+            pdu->on_sent_(error);
         delete pdu;
     });
+#endif
+#else
+    (void)error;
+#if !_USE_OBJECT_POOL
+    delete pdu;
 #else
     this->tsf_call_([pdu] {
         delete pdu;
     });
+#endif
 #endif
 }
 
@@ -868,53 +879,52 @@ bool async_tcp_client::do_read(channel_context* ctx)
         return true;
 
     bool bRet = false;
+
     do {
         if (!ctx->impl_.is_open())
             break;
 
         int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(ctx->buffer_) - ctx->offset_);
-
-        if (n > 0 || (n == -1 && ctx->offset_ != 0)) {
+        if (n > 0 || !SHOULD_CLOSE_0(n, this->set_errorno(ctx, xxsocket::get_last_errno()))) {
 
             if (n == -1)
                 n = 0;
 #if INET_ENABLE_VERBOSE_LOG
-            INET_LOG("async_tcp_client::do_read --- received data len: %d, buffer data len: %d", n, n + ctx->offset_);
+            INET_LOG("[index: %d] do_read ok, received data len: %d, buffer data len: %d", ctx->index_, n, n + ctx->offset_);
 #endif
-            if (ctx->receiving_pdu_elen_ == -1) { // decode length
-                if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
-                {
-                    if (ctx->receiving_pdu_elen_ > 0)
-                    { // ok
-                        ctx->receiving_pdu_.reserve((std::min)(ctx->receiving_pdu_elen_, MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-                        do_unpack(ctx, ctx->receiving_pdu_elen_, n);
+            if (n > 0) {
+                if (ctx->receiving_pdu_elen_ == -1) { // decode length
+                    if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
+                    {
+                        if (ctx->receiving_pdu_elen_ > 0)
+                        { // ok
+                            ctx->receiving_pdu_.reserve((std::min)(ctx->receiving_pdu_elen_, MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
+                            do_unpack(ctx, ctx->receiving_pdu_elen_, n);
+                        }
+                        else { // header insufficient, wait readfd ready at next event step.
+                            ctx->offset_ += n;
+                        }
                     }
-                    else { // header insufficient, wait readfd ready at next event step.
-                        ctx->offset_ += n;
+                    else {
+                        set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
+                        INET_LOG("[index: %d] do_read error, decode length of pdu failed, the connection should be closed!", ctx->index_);
+                        break;
                     }
                 }
-                else {
-                    set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
-                    INET_LOG("%s", "async_tcp_client::do_read error, decode length of pdu failed!");
-                    break;
+                else { // process incompleted pdu
+                    do_unpack(ctx, ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()), n);
                 }
-            }
-            else { // process incompleted pdu
-                do_unpack(ctx, ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()), n);
-            }
+            } // else no data ready
         }
         else {
-            this->set_errorno(ctx, xxsocket::get_last_errno());
-            if (SHOULD_CLOSE_0(n, error_)) {
-                const char* errormsg = xxsocket::get_error_msg(error_);
-                if (n == 0) {
-                    INET_LOG("async_tcp_client::do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", n, error_, errormsg);
-                }
-                else {
-                    INET_LOG("async_tcp_client::do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", n, error_, errormsg);
-                }
-                break;
+            const char* errormsg = xxsocket::get_error_msg(error_);
+            if (n == 0) {
+                INET_LOG("[index: %d] do_read error, the server close the connection, retval=%d, socket error:%d, detail:%s", ctx->index_, n, error_, errormsg);
             }
+            else {
+                INET_LOG("[index: %d] do_read error, the connection should be closed, retval=%d, socket error:%d, detail:%s", ctx->index_, n, error_, errormsg);
+            }
+            break;
         }
 
         bRet = true;
@@ -1033,7 +1043,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
             nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
 #else
             timeval* pmaxtv = &maxtv;
-            if (this->async_resolve_count_ > 0 && ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0) {
+            if (this->ares_count_ > 0 && ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0) {
                 struct timeval tv = { 0 };
                 pmaxtv = ::ares_timeout((ares_channel)this->ares_, &maxtv, &tv);
             }
@@ -1070,7 +1080,7 @@ long long  async_tcp_client::get_wait_duration(long long usec)
         return usec;
 }
 
-bool async_tcp_client::cleanup_descriptor(channel_context* ctx)
+bool async_tcp_client::do_close(channel_context* ctx)
 {
     if (ctx->impl_.is_open()) {
         unregister_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
@@ -1115,7 +1125,10 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
     if (this->ipsv_state_ == 0)
         this->ipsv_state_ = xxsocket::getipsv();
 
+#if _USE_ARES_LIB
     bool noblocking = false;
+#endif
+
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
     bool succeed = false;
@@ -1151,7 +1164,7 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
         }
     }
     else {
-        INET_LOG("start ares resolving for %s", ctx->address_.c_str());
+        INET_LOG("[index: %d] start async resolving for %s", ctx->index_, ctx->address_.c_str());
         ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));
         ctx->deadline_timer_.async_wait([=](bool cancelled) {
             if (!cancelled) {
@@ -1160,14 +1173,16 @@ void  async_tcp_client::start_async_resolve(channel_context* ctx)
             }
         });
 
-        ++this->async_resolve_count_;
+        ++this->ares_count_;
     }
 #endif
 }
 
 void  async_tcp_client::finish_async_resolve(channel_context*)
 { // Only call at event-loop thread, so no need to consider thread safe.
-    --this->async_resolve_count_;
+#if _USE_ARES_LIB
+    --this->ares_count_;
+#endif
 }
 
 void  async_tcp_client::interrupt()

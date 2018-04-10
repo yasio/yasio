@@ -332,7 +332,7 @@ static int
                 return (0);
             if (newv > 255)
                 return (0);
-            *tp = newv;
+            *tp = static_cast<u_char>(newv);
             if (!saw_digit) {
                 if (++octets > 4)
                     return (0);
@@ -824,8 +824,9 @@ bool xxsocket::open_ex(int af, int type, int protocol)
         }
     }
     return is_open();
-#endif
+#else
     return false;
+#endif
 }
 
 #if !defined(WP8)
@@ -1109,7 +1110,7 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
     int bytes_transferred;
     int n;
     int errcode = 0;
-    int send_times = 0;
+    // int send_times = 0;
 
     for (bytes_transferred = 0;
         bytes_transferred < len;

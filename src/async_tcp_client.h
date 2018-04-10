@@ -45,7 +45,7 @@ SOFTWARE.
 
 #define _USE_ARES_LIB 0
 #define _USE_OBJECT_POOL 1
-#define _ENABLE_SEND_CB_SUPPORT 1
+#define _ENABLE_SEND_CB_SUPPORT 0
 
 #if !defined(_ARRAYSIZE)
 #define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
@@ -132,7 +132,7 @@ namespace purelib {
             std::vector<ip::endpoint>  endpoints_;
             resolve_state              resolve_state_;
             
-            size_t                     index_ = -1;
+            int                        index_ = -1;
 
             // The deadline timer for resolve & connect
             deadline_timer             deadline_timer_;
@@ -254,7 +254,7 @@ namespace purelib {
             void       do_unpack(channel_context*, int bytes_expected, int bytes_transferred);
             void       move_received_pdu(channel_context*); // move received properly pdu to recv queue
 
-            void       handle_error(channel_context*); // TODO: add error_number parameter
+            void       handle_close(channel_context*, int error); // TODO: add error_number parameter
 
             // new/delete client socket connection channel
             // please call this at initialization, don't new channel at runtime dynmaically:
@@ -267,7 +267,7 @@ namespace purelib {
             int        set_errorno(channel_context* ctx, int error);
 
             // ensure event fd unregistered & closed.
-            bool       cleanup_descriptor(channel_context* ctx);
+            bool       do_close(channel_context* ctx);
 
             // Update resolve state for new endpoint set
             void       update_resolve_state(channel_context* ctx);
@@ -310,7 +310,6 @@ namespace purelib {
 
             // Optimize record incomplete works
             int nfds_;
-            int async_resolve_count_;
 
             // callbacks
             decode_pdu_length_func  decode_pdu_length_;
@@ -322,6 +321,7 @@ namespace purelib {
 #if _USE_ARES_LIB
             // non blocking io dns resolve support
             void* ares_;    //
+            int ares_count_;
 #endif
             int ipsv_state_; // local network state
         }; // async_tcp_client

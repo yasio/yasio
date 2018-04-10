@@ -33,7 +33,7 @@ extern long long atoll(const char* p)
 #endif
 
 int
-oslib::gettimeofday(struct timeval *tv, struct timezone2 *tz)
+oslib::gettimeofday(struct timeval *tv, struct timezone2* /*tz*/)
 {
     FILETIME ft;
     unsigned __int64 now = 0;

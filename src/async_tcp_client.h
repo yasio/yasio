@@ -44,6 +44,8 @@ SOFTWARE.
 #include "deadline_timer.h"
 
 #define _USE_ARES_LIB 0
+#define _USE_OBJECT_POOL 0
+#define _ENABLE_SEND_CB_SUPPORT 0
 
 #if !defined(_ARRAYSIZE)
 #define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
@@ -211,9 +213,12 @@ namespace purelib {
             // Gets last network error code
             error_number  get_errorno(void) { return static_cast<error_number>(error_); }
 
+#if _ENABLE_SEND_CB_SUPPORT
             // post a async send request.
-            void       async_send(std::vector<char>&& data, size_t channel_index = 0, send_pdu_callback_t callback = nullptr);
-
+            void async_send(std::vector<char>&& data, size_t channel_index = 0, send_pdu_callback_t callback = nullptr);
+  #else
+            void async_send(std::vector<char>&& data, size_t channel_index = 0);
+#endif
             // timer support
             void       schedule_timer(deadline_timer*);
             void       cancel_timer(deadline_timer*);

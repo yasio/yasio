@@ -98,7 +98,7 @@ namespace purelib {
 
         typedef std::function<void()> vdcallback_t;
 
-        class appl_pdu; // application layer protocol data unit.
+        class application_layer_pdu; // application layer protocol data unit.
 
         typedef std::function<void(error_number)> send_pdu_callback_t;
         typedef std::function<void(std::vector<char>&&)> recv_pdu_callback_t;
@@ -124,7 +124,7 @@ namespace purelib {
             int                        error_ = 0; // socket error(>= -1), application error(< -1)
             int                        ready_events_ = 0;
             std::recursive_mutex       send_queue_mtx_;
-            std::deque<appl_pdu*>      send_queue_;
+            std::deque<application_layer_pdu*> send_queue_;
 
             std::string                address_;
             u_short                    port_;
@@ -276,7 +276,7 @@ namespace purelib {
             int        flush_ready_events();
             void       swap_ready_events(channel_context* ctx);
 
-            void       handle_send_finished(appl_pdu*, error_number);
+            void       handle_send_finished(application_layer_pdu*, error_number);
 
         private:
             bool                    stopping_;

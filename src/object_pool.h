@@ -4,6 +4,7 @@
 
 #include "politedef.h"
 #include <assert.h>
+#include <mutex>
 
 #define OBJECT_POOL_HEADER_ONLY
 
@@ -41,7 +42,7 @@ namespace detail {
     public:
         OBJECT_POOL_DECL object_pool(size_t element_size, size_t element_count);
 
-        OBJECT_POOL_DECL ~object_pool(void);
+        OBJECT_POOL_DECL virtual ~object_pool(void);
 
         OBJECT_POOL_DECL void purge(void);
 
@@ -90,6 +91,30 @@ public: \
         return s_pool; \
     }
 
+// The thread safe edition
+#define DEFINE_OBJECT_POOL_ALLOCATION2(ELEMENT_TYPE,ELEMENT_COUNT) \
+public: \
+    static void * operator new(size_t /*size*/) \
+    { \
+        return get_pool().allocate(); \
+    } \
+    \
+    static void * operator new(size_t /*size*/, std::nothrow_t) \
+    { \
+        return get_pool().allocate(); \
+    } \
+    \
+    static void operator delete(void *p) \
+    { \
+        get_pool().deallocate(p); \
+    } \
+    \
+    static purelib::gc::object_pool<ELEMENT_TYPE, std::mutex>& get_pool() \
+    { \
+        static purelib::gc::object_pool<ELEMENT_TYPE, std::mutex> s_pool(ELEMENT_COUNT); \
+        return s_pool; \
+    }
+
 #define DECLARE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE) \
 public: \
     static void * operator new(size_t /*size*/); \
@@ -120,29 +145,73 @@ public: \
     }
 };
 
-template<typename _Ty, size_t _ElemCount = 512>
+template<typename _Ty, typename _Mutex = void>
 class object_pool : public detail::object_pool
 {
     object_pool(const object_pool&) = delete;
     void operator= (const object_pool&) = delete;
 
 public:
-    object_pool(void) : detail::object_pool(POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+    object_pool(size_t _ElemCount = 512) : detail::object_pool(POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
     {
     }
 
     template<typename..._Args>
     _Ty* construct(const _Args&...args)
     {
-        return new (get()) _Ty(args...);
+        return new (allocate()) _Ty(args...);
     }
 
     void destroy(void* _Ptr)
     {
-
         ((_Ty*)_Ptr)->~_Ty(); // call the destructor
         release(_Ptr);
     }
+
+    void* allocate()
+    {
+        return get();
+    }
+
+    void deallocate(void* _Ptr)
+    {
+        release(_Ptr);
+    }
+};
+
+template<typename _Ty>
+class object_pool<_Ty, std::mutex> : public detail::object_pool
+{
+public:
+    object_pool(size_t _ElemCount = 512) : detail::object_pool(POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+    {
+    }
+
+    template<typename..._Args>
+    _Ty* construct(const _Args&...args)
+    {
+        return new (allocate()) _Ty(args...);
+    }
+
+    void destroy(void* _Ptr)
+    {
+        ((_Ty*)_Ptr)->~_Ty(); // call the destructor
+        release(_Ptr);
+    }
+
+    void* allocate()
+    {
+        std::lock_guard<std::mutex> lk(this->mutex_);
+        return get();
+    }
+
+    void deallocate(void* _Ptr)
+    {
+        std::lock_guard<std::mutex> lk(this->mutex_);
+        release(_Ptr);
+    }
+
+    std::mutex mutex_;
 };
 
 }; // namespace: purelib::gc

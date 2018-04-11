@@ -72,11 +72,21 @@ typedef int socklen_t;
 #include <netinet/tcp.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#if !defined(SD_RECEIVE)
 #define SD_RECEIVE SHUT_RD
+#endif
+#if !defined(SD_SEND)
 #define SD_SEND SHUT_WR
+#endif
+#if !defined(SD_BOTH)
 #define SD_BOTH SHUT_RDWR
+#endif
+#if !defined(closesocket)
 #define closesocket close
+#endif
+#if !defined(ioctlsocket)
 #define ioctlsocket ioctl
+#endif
 typedef int socket_native_type;
 #undef socket
 #endif

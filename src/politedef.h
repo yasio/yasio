@@ -2,7 +2,7 @@
 *                                                                           *
 * politedef.h -- Basic politeness library Definitions                       *
 *                                                                           *
-* Copyright (c) X.D. Guo. All rights reserved.                              *
+* Copyright (c) HALX99. All rights reserved.                              *
 *                                                                           *
 ****************************************************************************/
 
@@ -257,7 +257,7 @@ namespace polite = ::purelib;
 
 #endif /* _POLITEDEF_H_ */
 /*
-* Copyright (c) 2012-2014 by X.D. Guo ALL RIGHTS RESERVED.
+* Copyright (c) 2012-2018 by HALX99, ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
 ***/
 

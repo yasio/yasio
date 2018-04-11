@@ -10,13 +10,9 @@ bool decode_pdu_length(const char* data, size_t datalen, int& len)
 
 int main(int, char**)
 {
-    std::vector<ip::endpoint> ipList;
-    xxsocket::resolve(ipList, "www.kernel.org");
     purelib::inet::channel_endpoint endpoints[] = {
         { "172.31.238.193", 8888 },
         { "www.kernel.org", 443 },
-        // { "www.baidu.com", "www.baidu.com", 443 },
-        //{ "www.tencent.com", "www.x-studio365.com", 443 },
     };
     tcpcli->start_service(endpoints, _ARRAYSIZE(endpoints));
 

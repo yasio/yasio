@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 purelib - All Rights Reserved
+// Copyright (c) 2014-2018 HALX99 - All Rights Reserved
 //
 #ifndef _SINGLETON_H_
 #define _SINGLETON_H_
@@ -155,7 +155,7 @@ namespace purelib {
 #endif
 
 /*
-* Copyright (c) 2012-2014 by X.D. Guo  ALL RIGHTS RESERVED.
+* Copyright (c) 2012-2018 by HALX99, ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
 V3.0:2011 */
 

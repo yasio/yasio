@@ -198,10 +198,10 @@ namespace {
 #endif
 }
 
-class application_layer_pdu
+class a_pdu
 {
 public:
-    application_layer_pdu(std::vector<char>&& right
+    a_pdu(std::vector<char>&& right
 #if _ENABLE_SEND_CB_SUPPORT
         , send_pdu_callback_t&& callback
 #endif
@@ -223,7 +223,7 @@ public:
     compatible_timepoint_t     expire_time_;
 
 #if _USE_OBJECT_POOL
-    DEFINE_OBJECT_POOL_ALLOCATION2(application_layer_pdu, 512)
+    DEFINE_OBJECT_POOL_ALLOCATION2(a_pdu, 512)
 #endif
 };
 
@@ -713,11 +713,11 @@ void async_tcp_client::async_send(std::vector<char>&& data
 
     if (ctx->impl_.is_open())
     {
-        auto pdu = new application_layer_pdu(std::move(data)
+        auto pdu = a_pdu_ptr(new a_pdu(std::move(data)
 #if _ENABLE_SEND_CB_SUPPORT
             , std::move(callback)
 #endif
-            , std::chrono::seconds(this->send_timeout_));
+            , std::chrono::seconds(this->send_timeout_)));
 
         ctx->send_queue_mtx_.lock();
         ctx->send_queue_.push_back(pdu);
@@ -843,7 +843,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
     return bRet;
 }
 
-void async_tcp_client::handle_send_finished(application_layer_pdu* pdu, error_number error)
+void async_tcp_client::handle_send_finished(a_pdu_ptr pdu, error_number error)
 {
 #if _ENABLE_SEND_CB_SUPPORT
     if (pdu->on_sent_) {
@@ -852,10 +852,14 @@ void async_tcp_client::handle_send_finished(application_layer_pdu* pdu, error_nu
             send_cb(error);
         }); 
     }
+#if !_USE_SHARED_PTR
     delete pdu;
+#endif
 #else
     (void)error;
+#if !_USE_SHARED_PTR
     delete pdu;
+#endif
 #endif
 }
 

@@ -39,11 +39,13 @@ SOFTWARE.
 #include <atomic>
 #include <queue>
 #include <algorithm>
+#include <memory>
 #include "object_pool.h"
 #include "select_interrupter.hpp"
 #include "deadline_timer.h"
 
 #define _USE_ARES_LIB 0
+#define _USE_SHARED_PTR 1
 #define _USE_OBJECT_POOL 1
 #define _ENABLE_SEND_CB_SUPPORT 0
 
@@ -98,7 +100,13 @@ namespace purelib {
 
         typedef std::function<void()> vdcallback_t;
 
-        class application_layer_pdu; // application layer protocol data unit.
+        class a_pdu; // application layer protocol data unit.
+
+#if _USE_SHARED_PTR
+        typedef std::shared_ptr<a_pdu> a_pdu_ptr;
+#else
+        typedef a_pdu* a_pdu_ptr;
+#endif
 
         typedef std::function<void(error_number)> send_pdu_callback_t;
         typedef std::function<void(std::vector<char>&&)> recv_pdu_callback_t;
@@ -124,7 +132,7 @@ namespace purelib {
             int                        error_ = 0; // socket error(>= -1), application error(< -1)
             int                        ready_events_ = 0;
             std::recursive_mutex       send_queue_mtx_;
-            std::deque<application_layer_pdu*> send_queue_;
+            std::deque<a_pdu_ptr>      send_queue_;
 
             std::string                address_;
             u_short                    port_;
@@ -276,7 +284,7 @@ namespace purelib {
             int        flush_ready_events();
             void       swap_ready_events(channel_context* ctx);
 
-            void       handle_send_finished(application_layer_pdu*, error_number);
+            void       handle_send_finished(a_pdu_ptr, error_number);
 
         private:
             bool                    stopping_;

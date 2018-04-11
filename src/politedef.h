@@ -2,7 +2,7 @@
 *                                                                           *
 * politedef.h -- Basic politeness library Definitions                       *
 *                                                                           *
-* Copyright (c) HALX99. All rights reserved.                              *
+* Copyright (c) HALX99. All rights reserved.                                *
 *                                                                           *
 ****************************************************************************/
 

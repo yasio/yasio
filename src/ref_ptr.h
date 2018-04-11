@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014-2015 purelib - All Rights Reserved
+// Copyright (c) 2014-2018 HALX99 - All Rights Reserved
 //
 #ifndef _XXREF_PTR_H_
 #define _XXREF_PTR_H_

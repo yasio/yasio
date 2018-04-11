@@ -147,6 +147,6 @@ object_pool::free_link_node* object_pool::tidy_chunk(chunk_link chunk)
 
 #endif // _OBJECT_POOL_CPP_
 /*
-* Copyright (c) 2012-2017 by HALX99,  ALL RIGHTS RESERVED.
+* Copyright (c) 2012-2018 by HALX99,  ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
 **/

@@ -882,29 +882,27 @@ bool async_tcp_client::do_read(channel_context* ctx)
 #if INET_ENABLE_VERBOSE_LOG
             INET_LOG("[index: %d] do_read ok, received data len: %d, buffer data len: %d", ctx->index_, n, n + ctx->offset_);
 #endif
-            if (n > 0) {
-                if (ctx->receiving_pdu_elen_ == -1) { // decode length
-                    if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
-                    {
-                        if (ctx->receiving_pdu_elen_ > 0)
-                        { // ok
-                            ctx->receiving_pdu_.reserve((std::min)(ctx->receiving_pdu_elen_, MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-                            do_unpack(ctx, ctx->receiving_pdu_elen_, n);
-                        }
-                        else { // header insufficient, wait readfd ready at next event step.
-                            ctx->offset_ += n;
-                        }
+            if (ctx->receiving_pdu_elen_ == -1) { // decode length
+                if (decode_pdu_length_(ctx->buffer_, ctx->offset_ + n, ctx->receiving_pdu_elen_))
+                {
+                    if (ctx->receiving_pdu_elen_ > 0)
+                    { // ok
+                        ctx->receiving_pdu_.reserve((std::min)(ctx->receiving_pdu_elen_, MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
+                        do_unpack(ctx, ctx->receiving_pdu_elen_, n);
                     }
-                    else {
-                        set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
-                        INET_LOG("[index: %d] do_read error, decode length of pdu failed, the connection should be closed!", ctx->index_);
-                        break;
+                    else { // header insufficient, wait readfd ready at next event step.
+                        ctx->offset_ += n;
                     }
                 }
-                else { // process incompleted pdu
-                    do_unpack(ctx, ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()), n);
+                else {
+                    set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
+                    INET_LOG("[index: %d] do_read error, decode length of pdu failed, the connection should be closed!", ctx->index_);
+                    break;
                 }
-            } // else no data ready
+            }
+            else { // process incompleted pdu
+                do_unpack(ctx, ctx->receiving_pdu_elen_ - static_cast<int>(ctx->receiving_pdu_.size()), n);
+            }
         }
         else {
             const char* errormsg = xxsocket::get_error_msg(error_);

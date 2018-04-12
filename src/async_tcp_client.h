@@ -47,7 +47,7 @@ SOFTWARE.
 #define _USE_ARES_LIB 0
 #define _USE_SHARED_PTR 1
 #define _USE_OBJECT_POOL 1
-#define _ENABLE_SEND_CB_SUPPORT 0
+#define _ENABLE_SEND_CB 0
 
 #if !defined(_ARRAYSIZE)
 #define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
@@ -224,7 +224,7 @@ namespace purelib {
             // post a async send request.
             void async_send(std::vector<char>&& data 
                             , size_t channel_index = 0 
-#if _ENABLE_SEND_CB_SUPPORT
+#if _ENABLE_SEND_CB
                             , send_pdu_callback_t callback = nullptr
 #endif
                            );

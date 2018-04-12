@@ -44,7 +44,7 @@ extern "C" {
 
 #define _USING_IN_COCOS2DX 0
 
-#define INET_ENABLE_VERBOSE_LOG 0
+#define _ENABLE_VERBOSE_LOG 0
 
 #if _USING_IN_COCOS2DX
 #include "cocos2d.h"
@@ -202,14 +202,14 @@ class a_pdu
 {
 public:
     a_pdu(std::vector<char>&& right
-#if _ENABLE_SEND_CB_SUPPORT
+#if _ENABLE_SEND_CB
         , send_pdu_callback_t&& callback
 #endif
     , const std::chrono::microseconds& duration)
     {
         data_ = std::move(right);
         offset_ = 0;
-#if _ENABLE_SEND_CB_SUPPORT
+#if _ENABLE_SEND_CB
         on_sent_ = std::move(callback);
 #endif
         expire_time_ = std::chrono::steady_clock::now() + duration;
@@ -454,14 +454,14 @@ void async_tcp_client::service()
         }
 
         if (nfds == 0) {
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
             INET_LOG("socket.select is timeout, do perform_timeout_timers()");
 #endif
         }
         // Reset the interrupter.
         else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
         {
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
             bool was_interrupt = interrupter_.reset();
             INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, was_interrupt:%s", this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
 #else
@@ -491,7 +491,7 @@ void async_tcp_client::service()
         for (auto ctx : channels_) {
             if (ctx->state_ == channel_state::CONNECTED) {
                 if (ctx->offset_ > 0 || FD_ISSET(ctx->impl_.native_handle(), &(fds_array[read_op]))) {
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
                     INET_LOG("[index: %d] perform non-blocking read operation...", ctx->index_);
 #endif
                     if (!do_read(ctx)) {
@@ -503,7 +503,7 @@ void async_tcp_client::service()
                 // perform write operations
                 if (!ctx->send_queue_.empty()) {
                     ctx->send_queue_mtx_.lock();
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
                     INET_LOG("[index: %d] perform non-blocking write operation...", ctx->index_);
 #endif
                     if (!do_write(ctx))
@@ -701,7 +701,7 @@ void async_tcp_client::unregister_descriptor(const socket_native_type fd, int fl
 
 void async_tcp_client::async_send(std::vector<char>&& data
     , size_t channel_index
-#if _ENABLE_SEND_CB_SUPPORT
+#if _ENABLE_SEND_CB
     , send_pdu_callback_t callback
 #endif
 )
@@ -714,7 +714,7 @@ void async_tcp_client::async_send(std::vector<char>&& data
     if (ctx->impl_.is_open())
     {
         auto pdu = a_pdu_ptr(new a_pdu(std::move(data)
-#if _ENABLE_SEND_CB_SUPPORT
+#if _ENABLE_SEND_CB
             , std::move(callback)
 #endif
             , std::chrono::seconds(this->send_timeout_)));
@@ -732,7 +732,7 @@ void async_tcp_client::async_send(std::vector<char>&& data
 
 void async_tcp_client::move_received_pdu(channel_context* ctx)
 {
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
     INET_LOG("[index: %d] received a properly packet from peer, packet size:%d", ctx->index_, ctx->receiving_pdu_elen_);
 #endif
     recv_queue_mtx_.lock();
@@ -806,7 +806,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
             n = ctx->impl_.send_i(v->data_.data() + v->offset_, outstanding_bytes);
             if (n == outstanding_bytes) { // All pdu bytes sent.
                 ctx->send_queue_.pop_front();
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
                 auto packet_size = static_cast<int>(v->data_.size());
                 INET_LOG("[index: %d] do_write ok, A packet sent success, packet size:%d", ctx->index_, packet_size);
 #endif
@@ -845,7 +845,7 @@ bool async_tcp_client::do_write(channel_context* ctx)
 
 void async_tcp_client::handle_send_finished(a_pdu_ptr pdu, error_number error)
 {
-#if _ENABLE_SEND_CB_SUPPORT
+#if _ENABLE_SEND_CB
     if (pdu->on_sent_) {
         auto send_cb = std::move(pdu->on_sent_);
         this->tsf_call_([=] {
@@ -876,12 +876,12 @@ bool async_tcp_client::do_read(channel_context* ctx)
 
         int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(ctx->buffer_) - ctx->offset_);
         if (n > 0 || !SHOULD_CLOSE_0(n, this->set_errorno(ctx, xxsocket::get_last_errno()))) {
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
             INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
 #endif
             if (n == -1)
                 n = 0;
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
             if (n > 0) {
                 INET_LOG("[index: %d] do_read ok, received data len: %d, buffer data len: %d", ctx->index_, n, n + ctx->offset_);
             }
@@ -1028,7 +1028,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
         if (wait_duration > 0) {
             maxtv.tv_sec = static_cast<long>(wait_duration / 1000000);
             maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
             INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_, maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
 #endif
 #if !_USE_ARES_LIB
@@ -1042,7 +1042,7 @@ int async_tcp_client::do_select(fd_set* fds_array, timeval& maxtv)
             nfds = ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, pmaxtv);
 #endif
 
-#if INET_ENABLE_VERBOSE_LOG
+#if _ENABLE_VERBOSE_LOG
             INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
         }

@@ -421,6 +421,18 @@ void  async_tcp_client::set_endpoint(size_t channel_index, const char* address, 
     update_resolve_state(ctx);
 }
 
+void  async_tcp_client::set_endpoint(size_t channel_index, const ip::endpoint& ep)
+{
+    // Gets channel context
+    if (channel_index >= channels_.size())
+        return;
+    auto ctx = channels_[channel_index];
+
+    ctx->endpoints_.clear();
+    ctx->endpoints_.push_back(ep);
+    ctx->resolve_state_ = resolve_state::READY;
+}
+
 void async_tcp_client::service()
 { // The async event-loop
     // Set Thread Name: mini async socket io
@@ -519,10 +531,20 @@ void async_tcp_client::service()
                 }
             }
             else if (ctx->state_ == channel_state::REQUEST_CONNECT) {
-                do_nonblocking_connect(ctx);
+                if (ctx->type_ == TCP_CLIENT) {
+                    do_nonblocking_connect(ctx);
+                }
+                else {
+                    do_nonblocking_accept(ctx);
+                }
             }
             else if (ctx->state_ == channel_state::CONNECTING) {
-                do_nonblocking_connect_completion(fds_array, ctx);
+                if (ctx->type_ == TCP_CLIENT) {
+                    do_nonblocking_connect_completion(fds_array, ctx);
+                }
+                else {
+                    do_nonblocking_accept_completion(fds_array, ctx);
+                }
             }
 
             this->swap_ready_events(ctx);
@@ -558,7 +580,12 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
             }
             
             ctx->state_ = channel_state::CONNECTING;
-            int ret = ctx->impl_.pconnect_n(ctx->endpoints_[0]);
+
+            int ret = -1;
+            if (ctx->impl_.reopen()) {
+                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
+                ret = xxsocket::connect_n(ctx->impl_.native_handle(), ctx->endpoints_[0]);
+            }
 
             if (ret < 0)
             { // setup no blocking connect
@@ -571,7 +598,6 @@ void async_tcp_client::do_nonblocking_connect(channel_context* ctx)
                     this->set_errorno(ctx, error);
 
                     register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-                    ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // set opt for p2p
 
                     ctx->receiving_pdu_elen_ = -1;
                     ctx->offset_ = 0;
@@ -645,6 +671,21 @@ void async_tcp_client::async_connect(size_t channel_index)
         ctx->impl_.shutdown();
     }
 
+    interrupter_.interrupt();
+}
+
+void async_tcp_client::open_p2p(size_t p2pIndex, size_t strikeIndex)
+{
+    // Gets channel
+    if (p2pIndex >= channels_.size() || strikeIndex >= channels_.size())
+        return;
+    auto ctx = channels_[p2pIndex];
+    auto strike = channels_[strikeIndex];
+
+    ctx->type_ = TCP_P2P_SERVER;
+    ctx->state_ = channel_state::REQUEST_CONNECT;
+    ctx->strike_ = strike;
+    
     interrupter_.interrupt();
 }
 
@@ -762,6 +803,35 @@ void async_tcp_client::do_nonblocking_connect_completion(fd_set* fds_array, chan
             }
         }
         // else  ; // Check whether connect is timeout.
+    }
+}
+
+void async_tcp_client::do_nonblocking_accept_completion(fd_set* fds_array, channel_context* ctx)
+{
+    if (ctx->state_ == channel_state::CONNECTING)
+    {
+        int error = -1;
+        if (FD_ISSET(ctx->impl_.native_handle(), &fds_array[read_op])) {
+            socklen_t len = sizeof(error);
+            if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >= 0 && error == 0) {
+
+                xxsocket temp = ctx->impl_.accept();
+                if (temp.is_open()) {
+                    ctx->impl_.swap(temp);
+
+                    unregister_descriptor(temp.native_handle(), socket_event_read);
+                    register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+                    ctx->state_ = channel_state::CONNECTED;
+                    INET_LOG("The p2p connection established, local endpoint:%s, peer endpoint:%s",
+                        ctx->impl_.local_endpoint().to_string().c_str(),
+                        ctx->impl_.peer_endpoint().to_string().c_str()
+                    );
+                }
+            }
+            else {
+			    ;
+            }
+        }
     }
 }
 
@@ -1187,6 +1257,39 @@ int async_tcp_client::set_errorno(channel_context* ctx, int error)
     ctx->error_ = error;
     error_ = error;
     return error;
+}
+
+void async_tcp_client::do_nonblocking_accept(channel_context* ctx)
+{
+    if (ctx->strike_ != nullptr && is_connected(ctx->strike_->index_)) {
+        if (ctx->impl_.reopen())
+        {
+            ctx->state_ = channel_state::CONNECTING;
+
+            ip::endpoint ep("0.0.0.0", ctx->strike_->impl_.local_endpoint().port());
+            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+            ctx->impl_.set_nonblocking(true);
+            ep.in4_.sin_addr.s_addr = INADDR_ANY;
+            if (ctx->impl_.bind(ep) != 0) {
+                this->set_errorno(ctx, xxsocket::get_last_errno());
+                INET_LOG("[index: %d] P2P: bind failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
+                ctx->impl_.close();
+                ctx->state_ = channel_state::INACTIVE;
+                return;
+            }
+            
+            if (ctx->impl_.listen(1) != 0) {
+                this->set_errorno(ctx, xxsocket::get_last_errno());
+                INET_LOG("[index: %d] P2P: listening failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
+                ctx->impl_.close();
+                ctx->state_ = channel_state::INACTIVE;
+                return;
+            }
+
+            INET_LOG("[index: %d] P2P: listening at %s...", ctx->index_, ep.to_string().c_str());
+            register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+        }
+    }
 }
 
 } /* namespace purelib::net */

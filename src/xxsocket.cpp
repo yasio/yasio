@@ -680,6 +680,8 @@ int xxsocket::pserv(const char* addr, u_short port)
         return -1;
     }
 
+    set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+
     int n = this->bind(local);
     if (n != 0)
         return n;

@@ -123,6 +123,7 @@ namespace purelib {
             channel_context(async_tcp_client& service);
             xxsocket                   impl_;
             channel_state              state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+            
             int                        type_ = TCP_CLIENT;
             char                       buffer_[65536]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
@@ -142,8 +143,11 @@ namespace purelib {
             
             int                        index_ = -1;
 
+            channel_context*           strike_ = nullptr;
+
             // The deadline timer for resolve & connect
             deadline_timer             deadline_timer_;
+
             void                       reset();
         };
 
@@ -187,6 +191,8 @@ namespace purelib {
 
             void       set_endpoint(size_t channel_index, const char* address, u_short port);
 
+            void       set_endpoint(size_t channel_index, const ip::endpoint& ep);
+
             size_t     get_received_pdu_count(void) const;
 
             // must be call on main thread(such cocos2d-x opengl thread)
@@ -211,6 +217,9 @@ namespace purelib {
 
             // start a async connect at specific channel
             void       async_connect(size_t channel_index = 0);
+
+            // open p2p port
+            void       open_p2p(size_t p2pIndex, size_t strikeIndex);
 
             // close tcp_client
             void       close(size_t channel_index = 0);
@@ -244,7 +253,7 @@ namespace purelib {
             long long  get_wait_duration(long long usec);
 
             int        do_select(fd_set* fds_array,timeval& timeout);
-
+    
             void       do_nonblocking_connect(channel_context*);
             void       do_nonblocking_connect_completion(fd_set* fds_array, channel_context*);
 
@@ -285,6 +294,10 @@ namespace purelib {
             void       swap_ready_events(channel_context* ctx);
 
             void       handle_send_finished(a_pdu_ptr, error_number);
+
+            // supporting P2P
+            void       do_nonblocking_accept(channel_context*);
+            void       do_nonblocking_accept_completion(fd_set* fds_array, channel_context*);
 
         private:
             bool                    stopping_;

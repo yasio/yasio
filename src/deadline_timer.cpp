@@ -29,7 +29,7 @@ SOFTWARE.
 #ifndef _XXSOCKET_DEADLINE_TIMER_IPP_
 #define _XXSOCKET_DEADLINE_TIMER_IPP_
 #include "deadline_timer.h"
-#include "async_tcp_client.h"
+#include "async_socket_io.h"
 
 namespace purelib {
 namespace inet {

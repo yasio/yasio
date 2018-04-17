@@ -313,7 +313,7 @@ channel_context* async_socket_io::new_channel(const channel_endpoint& ep)
     ctx->reset();
     ctx->address_ = ep.address_;
     ctx->port_ = ep.port_;
-    ctx->index_ = this->channels_.size();
+    ctx->index_ = static_cast<int>(this->channels_.size());
     update_resolve_state(ctx);
     this->channels_.push_back(ctx);
     return ctx;

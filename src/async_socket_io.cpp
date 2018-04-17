@@ -16,7 +16,7 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
+ 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
@@ -810,17 +810,38 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set* fds_array, channe
             socklen_t len = sizeof(error);
             if (::getsockopt(ctx->impl_.native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >= 0 && error == 0) {
 
-                xxsocket temp = ctx->impl_.accept();
-                if (temp.is_open()) {
-                    ctx->impl_.swap(temp);
+                if (ctx->type_ & CHANNEL_TCP) {
+                    xxsocket temp = ctx->impl_.accept();
+                    if (temp.is_open()) {
+                        ctx->impl_.swap(temp);
 
-                    unregister_descriptor(temp.native_handle(), socket_event_read);
-                    register_descriptor(ctx->impl_.native_handle(), socket_event_read);
-                    ctx->state_ = channel_state::CONNECTED;
-                    INET_LOG("The p2p connection established, local endpoint:%s, peer endpoint:%s",
-                        ctx->impl_.local_endpoint().to_string().c_str(),
-                        ctx->impl_.peer_endpoint().to_string().c_str()
-                    );
+                        unregister_descriptor(temp.native_handle(), socket_event_read);
+                        register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+
+                        handle_connect_succeed(ctx, 0);
+                    }
+                }
+                else {
+                    ip::endpoint ep;
+                    int n = ctx->impl_.recvfrom_i(ctx->buffer_, sizeof(ctx->buffer_), ep);
+                    if (n > 0) {
+                        xxsocket temp;
+                        if (temp.open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
+                        {
+                            temp.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+                            if (0 == temp.bind(ctx->impl_.local_endpoint()) && 0 == temp.connect(ep))
+                            {
+                                ctx->impl_.swap(temp);
+                                
+                                unregister_descriptor(temp.native_handle(), socket_event_read);
+                                register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+
+                                ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_, ctx->buffer_ + n);
+                                handle_connect_succeed(ctx, 0);
+                                move_received_pdu(ctx);
+                            }
+                        }
+                    }
                 }
             }
             else {
@@ -1265,8 +1286,8 @@ void async_socket_io::do_nonblocking_accept(channel_context* ctx)
             ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
             ctx->impl_.set_nonblocking(true);
             if (ctx->impl_.bind(ep) == 0) {
-                INET_LOG("[index: %d] create udp server %s succeed.", ctx->index_, ep.to_string().c_str());
-                ctx->state_ = channel_state::CONNECTED;
+                INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
+                ctx->state_ = channel_state::CONNECTING;
                 register_descriptor(ctx->impl_.native_handle(), socket_event_read);
             }
             else {

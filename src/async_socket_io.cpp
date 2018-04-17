@@ -547,87 +547,6 @@ _L_end:
     (void)0; // ONLY for xcode compiler happy.
 }
 
-void async_socket_io::do_nonblocking_connect(channel_context* ctx)
-{
-    assert(ctx->state_ == channel_state::REQUEST_CONNECT);
-    if (ctx->state_ != channel_state::REQUEST_CONNECT)
-        return;
-
-    if (ctx->resolve_state_ == resolve_state::READY) {
-
-        if (!ctx->impl_.is_open()) { // cleanup descriptor if possible
-            INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->address_.c_str(), ctx->port_);
-        }
-        else
-        {
-            do_close(ctx);
-            INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->address_.c_str(), ctx->port_);
-        }
-            
-        if (ctx->type_ & CHANNEL_TCP) {
-            ctx->state_ = channel_state::CONNECTING;
-
-            int ret = -1;
-            if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
-                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
-                ret = xxsocket::connect_n(ctx->impl_.native_handle(), ctx->endpoints_[0]);
-            }
-
-            if (ret < 0)
-            { // setup no blocking connect
-                int error = xxsocket::get_last_errno();
-                if (error != EINPROGRESS && error != EWOULDBLOCK) {
-                    this->handle_connect_failed(ctx, error);
-                    return;
-                }
-                else {
-                    this->set_errorno(ctx, error);
-
-                    register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
-
-                    ctx->receiving_pdu_elen_ = -1;
-                    ctx->offset_ = 0;
-                    ctx->receiving_pdu_.clear();
-
-                    ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(this->connect_timeout_));
-                    ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-                        if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
-                            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
-                        }
-                    });
-                }
-            }
-            else if (ret == 0) { // connect server succed immidiately.
-                handle_connect_succeed(ctx, error_number::ERR_OK);
-            }
-            else // MAY NEVER GO HERE
-                this->handle_connect_failed(ctx, ctx->error_);
-        }
-        else { // UDP
-            int ret = -1;
-            if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0)) {
-                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
-                ret = xxsocket::connect(ctx->impl_.native_handle(), ctx->endpoints_[0]);
-                if (ret == 0) {
-                    ctx->impl_.set_nonblocking(true);
-                    register_descriptor(ctx->impl_.native_handle(), socket_event_read);
-                    this->handle_connect_succeed(ctx, ctx->error_);
-                }
-                else {
-                    this->handle_connect_failed(ctx, ctx->error_);
-                }
-            }
-        }
-    }
-    else if (ctx->resolve_state_ == resolve_state::FAILED) {
-        handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
-    } // DIRTY,Try resolve address nonblocking
-    else if (ctx->resolve_state_ == resolve_state::DIRTY) {
-        // Check wheter a ip addres, no need to resolve by dns
-        start_async_resolve(ctx);
-    }
-}
-
 void async_socket_io::close(size_t channel_index)
 {
     // Gets channel context
@@ -780,6 +699,87 @@ void async_socket_io::move_received_pdu(channel_context* ctx)
     ctx->receiving_pdu_elen_ = -1;
 }
 
+void async_socket_io::do_nonblocking_connect(channel_context* ctx)
+{
+    assert(ctx->state_ == channel_state::REQUEST_CONNECT);
+    if (ctx->state_ != channel_state::REQUEST_CONNECT)
+        return;
+
+    if (ctx->resolve_state_ == resolve_state::READY) {
+
+        if (!ctx->impl_.is_open()) { // cleanup descriptor if possible
+            INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->address_.c_str(), ctx->port_);
+        }
+        else
+        {
+            do_close(ctx);
+            INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->address_.c_str(), ctx->port_);
+        }
+            
+        if (ctx->type_ & CHANNEL_TCP) {
+            ctx->state_ = channel_state::CONNECTING;
+
+            int ret = -1;
+            if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
+                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
+                ret = xxsocket::connect_n(ctx->impl_.native_handle(), ctx->endpoints_[0]);
+            }
+
+            if (ret < 0)
+            { // setup no blocking connect
+                int error = xxsocket::get_last_errno();
+                if (error != EINPROGRESS && error != EWOULDBLOCK) {
+                    this->handle_connect_failed(ctx, error);
+                    return;
+                }
+                else {
+                    this->set_errorno(ctx, error);
+
+                    register_descriptor(ctx->impl_.native_handle(), socket_event_read | socket_event_write);
+
+                    ctx->receiving_pdu_elen_ = -1;
+                    ctx->offset_ = 0;
+                    ctx->receiving_pdu_.clear();
+
+                    ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(this->connect_timeout_));
+                    ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+                        if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
+                            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+                        }
+                    });
+                }
+            }
+            else if (ret == 0) { // connect server succed immidiately.
+                handle_connect_succeed(ctx, error_number::ERR_OK);
+            }
+            else // MAY NEVER GO HERE
+                this->handle_connect_failed(ctx, ctx->error_);
+        }
+        else { // UDP
+            int ret = -1;
+            if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0)) {
+                ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
+                ret = xxsocket::connect(ctx->impl_.native_handle(), ctx->endpoints_[0]);
+                if (ret == 0) {
+                    ctx->impl_.set_nonblocking(true);
+                    register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+                    this->handle_connect_succeed(ctx, ctx->error_);
+                }
+                else {
+                    this->handle_connect_failed(ctx, ctx->error_);
+                }
+            }
+        }
+    }
+    else if (ctx->resolve_state_ == resolve_state::FAILED) {
+        handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
+    } // DIRTY,Try resolve address nonblocking
+    else if (ctx->resolve_state_ == resolve_state::DIRTY) {
+        // Check wheter a ip addres, no need to resolve by dns
+        start_async_resolve(ctx);
+    }
+}
+
 void async_socket_io::do_nonblocking_connect_completion(fd_set* fds_array, channel_context* ctx)
 {
     if (ctx->state_ == channel_state::CONNECTING)
@@ -798,6 +798,58 @@ void async_socket_io::do_nonblocking_connect_completion(fd_set* fds_array, chann
             }
         }
         // else  ; // Check whether connect is timeout.
+    }
+}
+
+void async_socket_io::do_nonblocking_accept(channel_context* ctx)
+{ // channel is server
+    do_close(ctx);
+
+    if (ctx->type_ & CHANNEL_UDP) {
+        if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM)) {
+            ip::endpoint ep("0.0.0.0", ctx->strike_ == nullptr ? ctx->port_ : ctx->strike_->impl_.local_endpoint().port());
+            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+            ctx->impl_.set_nonblocking(true);
+            if (ctx->impl_.bind(ep) == 0) {
+                INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
+                ctx->state_ = channel_state::CONNECTING;
+                register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+            }
+            else {
+                this->set_errorno(ctx, xxsocket::get_last_errno());
+                INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
+                ctx->impl_.close();
+                ctx->state_ = channel_state::INACTIVE;
+            }
+        }
+    }
+    else {
+        if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+        {
+            ctx->state_ = channel_state::CONNECTING;
+
+            ip::endpoint ep("0.0.0.0", ctx->strike_ == nullptr ? ctx->port_ : ctx->strike_->impl_.local_endpoint().port());
+            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+            ctx->impl_.set_nonblocking(true);
+            if (ctx->impl_.bind(ep) != 0) {
+                this->set_errorno(ctx, xxsocket::get_last_errno());
+                INET_LOG("[index: %d] P2P: bind failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
+                ctx->impl_.close();
+                ctx->state_ = channel_state::INACTIVE;
+                return;
+            }
+            
+            if (ctx->impl_.listen(1) != 0) {
+                this->set_errorno(ctx, xxsocket::get_last_errno());
+                INET_LOG("[index: %d] P2P: listening failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
+                ctx->impl_.close();
+                ctx->state_ = channel_state::INACTIVE;
+                return;
+            }
+
+            INET_LOG("[index: %d] P2P: listening at %s...", ctx->index_, ep.to_string().c_str());
+            register_descriptor(ctx->impl_.native_handle(), socket_event_read);
+        }
     }
 }
 
@@ -857,7 +909,7 @@ void async_socket_io::handle_connect_succeed(channel_context* ctx, int error)
     unregister_descriptor(ctx->impl_.native_handle(), socket_event_write); // remove write event avoid high-CPU occupation
 
     this->set_errorno(ctx, error);
-    INET_LOG("[index: %d] connect server %s:%u succeed, local endpoint[%s]", ctx->index_, ctx->address_.c_str(), ctx->port_, ctx->impl_.local_endpoint().to_string().c_str());
+    INET_LOG("[index: %d] the connection [%s] ---> %s:%u is established.", ctx->index_, ctx->impl_.local_endpoint().to_string().c_str(), ctx->address_.c_str(), ctx->port_);
 
     TSF_CALL(this->on_connect_resposne_(ctx->index_, true, error));
 }
@@ -1274,58 +1326,6 @@ int async_socket_io::set_errorno(channel_context* ctx, int error)
     ctx->error_ = error;
     error_ = error;
     return error;
-}
-
-void async_socket_io::do_nonblocking_accept(channel_context* ctx)
-{ // channel is server
-    do_close(ctx);
-
-    if (ctx->type_ & CHANNEL_UDP) {
-        if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM)) {
-            ip::endpoint ep("0.0.0.0", ctx->strike_ == nullptr ? ctx->port_ : ctx->strike_->impl_.local_endpoint().port());
-            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-            ctx->impl_.set_nonblocking(true);
-            if (ctx->impl_.bind(ep) == 0) {
-                INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
-                ctx->state_ = channel_state::CONNECTING;
-                register_descriptor(ctx->impl_.native_handle(), socket_event_read);
-            }
-            else {
-                this->set_errorno(ctx, xxsocket::get_last_errno());
-                INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
-                ctx->impl_.close();
-                ctx->state_ = channel_state::INACTIVE;
-            }
-        }
-    }
-    else {
-        if (ctx->impl_.reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
-        {
-            ctx->state_ = channel_state::CONNECTING;
-
-            ip::endpoint ep("0.0.0.0", ctx->strike_ == nullptr ? ctx->port_ : ctx->strike_->impl_.local_endpoint().port());
-            ctx->impl_.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-            ctx->impl_.set_nonblocking(true);
-            if (ctx->impl_.bind(ep) != 0) {
-                this->set_errorno(ctx, xxsocket::get_last_errno());
-                INET_LOG("[index: %d] P2P: bind failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
-                ctx->impl_.close();
-                ctx->state_ = channel_state::INACTIVE;
-                return;
-            }
-            
-            if (ctx->impl_.listen(1) != 0) {
-                this->set_errorno(ctx, xxsocket::get_last_errno());
-                INET_LOG("[index: %d] P2P: listening failed, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));
-                ctx->impl_.close();
-                ctx->state_ = channel_state::INACTIVE;
-                return;
-            }
-
-            INET_LOG("[index: %d] P2P: listening at %s...", ctx->index_, ep.to_string().c_str());
-            register_descriptor(ctx->impl_.native_handle(), socket_event_read);
-        }
-    }
 }
 
 } /* namespace purelib::net */

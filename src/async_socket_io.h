@@ -285,7 +285,7 @@ namespace purelib {
             int        set_errorno(channel_context* ctx, int error);
 
             // ensure event fd unregistered & closed.
-            bool       do_close(channel_context* ctx);
+            bool       cleanup(channel_context* ctx);
 
             // Update resolve state for new endpoint set
             void       update_resolve_state(channel_context* ctx);

@@ -157,8 +157,7 @@ namespace purelib {
         };
 
         class deadline_timer;
-
-        // A tcp client support P2P
+        
         /*
         Usage:
         purelib::inet::channel_endpoint endpoints[] = {

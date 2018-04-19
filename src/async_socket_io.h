@@ -104,6 +104,8 @@ namespace purelib {
         };
 
         typedef std::function<void()> vdcallback_t;
+        
+        static const int socket_recv_buffer_size = 65536;
 
         class a_pdu; // application layer protocol data unit.
 
@@ -130,7 +132,7 @@ namespace purelib {
             channel_state              state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
             
             int                        type_ = 0;
-            char                       buffer_[65536]; // recv buffer
+            char                       buffer_[socket_recv_buffer_size + 1]; // recv buffer
             int                        offset_ = 0; // recv buffer offset
 
             std::vector<char>          receiving_pdu_;

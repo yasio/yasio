@@ -229,9 +229,9 @@ namespace purelib {
             bool       is_connected(size_t cahnnel_index = 0) const;
 
             // Gets last network error code
-            error_number  get_errorno(void) { return static_cast<error_number>(error_); }
+            int        get_errorno(void) { return error_; }
 
-            void write(std::vector<char>&& data 
+            void       write(std::vector<char>&& data 
                             , size_t channel_index = 0 
 #if _ENABLE_SEND_CB
                             , send_pdu_callback_t callback = nullptr

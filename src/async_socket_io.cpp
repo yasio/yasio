@@ -1011,7 +1011,7 @@ bool async_socket_io::do_read(channel_context* ctx)
         if (!ctx->impl_.is_open())
             break;
 
-        int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(ctx->buffer_) - ctx->offset_);
+        int n = ctx->impl_.recv_i(ctx->buffer_ + ctx->offset_, sizeof(ctx->buffer_) - ctx->offset_ - 1);
         if (n > 0 || !SHOULD_CLOSE_0(n, this->set_errorno(ctx, xxsocket::get_last_errno()))) {
 #if _ENABLE_VERBOSE_LOG
             INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_, error_, xxsocket::get_error_msg(error_));

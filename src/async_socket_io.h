@@ -178,7 +178,7 @@ namespace purelib {
         public:
 
             // End user pdu decode length func
-            typedef bool(*decode_pdu_length_func)(const char* data, size_t datalen, int& len);
+            typedef bool(*decode_pdu_length_func)(char* data, size_t datalen, int& len);
 
             // connection callbacks
             typedef std::function<void(size_t channel_index, int error, const char* errormsg)> connection_lost_callback_t;

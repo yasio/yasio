@@ -105,7 +105,7 @@ namespace purelib {
 
         typedef std::function<void()> vdcallback_t;
         
-        static const int socket_recv_buffer_size = 65536;
+        static const int socket_recv_buffer_size = 65536; // 64K
 
         class a_pdu; // application layer protocol data unit.
 

@@ -654,7 +654,7 @@ void async_socket_io::unregister_descriptor(const socket_native_type fd, int fla
     }
 }
 
-void async_socket_io::send(std::vector<char>&& data
+void async_socket_io::write(std::vector<char>&& data
     , size_t channel_index
 #if _ENABLE_SEND_CB
     , send_pdu_callback_t callback

@@ -102,7 +102,7 @@ int main(int, char**)
             append_string(packet, "Accept: */*;q=0.8\r\n");
             append_string(packet, "Connection: Keep-Alive\r\n\r\n");
 
-            myasio->send(std::move(packet), 0);
+            myasio->write(std::move(packet), 0);
         }
         else {
             printf("[index: %zu] connect failed!\n", index);

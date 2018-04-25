@@ -24,42 +24,30 @@
     <ClCompile Include="..\..\src\xxsocket.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\oslib.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\ibinarystream.cpp">
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\obinarystream.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\async_tcp_client.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\deadline_timer.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libb64.cpp">
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="simple_test.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\async_socket_io.cpp">
+      <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\xxsocket.h">
       <Filter>lib</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\oslib.h">
-      <Filter>lib</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\ibinarystream.h">
       <Filter>lib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\obinarystream.h">
-      <Filter>lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\async_tcp_client.h">
       <Filter>lib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\deadline_timer.h">
@@ -76,6 +64,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\select_interrupter.hpp">
       <Filter>lib\interrupter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\async_socket_io.h">
+      <Filter>lib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

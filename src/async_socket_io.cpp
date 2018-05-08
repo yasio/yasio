@@ -42,6 +42,10 @@ extern "C" {
 }
 #endif
 
+#if !defined(MICROSECONDS_PER_SECOND)
+#define MICROSECONDS_PER_SECOND 1000000LL
+#endif
+
 #define _USING_IN_COCOS2DX 0
 
 #define _ENABLE_VERBOSE_LOG 0
@@ -248,8 +252,9 @@ void channel_context::reset()
 async_socket_io::async_socket_io() : stopping_(false),
     thread_started_(false),
     interrupter_(),
-    connect_timeout_(5LL * 1000 * 1000),
+    connect_timeout_(5LL * MICROSECONDS_PER_SECOND),
     send_timeout_((std::numeric_limits<int>::max)()),
+    auto_reconnect_timeout_(-1),
     decode_pdu_length_(nullptr),
     error_(error_number::ERR_OK)
 {
@@ -303,8 +308,18 @@ void async_socket_io::stop_service()
 
 void async_socket_io::set_timeouts(long timeo_connect, long timeo_send)
 {
-    this->connect_timeout_ = static_cast<long long>(timeo_connect) * 1000 * 1000;
-    this->send_timeout_ = timeo_send;
+    this->connect_timeout_ = static_cast<long long>(timeo_connect) * MICROSECONDS_PER_SECOND;
+    this->send_timeout_ = timeo_send * MICROSECONDS_PER_SECOND;
+}
+
+void async_socket_io::set_auto_reconnect_timeout(long timeout_secs/*-1: disable auto connect */)
+{
+    if (timeout_secs > 0) {
+        this->auto_reconnect_timeout_ = timeout_secs * MICROSECONDS_PER_SECOND;
+    }
+    else {
+        this->auto_reconnect_timeout_ = -1;
+    }
 }
 
 channel_context* async_socket_io::new_channel(const channel_endpoint& ep)
@@ -578,13 +593,6 @@ void async_socket_io::open(size_t channel_index, int channel_type, int strike_in
         return;
     auto ctx = channels_[channel_index];
 
-    if (ctx->state_ == channel_state::REQUEST_CONNECT ||
-        ctx->state_ == channel_state::CONNECTING)
-    { // in-progress, do nothing
-        INET_LOG("[index: %d] the connect request is already in progress!", channel_index);
-        return;
-    }
-
     if (strike_index != -1 && strike_index < static_cast<int>(channels_.size())) {
         ctx->strike_ = channels_[strike_index];
     }
@@ -594,13 +602,7 @@ void async_socket_io::open(size_t channel_index, int channel_type, int strike_in
 
     ctx->type_ = channel_type;
 
-    if (ctx->resolve_state_ != resolve_state::READY) update_resolve_state(ctx);
-    ctx->state_ = channel_state::REQUEST_CONNECT;
-    if (ctx->impl_.is_open()) {
-        ctx->impl_.shutdown();
-    }
-
-    interrupter_.interrupt();
+    open_internal(ctx);
 }
 
 void async_socket_io::handle_close(channel_context* ctx, int error)
@@ -613,6 +615,15 @@ void async_socket_io::handle_close(channel_context* ctx, int error)
     }
 
     ctx->reset();
+
+    if (this->auto_reconnect_timeout_ > 0 && ctx->type_ & CHANNEL_CLIENT) {
+        std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
+        timer->expires_from_now(std::chrono::microseconds(this->auto_reconnect_timeout_));
+        timer->async_wait([this, ctx, timer/*!important, hold on by lambda expression */](bool cancelled) {
+            if (!cancelled)
+                this->open_internal(ctx);
+        });
+    }
 }
 
 void async_socket_io::register_descriptor(const socket_native_type fd, int flags)
@@ -672,7 +683,7 @@ void async_socket_io::write(std::vector<char>&& data
 #if _ENABLE_SEND_CB
             , std::move(callback)
 #endif
-            , std::chrono::seconds(this->send_timeout_)));
+            , std::chrono::microseconds(this->send_timeout_)));
 
         ctx->send_queue_mtx_.lock();
         ctx->send_queue_.push_back(pdu);
@@ -1116,6 +1127,24 @@ void async_socket_io::cancel_timer(deadline_timer* timer)
         callback(true);
         timer_queue_.erase(iter);
     }
+}
+
+void async_socket_io::open_internal(channel_context* ctx)
+{
+    if (ctx->state_ == channel_state::REQUEST_CONNECT ||
+        ctx->state_ == channel_state::CONNECTING)
+    { // in-progress, do nothing
+        INET_LOG("[index: %d] the connect request is already in progress!", ctx->index_);
+        return;
+    }
+
+    if (ctx->resolve_state_ != resolve_state::READY) update_resolve_state(ctx);
+    ctx->state_ = channel_state::REQUEST_CONNECT;
+    if (ctx->impl_.is_open()) {
+        ctx->impl_.shutdown();
+    }
+
+    interrupter_.interrupt();
 }
 
 void async_socket_io::perform_timeout_timers()

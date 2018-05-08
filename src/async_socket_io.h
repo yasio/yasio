@@ -219,7 +219,9 @@ namespace purelib {
                 std::function<void(const vdcallback_t&)> threadsafe_call);
 
             // set connect and send timeouts.
-            void       set_timeouts(long timeo_connect, long timeo_send);
+            void       set_timeouts(long connect_timeout_secs, long send_timeout_secs);
+
+            void       set_auto_reconnect_timeout(long timeout_secs = -1/*-1: disable auto connect */);
 
             // open a channel, default: TCP_CLIENT
             void       open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT, int strike_index = -1);
@@ -250,6 +252,8 @@ namespace purelib {
             void       start_async_resolve(channel_context*);
             void       finish_async_resolve(channel_context*);
         private:
+            void       open_internal(channel_context*);
+
             void       perform_timeout_timers(); // ALL timer expired
 
             long long  get_wait_duration(long long usec);
@@ -307,7 +311,8 @@ namespace purelib {
             std::thread             worker_thread_;
 
             long long               connect_timeout_;
-            int                     send_timeout_;
+            long long               send_timeout_;
+            long long               auto_reconnect_timeout_;
 
             std::mutex              recv_queue_mtx_;
             std::deque<std::vector<char>> recv_queue_; // the recev_queue_ for connections: local-->server, local-->peer, peer-->local 

@@ -116,7 +116,7 @@ namespace purelib {
 #endif
 
         typedef std::function<void(error_number)> send_pdu_callback_t;
-        typedef std::function<void(std::vector<char>&&)> recv_pdu_callback_t;
+        typedef std::function<void(std::vector<char>)> recv_pdu_callback_t;
 
         class async_socket_io;
         struct channel_endpoint

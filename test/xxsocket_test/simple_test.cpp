@@ -22,7 +22,7 @@ int main(int, char**)
 {
     purelib::inet::channel_endpoint endpoints[] = {
         "www.ip138.com", 80, // http client
-                             // { "0.0.0.0", 56981 }, // udp server
+        { "0.0.0.0", 56981 }, // tcp server
     };
     myasio->start_service(endpoints, _ARRAYSIZE(endpoints));
 
@@ -73,9 +73,9 @@ int main(int, char**)
             append_string(packet, "Host: www.ip138.com\r\n");
             append_string(packet, "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\n");
             append_string(packet, "Accept: */*;q=0.8\r\n");
-            append_string(packet, "Connection: Keep-Alive\r\n\r\n");
+            append_string(packet, "Connection: Close\r\n\r\n");
 
-            myasio->write(std::move(packet), 0);
+            myasio->write(std::move(packet), index);
         }
         else {
             printf("[index: %zu] connect failed!\n", index);
@@ -91,6 +91,7 @@ int main(int, char**)
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     myasio->open(0, CHANNEL_TCP_CLIENT);
+    myasio->open(1, CHANNEL_TCP_SERVER);
 
     while (true)
     {

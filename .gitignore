@@ -18,3 +18,6 @@ ignored/*.*
 *.suo
 /.vs
 /.vs
+/test/x64/Debug
+/test/Debug
+/test/.vs/xxsocket_test-vc14/v15/Preview/ipch/AutoPCH

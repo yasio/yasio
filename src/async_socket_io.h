@@ -57,14 +57,8 @@ namespace purelib {
 
 namespace inet {
 enum channel_type {
-  CHANNEL_CLIENT = 1,
-  CHANNEL_SERVER = 2,
-  CHANNEL_TCP = 1 << 4,
-  CHANNEL_UDP = 1 << 5,
-  CHANNEL_TCP_CLIENT = CHANNEL_TCP | CHANNEL_CLIENT,
-  CHANNEL_TCP_SERVER = CHANNEL_TCP | CHANNEL_SERVER,
-  CHANNEL_UDP_CLIENT = CHANNEL_UDP | CHANNEL_CLIENT,
-  CHANNEL_UDP_SERVER = CHANNEL_UDP | CHANNEL_SERVER,
+  CHANNEL_TCP_CLIENT = 1,
+  CHANNEL_TCP_SERVER = 2,
 };
 
 enum class channel_state {
@@ -257,7 +251,8 @@ public:
   void write(std::shared_ptr<channel_transport> transport,
              std::vector<char> &&data
 #if _ENABLE_SEND_CB
-             , send_pdu_callback_t callback = nullptr
+             ,
+             send_pdu_callback_t callback = nullptr
 #endif
   );
 
@@ -321,7 +316,6 @@ private:
   // @Optimize remember Application layer events to avoid call kernel API -->
   // ::select
   int flush_ready_events();
-  void swap_ready_events(std::shared_ptr<channel_transport>);
 
   void handle_send_finished(a_pdu_ptr, error_number);
 

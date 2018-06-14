@@ -541,7 +541,8 @@ void async_socket_io::service() { // The async event-loop
         transport->send_queue_mtx_.unlock();
       }
 
-      this->swap_ready_events(transport);
+      this->nfds_ += transport->ready_events_;
+      transport->ready_events_ = 0;
 
       ++iter;
     }
@@ -549,13 +550,13 @@ void async_socket_io::service() { // The async event-loop
     // perform active channels
     for (auto ctx : channels_) {
       if (ctx->state_ == channel_state::REQUEST_CONNECT) {
-        if (ctx->type_ & CHANNEL_CLIENT) {
+        if (ctx->type_ == CHANNEL_TCP_CLIENT) {
           do_nonblocking_connect(ctx);
         } else {
           do_nonblocking_accept(ctx);
         }
       } else if (ctx->state_ == channel_state::CONNECTING) {
-        if (ctx->type_ & CHANNEL_CLIENT) {
+        if (ctx->type_ == CHANNEL_TCP_CLIENT) {
           do_nonblocking_connect_completion(fds_array, ctx);
         } else {
           do_nonblocking_accept_completion(fds_array, ctx);
@@ -743,57 +744,39 @@ void async_socket_io::do_nonblocking_connect(channel_context *ctx) {
                ctx->address_.c_str(), ctx->port_);
     }
 
-    if (ctx->type_ & CHANNEL_TCP) {
-      ctx->state_ = channel_state::CONNECTING;
+    ctx->state_ = channel_state::CONNECTING;
 
-      int ret = -1;
-      if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
-        ret = xxsocket::connect_n(ctx->socket_->native_handle(),
-                                  ctx->endpoints_[0]);
-      }
-
-      if (ret < 0) { // setup no blocking connect
-        int error = xxsocket::get_last_errno();
-        if (error != EINPROGRESS && error != EWOULDBLOCK) {
-          this->handle_connect_failed(ctx, error);
-          return;
-        } else {
-          // this->set_errorno(ctx, error);
-
-          register_descriptor(ctx->socket_->native_handle(),
-                              socket_event_read | socket_event_write);
-
-          ctx->deadline_timer_.expires_from_now(
-              std::chrono::microseconds(this->connect_timeout_));
-          ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-            if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
-              handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
-            }
-          });
-        }
-      } else if (ret == 0) { // connect server succed immidiately.
-        handle_connect_succeed(
-            std::shared_ptr<channel_transport>(new channel_transport(ctx)));
-      }
-      // NEVER GO HERE
-    } else { // UDP
-      int ret = -1;
-      if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6,
-                               SOCK_DGRAM, 0)) {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
-        ret = xxsocket::connect(ctx->socket_->native_handle(),
+    int ret = -1;
+    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1); // for p2p
+      ret = xxsocket::connect_n(ctx->socket_->native_handle(),
                                 ctx->endpoints_[0]);
-        if (ret == 0) {
-          ctx->socket_->set_nonblocking(true);
-          register_descriptor(ctx->socket_->native_handle(), socket_event_read);
-          handle_connect_succeed(
-              std::shared_ptr<channel_transport>(new channel_transport(ctx)));
-        } else {
-          this->handle_connect_failed(ctx, xxsocket::get_last_errno());
-        }
-      }
     }
+
+    if (ret < 0) { // setup no blocking connect
+      int error = xxsocket::get_last_errno();
+      if (error != EINPROGRESS && error != EWOULDBLOCK) {
+        this->handle_connect_failed(ctx, error);
+        return;
+      } else {
+        // this->set_errorno(ctx, error);
+
+        register_descriptor(ctx->socket_->native_handle(),
+                            socket_event_read | socket_event_write);
+
+        ctx->deadline_timer_.expires_from_now(
+            std::chrono::microseconds(this->connect_timeout_));
+        ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+          if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
+            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+          }
+        });
+      }
+    } else if (ret == 0) { // connect server succed immidiately.
+      handle_connect_succeed(
+          std::shared_ptr<channel_transport>(new channel_transport(ctx)));
+    }
+    // NEVER GO HERE
   } else if (ctx->resolve_state_ == resolve_state::FAILED) {
     handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
   } // DIRTY,Try resolve address nonblocking
@@ -829,55 +812,34 @@ void async_socket_io::do_nonblocking_accept(
     channel_context *ctx) { // channel is server
   cleanup(ctx->socket_);
 
-  if (ctx->type_ & CHANNEL_TCP) {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
-      ctx->state_ = channel_state::CONNECTING;
+  if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
+    ctx->state_ = channel_state::CONNECTING;
 
-      ip::endpoint ep("0.0.0.0", ctx->port_);
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      ctx->socket_->set_nonblocking(true);
-      int error = 0;
-      if (ctx->socket_->bind(ep) != 0) {
-        error = xxsocket::get_last_errno();
-        INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_,
-                 error, xxsocket::get_error_msg(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
-        return;
-      }
-
-      if (ctx->socket_->listen(1) != 0) {
-        error = xxsocket::get_last_errno();
-        INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_,
-                 error, xxsocket::get_error_msg(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
-        return;
-      }
-
-      INET_LOG("[index: %d] listening at %s...", ctx->index_,
-               ep.to_string().c_str());
-      register_descriptor(ctx->socket_->native_handle(), socket_event_read);
+    ip::endpoint ep("0.0.0.0", ctx->port_);
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+    ctx->socket_->set_nonblocking(true);
+    int error = 0;
+    if (ctx->socket_->bind(ep) != 0) {
+      error = xxsocket::get_last_errno();
+      INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+               xxsocket::get_error_msg(error));
+      ctx->socket_->close();
+      ctx->state_ = channel_state::INACTIVE;
+      return;
     }
-  } else {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6,
-                             SOCK_DGRAM)) {
-      ip::endpoint ep("0.0.0.0", ctx->port_);
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      ctx->socket_->set_nonblocking(true);
-      if (ctx->socket_->bind(ep) == 0) {
-        INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_,
-                 ep.to_string().c_str());
-        ctx->state_ = channel_state::CONNECTING;
-        register_descriptor(ctx->socket_->native_handle(), socket_event_read);
-      } else {
-        int error = 0;
-        INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s",
-                 ctx->index_, error, xxsocket::get_error_msg(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
-      }
+
+    if (ctx->socket_->listen(1) != 0) {
+      error = xxsocket::get_last_errno();
+      INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_,
+               error, xxsocket::get_error_msg(error));
+      ctx->socket_->close();
+      ctx->state_ = channel_state::INACTIVE;
+      return;
     }
+
+    INET_LOG("[index: %d] listening at %s...", ctx->index_,
+             ep.to_string().c_str());
+    register_descriptor(ctx->socket_->native_handle(), socket_event_read);
   }
 }
 
@@ -890,30 +852,15 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set *fds_array,
       if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR,
                        (char *)&error, &len) >= 0 &&
           error == 0) {
-        if (ctx->type_ & CHANNEL_TCP) {
-          xxsocket client_sock = ctx->socket_->accept();
-          if (client_sock.is_open()) {
-            register_descriptor(client_sock.native_handle(), socket_event_read);
+        xxsocket client_sock = ctx->socket_->accept();
+        if (client_sock.is_open()) {
+          register_descriptor(client_sock.native_handle(), socket_event_read);
 
-            std::shared_ptr<channel_transport> transport(
-                new channel_transport(ctx));
-            transport->socket_.reset(new xxsocket(std::move(client_sock)));
-            handle_connect_succeed(transport);
-            ctx->state_ = channel_state::CONNECTING;
-          }
-        } else { // UDP
-          ip::endpoint peer;
-
-          char buffer[SZ(64, k) + 1];
-          int n = ctx->socket_->recvfrom_i(buffer, SZ(64, k), peer);
-          if (n > 0) { // do udp accept
-            std::vector<char> packet;
-            packet.insert(packet.end(), buffer, buffer + n);
-
-            INET_LOG("received %d bytes udp data from:%s", n, peer.to_string().c_str());
-
-            handle_packet(std::move(packet));
-          }
+          std::shared_ptr<channel_transport> transport(
+              new channel_transport(ctx));
+          transport->socket_.reset(new xxsocket(std::move(client_sock)));
+          handle_connect_succeed(transport);
+          ctx->state_ = channel_state::CONNECTING;
         }
       } else {
         cleanup(ctx->socket_);
@@ -925,15 +872,16 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set *fds_array,
 void async_socket_io::handle_connect_succeed(
     std::shared_ptr<channel_transport> transport) {
   auto ctx = transport->ctx_;
-  if (ctx->type_ & CHANNEL_CLIENT) { // The client channl, transport will use
-                                     // shared context's socket
-    ctx->transport_ = transport;     // compatible write
+  if (ctx->type_ ==
+      CHANNEL_TCP_CLIENT) {      // The client channl, transport will use
+                                 // shared context's socket
+    ctx->transport_ = transport; // compatible write
     transport->socket_ = ctx->socket_;
     unregister_descriptor(
         ctx->socket_->native_handle(),
         socket_event_write); // remove write event avoid high-CPU occupation
     ctx->state_ = channel_state::CONNECTED;
-  } // TODO: consider UDP.
+  }
 
   this->transports_.push_back(transport);
 
@@ -1297,12 +1245,6 @@ int async_socket_io::flush_ready_events() {
   int nfds = this->nfds_;
   this->nfds_ = 0;
   return nfds;
-}
-
-void async_socket_io::swap_ready_events(
-    std::shared_ptr<channel_transport> ctx) {
-  this->nfds_ += ctx->ready_events_;
-  ctx->ready_events_ = 0;
 }
 
 void async_socket_io::start_async_resolve(

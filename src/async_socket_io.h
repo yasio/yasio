@@ -146,6 +146,12 @@ struct channel_context {
 };
 
 struct channel_transport {
+  friend class async_socket_io;
+
+public:
+  bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
+
+private:
   channel_transport(channel_context *ctx) : ctx_(ctx) {}
   channel_context *ctx_;
   std::shared_ptr<xxsocket> socket_;
@@ -191,7 +197,8 @@ public:
   typedef std::function<void(size_t channel_index, int error,
                              const char *errormsg)>
       connection_lost_callback_t;
-  typedef std::function<void(size_t channel_index, bool succeed, int ec)>
+  typedef std::function<void(std::shared_ptr<channel_transport>, bool succeed,
+                             int ec)>
       connect_response_callback_t;
 
 public:
@@ -237,6 +244,7 @@ public:
 
   // close tcp_client
   void close(size_t channel_index = 0);
+  void close(std::shared_ptr<channel_transport> transport);
 
   // Whether the client-->server connection established.
   bool is_connected(size_t cahnnel_index = 0) const;
@@ -263,7 +271,7 @@ public:
   void interrupt();
 
   // Async resolve handlers, It's only for internal use
-  void start_async_resolve(channel_context *);
+  bool do_resolve(channel_context *);
   void finish_async_resolve(channel_context *);
 
 private:
@@ -275,8 +283,8 @@ private:
 
   int do_select(fd_set *fds_array, timeval &timeout);
 
-  void do_nonblocking_connect(channel_context *);
-  void do_nonblocking_connect_completion(fd_set *fds_array, channel_context *);
+  bool do_nonblocking_connect(channel_context *);
+  bool do_nonblocking_connect_completion(fd_set *fds_array, channel_context *);
 
   void handle_connect_succeed(std::shared_ptr<channel_transport>);
   void handle_connect_failed(channel_context *, int error);
@@ -338,6 +346,10 @@ private:
                    // local-->peer, peer-->local
 
   std::vector<channel_context *> channels_;
+
+  std::vector<channel_context *> active_channels_;
+  std::mutex active_channels_mtx_;
+
   std::vector<std::shared_ptr<channel_transport>> transports_;
   // select interrupter
   select_interrupter interrupter_;

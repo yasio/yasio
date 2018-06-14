@@ -22,7 +22,7 @@ int main(int, char**)
 {
     purelib::inet::channel_endpoint endpoints[] = {
         "www.ip138.com", 80, // http client
-        { "192.168.103.183", 56981 }, // UDP client
+        { "0.0.0.0", 56981 }, // tcp server
     };
     myasio->start_service(endpoints, _ARRAYSIZE(endpoints));
 
@@ -68,9 +68,9 @@ int main(int, char**)
             }
         }
         return true;
-    }, [&](size_t index, bool succeed, int) { // connect response callback
+    }, [&](std::shared_ptr<channel_transport> transport, bool succeed, int) { // connect response callback
         if (succeed) {
-            printf("[index: %zu] connect succeed.\n", index);
+            // printf("[index: %zu] connect succeed.\n", index);
             std::vector<char> packet;
             append_string(packet, "GET /index.htm HTTP/1.1\r\n");
             append_string(packet, "Host: www.ip138.com\r\n");
@@ -78,10 +78,10 @@ int main(int, char**)
             append_string(packet, "Accept: */*;q=0.8\r\n");
             append_string(packet, "Connection: Close\r\n\r\n");
 
-            myasio->write(std::move(packet), index);
+            myasio->write(transport, std::move(packet));
         }
         else {
-            printf("[index: %zu] connect failed!\n", index);
+            // printf("[index: %zu] connect failed!\n");
         }
     }, [](size_t, int error, const char* errormsg) { // on connection lost
         printf("The connection is lost %d, %s", error, errormsg);
@@ -93,9 +93,8 @@ int main(int, char**)
     });
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    // myasio->open(0, CHANNEL_TCP_CLIENT);
-    myasio->open(1, CHANNEL_UDP_CLIENT);
-
+    myasio->open(0, CHANNEL_TCP_CLIENT);
+    myasio->open(1, CHANNEL_TCP_SERVER);
     while (true)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));

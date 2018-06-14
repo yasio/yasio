@@ -296,9 +296,8 @@ private:
   bool do_read(std::shared_ptr<channel_transport>);
   void do_unpack(std::shared_ptr<channel_transport>, int bytes_expected,
                  int bytes_transferred);
-  void move_received_pdu(
-      std::shared_ptr<channel_transport>); // move received properly pdu to recv
-                                           // queue
+
+  void handle_packet(std::vector<char> packet);
 
   void handle_close(
       std::shared_ptr<channel_transport>); // TODO: add error_number parameter

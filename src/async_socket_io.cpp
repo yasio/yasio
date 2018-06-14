@@ -503,27 +503,8 @@ void async_socket_io::service() { // The async event-loop
       }
     }
 #endif
-    /// perform active channels
-    for (auto ctx : channels_) {
-      if (ctx->state_ == channel_state::REQUEST_CONNECT) {
-        if (ctx->type_ & CHANNEL_CLIENT) {
-          do_nonblocking_connect(ctx);
-        } else {
-          do_nonblocking_accept(ctx);
-        }
-      } else if (ctx->state_ == channel_state::CONNECTING) {
-        if (ctx->type_ & CHANNEL_CLIENT) {
-          do_nonblocking_connect_completion(fds_array, ctx);
-        } else {
-          do_nonblocking_accept_completion(fds_array, ctx);
-        }
-      }
 
-      this->nfds_ += ctx->ready_events_;
-      ctx->ready_events_ = 0;
-    }
-
-    /// preform connections
+    // preform transports
     for (auto iter = transports_.begin(); iter != transports_.end();) {
       auto &transport = *iter;
       if (transport->offset_ > 0 ||
@@ -564,7 +545,28 @@ void async_socket_io::service() { // The async event-loop
 
       ++iter;
     }
-    /// perform timeout timers
+
+    // perform active channels
+    for (auto ctx : channels_) {
+      if (ctx->state_ == channel_state::REQUEST_CONNECT) {
+        if (ctx->type_ & CHANNEL_CLIENT) {
+          do_nonblocking_connect(ctx);
+        } else {
+          do_nonblocking_accept(ctx);
+        }
+      } else if (ctx->state_ == channel_state::CONNECTING) {
+        if (ctx->type_ & CHANNEL_CLIENT) {
+          do_nonblocking_connect_completion(fds_array, ctx);
+        } else {
+          do_nonblocking_accept_completion(fds_array, ctx);
+        }
+      }
+
+      this->nfds_ += ctx->ready_events_;
+      ctx->ready_events_ = 0;
+    }
+
+    // perform timeout timers
     perform_timeout_timers();
   }
 
@@ -708,12 +710,12 @@ void async_socket_io::write(std::shared_ptr<channel_transport> transport,
 
     interrupter_.interrupt();
   } else {
-    INET_LOG("[transport: %#x] send failed, the connection not ok!", transport.get());
+    INET_LOG("[transport: %#x] send failed, the connection not ok!",
+             transport.get());
   }
 }
 
-void async_socket_io::move_received_pdu(
-    std::shared_ptr<channel_transport> transport) {
+void async_socket_io::handle_packet(std::vector<char> packet) {
 #if _ENABLE_VERBOSE_LOG
   INET_LOG("[index: %d] received a properly packet from peer, packet size:%d",
            ctx->index_, ctx->receiving_pdu_elen_);
@@ -721,10 +723,8 @@ void async_socket_io::move_received_pdu(
   recv_queue_mtx_.lock();
   // Use std::move, so no need to call ctx->receiving_pdu_.shrink_to_fit to
   // avoid occupy large memory
-  recv_queue_.push_back(std::move(transport->receiving_pdu_));
+  recv_queue_.push_back(std::move(packet));
   recv_queue_mtx_.unlock();
-
-  transport->receiving_pdu_elen_ = -1;
 }
 
 void async_socket_io::do_nonblocking_connect(channel_context *ctx) {
@@ -904,33 +904,15 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set *fds_array,
         } else { // UDP
           ip::endpoint peer;
 
-          std::shared_ptr<channel_transport> transport(
-              new channel_transport(ctx));
-          transport->socket_ = ctx->socket_;
-          int n = ctx->socket_->recvfrom_i(transport->buffer_,
-                                           sizeof(transport->buffer_), peer);
+          char buffer[SZ(64, k) + 1];
+          int n = ctx->socket_->recvfrom_i(buffer, SZ(64, k), peer);
           if (n > 0) { // do udp accept
-            xxsocket client_sock;
-            if (transport->socket_->open(
-                    ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM)) {
-              client_sock.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-              if (0 == client_sock.bind(ctx->socket_->local_endpoint()) &&
-                  0 == client_sock.connect(peer)) {
-                unregister_descriptor(ctx->socket_->native_handle(),
-                                      socket_event_read);
-                register_descriptor(client_sock.native_handle(),
-                                    socket_event_read);
-                ctx->socket_->swap(client_sock);
+            std::vector<char> packet;
+            packet.insert(packet.end(), buffer, buffer + n);
 
-                handle_connect_succeed(std::shared_ptr<channel_transport>(
-                    new channel_transport(ctx)));
+            INET_LOG("received %d bytes udp data from:%s", n, peer.to_string().c_str());
 
-                transport->receiving_pdu_.insert(
-                    transport->receiving_pdu_.end(), transport->buffer_,
-                    transport->buffer_ + n);
-                move_received_pdu(transport);
-              }
-            }
+            handle_packet(std::move(packet));
           }
         }
       } else {
@@ -943,9 +925,9 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set *fds_array,
 void async_socket_io::handle_connect_succeed(
     std::shared_ptr<channel_transport> transport) {
   auto ctx = transport->ctx_;
-  if (ctx->type_ & CHANNEL_CLIENT) {   // The client channl, transport will use
-                                       // shared context's socket
-    ctx->transport_ = transport; // compatible write
+  if (ctx->type_ & CHANNEL_CLIENT) { // The client channl, transport will use
+                                     // shared context's socket
+    ctx->transport_ = transport;     // compatible write
     transport->socket_ = ctx->socket_;
     unregister_descriptor(
         ctx->socket_->native_handle(),
@@ -1138,7 +1120,8 @@ void async_socket_io::do_unpack(std::shared_ptr<channel_transport> ctx,
       ++ctx->ready_events_;
     }
     // move properly pdu to ready queue, GL thread will retrieve it.
-    move_received_pdu(ctx);
+    handle_packet(std::move(ctx->receiving_pdu_));
+    ctx->receiving_pdu_elen_ = -1;
   } else { // all buffer consumed, set offset to ZERO, pdu incomplete,
            // continue recv remain data.
     ctx->offset_ = 0;

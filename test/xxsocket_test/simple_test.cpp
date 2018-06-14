@@ -22,7 +22,7 @@ int main(int, char**)
 {
     purelib::inet::channel_endpoint endpoints[] = {
         "www.ip138.com", 80, // http client
-        { "0.0.0.0", 56981 }, // tcp server
+        { "192.168.103.183", 56981 }, // UDP client
     };
     myasio->start_service(endpoints, _ARRAYSIZE(endpoints));
 
@@ -34,6 +34,9 @@ int main(int, char**)
     });
 
     myasio->set_callbacks([](char* data, size_t datalen, int& len) { // decode pdu length func
+          len = datalen;
+          return true;
+
         if (datalen >= 4 &&
             data[datalen - 1] == '\n' &&
             data[datalen - 2] == '\r' &&
@@ -90,8 +93,8 @@ int main(int, char**)
     });
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    myasio->open(0, CHANNEL_TCP_CLIENT);
-    myasio->open(1, CHANNEL_TCP_SERVER);
+    // myasio->open(0, CHANNEL_TCP_CLIENT);
+    myasio->open(1, CHANNEL_UDP_CLIENT);
 
     while (true)
     {

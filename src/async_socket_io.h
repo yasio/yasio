@@ -141,7 +141,6 @@ struct channel_context {
   deadline_timer deadline_timer_;
 
   int ready_events_ = 0;
-  std::shared_ptr<channel_transport> transport_; // ONLY for client
   void reset();
 };
 
@@ -150,6 +149,8 @@ struct channel_transport {
 
 public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
+  ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
+  ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
 
 private:
   channel_transport(channel_context *ctx) : ctx_(ctx) {}
@@ -194,8 +195,7 @@ public:
   typedef bool (*decode_pdu_length_func)(char *data, size_t datalen, int &len);
 
   // connection callbacks
-  typedef std::function<void(size_t channel_index, int error,
-                             const char *errormsg)>
+  typedef std::function<void(std::shared_ptr<channel_transport>)>
       connection_lost_callback_t;
   typedef std::function<void(std::shared_ptr<channel_transport>, bool succeed,
                              int ec)>
@@ -242,14 +242,16 @@ public:
   // open a channel, default: TCP_CLIENT
   void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
 
-  // close tcp_client
-  void close(size_t channel_index = 0);
+  // close client
   void close(std::shared_ptr<channel_transport> transport);
+
+  // close server
+  void close(size_t channel_index = 0);
 
   // Whether the client-->server connection established.
   bool is_connected(size_t cahnnel_index = 0) const;
 
-  void write(std::vector<char> &&data, size_t channel_index = 0
+  void write(size_t channel_index, std::vector<char> &&data
 #if _ENABLE_SEND_CB
              ,
              send_pdu_callback_t callback = nullptr
@@ -341,16 +343,15 @@ private:
   long long auto_reconnect_timeout_;
 
   std::mutex recv_queue_mtx_;
-  std::deque<std::vector<char>>
-      recv_queue_; // the recev_queue_ for connections: local-->server,
-                   // local-->peer, peer-->local
+  std::deque<std::vector<char>> recv_queue_;
 
   std::vector<channel_context *> channels_;
 
-  std::vector<channel_context *> active_channels_;
   std::mutex active_channels_mtx_;
-
+  std::vector<channel_context *> active_channels_;
+  
   std::vector<std::shared_ptr<channel_transport>> transports_;
+  
   // select interrupter
   select_interrupter interrupter_;
 
@@ -388,5 +389,4 @@ private:
 };                 /* namespace purelib */
 #endif
 
-#define myasio                                                                 \
-  purelib::gc::singleton<purelib::inet::async_socket_io>::instance()
+#define myasio purelib::gc::singleton<purelib::inet::async_socket_io>::instance()

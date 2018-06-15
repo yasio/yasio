@@ -88,8 +88,8 @@ enum error_number {
   ERR_RESOLVE_HOST_FAILED,        // resolve host failed.
   ERR_RESOLVE_HOST_TIMEOUT,       // resolve host ip timeout.
   ERR_RESOLVE_HOST_IPV6_REQUIRED, // resolve host ip failed, a valid ipv6 host
-                                  // required.
-  ERR_INVALID_PORT,               // invalid port.
+  // required.
+  ERR_INVALID_PORT, // invalid port.
 };
 
 enum {
@@ -151,6 +151,9 @@ public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
+  int channel_index() const { return ctx_->index_; }
+  int error_code() const { return error_; }
+  void set_deferred(bool deferred) { deferred_ = deferred_; }
 
 private:
   channel_transport(channel_context *ctx) : ctx_(ctx) {}
@@ -166,6 +169,8 @@ private:
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
 
+  bool deferred_ = true; // whether use queue
+
   int update_socket_error() {
     error_ = xxsocket::get_last_errno();
     return error_;
@@ -176,18 +181,18 @@ class deadline_timer;
 /*
 Usage:
 purelib::inet::channel_endpoint endpoints[] = {
-    { "172.31.238.193", 8888 },
-    { "www.baidu.com", 443 },
-    //{ "www.tencent.com", 443 },
+{ "172.31.238.193", 8888 },
+{ "www.baidu.com", 443 },
+//{ "www.tencent.com", 443 },
 };
 tcpcli->start_service(endpoints, _ARRAYSIZE(endpoints));
 
 tcpcli->set_callbacks(decode_pdu_length,
-    [](size_t, bool, int) {},
-    [](size_t, int error, const char* errormsg) {printf("The connection is lost
+[](size_t, bool, int) {},
+[](size_t, int error, const char* errormsg) {printf("The connection is lost
 %d, %s", error, errormsg); },
-    [](std::vector<char>&&) {},
-    [](const vdcallback_t& callback) {callback(); });
+[](std::vector<char>&&) {},
+[](const vdcallback_t& callback) {callback(); });
 */
 class async_socket_io {
 public:
@@ -197,8 +202,7 @@ public:
   // connection callbacks
   typedef std::function<void(std::shared_ptr<channel_transport>)>
       connection_lost_callback_t;
-  typedef std::function<void(std::shared_ptr<channel_transport>, bool succeed,
-                             int ec)>
+  typedef std::function<void(size_t, std::shared_ptr<channel_transport>, int ec)>
       connect_response_callback_t;
 
 public:
@@ -222,11 +226,11 @@ public:
 
   // set callbacks, required API, must call by user
   /*
-    threadsafe_call: for cocos2d-x should be:
-    [](const vdcallback_t& callback) {
-        cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread(callback);
-    }
-  */
+threadsafe_call: for cocos2d-x should be:
+[](const vdcallback_t& callback) {
+  cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread(callback);
+}
+*/
   void set_callbacks(decode_pdu_length_func decode_length_func,
                      connect_response_callback_t on_connect_result,
                      connection_lost_callback_t on_connection_lost,
@@ -241,6 +245,8 @@ public:
 
   // open a channel, default: TCP_CLIENT
   void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
+
+  void reopen(std::shared_ptr<channel_transport>);
 
   // close client
   void close(std::shared_ptr<channel_transport> transport);
@@ -302,7 +308,7 @@ private:
   void do_unpack(std::shared_ptr<channel_transport>, int bytes_expected,
                  int bytes_transferred);
 
-  void handle_packet(std::vector<char> packet);
+  void handle_packet(std::shared_ptr<channel_transport> transport);
 
   void handle_close(
       std::shared_ptr<channel_transport>); // TODO: add error_number parameter
@@ -349,9 +355,9 @@ private:
 
   std::mutex active_channels_mtx_;
   std::vector<channel_context *> active_channels_;
-  
+
   std::vector<std::shared_ptr<channel_transport>> transports_;
-  
+
   // select interrupter
   select_interrupter interrupter_;
 

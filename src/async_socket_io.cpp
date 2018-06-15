@@ -96,9 +96,9 @@ extern "C" {
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 #define MAX_PDU_BUFFER_SIZE                                                    \
-  static_cast<int>(                                                            \
-      SZ(1, M)) // max pdu buffer length, avoid large memory allocation when
-                // application layer decode a huge length filed.
+  static_cast<int>(SZ(                                                         \
+      1, M)) // max pdu buffer length, avoid large memory allocation when \
+        // application layer decode a huge length filed.
 
 #define TSF_CALL(stmt) this->tsf_call_([=] { (stmt); });
 
@@ -107,16 +107,16 @@ namespace inet {
 
 namespace {
 /*--- This is a C++ universal sprintf in the future.
-**  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
-*different
-**      VS2013 or Unix-Like System will return -1 when buffer not enough, but
-*VS2015/2017 will return the actural needed length for buffer at this station
-**      The _vsnprintf behavior is compatible API which always return -1 when
-*buffer isn't enough at VS2013/2015/2017
-**      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later,
-*AND it's also standard-compliant, see reference:
-*http://www.cplusplus.com/reference/cstdio/vsnprintf/
-*/
+ **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
+ *different
+ **      VS2013 or Unix-Like System will return -1 when buffer not enough, but
+ *VS2015/2017 will return the actural needed length for buffer at this station
+ **      The _vsnprintf behavior is compatible API which always return -1 when
+ *buffer isn't enough at VS2013/2015/2017
+ **      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later,
+ *AND it's also standard-compliant, see reference:
+ *http://www.cplusplus.com/reference/cstdio/vsnprintf/
+ */
 static std::string _string_format(const char *format, ...) {
 #define CC_VSNPRINTF_BUFFER_LENGTH 512
   va_list args;
@@ -529,7 +529,7 @@ void async_socket_io::service() { // The async event-loop
                  ctx->index_);
 #endif
         if (!do_write(transport)) { // TODO: check would block? for client, may
-                                    // be unnecessary.
+          // be unnecessary.
           transport->send_queue_mtx_.unlock();
           handle_close(transport);
           iter = transports_.erase(iter);
@@ -637,6 +637,13 @@ bool async_socket_io::is_connected(size_t channel_index) const {
   return ctx->state_ == channel_state::CONNECTED;
 }
 
+void async_socket_io::reopen(std::shared_ptr<channel_transport> transport) {
+  if (transport->is_open()) {
+    transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
+  }
+  open_internal(transport->ctx_);
+}
+
 void async_socket_io::open(size_t channel_index, int channel_type) {
   // Gets channel
   if (channel_index >= channels_.size())
@@ -666,7 +673,8 @@ void async_socket_io::handle_close(
   }
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
-    ctx->state_ = channel_state::INACTIVE;
+    if (channel_state::REQUEST_CONNECT != ctx->state_)
+      ctx->state_ = channel_state::INACTIVE;
     if (this->auto_reconnect_timeout_ > 0) {
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
       timer->expires_from_now(
@@ -760,18 +768,23 @@ void async_socket_io::write(std::shared_ptr<channel_transport> transport,
   }
 }
 
-void async_socket_io::handle_packet(std::vector<char> packet) {
+void async_socket_io::handle_packet(
+    std::shared_ptr<channel_transport> transport) {
 #if _ENABLE_VERBOSE_LOG
   INET_LOG("[index: %d] received a properly packet from peer, "
            "packet size:%d",
            ctx->index_, ctx->receiving_pdu_elen_);
 #endif
-  recv_queue_mtx_.lock();
-  // Use std::move, so no need to call
-  // ctx->receiving_pdu_.shrink_to_fit to avoid occupy large
-  // memory
-  recv_queue_.push_back(std::move(packet));
-  recv_queue_mtx_.unlock();
+  if (transport->deferred_) {
+    recv_queue_mtx_.lock();
+    // Use std::move, so no need to call
+    // ctx->receiving_pdu_.shrink_to_fit to avoid occupy large
+    // memory
+    recv_queue_.push_back(std::move(transport->receiving_pdu_));
+    recv_queue_mtx_.unlock();
+  } else
+    this->on_recv_pdu_(std::move(transport->receiving_pdu_));
+  transport->receiving_pdu_elen_ = -1;
 }
 
 bool async_socket_io::do_nonblocking_connect(channel_context *ctx) {
@@ -930,12 +943,12 @@ void async_socket_io::handle_connect_succeed(
     std::shared_ptr<channel_transport> transport) {
   auto ctx = transport->ctx_;
   if (ctx->type_ == CHANNEL_TCP_CLIENT) { // The client channl, transport will
-                                          // use shared context's socket
+    // use shared context's socket
     // compatible write
     transport->socket_ = ctx->socket_;
     unregister_descriptor(ctx->socket_->native_handle(),
                           socket_event_write); // remove write event avoid
-                                               // high-CPU occupation
+    // high-CPU occupation
     ctx->state_ = channel_state::CONNECTED;
   }
 
@@ -946,7 +959,7 @@ void async_socket_io::handle_connect_succeed(
            ctx->index_, connection->local_endpoint().to_string().c_str(),
            connection->peer_endpoint().to_string().c_str());
 
-  TSF_CALL(this->on_connect_resposne_(transport, true, 0));
+  TSF_CALL(this->on_connect_resposne_(ctx->index_, transport, 0));
 }
 
 void async_socket_io::handle_connect_failed(channel_context *ctx, int error) {
@@ -954,7 +967,7 @@ void async_socket_io::handle_connect_failed(channel_context *ctx, int error) {
 
   ctx->state_ = channel_state::INACTIVE;
 
-  TSF_CALL(this->on_connect_resposne_(nullptr, false, error));
+  TSF_CALL(this->on_connect_resposne_(ctx->index_, nullptr, error));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s",
            ctx->index_, ctx->address_.c_str(), ctx->port_, error,
@@ -986,7 +999,7 @@ bool async_socket_io::do_write(std::shared_ptr<channel_transport> transport) {
         handle_send_finished(v, error_number::ERR_OK);
       } else if (n > 0) {    // TODO: add time
         if (!v->expired()) { // change offset, remain data will
-                             // send next time.
+          // send next time.
           // v->data_.erase(v->data_.begin(), v->data_.begin() +
           // n);
           v->offset_ += n;
@@ -1072,10 +1085,10 @@ bool async_socket_io::do_read(std::shared_ptr<channel_transport> transport) {
             transport->receiving_pdu_.reserve(
                 (std::min)(transport->receiving_pdu_elen_,
                            MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid
-                                                  // memory reallocte.
+            // memory reallocte.
             do_unpack(transport, transport->receiving_pdu_elen_, n);
           } else { // header insufficient, wait readfd ready at
-                   // next event step.
+            // next event step.
             transport->offset_ += n;
           }
         } else {
@@ -1132,10 +1145,10 @@ void async_socket_io::do_unpack(std::shared_ptr<channel_transport> ctx,
     }
     // move properly pdu to ready queue, GL thread will retrieve
     // it.
-    handle_packet(std::move(ctx->receiving_pdu_));
+    handle_packet(ctx);
     ctx->receiving_pdu_elen_ = -1;
   } else { // all buffer consumed, set offset to ZERO, pdu
-           // incomplete, continue recv remain data.
+    // incomplete, continue recv remain data.
     ctx->offset_ = 0;
   }
 }
@@ -1231,11 +1244,11 @@ void async_socket_io::perform_timeout_timers() {
 
 int async_socket_io::do_select(fd_set *fds_array, timeval &maxtv) {
   /*
-  @Optimize, swap nfds, make sure do_read & do_write event chould
-  be perform when no need to call socket.select However, the
-  connection exception will detected through do_read or do_write,
-  but it's ok.
-  */
+@Optimize, swap nfds, make sure do_read & do_write event chould
+be perform when no need to call socket.select However, the
+connection exception will detected through do_read or do_write,
+but it's ok.
+*/
   int nfds = this->flush_ready_events();
   ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
   if (nfds <= 0) {
@@ -1320,7 +1333,7 @@ int async_socket_io::flush_ready_events() {
 
 bool async_socket_io::do_resolve(
     channel_context *ctx) { // Only call at event-loop thread, so
-                            // no need to consider thread safe.
+  // no need to consider thread safe.
   ctx->resolve_state_ = resolve_state::INPRROGRESS;
   ctx->endpoints_.clear();
   if (this->ipsv_state_ == 0)
@@ -1376,7 +1389,7 @@ bool async_socket_io::do_resolve(
       if (!cancelled) {
         ::ares_cancel(
             (ares_channel)this->ares_); // It's seems not trigger socket close,
-                                        // because ares_getaddrinfo has bug yet.
+        // because ares_getaddrinfo has bug yet.
         handle_connect_failed(ctx, ERR_RESOLVE_HOST_TIMEOUT);
       }
     });
@@ -1401,9 +1414,9 @@ void async_socket_io::interrupt() { interrupter_.interrupt(); }
 /*int async_socket_io::set_errorno(channel_context* ctx, int
 error)
 {
-    ctx->error_ = error;
-    error_ = error;
-    return error;
+ctx->error_ = error;
+error_ = error;
+return error;
 }*/
 
 } // namespace inet

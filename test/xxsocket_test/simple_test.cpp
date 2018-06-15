@@ -3,177 +3,13 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include "processex.h"
 
 #if defined(_WIN32)
 #include <Shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 #define strcasestr StrStrIA
 #endif
-
-enum {
-    REDIRECT_STANDARD_INPUT = 1,
-    REDIRECT_STANDARD_OUTPUT = 2,
-    REDIRECT_STANDARD_ERROR = 4,
-};
-
-struct RedirectProcessInfo
-{
-    DWORD dwFlags;
-    BOOL bOverlapped;
-    HANDLE hInputWrite;
-    HANDLE hOutputRead;
-    HANDLE hErrorRead;
-    HANDLE hProcess;
-};
-
-int ReadPipeToEnd(HANDLE hPipe, std::string& output)
-{
-    CHAR lpBuffer[512];
-    DWORD nBytesRead;
-    DWORD nCharsWritten;
-    int error = 0;
-    while (TRUE)
-    {
-        if (ReadFile(hPipe, lpBuffer, sizeof(lpBuffer),
-            &nBytesRead, NULL) && nBytesRead)
-        {
-            output.append(lpBuffer, nBytesRead);
-        }
-        else {
-            error = GetLastError(); // ERROR_BROKEN_PIPE: pipe done - normal exit path. otherwise:  Something bad happened.
-            break;
-        }
-    }
-
-    CloseHandle(hPipe);
-    return error;
-}
-
-BOOL CreateRedirectProcess(std::string commandLine, RedirectProcessInfo& processInfo)
-{
-    HANDLE hOutputReadTmp, hOutputRead, hOutputWrite;
-    HANDLE hInputWriteTmp, hInputRead, hInputWrite;
-    HANDLE hErrorReadTmp, hErrorRead, hErrorWrite;
-
-    SECURITY_ATTRIBUTES sa;
-
-    // Set up the security attributes struct.
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = NULL;
-    sa.bInheritHandle = TRUE;
-
-    HANDLE hCurrentProcess = GetCurrentProcess();
-
-    // Create the child output pipe.
-    CreatePipe(&hOutputReadTmp, &hOutputWrite, &sa, 0);
-
-    if (processInfo.dwFlags & REDIRECT_STANDARD_ERROR) {
-        CreatePipe(&hErrorReadTmp, &hErrorWrite, &sa, 0);
-
-        DuplicateHandle(hCurrentProcess, hErrorReadTmp,
-            hCurrentProcess,
-            &hErrorRead, // Address of new handle.
-            0, FALSE, // Make it uninheritable.
-            DUPLICATE_SAME_ACCESS);
-
-        CloseHandle(hErrorReadTmp);
-    }
-    else {
-        // Create a duplicate of the output write handle for the std error
-        // write handle. This is necessary in case the child application
-        // closes one of its std output handles.
-        DuplicateHandle(hCurrentProcess, hOutputWrite,
-            hCurrentProcess, &hErrorWrite, 0,
-            TRUE, DUPLICATE_SAME_ACCESS);
-    }
-
-    // Create the child input pipe.
-    CreatePipe(&hInputRead, &hInputWriteTmp, &sa, 0);
-
-
-    // Create new output read handle and the input write handles. Set
-    // the Properties to FALSE. Otherwise, the child inherits the
-    // properties and, as a result, non-closeable handles to the pipes
-    // are created.
-    DuplicateHandle(hCurrentProcess, hOutputReadTmp,
-        hCurrentProcess,
-        &hOutputRead, // Address of new handle.
-        0, FALSE, // Make it uninheritable.
-        DUPLICATE_SAME_ACCESS);
-
-    DuplicateHandle(hCurrentProcess, hInputWriteTmp,
-        hCurrentProcess,
-        &hInputWrite, // Address of new handle.
-        0, FALSE, // Make it uninheritable.
-        DUPLICATE_SAME_ACCESS);
-
-
-    // Close inheritable copies of the handles you do not want to be
-    // inherited.
-    CloseHandle(hOutputReadTmp);
-    CloseHandle(hInputWriteTmp);
-
-
-    // Get std input handle so you can close it and force the ReadFile to
-    // fail when you want the input thread to exit.
-
-    // PrepAndLaunchRedirectedChild(hOutputWrite, hInputRead, hErrorWrite);
-    PROCESS_INFORMATION pi;
-    STARTUPINFOA si;
-
-    // Set up the start up info struct.
-    ZeroMemory(&si, sizeof(STARTUPINFO));
-    si.cb = sizeof(STARTUPINFO);
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = hOutputWrite;
-    si.hStdInput = hInputRead;
-    si.hStdError = hErrorWrite;
-    // Use this if you want to hide the child:
-    //     si.wShowWindow = SW_HIDE;
-    // Note that dwFlags must include STARTF_USESHOWWINDOW if you want to
-    // use the wShowWindow flags.
-
-    // Launch the process that you want to redirect (in this case,
-    // Child.exe). Make sure Child.exe is in the same directory as
-    // redirect.c launch redirect from a command line to prevent location
-    // confusion.
-    BOOL bRet = CreateProcessA(NULL, &commandLine.front(), NULL, NULL, TRUE,
-        CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
-
-    // Close pipe handles (do not continue to modify the parent).
-    // You need to make sure that no handles to the write end of the
-    // output pipe are maintained in this process or else the pipe will
-    // not close when the child process exits and the ReadFile will hang.
-    CloseHandle(hOutputWrite);
-    CloseHandle(hInputRead);
-    CloseHandle(hErrorWrite);
-
-    // Set global child process handle to cause threads to exit.
-    if (bRet) {
-        if (processInfo.dwFlags & REDIRECT_STANDARD_INPUT)
-            processInfo.hInputWrite = hInputWrite;
-        else
-            CloseHandle(hInputWrite);
-
-        if (processInfo.dwFlags & REDIRECT_STANDARD_OUTPUT)
-            processInfo.hOutputRead = hOutputRead;
-        else
-            CloseHandle(hOutputRead);
-
-        if (processInfo.dwFlags & REDIRECT_STANDARD_ERROR)
-            processInfo.hErrorRead = hErrorRead;
-
-        CloseHandle(pi.hThread);
-        processInfo.hProcess = pi.hProcess;
-    }
-    else {
-        CloseHandle(hInputWrite);
-        CloseHandle(hOutputRead);
-        if (processInfo.dwFlags & REDIRECT_STANDARD_ERROR) CloseHandle(hErrorRead);
-    }
-
-    return bRet;
-}
 
 using namespace purelib::inet;
 
@@ -186,6 +22,7 @@ int main(int, char **) {
 
     RedirectProcessInfo pi;
     ZeroMemory(&pi, sizeof(pi));
+    pi.bOverlapped = TRUE;
     pi.dwFlags = REDIRECT_STANDARD_OUTPUT | REDIRECT_STANDARD_ERROR;
     auto bRet = CreateRedirectProcess("cmd /c dsf hello world!", pi);
     if (bRet) {

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.2
+// universal app version: 3.3
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -44,7 +44,7 @@ SOFTWARE.
 #include <thread>
 #include <vector>
 
-#define _USE_ARES_LIB 0
+#define _USE_ARES_LIB 1
 #define _USE_SHARED_PTR 1
 #define _USE_OBJECT_POOL 1
 #define _ENABLE_SEND_CB 0
@@ -121,11 +121,15 @@ struct channel_endpoint {
 
 struct channel_transport;
 
-struct channel_context {
-  channel_context(async_socket_io &service);
+struct channel_base {
   std::shared_ptr<xxsocket> socket_;
   channel_state
       state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+  int ready_events_ = 0;
+};
+
+struct channel_context : public channel_base {
+  channel_context(async_socket_io &service);
 
   int type_ = 0;
 
@@ -140,11 +144,10 @@ struct channel_context {
   // The deadline timer for resolve & connect
   deadline_timer deadline_timer_;
 
-  int ready_events_ = 0;
   void reset();
 };
 
-struct channel_transport {
+struct channel_transport : public channel_base {
   friend class async_socket_io;
 
 public:
@@ -156,44 +159,31 @@ public:
   void set_deferred(bool deferred) { deferred_ = deferred_; }
 
 private:
-  channel_transport(channel_context *ctx) : ctx_(ctx) {}
+  channel_transport(channel_context *ctx) : ctx_(ctx) {
+    state_ = (channel_state::CONNECTED);
+  }
   channel_context *ctx_;
-  std::shared_ptr<xxsocket> socket_;
+
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
   int offset_ = 0;                           // recv buffer offset
 
   std::vector<char> receiving_pdu_;
   int receiving_pdu_elen_ = -1;
   int error_ = 0; // socket error(>= -1), application error(< -1)
-  int ready_events_ = 0;
+
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
 
   bool deferred_ = true; // whether use queue
 
-  int update_socket_error() {
+  int refresh_socket_error() {
     error_ = xxsocket::get_last_errno();
     return error_;
   }
 };
 
 class deadline_timer;
-/*
-Usage:
-purelib::inet::channel_endpoint endpoints[] = {
-{ "172.31.238.193", 8888 },
-{ "www.baidu.com", 443 },
-//{ "www.tencent.com", 443 },
-};
-tcpcli->start_service(endpoints, _ARRAYSIZE(endpoints));
 
-tcpcli->set_callbacks(decode_pdu_length,
-[](size_t, bool, int) {},
-[](size_t, int error, const char* errormsg) {printf("The connection is lost
-%d, %s", error, errormsg); },
-[](std::vector<char>&&) {},
-[](const vdcallback_t& callback) {callback(); });
-*/
 class async_socket_io {
 public:
   // End user pdu decode length func
@@ -202,7 +192,8 @@ public:
   // connection callbacks
   typedef std::function<void(std::shared_ptr<channel_transport>)>
       connection_lost_callback_t;
-  typedef std::function<void(size_t, std::shared_ptr<channel_transport>, int ec)>
+  typedef std::function<void(size_t, std::shared_ptr<channel_transport>,
+                             int ec)>
       connect_response_callback_t;
 
 public:
@@ -294,7 +285,7 @@ private:
   bool do_nonblocking_connect(channel_context *);
   bool do_nonblocking_connect_completion(fd_set *fds_array, channel_context *);
 
-  void handle_connect_succeed(std::shared_ptr<channel_transport>);
+  void handle_connect_succeed(channel_context *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(channel_context *, int error);
 
   void register_descriptor(const socket_native_type fd, int flags);
@@ -324,7 +315,7 @@ private:
   // int        set_errorno(channel_context* ctx, int error);
 
   // ensure event fd unregistered & closed.
-  bool cleanup(std::shared_ptr<xxsocket> ctx);
+  bool close_internal(channel_base *ctx);
 
   // Update resolve state for new endpoint set
   void update_resolve_state(channel_context *ctx);
@@ -335,9 +326,11 @@ private:
 
   void handle_send_finished(a_pdu_ptr, error_number);
 
-  // supporting P2P
+  // supporting server
   void do_nonblocking_accept(channel_context *);
   void do_nonblocking_accept_completion(fd_set *fds_array, channel_context *);
+
+  void swap_ready_events(channel_base *ctx);
 
 private:
   bool stopping_;
@@ -395,4 +388,5 @@ private:
 };                 /* namespace purelib */
 #endif
 
-#define myasio purelib::gc::singleton<purelib::inet::async_socket_io>::instance()
+#define myasio                                                                 \
+  purelib::gc::singleton<purelib::inet::async_socket_io>::instance()

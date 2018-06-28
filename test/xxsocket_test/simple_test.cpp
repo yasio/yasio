@@ -3,7 +3,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "processex.h"
 
 #if defined(_WIN32)
 #include <Shlwapi.h>
@@ -20,21 +19,8 @@ void append_string(std::vector<char> &packet, const char(&message)[_Size]) {
 
 int main(int, char **) {
 
-    RedirectProcessInfo pi;
-    ZeroMemory(&pi, sizeof(pi));
-    pi.bOverlapped = TRUE;
-    pi.dwFlags = REDIRECT_STANDARD_OUTPUT | REDIRECT_STANDARD_ERROR;
-    auto bRet = CreateRedirectProcess("cmd /c dsf hello world!", pi);
-    if (bRet) {
-        std::string output, error;
-        auto ec = ReadPipeToEnd(pi.hOutputRead, output);
-        ec = ReadPipeToEnd(pi.hErrorRead, error);
-        CloseHandle(pi.hProcess);
-    }
-
     purelib::inet::channel_endpoint endpoints[] = {
-        "www.ip138.com",
-        80,                 // http client
+        { "www.ip138.com", 80 },  // http client
         {"0.0.0.0", 56981}, // tcp server
     };
     myasio->start_service(endpoints, _ARRAYSIZE(endpoints));

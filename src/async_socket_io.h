@@ -210,10 +210,10 @@ public:
 
   void set_endpoint(size_t channel_index, const ip::endpoint &ep);
 
-  size_t get_received_pdu_count(void) const;
+  size_t get_packet_count(void) const;
 
   // must be call on main thread(such cocos2d-x opengl thread)
-  void dispatch_received_pdu(int count = 512);
+  void dispatch_packets(int count = 512);
 
   // set callbacks, required API, must call by user
   /*

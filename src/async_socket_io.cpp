@@ -62,7 +62,7 @@ extern "C" {
 #if COCOS2D_VERSION >= 0x00030000
 #define INET_LOG(format, ...)                                                  \
   do {                                                                         \
-    std::string msg = _string_format(("[mini-asio][%lld] " format),            \
+    std::string msg = _sfmt(("[mini-asio][%lld] " format),            \
                                      _highp_clock(), ##__VA_ARGS__);           \
     cocos2d::Director::getInstance()                                           \
         ->getScheduler()                                                       \
@@ -72,7 +72,7 @@ extern "C" {
 #else
 #define INET_LOG(format, ...)                                                  \
   do {                                                                         \
-    std::string msg = _string_format(("[mini-asio][%lld] " format),            \
+    std::string msg = _sfmt(("[mini-asio][%lld] " format),            \
                                      _highp_clock(), ##__VA_ARGS__);           \
     cocos2d::CCDirector::sharedDirector()                                      \
         ->getScheduler()                                                       \
@@ -83,7 +83,7 @@ extern "C" {
 #else
 #if defined(_WIN32)
 #define INET_LOG(format, ...)                                                  \
-  OutputDebugStringA(_string_format(("[mini-asio][%lld] " format "\r\n"),      \
+  OutputDebugStringA(_sfmt(("[mini-asio][%lld] " format "\r\n"),      \
                                     _highp_clock(), ##__VA_ARGS__)             \
                          .c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
@@ -105,7 +105,7 @@ extern "C" {
 #define MAX_PDU_BUFFER_SIZE                                                    \
   static_cast<int>(SZ(                                                         \
       1, M)) // max pdu buffer length, avoid large memory allocation when \
-        // application layer decode a huge length filed.
+        // application layer decode a huge length field.
 
 #define TSF_CALL(stmt) this->tsf_call_([=] { (stmt); });
 
@@ -130,7 +130,7 @@ static long long _highp_clock() {
  *AND it's also standard-compliant, see reference:
  *http://www.cplusplus.com/reference/cstdio/vsnprintf/
  */
-static std::string _string_format(const char *format, ...) {
+static std::string _sfmt(const char *format, ...) {
 #define CC_VSNPRINTF_BUFFER_LENGTH 512
   va_list args;
   std::string buffer(CC_VSNPRINTF_BUFFER_LENGTH, '\0');
@@ -366,11 +366,11 @@ void async_socket_io::set_callbacks(
   this->tsf_call_ = std::move(threadsafe_call);
 }
 
-size_t async_socket_io::get_received_pdu_count(void) const {
+size_t async_socket_io::get_packet_count(void) const {
   return recv_queue_.size();
 }
 
-void async_socket_io::dispatch_received_pdu(int count) {
+void async_socket_io::dispatch_packets(int count) {
   assert(this->on_recv_pdu_ != nullptr);
 
   if (this->recv_queue_.empty())

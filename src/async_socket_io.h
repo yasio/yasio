@@ -44,9 +44,9 @@ SOFTWARE.
 #include <thread>
 #include <vector>
 
-#define _USE_ARES_LIB 0
-#define _USE_SHARED_PTR 1
-#define _USE_OBJECT_POOL 1
+#define _USING_ARES_LIB 0
+#define _USING_SHARED_PTR 1
+#define _USING_OBJECT_POOL 1
 #define _ENABLE_SEND_CB 0
 
 #if !defined(_ARRAYSIZE)
@@ -104,7 +104,7 @@ static const int socket_recv_buffer_size = 65536; // 64K
 
 class a_pdu; // application layer protocol data unit.
 
-#if _USE_SHARED_PTR
+#if _USING_SHARED_PTR
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 #else
 typedef a_pdu *a_pdu_ptr;
@@ -137,7 +137,7 @@ struct channel_context : public channel_base {
   bool dns_queries_needed_;
 
   std::vector<ip::endpoint> endpoints_;
-  resolve_state resolve_state_;
+  std::atomic<resolve_state> resolve_state_;
 
   int index_ = -1;
 
@@ -156,7 +156,7 @@ public:
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int channel_index() const { return ctx_->index_; }
   int error_code() const { return error_; }
-  void set_deferred(bool deferred) { deferred_ = deferred_; }
+  void set_deferred(bool deferred) { deferred_ = deferred; }
 
 private:
   channel_transport(channel_context *ctx) : ctx_(ctx) {
@@ -248,13 +248,6 @@ threadsafe_call: for cocos2d-x should be:
   // Whether the client-->server connection established.
   bool is_connected(size_t cahnnel_index = 0) const;
 
-  void write(size_t channel_index, std::vector<char> &&data
-#if _ENABLE_SEND_CB
-             ,
-             send_pdu_callback_t callback = nullptr
-#endif
-  );
-
   void write(std::shared_ptr<channel_transport> transport,
              std::vector<char> &&data
 #if _ENABLE_SEND_CB
@@ -269,9 +262,12 @@ threadsafe_call: for cocos2d-x should be:
 
   void interrupt();
 
-  // Async resolve handlers, It's only for internal use
-  bool do_resolve(channel_context *);
-  void finish_async_resolve(channel_context *);
+  // Start a async resolve, It's only for internal use
+  bool start_resolve(channel_context *);
+
+#if _USING_ARES_LIB
+  void handle_ares_work_finish(channel_context *);
+#endif
 
 private:
   void open_internal(channel_context *);
@@ -363,7 +359,7 @@ private:
   };
   fd_set fds_array_[3];
 
-  // Optimize record incomplete works
+  // optimize record incomplete works
   int outstanding_work_;
 
   // callbacks
@@ -373,10 +369,10 @@ private:
   recv_pdu_callback_t on_recv_pdu_;
   std::function<void(const vdcallback_t &)> tsf_call_;
 
-#if _USE_ARES_LIB
+#if _USING_ARES_LIB
   // non blocking io dns resolve support
-  void *ares_; //
-  int ares_count_;
+  void *ares_; // the ares handle
+  int   ares_outstanding_work_;
 #endif
   int ipsv_state_; // local network state
 };                 // async_socket_io

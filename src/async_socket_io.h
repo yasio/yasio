@@ -44,7 +44,7 @@ SOFTWARE.
 #include <thread>
 #include <vector>
 
-#define _USE_ARES_LIB 1
+#define _USE_ARES_LIB 0
 #define _USE_SHARED_PTR 1
 #define _USE_OBJECT_POOL 1
 #define _ENABLE_SEND_CB 0

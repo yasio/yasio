@@ -44,7 +44,7 @@ SOFTWARE.
 #include <thread>
 #include <vector>
 
-#define _USE_ARES_LIB 1
+#define _USE_ARES_LIB 0
 #define _USE_SHARED_PTR 1
 #define _USE_OBJECT_POOL 1
 #define _ENABLE_SEND_CB 0
@@ -125,7 +125,6 @@ struct channel_base {
   std::shared_ptr<xxsocket> socket_;
   channel_state
       state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
-  int ready_events_ = 0;
 };
 
 struct channel_context : public channel_base {
@@ -135,6 +134,7 @@ struct channel_context : public channel_base {
 
   std::string address_;
   u_short port_;
+  bool dns_queries_needed_;
 
   std::vector<ip::endpoint> endpoints_;
   resolve_state resolve_state_;
@@ -276,6 +276,8 @@ threadsafe_call: for cocos2d-x should be:
 private:
   void open_internal(channel_context *);
 
+  void perform_active_channels(fd_set *fds_array);
+
   void perform_timeout_timers(); // ALL timer expired
 
   long long get_wait_duration(long long usec);
@@ -320,17 +322,11 @@ private:
   // Update resolve state for new endpoint set
   void update_resolve_state(channel_context *ctx);
 
-  // @Optimize remember Application layer events to avoid call kernel API -->
-  // ::select
-  int flush_ready_events();
-
   void handle_send_finished(a_pdu_ptr, error_number);
 
   // supporting server
   void do_nonblocking_accept(channel_context *);
   void do_nonblocking_accept_completion(fd_set *fds_array, channel_context *);
-
-  void swap_ready_events(channel_base *ctx);
 
 private:
   bool stopping_;
@@ -368,7 +364,7 @@ private:
   fd_set fds_array_[3];
 
   // Optimize record incomplete works
-  int nfds_;
+  int outstanding_work_;
 
   // callbacks
   decode_pdu_length_func decode_pdu_length_;

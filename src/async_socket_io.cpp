@@ -414,7 +414,7 @@ void async_socket_io::start_service(const channel_endpoint *channel_eps,
       (void)new_channel(channel_ep);
     }
 
-    worker_thread_ = std::thread(async_socket_io::service, this);
+    worker_thread_ = std::thread(&async_socket_io::service, this);
   }
 }
 

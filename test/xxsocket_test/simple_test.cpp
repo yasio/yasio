@@ -104,7 +104,7 @@ int main(int, char **) {
     time_t duration = 0;
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        myasio->dispatch_received_pdu();
+        myasio->dispatch_packets();
         duration += 50;
         if (duration >= 10000) {
             for (auto transport : transports)

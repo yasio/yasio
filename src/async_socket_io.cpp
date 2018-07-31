@@ -568,15 +568,15 @@ void async_socket_io::perform_active_channels(fd_set *fds_array) {
     for (auto iter = active_channels_.begin();
          iter != active_channels_.end();) {
       auto ctx = *iter;
-      bool should_remove = false;
+      bool finish = false;
       switch (ctx->type_) {
       case CHANNEL_TCP_CLIENT:
         switch (ctx->state_) {
         case channel_state::REQUEST_CONNECT:
-          should_remove = do_nonblocking_connect(ctx);
+          finish = do_nonblocking_connect(ctx);
           break;
         case channel_state::CONNECTING:
-          should_remove = do_nonblocking_connect_completion(fds_array, ctx);
+          finish = do_nonblocking_connect_completion(fds_array, ctx);
           break;
         }
         break;
@@ -590,13 +590,13 @@ void async_socket_io::perform_active_channels(fd_set *fds_array) {
           do_nonblocking_accept_completion(fds_array, ctx);
           break;
         case channel_state::INACTIVE:
-          should_remove = true;
+          finish = true;
           break;
         }
         break;
       }
 
-      if (should_remove)
+      if (finish)
         iter = active_channels_.erase(iter);
       else
         ++iter;

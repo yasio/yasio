@@ -1381,7 +1381,7 @@ void async_socket_io::handle_ares_work_finish(
     channel_context *) { // Only call at event-loop thread, so no
                          // need to consider thread safe.
   --this->ares_outstanding_work_;
-  this->interrupt();
+  ++this->outstanding_work_;
 }
 #endif
 

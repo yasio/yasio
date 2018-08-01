@@ -1344,6 +1344,15 @@ bool async_socket_io::start_resolve(
       ctx->resolve_state_ = resolve_state::FAILED;
     }
 
+    /*
+    The getaddrinfo behavior at win32 is strange:
+    If the channel 0 is in non-blocking connect, and waiting at select, than channel 1 request connect(need dns queries), 
+    it's wake up the select call, do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET without select call, 
+    FD_ISSET will always return true, even through the TCP connection handshake is not complete.
+
+    Try write data to a incomplete TCP will trigger error: 10057
+    Another result at this situation is: Try get local endpoint by getsockname will return 0.0.0.0
+    */
     this->interrupt();
   });
   getaddrinfo_thread.detach();

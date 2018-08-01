@@ -98,6 +98,13 @@ enum {
   socket_event_except = 4,
 };
 
+enum {
+    MASIO_OPT_CONNECT_TIMEOUT = 1,
+    MASIO_OPT_SEND_TIMEOUT,
+    MASIO_OPT_RECONNECT_TIMEOUT,
+    MASIO_OPT_DNS_CACHE_TIMEOUT,
+};
+
 typedef std::function<void()> vdcallback_t;
 
 static const int socket_recv_buffer_size = 65536; // 64K
@@ -135,6 +142,7 @@ struct channel_context : public channel_base {
   std::string address_;
   u_short port_;
   bool dns_queries_needed_;
+  time_t dns_queries_timestamp_ = 0;
 
   std::vector<ip::endpoint> endpoints_;
   std::atomic<resolve_state> resolve_state_;
@@ -228,11 +236,12 @@ threadsafe_call: for cocos2d-x should be:
                      recv_pdu_callback_t on_pdu_recv,
                      std::function<void(const vdcallback_t &)> threadsafe_call);
 
-  // set connect and send timeouts.
-  void set_timeouts(long connect_timeout_secs, long send_timeout_secs);
-
-  void set_auto_reconnect_timeout(
-      long timeout_secs = -1 /*-1: disable auto connect */);
+  /* option: MASIO_OPT_CONNECT_TIMEOUT 
+             MASIO_OPT_SEND_TIMEOUT
+             MASIO_OPT_RECONNECT_TIMEOUT
+             MASIO_OPT_DNS_CACHE_TIMEOUT
+  */
+  void set_option(int option, long value);
 
   // open a channel, default: TCP_CLIENT
   void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
@@ -329,9 +338,10 @@ private:
   bool thread_started_;
   std::thread worker_thread_;
 
-  long long connect_timeout_;
-  long long send_timeout_;
-  long long auto_reconnect_timeout_;
+  time_t connect_timeout_;
+  time_t send_timeout_;
+  time_t reconnect_timeout_;
+  time_t dns_cache_timeout_;
 
   std::mutex recv_queue_mtx_;
   std::deque<std::vector<char>> recv_queue_;
@@ -372,7 +382,7 @@ private:
 #if _USING_ARES_LIB
   // non blocking io dns resolve support
   void *ares_; // the ares handle
-  int   ares_outstanding_work_;
+  int ares_outstanding_work_;
 #endif
   int ipsv_state_; // local network state
 };                 // async_socket_io

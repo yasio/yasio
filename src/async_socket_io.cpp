@@ -113,6 +113,7 @@ namespace purelib {
 namespace inet {
 
 namespace {
+// The high precision micro seconds timestamp
 static long long _highp_clock() {
   auto duration = std::chrono::steady_clock::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::microseconds>(duration)
@@ -177,6 +178,7 @@ static void ares_getaddrinfo_callback(void *arg, int status,
       ep.port(ctx->port_);
       std::string ip = ep.to_string();
       ctx->endpoints_.push_back(ep);
+      ctx->dns_queries_timestamp_ = _highp_clock();
       INET_LOG(
           "[index: %d] ares_getaddrinfo_callback: resolve %s succeed, ip:%s",
           ctx->index_, ctx->address_.c_str(), ip.c_str());
@@ -266,16 +268,22 @@ void channel_context::reset() {
   state_ = channel_state::INACTIVE;
 
   resolve_state_ = resolve_state::FAILED;
-
+  dns_queries_timestamp_ = 0;
+  dns_queries_needed_ = false;
   endpoints_.clear();
   deadline_timer_.cancel();
 }
 
 async_socket_io::async_socket_io()
-    : stopping_(false), thread_started_(false), interrupter_(),
-      connect_timeout_(5LL * MICROSECONDS_PER_SECOND),
-      send_timeout_((std::numeric_limits<int>::max)()),
-      auto_reconnect_timeout_(-1), decode_pdu_length_(nullptr) {
+    : stopping_(false), 
+    thread_started_(false), 
+    interrupter_(),
+    connect_timeout_(5LL * MICROSECONDS_PER_SECOND),
+    send_timeout_((std::numeric_limits<int>::max)()), 
+    reconnect_timeout_(-1),
+    dns_cache_timeout_(600LL * MICROSECONDS_PER_SECOND), // Default: 10 minutes.
+    decode_pdu_length_(nullptr)
+{
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
@@ -319,18 +327,24 @@ void async_socket_io::stop_service() {
   }
 }
 
-void async_socket_io::set_timeouts(long timeo_connect, long timeo_send) {
-  this->connect_timeout_ =
-      static_cast<long long>(timeo_connect) * MICROSECONDS_PER_SECOND;
-  this->send_timeout_ = timeo_send * MICROSECONDS_PER_SECOND;
-}
-
-void async_socket_io::set_auto_reconnect_timeout(
-    long timeout_secs /*-1: disable auto connect */) {
-  if (timeout_secs > 0) {
-    this->auto_reconnect_timeout_ = timeout_secs * MICROSECONDS_PER_SECOND;
-  } else {
-    this->auto_reconnect_timeout_ = -1;
+void async_socket_io::set_option(int option, long value) {
+  switch (option) {
+  case MASIO_OPT_CONNECT_TIMEOUT:
+    this->connect_timeout_ = static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+    break;
+  case MASIO_OPT_SEND_TIMEOUT:
+    this->send_timeout_ = static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+    break;
+  case MASIO_OPT_RECONNECT_TIMEOUT:
+    if (value > 0)
+      this->reconnect_timeout_ =
+          static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+    else
+      this->reconnect_timeout_ = -1; // means auto reconnect is disabled.
+    break;
+  case MASIO_OPT_DNS_CACHE_TIMEOUT:
+    this->dns_cache_timeout_ = static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+    break;
   }
 }
 
@@ -679,10 +693,10 @@ void async_socket_io::handle_close(
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
     if (channel_state::REQUEST_CONNECT != ctx->state_)
       ctx->state_ = channel_state::INACTIVE;
-    if (this->auto_reconnect_timeout_ > 0) {
+    if (this->reconnect_timeout_ > 0) {
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
       timer->expires_from_now(
-          std::chrono::microseconds(this->auto_reconnect_timeout_));
+          std::chrono::microseconds(this->reconnect_timeout_));
       timer->async_wait(
           [this, ctx, timer /*!important, hold on by lambda expression */](
               bool cancelled) {
@@ -777,6 +791,10 @@ bool async_socket_io::do_nonblocking_connect(channel_context *ctx) {
   assert(ctx->state_ == channel_state::REQUEST_CONNECT);
   if (ctx->state_ != channel_state::REQUEST_CONNECT)
     return true;
+
+  auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
+  if (ctx->resolve_state_ == resolve_state::READY && diff >= this->dns_cache_timeout_)
+    ctx->resolve_state_ = resolve_state::DIRTY;
 
   if (ctx->resolve_state_ == resolve_state::READY) {
 
@@ -1317,7 +1335,7 @@ bool async_socket_io::start_resolve(
   if (this->ipsv_state_ == 0)
     this->ipsv_state_ = xxsocket::getipsv();
 
-    INET_LOG("[index: %d] start async resolving for %s", ctx->index_,
+  INET_LOG("[index: %d] start async resolving for %s", ctx->index_,
            ctx->address_.c_str());
 #if !_USING_ARES_LIB // 6.563ms
   std::thread getaddrinfo_thread([=] {
@@ -1336,7 +1354,7 @@ bool async_socket_io::start_resolve(
     }
     if (succeed && !ctx->endpoints_.empty()) {
       ctx->resolve_state_ = resolve_state::READY;
-
+      ctx->dns_queries_timestamp_ = _highp_clock();
       auto &ep = ctx->endpoints_[0];
       INET_LOG("[index: %d] getaddrinfo: resolve %s succeed, ip:%s",
                ctx->index_, ctx->address_.c_str(), ep.to_string().c_str());
@@ -1346,12 +1364,15 @@ bool async_socket_io::start_resolve(
 
     /*
     The getaddrinfo behavior at win32 is strange:
-    If the channel 0 is in non-blocking connect, and waiting at select, than channel 1 request connect(need dns queries), 
-    it's wake up the select call, do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET without select call, 
-    FD_ISSET will always return true, even through the TCP connection handshake is not complete.
+    If the channel 0 is in non-blocking connect, and waiting at select, than
+    channel 1 request connect(need dns queries), it's wake up the select call,
+    do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET
+    without select call, FD_ISSET will always return true, even through the
+    TCP connection handshake is not complete.
 
     Try write data to a incomplete TCP will trigger error: 10057
-    Another result at this situation is: Try get local endpoint by getsockname will return 0.0.0.0
+    Another result at this situation is: Try get local endpoint by getsockname
+    will return 0.0.0.0
     */
     this->interrupt();
   });
@@ -1382,7 +1403,7 @@ bool async_socket_io::start_resolve(
   ++this->ares_outstanding_work_;
 #endif
 
-   return false; // waiting async resolve complete.
+  return false; // waiting async resolve complete.
 }
 
 #if _USING_ARES_LIB

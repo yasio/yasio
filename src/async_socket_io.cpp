@@ -476,7 +476,7 @@ void async_socket_io::service() { // The async event-loop
     if (nfds == -1) {
       int ec = xxsocket::get_last_errno();
       INET_LOG("socket.select failed, ec:%d, detail:%s\n", ec,
-               xxsocket::get_error_msg(ec));
+               xxsocket::strerror(ec));
       if (ec == EBADF) {
         goto _L_end;
       }
@@ -679,7 +679,7 @@ void async_socket_io::handle_close(
   INET_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
            transport->local_endpoint().to_string().c_str(),
            transport->peer_endpoint().to_string().c_str(), transport->error_,
-           xxsocket::get_error_msg(transport->error_));
+           xxsocket::strerror(transport->error_));
 
   close_internal(transport.get());
 
@@ -891,7 +891,7 @@ void async_socket_io::do_nonblocking_accept(
     if (ctx->socket_->bind(ep) != 0) {
       error = xxsocket::get_last_errno();
       INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-               xxsocket::get_error_msg(error));
+               xxsocket::strerror(error));
       ctx->socket_->close();
       ctx->state_ = channel_state::INACTIVE;
       return;
@@ -900,7 +900,7 @@ void async_socket_io::do_nonblocking_accept(
     if (ctx->socket_->listen(1) != 0) {
       error = xxsocket::get_last_errno();
       INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_,
-               error, xxsocket::get_error_msg(error));
+               error, xxsocket::strerror(error));
       ctx->socket_->close();
       ctx->state_ = channel_state::INACTIVE;
       return;
@@ -968,7 +968,7 @@ void async_socket_io::handle_connect_failed(channel_context *ctx, int error) {
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s",
            ctx->index_, ctx->address_.c_str(), ctx->port_, error,
-           xxsocket::get_error_msg(error));
+           xxsocket::strerror(error));
 }
 
 bool async_socket_io::do_write(std::shared_ptr<channel_transport> transport) {
@@ -1020,7 +1020,7 @@ bool async_socket_io::do_write(std::shared_ptr<channel_transport> transport) {
           INET_LOG("[index: %d] do_write error, the connection "
                    "should be "
                    "closed, retval=%d, ec:%d, detail:%s",
-                   ctx->index_, n, error, xxsocket::get_error_msg(error));
+                   ctx->index_, n, error, xxsocket::strerror(error));
           break;
         }
       }
@@ -1063,7 +1063,7 @@ bool async_socket_io::do_read(std::shared_ptr<channel_transport> transport) {
     if (n > 0 || !SHOULD_CLOSE_0(n, transport->refresh_socket_error())) {
 #if _ENABLE_VERBOSE_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_,
-               error_, xxsocket::get_error_msg(error_));
+               error_, xxsocket::strerror(error_));
 #endif
       if (n == -1)
         n = 0;
@@ -1104,7 +1104,7 @@ bool async_socket_io::do_read(std::shared_ptr<channel_transport> transport) {
       }
     } else {
       int error = transport->error_;
-      const char *errormsg = xxsocket::get_error_msg(error);
+      const char *errormsg = xxsocket::strerror(error);
       if (n == 0) {
         INET_LOG("[index: %d] do_read error, the server close the "
                  "connection, retval=%d, ec:%d, detail:%s",

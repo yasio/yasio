@@ -918,12 +918,12 @@ int xxsocket::bind(const char* addr, unsigned short port) const
 {
     ip::endpoint local(addr, port);
 
-    return ::bind(this->fd, &local.intri_, sizeof(local));
+    return ::bind(this->fd, &local.sa_, sizeof(local));
 }
 
 int xxsocket::bind(const ip::endpoint& endpoint)
 {
-    return ::bind(this->fd, &endpoint.intri_, sizeof(endpoint));
+    return ::bind(this->fd, &endpoint.sa_, sizeof(endpoint));
 }
 
 int xxsocket::listen(int backlog) const
@@ -975,7 +975,7 @@ int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
 
 int xxsocket::connect(socket_native_type s, const ip::endpoint& ep)
 {
-    return ::connect(s, &ep.intri_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
+    return ::connect(s, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
 }
 
 int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
@@ -1344,7 +1344,7 @@ int xxsocket::recvfrom_i(void* buf, int len, ip::endpoint& from, int flags) cons
         (char*)buf,
         len,
         flags,
-        &from.intri_,
+        &from.sa_,
         &addrlen
     );
 }
@@ -1355,7 +1355,7 @@ int xxsocket::sendto_i(const void* buf, int len, ip::endpoint& to, int flags) co
         (const char*)buf,
         len,
         flags,
-        &to.intri_,
+        &to.sa_,
         sizeof(to)
     );
 }
@@ -1416,7 +1416,7 @@ ip::endpoint xxsocket::local_endpoint(socket_native_type fd)
 {
     ip::endpoint ep;
     socklen_t socklen = sizeof(ep);
-    getsockname(fd, &ep.intri_, &socklen);
+    getsockname(fd, &ep.sa_, &socklen);
     return ep;
 }
 
@@ -1429,7 +1429,7 @@ ip::endpoint xxsocket::peer_endpoint(socket_native_type fd)
 {
     ip::endpoint ep;
     socklen_t socklen = sizeof(ep);
-    getpeername(fd, &ep.intri_, &socklen);
+    getpeername(fd, &ep.sa_, &socklen);
     return ep;
 }
 
@@ -1520,11 +1520,11 @@ void xxsocket::set_last_errno(int error)
 #endif
 }
 
-const char* xxsocket::get_error_msg(int error)
+const char* xxsocket::strerror(int error)
 {
 #if defined(_MSC_VER) &&  !defined(_WINSTORE)
     static char error_msg[256];
-    /*LPVOID lpMsgBuf = nullptr;*/
+    ZeroMemory(error_msg, sizeof(error_msg));
     ::FormatMessageA(
         /*FORMAT_MESSAGE_ALLOCATE_BUFFER |*/
         FORMAT_MESSAGE_FROM_SYSTEM |
@@ -1537,13 +1537,9 @@ const char* xxsocket::get_error_msg(int error)
         NULL
     );
 
-    /*if (lpMsgBuf != nullptr) {
-        strcpy(error_msg, (const char*)lpMsgBuf);
-        ::LocalFree(lpMsgBuf);
-    }*/
     return error_msg;
 #else
-    return strerror(error);
+    return ::strerror(error);
 #endif
 }
 

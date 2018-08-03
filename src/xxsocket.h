@@ -435,7 +435,7 @@ public:
 
     int af() const
     {
-        return intri_.sa_family;
+        return sa_.sa_family;
     }
     std::string to_string(void) const
     {
@@ -443,7 +443,7 @@ public:
 
         size_t n = 0;
 
-        switch (intri_.sa_family) {
+        switch (sa_.sa_family) {
         case AF_INET:
             n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), 64));
             break;
@@ -460,7 +460,7 @@ public:
     char* to_cstring(char buffer[64]) const // // not safe, if use, please confirm buffer enough
     {
         size_t n = 0;
-        switch (intri_.sa_family) {
+        switch (sa_.sa_family) {
         case AF_INET:
             n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buffer, 64));
             break;
@@ -481,9 +481,9 @@ public:
     {
         in4_.sin_port = htons(value);
     }
-    sockaddr intri_;
-    mutable sockaddr_in in4_;
-    mutable sockaddr_in6 in6_;
+    sockaddr sa_;
+    sockaddr_in in4_;
+    sockaddr_in6 in6_;
 };
 
 };
@@ -910,7 +910,7 @@ public:
 
     static int get_last_errno(void);
     static void set_last_errno(int error);
-    static const char* get_error_msg(int error);
+    static const char* strerror(int error);
 
     /// <summary>
     /// Resolve all as ipv4 or ipv6 endpoints

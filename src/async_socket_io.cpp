@@ -792,8 +792,11 @@ bool async_socket_io::do_nonblocking_connect(channel_context *ctx) {
   if (ctx->state_ != channel_state::REQUEST_CONNECT)
     return true;
 
+  if (this->ipsv_state_ == 0)
+    this->ipsv_state_ = xxsocket::getipsv();
+  
   auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
-  if (ctx->resolve_state_ == resolve_state::READY && diff >= this->dns_cache_timeout_)
+  if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY && diff >= this->dns_cache_timeout_)
     ctx->resolve_state_ = resolve_state::DIRTY;
 
   if (ctx->resolve_state_ == resolve_state::READY) {
@@ -1332,9 +1335,7 @@ bool async_socket_io::start_resolve(
     return false;
   ctx->resolve_state_ = resolve_state::INPRROGRESS;
   ctx->endpoints_.clear();
-  if (this->ipsv_state_ == 0)
-    this->ipsv_state_ = xxsocket::getipsv();
-
+  
   INET_LOG("[index: %d] start async resolving for %s", ctx->index_,
            ctx->address_.c_str());
 #if !_USING_ARES_LIB // 6.563ms

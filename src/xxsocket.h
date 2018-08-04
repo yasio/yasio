@@ -133,6 +133,7 @@ typedef int socket_native_type;
 #undef ESTALE                  
 #undef EREMOTE 
 #undef EBADF
+#undef EFAULT
 
 #define EWOULDBLOCK             WSAEWOULDBLOCK
 #define EINPROGRESS             WSAEINPROGRESS
@@ -172,6 +173,7 @@ typedef int socket_native_type;
 #define ESTALE                  WSAESTALE
 #define EREMOTE                 WSAEREMOTE
 #define EBADF                   WSAEBADF
+#define EFAULT                  WSAEFAULT
 
 #endif
 
@@ -347,7 +349,7 @@ union endpoint
 public:
     endpoint(void)
     {
-        ::memset(this, 0x0, sizeof(*this));
+        this->zeroset();
     }
     explicit endpoint(const addrinfo* info)
     {
@@ -369,11 +371,13 @@ public:
 
     void assign(const void* ai_addr, size_t ai_addrlen)
     {
+        this->zeroset();
         ::memcpy(this, ai_addr, ai_addrlen);
     }
 
     void assign(const sockaddr* addr)
     {
+        this->zeroset();
         switch (addr->sa_family)
         {
         case AF_INET:
@@ -387,7 +391,7 @@ public:
 
     bool assign(const char* addr, unsigned short port)
     {
-        ::memset(this, 0x0, sizeof(*this));
+        this->zeroset();
 
         /*
         * Windows XP no inet_pton or inet_ntop
@@ -472,6 +476,23 @@ public:
         sprintf(buffer + n, ":%u", this->port());
 
         return buffer;
+    }
+    std::string ip() const {
+        std::string ipstring(64, '\0');
+
+        size_t n = 0;
+
+        switch (sa_.sa_family) {
+        case AF_INET:
+            n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &ipstring.front(), 64));
+            break;
+        case AF_INET6:
+            n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &ipstring.front(), 64));
+            break;
+        }
+        ipstring.resize(n);
+
+        return ipstring;
     }
     unsigned short port(void) const
     {

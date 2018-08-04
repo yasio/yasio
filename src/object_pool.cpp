@@ -1,4 +1,5 @@
-// object_pool.cpp: a simple & high-performance object pool implementation
+// object_pool.cpp: a simple & high-performance object pool implementation v1.3
+
 #if !defined(_OBJECT_POOL_CPP_)
 #define _OBJECT_POOL_CPP_
 
@@ -142,6 +143,7 @@ object_pool::free_link_node* object_pool::tidy_chunk(chunk_link chunk)
 }
 
 } // purelib::gc::detail
+
 } // namespace purelib::gc
 }; // namespace purelib
 
@@ -149,4 +151,5 @@ object_pool::free_link_node* object_pool::tidy_chunk(chunk_link chunk)
 /*
 * Copyright (c) 2012-2018 by HALX99,  ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
+* V1.3:2018
 **/

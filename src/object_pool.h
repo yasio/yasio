@@ -1,9 +1,11 @@
-// object_pool.h: a simple & high-performance object pool implementation
+// object_pool.h: a simple & high-performance object pool implementation v1.3
 #ifndef _OBJECT_POOL_H_
 #define _OBJECT_POOL_H_
 
 #include "politedef.h"
 #include <assert.h>
+#include <stdlib.h>
+#include <memory>
 #include <mutex>
 
 #define OBJECT_POOL_HEADER_ONLY
@@ -227,5 +229,6 @@ public:
 /*
 * Copyright (c) 2012-2018 by HALX99,  ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
+* V1.3:2018
 **/
 

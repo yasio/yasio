@@ -99,10 +99,10 @@ enum {
 };
 
 enum {
-    MASIO_OPT_CONNECT_TIMEOUT = 1,
-    MASIO_OPT_SEND_TIMEOUT,
-    MASIO_OPT_RECONNECT_TIMEOUT,
-    MASIO_OPT_DNS_CACHE_TIMEOUT,
+  MASIO_OPT_CONNECT_TIMEOUT = 1,
+  MASIO_OPT_SEND_TIMEOUT,
+  MASIO_OPT_RECONNECT_TIMEOUT,
+  MASIO_OPT_DNS_CACHE_TIMEOUT,
 };
 
 typedef std::function<void()> vdcallback_t;
@@ -116,9 +116,6 @@ typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 #else
 typedef a_pdu *a_pdu_ptr;
 #endif
-
-typedef std::function<void(error_number)> send_pdu_callback_t;
-typedef std::function<void(std::vector<char>)> recv_pdu_callback_t;
 
 class async_socket_io;
 struct channel_endpoint {
@@ -164,7 +161,6 @@ public:
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int channel_index() const { return ctx_->index_; }
   int error_code() const { return error_; }
-  void set_deferred(bool deferred) { deferred_ = deferred; }
 
 private:
   channel_transport(channel_context *ctx) : ctx_(ctx) {
@@ -182,15 +178,53 @@ private:
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
 
-  bool deferred_ = true; // whether use queue
-
-  int refresh_socket_error() {
+  int get_socket_error() {
     error_ = xxsocket::get_last_errno();
     return error_;
   }
 };
 
+enum {
+  MASIO_EVENT_CONNECT_RESPONSE = 0,
+  MASIO_EVENT_CONNECTION_LOST,
+  MASIO_EVENT_RECV_PACKET,
+};
+class channel_event final {
+public:
+  channel_event(int type, int error,
+                std::shared_ptr<channel_transport> transport)
+      : type_(type), error_code_(error), transport_(transport) {}
+  channel_event(int type, std::vector<char> packet)
+      : type_(type), error_code_(0), packet_(std::move(packet)) {}
+  channel_event(channel_event &&rhs)
+      : type_(rhs.type_), error_code_(rhs.error_code_),
+        transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_)) {
+  }
+
+  ~channel_event() {}
+
+  int get_type() const { return type_; }
+  int get_error_code() const { return error_code_; }
+
+  std::shared_ptr<channel_transport> get_transport() const {
+    return transport_;
+  }
+
+  const std::vector<char> &get_packet() const { return packet_; }
+  std::vector<char> retrive_packet() { return std::move(packet_); }
+
+private:
+  int type_;
+  int error_code_;
+  std::shared_ptr<channel_transport> transport_;
+  std::vector<char> packet_;
+};
+
 class deadline_timer;
+
+typedef std::function<void(error_number)> send_pdu_callback_t;
+typedef std::function<void(std::vector<char>)> recv_pdu_callback_t;
+typedef std::function<void(channel_event &&)> on_event_callback_t;
 
 class async_socket_io {
 public:
@@ -218,10 +252,10 @@ public:
 
   void set_endpoint(size_t channel_index, const ip::endpoint &ep);
 
-  size_t get_packet_count(void) const;
+  size_t get_event_count(void) const;
 
   // must be call on main thread(such cocos2d-x opengl thread)
-  void dispatch_packets(int count = 512);
+  void dispatch_events(int count = 512);
 
   // set callbacks, required API, must call by user
   /*
@@ -231,12 +265,10 @@ threadsafe_call: for cocos2d-x should be:
 }
 */
   void set_callbacks(decode_pdu_length_func decode_length_func,
-                     connect_response_callback_t on_connect_result,
-                     connection_lost_callback_t on_connection_lost,
-                     recv_pdu_callback_t on_pdu_recv,
+                     on_event_callback_t on_event,
                      std::function<void(const vdcallback_t &)> threadsafe_call);
 
-  /* option: MASIO_OPT_CONNECT_TIMEOUT 
+  /* option: MASIO_OPT_CONNECT_TIMEOUT
              MASIO_OPT_SEND_TIMEOUT
              MASIO_OPT_RECONNECT_TIMEOUT
              MASIO_OPT_DNS_CACHE_TIMEOUT
@@ -311,6 +343,8 @@ private:
   void handle_close(
       std::shared_ptr<channel_transport>); // TODO: add error_number parameter
 
+  void post_event(channel_event &&event);
+
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime
   // dynmaically: because this API is not thread safe.
@@ -343,8 +377,9 @@ private:
   time_t reconnect_timeout_;
   time_t dns_cache_timeout_;
 
-  std::mutex recv_queue_mtx_;
-  std::deque<std::vector<char>> recv_queue_;
+  bool deferred_event_ = true;
+  std::mutex event_queue_mtx_;
+  std::deque<channel_event> event_queue_;
 
   std::vector<channel_context *> channels_;
 
@@ -374,10 +409,8 @@ private:
 
   // callbacks
   decode_pdu_length_func decode_pdu_length_;
-  connect_response_callback_t on_connect_resposne_;
-  connection_lost_callback_t on_connection_lost_;
-  recv_pdu_callback_t on_recv_pdu_;
-  std::function<void(const vdcallback_t &)> tsf_call_;
+  std::function<void(channel_event &&)> on_event_;
+  std::function<void(const vdcallback_t &)> threadsafe_call_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support

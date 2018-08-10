@@ -107,8 +107,6 @@ extern "C" {
       1, M)) // max pdu buffer length, avoid large memory allocation when \
         // application layer decode a huge length field.
 
-#define TSF_CALL(stmt) this->tsf_call_([=] { (stmt); });
-
 namespace purelib {
 namespace inet {
 
@@ -275,15 +273,12 @@ void channel_context::reset() {
 }
 
 async_socket_io::async_socket_io()
-    : stopping_(false), 
-    thread_started_(false), 
-    interrupter_(),
-    connect_timeout_(5LL * MICROSECONDS_PER_SECOND),
-    send_timeout_((std::numeric_limits<int>::max)()), 
-    reconnect_timeout_(-1),
-    dns_cache_timeout_(600LL * MICROSECONDS_PER_SECOND), // Default: 10 minutes.
-    decode_pdu_length_(nullptr)
-{
+    : stopping_(false), thread_started_(false), interrupter_(),
+      connect_timeout_(5LL * MICROSECONDS_PER_SECOND),
+      send_timeout_((std::numeric_limits<int>::max)()), reconnect_timeout_(-1),
+      dns_cache_timeout_(600LL *
+                         MICROSECONDS_PER_SECOND), // Default: 10 minutes.
+      decode_pdu_length_(nullptr) {
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
@@ -330,7 +325,8 @@ void async_socket_io::stop_service() {
 void async_socket_io::set_option(int option, long value) {
   switch (option) {
   case MASIO_OPT_CONNECT_TIMEOUT:
-    this->connect_timeout_ = static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+    this->connect_timeout_ =
+        static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
     break;
   case MASIO_OPT_SEND_TIMEOUT:
     this->send_timeout_ = static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
@@ -343,7 +339,8 @@ void async_socket_io::set_option(int option, long value) {
       this->reconnect_timeout_ = -1; // means auto reconnect is disabled.
     break;
   case MASIO_OPT_DNS_CACHE_TIMEOUT:
-    this->dns_cache_timeout_ = static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+    this->dns_cache_timeout_ =
+        static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
     break;
   }
 }
@@ -368,34 +365,29 @@ void async_socket_io::clear_channels() {
 }
 
 void async_socket_io::set_callbacks(
-    decode_pdu_length_func decode_length_func,
-    connect_response_callback_t on_connect_response,
-    connection_lost_callback_t on_connection_lost,
-    recv_pdu_callback_t on_pdu_recv,
+    decode_pdu_length_func decode_length_func, on_event_callback_t on_event,
     std::function<void(const vdcallback_t &)> threadsafe_call) {
   this->decode_pdu_length_ = decode_length_func;
-  this->on_connect_resposne_ = std::move(on_connect_response);
-  this->on_recv_pdu_ = std::move(on_pdu_recv);
-  this->on_connection_lost_ = std::move(on_connection_lost);
-  this->tsf_call_ = std::move(threadsafe_call);
+  this->on_event_ = std::move(on_event);
+  this->threadsafe_call_ = std::move(threadsafe_call);
 }
 
-size_t async_socket_io::get_packet_count(void) const {
-  return recv_queue_.size();
+size_t async_socket_io::get_event_count(void) const {
+  return this->event_queue_.size();
 }
 
-void async_socket_io::dispatch_packets(int count) {
-  assert(this->on_recv_pdu_ != nullptr);
+void async_socket_io::dispatch_events(int count) {
+  assert(this->on_event_ != nullptr);
 
-  if (this->recv_queue_.empty())
+  if (this->event_queue_.empty())
     return;
 
-  std::lock_guard<std::mutex> autolock(this->recv_queue_mtx_);
+  std::lock_guard<std::mutex> autolock(this->event_queue_mtx_);
   do {
-    auto packet = std::move(this->recv_queue_.front());
-    this->recv_queue_.pop_front();
-    this->on_recv_pdu_(std::move(packet));
-  } while (!this->recv_queue_.empty() && --count > 0);
+    auto event = std::move(this->event_queue_.front());
+    this->event_queue_.pop_front();
+    this->on_event_(std::move(event));
+  } while (!this->event_queue_.empty() && --count > 0);
 }
 
 void async_socket_io::start_service(const channel_endpoint *channel_eps,
@@ -686,9 +678,8 @@ void async_socket_io::handle_close(
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
-  if (this->on_connection_lost_) {
-    TSF_CALL(on_connection_lost_(transport));
-  }
+  this->post_event(
+      channel_event(MASIO_EVENT_CONNECTION_LOST, transport->error_, transport));
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
     if (channel_state::REQUEST_CONNECT != ctx->state_)
@@ -775,16 +766,19 @@ void async_socket_io::handle_packet(
            "packet size:%d",
            ctx->index_, ctx->receiving_pdu_elen_);
 #endif
-  if (transport->deferred_) {
-    recv_queue_mtx_.lock();
-    // Use std::move, so no need to call
-    // ctx->receiving_pdu_.shrink_to_fit to avoid occupy large
-    // memory
-    recv_queue_.push_back(std::move(transport->receiving_pdu_));
-    recv_queue_mtx_.unlock();
-  } else
-    this->on_recv_pdu_(std::move(transport->receiving_pdu_));
+  this->post_event(channel_event(MASIO_EVENT_RECV_PACKET,
+                                 std::move(transport->receiving_pdu_)));
   transport->receiving_pdu_elen_ = -1;
+}
+
+void async_socket_io::post_event(channel_event &&event) {
+  if (deferred_event_) {
+    event_queue_mtx_.lock();
+    event_queue_.push_back(std::move(event));
+    event_queue_mtx_.unlock();
+  } else {
+    this->on_event_(std::move(event));
+  }
 }
 
 bool async_socket_io::do_nonblocking_connect(channel_context *ctx) {
@@ -794,9 +788,10 @@ bool async_socket_io::do_nonblocking_connect(channel_context *ctx) {
 
   if (this->ipsv_state_ == 0)
     this->ipsv_state_ = xxsocket::getipsv();
-  
+
   auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
-  if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY && diff >= this->dns_cache_timeout_)
+  if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY &&
+      diff >= this->dns_cache_timeout_)
     ctx->resolve_state_ = resolve_state::DIRTY;
 
   if (ctx->resolve_state_ == resolve_state::READY) {
@@ -959,7 +954,7 @@ void async_socket_io::handle_connect_succeed(channel_context *ctx,
            ctx->index_, connection->local_endpoint().to_string().c_str(),
            connection->peer_endpoint().to_string().c_str());
 
-  TSF_CALL(this->on_connect_resposne_(ctx->index_, transport, 0));
+  this->post_event(channel_event(MASIO_EVENT_CONNECT_RESPONSE, 0, transport));
 }
 
 void async_socket_io::handle_connect_failed(channel_context *ctx, int error) {
@@ -967,7 +962,7 @@ void async_socket_io::handle_connect_failed(channel_context *ctx, int error) {
 
   ctx->state_ = channel_state::INACTIVE;
 
-  TSF_CALL(this->on_connect_resposne_(ctx->index_, nullptr, error));
+  this->post_event(channel_event(MASIO_EVENT_CONNECT_RESPONSE, error, nullptr));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s",
            ctx->index_, ctx->address_.c_str(), ctx->port_, error,
@@ -1018,7 +1013,7 @@ bool async_socket_io::do_write(std::shared_ptr<channel_transport> transport) {
           handle_send_finished(v, error_number::ERR_SEND_TIMEOUT);
         }
       } else { // n <= 0, TODO: add time
-        int error = transport->refresh_socket_error();
+        int error = transport->get_socket_error();
         if (SHOULD_CLOSE_1(n, error)) {
           INET_LOG("[index: %d] do_write error, the connection "
                    "should be "
@@ -1039,7 +1034,7 @@ void async_socket_io::handle_send_finished(a_pdu_ptr pdu, error_number error) {
 #if _ENABLE_SEND_CB
   if (pdu->on_sent_) {
     auto send_cb = std::move(pdu->on_sent_);
-    this->tsf_call_([=] { send_cb(error); });
+    this->threadsafe_call_([=] { send_cb(error); });
   }
 #if !_USING_SHARED_PTR
   delete pdu;
@@ -1063,7 +1058,7 @@ bool async_socket_io::do_read(std::shared_ptr<channel_transport> transport) {
                                        socket_recv_buffer_size -
                                            transport->offset_);
 
-    if (n > 0 || !SHOULD_CLOSE_0(n, transport->refresh_socket_error())) {
+    if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error())) {
 #if _ENABLE_VERBOSE_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_,
                error_, xxsocket::strerror(error_));
@@ -1335,7 +1330,7 @@ bool async_socket_io::start_resolve(
     return false;
   ctx->resolve_state_ = resolve_state::INPRROGRESS;
   ctx->endpoints_.clear();
-  
+
   INET_LOG("[index: %d] start async resolving for %s", ctx->index_,
            ctx->address_.c_str());
 #if !_USING_ARES_LIB // 6.563ms
@@ -1410,7 +1405,7 @@ bool async_socket_io::start_resolve(
 #if _USING_ARES_LIB
 void async_socket_io::handle_ares_work_finish(
     channel_context *) { // Only call at event-loop thread, so no
-                         // need to consider thread safe.
+  // need to consider thread safe.
   --this->ares_outstanding_work_;
   ++this->outstanding_work_;
 }

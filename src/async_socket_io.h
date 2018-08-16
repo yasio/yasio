@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.3.1
+// universal app version: 3.3
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -124,7 +124,7 @@ struct io_hostent {
   u_short port_;
 };
 
-struct transport;
+struct io_transport;
 
 struct io_base {
   std::shared_ptr<xxsocket> socket_;
@@ -132,8 +132,8 @@ struct io_base {
       state_;  // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
 };
 
-struct channel : public io_base {
-  channel(async_socket_io& service);
+struct io_channel : public io_base {
+  io_channel(async_socket_io& service);
 
   int type_ = 0;
 
@@ -153,7 +153,7 @@ struct channel : public io_base {
   void reset();
 };
 
-struct transport : public io_base {
+struct io_transport : public io_base {
   friend class async_socket_io;
 
  public:
@@ -164,8 +164,8 @@ struct transport : public io_base {
   int error_code() const { return error_; }
 
  private:
-  transport(channel* ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED); }
-  channel* ctx_;
+  io_transport(io_channel* ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED); }
+  io_channel* ctx_;
 
   char buffer_[socket_recv_buffer_size + 1];  // recv buffer
   int offset_ = 0;                            // recv buffer offset
@@ -183,7 +183,7 @@ struct transport : public io_base {
   }
 };
 
-typedef std::shared_ptr<transport> transport_ptr;
+typedef std::shared_ptr<io_transport> transport_ptr;
 
 enum {
   MASIO_EVENT_CONNECT_RESPONSE = 0,
@@ -304,14 +304,14 @@ threadsafe_call: for cocos2d-x should be:
   void interrupt();
 
   // Start a async resolve, It's only for internal use
-  bool start_resolve(channel*);
+  bool start_resolve(io_channel*);
 
 #if _USING_ARES_LIB
   void handle_ares_work_finish(channel_context*);
 #endif
 
  private:
-  void open_internal(channel*);
+  void open_internal(io_channel*);
 
   void perform_active_channels(fd_set* fds_array);
 
@@ -321,11 +321,11 @@ threadsafe_call: for cocos2d-x should be:
 
   int do_select(fd_set* fds_array, timeval& timeout);
 
-  bool do_nonblocking_connect(channel*);
-  bool do_nonblocking_connect_completion(fd_set* fds_array, channel*);
+  bool do_nonblocking_connect(io_channel*);
+  bool do_nonblocking_connect_completion(fd_set* fds_array, io_channel*);
 
-  void handle_connect_succeed(channel*, std::shared_ptr<xxsocket>);
-  void handle_connect_failed(channel*, int error);
+  void handle_connect_succeed(io_channel*, std::shared_ptr<xxsocket>);
+  void handle_connect_failed(io_channel*, int error);
 
   void register_descriptor(const socket_native_type fd, int flags);
   void unregister_descriptor(const socket_native_type fd, int flags);
@@ -346,7 +346,7 @@ threadsafe_call: for cocos2d-x should be:
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime
   // dynmaically: because this API is not thread safe.
-  channel* new_channel(const io_hostent& ep);
+  io_channel* new_channel(const io_hostent& ep);
 
   // Clear all channels after service exit.
   void clear_channels();  // destroy all channels
@@ -357,13 +357,13 @@ threadsafe_call: for cocos2d-x should be:
   bool close_internal(io_base* ctx);
 
   // Update resolve state for new endpoint set
-  void update_resolve_state(channel* ctx);
+  void update_resolve_state(io_channel* ctx);
 
   void handle_send_finished(a_pdu_ptr, error_number);
 
   // supporting server
-  void do_nonblocking_accept(channel*);
-  void do_nonblocking_accept_completion(fd_set* fds_array, channel*);
+  void do_nonblocking_accept(io_channel*);
+  void do_nonblocking_accept_completion(fd_set* fds_array, io_channel*);
 
  private:
   bool stopping_;
@@ -379,10 +379,10 @@ threadsafe_call: for cocos2d-x should be:
   std::mutex event_queue_mtx_;
   std::deque<io_event> event_queue_;
 
-  std::vector<channel*> channels_;
+  std::vector<io_channel*> channels_;
 
   std::mutex active_channels_mtx_;
-  std::vector<channel*> active_channels_;
+  std::vector<io_channel*> active_channels_;
 
   std::vector<transport_ptr> transports_;
 

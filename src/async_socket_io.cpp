@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.3.1
+// universal app version: 3.3
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -248,11 +248,11 @@ class a_pdu {
 #endif
 };
 
-channel::channel(async_socket_io& service) : deadline_timer_(service) {
+io_channel::io_channel(async_socket_io& service) : deadline_timer_(service) {
   socket_.reset(new xxsocket());
 }
 
-void channel::reset() {
+void io_channel::reset() {
   state_ = channel_state::INACTIVE;
 
   resolve_state_ = resolve_state::FAILED;
@@ -344,8 +344,8 @@ void async_socket_io::set_option(int option, long value) {
   }
 }
 
-channel* async_socket_io::new_channel(const io_hostent& ep) {
-  auto ctx = new channel(*this);
+io_channel* async_socket_io::new_channel(const io_hostent& ep) {
+  auto ctx = new io_channel(*this);
   ctx->reset();
   ctx->address_ = ep.address_;
   ctx->port_ = ep.port_;
@@ -769,7 +769,7 @@ void async_socket_io::handle_event(io_event&& event) {
   }
 }
 
-bool async_socket_io::do_nonblocking_connect(channel* ctx) {
+bool async_socket_io::do_nonblocking_connect(io_channel* ctx) {
   assert(ctx->state_ == channel_state::REQUEST_CONNECT);
   if (ctx->state_ != channel_state::REQUEST_CONNECT)
     return true;
@@ -837,7 +837,7 @@ bool async_socket_io::do_nonblocking_connect(channel* ctx) {
 }
 
 bool async_socket_io::do_nonblocking_connect_completion(fd_set* fds_array,
-                                                        channel* ctx) {
+                                                        io_channel* ctx) {
   if (ctx->state_ == channel_state::CONNECTING) {
     int error = -1;
     if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
@@ -862,7 +862,7 @@ bool async_socket_io::do_nonblocking_connect_completion(fd_set* fds_array,
 }
 
 void async_socket_io::do_nonblocking_accept(
-    channel* ctx) {  // channel is server
+    io_channel* ctx) {  // channel is server
   close_internal(ctx);
 
   if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
@@ -897,7 +897,7 @@ void async_socket_io::do_nonblocking_accept(
 }
 
 void async_socket_io::do_nonblocking_accept_completion(fd_set* fds_array,
-                                                       channel* ctx) {
+                                                       io_channel* ctx) {
   if (ctx->state_ == channel_state::CONNECTING) {
     int error = -1;
     if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op])) {
@@ -921,9 +921,9 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set* fds_array,
   }
 }
 
-void async_socket_io::handle_connect_succeed(channel* ctx,
+void async_socket_io::handle_connect_succeed(io_channel* ctx,
                                              std::shared_ptr<xxsocket> socket) {
-  transport_ptr transport(new transport(ctx));
+  transport_ptr transport(new io_transport(ctx));
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {  // The client channl
     unregister_descriptor(socket->native_handle(),
@@ -944,7 +944,7 @@ void async_socket_io::handle_connect_succeed(channel* ctx,
       io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport));
 }
 
-void async_socket_io::handle_connect_failed(channel* ctx, int error) {
+void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
   close_internal(ctx);
 
   ctx->state_ = channel_state::INACTIVE;
@@ -1165,7 +1165,7 @@ void async_socket_io::cancel_timer(deadline_timer* timer) {
   }
 }
 
-void async_socket_io::open_internal(channel* ctx) {
+void async_socket_io::open_internal(io_channel* ctx) {
   if (ctx->state_ == channel_state::REQUEST_CONNECT ||
       ctx->state_ == channel_state::CONNECTING) {  // in-progress, do nothing
     INET_LOG("[index: %d] the connect request is already in progress!",
@@ -1292,7 +1292,7 @@ bool async_socket_io::close_internal(io_base* ctx) {
   return false;
 }
 
-void async_socket_io::update_resolve_state(channel* ctx) {
+void async_socket_io::update_resolve_state(io_channel* ctx) {
   if (ctx->port_ > 0) {
     ip::endpoint ep;
     ctx->endpoints_.clear();
@@ -1307,7 +1307,7 @@ void async_socket_io::update_resolve_state(channel* ctx) {
 }
 
 bool async_socket_io::start_resolve(
-    channel* ctx) {  // Only call at event-loop thread, so
+    io_channel* ctx) {  // Only call at event-loop thread, so
   // no need to consider thread safe.
   if (ctx->resolve_state_ != resolve_state::DIRTY)
     return false;

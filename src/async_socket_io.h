@@ -28,12 +28,6 @@ SOFTWARE.
 
 #ifndef _ASYNC_SOCKET_IO_H_
 #define _ASYNC_SOCKET_IO_H_
-#include "deadline_timer.h"
-#include "endian_portable.h"
-#include "object_pool.h"
-#include "select_interrupter.hpp"
-#include "singleton.h"
-#include "xxsocket.h"
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -43,11 +37,16 @@ SOFTWARE.
 #include <queue>
 #include <thread>
 #include <vector>
+#include "deadline_timer.h"
+#include "endian_portable.h"
+#include "object_pool.h"
+#include "select_interrupter.hpp"
+#include "singleton.h"
+#include "xxsocket.h"
 
 #define _USING_ARES_LIB 0
 #define _USING_SHARED_PTR 1
 #define _USING_OBJECT_POOL 1
-#define _ENABLE_SEND_CB 0
 
 #if !defined(_ARRAYSIZE)
 #define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
@@ -76,20 +75,20 @@ enum class resolve_state {
 };
 
 enum error_number {
-  ERR_OK,                         // NO ERROR
-  ERR_CONNECT_FAILED = -201,      // connect failed
-  ERR_CONNECT_TIMEOUT,            // connect timeout
-  ERR_SEND_FAILED,                // send error, failed
-  ERR_SEND_TIMEOUT,               // send timeout
-  ERR_RECV_FAILED,                // recv failed
-  ERR_NETWORK_UNREACHABLE,        // wifi or 2,3,4G not open
-  ERR_CONNECTION_LOST,            // connection lost
-  ERR_DPL_ILLEGAL_PDU,            // decode pdu error.
-  ERR_RESOLVE_HOST_FAILED,        // resolve host failed.
-  ERR_RESOLVE_HOST_TIMEOUT,       // resolve host ip timeout.
-  ERR_RESOLVE_HOST_IPV6_REQUIRED, // resolve host ip failed, a valid ipv6 host
+  ERR_OK,                          // NO ERROR
+  ERR_CONNECT_FAILED = -201,       // connect failed
+  ERR_CONNECT_TIMEOUT,             // connect timeout
+  ERR_SEND_FAILED,                 // send error, failed
+  ERR_SEND_TIMEOUT,                // send timeout
+  ERR_RECV_FAILED,                 // recv failed
+  ERR_NETWORK_UNREACHABLE,         // wifi or 2,3,4G not open
+  ERR_CONNECTION_LOST,             // connection lost
+  ERR_DPL_ILLEGAL_PDU,             // decode pdu error.
+  ERR_RESOLVE_HOST_FAILED,         // resolve host failed.
+  ERR_RESOLVE_HOST_TIMEOUT,        // resolve host ip timeout.
+  ERR_RESOLVE_HOST_IPV6_REQUIRED,  // resolve host ip failed, a valid ipv6 host
   // required.
-  ERR_INVALID_PORT, // invalid port.
+  ERR_INVALID_PORT,  // invalid port.
 };
 
 enum {
@@ -108,32 +107,33 @@ enum {
 
 typedef std::function<void()> vdcallback_t;
 
-static const int socket_recv_buffer_size = 65536; // 64K
+static const int socket_recv_buffer_size = 65536;  // 64K
 
-class a_pdu; // application layer protocol data unit.
+class a_pdu;  // application layer protocol data unit.
 
 #if _USING_SHARED_PTR
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 #else
-typedef a_pdu *a_pdu_ptr;
+typedef a_pdu* a_pdu_ptr;
 #endif
 
 class async_socket_io;
-struct channel_endpoint {
+
+struct io_hostent {
   std::string address_;
   u_short port_;
 };
 
-struct channel_transport;
+struct transport;
 
-struct channel_base {
+struct io_base {
   std::shared_ptr<xxsocket> socket_;
   channel_state
-      state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+      state_;  // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
 };
 
-struct channel_context : public channel_base {
-  channel_context(async_socket_io &service);
+struct channel : public io_base {
+  channel(async_socket_io& service);
 
   int type_ = 0;
 
@@ -153,28 +153,26 @@ struct channel_context : public channel_base {
   void reset();
 };
 
-struct channel_transport : public channel_base {
+struct transport : public io_base {
   friend class async_socket_io;
 
-public:
+ public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int channel_index() const { return ctx_->index_; }
   int error_code() const { return error_; }
 
-private:
-  channel_transport(channel_context *ctx) : ctx_(ctx) {
-    state_ = (channel_state::CONNECTED);
-  }
-  channel_context *ctx_;
+ private:
+  transport(channel* ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED); }
+  channel* ctx_;
 
-  char buffer_[socket_recv_buffer_size + 1]; // recv buffer
-  int offset_ = 0;                           // recv buffer offset
+  char buffer_[socket_recv_buffer_size + 1];  // recv buffer
+  int offset_ = 0;                            // recv buffer offset
 
   std::vector<char> receiving_pdu_;
   int receiving_pdu_elen_ = -1;
-  int error_ = 0; // socket error(>= -1), application error(< -1)
+  int error_ = 0;  // socket error(>= -1), application error(< -1)
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
@@ -185,73 +183,79 @@ private:
   }
 };
 
+typedef std::shared_ptr<transport> transport_ptr;
+
 enum {
   MASIO_EVENT_CONNECT_RESPONSE = 0,
   MASIO_EVENT_CONNECTION_LOST,
   MASIO_EVENT_RECV_PACKET,
 };
-class channel_event final {
-public:
-  channel_event(int type, int error,
-                std::shared_ptr<channel_transport> transport)
-      : type_(type), error_code_(error), transport_(transport) {}
-  channel_event(int type, std::vector<char> packet)
-      : type_(type), error_code_(0), packet_(std::move(packet)) {}
-  channel_event(channel_event &&rhs)
-      : type_(rhs.type_), error_code_(rhs.error_code_),
-        transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_)) {
-  }
+class io_event final {
+ public:
+  io_event(int channel_index, int type, int error, transport_ptr transport)
+      : channel_index_(channel_index),
+        type_(type),
+        error_code_(error),
+        transport_(transport) {}
+  io_event(int channel_index, int type, std::vector<char> packet)
+      : channel_index_(channel_index),
+        type_(type),
+        error_code_(0),
+        packet_(std::move(packet)) {}
+  io_event(io_event&& rhs)
+      : channel_index_(rhs.channel_index_),
+        type_(rhs.type_),
+        error_code_(rhs.error_code_),
+        transport_(std::move(rhs.transport_)),
+        packet_(std::move(rhs.packet_)) {}
 
-  ~channel_event() {}
+  ~io_event() {}
 
-  int get_type() const { return type_; }
-  int get_error_code() const { return error_code_; }
+  int channel_index() const { return channel_index_; }
 
-  std::shared_ptr<channel_transport> get_transport() const {
-    return transport_;
-  }
+  int type() const { return type_; }
+  int error_code() const { return error_code_; }
 
-  const std::vector<char> &get_packet() const { return packet_; }
-  std::vector<char> retrive_packet() { return std::move(packet_); }
+  transport_ptr transport() const { return transport_; }
 
-private:
+  const std::vector<char>& packet() const { return packet_; }
+  std::vector<char> take_packet() { return std::move(packet_); }
+
+ private:
+  int channel_index_;
   int type_;
   int error_code_;
-  std::shared_ptr<channel_transport> transport_;
+  transport_ptr transport_;
   std::vector<char> packet_;
 };
 
 class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
-typedef std::function<void(std::vector<char>)> recv_pdu_callback_t;
-typedef std::function<void(channel_event &&)> on_event_callback_t;
+typedef std::function<void(io_event&&)> on_event_callback_t;
 
 class async_socket_io {
-public:
+ public:
   // End user pdu decode length func
-  typedef bool (*decode_pdu_length_func)(char *data, size_t datalen, int &len);
+  typedef bool (*decode_pdu_length_func)(char* data, int datalen, int& len);
 
   // connection callbacks
-  typedef std::function<void(std::shared_ptr<channel_transport>)>
-      connection_lost_callback_t;
-  typedef std::function<void(size_t, std::shared_ptr<channel_transport>,
-                             int ec)>
+  typedef std::function<void(transport_ptr)> connection_lost_callback_t;
+  typedef std::function<void(size_t, transport_ptr, int ec)>
       connect_response_callback_t;
 
-public:
+ public:
   async_socket_io();
   ~async_socket_io();
 
   // start async socket service
-  void start_service(const channel_endpoint *channel_eps,
-                     int channel_count = 1);
+  void start_service(const io_hostent* channel_eps, int channel_count = 1);
 
   void stop_service();
 
-  void set_endpoint(size_t channel_index, const char *address, u_short port);
+  void set_endpoint(size_t channel_index, const char* address, u_short port);
 
-  void set_endpoint(size_t channel_index, const ip::endpoint &ep);
+  void set_endpoint(size_t channel_index, const ip::endpoint& ep);
 
   size_t get_event_count(void) const;
 
@@ -267,7 +271,7 @@ threadsafe_call: for cocos2d-x should be:
 */
   void set_callbacks(decode_pdu_length_func decode_length_func,
                      on_event_callback_t on_event,
-                     std::function<void(const vdcallback_t &)> threadsafe_call);
+                     std::function<void(const vdcallback_t&)> threadsafe_call);
 
   /* option: MASIO_OPT_CONNECT_TIMEOUT
              MASIO_OPT_SEND_TIMEOUT
@@ -280,10 +284,10 @@ threadsafe_call: for cocos2d-x should be:
   // open a channel, default: TCP_CLIENT
   void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
 
-  void reopen(std::shared_ptr<channel_transport>);
+  void reopen(transport_ptr);
 
   // close client
-  void close(std::shared_ptr<channel_transport> transport);
+  void close(transport_ptr transport);
 
   // close server
   void close(size_t channel_index = 0);
@@ -291,43 +295,37 @@ threadsafe_call: for cocos2d-x should be:
   // Whether the client-->server connection established.
   bool is_connected(size_t cahnnel_index = 0) const;
 
-  void write(std::shared_ptr<channel_transport> transport,
-             std::vector<char> &&data
-#if _ENABLE_SEND_CB
-             ,
-             send_pdu_callback_t callback = nullptr
-#endif
-  );
+  void write(transport_ptr transport, std::vector<char>&& data);
 
   // timer support
-  void schedule_timer(deadline_timer *);
-  void cancel_timer(deadline_timer *);
+  void schedule_timer(deadline_timer*);
+  void cancel_timer(deadline_timer*);
 
   void interrupt();
 
   // Start a async resolve, It's only for internal use
-  bool start_resolve(channel_context *);
+  bool start_resolve(channel*);
 
 #if _USING_ARES_LIB
-  void handle_ares_work_finish(channel_context *);
+  void handle_ares_work_finish(channel_context*);
 #endif
 
-private:
-  void open_internal(channel_context *);
+ private:
+  void open_internal(channel*);
 
-  void perform_active_channels(fd_set *fds_array);
+  void perform_active_channels(fd_set* fds_array);
 
-  void perform_timeout_timers(); // ALL timer expired
+  void perform_timeout_timers();  // ALL timer expired
 
   long long get_wait_duration(long long usec);
 
-  int do_select(fd_set *fds_array, timeval &timeout);
+  int do_select(fd_set* fds_array, timeval& timeout);
 
-  bool do_nonblocking_connect(channel_context *);
-  bool do_nonblocking_connect_completion(fd_set *fds_array, channel_context *);
+  bool do_nonblocking_connect(channel*);
+  bool do_nonblocking_connect_completion(fd_set* fds_array, channel*);
 
-  void handle_connect_succeed(channel_context *, std::shared_ptr<xxsocket>);
-  void handle_connect_failed(channel_context *, int error);
+  void handle_connect_succeed(channel*, std::shared_ptr<xxsocket>);
+  void handle_connect_failed(channel*, int error);
 
   void register_descriptor(const socket_native_type fd, int flags);
   void unregister_descriptor(const socket_native_type fd, int flags);
@@ -335,41 +333,39 @@ private:
   // The major async event-loop
   void service(void);
 
-  bool do_write(std::shared_ptr<channel_transport>);
-  bool do_read(std::shared_ptr<channel_transport>);
-  void do_unpack(std::shared_ptr<channel_transport>, int bytes_expected,
-                 int bytes_transferred);
+  bool do_write(transport_ptr);
+  bool do_read(transport_ptr);
+  void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
-  void handle_packet(std::shared_ptr<channel_transport> transport);
+  void handle_packet(transport_ptr);
 
-  void handle_close(
-      std::shared_ptr<channel_transport>); // TODO: add error_number parameter
+  void handle_close(transport_ptr);  // TODO: add error_number parameter
 
-  void post_event(channel_event &&event);
+  void post_event(io_event&& event);
 
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime
   // dynmaically: because this API is not thread safe.
-  channel_context *new_channel(const channel_endpoint &ep);
+  channel* new_channel(const io_hostent& ep);
 
   // Clear all channels after service exit.
-  void clear_channels(); // destroy all channels
+  void clear_channels();  // destroy all channels
 
   // int        set_errorno(channel_context* ctx, int error);
 
   // ensure event fd unregistered & closed.
-  bool close_internal(channel_base *ctx);
+  bool close_internal(io_base* ctx);
 
   // Update resolve state for new endpoint set
-  void update_resolve_state(channel_context *ctx);
+  void update_resolve_state(channel* ctx);
 
   void handle_send_finished(a_pdu_ptr, error_number);
 
   // supporting server
-  void do_nonblocking_accept(channel_context *);
-  void do_nonblocking_accept_completion(fd_set *fds_array, channel_context *);
+  void do_nonblocking_accept(channel*);
+  void do_nonblocking_accept_completion(fd_set* fds_array, channel*);
 
-private:
+ private:
   bool stopping_;
   bool thread_started_;
   std::thread worker_thread_;
@@ -381,27 +377,27 @@ private:
 
   bool deferred_event_ = true;
   std::mutex event_queue_mtx_;
-  std::deque<channel_event> event_queue_;
+  std::deque<io_event> event_queue_;
 
-  std::vector<channel_context *> channels_;
+  std::vector<channel*> channels_;
 
   std::mutex active_channels_mtx_;
-  std::vector<channel_context *> active_channels_;
+  std::vector<channel*> active_channels_;
 
-  std::vector<std::shared_ptr<channel_transport>> transports_;
+  std::vector<transport_ptr> transports_;
 
   // select interrupter
   select_interrupter interrupter_;
 
   // timer support
-  std::vector<deadline_timer *> timer_queue_;
+  std::vector<deadline_timer*> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 
   // socket event set
   int maxfdp_;
   enum {
-    read_op,  // for async read and write(trigger by interrupt)
-    write_op, // for async connect
+    read_op,   // for async read and write(trigger by interrupt)
+    write_op,  // for async connect
     except_op,
   };
   fd_set fds_array_[3];
@@ -411,19 +407,19 @@ private:
 
   // callbacks
   decode_pdu_length_func decode_pdu_length_;
-  std::function<void(channel_event &&)> on_event_;
-  std::function<void(const vdcallback_t &)> threadsafe_call_;
+  std::function<void(io_event&&)> on_event_;
+  std::function<void(vdcallback_t)> threadsafe_call_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support
-  void *ares_; // the ares handle
+  void* ares_;  // the ares handle
   int ares_outstanding_work_;
 #endif
-  int ipsv_state_; // local network state
-};                 // async_socket_io
-};                 // namespace inet
-};                 /* namespace purelib */
+  int ipsv_state_;  // local network state
+};                  // async_socket_io
+};                  // namespace inet
+};                  /* namespace purelib */
 #endif
 
-#define myasio                                                                 \
+#define myasio \
   purelib::gc::singleton<purelib::inet::async_socket_io>::instance()

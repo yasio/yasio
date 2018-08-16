@@ -46,7 +46,7 @@ void append_string(std::vector<char> &packet, const char (&message)[_Size]) {
 
 int main(int, char **) {
 
-  purelib::inet::channel_endpoint endpoints[] = {
+  purelib::inet::io_hostent endpoints[] = {
       {"203.162.71.67", 80}, // http client
       {"www.ip138.com", 80}       //  { "www.ip138.com", 80 },  // http client
   };
@@ -59,10 +59,10 @@ int main(int, char **) {
     printf("the timer is expired\n");
   });
 
-  std::vector<std::shared_ptr<channel_transport>> transports;
+  std::vector<std::shared_ptr<transport>> transports;
 
   myasio->set_callbacks(
-      [](char *data, size_t datalen, int &len) { // decode pdu length func
+      [](char *data, int datalen, int &len) { // decode pdu length func
         if (datalen >= 4 && data[datalen - 1] == '\n' &&
             data[datalen - 2] == '\r' && data[datalen - 3] == '\n' &&
             data[datalen - 4] == '\r') {
@@ -83,7 +83,7 @@ int main(int, char **) {
                   ptr = strstr(ptr, "\r\n\r\n");
                   if (ptr != nullptr) {
                     ptr += (sizeof("\r\n\r\n") - 1);
-                    len = bodylen + (ptr - data);
+                    len = bodylen + static_cast<int>(ptr - data);
                   }
                 }
               }
@@ -92,17 +92,17 @@ int main(int, char **) {
         }
         return true;
       },
-      [&](channel_event &&event) {
-        switch (event.get_type()) {
+      [&](io_event &&event) {
+        switch (event.type()) {
         case MASIO_EVENT_RECV_PACKET: {
-          auto packet = event.retrive_packet();
+          auto packet = event.take_packet();
           packet.push_back('\0');
           printf("receive data:%s", packet.data());
           break;
         }
         case MASIO_EVENT_CONNECT_RESPONSE:
-          if (event.get_error_code() == 0) {
-            auto transport = event.get_transport();
+          if (event.error_code() == 0) {
+            auto transport = event.transport();
             std::vector<char> packet;
             append_string(packet, "GET /index.htm HTTP/1.1\r\n");
 

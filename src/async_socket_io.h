@@ -341,7 +341,7 @@ threadsafe_call: for cocos2d-x should be:
 
   void handle_close(transport_ptr);  // TODO: add error_number parameter
 
-  void post_event(io_event&& event);
+  void handle_event(io_event&& event);
 
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime

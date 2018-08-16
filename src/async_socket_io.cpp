@@ -678,7 +678,7 @@ void async_socket_io::handle_close(transport_ptr transport) {
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
-  this->post_event(io_event(ctx->index_, MASIO_EVENT_CONNECTION_LOST,
+  this->handle_event(io_event(ctx->index_, MASIO_EVENT_CONNECTION_LOST,
                             transport->error_, transport));
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
@@ -754,12 +754,12 @@ void async_socket_io::handle_packet(transport_ptr transport) {
       "packet size:%d",
       ctx->index_, ctx->receiving_pdu_elen_);
 #endif
-  this->post_event(io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
+  this->handle_event(io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
                             std::move(transport->receiving_pdu_)));
   transport->receiving_pdu_elen_ = -1;
 }
 
-void async_socket_io::post_event(io_event&& event) {
+void async_socket_io::handle_event(io_event&& event) {
   if (deferred_event_) {
     event_queue_mtx_.lock();
     event_queue_.push_back(std::move(event));
@@ -940,7 +940,7 @@ void async_socket_io::handle_connect_succeed(channel* ctx,
            ctx->index_, connection->local_endpoint().to_string().c_str(),
            connection->peer_endpoint().to_string().c_str());
 
-  this->post_event(
+  this->handle_event(
       io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport));
 }
 
@@ -949,7 +949,7 @@ void async_socket_io::handle_connect_failed(channel* ctx, int error) {
 
   ctx->state_ = channel_state::INACTIVE;
 
-  this->post_event(
+  this->handle_event(
       io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s",

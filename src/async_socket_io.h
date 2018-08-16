@@ -103,6 +103,7 @@ enum {
   MASIO_OPT_SEND_TIMEOUT,
   MASIO_OPT_RECONNECT_TIMEOUT,
   MASIO_OPT_DNS_CACHE_TIMEOUT,
+  MASIO_OPT_DEFER_EVENT,
 };
 
 typedef std::function<void()> vdcallback_t;
@@ -272,6 +273,7 @@ threadsafe_call: for cocos2d-x should be:
              MASIO_OPT_SEND_TIMEOUT
              MASIO_OPT_RECONNECT_TIMEOUT
              MASIO_OPT_DNS_CACHE_TIMEOUT
+             MASIO_OPT_DEFER_EVENT
   */
   void set_option(int option, long value);
 

@@ -341,6 +341,9 @@ void async_socket_io::set_option(int option, long value) {
   case MASIO_OPT_DNS_CACHE_TIMEOUT:
     this->dns_cache_timeout_ =
         static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+   break;
+  case MASIO_OPT_DEFER_EVENT:
+    this->deferred_event_ = !!value;
     break;
   }
 }

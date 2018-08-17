@@ -67,17 +67,17 @@ int main(int, char **) {
         }
         return true;
       },
-      [&](io_event &&event) {
-        switch (event.type()) {
+      [&](event_ptr event) {
+        switch (event->type()) {
         case MASIO_EVENT_RECV_PACKET: {
-          auto packet = event.take_packet();
+          auto packet = event->take_packet();
           packet.push_back('\0');
           printf("receive data:%s", packet.data());
           break;
         }
         case MASIO_EVENT_CONNECT_RESPONSE:
-          if (event.error_code() == 0) {
-            auto transport = event.transport();
+          if (event->error_code() == 0) {
+            auto transport = event->transport();
             std::vector<char> packet;
             append_string(packet, "GET /index.htm HTTP/1.1\r\n");
 

@@ -221,6 +221,10 @@ class io_event final {
   const std::vector<char>& packet() const { return packet_; }
   std::vector<char> take_packet() { return std::move(packet_); }
 
+#if _USING_OBJECT_POOL
+  DEFINE_OBJECT_POOL_ALLOCATION2(io_event, 512)
+#endif
+
  private:
   int channel_index_;
   int type_;
@@ -228,11 +232,12 @@ class io_event final {
   transport_ptr transport_;
   std::vector<char> packet_;
 };
+typedef std::shared_ptr<io_event> event_ptr;
 
 class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
-typedef std::function<void(io_event&&)> on_event_callback_t;
+typedef std::function<void(event_ptr)> on_event_callback_t;
 
 class async_socket_io {
  public:
@@ -332,7 +337,7 @@ class async_socket_io {
 
   void handle_close(transport_ptr);  // TODO: add error_number parameter
 
-  void handle_event(io_event&& event);
+  void handle_event(event_ptr event);
 
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime
@@ -368,7 +373,7 @@ class async_socket_io {
 
   bool deferred_event_ = true;
   std::mutex event_queue_mtx_;
-  std::deque<io_event> event_queue_;
+  std::deque<event_ptr> event_queue_;
 
   std::vector<io_channel*> channels_;
 
@@ -398,7 +403,7 @@ class async_socket_io {
 
   // callbacks
   decode_pdu_length_func decode_pdu_length_;
-  std::function<void(io_event&&)> on_event_;
+  std::function<void(event_ptr)> on_event_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support

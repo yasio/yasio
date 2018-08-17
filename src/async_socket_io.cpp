@@ -380,7 +380,7 @@ void async_socket_io::dispatch_events(int count) {
 
   std::lock_guard<std::mutex> autolock(this->event_queue_mtx_);
   do {
-    auto event = std::move(this->event_queue_.front());
+    auto event = this->event_queue_.front();
     this->event_queue_.pop_front();
     this->on_event_(std::move(event));
   } while (!this->event_queue_.empty() && --count > 0);
@@ -674,8 +674,8 @@ void async_socket_io::handle_close(transport_ptr transport) {
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
-  this->handle_event(io_event(ctx->index_, MASIO_EVENT_CONNECTION_LOST,
-                            transport->error_, transport));
+  this->handle_event(event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECTION_LOST,
+                            transport->error_, transport)));
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
     if (channel_state::REQUEST_CONNECT != ctx->state_)
@@ -729,8 +729,7 @@ void async_socket_io::unregister_descriptor(const socket_native_type fd,
 
 void async_socket_io::write(transport_ptr transport, std::vector<char>&& data) {
   if (transport && transport->socket_->is_open()) {
-    auto pdu = a_pdu_ptr(new a_pdu(
-        std::move(data), std::chrono::microseconds(this->send_timeout_)));
+    auto pdu = a_pdu_ptr(new a_pdu(std::move(data), std::chrono::microseconds(this->send_timeout_)));
 
     transport->send_queue_mtx_.lock();
     transport->send_queue_.push_back(pdu);
@@ -750,12 +749,12 @@ void async_socket_io::handle_packet(transport_ptr transport) {
       "packet size:%d",
       ctx->index_, ctx->receiving_pdu_elen_);
 #endif
-  this->handle_event(io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
-                            std::move(transport->receiving_pdu_)));
+  this->handle_event(event_ptr(new io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
+                            std::move(transport->receiving_pdu_))));
   transport->receiving_pdu_elen_ = -1;
 }
 
-void async_socket_io::handle_event(io_event&& event) {
+void async_socket_io::handle_event(event_ptr event) {
   if (deferred_event_) {
     event_queue_mtx_.lock();
     event_queue_.push_back(std::move(event));
@@ -936,8 +935,7 @@ void async_socket_io::handle_connect_succeed(io_channel* ctx,
            ctx->index_, connection->local_endpoint().to_string().c_str(),
            connection->peer_endpoint().to_string().c_str());
 
-  this->handle_event(
-      io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport));
+  this->handle_event(event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 }
 
 void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
@@ -945,8 +943,7 @@ void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
 
   ctx->state_ = channel_state::INACTIVE;
 
-  this->handle_event(
-      io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr));
+  this->handle_event(event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s",
            ctx->index_, ctx->address_.c_str(), ctx->port_, error,

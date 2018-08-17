@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.3
+// universal app version: 3.3.1
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -248,30 +248,21 @@ class async_socket_io {
   async_socket_io();
   ~async_socket_io();
 
+  // set callbacks, required API, must call before dispatch_events
+  void set_callbacks(decode_pdu_length_func decode_length_func, on_event_callback_t on_event);
+
   // start async socket service
   void start_service(const io_hostent* channel_eps, int channel_count = 1);
-
   void stop_service();
 
   void set_endpoint(size_t channel_index, const char* address, u_short port);
-
   void set_endpoint(size_t channel_index, const ip::endpoint& ep);
 
-  size_t get_event_count(void) const;
-
-  // must be call on main thread(such cocos2d-x opengl thread)
+  // should call at the thread who care about async io events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET),
+  // such cocos2d-x opengl or any other game engines' render thread.
   void dispatch_events(int count = 512);
-
-  // set callbacks, required API, must call by user
-  /*
-threadsafe_call: for cocos2d-x should be:
-[](const vdcallback_t& callback) {
-  cocos2d::Director::getInstance()->getScheduler()->performFunctionInCocosThread(callback);
-}
-*/
-  void set_callbacks(decode_pdu_length_func decode_length_func,
-                     on_event_callback_t on_event,
-                     std::function<void(const vdcallback_t&)> threadsafe_call);
+ 
+  size_t get_event_count(void) const;
 
   /* option: MASIO_OPT_CONNECT_TIMEOUT
              MASIO_OPT_SEND_TIMEOUT
@@ -408,7 +399,6 @@ threadsafe_call: for cocos2d-x should be:
   // callbacks
   decode_pdu_length_func decode_pdu_length_;
   std::function<void(io_event&&)> on_event_;
-  std::function<void(vdcallback_t)> threadsafe_call_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support

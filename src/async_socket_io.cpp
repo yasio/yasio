@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.3
+// universal app version: 3.3.1
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -363,13 +363,9 @@ void async_socket_io::clear_channels() {
   }
 }
 
-void async_socket_io::set_callbacks(
-    decode_pdu_length_func decode_length_func,
-    on_event_callback_t on_event,
-    std::function<void(const vdcallback_t&)> threadsafe_call) {
+void async_socket_io::set_callbacks(decode_pdu_length_func decode_length_func, on_event_callback_t on_event) {
   this->decode_pdu_length_ = decode_length_func;
   this->on_event_ = std::move(on_event);
-  this->threadsafe_call_ = std::move(threadsafe_call);
 }
 
 size_t async_socket_io::get_event_count(void) const {

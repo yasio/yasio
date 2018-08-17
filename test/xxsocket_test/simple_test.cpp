@@ -11,6 +11,9 @@
 
 using namespace purelib::inet;
 
+static const int sz1 = 0x0fe4;
+static const char sz2 = 47;
+
 template <size_t _Size>
 void append_string(std::vector<char> &packet, const char (&message)[_Size]) {
   packet.insert(packet.end(), message, message + _Size - 1);
@@ -31,7 +34,7 @@ int main(int, char **) {
     printf("the timer is expired\n");
   });
 
-  std::vector<std::shared_ptr<transport>> transports;
+  std::vector<std::shared_ptr<io_transport>> transports;
 
   myasio->set_callbacks(
       [](char *data, int datalen, int &len) { // decode pdu length func
@@ -109,9 +112,6 @@ int main(int, char **) {
           printf("The connection is lost(user end)!\n");
           break;
         }
-      },
-      [](const vdcallback_t &callback) { // thread safe call
-        callback();
       });
 
   std::this_thread::sleep_for(std::chrono::seconds(1));

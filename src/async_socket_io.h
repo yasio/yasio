@@ -164,7 +164,9 @@ struct io_transport : public io_base {
   int error_code() const { return error_; }
 
  private:
-  io_transport(io_channel* ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED); }
+  io_transport(io_channel* ctx) : ctx_(ctx) {
+    state_ = (channel_state::CONNECTED);
+  }
   io_channel* ctx_;
 
   char buffer_[socket_recv_buffer_size + 1];  // recv buffer
@@ -238,12 +240,13 @@ class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
 typedef std::function<void(event_ptr)> on_event_callback_t;
+typedef std::function<int(char* data, int datalen)>
+    decode_pdu_length_callback_t;  // -1 indicate failed, connection will be
+                                   // closed
 
 class async_socket_io {
  public:
   // End user pdu decode length func
-  typedef bool (*decode_pdu_length_func)(char* data, int datalen, int& len);
-
   // connection callbacks
   typedef std::function<void(transport_ptr)> connection_lost_callback_t;
   typedef std::function<void(size_t, transport_ptr, int ec)>
@@ -254,7 +257,8 @@ class async_socket_io {
   ~async_socket_io();
 
   // set callbacks, required API, must call before dispatch_events
-  void set_callbacks(decode_pdu_length_func decode_length_func, on_event_callback_t on_event);
+  void set_callbacks(decode_pdu_length_callback_t decode_length_func,
+                     on_event_callback_t on_event);
 
   // start async socket service
   void start_service(const io_hostent* channel_eps, int channel_count = 1);
@@ -263,10 +267,11 @@ class async_socket_io {
   void set_endpoint(size_t channel_index, const char* address, u_short port);
   void set_endpoint(size_t channel_index, const ip::endpoint& ep);
 
-  // should call at the thread who care about async io events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET),
-  // such cocos2d-x opengl or any other game engines' render thread.
+  // should call at the thread who care about async io
+  // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
+  // any other game engines' render thread.
   void dispatch_events(int count = 512);
- 
+
   size_t get_event_count(void) const;
 
   /* option: MASIO_OPT_CONNECT_TIMEOUT
@@ -291,7 +296,7 @@ class async_socket_io {
   // Whether the client-->server connection established.
   bool is_connected(size_t cahnnel_index = 0) const;
 
-  void write(transport_ptr transport, std::vector<char>&& data);
+  void write(transport_ptr transport, std::vector<char> data);
 
   // timer support
   void schedule_timer(deadline_timer*);
@@ -402,7 +407,7 @@ class async_socket_io {
   int outstanding_work_;
 
   // callbacks
-  decode_pdu_length_func decode_pdu_length_;
+  decode_pdu_length_callback_t decode_pdu_length_;
   std::function<void(event_ptr)> on_event_;
 
 #if _USING_ARES_LIB

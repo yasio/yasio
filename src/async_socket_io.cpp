@@ -167,8 +167,7 @@ static std::string _sfmt(const char* format, ...) {
 }
 
 #if _USING_ARES_LIB
-static void ares_getaddrinfo_callback(void* arg,
-                                      int status,
+static void ares_getaddrinfo_callback(void* arg, int status,
                                       addrinfo* answerlist) {
   auto ctx = (channel*)arg;
   if (status == ARES_SUCCESS) {
@@ -285,9 +284,7 @@ async_socket_io::async_socket_io()
   ipsv_state_ = 0;
 }
 
-async_socket_io::~async_socket_io() {
-  stop_service();
-}
+async_socket_io::~async_socket_io() { stop_service(); }
 
 void async_socket_io::stop_service() {
   if (thread_started_) {
@@ -301,8 +298,7 @@ void async_socket_io::stop_service() {
     }
 
     interrupter_.interrupt();
-    if (this->worker_thread_.joinable())
-      this->worker_thread_.join();
+    if (this->worker_thread_.joinable()) this->worker_thread_.join();
 
     clear_channels();
 
@@ -363,8 +359,10 @@ void async_socket_io::clear_channels() {
   }
 }
 
-void async_socket_io::set_callbacks(decode_pdu_length_func decode_length_func, on_event_callback_t on_event) {
-  this->decode_pdu_length_ = decode_length_func;
+void async_socket_io::set_callbacks(
+    decode_pdu_length_callback_t decode_length_func,
+    on_event_callback_t on_event) {
+  this->decode_pdu_length_ = std::move(decode_length_func);
   this->on_event_ = std::move(on_event);
 }
 
@@ -375,8 +373,7 @@ size_t async_socket_io::get_event_count(void) const {
 void async_socket_io::dispatch_events(int count) {
   assert(this->on_event_ != nullptr);
 
-  if (this->event_queue_.empty())
-    return;
+  if (this->event_queue_.empty()) return;
 
   std::lock_guard<std::mutex> autolock(this->event_queue_mtx_);
   do {
@@ -389,8 +386,7 @@ void async_socket_io::dispatch_events(int count) {
 void async_socket_io::start_service(const io_hostent* channel_eps,
                                     int channel_count) {
   if (!thread_started_) {
-    if (channel_count <= 0)
-      return;
+    if (channel_count <= 0) return;
 
     stopping_ = false;
     thread_started_ = true;
@@ -420,12 +416,10 @@ void async_socket_io::start_service(const io_hostent* channel_eps,
   }
 }
 
-void async_socket_io::set_endpoint(size_t channel_index,
-                                   const char* address,
+void async_socket_io::set_endpoint(size_t channel_index, const char* address,
                                    u_short port) {
   // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
+  if (channel_index >= channels_.size()) return;
   auto ctx = channels_[channel_index];
 
   ctx->address_ = address;
@@ -436,8 +430,7 @@ void async_socket_io::set_endpoint(size_t channel_index,
 void async_socket_io::set_endpoint(size_t channel_index,
                                    const ip::endpoint& ep) {
   // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
+  if (channel_index >= channels_.size()) return;
   auto ctx = channels_[channel_index];
 
   ctx->endpoints_.clear();
@@ -459,8 +452,7 @@ void async_socket_io::service() {  // The async event-loop
   for (; !stopping_;) {
     int nfds = do_select(fds_array, timeout);
 
-    if (stopping_)
-      break;
+    if (stopping_) break;
 
     if (nfds == -1) {
       int ec = xxsocket::get_last_errno();
@@ -545,8 +537,7 @@ void async_socket_io::service() {  // The async event-loop
           continue;
         }
 
-        if (!transport->send_queue_.empty())
-          ++this->outstanding_work_;
+        if (!transport->send_queue_.empty()) ++this->outstanding_work_;
 
         transport->send_queue_mtx_.unlock();
       }
@@ -611,13 +602,11 @@ void async_socket_io::perform_active_channels(fd_set* fds_array) {
 
 void async_socket_io::close(size_t channel_index) {
   // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
+  if (channel_index >= channels_.size()) return;
   auto ctx = channels_[channel_index];
 
   assert(ctx->type_ == CHANNEL_TCP_SERVER);
-  if (ctx->type_ != CHANNEL_TCP_SERVER)
-    return;
+  if (ctx->type_ != CHANNEL_TCP_SERVER) return;
   if (ctx->state_ != channel_state::INACTIVE) {
     ctx->state_ = channel_state::INACTIVE;
     unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
@@ -639,8 +628,7 @@ void async_socket_io::close(transport_ptr transport) {
 
 bool async_socket_io::is_connected(size_t channel_index) const {
   // Gets channel
-  if (channel_index >= channels_.size())
-    return false;
+  if (channel_index >= channels_.size()) return false;
   auto ctx = channels_[channel_index];
   return ctx->state_ == channel_state::CONNECTED;
 }
@@ -654,8 +642,7 @@ void async_socket_io::reopen(transport_ptr transport) {
 
 void async_socket_io::open(size_t channel_index, int channel_type) {
   // Gets channel
-  if (channel_index >= channels_.size())
-    return;
+  if (channel_index >= channels_.size()) return;
   auto ctx = channels_[channel_index];
 
   ctx->type_ = channel_type;
@@ -674,8 +661,8 @@ void async_socket_io::handle_close(transport_ptr transport) {
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
-  this->handle_event(event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECTION_LOST,
-                            transport->error_, transport)));
+  this->handle_event(event_ptr(new io_event(
+      ctx->index_, MASIO_EVENT_CONNECTION_LOST, transport->error_, transport)));
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
     if (channel_state::REQUEST_CONNECT != ctx->state_)
@@ -687,8 +674,7 @@ void async_socket_io::handle_close(transport_ptr transport) {
       timer->async_wait(
           [this, ctx, timer /*!important, hold on by lambda expression */](
               bool cancelled) {
-            if (!cancelled)
-              this->open_internal(ctx);
+            if (!cancelled) this->open_internal(ctx);
           });
     }
   }
@@ -708,8 +694,7 @@ void async_socket_io::register_descriptor(const socket_native_type fd,
     FD_SET(fd, &(fds_array_[except_op]));
   }
 
-  if (maxfdp_ < static_cast<int>(fd) + 1)
-    maxfdp_ = static_cast<int>(fd) + 1;
+  if (maxfdp_ < static_cast<int>(fd) + 1) maxfdp_ = static_cast<int>(fd) + 1;
 }
 
 void async_socket_io::unregister_descriptor(const socket_native_type fd,
@@ -727,9 +712,10 @@ void async_socket_io::unregister_descriptor(const socket_native_type fd,
   }
 }
 
-void async_socket_io::write(transport_ptr transport, std::vector<char>&& data) {
+void async_socket_io::write(transport_ptr transport, std::vector<char> data) {
   if (transport && transport->socket_->is_open()) {
-    auto pdu = a_pdu_ptr(new a_pdu(std::move(data), std::chrono::microseconds(this->send_timeout_)));
+    auto pdu = a_pdu_ptr(new a_pdu(
+        std::move(data), std::chrono::microseconds(this->send_timeout_)));
 
     transport->send_queue_mtx_.lock();
     transport->send_queue_.push_back(pdu);
@@ -749,8 +735,9 @@ void async_socket_io::handle_packet(transport_ptr transport) {
       "packet size:%d",
       ctx->index_, ctx->receiving_pdu_elen_);
 #endif
-  this->handle_event(event_ptr(new io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
-                            std::move(transport->receiving_pdu_))));
+  this->handle_event(event_ptr(
+      new io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
+                   std::move(transport->receiving_pdu_))));
   transport->receiving_pdu_elen_ = -1;
 }
 
@@ -766,11 +753,9 @@ void async_socket_io::handle_event(event_ptr event) {
 
 bool async_socket_io::do_nonblocking_connect(io_channel* ctx) {
   assert(ctx->state_ == channel_state::REQUEST_CONNECT);
-  if (ctx->state_ != channel_state::REQUEST_CONNECT)
-    return true;
+  if (ctx->state_ != channel_state::REQUEST_CONNECT) return true;
 
-  if (this->ipsv_state_ == 0)
-    this->ipsv_state_ = xxsocket::getipsv();
+  if (this->ipsv_state_ == 0) this->ipsv_state_ = xxsocket::getipsv();
 
   auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
   if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY &&
@@ -935,7 +920,8 @@ void async_socket_io::handle_connect_succeed(io_channel* ctx,
            ctx->index_, connection->local_endpoint().to_string().c_str(),
            connection->peer_endpoint().to_string().c_str());
 
-  this->handle_event(event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+  this->handle_event(event_ptr(
+      new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 }
 
 void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
@@ -943,7 +929,8 @@ void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
 
   ctx->state_ = channel_state::INACTIVE;
 
-  this->handle_event(event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
+  this->handle_event(event_ptr(
+      new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s",
            ctx->index_, ctx->address_.c_str(), ctx->port_, error,
@@ -956,8 +943,7 @@ bool async_socket_io::do_write(transport_ptr transport) {
   do {
     int n;
 
-    if (!transport->socket_->is_open())
-      break;
+    if (!transport->socket_->is_open()) break;
 
     if (!transport->send_queue_.empty()) {
       auto v = transport->send_queue_.front();
@@ -1021,8 +1007,7 @@ bool async_socket_io::do_read(transport_ptr transport) {
   bool bRet = false;
   auto ctx = transport->ctx_;
   do {
-    if (!transport->socket_->is_open())
-      break;
+    if (!transport->socket_->is_open()) break;
 
     int n = transport->socket_->recv_i(
         transport->buffer_ + transport->offset_,
@@ -1033,8 +1018,7 @@ bool async_socket_io::do_read(transport_ptr transport) {
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_,
                error_, xxsocket::strerror(error_));
 #endif
-      if (n == -1)
-        n = 0;
+      if (n == -1) n = 0;
 #if _ENABLE_VERBOSE_LOG
       if (n > 0) {
         INET_LOG(
@@ -1045,18 +1029,18 @@ bool async_socket_io::do_read(transport_ptr transport) {
       }
 #endif
       if (transport->receiving_pdu_elen_ == -1) {  // decode length
-        if (decode_pdu_length_(transport->buffer_, transport->offset_ + n,
-                               transport->receiving_pdu_elen_)) {
-          if (transport->receiving_pdu_elen_ > 0) {  // ok
-            transport->receiving_pdu_.reserve(
-                (std::min)(transport->receiving_pdu_elen_,
-                           MAX_PDU_BUFFER_SIZE));  // #perfomance, avoid
-            // memory reallocte.
-            do_unpack(transport, transport->receiving_pdu_elen_, n);
-          } else {  // header insufficient, wait readfd ready at
-            // next event step.
-            transport->offset_ += n;
-          }
+        int length =
+            decode_pdu_length_(transport->buffer_, transport->offset_ + n);
+        if (length > 0) {
+          transport->receiving_pdu_elen_ = length;
+          transport->receiving_pdu_.reserve((std::min)(
+              transport->receiving_pdu_elen_,
+              MAX_PDU_BUFFER_SIZE));  // #perfomance, avoid // memory reallocte.
+          do_unpack(transport, transport->receiving_pdu_elen_, n);
+        } else if (length == 0) {
+          // header insufficient, wait readfd ready at
+          // next event step.
+          transport->offset_ += n;
         } else {
           // set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
           INET_LOG(
@@ -1096,8 +1080,7 @@ bool async_socket_io::do_read(transport_ptr transport) {
   return bRet;
 }
 
-void async_socket_io::do_unpack(transport_ptr ctx,
-                                int bytes_expected,
+void async_socket_io::do_unpack(transport_ptr ctx, int bytes_expected,
                                 int bytes_transferred) {
   auto bytes_available = bytes_transferred + ctx->offset_;
   ctx->receiving_pdu_.insert(
@@ -1128,8 +1111,7 @@ void async_socket_io::schedule_timer(deadline_timer* timer) {
   // pitfall: this service only hold the weak pointer of the timer
   // object, so before dispose the timer object need call
   // cancel_timer to cancel it.
-  if (timer == nullptr)
-    return;
+  if (timer == nullptr) return;
 
   std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
   if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) !=
@@ -1143,8 +1125,7 @@ void async_socket_io::schedule_timer(deadline_timer* timer) {
               return lhs->wait_duration() > rhs->wait_duration();
             });
 
-  if (timer == *this->timer_queue_.begin())
-    interrupter_.interrupt();
+  if (timer == *this->timer_queue_.begin()) interrupter_.interrupt();
 }
 
 void async_socket_io::cancel_timer(deadline_timer* timer) {
@@ -1166,8 +1147,7 @@ void async_socket_io::open_internal(io_channel* ctx) {
     return;
   }
 
-  if (ctx->resolve_state_ != resolve_state::READY)
-    update_resolve_state(ctx);
+  if (ctx->resolve_state_ != resolve_state::READY) update_resolve_state(ctx);
 
   ctx->state_ = channel_state::REQUEST_CONNECT;
   if (ctx->socket_->is_open()) {
@@ -1182,8 +1162,7 @@ void async_socket_io::open_internal(io_channel* ctx) {
 }
 
 void async_socket_io::perform_timeout_timers() {
-  if (this->timer_queue_.empty())
-    return;
+  if (this->timer_queue_.empty()) return;
 
   std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
 
@@ -1302,8 +1281,7 @@ void async_socket_io::update_resolve_state(io_channel* ctx) {
 bool async_socket_io::start_resolve(
     io_channel* ctx) {  // Only call at event-loop thread, so
   // no need to consider thread safe.
-  if (ctx->resolve_state_ != resolve_state::DIRTY)
-    return false;
+  if (ctx->resolve_state_ != resolve_state::DIRTY) return false;
   ctx->resolve_state_ = resolve_state::INPRROGRESS;
   ctx->endpoints_.clear();
 
@@ -1387,9 +1365,7 @@ void async_socket_io::handle_ares_work_finish(
 }
 #endif
 
-void async_socket_io::interrupt() {
-  interrupter_.interrupt();
-}
+void async_socket_io::interrupt() { interrupter_.interrupt(); }
 
 }  // namespace inet
 }  // namespace purelib

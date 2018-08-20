@@ -1113,7 +1113,7 @@ void async_socket_io::schedule_timer(deadline_timer* timer) {
   // cancel_timer to cancel it.
   if (timer == nullptr) return;
 
-  std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
   if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) !=
       timer_queue_.end())
     return;
@@ -1129,7 +1129,7 @@ void async_socket_io::schedule_timer(deadline_timer* timer) {
 }
 
 void async_socket_io::cancel_timer(deadline_timer* timer) {
-  std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
   auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
   if (iter != timer_queue_.end()) {
@@ -1164,7 +1164,7 @@ void async_socket_io::open_internal(io_channel* ctx) {
 void async_socket_io::perform_timeout_timers() {
   if (this->timer_queue_.empty()) return;
 
-  std::lock_guard<std::recursive_mutex> lk(this->timer_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
   std::vector<deadline_timer*> loop_timers;
   while (!this->timer_queue_.empty()) {

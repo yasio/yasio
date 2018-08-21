@@ -615,13 +615,14 @@ void async_socket_io::close(size_t channel_index) {
   }
 }
 
-void async_socket_io::close(transport_ptr transport) {
+void async_socket_io::close(transport_ptr& transport) {
   if (transport->is_open()) {
     INET_LOG("close the transport: %s --> %s",
              transport->socket_->local_endpoint().to_string().c_str(),
              transport->socket_->peer_endpoint().to_string().c_str());
     transport->offset_ = 1;  // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
+    transport.reset();
     interrupter_.interrupt();
   }
 }

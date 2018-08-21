@@ -288,7 +288,7 @@ class async_socket_io {
   void reopen(transport_ptr);
 
   // close client
-  void close(transport_ptr transport);
+  void close(transport_ptr& transport);
 
   // close server
   void close(size_t channel_index = 0);

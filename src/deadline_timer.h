@@ -31,16 +31,13 @@ SOFTWARE.
 #include <chrono>
 #include <functional>
 
-#if defined(_MSC_VER) && _MSC_VER < 1900
-typedef std::chrono::time_point<std::chrono::system_clock> compatible_timepoint_t;
-#else
-typedef std::chrono::time_point<std::chrono::steady_clock> compatible_timepoint_t;
-#endif
-
 namespace purelib
 {
 namespace inet {
 class async_socket_io;
+
+typedef std::chrono::high_resolution_clock highp_clock_t;
+
 class deadline_timer {
 public:
     ~deadline_timer();
@@ -75,19 +72,19 @@ public:
     // Let timer expire immidlately
     void expire()
     {
-        expire_time_ = std::chrono::steady_clock::now() - duration_;
+        expire_time_ = highp_clock_t::now() - duration_;
     }
 
     // Gets wait duration of timer.
     std::chrono::microseconds wait_duration() const
     {
-        return std::chrono::duration_cast<std::chrono::microseconds>(expire_time_ - std::chrono::steady_clock::now());
+        return std::chrono::duration_cast<std::chrono::microseconds>(expire_time_ - highp_clock_t::now());
     }
 
     bool repeated_;
     async_socket_io& service_;
     std::chrono::microseconds duration_;
-    compatible_timepoint_t expire_time_;
+    std::chrono::time_point<highp_clock_t> expire_time_;
     std::function<void(bool cancelled)> callback_;
 };
 }

@@ -113,7 +113,7 @@ namespace inet {
 namespace {
 // The high precision micro seconds timestamp
 static long long _highp_clock() {
-  auto duration = std::chrono::steady_clock::now().time_since_epoch();
+  auto duration = highp_clock_t::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::microseconds>(duration)
       .count();
 }
@@ -233,14 +233,14 @@ class a_pdu {
   a_pdu(std::vector<char>&& right, const std::chrono::microseconds& duration) {
     data_ = std::move(right);
     offset_ = 0;
-    expire_time_ = std::chrono::steady_clock::now() + duration;
+    expire_time_ = highp_clock_t::now() + duration;
   }
   bool expired() const {
-    return (expire_time_ - std::chrono::steady_clock::now()).count() < 0;
+    return (expire_time_ - highp_clock_t::now()).count() < 0;
   }
   std::vector<char> data_;  // sending data
   size_t offset_;           // offset
-  compatible_timepoint_t expire_time_;
+  std::chrono::time_point<highp_clock_t> expire_time_;
 
 #if _USING_OBJECT_POOL
   DEFINE_OBJECT_POOL_ALLOCATION2(a_pdu, 512)

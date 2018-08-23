@@ -37,6 +37,7 @@ namespace inet {
 class async_socket_io;
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
+typedef long long highp_time_t;
 
 class deadline_timer {
 public:

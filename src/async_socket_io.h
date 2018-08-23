@@ -140,7 +140,7 @@ struct io_channel : public io_base {
   std::string address_;
   u_short port_;
   bool dns_queries_needed_;
-  time_t dns_queries_timestamp_ = 0;
+  highp_time_t dns_queries_timestamp_ = 0;
 
   std::vector<ip::endpoint> endpoints_;
   std::atomic<resolve_state> resolve_state_;
@@ -371,10 +371,10 @@ class async_socket_io {
   bool thread_started_;
   std::thread worker_thread_;
 
-  time_t connect_timeout_;
-  time_t send_timeout_;
-  time_t reconnect_timeout_;
-  time_t dns_cache_timeout_;
+  highp_time_t connect_timeout_;
+  highp_time_t send_timeout_;
+  highp_time_t reconnect_timeout_;
+  highp_time_t dns_cache_timeout_;
 
   bool deferred_event_ = true;
   std::mutex event_queue_mtx_;

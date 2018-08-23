@@ -317,22 +317,22 @@ void async_socket_io::set_option(int option, long value) {
   switch (option) {
     case MASIO_OPT_CONNECT_TIMEOUT:
       this->connect_timeout_ =
-          static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
       break;
     case MASIO_OPT_SEND_TIMEOUT:
       this->send_timeout_ =
-          static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
       break;
     case MASIO_OPT_RECONNECT_TIMEOUT:
       if (value > 0)
         this->reconnect_timeout_ =
-            static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+            static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
       else
         this->reconnect_timeout_ = -1;  // means auto reconnect is disabled.
       break;
     case MASIO_OPT_DNS_CACHE_TIMEOUT:
       this->dns_cache_timeout_ =
-          static_cast<time_t>(value) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
       break;
     case MASIO_OPT_DEFER_EVENT:
       this->deferred_event_ = !!value;

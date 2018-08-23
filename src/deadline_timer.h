@@ -50,12 +50,12 @@ public:
     {
         this->duration_ = duration;
         this->repeated_ = repeated;
-        expire_time_ = std::chrono::steady_clock::now() + this->duration_;
+        expire_time_ = highp_clock_t::now() + this->duration_;
     }
 
     void expires_from_now()
     {
-        expire_time_ = std::chrono::steady_clock::now() + this->duration_;
+        expire_time_ = highp_clock_t::now() + this->duration_;
     }
 
     // Wait timer timeout or cancelled.

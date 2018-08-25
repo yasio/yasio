@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <stack>
 #include "endian_portable.h"
 class obinarystream
 {
@@ -11,6 +12,10 @@ public:
     obinarystream(const obinarystream& right);
     obinarystream(obinarystream&& right);
     ~obinarystream();
+
+    void push32();
+    void pop32();
+    void pop32(uint32_t);
 
     obinarystream& operator=(const obinarystream& right);
     obinarystream& operator=(obinarystream&& right);
@@ -66,7 +71,8 @@ public:
     void save(const char* filename);
 
 protected:
-    std::vector<char>    buffer_;
+    std::vector<char>  buffer_;
+    std::stack<size_t> offset_stack_;
 };
 
 template <typename _Nty>

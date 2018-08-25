@@ -9,6 +9,26 @@ obinarystream::obinarystream(size_t buffersize)
     buffer_.reserve(buffersize);
 }
 
+void obinarystream::push32()
+{
+    offset_stack_.push(buffer_.size());
+    write_i(static_cast<uint32_t>(0));
+}
+
+void obinarystream::pop32()
+{
+    auto offset = offset_stack_.top();
+    modify_i(offset, static_cast<uint32_t>(buffer_.size()));
+    offset_stack_.pop();
+}
+
+void obinarystream::pop32(uint32_t value)
+{
+    auto offset = offset_stack_.top();
+    modify_i(offset, value);
+    offset_stack_.pop();
+}
+
 obinarystream::obinarystream(const obinarystream& right) : buffer_(right.buffer_)
 {
 

@@ -1,4 +1,4 @@
-#include "bits_operations.h"
+#include "bits_op.h"
 
 static const unsigned char bits_wmask_table[8][8] = {
 	{0xFE/*11111110*/},

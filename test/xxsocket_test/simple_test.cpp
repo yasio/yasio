@@ -37,7 +37,8 @@ int main(int, char **) {
   std::vector<std::shared_ptr<io_transport>> transports;
 
   myasio->set_callbacks(
-      [](char *data, int datalen, int &len) { // decode pdu length func
+      [](char *data, int datalen) { // decode pdu length func
+        int len = 0;
         if (datalen >= 4 && data[datalen - 1] == '\n' &&
             data[datalen - 2] == '\r' && data[datalen - 3] == '\n' &&
             data[datalen - 4] == '\r') {
@@ -65,7 +66,7 @@ int main(int, char **) {
             }
           }
         }
-        return true;
+        return len;
       },
       [&](event_ptr event) {
         switch (event->type()) {

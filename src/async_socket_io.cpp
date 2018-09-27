@@ -1369,4 +1369,4 @@ void async_socket_io::handle_ares_work_finish(
 void async_socket_io::interrupt() { interrupter_.interrupt(); }
 
 }  // namespace inet
-}  // namespace 
+}  // namespace purelib

@@ -22,29 +22,27 @@ static const unsigned char bits_rmask_table[8] = {
 	0xFF/*11111111*/
 };
 
-int set_bits_value(unsigned char value, void* dest, unsigned int bits_count, unsigned int pos)
+unsigned char set_bits_value(unsigned char value, unsigned int bits, unsigned int pos, void* dest)
 {
-	if(pos > 7 || (pos + 1) < bits_count || bits_count > 8)
+	if(pos > 7 || (pos + 1) < bits || bits > 8)
 	{
-		return -1;
+		return;
 	}
 
 	*( (unsigned char*)dest ) = ( 
-		( *( (unsigned char*)dest ) & bits_wmask_table[pos][bits_count - 1] ) 
+		( *( (unsigned char*)dest ) & bits_wmask_table[pos][bits - 1] ) 
 		| 
-		( value << (pos + 1 - bits_count) )
+		( value << (pos + 1 - bits) )
 		);
-	return 0;
 }
 
-int get_bits_value(unsigned char* value, unsigned char source, unsigned int bits_count, unsigned int pos)
+unsigned char get_bits_value(unsigned char source, unsigned int bits, unsigned int pos)
 {
 	if(pos > 7 || (pos + 1) < bits_count || bits_count > 8)
 	{
-		return -1;
+		return 0;
 	}
-
-	*value = ( (source & bits_rmask_table[pos]) >> (pos + 1 - bits_count) );
-	return 0;
+	
+	( (source & bits_rmask_table[pos]) >> (pos + 1 - bits) );
 }
 

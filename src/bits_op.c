@@ -38,11 +38,11 @@ unsigned char set_bits_value(unsigned char value, unsigned int bits, unsigned in
 
 unsigned char get_bits_value(unsigned char source, unsigned int bits, unsigned int pos)
 {
-	if(pos > 7 || (pos + 1) < bits_count || bits_count > 8)
+	if(pos > 7 || (pos + 1) < bits || bits > 8)
 	{
 		return 0;
 	}
 	
-	( (source & bits_rmask_table[pos]) >> (pos + 1 - bits) );
+	return ( (source & bits_rmask_table[pos]) >> (pos + 1 - bits) );
 }
 

@@ -4,10 +4,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+void set_bits_value(unsigned char value, unsigned int bits, unsigned int pos, void* dest);
 
-int set_bits_value(unsigned char value, void* dest, unsigned int bits_count, unsigned int pos);
-
-int get_bits_value(unsigned char* value, unsigned char source, unsigned int bits_count, unsigned int pos);
+unsigned char get_bits_value(unsigned char source, unsigned int bits, unsigned int pos);
 
 #ifdef __cplusplus
 }

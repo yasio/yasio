@@ -22,7 +22,7 @@ static const unsigned char bits_rmask_table[8] = {
 	0xFF/*11111111*/
 };
 
-unsigned char set_bits_value(unsigned char value, unsigned int bits, unsigned int pos, void* dest)
+void set_bits_value(unsigned char value, unsigned int bits, unsigned int pos, void* dest)
 {
 	if(pos > 7 || (pos + 1) < bits || bits > 8)
 	{

@@ -776,10 +776,11 @@ bool async_socket_io::do_nonblocking_connect(io_channel* ctx) {
     ctx->state_ = channel_state::CONNECTING;
 
     int ret = -1;
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
+    auto& ep = ctx->endpoints_[0];
+    if (ctx->socket_->reopen(ep.af())) {
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
       ret = xxsocket::connect_n(ctx->socket_->native_handle(),
-                                ctx->endpoints_[0]);
+                                ep);
     }
 
     if (ret < 0) {  // setup no blocking connect

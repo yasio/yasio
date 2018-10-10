@@ -850,7 +850,7 @@ void async_socket_io::do_nonblocking_accept(
   if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6)) {
     ctx->state_ = channel_state::CONNECTING;
 
-    ip::endpoint ep("0.0.0.0", ctx->port_);
+    ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
     ctx->socket_->set_nonblocking(true);
     int error = 0;

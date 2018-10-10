@@ -443,39 +443,24 @@ public:
     }
     std::string to_string(void) const
     {
-        std::string addr(64, '\0');
+        std::string addr(64, '[');
 
         size_t n = 0;
 
         switch (sa_.sa_family) {
         case AF_INET:
-            n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), 64));
+            n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), addr.length()));
+            n += sprintf(&addr.front() + n, ":%u", this->port());
             break;
         case AF_INET6:
-            n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front(), 64));
+            n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, addr.length() - 1));
+            n += sprintf(&addr.front() + n, "]:%u", this->port());
             break;
         }
-        n += sprintf(&addr.front() + n, ":%u", this->port());
-
+        
         addr.resize(n);
 
         return addr;
-    }
-    char* to_cstring(char buffer[64]) const // // not safe, if use, please confirm buffer enough
-    {
-        size_t n = 0;
-        switch (sa_.sa_family) {
-        case AF_INET:
-            n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buffer, 64));
-            break;
-        case AF_INET6:
-            n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, buffer, 64));
-            break;
-        }
-
-        sprintf(buffer + n, ":%u", this->port());
-
-        return buffer;
     }
     std::string ip() const {
         std::string ipstring(64, '\0');

@@ -1,5 +1,5 @@
 # mini-asio
-A lightweight & stable cross platform posix socket API wrapper, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal
+A lightweight & stable cross platform posix socket API wrapper, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
 Used by http://hongjing.qq.com/  
 **support IPv6-only network.  
 support multi-connections at one thread.  

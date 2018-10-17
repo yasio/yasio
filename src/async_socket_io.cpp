@@ -375,7 +375,7 @@ void async_socket_io::dispatch_events(int count) {
 
   if (this->event_queue_.empty()) return;
 
-  std::lock_guard<std::mutex> autolock(this->event_queue_mtx_);
+  std::lock_guard<std::mutex> lck(this->event_queue_mtx_);
   do {
     auto event = this->event_queue_.front();
     this->event_queue_.pop_front();
@@ -1245,7 +1245,7 @@ long long async_socket_io::get_wait_duration(long long usec) {
     return usec;
   }
 
-  std::lock_guard<std::recursive_mutex> autolock(this->timer_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
   deadline_timer* earliest = timer_queue_.back();
 
   // microseconds

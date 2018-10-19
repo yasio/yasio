@@ -1456,12 +1456,11 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
         nullptr,
         nullptr);
 #else
-    int nret = 0;
-    nret += set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag);
-    nret += set_optval(s, SOL_TCP, TCP_KEEPIDLE, idle);
-    nret += set_optval(s, SOL_TCP, TCP_KEEPINTVL, interval);
-    nret += set_optval(s, SOL_TCP, TCP_KEEPCNT, probes);
-    return nret;
+    int n = set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag);
+    n += set_optval(s, SOL_TCP, TCP_KEEPIDLE, idle);
+    n += set_optval(s, SOL_TCP, TCP_KEEPINTVL, interval);
+    n += set_optval(s, SOL_TCP, TCP_KEEPCNT, probes);
+    return n;
 #endif
 }
 

@@ -1290,7 +1290,7 @@ bool async_socket_io::start_resolve(
   INET_LOG("[index: %d] start async resolving for %s", ctx->index_,
            ctx->address_.c_str());
 #if !_USING_ARES_LIB  // 6.563ms
-  std::thread getaddrinfo_thread([=] {
+  std::thread resolve_thread([=] {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
     bool succeed = false;
@@ -1328,7 +1328,7 @@ bool async_socket_io::start_resolve(
     */
     this->interrupt();
   });
-  getaddrinfo_thread.detach();
+  resolve_thread.detach();
 #else
   addrinfo hint;  // 333.921ms
   memset(&hint, 0x0, sizeof(hint));

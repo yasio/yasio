@@ -31,6 +31,11 @@ SOFTWARE.
 #include <stdio.h>
 #endif
 
+// For apple bsd socket implemention
+#if !defined(TCP_KEEPIDLE)
+#define TCP_KEEPIDLE TCP_KEEPALIVE
+#endif
+
 #define TIME_GRANULARITY 1000000
 
 #if !defined(_WIN32) && !defined(ANDROID)
@@ -1457,9 +1462,9 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
         nullptr);
 #else
     int n = set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag);
-    n += set_optval(s, SOL_TCP, TCP_KEEPIDLE, idle);
-    n += set_optval(s, SOL_TCP, TCP_KEEPINTVL, interval);
-    n += set_optval(s, SOL_TCP, TCP_KEEPCNT, probes);
+    n += set_optval(s, IPPROTO_TCP, TCP_KEEPIDLE, idle);
+    n += set_optval(s, IPPROTO_TCP, TCP_KEEPINTVL, interval);
+    n += set_optval(s, IPPROTO_TCP, TCP_KEEPCNT, probes);
     return n;
 #endif
 }

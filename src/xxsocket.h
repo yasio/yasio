@@ -826,7 +826,7 @@ public:
     **          [<0].one or more errors occured
     */
     int set_keepalive(int flag = 1, int idle = 7200, int interval = 75, int probes = 10);
-    static int set_keepalive(socket_native_type s, int flag = 1, int idle = 7200, int interval = 75, int probes = 10);
+    static int set_keepalive(socket_native_type s, int flag, int idle, int interval, int probes);
 
 
     /* @brief: Sets the socket option

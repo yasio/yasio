@@ -11,9 +11,6 @@
 
 using namespace purelib::inet;
 
-static const int sz1 = 0x0fe4;
-static const char sz2 = 47;
-
 template <size_t _Size>
 void append_string(std::vector<char> &packet, const char (&message)[_Size]) {
   packet.insert(packet.end(), message, message + _Size - 1);
@@ -25,6 +22,8 @@ int main(int, char **) {
       {"203.162.71.67", 80}, // http client
       {"www.ip138.com", 80}       //  { "www.ip138.com", 80 },  // http client
   };
+
+  myasio->set_option(MASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
   myasio->start_service(endpoints, _ARRAYSIZE(endpoints));
 
   deadline_timer t0(*myasio);

@@ -103,6 +103,7 @@ enum {
   MASIO_OPT_RECONNECT_TIMEOUT,
   MASIO_OPT_DNS_CACHE_TIMEOUT,
   MASIO_OPT_DEFER_EVENT,
+  MASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
 };
 
 typedef std::function<void()> vdcallback_t;
@@ -274,13 +275,14 @@ class async_socket_io {
 
   size_t get_event_count(void) const;
 
-  /* option: MASIO_OPT_CONNECT_TIMEOUT
-             MASIO_OPT_SEND_TIMEOUT
-             MASIO_OPT_RECONNECT_TIMEOUT
-             MASIO_OPT_DNS_CACHE_TIMEOUT
-             MASIO_OPT_DEFER_EVENT
+  /* option: MASIO_OPT_CONNECT_TIMEOUT   timeout:int
+             MASIO_OPT_SEND_TIMEOUT      timeout:int
+             MASIO_OPT_RECONNECT_TIMEOUT timeout:int
+             MASIO_OPT_DNS_CACHE_TIMEOUT timeout:int
+             MASIO_OPT_DEFER_EVENT       defer:int
+             MASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
   */
-  void set_option(int option, long value);
+  void set_option(int option, ...);
 
   // open a channel, default: TCP_CLIENT
   void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
@@ -409,6 +411,14 @@ class async_socket_io {
   // callbacks
   decode_pdu_length_callback_t decode_pdu_length_;
   std::function<void(event_ptr)> on_event_;
+
+  // tcp keepalive settings
+  struct {
+    int onoff = 0;
+    int idle = 7200;
+    int interval = 75;
+    int probs = 10;
+  } tkpl_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support

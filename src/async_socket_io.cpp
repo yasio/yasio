@@ -313,7 +313,10 @@ void async_socket_io::stop_service() {
   }
 }
 
-void async_socket_io::set_option(int option, long value) {
+void async_socket_io::set_option(int option, ...) {
+  va_list ap;
+  va_start(ap, option);
+  int value = va_arg(ap, int);
   switch (option) {
     case MASIO_OPT_CONNECT_TIMEOUT:
       this->connect_timeout_ =
@@ -337,7 +340,14 @@ void async_socket_io::set_option(int option, long value) {
     case MASIO_OPT_DEFER_EVENT:
       this->deferred_event_ = !!value;
       break;
+    case MASIO_OPT_TCP_KEEPALIVE:
+      tkpl_.onoff = 1;
+      tkpl_.idle = value;
+      tkpl_.interval = va_arg(ap, int);
+      tkpl_.probs = va_arg(ap, int);
+      break;
   }
+  va_end(ap);
 }
 
 io_channel* async_socket_io::new_channel(const io_hostent& ep) {
@@ -779,8 +789,7 @@ bool async_socket_io::do_nonblocking_connect(io_channel* ctx) {
     auto& ep = ctx->endpoints_[0];
     if (ctx->socket_->reopen(ep.af())) {
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      ret = xxsocket::connect_n(ctx->socket_->native_handle(),
-                                ep);
+      ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     }
 
     if (ret < 0) {  // setup no blocking connect
@@ -914,6 +923,10 @@ void async_socket_io::handle_connect_succeed(io_channel* ctx,
     ctx->state_ = channel_state::CONNECTED;
   }
 
+  if (tkpl_.onoff) {
+    socket->set_keepalive(tkpl_.idle, tkpl_.interval, tkpl_.probs);
+  }
+
   transport->socket_ = socket;
   this->transports_.push_back(transport);
 
@@ -1003,7 +1016,8 @@ bool async_socket_io::do_write(transport_ptr transport) {
   return bRet;
 }
 
-void async_socket_io::handle_send_finished(a_pdu_ptr pdu, error_number error) {}
+void async_socket_io::handle_send_finished(a_pdu_ptr /*pdu*/,
+                                           error_number /*error*/) {}
 
 bool async_socket_io::do_read(transport_ptr transport) {
   bool bRet = false;

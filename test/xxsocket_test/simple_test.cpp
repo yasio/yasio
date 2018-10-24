@@ -1,7 +1,7 @@
-#include "async_socket_io.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include "async_socket_io.h"
 
 #if defined(_WIN32)
 #include <Shlwapi.h>
@@ -16,27 +16,32 @@ void append_string(std::vector<char> &packet, const char (&message)[_Size]) {
   packet.insert(packet.end(), message, message + _Size - 1);
 }
 
-int main(int, char **) {
+bool resolv(std::vector<ip::endpoint> &endpoints, const char *hostname,
+ unsigned short port) {
+  return myasio->resolve(endpoints, hostname, port);
+}
 
+int main(int, char **) {
   purelib::inet::io_hostent endpoints[] = {
-      {"203.162.71.67", 80}, // http client
-      {"www.ip138.com", 80}       //  { "www.ip138.com", 80 },  // http client
+      {"203.162.71.67", 80},  // http client
+      {"www.ip138.com", 80}   //  { "www.ip138.com", 80 },  // http client
   };
 
   myasio->set_option(MASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
+  myasio->set_option(MASIO_OPT_RESOLV_FUNCTION, resolv);
   myasio->start_service(endpoints, _ARRAYSIZE(endpoints));
 
   deadline_timer t0(*myasio);
 
   t0.expires_from_now(std::chrono::seconds(3));
-  t0.async_wait([](bool) { // called at network thread
+  t0.async_wait([](bool) {  // called at network thread
     printf("the timer is expired\n");
   });
 
   std::vector<std::shared_ptr<io_transport>> transports;
 
   myasio->set_callbacks(
-      [](char *data, int datalen) { // decode pdu length func
+      [](char *data, int datalen) {  // decode pdu length func
         int len = 0;
         if (datalen >= 4 && data[datalen - 1] == '\n' &&
             data[datalen - 2] == '\r' && data[datalen - 3] == '\n' &&
@@ -69,48 +74,48 @@ int main(int, char **) {
       },
       [&](event_ptr event) {
         switch (event->type()) {
-        case MASIO_EVENT_RECV_PACKET: {
-          auto packet = event->take_packet();
-          packet.push_back('\0');
-          printf("receive data:%s", packet.data());
-          break;
-        }
-        case MASIO_EVENT_CONNECT_RESPONSE:
-          if (event->error_code() == 0) {
-            auto transport = event->transport();
-            std::vector<char> packet;
-            append_string(packet, "GET /index.htm HTTP/1.1\r\n");
-
-            if (transport->channel_index() == 0)
-              append_string(packet, "Host: 203.162.71.67\r\n");
-            else
-              append_string(packet, "Host: www.ip138.com\r\n");
-
-            append_string(packet,
-                          "User-Agent: Mozilla/5.0 (Windows NT 10.0; "
-                          "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/51.0.2704.106 Safari/537.36\r\n");
-            append_string(packet, "Accept: */*;q=0.8\r\n");
-            append_string(packet, "Connection: Close\r\n\r\n");
-
-            transports.push_back(transport);
-
-            myasio->write(transport, std::move(packet));
-            // myasio->close(transport);
-            /*std::shared_ptr<deadline_timer> delayOneFrame(
-                new deadline_timer(*myasio));
-            delayOneFrame->expires_from_now(std::chrono::milliseconds(10));
-            delayOneFrame->async_wait(
-                [delayOneFrame, transport](bool cancelled) {
-                  if (!cancelled) {
-                    myasio->close(transport);
-                  }
-                });*/
+          case MASIO_EVENT_RECV_PACKET: {
+            auto packet = event->take_packet();
+            packet.push_back('\0');
+            printf("receive data:%s", packet.data());
+            break;
           }
-          break;
-        case MASIO_EVENT_CONNECTION_LOST:
-          printf("The connection is lost(user end)!\n");
-          break;
+          case MASIO_EVENT_CONNECT_RESPONSE:
+            if (event->error_code() == 0) {
+              auto transport = event->transport();
+              std::vector<char> packet;
+              append_string(packet, "GET /index.htm HTTP/1.1\r\n");
+
+              if (transport->channel_index() == 0)
+                append_string(packet, "Host: 203.162.71.67\r\n");
+              else
+                append_string(packet, "Host: www.ip138.com\r\n");
+
+              append_string(packet,
+                            "User-Agent: Mozilla/5.0 (Windows NT 10.0; "
+                            "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/51.0.2704.106 Safari/537.36\r\n");
+              append_string(packet, "Accept: */*;q=0.8\r\n");
+              append_string(packet, "Connection: Close\r\n\r\n");
+
+              transports.push_back(transport);
+
+              myasio->write(transport, std::move(packet));
+              // myasio->close(transport);
+              /*std::shared_ptr<deadline_timer> delayOneFrame(
+                  new deadline_timer(*myasio));
+              delayOneFrame->expires_from_now(std::chrono::milliseconds(10));
+              delayOneFrame->async_wait(
+                  [delayOneFrame, transport](bool cancelled) {
+                    if (!cancelled) {
+                      myasio->close(transport);
+                    }
+                  });*/
+            }
+            break;
+          case MASIO_EVENT_CONNECTION_LOST:
+            printf("The connection is lost(user end)!\n");
+            break;
         }
       });
 
@@ -122,8 +127,7 @@ int main(int, char **) {
   while (true) {
     myasio->dispatch_events();
     if (duration >= 60000) {
-      for (auto transport : transports)
-        myasio->close(transport);
+      for (auto transport : transports) myasio->close(transport);
       // myasio->close(1);
       break;
     }

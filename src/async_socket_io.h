@@ -104,9 +104,13 @@ enum {
   MASIO_OPT_DNS_CACHE_TIMEOUT,
   MASIO_OPT_DEFER_EVENT,
   MASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
+  MASIO_OPT_RESOLV_FUNCTION,
 };
 
 typedef std::function<void()> vdcallback_t;
+
+typedef bool(*resolv_t)(std::vector<ip::endpoint>& endpoints,
+                           const char* hostname, unsigned short port);
 
 static const int socket_recv_buffer_size = 65536;  // 64K
 
@@ -281,6 +285,7 @@ class async_socket_io {
              MASIO_OPT_DNS_CACHE_TIMEOUT timeout:int
              MASIO_OPT_DEFER_EVENT       defer:int
              MASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
+             MASIO_OPT_RESOLV_FUNCTION   func:resolv_t
   */
   void set_option(int option, ...);
 
@@ -308,6 +313,9 @@ class async_socket_io {
 
   // Start a async resolve, It's only for internal use
   bool start_resolve(io_channel*);
+
+  bool resolve(std::vector<ip::endpoint>& endpoints, const char* hostname,
+               unsigned short port = 0);
 
 #if _USING_ARES_LIB
   void handle_ares_work_finish(channel_context*);
@@ -419,6 +427,10 @@ class async_socket_io {
     int interval = 75;
     int probs = 10;
   } tkpl_;
+
+  // The resolve function
+  std::function<bool(std::vector<ip::endpoint>& endpoints, const char* hostname,
+                     unsigned short port)> xresolv_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support

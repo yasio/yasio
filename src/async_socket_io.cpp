@@ -316,37 +316,42 @@ void async_socket_io::stop_service() {
 void async_socket_io::set_option(int option, ...) {
   va_list ap;
   va_start(ap, option);
-  int value = va_arg(ap, int);
+
   switch (option) {
     case MASIO_OPT_CONNECT_TIMEOUT:
       this->connect_timeout_ =
-          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
     case MASIO_OPT_SEND_TIMEOUT:
       this->send_timeout_ =
-          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case MASIO_OPT_RECONNECT_TIMEOUT:
+    case MASIO_OPT_RECONNECT_TIMEOUT: {
+      int value = va_arg(ap, int);
       if (value > 0)
         this->reconnect_timeout_ =
             static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
       else
         this->reconnect_timeout_ = -1;  // means auto reconnect is disabled.
-      break;
+    } break;
     case MASIO_OPT_DNS_CACHE_TIMEOUT:
       this->dns_cache_timeout_ =
-          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
     case MASIO_OPT_DEFER_EVENT:
-      this->deferred_event_ = !!value;
+      this->deferred_event_ = !!va_arg(ap, int);
       break;
     case MASIO_OPT_TCP_KEEPALIVE:
       tkpl_.onoff = 1;
-      tkpl_.idle = value;
+      tkpl_.idle = va_arg(ap, int);
       tkpl_.interval = va_arg(ap, int);
       tkpl_.probs = va_arg(ap, int);
       break;
+    case MASIO_OPT_RESOLV_FUNCTION:
+      this->xresolv_ = va_arg(ap, resolv_t);
+      break;
   }
+
   va_end(ap);
 }
 
@@ -1307,17 +1312,11 @@ bool async_socket_io::start_resolve(
   std::thread resolve_thread([=] {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
-    bool succeed = false;
-    if (this->ipsv_state_ & ipsv_ipv4) {
-      succeed = xxsocket::resolve_v4(ctx->endpoints_, ctx->address_.c_str(),
-                                     ctx->port_);
-    } else if (this->ipsv_state_ &
-               ipsv_ipv6) {  // localhost is IPV6 ONLY network
-      succeed = xxsocket::resolve_v6(ctx->endpoints_, ctx->address_.c_str(),
-                                     ctx->port_) ||
-                xxsocket::resolve_v4to6(ctx->endpoints_, ctx->address_.c_str(),
-                                        ctx->port_);
-    }
+
+    bool succeed =
+        xresolv_ ? xresolv_(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
+                 : resolve(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
+
     if (succeed && !ctx->endpoints_.empty()) {
       ctx->resolve_state_ = resolve_state::READY;
       ctx->dns_queries_timestamp_ = _highp_clock();
@@ -1370,6 +1369,17 @@ bool async_socket_io::start_resolve(
 #endif
 
   return false;  // waiting async resolve complete.
+}
+
+bool async_socket_io::resolve(std::vector<ip::endpoint>& endpoints,
+                              const char* hostname, unsigned short port) {
+  if (this->ipsv_state_ & ipsv_ipv4) {
+    return xxsocket::resolve_v4(endpoints, hostname, port);
+  } else if (this->ipsv_state_ & ipsv_ipv6) {  // localhost is IPV6 ONLY network
+    return xxsocket::resolve_v6(endpoints, hostname, port) ||
+           xxsocket::resolve_v4to6(endpoints, hostname, port);
+  }
+  return false;
 }
 
 #if _USING_ARES_LIB

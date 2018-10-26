@@ -94,7 +94,7 @@ public: \
     }
 
 // The thread safe edition
-#define DEFINE_OBJECT_POOL_ALLOCATION2(ELEMENT_TYPE,ELEMENT_COUNT) \
+#define DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE,ELEMENT_COUNT) \
 public: \
     static void * operator new(size_t /*size*/) \
     { \

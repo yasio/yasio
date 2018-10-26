@@ -243,7 +243,7 @@ class a_pdu {
   std::chrono::time_point<highp_clock_t> expire_time_;
 
 #if _USING_OBJECT_POOL
-  DEFINE_OBJECT_POOL_ALLOCATION2(a_pdu, 512)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(a_pdu, 512)
 #endif
 };
 

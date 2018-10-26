@@ -229,7 +229,7 @@ class io_event final {
   std::vector<char> take_packet() { return std::move(packet_); }
 
 #if _USING_OBJECT_POOL
-  DEFINE_OBJECT_POOL_ALLOCATION2(io_event, 512)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 
  private:

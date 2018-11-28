@@ -3,16 +3,8 @@
 #include "masio.h"
 #include "lmasio.h"
 
-void f222(std::string_view)
-{
-
-}
-
 void lua_open_masio(lua_State *L) {
   sol::state_view sol2(L);
-
-  std::string abc = "11314";
-  f222(abc);
 #if 0
     auto t = sol2.create_named_table("simple_timer");
     // the simple timer implementation is here: https://github.com/halx99/x-studio365/blob/master/cocos2d-x-patch/cocos/editor-support/cocostudio/ext/SimpleTimer.h

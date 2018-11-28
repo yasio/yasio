@@ -1,6 +1,7 @@
 #ifndef _OBINARYSTREAM_H_
 #define _OBINARYSTREAM_H_
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <vector>
 #include <stack>
@@ -28,15 +29,15 @@ public:
     size_t write_i(float);
     size_t write_i(double);
 
-    size_t write_v(const std::string&);
-    size_t write_v16(const std::string&);
-    size_t write_v32(const std::string&);
+    size_t write_v(std::string_view);
+    size_t write_v16(std::string_view);
+    size_t write_v32(std::string_view);
     
     size_t write_v(const void* v, int size);
     size_t write_v16(const void* v, int size);
     size_t write_v32(const void* v, int size);
 
-    size_t write_bytes(const std::string&);
+    size_t write_bytes(std::string_view);
     size_t write_bytes(const void* v, int vl);
 
     size_t length() const { return buffer_.size(); }

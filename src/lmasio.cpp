@@ -3,9 +3,16 @@
 #include "masio.h"
 #include "lmasio.h"
 
+void f222(std::string_view)
+{
+
+}
+
 void lua_open_masio(lua_State *L) {
   sol::state_view sol2(L);
 
+  std::string abc = "11314";
+  f222(abc);
 #if 0
     auto t = sol2.create_named_table("simple_timer");
     // the simple timer implementation is here: https://github.com/halx99/x-studio365/blob/master/cocos2d-x-patch/cocos/editor-support/cocostudio/ext/SimpleTimer.h
@@ -42,12 +49,15 @@ void lua_open_masio(lua_State *L) {
   sol2.new_usertype<obinarystream>(
       "obstream", 
       "push32", &obinarystream::push32,
-      "pop32", static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
+      "pop32", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
+      static_cast<void (obinarystream ::*)(uint32_t)>(&obinarystream::pop32)),
       "write_i8", &obinarystream::write_i<int8_t>,
       "write_i16", &obinarystream::write_i<int16_t>,
       "write_i32", &obinarystream::write_i<int32_t>,
       "write_i64", &obinarystream::write_i<int64_t>,
-      "write_bytes", static_cast<size_t(obinarystream::*)(const std::string&)>(&obinarystream::write_bytes),
+      "write_f", static_cast<size_t(obinarystream::*)(float)>(&obinarystream::write_i),
+      "write_lf", static_cast<size_t(obinarystream::*)(double)>(&obinarystream::write_i),
+      "write_v", static_cast<size_t(obinarystream::*)(std::string_view)>(&obinarystream::write_v),
       "length", &obinarystream::length
       );
 }

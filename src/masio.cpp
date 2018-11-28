@@ -53,34 +53,8 @@ extern "C" {
 #define MICROSECONDS_PER_SECOND 1000000LL
 #endif
 
-#define _USING_IN_COCOS2DX 0
+#define _MASIO_VERBOS_LOG 0
 
-#define _ENABLE_VERBOSE_LOG 0
-
-#if _USING_IN_COCOS2DX
-#include "cocos2d.h"
-#if COCOS2D_VERSION >= 0x00030000
-#define INET_LOG(format, ...)                                                \
-  do {                                                                       \
-    std::string msg =                                                        \
-        _sfmt(("[mini-asio][%lld] " format), _highp_clock(), ##__VA_ARGS__); \
-    cocos2d::Director::getInstance()                                         \
-        ->getScheduler()                                                     \
-        ->performFunctionInCocosThread(                                      \
-            [=] { cocos2d::log("%s", msg.c_str()); });                       \
-  } while (false)
-#else
-#define INET_LOG(format, ...)                                                \
-  do {                                                                       \
-    std::string msg =                                                        \
-        _sfmt(("[mini-asio][%lld] " format), _highp_clock(), ##__VA_ARGS__); \
-    cocos2d::CCDirector::sharedDirector()                                    \
-        ->getScheduler()                                                     \
-        ->performFunctionInCocosThread(                                      \
-            [=] { cocos2d::CCLog("%s", msg.c_str()); });                     \
-  } while (false)
-#endif
-#else
 #if defined(_WIN32)
 #define INET_LOG(format, ...)                                    \
   OutputDebugStringA(_sfmt(("[mini-asio][%lld] " format "\r\n"), \
@@ -90,13 +64,12 @@ extern "C" {
 #include <android/log.h>
 #include <jni.h>
 #define INET_LOG(format, ...)                                            \
-  __android_log_print(ANDROID_LOG_DEBUG, "mini-asio", ("[%lld]" format), \
+  __android_log_print(ANDROID_LOG_INFO, "mini-asio", ("[%lld]" format), \
                       _highp_clock(), ##__VA_ARGS__)
 #else
 #define INET_LOG(format, ...)                                         \
   fprintf(stdout, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
           ##__VA_ARGS__)
-#endif
 #endif
 
 #define ASYNC_RESOLVE_TIMEOUT 45  // 45 seconds
@@ -350,6 +323,9 @@ void async_socket_io::set_option(int option, ...) {
     case MASIO_OPT_RESOLV_FUNCTION:
       this->xresolv_ = va_arg(ap, resolv_t);
       break;
+    case MASIO_OPT_LOG_FILE:
+      this->log_file_ = va_arg(ap, const char*);
+      break;
   }
 
   va_end(ap);
@@ -480,14 +456,14 @@ void async_socket_io::service() {  // The async event-loop
     }
 
     if (nfds == 0) {
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
       INET_LOG("socket.select is timeout, do perform_timeout_timers()");
 #endif
     }
     // Reset the interrupter.
     else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(),
                                   &(fds_array[read_op]))) {
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
       INET_LOG(
           "socket.select waked up by interrupt, interrupter fd:%d, "
@@ -526,7 +502,7 @@ void async_socket_io::service() {  // The async event-loop
       if (transport->offset_ > 0 ||
           FD_ISSET(transport->socket_->native_handle(),
                    &(fds_array[read_op]))) {
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
         INET_LOG("[index: %d] perform non-blocking read operation...",
                  ctx->index_);
 #endif
@@ -540,7 +516,7 @@ void async_socket_io::service() {  // The async event-loop
       // perform write operations
       if (!transport->send_queue_.empty()) {
         transport->send_queue_mtx_.lock();
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
         INET_LOG("[index: %d] perform non-blocking write operation...",
                  ctx->index_);
 #endif
@@ -745,7 +721,7 @@ void async_socket_io::write(transport_ptr transport, std::vector<char> data) {
 }
 
 void async_socket_io::handle_packet(transport_ptr transport) {
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
   INET_LOG(
       "[index: %d] received a properly packet from peer, "
       "packet size:%d",
@@ -972,7 +948,7 @@ bool async_socket_io::do_write(transport_ptr transport) {
                                      outstanding_bytes);
       if (n == outstanding_bytes) {  // All pdu bytes sent.
         transport->send_queue_.pop_front();
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
         auto packet_size = static_cast<int>(v->data_.size());
         INET_LOG(
             "[index: %d] do_write ok, A packet sent "
@@ -1035,12 +1011,12 @@ bool async_socket_io::do_read(transport_ptr transport) {
         socket_recv_buffer_size - transport->offset_);
 
     if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error())) {
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_,
                error_, xxsocket::strerror(error_));
 #endif
       if (n == -1) n = 0;
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
       if (n > 0) {
         INET_LOG(
             "[index: %d] do_read ok, received data len: %d, "
@@ -1229,7 +1205,7 @@ but it's ok.
     if (wait_duration > 0) {
       maxtv.tv_sec = static_cast<long>(wait_duration / 1000000);
       maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
       INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
 #endif
@@ -1248,7 +1224,7 @@ but it's ok.
                       &(fds_array[write_op]), nullptr, pmaxtv);
 #endif
 
-#if _ENABLE_VERBOSE_LOG
+#if _MASIO_VERBOS_LOG
       INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
     } else {

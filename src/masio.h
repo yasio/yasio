@@ -26,8 +26,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef _ASYNC_SOCKET_IO_H_
-#define _ASYNC_SOCKET_IO_H_
+#ifndef _MASIO_H_
+#define _MASIO_H_
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -105,6 +105,7 @@ enum {
   MASIO_OPT_DEFER_EVENT,
   MASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   MASIO_OPT_RESOLV_FUNCTION,
+  MASIO_OPT_LOG_FILE,
 };
 
 typedef std::function<void()> vdcallback_t;
@@ -427,6 +428,8 @@ class async_socket_io {
     int interval = 75;
     int probs = 10;
   } tkpl_;
+  
+  std::string log_file_;
 
   // The resolve function
   std::function<bool(std::vector<ip::endpoint>& endpoints, const char* hostname,

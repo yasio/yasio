@@ -220,7 +220,7 @@ class a_pdu {
 #endif
 };
 
-io_channel::io_channel(async_socket_io& service) : deadline_timer_(service) {
+io_channel::io_channel(io_service& service) : deadline_timer_(service) {
   socket_.reset(new xxsocket());
 }
 
@@ -234,7 +234,7 @@ void io_channel::reset() {
   deadline_timer_.cancel();
 }
 
-async_socket_io::async_socket_io()
+io_service::io_service()
     : stopping_(false),
       thread_started_(false),
       interrupter_(),
@@ -257,9 +257,9 @@ async_socket_io::async_socket_io()
   ipsv_state_ = 0;
 }
 
-async_socket_io::~async_socket_io() { stop_service(); }
+io_service::~io_service() { stop_service(); }
 
-void async_socket_io::stop_service() {
+void io_service::stop_service() {
   if (thread_started_) {
     stopping_ = true;
 
@@ -286,7 +286,7 @@ void async_socket_io::stop_service() {
   }
 }
 
-void async_socket_io::set_option(int option, ...) {
+void io_service::set_option(int option, ...) {
   va_list ap;
   va_start(ap, option);
 
@@ -331,7 +331,7 @@ void async_socket_io::set_option(int option, ...) {
   va_end(ap);
 }
 
-io_channel* async_socket_io::new_channel(const io_hostent& ep) {
+io_channel* io_service::new_channel(const io_hostent& ep) {
   auto ctx = new io_channel(*this);
   ctx->reset();
   ctx->address_ = ep.address_;
@@ -342,7 +342,7 @@ io_channel* async_socket_io::new_channel(const io_hostent& ep) {
   return ctx;
 }
 
-void async_socket_io::clear_channels() {
+void io_service::clear_channels() {
   for (auto iter = channels_.begin(); iter != channels_.end();) {
     (*iter)->socket_->close();
     delete *(iter);
@@ -350,18 +350,18 @@ void async_socket_io::clear_channels() {
   }
 }
 
-void async_socket_io::set_callbacks(
+void io_service::set_callbacks(
     decode_pdu_length_callback_t decode_length_func,
     on_event_callback_t on_event) {
   this->decode_pdu_length_ = std::move(decode_length_func);
   this->on_event_ = std::move(on_event);
 }
 
-size_t async_socket_io::get_event_count(void) const {
+size_t io_service::get_event_count(void) const {
   return this->event_queue_.size();
 }
 
-void async_socket_io::dispatch_events(int count) {
+void io_service::dispatch_events(int count) {
   assert(this->on_event_ != nullptr);
 
   if (this->event_queue_.empty()) return;
@@ -374,7 +374,7 @@ void async_socket_io::dispatch_events(int count) {
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
-void async_socket_io::start_service(const io_hostent* channel_eps,
+void io_service::start_service(const io_hostent* channel_eps,
                                     int channel_count) {
   if (!thread_started_) {
     if (channel_count <= 0) return;
@@ -403,11 +403,11 @@ void async_socket_io::start_service(const io_hostent* channel_eps,
       (void)new_channel(channel_ep);
     }
 
-    worker_thread_ = std::thread(&async_socket_io::service, this);
+    worker_thread_ = std::thread(&io_service::service, this);
   }
 }
 
-void async_socket_io::set_endpoint(size_t channel_index, const char* address,
+void io_service::set_endpoint(size_t channel_index, const char* address,
                                    u_short port) {
   // Gets channel context
   if (channel_index >= channels_.size()) return;
@@ -418,7 +418,7 @@ void async_socket_io::set_endpoint(size_t channel_index, const char* address,
   update_resolve_state(ctx);
 }
 
-void async_socket_io::set_endpoint(size_t channel_index,
+void io_service::set_endpoint(size_t channel_index,
                                    const ip::endpoint& ep) {
   // Gets channel context
   if (channel_index >= channels_.size()) return;
@@ -429,7 +429,7 @@ void async_socket_io::set_endpoint(size_t channel_index,
   ctx->resolve_state_ = resolve_state::READY;
 }
 
-void async_socket_io::service() {  // The async event-loop
+void io_service::service() {  // The async event-loop
   // Set Thread Name: mini async socket io
   _set_thread_name("mini-asio");
 
@@ -547,7 +547,7 @@ _L_end:
   (void)0;  // ONLY for xcode compiler happy.
 }
 
-void async_socket_io::perform_active_channels(fd_set* fds_array) {
+void io_service::perform_active_channels(fd_set* fds_array) {
   if (!active_channels_.empty()) {
     // perform active channels
     active_channels_mtx_.lock();
@@ -591,7 +591,7 @@ void async_socket_io::perform_active_channels(fd_set* fds_array) {
   }
 }
 
-void async_socket_io::close(size_t channel_index) {
+void io_service::close(size_t channel_index) {
   // Gets channel context
   if (channel_index >= channels_.size()) return;
   auto ctx = channels_[channel_index];
@@ -606,7 +606,7 @@ void async_socket_io::close(size_t channel_index) {
   }
 }
 
-void async_socket_io::close(transport_ptr& transport) {
+void io_service::close(transport_ptr& transport) {
   if (transport->is_open()) {
     INET_LOG("close the transport: %s --> %s",
              transport->socket_->local_endpoint().to_string().c_str(),
@@ -618,21 +618,21 @@ void async_socket_io::close(transport_ptr& transport) {
   }
 }
 
-bool async_socket_io::is_connected(size_t channel_index) const {
+bool io_service::is_connected(size_t channel_index) const {
   // Gets channel
   if (channel_index >= channels_.size()) return false;
   auto ctx = channels_[channel_index];
   return ctx->state_ == channel_state::CONNECTED;
 }
 
-void async_socket_io::reopen(transport_ptr transport) {
+void io_service::reopen(transport_ptr transport) {
   if (transport->is_open()) {
     transport->offset_ = 1;  // !IMPORTANT, trigger the close immidlately.
   }
   open_internal(transport->ctx_);
 }
 
-void async_socket_io::open(size_t channel_index, int channel_type) {
+void io_service::open(size_t channel_index, int channel_type) {
   // Gets channel
   if (channel_index >= channels_.size()) return;
   auto ctx = channels_[channel_index];
@@ -642,7 +642,7 @@ void async_socket_io::open(size_t channel_index, int channel_type) {
   open_internal(ctx);
 }
 
-void async_socket_io::handle_close(transport_ptr transport) {
+void io_service::handle_close(transport_ptr transport) {
   INET_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
            transport->local_endpoint().to_string().c_str(),
            transport->peer_endpoint().to_string().c_str(), transport->error_,
@@ -672,7 +672,7 @@ void async_socket_io::handle_close(transport_ptr transport) {
   }
 }
 
-void async_socket_io::register_descriptor(const socket_native_type fd,
+void io_service::register_descriptor(const socket_native_type fd,
                                           int flags) {
   if ((flags & socket_event_read) != 0) {
     FD_SET(fd, &(fds_array_[read_op]));
@@ -689,7 +689,7 @@ void async_socket_io::register_descriptor(const socket_native_type fd,
   if (maxfdp_ < static_cast<int>(fd) + 1) maxfdp_ = static_cast<int>(fd) + 1;
 }
 
-void async_socket_io::unregister_descriptor(const socket_native_type fd,
+void io_service::unregister_descriptor(const socket_native_type fd,
                                             int flags) {
   if ((flags & socket_event_read) != 0) {
     FD_CLR(fd, &(fds_array_[read_op]));
@@ -704,7 +704,7 @@ void async_socket_io::unregister_descriptor(const socket_native_type fd,
   }
 }
 
-void async_socket_io::write(transport_ptr transport, std::vector<char> data) {
+void io_service::write(transport_ptr transport, std::vector<char> data) {
   if (transport && transport->socket_->is_open()) {
     auto pdu = a_pdu_ptr(new a_pdu(
         std::move(data), std::chrono::microseconds(this->send_timeout_)));
@@ -720,7 +720,7 @@ void async_socket_io::write(transport_ptr transport, std::vector<char> data) {
   }
 }
 
-void async_socket_io::handle_packet(transport_ptr transport) {
+void io_service::handle_packet(transport_ptr transport) {
 #if _MASIO_VERBOS_LOG
   INET_LOG(
       "[index: %d] received a properly packet from peer, "
@@ -733,7 +733,7 @@ void async_socket_io::handle_packet(transport_ptr transport) {
   transport->receiving_pdu_elen_ = -1;
 }
 
-void async_socket_io::handle_event(event_ptr event) {
+void io_service::handle_event(event_ptr event) {
   if (deferred_event_) {
     event_queue_mtx_.lock();
     event_queue_.push_back(std::move(event));
@@ -743,7 +743,7 @@ void async_socket_io::handle_event(event_ptr event) {
   }
 }
 
-bool async_socket_io::do_nonblocking_connect(io_channel* ctx) {
+bool io_service::do_nonblocking_connect(io_channel* ctx) {
   assert(ctx->state_ == channel_state::REQUEST_CONNECT);
   if (ctx->state_ != channel_state::REQUEST_CONNECT) return true;
 
@@ -808,7 +808,7 @@ bool async_socket_io::do_nonblocking_connect(io_channel* ctx) {
   return !(ctx->resolve_state_ == resolve_state::INPRROGRESS);
 }
 
-bool async_socket_io::do_nonblocking_connect_completion(fd_set* fds_array,
+bool io_service::do_nonblocking_connect_completion(fd_set* fds_array,
                                                         io_channel* ctx) {
   if (ctx->state_ == channel_state::CONNECTING) {
     int error = -1;
@@ -833,7 +833,7 @@ bool async_socket_io::do_nonblocking_connect_completion(fd_set* fds_array,
   return false;
 }
 
-void async_socket_io::do_nonblocking_accept(
+void io_service::do_nonblocking_accept(
     io_channel* ctx) {  // channel is server
   close_internal(ctx);
 
@@ -868,7 +868,7 @@ void async_socket_io::do_nonblocking_accept(
   }
 }
 
-void async_socket_io::do_nonblocking_accept_completion(fd_set* fds_array,
+void io_service::do_nonblocking_accept_completion(fd_set* fds_array,
                                                        io_channel* ctx) {
   if (ctx->state_ == channel_state::CONNECTING) {
     int error = -1;
@@ -893,7 +893,7 @@ void async_socket_io::do_nonblocking_accept_completion(fd_set* fds_array,
   }
 }
 
-void async_socket_io::handle_connect_succeed(io_channel* ctx,
+void io_service::handle_connect_succeed(io_channel* ctx,
                                              std::shared_ptr<xxsocket> socket) {
   transport_ptr transport(new io_transport(ctx));
 
@@ -920,7 +920,7 @@ void async_socket_io::handle_connect_succeed(io_channel* ctx,
       new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 }
 
-void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
+void io_service::handle_connect_failed(io_channel* ctx, int error) {
   close_internal(ctx);
 
   ctx->state_ = channel_state::INACTIVE;
@@ -933,7 +933,7 @@ void async_socket_io::handle_connect_failed(io_channel* ctx, int error) {
            xxsocket::strerror(error));
 }
 
-bool async_socket_io::do_write(transport_ptr transport) {
+bool io_service::do_write(transport_ptr transport) {
   bool bRet = false;
   auto ctx = transport->ctx_;
   do {
@@ -997,10 +997,10 @@ bool async_socket_io::do_write(transport_ptr transport) {
   return bRet;
 }
 
-void async_socket_io::handle_send_finished(a_pdu_ptr /*pdu*/,
+void io_service::handle_send_finished(a_pdu_ptr /*pdu*/,
                                            error_number /*error*/) {}
 
-bool async_socket_io::do_read(transport_ptr transport) {
+bool io_service::do_read(transport_ptr transport) {
   bool bRet = false;
   auto ctx = transport->ctx_;
   do {
@@ -1077,7 +1077,7 @@ bool async_socket_io::do_read(transport_ptr transport) {
   return bRet;
 }
 
-void async_socket_io::do_unpack(transport_ptr ctx, int bytes_expected,
+void io_service::do_unpack(transport_ptr ctx, int bytes_expected,
                                 int bytes_transferred) {
   auto bytes_available = bytes_transferred + ctx->offset_;
   ctx->receiving_pdu_.insert(
@@ -1104,7 +1104,7 @@ void async_socket_io::do_unpack(transport_ptr ctx, int bytes_expected,
   }
 }
 
-void async_socket_io::schedule_timer(deadline_timer* timer) {
+void io_service::schedule_timer(deadline_timer* timer) {
   // pitfall: this service only hold the weak pointer of the timer
   // object, so before dispose the timer object need call
   // cancel_timer to cancel it.
@@ -1125,7 +1125,7 @@ void async_socket_io::schedule_timer(deadline_timer* timer) {
   if (timer == *this->timer_queue_.begin()) interrupter_.interrupt();
 }
 
-void async_socket_io::cancel_timer(deadline_timer* timer) {
+void io_service::cancel_timer(deadline_timer* timer) {
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
   auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
@@ -1136,7 +1136,7 @@ void async_socket_io::cancel_timer(deadline_timer* timer) {
   }
 }
 
-void async_socket_io::open_internal(io_channel* ctx) {
+void io_service::open_internal(io_channel* ctx) {
   if (ctx->state_ == channel_state::REQUEST_CONNECT ||
       ctx->state_ == channel_state::CONNECTING) {  // in-progress, do nothing
     INET_LOG("[index: %d] the connect request is already in progress!",
@@ -1158,7 +1158,7 @@ void async_socket_io::open_internal(io_channel* ctx) {
   interrupter_.interrupt();
 }
 
-void async_socket_io::perform_timeout_timers() {
+void io_service::perform_timeout_timers() {
   if (this->timer_queue_.empty()) return;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
@@ -1189,7 +1189,7 @@ void async_socket_io::perform_timeout_timers() {
   }
 }
 
-int async_socket_io::do_select(fd_set* fds_array, timeval& maxtv) {
+int io_service::do_select(fd_set* fds_array, timeval& maxtv) {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
 be perform when no need to call socket.select However, the
@@ -1235,7 +1235,7 @@ but it's ok.
   return nfds;
 }
 
-long long async_socket_io::get_wait_duration(long long usec) {
+long long io_service::get_wait_duration(long long usec) {
   if (this->timer_queue_.empty()) {
     return usec;
   }
@@ -1251,7 +1251,7 @@ long long async_socket_io::get_wait_duration(long long usec) {
     return usec;
 }
 
-bool async_socket_io::close_internal(io_base* ctx) {
+bool io_service::close_internal(io_base* ctx) {
   if (ctx->socket_->is_open()) {
     unregister_descriptor(ctx->socket_->native_handle(),
                           socket_event_read | socket_event_write);
@@ -1261,7 +1261,7 @@ bool async_socket_io::close_internal(io_base* ctx) {
   return false;
 }
 
-void async_socket_io::update_resolve_state(io_channel* ctx) {
+void io_service::update_resolve_state(io_channel* ctx) {
   if (ctx->port_ > 0) {
     ip::endpoint ep;
     ctx->endpoints_.clear();
@@ -1275,7 +1275,7 @@ void async_socket_io::update_resolve_state(io_channel* ctx) {
     ctx->resolve_state_ = resolve_state::FAILED;
 }
 
-bool async_socket_io::start_resolve(
+bool io_service::start_resolve(
     io_channel* ctx) {  // Only call at event-loop thread, so
   // no need to consider thread safe.
   if (ctx->resolve_state_ != resolve_state::DIRTY) return false;
@@ -1347,7 +1347,7 @@ bool async_socket_io::start_resolve(
   return false;  // waiting async resolve complete.
 }
 
-bool async_socket_io::resolve(std::vector<ip::endpoint>& endpoints,
+bool io_service::resolve(std::vector<ip::endpoint>& endpoints,
                               const char* hostname, unsigned short port) {
   if (this->ipsv_state_ & ipsv_ipv4) {
     return xxsocket::resolve_v4(endpoints, hostname, port);
@@ -1359,7 +1359,7 @@ bool async_socket_io::resolve(std::vector<ip::endpoint>& endpoints,
 }
 
 #if _USING_ARES_LIB
-void async_socket_io::handle_ares_work_finish(
+void io_service::handle_ares_work_finish(
     channel*) {  // Only call at event-loop thread, so no
   // need to consider thread safe.
   --this->ares_outstanding_work_;
@@ -1367,7 +1367,7 @@ void async_socket_io::handle_ares_work_finish(
 }
 #endif
 
-void async_socket_io::interrupt() { interrupter_.interrupt(); }
+void io_service::interrupt() { interrupter_.interrupt(); }
 
 }  // namespace inet
 }  // namespace purelib

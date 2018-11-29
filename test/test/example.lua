@@ -15,7 +15,7 @@ obs:pop32()
 local hostent = io_hostent.new()
 hostent.address_ = "0.0.0.0";
 hostent.port_ = 8081;
-local server = async_socket_io.new()
+local server = io_service.new()
 server:start_service(hostent, 1)
 server:set_callbacks(function(v,n)
         return n
@@ -40,7 +40,7 @@ server:set_callbacks(function(v,n)
 
 server:open(0, 2)
 
-local client = async_socket_io.new()
+local client = io_service.new()
 hostent.address_ = "127.0.0.1"
 client:start_service(hostent, 1)
 client:set_callbacks(function(ud,n)

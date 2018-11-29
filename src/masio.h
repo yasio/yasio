@@ -123,7 +123,7 @@ typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef a_pdu* a_pdu_ptr;
 #endif
 
-class async_socket_io;
+class io_service;
 
 struct io_hostent {
   std::string address_;
@@ -139,7 +139,7 @@ struct io_base {
 };
 
 struct io_channel : public io_base {
-  io_channel(async_socket_io& service);
+  io_channel(io_service& service);
 
   int type_ = 0;
 
@@ -160,7 +160,7 @@ struct io_channel : public io_base {
 };
 
 struct io_transport : public io_base {
-  friend class async_socket_io;
+  friend class io_service;
 
  public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
@@ -250,7 +250,7 @@ typedef std::function<int(void* data, int datalen)>
     decode_pdu_length_callback_t;  // -1 indicate failed, connection will be
                                    // closed
 
-class async_socket_io {
+class io_service {
  public:
   // End user pdu decode length func
   // connection callbacks
@@ -259,8 +259,8 @@ class async_socket_io {
       connect_response_callback_t;
 
  public:
-  async_socket_io();
-  ~async_socket_io();
+  io_service();
+  ~io_service();
 
   // set callbacks, required API, must call before dispatch_events
   void set_callbacks(decode_pdu_length_callback_t decode_length_func,
@@ -441,10 +441,10 @@ class async_socket_io {
   int ares_outstanding_work_;
 #endif
   int ipsv_state_;  // local network state
-};                  // async_socket_io
+};                  // io_service
 };                  // namespace inet
 };                  /* namespace purelib */
 #endif
 
 #define myasio \
-  purelib::gc::singleton<purelib::inet::async_socket_io>::instance()
+  purelib::gc::singleton<purelib::inet::io_service>::instance()

@@ -27,15 +27,15 @@ void lua_open_masio(lua_State *L) {
         return std::unique_ptr<ibinarystream>(new ibinarystream(event->packet().data(), event->packet().size()));
     });
 
-    sol2.new_usertype<purelib::inet::async_socket_io>(
-        "async_socket_io", "start_service", &purelib::inet::async_socket_io::start_service,
-        "stop_service", &purelib::inet::async_socket_io::stop_service,
-        "set_callbacks", &purelib::inet::async_socket_io::set_callbacks,
-        "dispatch_events", &purelib::inet::async_socket_io::dispatch_events,
-        "open", &purelib::inet::async_socket_io::open,
-        "write", sol::overload([](purelib::inet::async_socket_io *aio, purelib::inet::transport_ptr transport, const char *s, size_t n) {
+    sol2.new_usertype<purelib::inet::io_service>(
+        "io_service", "start_service", &purelib::inet::io_service::start_service,
+        "stop_service", &purelib::inet::io_service::stop_service,
+        "set_callbacks", &purelib::inet::io_service::set_callbacks,
+        "dispatch_events", &purelib::inet::io_service::dispatch_events,
+        "open", &purelib::inet::io_service::open,
+        "write", sol::overload([](purelib::inet::io_service *aio, purelib::inet::transport_ptr transport, const char *s, size_t n) {
             aio->write(transport, std::vector<char>(s, s + n));
-        }, [](purelib::inet::async_socket_io *aio, purelib::inet::transport_ptr transport, obinarystream* obs) {
+        }, [](purelib::inet::io_service *aio, purelib::inet::transport_ptr transport, obinarystream* obs) {
             aio->write(transport, obs->take_buffer());
         })
     );

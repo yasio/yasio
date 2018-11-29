@@ -29,7 +29,7 @@ SOFTWARE.
 #ifndef _XXSOCKET_DEADLINE_TIMER_CPP_
 #define _XXSOCKET_DEADLINE_TIMER_CPP_
 #include "deadline_timer.h"
-#include "async_socket_io.h"
+#include "masio.h"
 
 namespace purelib {
 namespace inet {

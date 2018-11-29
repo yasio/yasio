@@ -76,17 +76,17 @@ size_t obinarystream::write_v32(std::string_view value)
 
 size_t obinarystream::write_v(const void* v, int size)
 {
-    return write_vv<LENGTH_FIELD_TYPE>(v, size);
+    return write_vx<LENGTH_FIELD_TYPE>(v, size);
 }
 
 size_t obinarystream::write_v16(const void* v, int size)
 {
-    return write_vv<uint16_t>(v, size);
+    return write_vx<uint16_t>(v, size);
 }
 
 size_t obinarystream::write_v32(const void* v, int size)
 {
-    return write_vv<uint32_t>(v, size);
+    return write_vx<uint32_t>(v, size);
 }
 
 size_t obinarystream::write_bytes(std::string_view v)

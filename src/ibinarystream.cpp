@@ -1,3 +1,4 @@
+#include "obinarystream.h"
 #include "ibinarystream.h"
 
 #ifdef _WIN32
@@ -6,7 +7,7 @@
 
 ibinarystream::ibinarystream()
 {
-    this->assign(nullptr, 0);
+    this->assign("", 0);
 }
 
 ibinarystream::ibinarystream(const char* data, int size)
@@ -14,65 +15,89 @@ ibinarystream::ibinarystream(const char* data, int size)
     this->assign(data, size);
 }
 
+ibinarystream::ibinarystream(const obinarystream* obs)
+{
+    auto& buffer = obs->buffer();
+    this->assign(!buffer.empty() ? buffer.data() : "", buffer.size());
+}
+
+ibinarystream::~ibinarystream()
+{
+}
+
 void ibinarystream::assign(const char* data, int size)
 {
     ptr_ = data;
-    remain_ = size;
+    size_ = size;
 }
 
-int ibinarystream::read_v(std::string& oav)
+void ibinarystream::read_v(std::string& oav)
 {
-    return read_vv<LENGTH_FIELD_TYPE>(oav);
+    oav = read_vx<LENGTH_FIELD_TYPE>();
 }
 
-int ibinarystream::read_v16(std::string& oav)
+std::string_view ibinarystream::read_v()
 {
-    return read_vv<uint16_t>(oav);
+    return read_vx<LENGTH_FIELD_TYPE>();
 }
 
-int ibinarystream::read_v32( std::string& oav)
+void ibinarystream::read_v16(std::string& oav)
 {
-    return read_vv<uint32_t>(oav);
+    oav = read_vx<uint16_t>();
 }
 
-int ibinarystream::read_v(void* oav, int len)
+void ibinarystream::read_v32( std::string& oav)
 {
-    return read_vv<LENGTH_FIELD_TYPE>(oav, len);
+    oav = read_vx<uint32_t>();
 }
 
-int ibinarystream::read_v16(void* oav, int len)
+void ibinarystream::read_v(void* oav, int len)
 {
-    return read_vv<uint16_t>(oav, len);
+    read_vx<LENGTH_FIELD_TYPE>().copy((char*)oav, len);
 }
 
-int ibinarystream::read_v32(void* oav, int len)
+void ibinarystream::read_v16(void* oav, int len)
 {
-    return read_vv<uint32_t>(oav, len);
+    read_vx<uint16_t>().copy((char*)oav, len);
 }
 
-int ibinarystream::read_bytes(std::string& oav, int len)
+void ibinarystream::read_v32(void* oav, int len)
+{
+    read_vx<uint32_t>().copy((char*)oav, len);
+}
+
+void ibinarystream::read_bytes(std::string& oav, int len)
 {
     if (len > 0) {
         oav.resize(len);
-        return read_bytes(&oav.front(), len);
+        read_bytes(&oav.front(), len);
     }
-    return 0;
 }
 
-int ibinarystream::read_bytes(void* oav, int len)
+void ibinarystream::read_bytes(void* oav, int len)
 {
     if (len > 0) {
-        ::memcpy(oav, ptr_, len);
-        return consume(len);
+        ::memcpy(oav, consume(len), len);
     }
-    return 0;
 }
 
-int ibinarystream::consume(size_t size)
+std::string_view ibinarystream::read_bytes(int len)
 {
-    ptr_ += size;
-    remain_ -= static_cast<int>(size);
-    if (remain_ < 0) // == 0, packet decode complete.
+    std::string_view sv;
+    if (len > 0) {
+        sv = std::string_view(consume(len), len);
+    }
+    return sv;
+}
+
+const char* ibinarystream::consume(size_t size)
+{
+    if (size_ <= 0)
         throw std::logic_error("packet error, data insufficiently!");
-    return remain_;
+
+    auto ptr = ptr_;
+    ptr_ += size;
+    size_ -= static_cast<int>(size);
+    
+    return ptr;
 }

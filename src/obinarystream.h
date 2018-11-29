@@ -54,7 +54,7 @@ public:
     void compress(size_t offset = 0 /* header maybe */);
 
     template<typename _LenT>
-    size_t write_vv(const void* v, int size)
+    size_t write_vx(const void* v, int size)
     {
         auto l = purelib::endian::htonv(static_cast<_LenT>(size));
 

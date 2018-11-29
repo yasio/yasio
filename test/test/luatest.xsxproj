@@ -1,0 +1,14 @@
+<Project fullMode="0">
+  <assets>
+    <item path="example.lua" dflag="131076"/>
+  </assets>
+  <debug-options>
+    <start-program>.\luatest.exe</start-program>
+    <start-working-dir>.</start-working-dir>
+    <start-command/>
+  </debug-options>
+  <project-home>.</project-home>
+  <ssheets/>
+  <assets.ref/>
+</Project>
+

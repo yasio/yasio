@@ -1,17 +1,21 @@
 #ifndef _IBINARYSTREAM_H_
 #define _IBINARYSTREAM_H_
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <exception>
 #include "endian_portable.h"
-
+class obinarystream;
 class ibinarystream
 {
 public:
     ibinarystream();
     ibinarystream(const char* data, int size);
+    ibinarystream(const obinarystream*);
     ibinarystream(const ibinarystream& right) = delete;
     ibinarystream(ibinarystream&& right) = delete;
+
+    ~ibinarystream();
 
     void assign(const char* data, int size);
 
@@ -19,81 +23,68 @@ public:
     ibinarystream& operator=(ibinarystream&& right) = delete;
 
     template<typename _Nty>
-    int read_i(_Nty& ov);
-    int read_i(float& ov);
-    int read_i(double& ov);
+    void read_i(_Nty& ov);
+    void read_i(float& ov);
+    void read_i(double& ov);
 
-    int read_v(std::string&);
-    int read_v16(std::string&);
-    int read_v32(std::string&);
-
-    int read_v(void*, int);
-    int read_v16(void*, int);
-    int read_v32(void*, int);
-
-    int read_bytes(std::string& oav, int len);
-    int read_bytes(void* oav, int len);
-
-    inline int remain(void) { return remain_;  }
-
-    template<typename _LenT>
-    int read_vv(std::string& ov)
-    {
-        _LenT n = purelib::endian::ntohv(*(_LenT*)(ptr_));
-
-        (void)consume(sizeof(n));
-
-        if (n > 0) {
-            ov.resize(n);
-            return read_bytes(&ov.front(), n);
-        }
-
-        return remain_;
+    template<typename _Nty>
+    _Nty read_i0() {
+        _Nty value;
+        read_i(value);
+        return value;
     }
 
-    template<typename _LenT>
-    int read_vv(void* ov, int len)
-    {
-        _LenT n = purelib::endian::ntohv(*(_LenT*)(ptr_));
+    void read_v(std::string&);
+    void read_v16(std::string&);
+    void read_v32(std::string&);
 
-        (void)consume(sizeof(n));
+    void read_v(void*, int);
+    void read_v16(void*, int);
+    void read_v32(void*, int);
+
+    void read_bytes(std::string& oav, int len);
+    void read_bytes(void* oav, int len);
+
+    std::string_view read_v();
+    std::string_view read_bytes(int len);
+
+    inline int size(void) { return size_;  }
+
+    template<typename _LenT>
+    std::string_view read_vx()
+    {
+        _LenT n = purelib::endian::ntohv(*(_LenT*)consume(sizeof(n)));
 
         if (n > 0) {
-            // ov.resize(n);
-            if (len < static_cast<int>(n))
-                n = static_cast<_LenT>(len);
-            return read_bytes(ov, n);
+            return read_bytes(n);
         }
 
-        return remain_;
+        return {};
     }
 
 protected:
     // will throw std::logic_error
-    int consume(size_t size);
+    const char* consume(size_t size) noexcept(false);
 
 protected:
     const char*    ptr_;
-    int            remain_;
+    int            size_;
 };
 
 template <typename _Nty>
-inline int ibinarystream::read_i(_Nty & ov)
+inline void ibinarystream::read_i(_Nty & ov)
 {
-    ov = purelib::endian::ntohv(*((_Nty*)(ptr_)));
-    return consume(sizeof(_Nty));
+    ov = purelib::endian::ntohv(*((_Nty*)consume(sizeof(_Nty))));
 }
 
-inline int ibinarystream::read_i(float& ov)
+inline void ibinarystream::read_i(float& ov)
 {
-    ov = ntohf(*((uint32_t*)(ptr_)));
-    return consume(sizeof(ov));
+    ov = ntohf(*((uint32_t*)consume(sizeof(ov))));
 }
 
-inline int ibinarystream::read_i(double& ov)
+inline void ibinarystream::read_i(double& ov)
 {
-    ov = ntohd(*((uint64_t*)(ptr_)));
-    return  consume(sizeof(uint64_t));
+    ov = ntohd(*((uint64_t*)consume(sizeof(uint64_t))));
 }
 
 #endif

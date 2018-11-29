@@ -5,7 +5,7 @@ Used by http://hongjing.qq.com/
 support multi-connections at one thread.  
 support deadline timer.**
   
-Usage:
+Usage(less v4.0, since v4.0 c++17 required):
 
 1. Only compile src\xxsocket.cpp src\deadline_timer.cpp src\async_socket_io.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
 2. demo code:

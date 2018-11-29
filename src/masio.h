@@ -246,7 +246,7 @@ class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
 typedef std::function<void(event_ptr)> on_event_callback_t;
-typedef std::function<int(char* data, int datalen)>
+typedef std::function<int(void* data, int datalen)>
     decode_pdu_length_callback_t;  // -1 indicate failed, connection will be
                                    // closed
 

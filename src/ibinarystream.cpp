@@ -10,7 +10,7 @@ ibinarystream::ibinarystream()
     this->assign("", 0);
 }
 
-ibinarystream::ibinarystream(const char* data, int size)
+ibinarystream::ibinarystream(const void* data, int size)
 {
     this->assign(data, size);
 }
@@ -25,9 +25,9 @@ ibinarystream::~ibinarystream()
 {
 }
 
-void ibinarystream::assign(const char* data, int size)
+void ibinarystream::assign(const void* data, int size)
 {
-    ptr_ = data;
+    ptr_ = static_cast<const char*>(data);
     size_ = size;
 }
 

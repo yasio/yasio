@@ -10,14 +10,14 @@ class ibinarystream
 {
 public:
     ibinarystream();
-    ibinarystream(const char* data, int size);
+    ibinarystream(const void* data, int size);
     ibinarystream(const obinarystream*);
     ibinarystream(const ibinarystream& right) = delete;
     ibinarystream(ibinarystream&& right) = delete;
 
     ~ibinarystream();
 
-    void assign(const char* data, int size);
+    void assign(const void* data, int size);
 
     ibinarystream& operator=(const ibinarystream& right) = delete;
     ibinarystream& operator=(ibinarystream&& right) = delete;

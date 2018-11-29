@@ -59,7 +59,8 @@ void lua_open_masio(lua_State *L) {
     // ##-- ibinarystream
     sol2.new_usertype<ibinarystream>(
         "ibstream",
-        sol::constructors<ibinarystream(), ibinarystream(const char*, int), ibinarystream(const obinarystream*)>(),
+        sol::constructors<ibinarystream(), ibinarystream(const void*, int), ibinarystream(const obinarystream*)>(),
+        "assign", &ibinarystream::assign,
         "read_i8", &ibinarystream::read_i0<int8_t>,
         "read_i16", &ibinarystream::read_i0<int16_t>,
         "read_i32", &ibinarystream::read_i0<int32_t>,

@@ -43,8 +43,13 @@ server:open(0, 2)
 local client = async_socket_io.new()
 hostent.address_ = "127.0.0.1"
 client:start_service(hostent, 1)
-client:set_callbacks(function(v,n)
-        return n
+client:set_callbacks(function(ud,n)
+        if n >= 4 then
+            local ibs = ibstream.new(ud, n)
+            local len = ibs:read_i32()
+            return len
+        end
+        return 0
     end,
     function(event)
         local t = event:type()
@@ -59,9 +64,9 @@ client:set_callbacks(function(v,n)
             local lf = ibs:read_lf()
             local v = ibs:read_v()
             print(string.format('receve data from server: %s', v))
-            
+
             local succeed, result = pcall(ibs.read_i8, ibs)
-            
+
             stopFlag = true
             -- print(packet)
         elseif(t == 0) then -- connect responseType

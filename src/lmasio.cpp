@@ -46,13 +46,18 @@ void lua_open_masio(lua_State *L) {
         "push32", &obinarystream::push32,
         "pop32", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
             static_cast<void (obinarystream ::*)(uint32_t)>(&obinarystream::pop32)),
+        "write_b", &obinarystream::write_i<bool>,
         "write_i8", &obinarystream::write_i<int8_t>,
         "write_i16", &obinarystream::write_i<int16_t>,
         "write_i32", &obinarystream::write_i<int32_t>,
         "write_i64", &obinarystream::write_i<int64_t>,
+        "write_u8", &obinarystream::write_i<uint8_t>,
+        "write_u16", &obinarystream::write_i<uint16_t>,
+        "write_u32", &obinarystream::write_i<uint32_t>,
+        "write_u64", &obinarystream::write_i<uint64_t>,
         "write_f", static_cast<size_t(obinarystream::*)(float)>(&obinarystream::write_i),
         "write_lf", static_cast<size_t(obinarystream::*)(double)>(&obinarystream::write_i),
-        "write_v", static_cast<size_t(obinarystream::*)(std::string_view)>(&obinarystream::write_v),
+        "write_string", static_cast<size_t(obinarystream::*)(std::string_view)>(&obinarystream::write_v),
         "length", &obinarystream::length
         );
 
@@ -61,12 +66,17 @@ void lua_open_masio(lua_State *L) {
         "ibstream",
         sol::constructors<ibinarystream(), ibinarystream(const void*, int), ibinarystream(const obinarystream*)>(),
         "assign", &ibinarystream::assign,
+        "read_b", &ibinarystream::read_i0<bool>,
         "read_i8", &ibinarystream::read_i0<int8_t>,
         "read_i16", &ibinarystream::read_i0<int16_t>,
         "read_i32", &ibinarystream::read_i0<int32_t>,
         "read_i64", &ibinarystream::read_i0<int64_t>,
+        "read_u8", &ibinarystream::read_i0<uint8_t>,
+        "read_u16", &ibinarystream::read_i0<uint16_t>,
+        "read_u32", &ibinarystream::read_i0<uint32_t>,
+        "read_u64", &ibinarystream::read_i0<uint64_t>,
         "read_f", &ibinarystream::read_i0<float>,
         "read_lf", &ibinarystream::read_i0<double>,
-        "read_v", static_cast<std::string_view(ibinarystream::*)()>(&ibinarystream::read_v)
+        "read_string", static_cast<std::string_view(ibinarystream::*)()>(&ibinarystream::read_v)
         );
 }

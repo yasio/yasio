@@ -34,7 +34,7 @@ SOFTWARE.
 namespace purelib
 {
 namespace inet {
-class async_socket_io;
+class io_service;
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
 typedef long long highp_time_t;
@@ -42,7 +42,7 @@ typedef long long highp_time_t;
 class deadline_timer {
 public:
     ~deadline_timer();
-    deadline_timer(async_socket_io& service) : repeated_(false), service_(service)
+    deadline_timer(io_service& service) : repeated_(false), service_(service)
     {
     }
 
@@ -83,7 +83,7 @@ public:
     }
 
     bool repeated_;
-    async_socket_io& service_;
+    io_service& service_;
     std::chrono::microseconds duration_;
     std::chrono::time_point<highp_clock_t> expire_time_;
     std::function<void(bool cancelled)> callback_;

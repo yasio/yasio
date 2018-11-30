@@ -1,7 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "async_socket_io.h"
+#include "masio.h"
 
 #if defined(_WIN32)
 #include <Shlwapi.h>
@@ -41,7 +41,8 @@ int main(int, char **) {
   std::vector<std::shared_ptr<io_transport>> transports;
 
   myasio->set_callbacks(
-      [](char *data, int datalen) {  // decode pdu length func
+      [](void *ud, int datalen) {  // decode pdu length func
+        auto data = (char*)ud;
         int len = 0;
         if (datalen >= 4 && data[datalen - 1] == '\n' &&
             data[datalen - 2] == '\r' && data[datalen - 3] == '\n' &&

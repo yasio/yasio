@@ -106,6 +106,7 @@ enum {
   MASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   MASIO_OPT_RESOLV_FUNCTION,
   MASIO_OPT_LOG_FILE,
+  MASIO_OPT_LFIB_PARAMS,
 };
 
 typedef std::function<void()> vdcallback_t;
@@ -245,10 +246,7 @@ typedef std::shared_ptr<io_event> event_ptr;
 class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
-typedef std::function<void(event_ptr)> on_event_callback_t;
-typedef std::function<int(void* data, int datalen)>
-    decode_pdu_length_callback_t;  // -1 indicate failed, connection will be
-                                   // closed
+typedef std::function<void(event_ptr)> on_event_callback_t; 
 
 class io_service {
  public:
@@ -263,8 +261,7 @@ class io_service {
   ~io_service();
 
   // set callbacks, required API, must call before dispatch_events
-  void set_callbacks(decode_pdu_length_callback_t decode_length_func,
-                     on_event_callback_t on_event);
+  void set_event_callback(on_event_callback_t on_event);
 
   // start async socket service
   void start_service(const io_hostent* channel_eps, int channel_count = 1);
@@ -287,7 +284,8 @@ class io_service {
              MASIO_OPT_DEFER_EVENT       defer:int
              MASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              MASIO_OPT_RESOLV_FUNCTION   func:resolv_t
-  */
+             MASIO_OPT_LFIB_PARAMS length_field_offst:int, length_adjustment:int, max_frame_length:int
+  */ 
   void set_option(int option, ...);
 
   // open a channel, default: TCP_CLIENT
@@ -377,6 +375,9 @@ class io_service {
   void do_nonblocking_accept(io_channel*);
   void do_nonblocking_accept_completion(fd_set* fds_array, io_channel*);
 
+  // -1 indicate failed, connection will be closed
+  int decode_frame_length(void* ptr, int len);
+
  private:
   bool stopping_;
   bool thread_started_;
@@ -417,19 +418,31 @@ class io_service {
   // optimize record incomplete works
   int outstanding_work_;
 
-  // callbacks
-  decode_pdu_length_callback_t decode_pdu_length_;
+  // the event callback
   std::function<void(event_ptr)> on_event_;
 
-  // tcp keepalive settings
+  /* 
+  options_.tcp.keepalive.
+  options_.length_field_offset: -1: direct, >= 0: store as 4bytes integer, default value=0
+  options_.max_pdu_size: default value=10M
+  options_.log_file:
+  */
   struct {
-    int onoff = 0;
-    int idle = 7200;
-    int interval = 75;
-    int probs = 10;
-  } tkpl_;
-  
-  std::string log_file_;
+      // tcp keepalive settings
+      struct {
+          int onoff = 0;
+          int idle = 7200;
+          int interval = 75;
+          int probs = 10;
+      } tcp_keepalive;
+
+      struct {
+          int length_field_offset = 0;
+          int length_adjustment = 0;
+          int max_frame_length = SZ(10, M);
+      } lfib;
+      std::string log_file;
+  } options_; 
 
   // The resolve function
   std::function<bool(std::vector<ip::endpoint>& endpoints, const char* hostname,

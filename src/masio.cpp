@@ -242,8 +242,8 @@ io_service::io_service()
       send_timeout_((std::numeric_limits<int>::max)()),
       reconnect_timeout_(-1),
       dns_cache_timeout_(600LL *
-                         MICROSECONDS_PER_SECOND),  // Default: 10 minutes.
-      decode_pdu_length_(nullptr) {
+                         MICROSECONDS_PER_SECOND)  // Default: 10 minutes.
+      {
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
@@ -291,41 +291,46 @@ void io_service::set_option(int option, ...) {
   va_start(ap, option);
 
   switch (option) {
-    case MASIO_OPT_CONNECT_TIMEOUT:
-      this->connect_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case MASIO_OPT_SEND_TIMEOUT:
-      this->send_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case MASIO_OPT_RECONNECT_TIMEOUT: {
-      int value = va_arg(ap, int);
-      if (value > 0)
-        this->reconnect_timeout_ =
-            static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
-      else
-        this->reconnect_timeout_ = -1;  // means auto reconnect is disabled.
-    } break;
-    case MASIO_OPT_DNS_CACHE_TIMEOUT:
-      this->dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case MASIO_OPT_DEFER_EVENT:
-      this->deferred_event_ = !!va_arg(ap, int);
-      break;
-    case MASIO_OPT_TCP_KEEPALIVE:
-      tkpl_.onoff = 1;
-      tkpl_.idle = va_arg(ap, int);
-      tkpl_.interval = va_arg(ap, int);
-      tkpl_.probs = va_arg(ap, int);
-      break;
-    case MASIO_OPT_RESOLV_FUNCTION:
-      this->xresolv_ = va_arg(ap, resolv_t);
-      break;
-    case MASIO_OPT_LOG_FILE:
-      this->log_file_ = va_arg(ap, const char*);
-      break;
+  case MASIO_OPT_CONNECT_TIMEOUT:
+    this->connect_timeout_ =
+        static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+    break;
+  case MASIO_OPT_SEND_TIMEOUT:
+    this->send_timeout_ =
+        static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+    break;
+  case MASIO_OPT_RECONNECT_TIMEOUT: {
+    int value = va_arg(ap, int);
+    if (value > 0)
+      this->reconnect_timeout_ =
+          static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
+    else
+      this->reconnect_timeout_ = -1; // means auto reconnect is disabled.
+  } break;
+  case MASIO_OPT_DNS_CACHE_TIMEOUT:
+    this->dns_cache_timeout_ =
+        static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+    break;
+  case MASIO_OPT_DEFER_EVENT:
+    this->deferred_event_ = !!va_arg(ap, int);
+    break;
+  case MASIO_OPT_TCP_KEEPALIVE:
+    options_.tcp_keepalive.onoff = 1;
+    options_.tcp_keepalive.idle = va_arg(ap, int);
+    options_.tcp_keepalive.interval = va_arg(ap, int);
+    options_.tcp_keepalive.probs = va_arg(ap, int);
+    break;
+  case MASIO_OPT_RESOLV_FUNCTION:
+    this->xresolv_ = va_arg(ap, resolv_t);
+    break;
+  case MASIO_OPT_LOG_FILE:
+    options_.log_file = va_arg(ap, const char *);
+    break;
+  case MASIO_OPT_LFIB_PARAMS:
+    options_.lfib.length_field_offset = va_arg(ap, int);
+    options_.lfib.length_adjustment = va_arg(ap, int);
+    options_.lfib.max_frame_length = va_arg(ap, int);
+    break;
   }
 
   va_end(ap);
@@ -350,10 +355,7 @@ void io_service::clear_channels() {
   }
 }
 
-void io_service::set_callbacks(
-    decode_pdu_length_callback_t decode_length_func,
-    on_event_callback_t on_event) {
-  this->decode_pdu_length_ = std::move(decode_length_func);
+void io_service::set_event_callback(on_event_callback_t on_event) {
   this->on_event_ = std::move(on_event);
 }
 
@@ -904,8 +906,8 @@ void io_service::handle_connect_succeed(io_channel* ctx,
     ctx->state_ = channel_state::CONNECTED;
   }
 
-  if (tkpl_.onoff) {
-    socket->set_keepalive(tkpl_.idle, tkpl_.interval, tkpl_.probs);
+  if (options_.tcp_keepalive.onoff) {
+    socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval, options_.tcp_keepalive.probs);
   }
 
   transport->socket_ = socket;
@@ -1027,7 +1029,7 @@ bool io_service::do_read(transport_ptr transport) {
 #endif
       if (transport->receiving_pdu_elen_ == -1) {  // decode length
         int length =
-            decode_pdu_length_(transport->buffer_, transport->offset_ + n);
+            decode_frame_length(transport->buffer_, transport->offset_ + n);
         if (length > 0) {
           transport->receiving_pdu_elen_ = length;
           transport->receiving_pdu_.reserve((std::min)(
@@ -1366,6 +1368,22 @@ void io_service::handle_ares_work_finish(
   ++this->outstanding_work_;
 }
 #endif
+
+int io_service::decode_frame_length(void *ud, int n) {
+  if (options_.lfib.length_field_offset >= 0) {
+    if (n >= (options_.lfib.length_field_offset +
+              static_cast<int>(sizeof(int32_t)))) {
+      int length = ntohl(*reinterpret_cast<int32_t *>(
+                       (char *)ud + options_.lfib.length_field_offset)) +
+                   options_.lfib.length_adjustment;
+      if (length > options_.lfib.max_frame_length)
+        length = -1;
+      return length;
+    }
+    return 0;
+  }
+  return n;
+}
 
 void io_service::interrupt() { interrupter_.interrupt(); }
 

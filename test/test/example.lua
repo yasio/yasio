@@ -3,7 +3,8 @@ local stopFlag = false
 local obs = obstream.new()
 
 obs:push32()
-obs:write_u8(235)
+obs:write_u8(247)
+obs:write_b(false)
 obs:write_i16(2)
 obs:write_i32(3)
 obs:write_i64(4)
@@ -17,9 +18,7 @@ hostent.address_ = "0.0.0.0";
 hostent.port_ = 8081;
 local server = io_service.new()
 server:start_service(hostent, 1)
-server:set_callbacks(function(v,n)
-        return n
-    end,
+server:set_event_callback(
     function(event)
         local t = event:type()
         if t == 2 then
@@ -42,29 +41,25 @@ server:open(0, 2)
 
 local client = io_service.new()
 hostent.address_ = "127.0.0.1"
+client:set_option(9, 0, 0, 16384)
 client:start_service(hostent, 1)
-client:set_callbacks(function(ud,n)
-        if n >= 4 then
-            local ibs = ibstream.new(ud, n)
-            local len = ibs:read_i32()
-            return len
-        end
-        return 0
-    end,
+client:set_event_callback(
     function(event)
         local t = event:type()
         if t == 2 then
             local ibs = event:packet()
             local len = ibs:read_i32()
-            local u8 = ibs:read_u8()
+            local i8 = ibs:read_u8()
+            local boolval = ibs:read_b()
             local i16 = ibs:read_i16()
             local i32 = ibs:read_i32()
             local i64 = ibs:read_i64()
             local f = ibs:read_f()
             local lf = ibs:read_lf()
-            local v = ibs:read_v()
+            local v = ibs:read_string()
             print(string.format('receve data from server: %s', v))
 
+            -- test buffer overflow exception handler
             local succeed, result = pcall(ibs.read_i8, ibs)
 
             stopFlag = true

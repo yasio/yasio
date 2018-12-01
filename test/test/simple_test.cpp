@@ -39,40 +39,8 @@ int main(int, char **) {
   });
 
   std::vector<std::shared_ptr<io_transport>> transports;
-
-  myasio->set_callbacks(
-      [](void *ud, int datalen) {  // decode pdu length func
-        auto data = (char*)ud;
-        int len = 0;
-        if (datalen >= 4 && data[datalen - 1] == '\n' &&
-            data[datalen - 2] == '\r' && data[datalen - 3] == '\n' &&
-            data[datalen - 4] == '\r') {
-          len = datalen;
-        } else {
-          data[datalen] = '\0';
-          auto ptr = strcasestr(data, "Content-Length:");
-
-          if (ptr != nullptr) {
-            ptr += (sizeof("Content-Length:") - 1);
-            if (static_cast<int>(ptr - data) < static_cast<int>(datalen)) {
-              while (static_cast<int>(ptr - data) < static_cast<int>(datalen) &&
-                     !isdigit(*ptr))
-                ++ptr;
-              if (isdigit(*ptr)) {
-                int bodylen = static_cast<int>(strtol(ptr, nullptr, 10));
-                if (bodylen > 0) {
-                  ptr = strstr(ptr, "\r\n\r\n");
-                  if (ptr != nullptr) {
-                    ptr += (sizeof("\r\n\r\n") - 1);
-                    len = bodylen + static_cast<int>(ptr - data);
-                  }
-                }
-              }
-            }
-          }
-        }
-        return len;
-      },
+  myasio->set_option(MASIO_OPT_LFIB_PARAMS, -1, 0, SZ(5,M))
+  myasio->set_event_callback(
       [&](event_ptr event) {
         switch (event->type()) {
           case MASIO_EVENT_RECV_PACKET: {

@@ -48,6 +48,7 @@ public:
     std::string_view read_v();
     std::string_view read_bytes(int len);
 
+    inline const char *data() { return ptr_; }
     inline int size(void) { return size_;  }
 
     template<typename _LenT>

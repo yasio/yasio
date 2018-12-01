@@ -90,6 +90,8 @@ void lua_open_masio(lua_State *L) {
         "read_u64", &ibinarystream::read_i0<uint64_t>,
         "read_f", &ibinarystream::read_i0<float>,
         "read_lf", &ibinarystream::read_i0<double>,
-        "read_string", static_cast<std::string_view(ibinarystream::*)()>(&ibinarystream::read_v)
-        );
+        "read_string", static_cast<std::string_view(ibinarystream::*)()>(&ibinarystream::read_v),
+        "to_string", [](ibinarystream* ibs) {
+              return std::string_view(ibs->data(), ibs->size());
+        });
 }

@@ -1,3 +1,4 @@
+local masio = require('masio') -- constants
 local stopFlag = false
 
 local obs = obstream.new()
@@ -21,10 +22,10 @@ server:start_service(hostent, 1)
 server:set_event_callback(
     function(event)
         local t = event:type()
-        if t == 2 then
+        if t == masio.MASIO_EVENT_RECV_PACKET then
             local packet = event:packet()
             -- print(packet)
-        elseif(t == 0) then -- connect responseType
+        elseif(t == masio.MASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
             if(event:error_code() == 0) then
                 local transport = event:transport()
                 -- local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
@@ -32,21 +33,21 @@ server:set_event_callback(
             else
                 print("connect server failed!")
             end
-        elseif(t == 1) then -- connection lost event
+        elseif(t == masio.MASIO_EVENT_CONNECTION_LOST) then -- connection lost event
             print("The connection is lost!")
         end
     end)
 
-server:open(0, 2)
+server:open(0, masio.CHANNEL_TCP_SERVER)
 
 local client = io_service.new()
 hostent.address_ = "127.0.0.1"
-client:set_option(9, 0, 0, 16384)
+client:set_option(masio.MASIO_OPT_LFIB_PARAMS, 0, 0, 16384)
 client:start_service(hostent, 1)
 client:set_event_callback(
     function(event)
         local t = event:type()
-        if t == 2 then
+        if t == masio.MASIO_EVENT_RECV_PACKET then
             local ibs = event:packet()
             local len = ibs:read_i32()
             local i8 = ibs:read_u8()
@@ -64,7 +65,7 @@ client:set_event_callback(
 
             stopFlag = true
             -- print(packet)
-        elseif(t == 0) then -- connect responseType
+        elseif(t == masio.MASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
             if(event:error_code() == 0) then
                 local transport = event:transport()
                 -- local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
@@ -72,11 +73,11 @@ client:set_event_callback(
             else
                 print("connect server failed!")
             end
-        elseif(t == 1) then -- connection lost event
+        elseif(t == masio.MASIO_EVENT_CONNECTION_LOST) then -- connection lost event
             print("The connection is lost!")
         end
     end)
-client:open(0, 1)
+client:open(0, masio.CHANNEL_TCP_CLIENT)
 
 function global_update(dt)
     server:dispatch_events(128)

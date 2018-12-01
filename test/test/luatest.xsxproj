@@ -1,6 +1,7 @@
 <Project fullMode="0">
   <assets>
     <item path="example.lua" dflag="131076"/>
+    <item path="masio.lua" dflag="131076"/>
   </assets>
   <debug-options>
     <start-program>.\luatest.exe</start-program>

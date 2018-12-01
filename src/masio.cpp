@@ -237,13 +237,13 @@ void io_channel::reset() {
 io_service::io_service()
     : stopping_(false),
       thread_started_(false),
-      interrupter_(),
-      connect_timeout_(5LL * MICROSECONDS_PER_SECOND),
-      send_timeout_((std::numeric_limits<int>::max)()),
-      reconnect_timeout_(-1),
-      dns_cache_timeout_(600LL *
-                         MICROSECONDS_PER_SECOND)  // Default: 10 minutes.
-      {
+      interrupter_()
+{
+  options_.connect_timeout_ = 5LL * MICROSECONDS_PER_SECOND;
+  options_.send_timeout_ = (std::numeric_limits<int>::max)();
+  options_.reconnect_timeout_ = -1;
+  // Default: 10 minutes.
+  options_.dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
@@ -292,27 +292,27 @@ void io_service::set_option(int option, ...) {
 
   switch (option) {
   case MASIO_OPT_CONNECT_TIMEOUT:
-    this->connect_timeout_ =
+    options_.connect_timeout_ =
         static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
     break;
   case MASIO_OPT_SEND_TIMEOUT:
-    this->send_timeout_ =
+    options_.send_timeout_ =
         static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
     break;
   case MASIO_OPT_RECONNECT_TIMEOUT: {
     int value = va_arg(ap, int);
     if (value > 0)
-      this->reconnect_timeout_ =
+      options_.reconnect_timeout_ =
           static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
     else
-      this->reconnect_timeout_ = -1; // means auto reconnect is disabled.
+      options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
   } break;
   case MASIO_OPT_DNS_CACHE_TIMEOUT:
-    this->dns_cache_timeout_ =
+    options_.dns_cache_timeout_ =
         static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
     break;
   case MASIO_OPT_DEFER_EVENT:
-    this->deferred_event_ = !!va_arg(ap, int);
+    options_.deferred_event_ = !!va_arg(ap, int);
     break;
   case MASIO_OPT_TCP_KEEPALIVE:
     options_.tcp_keepalive.onoff = 1;
@@ -661,10 +661,10 @@ void io_service::handle_close(transport_ptr transport) {
   if (ctx->type_ == CHANNEL_TCP_CLIENT) {
     if (channel_state::REQUEST_CONNECT != ctx->state_)
       ctx->state_ = channel_state::INACTIVE;
-    if (this->reconnect_timeout_ > 0) {
+    if (options_.reconnect_timeout_ > 0) {
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
       timer->expires_from_now(
-          std::chrono::microseconds(this->reconnect_timeout_));
+          std::chrono::microseconds(options_.reconnect_timeout_));
       timer->async_wait(
           [this, ctx, timer /*!important, hold on by lambda expression */](
               bool cancelled) {
@@ -709,7 +709,7 @@ void io_service::unregister_descriptor(const socket_native_type fd,
 void io_service::write(transport_ptr transport, std::vector<char> data) {
   if (transport && transport->socket_->is_open()) {
     auto pdu = a_pdu_ptr(new a_pdu(
-        std::move(data), std::chrono::microseconds(this->send_timeout_)));
+        std::move(data), std::chrono::microseconds(options_.send_timeout_)));
 
     transport->send_queue_mtx_.lock();
     transport->send_queue_.push_back(pdu);
@@ -736,7 +736,7 @@ void io_service::handle_packet(transport_ptr transport) {
 }
 
 void io_service::handle_event(event_ptr event) {
-  if (deferred_event_) {
+  if (options_.deferred_event_) {
     event_queue_mtx_.lock();
     event_queue_.push_back(std::move(event));
     event_queue_mtx_.unlock();
@@ -753,7 +753,7 @@ bool io_service::do_nonblocking_connect(io_channel* ctx) {
 
   auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
   if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY &&
-      diff >= this->dns_cache_timeout_)
+      diff >= options_.dns_cache_timeout_)
     ctx->resolve_state_ = resolve_state::DIRTY;
 
   if (ctx->resolve_state_ == resolve_state::READY) {
@@ -785,7 +785,7 @@ bool io_service::do_nonblocking_connect(io_channel* ctx) {
                             socket_event_read | socket_event_write);
 
         ctx->deadline_timer_.expires_from_now(
-            std::chrono::microseconds(this->connect_timeout_));
+            std::chrono::microseconds(options_.connect_timeout_));
         ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
           if (!cancelled && ctx->state_ != channel_state::CONNECTED) {
             handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);

@@ -383,12 +383,6 @@ class io_service {
   bool thread_started_;
   std::thread worker_thread_;
 
-  highp_time_t connect_timeout_;
-  highp_time_t send_timeout_;
-  highp_time_t reconnect_timeout_;
-  highp_time_t dns_cache_timeout_;
-
-  bool deferred_event_ = true;
   std::mutex event_queue_mtx_;
   std::deque<event_ptr> event_queue_;
 
@@ -428,20 +422,26 @@ class io_service {
   options_.log_file:
   */
   struct {
-      // tcp keepalive settings
-      struct {
-          int onoff = 0;
-          int idle = 7200;
-          int interval = 75;
-          int probs = 10;
-      } tcp_keepalive;
+    highp_time_t connect_timeout_;
+    highp_time_t send_timeout_;
+    highp_time_t reconnect_timeout_;
+    highp_time_t dns_cache_timeout_;
 
-      struct {
-          int length_field_offset = 0;
-          int length_adjustment = 0;
-          int max_frame_length = SZ(10, M);
-      } lfib;
-      std::string log_file;
+    bool deferred_event_ = true;
+    // tcp keepalive settings
+    struct {
+      int onoff = 0;
+      int idle = 7200;
+      int interval = 75;
+      int probs = 10;
+    } tcp_keepalive;
+
+    struct {
+      int length_field_offset = 0;
+      int length_adjustment = 0;
+      int max_frame_length = SZ(10, M);
+    } lfib;
+    std::string log_file;
   } options_; 
 
   // The resolve function

@@ -28,9 +28,22 @@ void lua_open_masio(lua_State *L) {
     });
 
     sol2.new_usertype<purelib::inet::io_service>(
-        "io_service", "start_service", &purelib::inet::io_service::start_service,
-        "stop_service", &purelib::inet::io_service::stop_service,
-        "set_callbacks", &purelib::inet::io_service::set_callbacks,
+        "io_service", 
+        "start_service", &purelib::inet::io_service::start_service,
+        "stop_service", &purelib::inet::io_service::stop_service, 
+        "set_option", [](purelib::inet::io_service* service, int opt, sol::variadic_args va) {
+            switch(opt) { 
+            case purelib::inet::MASIO_OPT_TCP_KEEPALIVE:
+            case purelib::inet::MASIO_OPT_LFIB_PARAMS:
+                service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]), static_cast<int>(va[2]));
+                break;
+            case purelib::inet::MASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom resolv function
+                break;
+            default:
+                service->set_option(opt, static_cast<int>(va[0]));
+            }
+        },
+        "set_event_callback", &purelib::inet::io_service::set_event_callback,
         "dispatch_events", &purelib::inet::io_service::dispatch_events,
         "open", &purelib::inet::io_service::open,
         "write", sol::overload([](purelib::inet::io_service *aio, purelib::inet::transport_ptr transport, const char *s, size_t n) {

@@ -10,11 +10,9 @@ int main(int argc, char** argv)
 
     s.script_file("example.lua");
 
-    while (1)
-    {
+    do {
         std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(50)));
-        if (s["global_update"].call(50.0 / 1000))
-            break;
-    }
+    } while (!s["global_update"].call(50.0 / 1000));
+
     return 0;
 }

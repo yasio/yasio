@@ -1,3 +1,30 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store
+// universal app version: 4.0
+//////////////////////////////////////////////////////////////////////////////////////////
+/*
+The MIT License (MIT)
+
+Copyright (c) 2012-2018 halx99
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 #include "ibinarystream.h"
 #include "obinarystream.h"
 #include "masio.h"
@@ -59,7 +86,7 @@ void lua_open_masio(lua_State *L) {
         "push32", &obinarystream::push32,
         "pop32", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
             static_cast<void (obinarystream ::*)(uint32_t)>(&obinarystream::pop32)),
-        "write_b", &obinarystream::write_i<bool>,
+        "write_bool", &obinarystream::write_i<bool>,
         "write_i8", &obinarystream::write_i<int8_t>,
         "write_i16", &obinarystream::write_i<int16_t>,
         "write_i32", &obinarystream::write_i<int32_t>,
@@ -79,7 +106,7 @@ void lua_open_masio(lua_State *L) {
         "ibstream",
         sol::constructors<ibinarystream(), ibinarystream(const void*, int), ibinarystream(const obinarystream*)>(),
         "assign", &ibinarystream::assign,
-        "read_b", &ibinarystream::read_i0<bool>,
+        "read_bool", &ibinarystream::read_i0<bool>,
         "read_i8", &ibinarystream::read_i0<int8_t>,
         "read_i16", &ibinarystream::read_i0<int16_t>,
         "read_i32", &ibinarystream::read_i0<int32_t>,

@@ -2,6 +2,9 @@
 
 rmdir /q /s ipch
 rmdir /q /s *ipch
+rmdir /q /s test\.vs
+rmdir /q /s test\Release
+rmdir /q /s test\Debug
 del /q /f /s *.iobj
 del /q /f /s *.ipdb
 del /q /f /s *.sdf

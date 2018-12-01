@@ -32,7 +32,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
 
 
 -->
-<protocol name="client" version="1.16" author="halx99" release_date="2016.6.9">
+<protocol name="client" version="1.18" author="halx99" release_date="2018.12.2">
 
   <header desc="16 bytes header, unused for generator, on for description protocol">
     <field name="length" type="uint16_t" />
@@ -66,44 +66,16 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="reserved2" type="uint64_t" /> <!-- May be timestamp -->
     </message>
 
-     <message name="LoginReq" command_id="CID_LOGIN_REQ = 101" mode="lua.encode|lua.decode">	<!-- 登陆请求 -->
+     <message name="MessageSimple1" command_id="CID_SIMPLE1 = 101" mode="lua.all">	<!-- 登陆请求 -->
+      <field name="id" type="int8_t" />
+      <field name="value1" type="uint16_t" />
+      <field name="value2" type="int32_t" />
+      <field name="value3" type="bool" />
+      <field name="value4" type="float" />
       <field name="username" type="std::string" />
       <field name="password" type="std::string" />
     </message>
 
-    <message name="LoginResp" command_id="CID_LOGIN_RESP = 102" mode="lua.encode|lua.decode">	<!-- 登陆响应 -->
-      <field name="succeed" type="bool" />
-      <field name="session" type="int32_t" />
-      <field name="append_info" type="std::string" /> <!--如果自定义json格式则可增加附加字符串, 自行解析和编码-->
-    </message>
-
-    <message name="LocalErrorResp" command_id="CID_LOCAL_ERROR_INFO = 0x7fff" mode="lua.encode|lua.decode">	<!-- 网络出错 -->
-      <field name="error_code" type="int16_t" />
-      <field name="error_msg" type="std::string" />
-    </message>
-
-
-    
-    <message name="MsgPeerEndpointReq" command_id="CID_MSG_PEER_ENDPOINT_REQ = 1001" mode="lua.encode|lua.decode">
-      <field name="user_id" type="uint32_t" />
-    </message>
-    
-    <message name="MsgPeerEndpointResp" command_id="CID_MSG_PEER_ENDPOINT_RESP= 1002" mode="lua.decode">
-      <field name="user_id" type="uint32_t" />
-      <field name="addr" type="std::string" />
-      <field name="port" type="uint16_t" />
-    </message>
-   
-    <message name="MsgGetFriendListReq" command_id="CID_MSG_GET_FRIENDLIST_REQ = 1003" mode="lua.encode">
-      <field name="user_id" type="uint32_t" />
-    </message>
-   
-    <message name="MsgGetFriendListResp" command_id="CID_MSG_GET_FRIENDLIST_RESP = 1004" mode="lua.decode">
-      <field name="result" type="int8_t" />
-      <field name="user_id" type="uint32_t" />
-      <field name="friends" type="std::vector&lt;UserInfo&gt;" />
-    </message>
-    
   </messages>
   
 </protocol>

@@ -88,11 +88,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;BOOST_SYSTEM_NO_LIB;BOOST_DATE_TIME_NO_LIB;BOOST_REGEX_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;..\..\refs\boost.asio\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\refs\boost.asio\;D:\develop\gamedev\engines\cocos2d-x\external\lua\luajit\include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\develop\gamedev\engines\cocos2d-x\external\lua\luajit\prebuilt\win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -118,13 +120,15 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;BOOST_SYSTEM_NO_LIB;BOOST_DATE_TIME_NO_LIB;BOOST_REGEX_NO_LIB;BOOST_ASIO_DISABLE_THREADS;_WIN32_WINNT=0x0a00;BOOST_ASIO_ENABLE_BUFFER_DEBUGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;..\..\refs\boost.asio\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\refs\boost.asio\;D:\develop\gamedev\engines\cocos2d-x\external\lua\luajit\include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\develop\gamedev\engines\cocos2d-x\external\lua\luajit\prebuilt\win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -146,18 +150,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\async_socket_io.cpp" />
     <ClCompile Include="..\..\src\deadline_timer.cpp" />
     <ClCompile Include="..\..\src\ibinarystream.cpp" />
+    <ClCompile Include="..\..\src\lmasio.cpp" />
+    <ClCompile Include="..\..\src\masio.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="simple_test.cpp" />
+    <ClCompile Include="luatest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\async_socket_io.h" />
     <ClInclude Include="..\..\src\deadline_timer.h" />
     <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\ibinarystream.h" />
+    <ClInclude Include="..\..\src\lmasio.h" />
+    <ClInclude Include="..\..\src\masio.h" />
     <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\pipe_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\select_interrupter.hpp" />

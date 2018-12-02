@@ -1,18 +1,9 @@
+require 'protocol_base'
+require 'protocol_enc'
+require 'protocol_dec'
+
 local masio = require('masio') -- constants
 local stopFlag = 0
-
-local obs = obstream.new()
-
-obs:push32()
-obs:write_u8(247)
-obs:write_bool(false)
-obs:write_i16(2)
-obs:write_i32(3)
-obs:write_i64(4)
-obs:write_f(5.2)
-obs:write_lf(6.3)
-obs:write_string("hello world!")
-obs:pop32()
 
 local hostent = io_hostent.new()
 hostent.address_ = "0.0.0.0";
@@ -31,6 +22,17 @@ server:start_service(hostents, function(event)
             if(event:error_code() == 0) then
                 local transport = event:transport()
                 -- local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
+                local msg = {
+                    id = 110,
+                    value1 = 3291,
+                    value2 = 391040,
+                    value3 = true,
+                    value4 = 301.32,
+                    value6 = 13883.197,
+                    uname = "halx99",
+                    passwd = "x-studio365 is a powerful IDE!"
+                }
+                local obs = proto.e101(msg)
                 server:write(transport, obs)
             else
                 print("connect server failed!")
@@ -48,16 +50,8 @@ local func = function(event)
     local t = event:type()
     if t == masio.MASIO_EVENT_RECV_PACKET then
         local ibs = event:packet()
-        local len = ibs:read_i32()
-        local i8 = ibs:read_u8()
-        local boolval = ibs:read_bool()
-        local i16 = ibs:read_i16()
-        local i32 = ibs:read_i32()
-        local i64 = ibs:read_i64()
-        local f = ibs:read_f()
-        local lf = ibs:read_lf()
-        local v = ibs:read_string()
-        print(string.format('receve data from server: %s', v))
+        local msg = proto.d101(ibs)
+        print(string.format('receve data from server: %s', msg.passwd))
         stopFlag = stopFlag + 1
         -- test buffer overflow exception handler
         local succeed, result = pcall(ibs.read_i8, ibs)

@@ -72,8 +72,9 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="value2" type="int32_t" />
       <field name="value3" type="bool" />
       <field name="value4" type="float" />
-      <field name="username" type="std::string" />
-      <field name="password" type="std::string" />
+      <field name="value6" type="double" />
+      <field name="uname" type="std::string" />
+      <field name="passwd" type="std::string" />
     </message>
 
   </messages>

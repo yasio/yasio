@@ -29,7 +29,6 @@ int main(int, char **) {
 
   myasio->set_option(MASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
   myasio->set_option(MASIO_OPT_RESOLV_FUNCTION, resolv);
-  myasio->start_service(endpoints, _ARRAYSIZE(endpoints));
 
   deadline_timer t0(*myasio);
 
@@ -39,8 +38,8 @@ int main(int, char **) {
   });
 
   std::vector<std::shared_ptr<io_transport>> transports;
-  myasio->set_option(MASIO_OPT_LFIB_PARAMS, -1, 0, SZ(5,M))
-  myasio->set_event_callback(
+  myasio->set_option(MASIO_OPT_LFIB_PARAMS, -1, 0, SZ(5, M));
+  myasio->start_service(endpoints, _ARRAYSIZE(endpoints), 
       [&](event_ptr event) {
         switch (event->type()) {
           case MASIO_EVENT_RECV_PACKET: {

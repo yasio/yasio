@@ -31,6 +31,7 @@ SOFTWARE.
 #include "lmasio.h"
 
 void lua_open_masio(lua_State *L) {
+    using namespace purelib::inet;
     sol::state_view sol2(L);
 #if 0
     auto t = sol2.create_named_table("simple_timer");
@@ -40,42 +41,53 @@ void lua_open_masio(lua_State *L) {
     t.set_function("kill", simple_timer::kill);
 #endif
 
-    sol2.new_usertype<purelib::inet::io_hostent>(
+    sol2.new_usertype<io_hostent>(
         "io_hostent",
-        "address_", &purelib::inet::io_hostent::address_,
-        "port_", &purelib::inet::io_hostent::port_);
+        sol::constructors<io_hostent(), io_hostent(std::string_view, u_short)>(),
+        "address_", &io_hostent::address_,
+        "port_", &io_hostent::port_);
 
-    sol2.new_usertype<purelib::inet::io_event>(
-        "io_event", "channel_index", &purelib::inet::io_event::channel_index,
-        "type", &purelib::inet::io_event::type,
-        "error_code", &purelib::inet::io_event::error_code,
-        "transport", &purelib::inet::io_event::transport,
-        "packet", [](purelib::inet::io_event *event) {
+    sol2.new_usertype<io_event>(
+        "io_event", "channel_index", &io_event::channel_index,
+        "type", &io_event::type,
+        "error_code", &io_event::error_code,
+        "transport", &io_event::transport,
+        "packet", [](io_event *event) {
         return std::unique_ptr<ibinarystream>(new ibinarystream(event->packet().data(), event->packet().size()));
     });
 
-    sol2.new_usertype<purelib::inet::io_service>(
+    sol2.new_usertype<io_service>(
         "io_service", 
-        "start_service", &purelib::inet::io_service::start_service,
-        "stop_service", &purelib::inet::io_service::stop_service, 
-        "set_option", [](purelib::inet::io_service* service, int opt, sol::variadic_args va) {
+        "start_service",
+        sol::overload(static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_callback_t)>(&io_service::start_service),
+            static_cast<void (io_service::*)(const io_hostent *channel_eps, io_event_callback_t cb)>(&io_service::start_service)),
+        "stop_service", &io_service::stop_service, 
+        "set_option", [](io_service* service, int opt, sol::variadic_args va) {
             switch(opt) { 
-            case purelib::inet::MASIO_OPT_TCP_KEEPALIVE:
-            case purelib::inet::MASIO_OPT_LFIB_PARAMS:
+            case MASIO_OPT_TCP_KEEPALIVE:
+            case MASIO_OPT_LFIB_PARAMS:
                 service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]), static_cast<int>(va[2]));
                 break;
-            case purelib::inet::MASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom resolv function
+            case MASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom resolv function
+                break;
+            case MASIO_OPT_IO_EVENT_CALLBACK: 
+                (void)0; {
+                    sol::function fn = va[0];
+                    io_event_callback_t fnwrap = [=](event_ptr e)mutable ->void {
+                        fn(e);
+                    };
+                    service->set_option(opt, std::addressof(fnwrap));
+                }
                 break;
             default:
                 service->set_option(opt, static_cast<int>(va[0]));
             }
         },
-        "set_event_callback", &purelib::inet::io_service::set_event_callback,
-        "dispatch_events", &purelib::inet::io_service::dispatch_events,
-        "open", &purelib::inet::io_service::open,
-        "write", sol::overload([](purelib::inet::io_service *aio, purelib::inet::transport_ptr transport, const char *s, size_t n) {
+        "dispatch_events", &io_service::dispatch_events,
+        "open", &io_service::open,
+        "write", sol::overload([](io_service *aio, transport_ptr transport, const char *s, size_t n) {
             aio->write(transport, std::vector<char>(s, s + n));
-        }, [](purelib::inet::io_service *aio, purelib::inet::transport_ptr transport, obinarystream* obs) {
+        }, [](io_service *aio, transport_ptr transport, obinarystream* obs) {
             aio->write(transport, obs->take_buffer());
         })
     );

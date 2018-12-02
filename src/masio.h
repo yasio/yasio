@@ -107,12 +107,13 @@ enum {
   MASIO_OPT_RESOLV_FUNCTION,
   MASIO_OPT_LOG_FILE,
   MASIO_OPT_LFIB_PARAMS,
+  MASIO_OPT_IO_EVENT_CALLBACK,
 };
 
 typedef std::function<void()> vdcallback_t;
 
-typedef bool(*resolv_t)(std::vector<ip::endpoint>& endpoints,
-                           const char* hostname, unsigned short port);
+typedef bool(*resolv_funcptr)(std::vector<ip::endpoint>&,
+                           const char*, unsigned short);
 
 static const int socket_recv_buffer_size = 65536;  // 64K
 
@@ -127,6 +128,10 @@ typedef a_pdu* a_pdu_ptr;
 class io_service;
 
 struct io_hostent {
+  io_hostent() {}
+  io_hostent(std::string_view addr, u_short port) : address_(addr), port_(port)
+  {
+  }
   std::string address_;
   u_short port_;
 };
@@ -246,7 +251,7 @@ typedef std::shared_ptr<io_event> event_ptr;
 class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
-typedef std::function<void(event_ptr)> on_event_callback_t; 
+typedef std::function<void(event_ptr)> io_event_callback_t; 
 
 class io_service {
  public:
@@ -260,11 +265,20 @@ class io_service {
   io_service();
   ~io_service();
 
-  // set callbacks, required API, must call before dispatch_events
-  void set_event_callback(on_event_callback_t on_event);
-
-  // start async socket service
-  void start_service(const io_hostent* channel_eps, int channel_count = 1);
+  // start async socket io service
+  void start_service(const io_hostent *channel_eps, int channel_count,
+                     io_event_callback_t cb);
+  void start_service(const io_hostent *channel_eps, io_event_callback_t cb) {
+    this->start_service(channel_eps, 1, std::move(cb));
+  }
+  void start_service(std::vector<io_hostent> channel_eps,
+                     io_event_callback_t cb) {
+    if (!channel_eps.empty()) {
+      this->start_service(&channel_eps.front(), channel_eps.size(),
+                          std::move(cb));
+    }
+  }
+  
   void stop_service();
 
   void set_endpoint(size_t channel_index, const char* address, u_short port);
@@ -413,7 +427,7 @@ class io_service {
   int outstanding_work_;
 
   // the event callback
-  std::function<void(event_ptr)> on_event_;
+  io_event_callback_t on_event_;
 
   /* 
   options_.tcp.keepalive.

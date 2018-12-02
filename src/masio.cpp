@@ -321,7 +321,7 @@ void io_service::set_option(int option, ...) {
     options_.tcp_keepalive.probs = va_arg(ap, int);
     break;
   case MASIO_OPT_RESOLV_FUNCTION:
-    this->xresolv_ = va_arg(ap, resolv_t);
+    this->xresolv_ = va_arg(ap, resolv_funcptr);
     break;
   case MASIO_OPT_LOG_FILE:
     options_.log_file = va_arg(ap, const char *);
@@ -330,6 +330,9 @@ void io_service::set_option(int option, ...) {
     options_.lfib.length_field_offset = va_arg(ap, int);
     options_.lfib.length_adjustment = va_arg(ap, int);
     options_.lfib.max_frame_length = va_arg(ap, int);
+    break;
+  case MASIO_OPT_IO_EVENT_CALLBACK:
+    this->on_event_ = std::move(*va_arg(ap, io_event_callback_t*));
     break;
   }
 
@@ -355,10 +358,6 @@ void io_service::clear_channels() {
   }
 }
 
-void io_service::set_event_callback(on_event_callback_t on_event) {
-  this->on_event_ = std::move(on_event);
-}
-
 size_t io_service::get_event_count(void) const {
   return this->event_queue_.size();
 }
@@ -376,11 +375,13 @@ void io_service::dispatch_events(int count) {
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
-void io_service::start_service(const io_hostent* channel_eps,
-                                    int channel_count) {
+void io_service::start_service(const io_hostent* channel_eps, int channel_count,
+                               io_event_callback_t cb) {
   if (!thread_started_) {
     if (channel_count <= 0) return;
-
+    if (cb)
+      this->on_event_ = std::move(cb);
+    
     stopping_ = false;
     thread_started_ = true;
 #if _USING_ARES_LIB

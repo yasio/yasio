@@ -266,30 +266,30 @@ namespace hardware_impl {
 
 	////////////////////////// cbc encrypt/decrypt ///////////////////////////
 	void cbc_encrypt(const void* in, size_t inlen,
-		void* out, size_t outlen, const void* private_key, int keybits)
+		void* out, size_t outlen, const void* private_key, int keybits, const void* ivec)
 	{
 		assert(inlen == outlen);
 
-		unsigned char ivec[16];
-		memcpy(ivec, s_shared_ivec, sizeof(ivec));
+		unsigned char iv[16];
+		memcpy(iv, ivec != nullptr ? ivec : s_default_ivec, sizeof(iv));
 
 		size_t numBlocks = inlen / AES_BLOCK_SIZE;
 
 		assert(INDEX_BITS(keybits) <= 2);
-		cbc_encrypt_bits[INDEX_BITS(keybits)]((UCHAR*)in, (UCHAR*)out, (UCHAR*)private_key, numBlocks, ivec);
+		cbc_encrypt_bits[INDEX_BITS(keybits)]((UCHAR*)in, (UCHAR*)out, (UCHAR*)private_key, numBlocks, iv);
 	}
 
 	void cbc_decrypt(const void* in, size_t inlen,
-		void* out, size_t& outlen, const void* private_key, int keybits)
+		void* out, size_t& outlen, const void* private_key, int keybits, const void* ivec)
 	{
-		unsigned char ivec[16];
-		memcpy(ivec, s_shared_ivec, sizeof(ivec));
+		unsigned char iv[16];
+		memcpy(iv, ivec != nullptr ? ivec : s_default_ivec, sizeof(iv));
 
 		size_t numBlocks = inlen / AES_BLOCK_SIZE;
 
 		assert(INDEX_BITS(keybits) <= 2);
 
-		cbc_decrypt_bits[INDEX_BITS(keybits)]((UCHAR*)in, (UCHAR*)out, (UCHAR*)private_key, numBlocks, ivec);
+		cbc_decrypt_bits[INDEX_BITS(keybits)]((UCHAR*)in, (UCHAR*)out, (UCHAR*)private_key, numBlocks, iv);
 
 		size_t padding_size = ((unsigned char*)out)[inlen - 1];
 		if (inlen > padding_size)
@@ -297,44 +297,44 @@ namespace hardware_impl {
 	}
 
 	/// AES cbc partial
-	void cbc_encrypt_init(const void* private_key, int keybits)
+	void cbc_encrypt_init(cbc_block_state* state, const void* private_key, int keybits, const void* ivec)
 	{
-		memcpy(s_shared_enc_ivec, s_shared_ivec, sizeof(s_shared_enc_ivec));
+		memcpy(state->iv, ivec, sizeof(state->iv));
 
 		if (keybits == 128) {
-			s_shared_enc_key.rounds = 10;
-			iEncExpandKey128((UCHAR*)private_key, (UCHAR*)&s_shared_enc_key);
+			state->key.rounds = 10;
+			iEncExpandKey128((UCHAR*)private_key, (UCHAR*)&state->key);
 		}
 		else if (keybits == 192) {
-			s_shared_enc_key.rounds = 12;
-			iEncExpandKey192((UCHAR*)private_key, (UCHAR*)&s_shared_enc_key);
+			state->key.rounds = 12;
+			iEncExpandKey192((UCHAR*)private_key, (UCHAR*)&state->key);
 		}
 		else {
-			s_shared_enc_key.rounds = 14;
-			iEncExpandKey256((UCHAR*)private_key, (UCHAR*)&s_shared_enc_key);
+			state->key.rounds = 14;
+			iEncExpandKey256((UCHAR*)private_key, (UCHAR*)&state->key);
 		}
 	}
 
-	void cbc_decrypt_init(const void* private_key, int keybits)
+	void cbc_decrypt_init(cbc_block_state* state, const void* private_key, int keybits, const void* ivec)
 	{
-		memcpy(s_shared_dec_ivec, s_shared_ivec, sizeof(s_shared_enc_ivec));
+		memcpy(state->iv, ivec, sizeof(state->iv));
 
 		// DEFINE_ROUND_KEYS;
 		if (keybits == 128) {
-			s_shared_enc_key.rounds = 10;
-			iDecExpandKey128((UCHAR*)private_key, (UCHAR*)&s_shared_enc_key);
+			state->key.rounds = 10;
+			iDecExpandKey128((UCHAR*)private_key, (UCHAR*)&state->key);
 		}
 		else if (keybits == 192) {
-			s_shared_enc_key.rounds = 12;
-			iDecExpandKey192((UCHAR*)private_key, (UCHAR*)&s_shared_enc_key);
+			state->key.rounds = 12;
+			iDecExpandKey192((UCHAR*)private_key, (UCHAR*)&state->key);
 		}
 		else {
-			s_shared_enc_key.rounds = 14;
-			iDecExpandKey256((UCHAR*)private_key, (UCHAR*)&s_shared_enc_key);
+			state->key.rounds = 14;
+			iDecExpandKey256((UCHAR*)private_key, (UCHAR*)&state->key);
 		}
 	}
 
-	void cbc_encrypt_block(const void* in, size_t inlen,
+	void cbc_encrypt_block(cbc_block_state* state, const void* in, size_t inlen,
 		void* out, size_t outlen)
 	{
 		assert(inlen == outlen);
@@ -342,27 +342,27 @@ namespace hardware_impl {
 		sAesData aesData;
 		aesData.in_block = (UCHAR*)in;
 		aesData.out_block = (UCHAR*)out;
-		aesData.expanded_key = (UCHAR*)&s_shared_enc_key;
+		aesData.expanded_key = (UCHAR*)&state->key;
 		aesData.num_blocks = numBlocks;
-		aesData.iv = s_shared_enc_ivec;
+		aesData.iv = state->iv;
 
-		assert(INDEX_ROUNDS(s_shared_enc_key.rounds) <= 2);
-		cbc_block_encrypt_bits[INDEX_ROUNDS(s_shared_enc_key.rounds)](&aesData);
+		assert(INDEX_ROUNDS(state->key.rounds) <= 2);
+		cbc_block_encrypt_bits[INDEX_ROUNDS(state->key.rounds)](&aesData);
 	}
 
-	void cbc_decrypt_block(const void* in, size_t inlen, void* out, size_t outlen)
+	void cbc_decrypt_block(cbc_block_state* state, const void* in, size_t inlen, void* out, size_t outlen)
 	{
 		size_t numBlocks = inlen / AES_BLOCK_SIZE;
 
 		sAesData aesData;
 		aesData.in_block = (UCHAR*)in;
 		aesData.out_block = (UCHAR*)out;
-		aesData.expanded_key = (UCHAR*)&s_shared_dec_key;
+		aesData.expanded_key = (UCHAR*)&state->key;
 		aesData.num_blocks = numBlocks;
-		aesData.iv = s_shared_enc_ivec;
+		aesData.iv = state->iv;
 
-		assert(INDEX_ROUNDS(s_shared_enc_key.rounds) <= 2);
-		cbc_block_decrypt_bits[INDEX_ROUNDS(s_shared_enc_key.rounds)](&aesData);
+		assert(INDEX_ROUNDS(state->key.rounds) <= 2);
+		cbc_block_decrypt_bits[INDEX_ROUNDS(state->key.rounds)](&aesData);
 	}
 } /* hardware impl */
 #endif

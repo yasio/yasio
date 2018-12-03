@@ -4,7 +4,7 @@
 #include <fstream>
 
 #if _HAS_ZLIB
-#include <win32-specific/zlib/include/zlib.h>
+#include <zlib.h>
 #if !defined(WINRT)
 #pragma comment(lib, "libzlib.lib")
 #else

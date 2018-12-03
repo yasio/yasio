@@ -33,7 +33,7 @@
     <ClCompile Include="..\..\src\deadline_timer.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="simple_test.cpp">
+    <ClCompile Include="cpptest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\async_socket_io.cpp">

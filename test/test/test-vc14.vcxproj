@@ -155,7 +155,7 @@
     <ClCompile Include="..\..\src\masio.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="simple_test.cpp" />
+    <ClCompile Include="cpptest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\deadline_timer.h" />

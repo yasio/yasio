@@ -26,7 +26,7 @@ void test_connect()
 
 ASIO Usage(Client Program):
 
-cpptest: https://github.com/halx99/mini-asio/blob/master/test/test/simple_test.cpp  
+cpptest: https://github.com/halx99/mini-asio/blob/master/test/test/cpptest.cpp  
 luatest: open https://github.com/halx99/mini-asio/blob/master/test/test/luatest.xsxproj by x-studui365 ide  
   
   

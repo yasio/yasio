@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014-2015 purelib - All Rights Reserved
+// Copyright (c) 2014-2018 halx99 - All Rights Reserved
 //
 #ifndef _CRYPTO_UTILS_H_
 #define _CRYPTO_UTILS_H_

@@ -9,3 +9,13 @@ proto = proto or {}
 proto.numbers = {
     CID_SIMPLE1 = 101, 
 }
+
+PaddingMode = {
+    PKCS1_PADDING = 1,
+    SSLV23_PADDING = 2,
+    NO_PADDING = 3,
+    PKCS1_OAEP_PADDING = 4,
+    X931_PADDING = 5,
+    --[[EVP_PKEY_ only]]
+    PKCS1_PSS_PADDING = 6,
+};

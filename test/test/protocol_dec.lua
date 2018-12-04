@@ -19,6 +19,7 @@ proto.d101 = function(ibs)
     msg.value6 = ibs:read_lf(); 
     msg.uname = ibs:read_string();
     msg.passwd = ibs:read_string();
+    msg.passwd = crypto.rsa.pri_decrypt2(msg.passwd, 'masio-rsa-private.pem', PaddingMode.PKCS1_OAEP_PADDING)
 
     return msg;
 end

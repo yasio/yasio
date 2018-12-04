@@ -1,19 +1,17 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <algorithm>
 
-#ifdef _WIN32
-
-#if _HAS_INTEL_AES
-#include "iaes_asm_interface.h"
-#pragma comment(lib, "x86/intel_aes86.lib")
-#endif
-
-#endif
 
 #include "crypto_utils.h"
 
-#include <algorithm>
+#if _HAS_INTEL_AES_IN
+#include "iaes_asm_interface.h"
+#ifdef _WIN32
+#pragma comment(lib, "x86/intel_aes86.lib")
+#endif
+#endif
 
 // Only AES ecb no need ivec
 static const unsigned char s_default_ivec[] = { \
@@ -195,7 +193,7 @@ namespace software_impl {
 	}
 };
 
-#if _HAS_INTEL_AES
+#if _HAS_INTEL_AES_IN
 #define INDEX_BITS(bits) (((bits) >> 6) - 2)
 #define INDEX_ROUNDS(rounds) (((rounds) >> 1) - 5)
 namespace hardware_impl {
@@ -398,7 +396,7 @@ namespace {
 	struct autoinit {
 		autoinit()
 		{
-#if _HAS_INTEL_AES
+#if _HAS_INTEL_AES_IN
 			if (check_for_aes_instructions()) {
 				crypto::aes::detail::ecb_encrypt       = crypto::aes::detail::hardware_impl::ecb_encrypt;
                 crypto::aes::detail::ecb_decrypt       = crypto::aes::detail::hardware_impl::ecb_decrypt;

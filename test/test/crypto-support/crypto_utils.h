@@ -8,15 +8,13 @@
 #include <stdlib.h>
 
 #define _HAS_MD5 1
-#define _HAS_MD6 1
+#define _HAS_MD6 0
 #define _HAS_OPENSSL 1
-#define _HAS_ZLIB 1
-#define _HAS_LIBB64 1
-#define _HAS_INTEL_AES 0
+#define _HAS_ZLIB 0
+#define _HAS_LIBB64 0
+#define _HAS_INTEL_AES_IN 1
 
 #include "aes.h"
-#include "libb64.h"
-#include "md5.h"
 
 //#ifdef __cplusplus
 // extern "C"

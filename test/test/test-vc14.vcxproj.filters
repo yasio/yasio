@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\src\deadline_timer.cpp" />
+    <ClCompile Include="..\..\src\ibinarystream.cpp" />
+    <ClCompile Include="..\..\src\masio.cpp" />
+    <ClCompile Include="..\..\src\obinarystream.cpp" />
+    <ClCompile Include="..\..\src\xxsocket.cpp" />
+    <ClCompile Include="crypto-support\aes_core.cpp">
+      <Filter>crypt-support</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto-support\applink.c">
+      <Filter>crypt-support</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto-support\crypto_utils.cpp">
+      <Filter>crypt-support</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto-support\crypto_wrapper.cpp">
+      <Filter>crypt-support</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto-support\md5.cpp">
+      <Filter>crypt-support</Filter>
+    </ClCompile>
+    <ClCompile Include="luatest.cpp" />
+    <ClCompile Include="..\..\src\lmasio.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\deadline_timer.h" />
+    <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp" />
+    <ClInclude Include="..\..\src\ibinarystream.h" />
+    <ClInclude Include="..\..\src\masio.h" />
+    <ClInclude Include="..\..\src\obinarystream.h" />
+    <ClInclude Include="..\..\src\pipe_select_interrupter.hpp" />
+    <ClInclude Include="..\..\src\select_interrupter.hpp" />
+    <ClInclude Include="..\..\src\socket_select_interrupter.hpp" />
+    <ClInclude Include="..\..\src\xxsocket.h" />
+    <ClInclude Include="crypto-support\aes.h">
+      <Filter>crypt-support</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto-support\crypto_utils.h">
+      <Filter>crypt-support</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto-support\crypto_wrapper.h">
+      <Filter>crypt-support</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto-support\md5.h">
+      <Filter>crypt-support</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\lmasio.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\eventfd_select_interrupter.ipp" />
+    <None Include="..\..\src\pipe_select_interrupter.ipp" />
+    <None Include="..\..\src\socket_select_interrupter.ipp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="crypt-support">
+      <UniqueIdentifier>{94b15a68-cda0-4743-8ec7-e74ac87dc397}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -2,21 +2,27 @@
   <assets>
     <item path="example.lua" dflag="131076"/>
     <item path="masio.lua" dflag="131076"/>
-    <item path="crypto-support\aes.h" dflag="131076"/>
-    <item path="crypto-support\crypto_wrapper.cpp" dflag="131076"/>
-    <item path="crypto-support\md6.cpp" dflag="131076"/>
-    <item path="crypto-support\md6.h" dflag="131076"/>
-    <item path="crypto-support\aes_core.cpp" dflag="131076"/>
-    <item path="crypto-support\crypto_utils.h" dflag="131076"/>
-    <item path="crypto-support\crypto_wrapper.h" dflag="131076"/>
-    <item path="crypto-support\libb64.cpp" dflag="131076"/>
-    <item path="crypto-support\libb64.h" dflag="131076"/>
-    <item path="crypto-support\md5.cpp" dflag="131076"/>
-    <item path="crypto-support\md5.h" dflag="131076"/>
     <item path="crypto-support\crypto_utils.cpp" dflag="131076"/>
+    <item path="crypto-support\libb64.cpp" dflag="131076"/>
+    <item path="crypto-support\aes.h" dflag="131076"/>
+    <item path="crypto-support\aes_core.cpp" dflag="131076"/>
+    <item path="crypto-support\crypto_wrapper.h" dflag="131076"/>
+    <item path="crypto-support\md5.h" dflag="131076"/>
+    <item path="crypto-support\libb64.h" dflag="131076"/>
+    <item path="crypto-support\md6.h" dflag="131076"/>
+    <item path="crypto-support\md6.cpp" dflag="131076"/>
+    <item path="crypto-support\crypto_utils.h" dflag="131076"/>
+    <item path="crypto-support\md5.cpp" dflag="131076"/>
+    <item path="crypto-support\crypto_wrapper.cpp" dflag="131076"/>
+    <item path="crypto-support\applink.c" dflag="131076"/>
+    <item path="protocol_base.lua" dflag="131076"/>
+    <item path="luatest.cpp" dflag="131076"/>
+    <item path="protocol_enc.lua" dflag="131076"/>
+    <item path="protocol_enums.lua" dflag="131076"/>
+    <item path="protocol_dec.lua" dflag="131076"/>
   </assets>
   <debug-options>
-    <start-program>.\luatest.exe</start-program>
+    <start-program>luatest.exe</start-program>
     <start-working-dir>.</start-working-dir>
     <start-command/>
   </debug-options>

@@ -201,7 +201,7 @@ namespace crypto {
         std::string fmd5(const char* filename);
 #endif
 
-#if _HAS_MD5
+#if _HAS_MD6
         std::string md6(std::string_view data, size_t hashByteLen = 64); // small data
         std::string md6raw(std::string_view data, size_t hashByteLen = 64);
         std::string fmd6(const char* filename, int hashByteLen = 64);

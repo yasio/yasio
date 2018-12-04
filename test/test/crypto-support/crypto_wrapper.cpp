@@ -20,11 +20,18 @@
 #include "md6.h"
 #endif
 
+#if _HAS_LIBB64
+#include "libb64.h"
+#endif
+
 #if _HAS_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
+#if defined(_WIN32)
+#pragma comment(lib, "libcrypto.lib")
+#endif
 #endif
 
 #define HASH_FILE_BUFF_SIZE 1024
@@ -502,7 +509,7 @@ std::string crypto::hash::fmd5(const char* filename)
 }
 #endif
 
-#if defined(_HAS_MD6)
+#if _HAS_MD6
 std::string crypto::hash::md6(std::string_view plaintext, size_t hashByteLen)
 {
     assert(hashByteLen <= 64);
@@ -577,6 +584,7 @@ std::string crypto::hash::fmd6(const char* filename, int hashByteLen)
 }
 #endif
 
+#if _HAS_LIBB64
 std::string crypto::http::b64dec(std::string_view ciphertext)
 {
     std::string plaintext( ciphertext.length(), '\0' );
@@ -601,6 +609,7 @@ std::string crypto::http::b64enc(std::string_view  plaintext)
     ciphertext.resize(r1 + r2);
     return ciphertext;
 }
+#endif
 
 std::string crypto::http::urlencode(std::string_view input)
 {

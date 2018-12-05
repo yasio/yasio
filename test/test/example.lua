@@ -6,15 +6,15 @@ local masio = require('masio') -- constants
 local stopFlag = 0
 
 local hostent = io_hostent.new()
-hostent.address_ = "0.0.0.0";
-hostent.port_ = 8081;
+hostent.address = "0.0.0.0";
+hostent.port = 8081;
 local server = io_service.new()
 local hostents = {
     io_hostent.new('0.0.0.0', 8081),
     io_hostent.new('0.0.0.0', 8082)
 }
 server:start_service(hostents, function(event)
-        local t = event:type()
+        local t = event:kind()
         if t == masio.MASIO_EVENT_RECV_PACKET then
             local packet = event:packet()
             -- print(packet)
@@ -44,10 +44,10 @@ server:start_service(hostents, function(event)
 server:open(0, masio.CHANNEL_TCP_SERVER)
 
 local client = io_service.new()
-hostent.address_ = "127.0.0.1"
+hostent.address = "127.0.0.1"
 client:set_option(masio.MASIO_OPT_LFIB_PARAMS, 0, 0, 16384)
 local func = function(event)
-    local t = event:type()
+    local t = event:kind()
     if t == masio.MASIO_EVENT_RECV_PACKET then
         local ibs = event:packet()
         local msg = proto.d101(ibs)
@@ -75,11 +75,11 @@ client:open(0, masio.CHANNEL_TCP_CLIENT)
 
 -- httpclient
 local httpclient = io_service.new()
-hostent.address_ = "ip138.com"
-hostent.port_ = 80
+hostent.address = "ip138.com"
+hostent.port = 80
 httpclient:set_option(masio.MASIO_OPT_LFIB_PARAMS, -1, 0, 65535)
 httpclient:start_service(hostent, function(event)
-        local t = event:type()
+        local t = event:kind()
         if t == masio.MASIO_EVENT_RECV_PACKET then
             local ibs = event:packet()
             print(string.format('receve data from server: %s', ibs:to_string()))

@@ -17,8 +17,23 @@ proto.d101 = function(ibs)
     msg.value3 = ibs:read_bool(); 
     msg.value4 = ibs:read_f(); 
     msg.value6 = ibs:read_lf(); 
-    msg.uname = crypto.rsa.pub_decrypt(ibs:read_string(), get_file_content('masio-rsa-public.pem'), PaddingMode.PKCS1_PADDING);
-    msg.passwd = crypto.rsa.pri_decrypt(ibs:read_string(), get_file_content('masio-rsa-private.pem'), PaddingMode.PKCS1_OAEP_PADDING)
+    msg.uname = ibs:read_string();
+    msg.passwd = ibs:read_string();
+
+    return msg;
+end
+
+proto.d1 = function(ibs)
+    local msg = proto.begin_decode(ibs);
+
+    msg.legacy_version = ibs:read_i16(); 
+    msg.value1 = ibs:read_u16(); 
+    msg.value2 = ibs:read_i32(); 
+    msg.value3 = ibs:read_bool(); 
+    msg.value4 = ibs:read_f(); 
+    msg.value6 = ibs:read_lf(); 
+    msg.uname = ibs:read_string();
+    msg.passwd = ibs:read_string();
 
     return msg;
 end

@@ -220,6 +220,22 @@ class a_pdu {
 #endif
 };
 
+/// deadline_timer
+void deadline_timer::async_wait(const std::function<void(bool cancelled)>& callback)
+{
+    this->callback_ = callback;
+    this->service_.schedule_timer(this);
+}
+
+void deadline_timer::cancel()
+{
+    if (!expired()) {
+        this->service_.cancel_timer(this);
+        this->expire();
+    }
+}
+
+/// io_channel
 io_channel::io_channel(io_service& service) : deadline_timer_(service) {
   socket_.reset(new xxsocket());
 }

@@ -44,12 +44,12 @@ void lua_open_masio(lua_State *L) {
     sol2.new_usertype<io_hostent>(
         "io_hostent",
         sol::constructors<io_hostent(), io_hostent(std::string_view, u_short)>(),
-        "address_", &io_hostent::address_,
-        "port_", &io_hostent::port_);
+        "address", &io_hostent::address_,
+        "port", &io_hostent::port_);
 
     sol2.new_usertype<io_event>(
         "io_event", "channel_index", &io_event::channel_index,
-        "type", &io_event::type,
+        "kind", &io_event::type,
         "error_code", &io_event::error_code,
         "transport", &io_event::transport,
         "packet", [](io_event *event) {

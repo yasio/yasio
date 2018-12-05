@@ -37,7 +37,8 @@ SOFTWARE.
 #include <queue>
 #include <thread>
 #include <vector>
-#include "deadline_timer.h"
+#include <chrono>
+#include <functional>
 #include "endian_portable.h"
 #include "object_pool.h"
 #include "select_interrupter.hpp"
@@ -110,6 +111,9 @@ enum {
   MASIO_OPT_IO_EVENT_CALLBACK,
 };
 
+typedef std::chrono::high_resolution_clock highp_clock_t;
+typedef long long highp_time_t;
+
 typedef std::function<void()> vdcallback_t;
 
 typedef bool(*resolv_funcptr)(std::vector<ip::endpoint>&,
@@ -126,6 +130,58 @@ typedef a_pdu* a_pdu_ptr;
 #endif
 
 class io_service;
+
+class deadline_timer {
+public:
+    ~deadline_timer() 
+    {
+    }
+    deadline_timer(io_service& service) : repeated_(false), service_(service)
+    {
+    }
+
+    void expires_from_now(const std::chrono::microseconds& duration, bool repeated = false)
+    {
+        this->duration_ = duration;
+        this->repeated_ = repeated;
+        expire_time_ = highp_clock_t::now() + this->duration_;
+    }
+
+    void expires_from_now()
+    {
+        expire_time_ = highp_clock_t::now() + this->duration_;
+    }
+
+    // Wait timer timeout or cancelled.
+    void async_wait(const std::function<void(bool cancelled)>& callback);
+
+    // Cancel the timer
+    void cancel();
+
+    // Check if timer is expired?
+    bool expired() const
+    {
+        return wait_duration().count() <= 0;
+    }
+
+    // Let timer expire immidlately
+    void expire()
+    {
+        expire_time_ = highp_clock_t::now() - duration_;
+    }
+
+    // Gets wait duration of timer.
+    std::chrono::microseconds wait_duration() const
+    {
+        return std::chrono::duration_cast<std::chrono::microseconds>(expire_time_ - highp_clock_t::now());
+    }
+
+    bool repeated_;
+    io_service& service_;
+    std::chrono::microseconds duration_;
+    std::chrono::time_point<highp_clock_t> expire_time_;
+    std::function<void(bool cancelled)> callback_;
+};
 
 struct io_hostent {
   io_hostent() {}

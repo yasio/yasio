@@ -76,6 +76,19 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="uname" type="std::string" />
       <field name="passwd" type="std::string" />
     </message>
+    
+    <!----- TSL v1.3 protocol --->
+    <message name="ClientHello" command_id="TLS1_3_CLIENT_HELLO = 1" mode="lua.all">
+      <!----- TLS v1.1 0x0302, TLS v1.2 0x0303, TLS v1.3 0x0304 --->
+      <field name="legacy_version" type="int16_t" /> 
+      <field name="value1" type="uint16_t" />
+      <field name="value2" type="int32_t" />
+      <field name="value3" type="bool" />
+      <field name="value4" type="float" />
+      <field name="value6" type="double" />
+      <field name="uname" type="std::string" />
+      <field name="passwd" type="std::string" />
+    </message>
 
   </messages>
   

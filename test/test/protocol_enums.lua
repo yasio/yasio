@@ -19,3 +19,10 @@ PaddingMode = {
     --[[EVP_PKEY_ only]]
     PKCS1_PSS_PADDING = 6,
 };
+
+function get_file_content(fileName)
+    local file = io.open(fileName)
+    local content = file:read('*a')
+    file:close()
+    return content
+end

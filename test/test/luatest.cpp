@@ -8,6 +8,7 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 
+#if 0
 RSA* getPrivateKey(char* in_szKeyPath)
 {
     FILE    *fp = NULL;
@@ -142,6 +143,7 @@ int testvVerify(void)
     RSA_free(prsa);
     return 0;
 }
+#endif
 
 void lua_open_crypto(lua_State* L)
 {
@@ -165,7 +167,7 @@ int main(int argc, char** argv)
     lua_open_masio(s.lua_state());
     lua_open_crypto(s.lua_state());
 
-    testvVerify();
+    // testvVerify();
 
     s.script_file("example.lua");
 

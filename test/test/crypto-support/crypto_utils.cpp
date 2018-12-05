@@ -24,7 +24,6 @@ static const unsigned char s_default_ivec[] = { \
 #define rrand(min,max) rand() % ((max) - (min)) + (min)
 #define sz_align(d, a)     (((d) + ((a) - 1)) & ~((a) - 1))
 #define align_size(size) align((unsigned int)(size), sizeof(void*))
-#define min(a,b) ( (a) <= (b) ? (a) : (b) )
 
 namespace crypto {
 
@@ -59,7 +58,7 @@ void bin2hex(const void* source, unsigned int sourceLen,
 	char* dest, unsigned int destLen)
 {
 	int i = 0, j = 0;
-	int n = min(sourceLen, destLen);
+	int n = (std::min)(sourceLen, destLen);
 	// assert( (sourceLen << 1) <= destLen );
 
 	for (; i < n; ++i, j = i << 1)

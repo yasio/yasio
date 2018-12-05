@@ -19,9 +19,9 @@ proto.e101 = function(msg)
     obs:write_bool(msg.value3);
     obs:write_f(msg.value4);
     obs:write_lf(msg.value6);
-    obs:write_string(msg.uname);
-    local v = crypto.rsa.pub_encrypt2(msg.passwd, 'masio-rsa-public.pem', PaddingMode.PKCS1_OAEP_PADDING)
-    obs:write_string(v);
+    
+    obs:write_string(crypto.rsa.pri_encrypt(msg.uname, get_file_content('masio-rsa-private.pem'), PaddingMode.PKCS1_PADDING));
+    obs:write_string(crypto.rsa.pub_encrypt(msg.passwd, get_file_content('masio-rsa-public.pem'), PaddingMode.PKCS1_OAEP_PADDING));
 
     -- finish message encode.
     obs:pop32(); -- finish encode

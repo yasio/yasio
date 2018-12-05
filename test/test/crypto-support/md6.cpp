@@ -60,7 +60,7 @@
 #include "md6.h"
 //#include "md6_nist.h"
 
-HashReturn Init( hashState *state, 
+HashReturn MD6Init( hashState *state, 
          int hashbitlen
          )
 { int err;
@@ -72,7 +72,7 @@ HashReturn Init( hashState *state,
   return SUCCESS;
 }
 
-HashReturn Update( hashState *state, 
+HashReturn MD6Update( hashState *state, 
            const BitSequence *data, 
            DataLength databitlen
            )
@@ -82,7 +82,7 @@ HashReturn Update( hashState *state,
              (uint64_t) databitlen );
 }
 
-HashReturn Final( hashState *state,
+HashReturn MD6Final( hashState *state,
           BitSequence *hashval
           )
 {
@@ -91,7 +91,7 @@ HashReturn Final( hashState *state,
             );
 }
 
-HashReturn Hash( int hashbitlen,
+HashReturn MD6Hash( int hashbitlen,
          const BitSequence *data,
          DataLength databitlen,
          BitSequence *hashval

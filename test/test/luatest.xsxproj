@@ -1,25 +1,25 @@
 <Project fullMode="0">
   <assets>
-    <item path="example.lua" dflag="131076"/>
-    <item path="masio.lua" dflag="131076"/>
+    <item path="luatest.cpp" dflag="131076"/>
+    <item path="crypto-support\aes_core.cpp" dflag="131076"/>
+    <item path="crypto-support\md6.h" dflag="131076"/>
+    <item path="crypto-support\crypto_wrapper.h" dflag="131076"/>
+    <item path="protocol_base.lua" dflag="131076"/>
+    <item path="protocol_dec.lua" dflag="131076"/>
+    <item path="crypto-support\md5.h" dflag="131076"/>
+    <item path="crypto-support\libb64.h" dflag="131076"/>
+    <item path="crypto-support\crypto_wrapper.cpp" dflag="131076"/>
+    <item path="crypto-support\applink.c" dflag="131076"/>
+    <item path="protocol_enc.lua" dflag="131076"/>
+    <item path="crypto-support\md6.cpp" dflag="131076"/>
+    <item path="crypto-support\crypto_utils.h" dflag="131076"/>
+    <item path="protocol_enums.lua" dflag="131076"/>
     <item path="crypto-support\crypto_utils.cpp" dflag="131076"/>
     <item path="crypto-support\libb64.cpp" dflag="131076"/>
     <item path="crypto-support\aes.h" dflag="131076"/>
-    <item path="crypto-support\aes_core.cpp" dflag="131076"/>
-    <item path="crypto-support\crypto_wrapper.h" dflag="131076"/>
-    <item path="crypto-support\md5.h" dflag="131076"/>
-    <item path="crypto-support\libb64.h" dflag="131076"/>
-    <item path="crypto-support\md6.h" dflag="131076"/>
-    <item path="crypto-support\md6.cpp" dflag="131076"/>
-    <item path="crypto-support\crypto_utils.h" dflag="131076"/>
     <item path="crypto-support\md5.cpp" dflag="131076"/>
-    <item path="crypto-support\crypto_wrapper.cpp" dflag="131076"/>
-    <item path="crypto-support\applink.c" dflag="131076"/>
-    <item path="protocol_base.lua" dflag="131076"/>
-    <item path="luatest.cpp" dflag="131076"/>
-    <item path="protocol_enc.lua" dflag="131076"/>
-    <item path="protocol_enums.lua" dflag="131076"/>
-    <item path="protocol_dec.lua" dflag="131076"/>
+    <item path="example.lua" dflag="131076"/>
+    <item path="masio.lua" dflag="131076"/>
   </assets>
   <debug-options>
     <start-program>luatest.exe</start-program>
@@ -28,6 +28,39 @@
   </debug-options>
   <project-home>.</project-home>
   <ssheets/>
-  <assets.ref/>
+  <assets.ref>
+    <item.ref name="src" path="D:\develop\git-projects\mini-asio\src" relative="..\..\src">
+      <item path="ibinarystream.h" dflags="655364"/>
+      <item path="bits_op.c" dflags="655364"/>
+      <item path="deadline_timer.h" dflags="655364"/>
+      <item path="obinarystream.h" dflags="655364"/>
+      <item path="masio.cpp" dflags="655364"/>
+      <item path="lmasio.h" dflags="655364"/>
+      <item path="deadline_timer.cpp" dflags="655364"/>
+      <item path="fastest_csv_parser.h" dflags="655364"/>
+      <item path="endian_portable.h" dflags="655364"/>
+      <item path="ibinarystream.cpp" dflags="655364"/>
+      <item path="lmasio.cpp" dflags="655364"/>
+      <item path="obinarystream.cpp" dflags="655364"/>
+      <item path="masio.h" dflags="655364"/>
+      <item path="eventfd_select_interrupter.hpp" dflags="655364"/>
+      <item path="eventfd_select_interrupter.ipp" dflags="655364"/>
+      <item path="bits_op.h" dflags="655364"/>
+      <item path="xxsocket.h" dflags="655364"/>
+      <item path="ref_ptr.h" dflags="655364"/>
+      <item path="socket_select_interrupter.ipp" dflags="655364"/>
+      <item path="xxsocket.cpp" dflags="655364"/>
+      <item path="sol_forward.hpp" dflags="655364"/>
+      <item path="select_interrupter.hpp" dflags="655364"/>
+      <item path="singleton.h" dflags="655364"/>
+      <item path="pipe_select_interrupter.ipp" dflags="655364"/>
+      <item path="pipe_select_interrupter.hpp" dflags="655364"/>
+      <item path="sol.hpp" dflags="655364"/>
+      <item path="object_pool.h" dflags="655364"/>
+      <item path="object_pool.cpp" dflags="655364"/>
+      <item path="politedef.h" dflags="655364"/>
+      <item path="socket_select_interrupter.hpp" dflags="655364"/>
+    </item.ref>
+  </assets.ref>
 </Project>
 

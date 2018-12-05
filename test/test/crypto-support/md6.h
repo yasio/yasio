@@ -513,20 +513,20 @@ typedef enum { SUCCESS = 0, FAIL = 1, BAD_HASHLEN = 2 } HashReturn;
 
 typedef md6_state hashState;
 
-HashReturn Init( hashState *state, 
+HashReturn MD6Init( hashState *state, 
          int hashbitlen
          );
 
-HashReturn Update( hashState *state, 
+HashReturn MD6Update( hashState *state, 
            const BitSequence *data, 
            DataLength databitlen
            );
 
-HashReturn Final( hashState *state,
+HashReturn MD6Final( hashState *state,
           BitSequence *hashval
           );
 
-HashReturn Hash( int hashbitlen,
+HashReturn MD6Hash( int hashbitlen,
          const BitSequence *data,
          DataLength databitlen,
          BitSequence *hashval

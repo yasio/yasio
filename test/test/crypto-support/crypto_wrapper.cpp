@@ -29,8 +29,17 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
+
+#if defined(LIBWOLFSSL_VERSION_HEX)
+#define _HAS_WOLFSSL 1
+#endif
+
 #if defined(_WIN32)
+#if !_HAS_WOLFSSL
 #pragma comment(lib, "libcrypto.lib")
+#else
+#pragma comment(lib, "wolfssl.lib")
+#endif
 #endif
 #endif
 
@@ -666,6 +675,11 @@ std::string crypto::http::urldecode(std::string_view ciphertext)
 
 /// ----------------- rsa wrappers ---------------------------
 #if _HAS_OPENSSL
+
+#if _HAS_WOLFSSL
+#define PEM_read_RSA_PUBKEY PEM_read_RSAPublicKey
+#endif
+
 namespace crypto {
 
     namespace rsa {
@@ -680,7 +694,7 @@ namespace crypto {
             unsigned char *to, RSA *rsa, int padding);
         typedef void(*close_key_func)(RSA_Key* k);
 
-        static bool load_public_keybio(const char* key, int length, RSA_Key* k)
+        static bool load_public_key_from_mem(const char* key, int length, RSA_Key* k)
         {
             BIO *bio = NULL;
             if (length <= 0) {
@@ -688,7 +702,7 @@ namespace crypto {
                 return false;
             }
 
-            if ((bio = BIO_new_mem_buf(key, length)) == NULL)
+            if ((bio = BIO_new_mem_buf((char*)key, length)) == NULL)
             {
                 perror("BIO_new_mem_buf failed!");
                 return false;
@@ -704,7 +718,7 @@ namespace crypto {
             return true;
         }
 
-        static bool load_private_keybio(const char* key, int length, RSA_Key* k)
+        static bool load_private_key_from_mem(const char* key, int length, RSA_Key* k)
         {
             BIO *bio = NULL;
             if (length <= 0) {
@@ -712,7 +726,7 @@ namespace crypto {
                 return false;
             }
 
-            if ((bio = BIO_new_mem_buf(key, length)) == NULL)
+            if ((bio = BIO_new_mem_buf((char*)key, length)) == NULL)
             {
                 perror("BIO_new_mem_buf failed!");
                 return false;
@@ -728,36 +742,45 @@ namespace crypto {
             return true;
         }
 
-        static bool load_public_keyfile(const char* key, int /*length*/, RSA_Key* k)
+        static bool load_public_key_from_file(const char* key, int /*length*/, RSA_Key* k)
         {
+            /* equal as follow:
             FILE* fp = nullptr;
             if ((fp = fopen(key, "r")) == NULL) {
                 perror("open key file error");
                 return false;
             }
+            PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
+            */
+            BIO *bio = NULL;
+            if ((bio = BIO_new_file(key, "r")) == NULL)
+            {
+                perror("BIO_new_file failed!");
+                return false;
+            }
 
-            k->p_io = fp;
-            k->p_rsa = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
+            k->p_io = bio;
+            k->p_rsa = PEM_read_bio_RSA_PUBKEY(bio, NULL, NULL, NULL); 
             if (k->p_rsa == nullptr) {
-                fclose(fp);
+                BIO_free_all(bio);
                 return false;
             }
 
             return true;
         }
 
-        static bool load_private_keyfile(const char* key, int /*length*/, RSA_Key* k)
+        static bool load_private_key_from_file(const char* key, int /*length*/, RSA_Key* k)
         {
-            FILE* fp = nullptr;
-            if ((fp = fopen(key, "r")) == NULL) {
-                perror("open key file error");
+            BIO *bio = NULL;
+            if ((bio = BIO_new_file(key, "r")) == NULL)
+            {
+                perror("BIO_new_file failed!");
                 return false;
             }
-
-            k->p_io = fp;
-            k->p_rsa = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+            k->p_io = bio;
+            k->p_rsa = PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL);
             if (k->p_rsa == nullptr) {
-                fclose(fp);
+                BIO_free_all(bio);
                 return false;
             }
 
@@ -772,12 +795,16 @@ namespace crypto {
                 flen -= (2 * SHA_DIGEST_LENGTH + 2); // pitfall: many blogs from internet said: it's 41, actually, it must be 42, phpseclib does correct.
                 break;
             case RSA_PKCS1_PADDING:
+#if !_HAS_WOLFSSL
             case RSA_SSLV23_PADDING:
+#endif
                 flen -= 11;
                 break;
+#if !_HAS_WOLFSSL
             case RSA_NO_PADDING:
                 assert(ilen % flen == 0);
                 break;
+#endif
             }
         }
 
@@ -788,12 +815,14 @@ namespace crypto {
             case RSA_PKCS1_PADDING:
                 flen -= 11;
                 break;
+#if !_HAS_WOLFSSL
             case RSA_X931_PADDING:
                 flen -= 2;
                 break;
             case RSA_NO_PADDING:
                 assert(ilen % flen == 0);
                 break;
+#endif
             };
         }
 
@@ -804,12 +833,12 @@ namespace crypto {
             }
         }
 
-        static void close_keyfile(RSA_Key* k)
-        {
-            if (k->p_rsa != nullptr) {
-                fclose((FILE*)k->p_io);
-            }
-        }
+        //static void close_keyfile(RSA_Key* k)
+        //{
+        //    if (k->p_rsa != nullptr) {
+        //        fclose((FILE*)k->p_io);
+        //    }
+        //}
 
         struct encrypt_helper {
             load_key_func load_key;
@@ -860,7 +889,7 @@ namespace crypto {
                     offset += grab;
                 }
                 else {
-#if defined(_DEBUG)
+#if defined(_DEBUG) && !_HAS_WOLFSSL
                     ERR_print_errors_cb(error_handler, &errormsg);
 #endif
                     break;
@@ -904,7 +933,7 @@ namespace crypto {
                     offset += flen;
                 }
                 else {
-#if defined(_DEBUG)
+#if defined(_DEBUG) && !_HAS_WOLFSSL
                     ERR_print_errors_cb(error_handler, &errormsg);
 #endif
                     break;
@@ -921,23 +950,23 @@ namespace crypto {
         namespace pub {
             std::string encrypt(std::string_view plaintext, std::string_view key, int paddingMode)
             {
-                encrypt_helper helper = { load_public_keybio, process_public_padding, RSA_public_encrypt,  close_keybio };
+                encrypt_helper helper = { load_public_key_from_mem, process_public_padding, RSA_public_encrypt,  close_keybio };
                 return common_encrypt(plaintext, key, helper, paddingMode);
             }
             std::string decrypt(std::string_view ciphertext, std::string_view key, int paddingMode)
             {
-                decrypt_helper helper = { load_public_keybio, RSA_public_decrypt,  close_keybio };
+                decrypt_helper helper = { load_public_key_from_mem, RSA_public_decrypt,  close_keybio };
                 return common_decrypt(ciphertext, key, helper, paddingMode);
             }
 
             std::string encrypt2(std::string_view plaintext, std::string_view keyfile, int paddingMode)
             {
-                encrypt_helper helper = { load_public_keyfile, process_public_padding, RSA_public_encrypt,  close_keyfile };
+                encrypt_helper helper = { load_public_key_from_file, process_public_padding, RSA_public_encrypt,  close_keybio };
                 return common_encrypt(plaintext, keyfile, helper, paddingMode);
             }
             std::string decrypt2(std::string_view ciphertext, std::string_view keyfile, int paddingMode)
             {
-                decrypt_helper helper = { load_public_keyfile, RSA_public_decrypt,  close_keyfile };
+                decrypt_helper helper = { load_public_key_from_file, RSA_public_decrypt,  close_keybio };
                 return common_decrypt(ciphertext, keyfile, helper, paddingMode);
             }
         }
@@ -945,23 +974,23 @@ namespace crypto {
         namespace pri {
             std::string encrypt(std::string_view plaintext, std::string_view key, int paddingMode)
             {
-                encrypt_helper helper = { load_private_keybio, process_private_padding, RSA_private_encrypt,  close_keybio };
+                encrypt_helper helper = { load_private_key_from_mem, process_private_padding, (RSA_crypto_func)&RSA_private_encrypt,  close_keybio };
                 return common_encrypt(plaintext, key, helper, paddingMode);
             }
             std::string decrypt(std::string_view ciphertext, std::string_view key, int paddingMode)
             {
-                decrypt_helper helper = { load_private_keybio, RSA_private_decrypt,  close_keybio };
+                decrypt_helper helper = { load_private_key_from_mem, RSA_private_decrypt,  close_keybio };
                 return common_decrypt(ciphertext, key, helper, paddingMode);
             }
 
             std::string encrypt2(std::string_view plaintext, std::string_view keyfile, int paddingMode)
             {
-                encrypt_helper helper = { load_private_keyfile, process_private_padding, RSA_private_encrypt,  close_keyfile };
+                encrypt_helper helper = { load_private_key_from_file, process_private_padding, (RSA_crypto_func)&RSA_private_encrypt,  close_keybio/*close_keyfile*/ };
                 return common_encrypt(plaintext, keyfile, helper, paddingMode);
             }
             std::string decrypt2(std::string_view ciphertext, std::string_view keyfile, int paddingMode)
             {
-                decrypt_helper helper = { load_private_keyfile, RSA_private_decrypt,  close_keyfile };
+                decrypt_helper helper = { load_private_key_from_file, RSA_private_decrypt, close_keybio};
                 return common_decrypt(ciphertext, keyfile, helper, paddingMode);
             }
         }

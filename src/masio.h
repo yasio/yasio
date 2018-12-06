@@ -116,8 +116,8 @@ typedef long long highp_time_t;
 
 typedef std::function<void()> vdcallback_t;
 
-typedef bool(*resolv_funcptr)(std::vector<ip::endpoint>&,
-                           const char*, unsigned short);
+typedef std::function<bool(std::vector<ip::endpoint>& endpoints, const char* hostname,
+	unsigned short port)> resolv_fn_t;
 
 static const int socket_recv_buffer_size = 65536;  // 64K
 
@@ -353,7 +353,7 @@ class io_service {
              MASIO_OPT_DNS_CACHE_TIMEOUT timeout:int
              MASIO_OPT_DEFER_EVENT       defer:int
              MASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
-             MASIO_OPT_RESOLV_FUNCTION   func:resolv_t
+             MASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
              MASIO_OPT_LFIB_PARAMS length_field_offst:int, length_adjustment:int, max_frame_length:int
   */ 
   void set_option(int option, ...);
@@ -515,8 +515,7 @@ class io_service {
   } options_; 
 
   // The resolve function
-  std::function<bool(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                     unsigned short port)> xresolv_;
+  resolv_fn_t xresolv_;
 
 #if _USING_ARES_LIB
   // non blocking io dns resolve support

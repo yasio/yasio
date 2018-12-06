@@ -337,7 +337,7 @@ void io_service::set_option(int option, ...) {
     options_.tcp_keepalive.probs = va_arg(ap, int);
     break;
   case MASIO_OPT_RESOLV_FUNCTION:
-    this->xresolv_ = va_arg(ap, resolv_funcptr);
+    this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t*));
     break;
   case MASIO_OPT_LOG_FILE:
     options_.log_file = va_arg(ap, const char *);

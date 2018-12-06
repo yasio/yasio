@@ -7,7 +7,7 @@ support deadline timer.**
   
 Usage(since v3.9 c++17 required):
 
-1. Only compile src\xxsocket.cpp src\masio.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
+1. Only compile src\xxsocket.cpp src\masio.cpp with your project; For gcc, you must add --std=c++17 compile flag<br />
 2. demo code:
 ```
 #include "xxsocket.h"

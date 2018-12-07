@@ -4,7 +4,7 @@ Used by http://hongjing.qq.com/
 **support IPv6-only network.  
 support multi-connections at one thread.  
 support deadline timer.  
-processing tcp sticky pack internal, user do not need to care it.**
+processing tcp sticky internal, user do not need to care it.**
   
 Usage(since v3.9 c++17 required):
 

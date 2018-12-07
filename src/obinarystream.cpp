@@ -1,8 +1,6 @@
 #include "obinarystream.h"
 #include <iostream>
 #include <fstream>
-//#include "xxfsutility.h"
-//#include "crypto_wrapper.h"
 
 obinarystream::obinarystream(size_t buffersize)
 {

@@ -151,16 +151,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\ibinarystream.cpp" />
-    <ClCompile Include="..\..\src\lmasio.cpp" />
     <ClCompile Include="..\..\src\masio.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="luatest.cpp" />
+    <ClCompile Include="cpptest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\ibinarystream.h" />
-    <ClInclude Include="..\..\src\lmasio.h" />
     <ClInclude Include="..\..\src\masio.h" />
     <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\pipe_select_interrupter.hpp" />

@@ -16,11 +16,6 @@ void append_string(std::vector<char> &packet, const char (&message)[_Size]) {
   packet.insert(packet.end(), message, message + _Size - 1);
 }
 
-bool resolv(std::vector<ip::endpoint> &endpoints, const char *hostname,
- unsigned short port) {
-  return myasio->resolve(endpoints, hostname, port);
-}
-
 int main(int, char **) {
   purelib::inet::io_hostent endpoints[] = {
       {"203.162.71.67", 80},  // http client
@@ -28,7 +23,12 @@ int main(int, char **) {
   };
 
   myasio->set_option(MASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
-  myasio->set_option(MASIO_OPT_RESOLV_FUNCTION, resolv);
+
+  resolv_fn_t resolv = [](std::vector<ip::endpoint> &endpoints, const char *hostname,
+      unsigned short port) {
+      return myasio->resolve(endpoints, hostname, port);
+  };
+  myasio->set_option(MASIO_OPT_RESOLV_FUNCTION, &resolv);
 
   deadline_timer t0(*myasio);
 
@@ -39,6 +39,7 @@ int main(int, char **) {
 
   std::vector<std::shared_ptr<io_transport>> transports;
   myasio->set_option(MASIO_OPT_LFIB_PARAMS, -1, 0, SZ(5, M));
+  myasio->set_option(MASIO_OPT_LOG_FILE, "mini-asio.log");
   myasio->start_service(endpoints, _ARRAYSIZE(endpoints), 
       [&](event_ptr event) {
         switch (event->type()) {
@@ -69,16 +70,6 @@ int main(int, char **) {
               transports.push_back(transport);
 
               myasio->write(transport, std::move(packet));
-              // myasio->close(transport);
-              /*std::shared_ptr<deadline_timer> delayOneFrame(
-                  new deadline_timer(*myasio));
-              delayOneFrame->expires_from_now(std::chrono::milliseconds(10));
-              delayOneFrame->async_wait(
-                  [delayOneFrame, transport](bool cancelled) {
-                    if (!cancelled) {
-                      myasio->close(transport);
-                    }
-                  });*/
             }
             break;
           case MASIO_EVENT_CONNECTION_LOST:
@@ -96,7 +87,6 @@ int main(int, char **) {
     myasio->dispatch_events();
     if (duration >= 60000) {
       for (auto transport : transports) myasio->close(transport);
-      // myasio->close(1);
       break;
     }
     duration += 50;

@@ -511,7 +511,7 @@ class io_service {
       int length_adjustment = 0;
       int max_frame_length = SZ(10, M);
     } lfib;
-    std::string log_file;
+    FILE* outf = nullptr;
   } options_; 
 
   // The resolve function

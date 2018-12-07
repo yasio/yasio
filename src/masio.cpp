@@ -56,20 +56,26 @@ extern "C" {
 #define _MASIO_VERBOS_LOG 0
 
 #if defined(_WIN32)
-#define INET_LOG(format, ...)                                    \
-  OutputDebugStringA(_sfmt(("[mini-asio][%lld] " format "\r\n"), \
-                           _highp_clock(), ##__VA_ARGS__)        \
-                         .c_str())
+#define INET_LOG(format, ...) do {                                  \
+    auto content = _sfmt(("[mini-asio][%lld] " format "\r\n"),      \
+                           _highp_clock(), ##__VA_ARGS__);          \
+    OutputDebugStringA(content.c_str());                            \
+    if(options_.outf) fprintf(options_.outf, "%s", content.c_str()); \
+  } while(false)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #include <android/log.h>
 #include <jni.h>
 #define INET_LOG(format, ...)                                            \
   __android_log_print(ANDROID_LOG_INFO, "mini-asio", ("[%lld]" format), \
-                      _highp_clock(), ##__VA_ARGS__)
+                      _highp_clock(), ##__VA_ARGS__) \
+  if(options_.outf) fprintf(options_.outf, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
+          ##__VA_ARGS__) 
 #else
 #define INET_LOG(format, ...)                                         \
   fprintf(stdout, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
-          ##__VA_ARGS__)
+          ##__VA_ARGS__) \
+  if(options_.outf) fprintf(options_.outf, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
+          ##__VA_ARGS__) 
 #endif
 
 #define ASYNC_RESOLVE_TIMEOUT 45  // 45 seconds
@@ -340,7 +346,9 @@ void io_service::set_option(int option, ...) {
     this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t*));
     break;
   case MASIO_OPT_LOG_FILE:
-    options_.log_file = va_arg(ap, const char *);
+    if (options_.outf)
+      fclose(options_.outf);
+    options_.outf = fopen(va_arg(ap, const char *), "wb");
     break;
   case MASIO_OPT_LFIB_PARAMS:
     options_.lfib.length_field_offset = va_arg(ap, int);

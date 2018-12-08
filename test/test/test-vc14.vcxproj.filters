@@ -16,6 +16,7 @@
     <ClInclude Include="..\..\src\select_interrupter.hpp" />
     <ClInclude Include="..\..\src\socket_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\xxsocket.h" />
+    <ClInclude Include="..\..\src\string_view.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\eventfd_select_interrupter.ipp" />

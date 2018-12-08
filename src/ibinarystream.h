@@ -1,7 +1,7 @@
 #ifndef _IBINARYSTREAM_H_
 #define _IBINARYSTREAM_H_
 #include <string>
-#include <string_view>
+#include "string_view.hpp"
 #include <sstream>
 #include <exception>
 #include "endian_portable.h"

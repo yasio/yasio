@@ -39,6 +39,7 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 #include <functional>
+#include "string_view.hpp"
 #include "endian_portable.h"
 #include "object_pool.h"
 #include "select_interrupter.hpp"

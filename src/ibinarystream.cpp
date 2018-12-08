@@ -33,7 +33,8 @@ void ibinarystream::assign(const void* data, int size)
 
 void ibinarystream::read_v(std::string& oav)
 {
-    oav = read_vx<LENGTH_FIELD_TYPE>();
+	auto sv = read_vx<LENGTH_FIELD_TYPE>();
+    oav.assign(sv.data(), sv.length());
 }
 
 std::string_view ibinarystream::read_v()
@@ -43,12 +44,14 @@ std::string_view ibinarystream::read_v()
 
 void ibinarystream::read_v16(std::string& oav)
 {
-    oav = read_vx<uint16_t>();
+	auto sv = read_vx<uint16_t>();
+	oav.assign(sv.data(), sv.length());
 }
 
 void ibinarystream::read_v32( std::string& oav)
 {
-    oav = read_vx<uint32_t>();
+	auto sv = read_vx<uint32_t>();
+	oav.assign(sv.data(), sv.length());
 }
 
 void ibinarystream::read_v(void* oav, int len)

@@ -6,9 +6,9 @@ support multi-connections at one thread.
 support deadline timer.  
 processing tcp sticky internal, user do not need to care it.**
   
-Usage(since v3.9 c++17 required):
+Usage:
 
-1. Only compile src\xxsocket.cpp src\masio.cpp with your project; For gcc, you must add --std=c++17 compile flag<br />
+1. Only compile src\xxsocket.cpp src\masio.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
 2. demo code:
 ```
 #include "xxsocket.h"

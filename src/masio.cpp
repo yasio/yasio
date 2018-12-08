@@ -67,13 +67,13 @@ extern "C" {
 #include <jni.h>
 #define INET_LOG(format, ...)                                            \
   __android_log_print(ANDROID_LOG_INFO, "mini-asio", ("[%lld]" format), \
-                      _highp_clock(), ##__VA_ARGS__) \
+                      _highp_clock(), ##__VA_ARGS__); \
   if(options_.outf) fprintf(options_.outf, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
           ##__VA_ARGS__) 
 #else
 #define INET_LOG(format, ...)                                         \
   fprintf(stdout, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
-          ##__VA_ARGS__) \
+          ##__VA_ARGS__); \
   if(options_.outf) fprintf(options_.outf, ("[mini-asio][%lld] " format "\n"), _highp_clock(), \
           ##__VA_ARGS__) 
 #endif
@@ -742,7 +742,7 @@ void io_service::write(transport_ptr transport, std::vector<char> data) {
 
     interrupter_.interrupt();
   } else {
-    INET_LOG("[transport: %#x] send failed, the connection not ok!",
+    INET_LOG("[transport: %p] send failed, the connection not ok!",
              transport.get());
   }
 }

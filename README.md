@@ -27,8 +27,8 @@ void test_connect()
 
 ASIO Usage(Client Program):
 
-cpptest: https://github.com/halx99/mini-asio/blob/master/test/test/cpptest.cpp  
-luatest: open https://github.com/halx99/mini-asio/blob/master/test/test/luatest.xsxproj by x-studui365 ide  
+cpptest: https://github.com/halx99/mini-asio/blob/master/test/test/cpptest.cpp   (C++11 required)  
+luatest: open https://github.com/halx99/mini-asio/blob/master/test/test/luatest.xsxproj by x-studui365 ide  (C++17 required)  
   
   
 #pitfall: For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: C/C++ --> Advance -->'Forced Include File' to it(such as pch.h).

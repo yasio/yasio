@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -34,6 +34,64 @@ obinarystream::obinarystream(size_t buffersize)
     buffer_.reserve(buffersize);
 }
 
+void obinarystream::push8()
+{
+    offset_stack_.push(buffer_.size());
+    write_i(static_cast<uint8_t>(0));
+}
+void obinarystream::pop8()
+{
+    auto offset = offset_stack_.top();
+    set_i(offset, static_cast<uint8_t>(buffer_.size()));
+    offset_stack_.pop();
+}
+void obinarystream::pop8(uint8_t value)
+{
+    auto offset = offset_stack_.top();
+    set_i(offset, value);
+    offset_stack_.pop();
+}
+
+void obinarystream::push16()
+{
+    offset_stack_.push(buffer_.size());
+    write_i(static_cast<uint16_t>(0));
+}
+void obinarystream::pop16()
+{
+    auto offset = offset_stack_.top();
+    set_i(offset, static_cast<uint16_t>(buffer_.size()));
+    offset_stack_.pop();
+}
+void obinarystream::pop16(uint16_t value)
+{
+    auto offset = offset_stack_.top();
+    set_i(offset, value);
+    offset_stack_.pop();
+}
+
+void obinarystream::push24()
+{
+    offset_stack_.push(buffer_.size());
+
+    unsigned char u32buf[4] = { 0, 0, 0, 0 };
+    write_bytes(u32buf, 3);
+}
+void obinarystream::pop24()
+{
+    auto offset = offset_stack_.top();
+    auto value = htonl(static_cast<uint32_t>(buffer_.size())) >> 8;
+    memcpy(wdata(offset), &value, 3);
+    offset_stack_.pop();
+}
+void obinarystream::pop24(uint32_t value)
+{
+    auto offset = offset_stack_.top();
+    value = htonl(value) >> 8;
+    memcpy(wdata(offset), &value, 3);
+    offset_stack_.pop();
+}
+
 void obinarystream::push32()
 {
     offset_stack_.push(buffer_.size());
@@ -43,14 +101,14 @@ void obinarystream::push32()
 void obinarystream::pop32()
 {
     auto offset = offset_stack_.top();
-    modify_i(offset, static_cast<uint32_t>(buffer_.size()));
+    set_i(offset, static_cast<uint32_t>(buffer_.size()));
     offset_stack_.pop();
 }
 
 void obinarystream::pop32(uint32_t value)
 {
     auto offset = offset_stack_.top();
-    modify_i(offset, value);
+    set_i(offset, value);
     offset_stack_.pop();
 }
 
@@ -82,6 +140,13 @@ obinarystream& obinarystream::operator=(obinarystream&& right)
 {
 	buffer_ = std::move(right.buffer_);
 	return *this;
+}
+
+size_t obinarystream::write_i24(uint32_t value)
+{
+    value = htonl(value) >> 8;
+    write_bytes(&value, 3);
+    return buffer_.size();
 }
 
 size_t obinarystream::write_v(std::string_view value)
@@ -137,11 +202,3 @@ void obinarystream::save(const char * filename)
         fout.write(&this->buffer_.front(), this->length());
     fout.close();
 }
-//
-//void obinarystream::compress(size_t offset/* header maybe */)
-//{
-//    auto compr = crypto::zlib::abi::compress(unmanaged_string(this->buffer_.data() + offset, this->buffer_.size() - offset));
-//    this->buffer_.resize(offset + compr.size());
-//    memcpy(&this->buffer_.front() + offset, compr.data(), compr.size());
-//}
-

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -29,7 +29,7 @@ SOFTWARE.
 #include "obinarystream.h"
 #include "masio.h"
 #include "lmasio.h"
-
+#include "sol.hpp"
 void lua_open_masio(lua_State *L) {
     using namespace purelib::inet;
     sol::state_view sol2(L);
@@ -65,8 +65,10 @@ void lua_open_masio(lua_State *L) {
         "set_option", [](io_service* service, int opt, sol::variadic_args va) {
             switch(opt) { 
             case MASIO_OPT_TCP_KEEPALIVE:
-            case MASIO_OPT_LFIB_PARAMS:
                 service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]), static_cast<int>(va[2]));
+                break;
+            case MASIO_OPT_LFIB_PARAMS:
+                service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]), static_cast<int>(va[2]), static_cast<int>(va[3]));
                 break;
             case MASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom resolv function
                 break;
@@ -85,8 +87,8 @@ void lua_open_masio(lua_State *L) {
         },
         "dispatch_events", &io_service::dispatch_events,
         "open", &io_service::open,
-        "write", sol::overload([](io_service *aio, transport_ptr transport, const char *s, size_t n) {
-            aio->write(transport, std::vector<char>(s, s + n));
+        "write", sol::overload([](io_service *aio, transport_ptr transport, std::string_view s) {
+            aio->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
         }, [](io_service *aio, transport_ptr transport, obinarystream* obs) {
             aio->write(transport, obs->take_buffer());
         })
@@ -98,9 +100,19 @@ void lua_open_masio(lua_State *L) {
         "push32", &obinarystream::push32,
         "pop32", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
             static_cast<void (obinarystream ::*)(uint32_t)>(&obinarystream::pop32)),
+        "push24", &obinarystream::push24,
+        "pop24", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop24),
+            static_cast<void (obinarystream ::*)(uint32_t)>(&obinarystream::pop24)),
+        "push16", &obinarystream::push16,
+        "pop16", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop16),
+            static_cast<void (obinarystream ::*)(uint16_t)>(&obinarystream::pop16)),
+        "push8", &obinarystream::push8,
+        "pop8", sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop8),
+            static_cast<void (obinarystream ::*)(uint8_t)>(&obinarystream::pop8)),
         "write_bool", &obinarystream::write_i<bool>,
         "write_i8", &obinarystream::write_i<int8_t>,
         "write_i16", &obinarystream::write_i<int16_t>,
+        "write_i24", &obinarystream::write_i24,
         "write_i32", &obinarystream::write_i<int32_t>,
         "write_i64", &obinarystream::write_i<int64_t>,
         "write_u8", &obinarystream::write_i<uint8_t>,
@@ -110,25 +122,28 @@ void lua_open_masio(lua_State *L) {
         "write_f", static_cast<size_t(obinarystream::*)(float)>(&obinarystream::write_i),
         "write_lf", static_cast<size_t(obinarystream::*)(double)>(&obinarystream::write_i),
         "write_string", static_cast<size_t(obinarystream::*)(std::string_view)>(&obinarystream::write_v),
-        "length", &obinarystream::length
-        );
+        "length", &obinarystream::length,
+        "to_string", [](obinarystream* obs) {
+        return std::string_view(obs->data(), obs->length());
+        });
 
     // ##-- ibinarystream
     sol2.new_usertype<ibinarystream>(
         "ibstream",
         sol::constructors<ibinarystream(), ibinarystream(const void*, int), ibinarystream(const obinarystream*)>(),
         "assign", &ibinarystream::assign,
-        "read_bool", &ibinarystream::read_i0<bool>,
-        "read_i8", &ibinarystream::read_i0<int8_t>,
-        "read_i16", &ibinarystream::read_i0<int16_t>,
-        "read_i32", &ibinarystream::read_i0<int32_t>,
-        "read_i64", &ibinarystream::read_i0<int64_t>,
-        "read_u8", &ibinarystream::read_i0<uint8_t>,
-        "read_u16", &ibinarystream::read_i0<uint16_t>,
-        "read_u32", &ibinarystream::read_i0<uint32_t>,
-        "read_u64", &ibinarystream::read_i0<uint64_t>,
-        "read_f", &ibinarystream::read_i0<float>,
-        "read_lf", &ibinarystream::read_i0<double>,
+        "read_bool", &ibinarystream::read_ix<bool>,
+        "read_i8", &ibinarystream::read_ix<int8_t>,
+        "read_i16", &ibinarystream::read_ix<int16_t>,
+        "read_i16", &ibinarystream::read_i24,
+        "read_i32", &ibinarystream::read_ix<int32_t>,
+        "read_i64", &ibinarystream::read_ix<int64_t>,
+        "read_u8", &ibinarystream::read_ix<uint8_t>,
+        "read_u16", &ibinarystream::read_ix<uint16_t>,
+        "read_u32", &ibinarystream::read_ix<uint32_t>,
+        "read_u64", &ibinarystream::read_ix<uint64_t>,
+        "read_f", &ibinarystream::read_ix<float>,
+        "read_lf", &ibinarystream::read_ix<double>,
         "read_string", static_cast<std::string_view(ibinarystream::*)()>(&ibinarystream::read_v),
         "to_string", [](ibinarystream* ibs) {
               return std::string_view(ibs->data(), ibs->size());

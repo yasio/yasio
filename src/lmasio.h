@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -27,7 +27,10 @@ SOFTWARE.
 */
 #ifndef _LMASIO_H_
 #define _LMASIO_H_
-#include "sol.hpp"
+
+extern "C" {
+    struct lua_State;
+}
 
 void lua_open_masio(lua_State* L);
 

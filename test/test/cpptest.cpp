@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "masio.h"
+#include "ibinarystream.h"
+#include "obinarystream.h"
 
 #if defined(_WIN32)
 #include <Shlwapi.h>
@@ -22,6 +24,21 @@ int main(int, char **) {
       {"www.ip138.com", 80}   //  { "www.ip138.com", 80 },  // http client
   };
 
+  obinarystream obs;
+  obs.push24();
+  obs.write_i24(16777215);
+  obs.write_i24(16777213);
+  obs.write_i24(259);
+  obs.write_i24(16777217); // uint24 value overflow test
+  obs.pop24();
+
+  ibinarystream ibs(obs.data(), obs.length());
+  auto n = ibs.read_i24();
+  auto v1 = ibs.read_i24();
+  auto v2 = ibs.read_i24();
+  auto v3 = ibs.read_i24();
+  auto v4 = ibs.read_i24();
+
   myasio->set_option(MASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
 
   resolv_fn_t resolv = [](std::vector<ip::endpoint> &endpoints, const char *hostname,
@@ -38,7 +55,7 @@ int main(int, char **) {
   });
 
   std::vector<std::shared_ptr<io_transport>> transports;
-  myasio->set_option(MASIO_OPT_LFIB_PARAMS, -1, 0, SZ(5, M));
+  myasio->set_option(MASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
   myasio->set_option(MASIO_OPT_LOG_FILE, "mini-asio.log");
   myasio->start_service(endpoints, _ARRAYSIZE(endpoints), 
       [&](event_ptr event) {

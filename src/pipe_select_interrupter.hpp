@@ -8,8 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef XXSOCKET_PIPE_SELECT_INTERRUPTER_HPP
-#define XXSOCKET_PIPE_SELECT_INTERRUPTER_HPP
+#ifndef MASIO_PIPE_SELECT_INTERRUPTER_HPP
+#define MASIO_PIPE_SELECT_INTERRUPTER_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
@@ -32,19 +32,19 @@ class pipe_select_interrupter
 {
 public:
   // Constructor.
-  _XXSOCKET_INLINE pipe_select_interrupter();
+  _MASIO_INLINE pipe_select_interrupter();
 
   // Destructor.
-  _XXSOCKET_INLINE ~pipe_select_interrupter();
+  _MASIO_INLINE ~pipe_select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  _XXSOCKET_INLINE void recreate();
+  _MASIO_INLINE void recreate();
 
   // Interrupt the select call.
-  _XXSOCKET_INLINE void interrupt();
+  _MASIO_INLINE void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  _XXSOCKET_INLINE bool reset();
+  _MASIO_INLINE bool reset();
 
   // Get the read descriptor to be passed to select.
   int read_descriptor() const
@@ -54,10 +54,10 @@ public:
 
 private:
   // Open the descriptors. Throws on error.
-  _XXSOCKET_INLINE void open_descriptors();
+  _MASIO_INLINE void open_descriptors();
 
   // Close the descriptors.
-  _XXSOCKET_INLINE void close_descriptors();
+  _MASIO_INLINE void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single

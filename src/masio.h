@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -186,7 +186,7 @@ public:
 
 struct io_hostent {
   io_hostent() {}
-  io_hostent(std::string_view addr, u_short port) : address_(addr), port_(port)
+  io_hostent(std::string_view addr, u_short port) : address_(addr.data(), addr.length()), port_(port)
   {
   }
   std::string address_;
@@ -355,7 +355,8 @@ class io_service {
              MASIO_OPT_DEFER_EVENT       defer:int
              MASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              MASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             MASIO_OPT_LFIB_PARAMS length_field_offst:int, length_adjustment:int, max_frame_length:int
+             MASIO_OPT_LFIB_PARAMS max_frame_length:int, length_field_offst:int, length_field_length:int, length_adjustment:int
+             MASIO_OPT_IO_EVENT_CALLBACK  func:io_event_callback_t*
   */ 
   void set_option(int option, ...);
 
@@ -509,6 +510,7 @@ class io_service {
 
     struct {
       int length_field_offset = 0;
+      int length_field_length = 4; // 1,2,3,4
       int length_adjustment = 0;
       int max_frame_length = SZ(10, M);
     } lfib;

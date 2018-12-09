@@ -8,16 +8,16 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef XXSOCKET_SELECT_INTERRUPTER_HPP
-#define XXSOCKET_SELECT_INTERRUPTER_HPP
+#ifndef MASIO_SELECT_INTERRUPTER_HPP
+#define MASIO_SELECT_INTERRUPTER_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 
-#if !defined(_XXSOCKET_INLINE)
-#define _XXSOCKET_INLINE inline
+#if !defined(_MASIO_INLINE)
+#define _MASIO_INLINE inline
 #endif
 
 #if defined(_WIN32) 

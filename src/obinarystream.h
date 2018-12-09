@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -41,6 +41,18 @@ public:
     obinarystream(obinarystream&& right);
     ~obinarystream();
 
+    void push8();
+    void pop8();
+    void pop8(uint8_t);
+
+    void push16();
+    void pop16();
+    void pop16(uint16_t);
+
+    void push24();
+    void pop24();
+    void pop24(uint32_t);
+
     void push32();
     void pop32();
     void pop32(uint32_t);
@@ -55,6 +67,7 @@ public:
 
     size_t write_i(float);
     size_t write_i(double);
+    size_t write_i24(uint32_t value); // highest byte ignored
 
     size_t write_v(std::string_view);
     size_t write_v16(std::string_view);
@@ -73,12 +86,10 @@ public:
     const std::vector<char>& buffer() const { return buffer_; }
     std::vector<char>& buffer() { return buffer_; }
     
-    char* offsetp(size_t offset = 0) { return &buffer_.front() + offset; }
+    char* wdata(size_t offset = 0) { return &buffer_.front() + offset; }
 
     template<typename _Nty>
-    void modify_i(std::streamoff offset, const _Nty value);
-
-    void compress(size_t offset = 0 /* header maybe */);
+    void set_i(std::streamoff offset, const _Nty value);
 
     template<typename _LenT>
     size_t write_vx(const void* v, int size)
@@ -129,7 +140,7 @@ inline size_t obinarystream::write_i(double value)
 }
 
 template <typename _Nty>
-inline void obinarystream::modify_i(std::streamoff offset, const _Nty value)
+inline void obinarystream::set_i(std::streamoff offset, const _Nty value)
 {
     auto pvalue = (_Nty*)(buffer_.data() + offset);
     *pvalue = purelib::endian::htonv(value);

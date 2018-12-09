@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -58,9 +58,18 @@ void ibinarystream::assign(const void* data, int size)
     size_ = size;
 }
 
+// TODO: rewrite a class uint24_t
+uint32_t ibinarystream::read_i24()
+{
+    uint32_t value = 0;
+    auto ptr = consume(3);
+    memcpy(&value, ptr, 3);
+    return ntohl(value) >> 8;
+}
+
 void ibinarystream::read_v(std::string& oav)
 {
-	auto sv = read_vx<LENGTH_FIELD_TYPE>();
+    auto sv = read_vx<LENGTH_FIELD_TYPE>();
     oav.assign(sv.data(), sv.length());
 }
 
@@ -71,14 +80,14 @@ std::string_view ibinarystream::read_v()
 
 void ibinarystream::read_v16(std::string& oav)
 {
-	auto sv = read_vx<uint16_t>();
+    auto sv = read_vx<uint16_t>();
 	oav.assign(sv.data(), sv.length());
 }
 
 void ibinarystream::read_v32( std::string& oav)
 {
-	auto sv = read_vx<uint32_t>();
-	oav.assign(sv.data(), sv.length());
+    auto sv = read_vx<uint32_t>();
+    oav.assign(sv.data(), sv.length());
 }
 
 void ibinarystream::read_v(void* oav, int len)

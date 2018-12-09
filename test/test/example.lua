@@ -13,11 +13,14 @@ local hostents = {
     io_hostent.new('0.0.0.0', 8081),
     io_hostent.new('0.0.0.0', 8082)
 }
+
+local transport1 = nil
+local data_partial2 = nil
 server:start_service(hostents, function(event)
         local t = event:kind()
         if t == masio.MASIO_EVENT_RECV_PACKET then
             local packet = event:packet()
-            -- print(packet)
+            print(packet)
         elseif(t == masio.MASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
             if(event:error_code() == 0) then
                 local transport = event:transport()
@@ -33,7 +36,13 @@ server:start_service(hostents, function(event)
                     passwd = "x-studio365 is a powerful IDE!"
                 }
                 local obs = proto.e101(msg)
-                server:write(transport, obs)
+                local data = obs:to_string()
+                local data_partial1 = data:sub(1, #data - 10)
+                server:write(transport, data_partial1)
+                
+                print('The remain data will be sent after 6 seconds...')
+                transport1 = transport
+                data_partial2 = data:sub(#data - 10 + 1, #data)
             else
                 print("connect server failed!")
             end
@@ -45,7 +54,7 @@ server:open(0, masio.CHANNEL_TCP_SERVER)
 
 local client = io_service.new()
 hostent.address = "127.0.0.1"
-client:set_option(masio.MASIO_OPT_LFIB_PARAMS, 0, 0, 16384)
+client:set_option(masio.MASIO_OPT_LFIB_PARAMS, 65535, 0, 4, 0)
 local func = function(event)
     local t = event:kind()
     if t == masio.MASIO_EVENT_RECV_PACKET then
@@ -53,12 +62,13 @@ local func = function(event)
         local msg = proto.d101(ibs)
         print(string.format('receve data from server: %s', msg.passwd))
         stopFlag = stopFlag + 1
-        -- test buffer overflow exception handler
-        local succeed, result = pcall(ibs.read_i8, ibs)
-        -- print(packet)
+        -- test buffer out_of_range exception handler
+        local _, result = pcall(ibs.read_i8, ibs)
+        print(result)
     elseif(t == masio.MASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
         if(event:error_code() == 0) then
-            local transport = event:transport()
+            print("connect serve succeed.")
+            -- local transport = event:transport()
             -- local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
             -- client:write(transport, obs)
         else
@@ -77,7 +87,7 @@ client:open(0, masio.CHANNEL_TCP_CLIENT)
 local httpclient = io_service.new()
 hostent.address = "ip138.com"
 hostent.port = 80
-httpclient:set_option(masio.MASIO_OPT_LFIB_PARAMS, -1, 0, 65535)
+httpclient:set_option(masio.MASIO_OPT_LFIB_PARAMS, 65535, -1, 0, 0)
 httpclient:start_service(hostent, function(event)
         local t = event:kind()
         if t == masio.MASIO_EVENT_RECV_PACKET then
@@ -88,7 +98,7 @@ httpclient:start_service(hostent, function(event)
             if(event:error_code() == 0) then
                 local transport = event:transport()
                 local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
-                httpclient:write(transport, requestData, #requestData)
+                httpclient:write(transport, requestData)
             else
                 print("connect server failed!")
             end
@@ -96,13 +106,19 @@ httpclient:start_service(hostent, function(event)
             print("The http connection is lost!")
             stopFlag = stopFlag + 1
         end
-    end)
+end)
 httpclient:open(0, masio.CHANNEL_TCP_CLIENT)    
 
+local elapsedTime = 0
+local partial2Sent = false
 function global_update(dt)
     server:dispatch_events(128)
     client:dispatch_events(128)
     httpclient:dispatch_events(128)
+    elapsedTime = elapsedTime + dt
+    if elapsedTime > 6 and not partial2Sent then
+        server:write(transport1, data_partial2)
+    end
     return stopFlag >= 2
 end
 

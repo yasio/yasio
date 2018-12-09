@@ -89,7 +89,6 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;BOOST_SYSTEM_NO_LIB;BOOST_DATE_TIME_NO_LIB;BOOST_REGEX_NO_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\src;D:\develop\gamedev\engines\cocos2d-x\external\lua\luajit\include</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -55,11 +55,13 @@ public:
     void read_i(double& ov);
 
     template<typename _Nty>
-    _Nty read_i0() {
+    _Nty read_ix() {
         _Nty value;
         read_i(value);
         return value;
     }
+
+    uint32_t read_i24();
 
     void read_v(std::string&);
     void read_v16(std::string&);

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.1
+// universal app version: 3.9.2
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -351,9 +351,10 @@ void io_service::set_option(int option, ...) {
     options_.outf = fopen(va_arg(ap, const char *), "wb");
     break;
   case MASIO_OPT_LFIB_PARAMS:
-    options_.lfib.length_field_offset = va_arg(ap, int);
-    options_.lfib.length_adjustment = va_arg(ap, int);
     options_.lfib.max_frame_length = va_arg(ap, int);
+    options_.lfib.length_field_offset = va_arg(ap, int);
+    options_.lfib.length_field_length = va_arg(ap, int);
+    options_.lfib.length_adjustment = va_arg(ap, int);
     break;
   case MASIO_OPT_IO_EVENT_CALLBACK:
     this->on_event_ = std::move(*va_arg(ap, io_event_callback_t*));
@@ -1397,10 +1398,31 @@ void io_service::handle_ares_work_finish(
 int io_service::decode_frame_length(void *ud, int n) {
   if (options_.lfib.length_field_offset >= 0) {
     if (n >= (options_.lfib.length_field_offset +
-              static_cast<int>(sizeof(int32_t)))) {
-      int length = ntohl(*reinterpret_cast<int32_t *>(
-                       (char *)ud + options_.lfib.length_field_offset)) +
-                   options_.lfib.length_adjustment;
+              options_.lfib.length_field_length)) {
+      int32_t length = -1;
+      switch (options_.lfib.length_field_length) {
+      case 4:
+        length = ntohl(*reinterpret_cast<int32_t *>(
+                     (unsigned char *)ud + options_.lfib.length_field_offset)) +
+                 options_.lfib.length_adjustment;
+        break;
+      case 3:
+        length = 0;
+        memcpy(&length,
+               (unsigned char *)ud + options_.lfib.length_field_offset, 3);
+        length = (ntohl(length) >> 8) +
+                 options_.lfib.length_adjustment;
+        break;
+      case 2:
+        length = ntohs(*reinterpret_cast<uint16_t *>(
+                     (unsigned char *)ud + options_.lfib.length_field_offset)) +
+                 options_.lfib.length_adjustment;
+        break;
+      case 1:
+        length = *((unsigned char *)ud + options_.lfib.length_field_offset) +
+                 options_.lfib.length_adjustment;
+        break;
+      }
       if (length > options_.lfib.max_frame_length)
         length = -1;
       return length;

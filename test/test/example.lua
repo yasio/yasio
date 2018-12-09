@@ -117,6 +117,7 @@ function global_update(dt)
     httpclient:dispatch_events(128)
     elapsedTime = elapsedTime + dt
     if elapsedTime > 6 and not partial2Sent then
+        partial2Sent = true
         server:write(transport1, data_partial2)
     end
     return stopFlag >= 2

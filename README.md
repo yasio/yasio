@@ -1,7 +1,7 @@
 # mini-asio
 A lightweight & stable cross platform posix socket API wrapper, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
-core design: reference to https://github.com/chriskohlhoff/asio but very small.  
-Used by http://hongjing.qq.com/  
+The core design: reference to https://github.com/chriskohlhoff/asio but very small.  
+This lib is used by project http://hongjing.qq.com/ and run at thousands of devices.  
 **support IPv6-only network.  
 support multi-connections at one thread.  
 support deadline timer.  

@@ -54,6 +54,12 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="hero_mp" type="uint32_t" />
     </structure>
     
+    <structure name="Extension">
+      <field name="extension_type" type="uint8_t" />
+      <field name="extension_data_length" type="uint16_t" />
+      <field name="extension_data" type="uint8_t*" length_specifier="extension_data_length" />
+    </structure>
+    
   </structures>
 
   <messages>
@@ -65,7 +71,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="reserved" type="uint16_t" /> <!-- magic number For packet check, such as 0x5a5a-->
       <field name="reserved2" type="uint64_t" /> <!-- May be timestamp -->
     </message>
-
+ 
      <message name="MessageSimple1" command_id="CID_SIMPLE1 = 101" mode="lua.all">	<!-- 登陆请求 -->
       <field name="id" type="int8_t" />
       <field name="value1" type="uint16_t" />
@@ -77,19 +83,25 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="passwd" type="std::string" />
     </message>
     
-    <!----- TSL v1.3 protocol --->
-    <message name="ClientHello" command_id="TLS1_3_CLIENT_HELLO = 1" mode="lua.all">
-      <!----- TLS v1.1 0x0302, TLS v1.2 0x0303, TLS v1.3 0x0304 --->
-      <field name="legacy_version" type="int16_t" /> 
-      <field name="value1" type="uint16_t" />
-      <field name="value2" type="int32_t" />
-      <field name="value3" type="bool" />
-      <field name="value4" type="float" />
-      <field name="value6" type="double" />
-      <field name="uname" type="std::string" />
-      <field name="passwd" type="std::string" />
+    <!-- TSL v1.3 protocol 
+    <message name="TLS_1_3_Header" is_header="1" >
+      <field name="msg_type" type="uint8_t" />
+      <field name="length" type="uint24_t" />
     </message>
 
+    
+    <message name="ClientHello" command_id="TLS_1_3_CLIENT_HELLO = 1" mode="lua.all">
+      <field name="legacy_version" type="int16_t" value="0x0303" /> 
+      <field name="random" type="uint8_t[32]" />
+      <field name="legacy_session_id" type="uint8_t"  value="0" />
+      <field name="cipher_suites_length" type="uint16_t" />
+      <field name="cipher_suites" type="uint16_t*" length_specifier="cipher_suites_length"/>
+      <field name="legacy_compression_methods_length" type="uint8_t" value="1" />
+      <field name="legacy_compression_methods" type="uint8_t" value="0" />
+      <field name="extensions_length" type="uint16_t" />
+      <field name="extensions" type="Extension*" length_specifier="extensions_length"/>
+    </message>
+-->
   </messages>
   
 </protocol>

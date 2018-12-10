@@ -28,24 +28,4 @@ proto.e101 = function(msg)
     return obs;
 end
 
-proto.e1 = function(msg)
-    -- begin message encode.
-    local obs = proto.begin_encode(proto.numbers.TLS1_3_CLIENT_HELLO);
-
-    -- encode message fields.
-    obs:write_i16(msg.legacy_version);
-    obs:write_u16(msg.value1);
-    obs:write_i32(msg.value2);
-    obs:write_bool(msg.value3);
-    obs:write_f(msg.value4);
-    obs:write_lf(msg.value6);
-    obs:write_string(msg.uname);
-    obs:write_string(msg.passwd);
-
-    -- finish message encode.
-    obs:pop32(); -- finish encode
-
-    return obs;
-end
-
 

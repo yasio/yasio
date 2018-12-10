@@ -29,9 +29,18 @@ SOFTWARE.
 #include <string>
 
 // C++17 standard compatible for C++11
-#if _HAS_CXX17 || __cplusplus >= 201703L
+#if (defined(_HAS_CXX17) && _HAS_CXX17) || __cplusplus >= 201703L
+#if !defined(_HAS_CXX17)
+#define _HAS_CXX17 1
+#endif
+
 #include <string_view>
 #else
+
+#if !defined(_HAS_CXX17)
+#define _HAS_CXX17 0
+#endif
+
 #include <string.h>
 #include <exception>
 #include <stdexcept>

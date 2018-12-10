@@ -5,7 +5,8 @@
     <ClCompile Include="..\..\src\masio.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="cpptest.cpp" />
+    <ClCompile Include="..\..\src\lmasio.cpp" />
+    <ClCompile Include="luatest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp" />
@@ -17,6 +18,7 @@
     <ClInclude Include="..\..\src\socket_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\xxsocket.h" />
     <ClInclude Include="..\..\src\string_view.hpp" />
+    <ClInclude Include="..\..\src\sol2.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\eventfd_select_interrupter.ipp" />

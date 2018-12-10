@@ -8,5 +8,4 @@ proto = proto or {}
 
 proto.numbers = {
     CID_SIMPLE1 = 101, 
-    TLS1_3_CLIENT_HELLO = 1, 
 }

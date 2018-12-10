@@ -1,6 +1,6 @@
 #include "lmasio.h"
 #include "string_view.hpp"
-#include "sol.hpp"
+#include "sol2.hpp"
 #include <thread>
 #pragma comment(lib, "lua51.lib")
 
@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     s.script_file("example.lua");
 
     do {
-        std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(50)));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     } while (!s["global_update"].call(50.0 / 1000));
 
     return 0;

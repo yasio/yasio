@@ -23,19 +23,4 @@ proto.d101 = function(ibs)
     return msg;
 end
 
-proto.d1 = function(ibs)
-    local msg = proto.begin_decode(ibs);
-
-    msg.legacy_version = ibs:read_i16(); 
-    msg.value1 = ibs:read_u16(); 
-    msg.value2 = ibs:read_i32(); 
-    msg.value3 = ibs:read_bool(); 
-    msg.value4 = ibs:read_f(); 
-    msg.value6 = ibs:read_lf(); 
-    msg.uname = ibs:read_string();
-    msg.passwd = ibs:read_string();
-
-    return msg;
-end
-
 

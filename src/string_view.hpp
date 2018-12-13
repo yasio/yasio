@@ -28,18 +28,35 @@ SOFTWARE.
 #pragma once
 #include <string>
 
-// C++17 standard compatible for C++11
-#if (defined(_HAS_CXX17) && _HAS_CXX17) || __cplusplus >= 201703L
-#if !defined(_HAS_CXX17)
-#define _HAS_CXX17 1
+#define _to_literal(s) #s
+#define to_literal(s) _to_literal(s)
+
+#if (defined(__cplusplus) && __cplusplus == 201703L) || (defined(_MSC_VER) && _MSC_VER > 1900 && ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) || (defined(_MSVC_LANG) && (_MSVC_LANG > 201402L))))
+#ifndef _HAS_STD_STRING_VIEW
+#define _HAS_STD_STRING_VIEW 1
+#endif // C++17 features macro
+#endif // C++17 features check
+
+#if !defined(_HAS_STD_STRING_VIEW)
+# if  defined(__clang__)
+// #pragma message("clang version is: " to_literal(__clang_major__) "." to_literal(__clang_minor__))
+#  if defined(__has_include)
+#   if __has_include( <string_view> )
+#    define _HAS_STD_STRING_VIEW  1
+#   endif
+#  endif
+# endif
 #endif
 
+#if !defined(_HAS_STD_STRING_VIEW)
+#define _HAS_STD_STRING_VIEW 0
+#endif
+
+#if _HAS_STD_STRING_VIEW
+// #pragma message("_HAS_STD_STRING_VIEW = 1")
 #include <string_view>
 #else
-
-#if !defined(_HAS_CXX17)
-#define _HAS_CXX17 0
-#endif
+// #pragma message("_HAS_STD_STRING_VIEW = 0")
 
 #include <string.h>
 #include <exception>

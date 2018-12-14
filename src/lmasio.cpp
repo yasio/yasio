@@ -29,7 +29,7 @@ SOFTWARE.
 #include "obinarystream.h"
 #include "masio.h"
 #include "lmasio.h"
-#include "sol2.hpp"
+#include "sol.hpp"
 
 void lua_open_masio(lua_State *L) {
   using namespace purelib::inet;
@@ -58,27 +58,12 @@ void lua_open_masio(lua_State *L) {
 
   sol2.new_usertype<io_service>(
       "io_service", "start_service",
-#if _HAS_CXX17
       sol::overload(static_cast<void (io_service::*)(std::vector<io_hostent>,
                                                      io_event_callback_t)>(
                         &io_service::start_service),
                     static_cast<void (io_service::*)(
                         const io_hostent *channel_eps, io_event_callback_t cb)>(
                         &io_service::start_service)),
-#else
-      [](io_service *service, sol::object obj, io_event_callback_t cb) {
-        if (obj.get_type() == sol::type::table) {
-          std::vector<io_hostent> hostents;
-          for (auto &v : static_cast<sol::table>(obj)) {
-            auto ioh = v.second.as<io_hostent *>();
-            hostents.push_back(*ioh);
-          }
-          service->start_service(std::move(hostents), cb);
-        } else {
-          service->start_service(obj.as<io_hostent *>(), 1, cb);
-        }
-      },
-#endif
       "stop_service", &io_service::stop_service, "set_option",
       [](io_service *service, int opt, sol::variadic_args va) {
         switch (opt) {
@@ -111,13 +96,7 @@ void lua_open_masio(lua_State *L) {
       "dispatch_events", &io_service::dispatch_events, "open",
       &io_service::open, "write",
       sol::overload(
-          [](io_service *aio, transport_ptr transport,
-#if _HAS_CXX17
-             std::string_view s
-#else
-             const std::string &s
-#endif
-          ) {
+          [](io_service *aio, transport_ptr transport, std::string_view s) {
             aio->write(transport,
                        std::vector<char>(s.data(), s.data() + s.length()));
           },
@@ -160,18 +139,10 @@ void lua_open_masio(lua_State *L) {
       static_cast<size_t (obinarystream::*)(double)>(&obinarystream::write_i),
 
       "write_string",
-#if _HAS_CXX17
       static_cast<size_t (obinarystream::*)(std::string_view)>(
           &obinarystream::write_v),
-#else
-        [](obinarystream *obs, const std::string &value) { obs->write_v(value); },
-#endif
       "length", &obinarystream::length, "to_string", [](obinarystream *obs) {
-#if _HAS_CXX17
         return std::string_view(obs->data(), obs->length());
-#else
-          return std::string(obs->data(), obs->length());
-#endif
       });
 
   // ##-- ibinarystream
@@ -190,20 +161,9 @@ void lua_open_masio(lua_State *L) {
       &ibinarystream::read_ix<uint64_t>, "read_f",
       &ibinarystream::read_ix<float>, "read_lf",
       &ibinarystream::read_ix<double>, "read_string",
-#if _HAS_CXX17
       static_cast<std::string_view (ibinarystream::*)()>(
           &ibinarystream::read_v),
-#else
-        [](ibinarystream* ibs) {
-          auto sv = ibs->read_v();
-          return std::string(sv.data(), sv.length());
-        },
-#endif
       "to_string", [](ibinarystream *ibs) {
-#if _HAS_CXX17
         return std::string_view(ibs->data(), ibs->size());
-#else
-          return std::string(ibs->data(), ibs->size());
-#endif
       });
 }

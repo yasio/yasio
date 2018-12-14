@@ -1,6 +1,6 @@
 #include "lmasio.h"
 #include "string_view.hpp"
-#include "sol2.hpp"
+#include "sol.hpp"
 #include <thread>
 #pragma comment(lib, "lua51.lib")
 

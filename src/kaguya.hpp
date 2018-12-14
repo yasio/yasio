@@ -5756,7 +5756,7 @@ struct lua_type_traits<
   }
   static opt_type opt(lua_State *l, int index) KAGUYA_NOEXCEPT {
     int isnum = 0;
-    get_type num = static_cast<T>(lua_tonumberx(l, index, &isnum));
+    get_type num = static_cast<T>(::kaguya::compat::lua_tonumberx(l, index, &isnum));
     if (!isnum) {
       return opt_type();
     }
@@ -5764,7 +5764,7 @@ struct lua_type_traits<
   }
   static get_type get(lua_State *l, int index) {
     int isnum = 0;
-    get_type num = static_cast<T>(lua_tonumberx(l, index, &isnum));
+    get_type num = static_cast<T>(::kaguya::compat::lua_tonumberx(l, index, &isnum));
     if (!isnum) {
       throw LuaTypeMismatch();
     }

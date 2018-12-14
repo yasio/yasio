@@ -189,6 +189,10 @@ struct io_hostent {
   io_hostent(std::string_view addr, u_short port) : address_(addr.data(), addr.length()), port_(port)
   {
   }
+  void set_address(const std::string &value) { address_ = value; }
+  const std::string &get_address() const { return address_; }
+  void set_port(u_short port) { port_ = port; }
+  u_short get_port() const { return port_; }
   std::string address_;
   u_short port_;
 };

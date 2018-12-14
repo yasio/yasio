@@ -39,13 +39,11 @@ void lua_open_masio(lua_State *L) {
       kaguya::UserdataMetatable<io_hostent>()
           .setConstructors<io_hostent(),
                            io_hostent(const std::string &, u_short)>()
-          /*.addPropertyAny("address",
-                          [](io_hostent *hst, const std::string &value) {})*/
-  );
-      /*sol::constructors<io_hostent(),
-                        io_hostent(const std::string &, u_short)>(),
-      "address", &io_hostent::address_, "port", &io_hostent::port_);*/
-
+          .addProperty("address", &io_hostent::get_address,
+                       &io_hostent::set_address)
+          .addProperty("port", &io_hostent::get_port,
+                       &io_hostent::set_port));
+  
 #if 0
   sol2.new_usertype<io_event>(
       "io_event", "channel_index", &io_event::channel_index, "kind",

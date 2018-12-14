@@ -110,13 +110,13 @@ namespace purelib {
             template<typename _Fty, typename _Arg>
             static void delay_init(const _Fty& memf, const _Arg& arg)
             { // init use specific member func with 1 arg
-                std::mem_fun(memf)(_Myt::__single__.get(), arg);
+                std::mem_fn(memf)(_Myt::__single__.get(), arg);
             }
 
             template<typename _Fty>
             static void delay_init(const _Fty& memf)
             { // init use specific member func without arg
-                std::mem_fun(memf)(_Myt::__single__.get());
+                std::mem_fn(memf)(_Myt::__single__.get());
             }
 
             static void delay_init(void)

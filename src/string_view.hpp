@@ -6,6 +6,7 @@
 The MIT License (MIT)
 
 Copyright (c) 2012-2018 halx99
+Copyright (c) 2016 Matthew Rodusek(matthew.rodusek@gmail.com) <http://rodusek.me>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+See: https://github.com/bitwizeshift/string_view-standalone
 */
 #pragma once
 #include <string>
@@ -70,40 +72,6 @@ SOFTWARE.
 #  include <string.h>
 namespace std
 {
-/**
- * \file string_view.hpp
- *
- * \brief todo: fill in documentation
- *
- * \author Matthew Rodusek (matthew.rodusek@gmail.com)
- * \copyright Matthew Rodusek
- */
-
-/*
- * The MIT License (MIT)
- *
- * Licensed under the MIT License <http://opensource.org/licenses/MIT>.
- * Copyright (c) 2016 Matthew Rodusek <http://rodusek.me>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- * See: https://github.com/bitwizeshift/string_view-standalone
- */
 template <class _Traits>
 inline size_t __xxtraits_find(const typename _Traits::char_type *_Haystack, const size_t _Hay_size,
                               const size_t _Start_at, const typename _Traits::char_type *_Needle,

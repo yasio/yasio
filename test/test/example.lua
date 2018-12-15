@@ -2,7 +2,9 @@ require 'protocol_base'
 require 'protocol_enc'
 require 'protocol_dec'
 
-local masio = require('masio') -- constants
+local masio = masio -- constants
+local io_hostent = masio.io_hostent
+local io_service = masio.io_service
 local stopFlag = 0
 
 local hostent = io_hostent.new()
@@ -51,6 +53,7 @@ server:start_service(hostents, function(event)
         end
     end)
 server:open(0, masio.CHANNEL_TCP_SERVER)
+server:open(1, masio.CHANNEL_TCP_SERVER)
 
 local client = io_service.new()
 hostent.address = "127.0.0.1"
@@ -61,7 +64,8 @@ client:set_option(masio.MASIO_OPT_LFIB_PARAMS,
     4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
     0 -- lengthAdjustment：如果长度字段之时字节大小包含包头，则为0， 否则，这里=包头大小
 )
-local func = function(event)
+
+client:start_service(hostent, function(event)
     local t = event:kind()
     if t == masio.MASIO_EVENT_RECV_PACKET then
         local ibs = event:packet()
@@ -83,11 +87,8 @@ local func = function(event)
     elseif(t == masio.MASIO_EVENT_CONNECTION_LOST) then -- connection lost event
         print("The connection is lost!")
     end
-end
-client:start_service(hostent, func)
--- client:set_option(masio.MASIO_OPT_IO_EVENT_CALLBACK, func)
+end)
 client:open(0, masio.CHANNEL_TCP_CLIENT)
-
 
 -- httpclient
 local httpclient = io_service.new()

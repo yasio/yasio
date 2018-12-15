@@ -7,7 +7,7 @@ support multi-connections at one thread.
 support deadline timer.  
 processing tcp sticky internal, user do not need to care it.**
   
-#Simiple usage:
+#Simiple usage:  
 1. Only compile src\xxsocket.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
 2. demo code:
 ```
@@ -25,7 +25,7 @@ void test_connect()
 }
 ```
 
-#Asio usage:
+#Asio usage:  
 cpp intergation: Compile src\xxsocket.cpp src\masio.cpp with your project  
 cpptest: https://github.com/halx99/mini-asio/blob/master/test/test/cpptest.cpp  
   
@@ -35,7 +35,7 @@ lua intergation:
 2. call lua_open_masio after LUA VM initialized.  
 luatest(windows user): open https://github.com/halx99/mini-asio/blob/master/test/test/luatest.xsxproj by x-studui365 ide  
 
-#quick test at linux platform with gcc compiler
+#Quick test at linux platform with gcc compiler:  
 ```g++ src/xxsocket.cpp src/masio.cpp test/test/cpptest.cpp --std=c++11 -lpthread -I./src -o cpptest && ./cpptest```  
   
 #pitfall: For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: C/C++ --> Advance -->'Forced Include File' to it(such as pch.h).

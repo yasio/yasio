@@ -62,7 +62,7 @@ client:set_option(masio.MASIO_OPT_LFIB_PARAMS,
     65535, -- maxFrameLength, 最大包长度
     0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
     4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
-    0 -- lengthAdjustment：如果长度字段之时字节大小包含包头，则为0， 否则，这里=包头大小
+    0 -- lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
 )
 
 client:start_service(hostent, function(event)

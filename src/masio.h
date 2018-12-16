@@ -26,33 +26,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef _MASIO_H_
-#  define _MASIO_H_
-#  include "endian_portable.h"
-#  include "object_pool.h"
-#  include "select_interrupter.hpp"
-#  include "singleton.h"
-#  include "string_view.hpp"
-#  include "xxsocket.h"
-#  include <algorithm>
-#  include <atomic>
-#  include <chrono>
-#  include <condition_variable>
-#  include <ctime>
-#  include <functional>
-#  include <memory>
-#  include <mutex>
-#  include <queue>
-#  include <thread>
-#  include <vector>
+#pragma once
+#include "endian_portable.h"
+#include "object_pool.h"
+#include "select_interrupter.hpp"
+#include "singleton.h"
+#include "string_view.hpp"
+#include "xxsocket.h"
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <ctime>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
 
-#  define _USING_ARES_LIB 0
-#  define _USING_SHARED_PTR 1
-#  define _USING_OBJECT_POOL 1
+#define _USING_ARES_LIB 0
+#define _USING_SHARED_PTR 1
+#define _USING_OBJECT_POOL 1
 
-#  if !defined(_ARRAYSIZE)
-#    define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
-#  endif
+#if !defined(_ARRAYSIZE)
+#  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
+#endif
 
 namespace purelib
 {
@@ -133,11 +132,11 @@ static const int socket_recv_buffer_size = 65536; // 64K
 
 class a_pdu; // application layer protocol data unit.
 
-#  if _USING_SHARED_PTR
+#if _USING_SHARED_PTR
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
-#  else
+#else
 typedef a_pdu *a_pdu_ptr;
-#  endif
+#endif
 
 class io_service;
 
@@ -292,9 +291,9 @@ public:
   const std::vector<char> &packet() const { return packet_; }
   std::vector<char> take_packet() { return std::move(packet_); }
 
-#  if _USING_OBJECT_POOL
+#if _USING_OBJECT_POOL
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
-#  endif
+#endif
 
 private:
   int channel_index_;
@@ -388,9 +387,9 @@ public:
 
   bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
 
-#  if _USING_ARES_LIB
+#if _USING_ARES_LIB
   void handle_ares_work_finish(channel_context *);
-#  endif
+#endif
 
 private:
   void open_internal(io_channel *);
@@ -524,11 +523,11 @@ private:
   // The resolve function
   resolv_fn_t xresolv_;
 
-#  if _USING_ARES_LIB
+#if _USING_ARES_LIB
   // non blocking io dns resolve support
   void *ares_; // the ares handle
   int ares_outstanding_work_;
-#  endif
+#endif
   int ipsv_state_; // local network state
 };                 // io_service
 };                 // namespace inet

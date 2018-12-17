@@ -27,23 +27,22 @@ SOFTWARE.
 */
 
 #pragma once
-#include "endian_portable.h"
-#include "object_pool.h"
-#include "select_interrupter.hpp"
-#include "singleton.h"
-#include "string_view.hpp"
-#include "xxsocket.h"
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <condition_variable>
 #include <ctime>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
+#include <chrono>
+#include <functional>
+#include "endian_portable.h"
+#include "object_pool.h"
+#include "select_interrupter.hpp"
+#include "singleton.h"
+#include "xxsocket.h"
 
 #define _USING_ARES_LIB 0
 #define _USING_SHARED_PTR 1

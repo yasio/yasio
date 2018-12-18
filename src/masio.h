@@ -27,6 +27,7 @@ SOFTWARE.
 */
 
 #pragma once
+
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -43,6 +44,7 @@ SOFTWARE.
 #include "select_interrupter.hpp"
 #include "singleton.h"
 #include "xxsocket.h"
+#include "string_view.hpp"
 
 #define _USING_ARES_LIB 0
 #define _USING_SHARED_PTR 1
@@ -531,6 +533,5 @@ private:
 };                 // io_service
 };                 // namespace inet
 };                 /* namespace purelib */
-#endif
 
 #define myasio purelib::gc::singleton<purelib::inet::io_service>::instance()

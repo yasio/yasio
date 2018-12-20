@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     sol::state s;
     s.open_libraries();
-    lua_open_masio(s.lua_state());
+    luaopen_masio(s.lua_state());
 
     s.script_file("example.lua");
 

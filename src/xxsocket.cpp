@@ -42,8 +42,6 @@ SOFTWARE.
 #include <ifaddrs.h>
 #endif
 
-#if !defined(_WIN32) || defined(_WINSTORE)
-
 #ifndef IN_CLASSB_NET
 #define	IN_CLASSB_NET		0xffff0000
 #endif
@@ -66,8 +64,6 @@ SOFTWARE.
 
 #ifndef IN4_IS_ADDR_LINKLOCAL
 #define IN4_IS_ADDR_LINKLOCAL(paddr) IN_LINKLOCAL(ntohl((paddr)->s_addr))
-#endif
-
 #endif
 
 #pragma warning(push)
@@ -838,14 +834,14 @@ bool xxsocket::open_ex(int af, int type, int protocol)
 
 #if !defined(WP8)
 bool xxsocket::accept_ex(
-    __in SOCKET sockfd_listened,
-    __in SOCKET sockfd_prepared,
-    __in PVOID lpOutputBuffer,
-    __in DWORD dwReceiveDataLength,
-    __in DWORD dwLocalAddressLength,
-    __in DWORD dwRemoteAddressLength,
-    __out LPDWORD lpdwBytesReceived,
-    __inout LPOVERLAPPED lpOverlapped)
+    SOCKET sockfd_listened,
+    SOCKET sockfd_prepared,
+    PVOID lpOutputBuffer,
+    DWORD dwReceiveDataLength,
+    DWORD dwLocalAddressLength,
+    DWORD dwRemoteAddressLength,
+    LPDWORD lpdwBytesReceived,
+    LPOVERLAPPED lpOverlapped)
 {
     return __accept_ex(sockfd_listened,
         sockfd_prepared,

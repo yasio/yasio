@@ -204,12 +204,14 @@ static void _set_thread_name(const char *threadName)
   info.dwFlags    = 0;
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322)
+#  if !defined(__MINGW64__) && !defined(__MINGW32__)
   __try
   {
     RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR *)&info);
   }
   __except (EXCEPTION_EXECUTE_HANDLER)
   {}
+#  endif
 #  pragma warning(pop)
 }
 #elif defined(ANDROID)

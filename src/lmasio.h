@@ -25,13 +25,25 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef _LMASIO_H_
-#define _LMASIO_H_
 
-extern "C" {
-    struct lua_State;
-}
+#pragma once
 
-void lua_open_masio(lua_State* L);
-
+#if defined(MASIO_BUILD_AS_DLL)
+#  if defined(MASIO_LIB)
+#    define MASIO_API __declspec(dllexport)
+#  else
+#    define MASIO_API __declspec(dllimport)
+#  endif
+#else
+#  define MASIO_API
 #endif
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+struct lua_State;
+MASIO_API int luaopen_masio(lua_State *L);
+#if defined(__cplusplus)
+}
+#endif
+

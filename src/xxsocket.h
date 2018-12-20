@@ -564,24 +564,24 @@ public:
     bool open_ex(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
 
     static bool accept_ex(
-    __in SOCKET sockfd_listened,
-    __in SOCKET sockfd_prepared,
-    __in PVOID lpOutputBuffer,
-    __in DWORD dwReceiveDataLength,
-    __in DWORD dwLocalAddressLength,
-    __in DWORD dwRemoteAddressLength,
-    __out LPDWORD lpdwBytesReceived,
-    __inout LPOVERLAPPED lpOverlapped);
+    SOCKET sockfd_listened,
+    SOCKET sockfd_prepared,
+    PVOID lpOutputBuffer,
+    DWORD dwReceiveDataLength,
+    DWORD dwLocalAddressLength,
+    DWORD dwRemoteAddressLength,
+    LPDWORD lpdwBytesReceived,
+    LPOVERLAPPED lpOverlapped);
 
     static void translate_sockaddrs(
-        __in PVOID lpOutputBuffer,
-        __in DWORD dwReceiveDataLength,
-        __in DWORD dwLocalAddressLength,
-        __in DWORD dwRemoteAddressLength,
-        __deref_out_bcount(*LocalSockaddrLength) sockaddr **LocalSockaddr,
-        __out LPINT LocalSockaddrLength,
-        __deref_out_bcount(*RemoteSockaddrLength) sockaddr **RemoteSockaddr,
-        __out LPINT RemoteSockaddrLength);
+        PVOID lpOutputBuffer,
+        DWORD dwReceiveDataLength,
+        DWORD dwLocalAddressLength,
+        DWORD dwRemoteAddressLength,
+        sockaddr **LocalSockaddr,
+        LPINT LocalSockaddrLength,
+        sockaddr **RemoteSockaddr,
+        LPINT RemoteSockaddrLength);
 #endif
 
     /** Is this socket opened **/

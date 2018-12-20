@@ -31,7 +31,9 @@ SOFTWARE.
 #include "obinarystream.h"
 #include "sol.hpp"
 
-void lua_open_masio(lua_State *L)
+extern "C" {
+
+MASIO_API int luaopen_masio(lua_State *L)
 {
   using namespace purelib::inet;
   sol::state_view sol2(L);
@@ -157,4 +159,8 @@ void lua_open_masio(lua_State *L)
   masio["MASIO_EVENT_CONNECT_RESPONSE"] = MASIO_EVENT_CONNECT_RESPONSE;
   masio["MASIO_EVENT_CONNECTION_LOST"]  = MASIO_EVENT_CONNECTION_LOST;
   masio["MASIO_EVENT_RECV_PACKET"]      = MASIO_EVENT_RECV_PACKET;
+
+  return masio.push(); /* return 'masio' table */
 }
+
+} /* extern "C" */

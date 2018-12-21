@@ -38,4 +38,7 @@ luatest(windows user): open https://github.com/halx99/mini-asio/blob/master/test
 #Quick test at linux platform with gcc compiler:  
 ```g++ src/xxsocket.cpp src/masio.cpp test/test/cpptest.cpp --std=c++11 -lpthread -I./src -o cpptest && ./cpptest```  
   
-#pitfall: For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: C/C++ --> Advance -->'Forced Include File' to it(such as pch.h).
+#pitfall: For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: C/C++ --> Advance -->'Forced Include File' to it(such as pch.h).  
+  
+#Unity integration showcase:  
+https://github.com/halx99/mini-asio/raw/master/showcaseunity.png

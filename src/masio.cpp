@@ -293,6 +293,10 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
   ares_outstanding_work_ = 0;
 #endif
   ipsv_state_ = 0;
+
+  this->xdec_len_ = [](io_service *service, void *ptr, int len) {
+    return service->builtin_decode_frame_length(ptr, len);
+  };
 }
 
 io_service::~io_service() { stop_service(); }
@@ -382,6 +386,9 @@ void io_service::set_option(int option, ...)
       break;
     case MASIO_OPT_IO_EVENT_CALLBACK:
       this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
+      break;
+    case MASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION:
+      this->xdec_len_ = std::move(*va_arg(ap, decode_frame_length_fn_t *));
       break;
   }
 
@@ -1174,7 +1181,7 @@ bool io_service::do_read(transport_ptr transport)
 #endif
       if (transport->receiving_pdu_elen_ == -1)
       { // decode length
-        int length = decode_frame_length(transport->buffer_, transport->offset_ + n);
+        int length = this->xdec_len_(this, transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
           transport->receiving_pdu_elen_ = length;
@@ -1556,7 +1563,7 @@ void io_service::handle_ares_work_finish(channel *)
 }
 #endif
 
-int io_service::decode_frame_length(void *ud, int n)
+int io_service::builtin_decode_frame_length(void *ud, int n)
 {
   if (options_.lfib.length_field_offset >= 0)
   {

@@ -118,6 +118,7 @@ enum
   MASIO_OPT_LOG_FILE,
   MASIO_OPT_LFIB_PARAMS,
   MASIO_OPT_IO_EVENT_CALLBACK,
+  MASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -309,6 +310,7 @@ class deadline_timer;
 
 typedef std::function<void(error_number)> send_pdu_callback_t;
 typedef std::function<void(event_ptr)> io_event_callback_t;
+typedef std::function<int(io_service *service, void *ptr, int len)> decode_frame_length_fn_t;
 
 class io_service
 {
@@ -448,7 +450,7 @@ private:
   void do_nonblocking_accept_completion(fd_set *fds_array, io_channel *);
 
   // -1 indicate failed, connection will be closed
-  int decode_frame_length(void *ptr, int len);
+  int builtin_decode_frame_length(void *ptr, int len);
 
 private:
   bool stopping_;
@@ -519,7 +521,11 @@ private:
       int max_frame_length    = SZ(10, M);
     } lfib;
     FILE *outf = nullptr;
+
   } options_;
+
+  // The decode frame length function
+  decode_frame_length_fn_t xdec_len_;
 
   // The resolve function
   resolv_fn_t xresolv_;

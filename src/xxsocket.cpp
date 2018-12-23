@@ -104,17 +104,17 @@ static const unsigned char bits_rmask_table[8] = {
     0x1F /*00011111*/, 0x3F /*00111111*/, 0x7F /*01111111*/, 0xFF /*11111111*/
 };
 
-void set_bits_value(void *pByteValue, unsigned int pos, unsigned char value, unsigned int bits)
+void set_bits_value(void *pByteValue, unsigned int pos, unsigned char bitsValue, unsigned int bits)
 {
   if (bits > 0 && bits < 8 && bits <= (pos + 1) && pos < 8)
   {
     *((unsigned char *)pByteValue) =
         ((*((unsigned char *)pByteValue) & bits_wmask_table[pos][bits - 1]) |
-         (value << (pos + 1 - bits)));
+         (bitsValue << (pos + 1 - bits)));
   }
 }
 
-unsigned char get_bits_value(unsigned char byteValue, unsigned int bits, unsigned int pos)
+unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, unsigned int bits)
 {
   if (bits > 0 && bits < 8 && bits <= (pos + 1) && pos < 8)
     return ((byteValue & bits_rmask_table[pos]) >> (pos + 1 - bits));

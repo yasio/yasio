@@ -106,18 +106,24 @@ static const unsigned char bits_rmask_table[8] = {
 
 void set_bits_value(void *pByteValue, unsigned int pos, unsigned char bitsValue, unsigned int bits)
 {
-  if (bits > 0 && bits <= (pos + 1) && pos < 8)
-  {
-    *((unsigned char *)pByteValue) =
-        ((*((unsigned char *)pByteValue) & bits_wmask_table[pos][bits - 1]) |
-         (bitsValue << (pos + 1 - bits)));
-  }
+#if defined(_DEBUG)
+  if (!(bits > 0 && bits <= (pos + 1) && pos < 8))
+    return;
+#endif
+
+  *((unsigned char *)pByteValue) =
+      ((*((unsigned char *)pByteValue) & bits_wmask_table[pos][bits - 1]) |
+       (bitsValue << (pos + 1 - bits)));
 }
 
 unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, unsigned int bits)
 {
-  if (bits > 0 && bits <= (pos + 1) && pos < 8)
-    return ((byteValue & bits_rmask_table[pos]) >> (pos + 1 - bits));
+#if defined(_DEBUG)
+  if (!(bits > 0 && bits <= (pos + 1) && pos < 8))
+    return 0;
+#endif
+
+  return ((byteValue & bits_rmask_table[pos]) >> (pos + 1 - bits));
 }
 
 namespace ip

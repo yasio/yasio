@@ -397,8 +397,8 @@ public:
 private:
   void open_internal(io_channel *);
 
-  void perform_active_channels(fd_set *fds_array);
-
+  void perform_transports(fd_set *fds_array);
+  void perform_channels(fd_set *fds_array);
   void perform_timeout_timers(); // ALL timer expired
 
   long long get_wait_duration(long long usec);

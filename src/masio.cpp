@@ -571,51 +571,11 @@ void io_service::service()
     }
 #endif
 
-    // preform transports
-    for (auto iter = transports_.begin(); iter != transports_.end();)
-    {
-      auto &transport = *iter;
-      if (transport->offset_ > 0 ||
-          FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
-      {
-#if _MASIO_VERBOS_LOG
-        INET_LOG("[index: %d] perform non-blocking read operation...", ctx->index_);
-#endif
-        if (!do_read(transport))
-        {
-          handle_close(transport);
-          iter = transports_.erase(iter);
-          continue;
-        }
-      }
-
-      // perform write operations
-      if (!transport->send_queue_.empty())
-      {
-        transport->send_queue_mtx_.lock();
-#if _MASIO_VERBOS_LOG
-        INET_LOG("[index: %d] perform non-blocking write operation...", ctx->index_);
-#endif
-        if (!do_write(transport))
-        { // TODO: check would block? for client, may
-          // be unnecessary.
-          transport->send_queue_mtx_.unlock();
-          handle_close(transport);
-          iter = transports_.erase(iter);
-          continue;
-        }
-
-        if (!transport->send_queue_.empty())
-          ++this->outstanding_work_;
-
-        transport->send_queue_mtx_.unlock();
-      }
-
-      ++iter;
-    }
+    // perform active transports
+    perform_transports(fds_array);
 
     // perform active channels
-    perform_active_channels(fds_array);
+    perform_channels(fds_array);
 
     // perform timeout timers
     perform_timeout_timers();
@@ -625,7 +585,53 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-void io_service::perform_active_channels(fd_set *fds_array)
+void io_service::perform_transports(fd_set *fds_array)
+{
+  // preform transports
+  for (auto iter = transports_.begin(); iter != transports_.end();)
+  {
+    auto &transport = *iter;
+    if (transport->offset_ > 0 ||
+        FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
+    {
+#if _MASIO_VERBOS_LOG
+      INET_LOG("[index: %d] perform non-blocking read operation...", ctx->index_);
+#endif
+      if (!do_read(transport))
+      {
+        handle_close(transport);
+        iter = transports_.erase(iter);
+        continue;
+      }
+    }
+
+    // perform write operations
+    if (!transport->send_queue_.empty())
+    {
+      transport->send_queue_mtx_.lock();
+#if _MASIO_VERBOS_LOG
+      INET_LOG("[index: %d] perform non-blocking write operation...", ctx->index_);
+#endif
+      if (!do_write(transport))
+      { // TODO: check would block? for client, may
+        // be unnecessary.
+        transport->send_queue_mtx_.unlock();
+        handle_close(transport);
+        iter = transports_.erase(iter);
+        continue;
+      }
+
+      if (!transport->send_queue_.empty())
+        ++this->outstanding_work_;
+
+      transport->send_queue_mtx_.unlock();
+    }
+
+    ++iter;
+  }
+}
+
+void io_service::perform_channels(fd_set *fds_array)
 {
   if (!active_channels_.empty())
   {

@@ -368,41 +368,41 @@ public:
   // Public Members
   //------------------------------------------------------------------------
 public:
-  static constexpr size_type npos = size_type(-1);
+  static const size_type npos = size_type(-1);
 
   //------------------------------------------------------------------------
   // Constructors
   //------------------------------------------------------------------------
 public:
   /// \brief Default constructs a basic_string_view without any content
-  constexpr basic_string_view() noexcept;
+  basic_string_view() noexcept;
 
   /// \brief Constructs a basic_string_view by copying another one
   ///
   /// \param other the string view being copied
-  constexpr basic_string_view(const basic_string_view &other) noexcept = default;
+  basic_string_view(const basic_string_view &other) noexcept = default;
 
   /// \brief Constructs a basic_string_view by moving anothe rone
   ///
   /// \param other the string view being moved
-  constexpr basic_string_view(basic_string_view &&other) noexcept = default;
+  basic_string_view(basic_string_view &&other) noexcept = default;
 
   /// \brief Constructs a basic_string_view from a std::basic_string
   ///
   /// \param str the string to view
   template <typename Allocator>
-  constexpr basic_string_view(const std::basic_string<CharT, Traits, Allocator> &str) noexcept;
+  basic_string_view(const std::basic_string<CharT, Traits, Allocator> &str) noexcept;
 
   /// \brief Constructs a basic_string_view from an ansi-string
   ///
   /// \param str the string to view
-  constexpr basic_string_view(const char_type *str) noexcept;
+  basic_string_view(const char_type *str) noexcept;
 
   /// \brief Constructs a basic_string_view from an ansi string of a given size
   ///
   /// \param str the string to view
   /// \param count the size of the string
-  constexpr basic_string_view(const char_type *str, size_type count) noexcept;
+  basic_string_view(const char_type *str, size_type count) noexcept;
 
   //------------------------------------------------------------------------
   // Assignment
@@ -421,21 +421,21 @@ public:
   /// \brief Returns the length of the string, in terms of bytes
   ///
   /// \return the length of the string, in terms of bytes
-  constexpr size_type size() const noexcept;
+  size_type size() const noexcept;
 
   /// \copydoc basic_string_view::size
-  constexpr size_type length() const noexcept;
+  size_type length() const noexcept;
 
   /// \brief The largest possible number of char-like objects that can be
   ///        referred to by a basic_string_view.
   /// \return Maximum number of characters
-  constexpr size_type max_size() const noexcept;
+  size_type max_size() const noexcept;
 
   /// \brief Returns whether the basic_string_view is empty
   ///        (i.e. whether its length is 0).
   ///
   /// \return whether the basic_string_view is empty
-  constexpr bool empty() const noexcept;
+  bool empty() const noexcept;
 
   //------------------------------------------------------------------------
   // Element Access
@@ -444,40 +444,40 @@ public:
   /// \brief Gets the ansi-string of the current basic_string_view
   ///
   /// \return the ansi-string pointer
-  constexpr const char_type *c_str() const noexcept;
+  const char_type *c_str() const noexcept;
 
   /// \brief Gets the data of the current basic_string_view
   ///
   /// \note This is an alias of #c_str
   ///
   /// \return the data this basic_string_view contains
-  constexpr const char_type *data() const noexcept;
+  const char_type *data() const noexcept;
 
   /// \brief Accesses the element at index \p pos
   ///
   /// \param pos the index to access
   /// \return const reference to the character
-  constexpr const_reference operator[](size_t pos) const noexcept;
+  const_reference operator[](size_t pos) const noexcept;
 
   /// \brief Accesses the element at index \p pos
   ///
   /// \param pos the index to access
   /// \return const reference to the character
-  constexpr const_reference at(size_t pos) const;
+  const_reference at(size_t pos) const;
 
   /// \brief Access the first character of the string
   ///
   /// \note Undefined behavior if basic_string_view is empty
   ///
   /// \return reference to the first character of the string
-  constexpr const_reference front() const noexcept;
+  const_reference front() const noexcept;
 
   /// \brief References the last character of the string
   ///
   /// \note Undefined behavior if basic_string_view is empty
   ///
   /// \return reference to the last character of the string
-  constexpr const_reference back() const noexcept;
+  const_reference back() const noexcept;
 
   //------------------------------------------------------------------------
   // Modifiers
@@ -515,12 +515,10 @@ public:
   /// \return A basic_string containing a copy of the characters of the current
   /// view.
   template <class Allocator = std::allocator<CharT>>
-  constexpr std::basic_string<CharT, Traits, Allocator>
-  to_string(const Allocator &a = Allocator()) const;
+  std::basic_string<CharT, Traits, Allocator> to_string(const Allocator &a = Allocator()) const;
 
   /// \copydoc basic_string_view::to_string
-  template <class Allocator>
-  explicit constexpr operator std::basic_string<CharT, Traits, Allocator>() const;
+  template <class Allocator> explicit operator std::basic_string<CharT, Traits, Allocator>() const;
 
   //------------------------------------------------------------------------
   // Operations
@@ -782,25 +780,24 @@ using u32string_view = basic_string_view<char32_t>;
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline constexpr basic_string_view<CharT, Traits>::basic_string_view() noexcept
-    : m_str(nullptr), m_size(0)
+inline basic_string_view<CharT, Traits>::basic_string_view() noexcept : m_str(nullptr), m_size(0)
 {}
 
 template <typename CharT, typename Traits>
 template <typename Allocator>
-inline constexpr basic_string_view<CharT, Traits>::basic_string_view(
+inline basic_string_view<CharT, Traits>::basic_string_view(
     const std::basic_string<CharT, Traits, Allocator> &str) noexcept
     : m_str(str.c_str()), m_size(str.size())
 {}
 
 template <typename CharT, typename Traits>
-inline constexpr basic_string_view<CharT, Traits>::basic_string_view(const char_type *str) noexcept
+inline basic_string_view<CharT, Traits>::basic_string_view(const char_type *str) noexcept
     : m_str(str), m_size(traits_type::length(str))
 {}
 
 template <typename CharT, typename Traits>
-inline constexpr basic_string_view<CharT, Traits>::basic_string_view(const char_type *str,
-                                                                     size_type count) noexcept
+inline basic_string_view<CharT, Traits>::basic_string_view(const char_type *str,
+                                                           size_type count) noexcept
     : m_str(str), m_size(count)
 {}
 
@@ -809,28 +806,28 @@ inline constexpr basic_string_view<CharT, Traits>::basic_string_view(const char_
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::size_type
+inline typename basic_string_view<CharT, Traits>::size_type
 basic_string_view<CharT, Traits>::size() const noexcept
 {
   return m_size;
 }
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::size_type
+inline typename basic_string_view<CharT, Traits>::size_type
 basic_string_view<CharT, Traits>::length() const noexcept
 {
   return size();
 }
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::size_type
+inline typename basic_string_view<CharT, Traits>::size_type
 basic_string_view<CharT, Traits>::max_size() const noexcept
 {
   return npos - 1;
 }
 
 template <typename CharT, typename Traits>
-inline constexpr bool basic_string_view<CharT, Traits>::empty() const noexcept
+inline bool basic_string_view<CharT, Traits>::empty() const noexcept
 {
   return m_size == 0;
 }
@@ -840,28 +837,28 @@ inline constexpr bool basic_string_view<CharT, Traits>::empty() const noexcept
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline constexpr const typename basic_string_view<CharT, Traits>::char_type *
+inline const typename basic_string_view<CharT, Traits>::char_type *
 basic_string_view<CharT, Traits>::c_str() const noexcept
 {
   return m_str;
 }
 
 template <typename CharT, typename Traits>
-inline constexpr const typename basic_string_view<CharT, Traits>::char_type *
+inline const typename basic_string_view<CharT, Traits>::char_type *
 basic_string_view<CharT, Traits>::data() const noexcept
 {
   return m_str;
 }
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::const_reference
-    basic_string_view<CharT, Traits>::operator[](size_t pos) const noexcept
+inline typename basic_string_view<CharT, Traits>::const_reference basic_string_view<CharT, Traits>::
+operator[](size_t pos) const noexcept
 {
   return m_str[pos];
 }
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::const_reference
+inline typename basic_string_view<CharT, Traits>::const_reference
 basic_string_view<CharT, Traits>::at(size_t pos) const
 {
   return pos < m_size ? m_str[pos]
@@ -870,14 +867,14 @@ basic_string_view<CharT, Traits>::at(size_t pos) const
 }
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::const_reference
+inline typename basic_string_view<CharT, Traits>::const_reference
 basic_string_view<CharT, Traits>::front() const noexcept
 {
   return *m_str;
 }
 
 template <typename CharT, typename Traits>
-inline constexpr typename basic_string_view<CharT, Traits>::const_reference
+inline typename basic_string_view<CharT, Traits>::const_reference
 basic_string_view<CharT, Traits>::back() const noexcept
 {
   return m_str[m_size - 1];
@@ -913,7 +910,7 @@ inline void basic_string_view<CharT, Traits>::swap(basic_string_view &v) noexcep
 
 template <typename CharT, typename Traits>
 template <class Allocator>
-inline constexpr std::basic_string<CharT, Traits, Allocator>
+inline std::basic_string<CharT, Traits, Allocator>
 basic_string_view<CharT, Traits>::to_string(const Allocator &a) const
 {
   return std::basic_string<CharT, Traits, Allocator>(m_str, m_size, a);
@@ -921,7 +918,7 @@ basic_string_view<CharT, Traits>::to_string(const Allocator &a) const
 
 template <typename CharT, typename Traits>
 template <class Allocator>
-inline constexpr basic_string_view<CharT, Traits>::
+inline basic_string_view<CharT, Traits>::
 operator std::basic_string<CharT, Traits, Allocator>() const
 {
   return std::basic_string<CharT, Traits, Allocator>(m_str, m_size);

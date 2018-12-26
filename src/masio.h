@@ -237,6 +237,11 @@ public:
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int channel_index() const { return ctx_->index_; }
   int error_code() const { return error_; }
+  inline std::vector<char> take_packet()
+  {
+    expected_packet_size_ = -1;
+    return std::move(expected_packet_);
+  }
 
 private:
   io_transport(io_channel *ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED); }
@@ -245,9 +250,10 @@ private:
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
   int offset_ = 0;                           // recv buffer offset
 
-  std::vector<char> receiving_pdu_;
-  int receiving_pdu_elen_ = -1;
-  int error_              = 0; // socket error(>= -1), application error(< -1)
+  std::vector<char> expected_packet_;
+  int expected_packet_size_ = -1;
+
+  int error_ = 0; // socket error(>= -1), application error(< -1)
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
@@ -399,7 +405,7 @@ private:
 
   void perform_transports(fd_set *fds_array);
   void perform_channels(fd_set *fds_array);
-  void perform_timeout_timers(); // ALL timer expired
+  void perform_timers();
 
   long long get_wait_duration(long long usec);
 
@@ -421,9 +427,7 @@ private:
   bool do_read(transport_ptr);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
-  void handle_packet(transport_ptr);
-
-  void handle_close(transport_ptr); // TODO: add error_number parameter
+  void handle_close(transport_ptr);
 
   void handle_event(event_ptr event);
 

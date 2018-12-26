@@ -578,7 +578,7 @@ void io_service::service()
     perform_channels(fds_array);
 
     // perform timeout timers
-    perform_timeout_timers();
+    perform_timers();
   }
 
 _L_end:
@@ -833,18 +833,6 @@ void io_service::write(transport_ptr transport, std::vector<char> data)
   {
     INET_LOG("[transport: %p] send failed, the connection not ok!", transport.get());
   }
-}
-
-void io_service::handle_packet(transport_ptr transport)
-{
-#if _MASIO_VERBOS_LOG
-  INET_LOG("[index: %d] received a properly packet from peer, "
-           "packet size:%d",
-           ctx->index_, ctx->receiving_pdu_elen_);
-#endif
-  this->handle_event(event_ptr(new io_event(transport->channel_index(), MASIO_EVENT_RECV_PACKET,
-                                            std::move(transport->receiving_pdu_))));
-  transport->receiving_pdu_elen_ = -1;
 }
 
 void io_service::handle_event(event_ptr event)
@@ -1185,16 +1173,16 @@ bool io_service::do_read(transport_ptr transport)
                  ctx->index_, n, n + ctx->offset_);
       }
 #endif
-      if (transport->receiving_pdu_elen_ == -1)
+      if (transport->expected_packet_size_ == -1)
       { // decode length
         int length = this->xdec_len_(this, transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
-          transport->receiving_pdu_elen_ = length;
-          transport->receiving_pdu_.reserve(
-              (std::min)(transport->receiving_pdu_elen_,
+          transport->expected_packet_size_ = length;
+          transport->expected_packet_.reserve(
+              (std::min)(transport->expected_packet_size_,
                          MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid // memory reallocte.
-          do_unpack(transport, transport->receiving_pdu_elen_, n);
+          do_unpack(transport, transport->expected_packet_size_, n);
         }
         else if (length == 0)
         {
@@ -1214,9 +1202,10 @@ bool io_service::do_read(transport_ptr transport)
       }
       else
       { // process incompleted pdu
-        do_unpack(
-            transport,
-            transport->receiving_pdu_elen_ - static_cast<int>(transport->receiving_pdu_.size()), n);
+        do_unpack(transport,
+                  transport->expected_packet_size_ -
+                      static_cast<int>(transport->expected_packet_.size()),
+                  n);
       }
     }
     else
@@ -1248,8 +1237,8 @@ bool io_service::do_read(transport_ptr transport)
 void io_service::do_unpack(transport_ptr ctx, int bytes_expected, int bytes_transferred)
 {
   auto bytes_available = bytes_transferred + ctx->offset_;
-  ctx->receiving_pdu_.insert(ctx->receiving_pdu_.end(), ctx->buffer_,
-                             ctx->buffer_ + (std::min)(bytes_expected, bytes_available));
+  ctx->expected_packet_.insert(ctx->expected_packet_.end(), ctx->buffer_,
+                               ctx->buffer_ + (std::min)(bytes_expected, bytes_available));
 
   ctx->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
   if (ctx->offset_ >= 0)
@@ -1262,8 +1251,13 @@ void io_service::do_unpack(transport_ptr ctx, int bytes_expected, int bytes_tran
     }
     // move properly pdu to ready queue, GL thread will retrieve
     // it.
-    handle_packet(ctx);
-    ctx->receiving_pdu_elen_ = -1;
+#if _MASIO_VERBOS_LOG
+    INET_LOG("[index: %d] received a properly packet from peer, "
+             "packet size:%d",
+             ctx->index_, ctx->expected_packet_size_);
+#endif
+    this->handle_event(
+        event_ptr(new io_event(ctx->channel_index(), MASIO_EVENT_RECV_PACKET, ctx->take_packet())));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu
@@ -1332,7 +1326,7 @@ void io_service::open_internal(io_channel *ctx)
   interrupter_.interrupt();
 }
 
-void io_service::perform_timeout_timers()
+void io_service::perform_timers()
 {
   if (this->timer_queue_.empty())
     return;

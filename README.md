@@ -33,7 +33,7 @@ cpptest: https://github.com/halx99/mini-asio/blob/master/test/test/cpptest.cpp
 lua intergation: 
 1. Compile src\xxsocket.cpp src\masio.cpp src\ibinarystream.cpp src\obinarystream.cpp [src\lmasio.cpp(for c++17) or src\lmasio11.cpp(for c++11)] with your project  
 2. call luaopen_masio after LUA VM initialized.  
-luatest(windows user): open https://github.com/halx99/mini-asio/blob/master/test/test/luatest.xsxproj by x-studui365 ide  
+luatest(windows user): open https://github.com/halx99/mini-asio/blob/master/test/test/luatest.xsxproj by x-studio365 ide  
 
 #Quick test at linux platform with gcc compiler:  
 ```g++ src/xxsocket.cpp src/masio.cpp test/test/cpptest.cpp --std=c++11 -lpthread -I./src -o cpptest && ./cpptest```  

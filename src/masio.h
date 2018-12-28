@@ -455,6 +455,8 @@ private:
 
   // -1 indicate failed, connection will be closed
   int builtin_decode_frame_length(void *ptr, int len);
+  
+  static const char* strerror(int error);
 
 private:
   bool stopping_;

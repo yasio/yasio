@@ -522,7 +522,7 @@ void io_service::service()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      INET_LOG("socket.select failed, ec:%d, detail:%s\n", ec, xxsocket::strerror(ec));
+      INET_LOG("socket.select failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
       {
         goto _L_end;
@@ -750,7 +750,7 @@ void io_service::handle_close(transport_ptr transport)
   INET_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
            transport->local_endpoint().to_string().c_str(),
            transport->peer_endpoint().to_string().c_str(), transport->error_,
-           xxsocket::strerror(transport->error_));
+           io_service::strerror(transport->error_));
 
   close_internal(transport.get());
 
@@ -976,7 +976,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
     {
       error = xxsocket::get_last_errno();
       INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-               xxsocket::strerror(error));
+               io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = channel_state::INACTIVE;
       return;
@@ -986,7 +986,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
     {
       error = xxsocket::get_last_errno();
       INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-               xxsocket::strerror(error));
+               io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = channel_state::INACTIVE;
       return;
@@ -1067,7 +1067,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
       event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
-           ctx->address_.c_str(), ctx->port_, error, xxsocket::strerror(error));
+           ctx->address_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
 bool io_service::do_write(transport_ptr transport)
@@ -1130,7 +1130,7 @@ bool io_service::do_write(transport_ptr transport)
           INET_LOG("[index: %d] do_write error, the connection "
                    "should be "
                    "closed, retval=%d, ec:%d, detail:%s",
-                   ctx->index_, n, error, xxsocket::strerror(error));
+                   ctx->index_, n, error, io_service::strerror(error));
           break;
         }
       }
@@ -1160,7 +1160,7 @@ bool io_service::do_read(transport_ptr transport)
     {
 #if _MASIO_VERBOS_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_, error_,
-               xxsocket::strerror(error_));
+               io_service::strerror(error_));
 #endif
       if (n == -1)
         n = 0;
@@ -1211,7 +1211,7 @@ bool io_service::do_read(transport_ptr transport)
     else
     {
       int error            = transport->error_;
-      const char *errormsg = xxsocket::strerror(error);
+      const char *errormsg = io_service::strerror(error);
       if (n == 0)
       {
         INET_LOG("[index: %d] do_read error, the server close the "
@@ -1602,6 +1602,37 @@ int io_service::builtin_decode_frame_length(void *ud, int n)
 }
 
 void io_service::interrupt() { interrupter_.interrupt(); }
+
+const char *io_service::strerror(int error)
+{
+  switch (error)
+  {
+    case ERR_CONNECT_FAILED:
+      return "connect failed!";
+    case ERR_CONNECT_TIMEOUT:
+      return "connect timeout!";
+    case ERR_SEND_FAILED:
+      return "send failed!";
+    case ERR_SEND_TIMEOUT:
+      return "send timeout!";
+    case ERR_RECV_FAILED:
+      return "recv failed!";
+    case ERR_NETWORK_UNREACHABLE:
+      return "the network unreachable!";
+    case ERR_CONNECTION_LOST:
+      return "the connection lost!";
+    case ERR_DPL_ILLEGAL_PDU:
+      return "decode frame length failed!";
+    case ERR_RESOLVE_HOST_FAILED:
+      return "resolve host failed!";
+    case ERR_RESOLVE_HOST_TIMEOUT:
+      return "resolve host timeout!";
+    case ERR_RESOLVE_HOST_IPV6_REQUIRED:
+      return "resolve host ipv6 required!";
+    default:
+      return xxsocket::strerror(error);
+  }
+}
 
 } // namespace inet
 } // namespace purelib

@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2018 halx99
+Copyright (c) 2012-2019 halx99
 Copyright (c) 2016 Matthew Rodusek(matthew.rodusek@gmail.com) <http://rodusek.me>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

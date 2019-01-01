@@ -1249,7 +1249,7 @@ void io_service::do_unpack(transport_ptr ctx, int bytes_expected, int bytes_tran
       // not all data consumed, so add events for this context
       ++this->outstanding_work_;
     }
-    // move properly pdu to ready queue, GL thread will retrieve
+    // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
 #if _MASIO_VERBOS_LOG
     INET_LOG("[index: %d] received a properly packet from peer, "

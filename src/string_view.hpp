@@ -956,7 +956,7 @@ inline basic_string_view<CharT, Traits> basic_string_view<CharT, Traits>::substr
 template <typename CharT, typename Traits>
 inline int basic_string_view<CharT, Traits>::compare(basic_string_view v) const noexcept
 {
-  const size_type rlen = std::min(m_size, v.m_size);
+  const size_type rlen = (std::min)(m_size, v.m_size);
   const int compare    = Traits::compare(m_str, v.m_str, rlen);
 
   return (compare ? compare : (m_size < v.m_size ? -1 : (m_size > v.m_size ? 1 : 0)));

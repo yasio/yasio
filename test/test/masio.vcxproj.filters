@@ -6,6 +6,8 @@
     <ClCompile Include="..\..\src\obinarystream.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
     <ClCompile Include="cpptest.cpp" />
+    <ClCompile Include="..\..\src\lmasio11.cpp" />
+    <ClCompile Include="..\..\src\stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp" />

@@ -23,6 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>test-vc14</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <ProjectName>masio</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -39,15 +40,15 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -102,12 +103,14 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;BOOST_SYSTEM_NO_LIB;BOOST_DATE_TIME_NO_LIB;BOOST_REGEX_NO_LIB;BOOST_ASIO_DISABLE_IOCP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;..\..\refs\boost.asio</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;BOOST_ERROR_CODE_HEADER_ONLY;BOOST_SYSTEM_NO_DEPRECATED;BOOST_SYSTEM_NO_LIB;BOOST_DATE_TIME_NO_LIB;BOOST_REGEX_NO_LIB;BOOST_ASIO_DISABLE_IOCP;%(PreprocessorDefinitions);MASIO_BUILD_AS_DLL;MASIO_LIB</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\src;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\msys64\usr\local\src\tolua_rumtime\window\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>libluajit.a %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -138,26 +141,30 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);MASIO_BUILD_AS_DLL;MASIO_LIB</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\src;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\msys64\usr\local\src\tolua_rumtime\window\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>libluajit.a %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\ibinarystream.cpp" />
+    <ClCompile Include="..\..\src\lmasio11.cpp" />
     <ClCompile Include="..\..\src\masio.cpp" />
     <ClCompile Include="..\..\src\obinarystream.cpp" />
+    <ClCompile Include="..\..\src\stdafx.cpp" />
     <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="cpptest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\eventfd_select_interrupter.hpp" />
     <ClInclude Include="..\..\src\ibinarystream.h" />
+    <ClInclude Include="..\..\src\lmasio.h" />
     <ClInclude Include="..\..\src\masio.h" />
     <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\pipe_select_interrupter.hpp" />

@@ -1,4 +1,4 @@
-# mini-asio
+# yasio
 A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
 The core design is reference from https://github.com/chriskohlhoff/asio but very small.  
 This lib is used by project http://hongjing.qq.com/ and run at thousands of devices.  

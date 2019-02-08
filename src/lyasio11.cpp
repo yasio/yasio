@@ -91,7 +91,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
   yasio["io_hostent"].setClass(
       kaguya::UserdataMetatable<io_hostent>()
           .setConstructors<io_hostent(), io_hostent(const std::string &, u_short)>()
-          .addProperty("host", &io_hostent::get_address, &io_hostent::set_address)
+          .addProperty("host", &io_hostent::get_ip, &io_hostent::set_ip)
           .addProperty("port", &io_hostent::get_port, &io_hostent::set_port));
 
   yasio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()

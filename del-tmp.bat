@@ -2,9 +2,15 @@
 
 rmdir /q /s ipch
 rmdir /q /s *ipch
-rmdir /q /s test\.vs
-rmdir /q /s test\Release
-rmdir /q /s test\Debug
+rmdir /q /s msvc\.vs
+rmdir /q /s msvc\Release
+rmdir /q /s msvc\Debug
+rmdir /q /s msvc\cpptest\Debug
+rmdir /q /s msvc\luatest\Debug
+rmdir /q /s msvc\yasio\Debug
+rmdir /q /s msvc\cpptest\Release
+rmdir /q /s msvc\luatest\Release
+rmdir /q /s msvc\yasio\Release
 del /q /f /s *.iobj
 del /q /f /s *.ipdb
 del /q /f /s *.sdf
@@ -13,7 +19,6 @@ del /q /f /s *.sbr
 del /q /f /s *.bsc
 del /q /f /s *.ilk
 del /q /f /s *.pdb
-del /q /f /s *.user
 del /q /f /s *.log
 del /q /f /s *.tlog
 del /q /f /s *.obj

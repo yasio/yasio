@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -28,7 +28,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#include "masio.h"
+#include "yasio.h"
 #include <limits>
 #include <stdarg.h>
 #include <string>
@@ -53,13 +53,13 @@ extern "C" {
 #  define MICROSECONDS_PER_SECOND 1000000LL
 #endif
 
-#define _MASIO_VERBOS_LOG 0
+#define _YASIO_VERBOS_LOG 0
 
 #if defined(_WIN32)
 #  define INET_LOG(format, ...)                                                                    \
     do                                                                                             \
     {                                                                                              \
-      auto content = _sfmt(("[mini-asio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);   \
+      auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);   \
       OutputDebugStringA(content.c_str());                                                         \
       if (options_.outf)                                                                           \
         fprintf(options_.outf, "%s", content.c_str());                                             \
@@ -68,15 +68,15 @@ extern "C" {
 #  include <android/log.h>
 #  include <jni.h>
 #  define INET_LOG(format, ...)                                                                    \
-    __android_log_print(ANDROID_LOG_INFO, "mini-asio", ("[%lld]" format), _highp_clock(),          \
+    __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),          \
                         ##__VA_ARGS__);                                                            \
     if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[mini-asio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #else
 #  define INET_LOG(format, ...)                                                                    \
-    fprintf(stdout, ("[mini-asio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);            \
+    fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);            \
     if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[mini-asio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
 
 #define ASYNC_RESOLVE_TIMEOUT 45 // 45 seconds
@@ -169,13 +169,13 @@ static void ares_getaddrinfo_callback(void *arg, int status, addrinfo *answerlis
       ctx->endpoints_.push_back(ep);
       ctx->dns_queries_timestamp_ = _highp_clock();
       INET_LOG("[index: %d] ares_getaddrinfo_callback: resolve %s succeed, ip:%s", ctx->index_,
-               ctx->address_.c_str(), ip.c_str());
+               ctx->host_.c_str(), ip.c_str());
     }
   }
   else
   {
     INET_LOG("[index: %d] ares_getaddrinfo_callback: resolve %s failed, status:%d", ctx->index_,
-             ctx->address_.c_str(), status);
+             ctx->host_.c_str(), status);
   }
 
   ctx->deadline_timer_.cancel();
@@ -331,6 +331,8 @@ void io_service::stop_service()
       this->ares_ = nullptr;
     }
 #endif
+
+    this->on_event_ = nullptr;
   }
 }
 
@@ -341,14 +343,14 @@ void io_service::set_option(int option, ...)
 
   switch (option)
   {
-    case MASIO_OPT_CONNECT_TIMEOUT:
+    case YASIO_OPT_CONNECT_TIMEOUT:
       options_.connect_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case MASIO_OPT_SEND_TIMEOUT:
+    case YASIO_OPT_SEND_TIMEOUT:
       options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case MASIO_OPT_RECONNECT_TIMEOUT:
+    case YASIO_OPT_RECONNECT_TIMEOUT:
     {
       int value = va_arg(ap, int);
       if (value > 0)
@@ -357,37 +359,37 @@ void io_service::set_option(int option, ...)
         options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
     }
     break;
-    case MASIO_OPT_DNS_CACHE_TIMEOUT:
+    case YASIO_OPT_DNS_CACHE_TIMEOUT:
       options_.dns_cache_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case MASIO_OPT_DEFER_EVENT:
+    case YASIO_OPT_DEFER_EVENT:
       options_.deferred_event_ = !!va_arg(ap, int);
       break;
-    case MASIO_OPT_TCP_KEEPALIVE:
+    case YASIO_OPT_TCP_KEEPALIVE:
       options_.tcp_keepalive.onoff    = 1;
       options_.tcp_keepalive.idle     = va_arg(ap, int);
       options_.tcp_keepalive.interval = va_arg(ap, int);
       options_.tcp_keepalive.probs    = va_arg(ap, int);
       break;
-    case MASIO_OPT_RESOLV_FUNCTION:
+    case YASIO_OPT_RESOLV_FUNCTION:
       this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
-    case MASIO_OPT_LOG_FILE:
+    case YASIO_OPT_LOG_FILE:
       if (options_.outf)
         fclose(options_.outf);
       options_.outf = fopen(va_arg(ap, const char *), "wb");
       break;
-    case MASIO_OPT_LFIB_PARAMS:
+    case YASIO_OPT_LFIB_PARAMS:
       options_.lfib.max_frame_length    = va_arg(ap, int);
       options_.lfib.length_field_offset = va_arg(ap, int);
       options_.lfib.length_field_length = va_arg(ap, int);
       options_.lfib.length_adjustment   = va_arg(ap, int);
       break;
-    case MASIO_OPT_IO_EVENT_CALLBACK:
+    case YASIO_OPT_IO_EVENT_CALLBACK:
       this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
       break;
-    case MASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION:
+    case YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->xdec_len_ = std::move(*va_arg(ap, decode_frame_length_fn_t *));
       break;
   }
@@ -399,7 +401,7 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 {
   auto ctx = new io_channel(*this);
   ctx->reset();
-  ctx->address_ = ep.address_;
+  ctx->host_ = ep.host_;
   ctx->port_    = ep.port_;
   ctx->index_   = static_cast<int>(this->channels_.size());
   update_resolve_state(ctx);
@@ -429,7 +431,7 @@ void io_service::dispatch_events(int count)
   std::lock_guard<std::mutex> lck(this->event_queue_mtx_);
   do
   {
-    auto event = this->event_queue_.front();
+    auto event = std::move(this->event_queue_.front());
     this->event_queue_.pop_front();
     this->on_event_(std::move(event));
   } while (!this->event_queue_.empty() && --count > 0);
@@ -476,14 +478,14 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
   }
 }
 
-void io_service::set_endpoint(size_t channel_index, const char *address, u_short port)
+void io_service::set_endpoint(size_t channel_index, const char *host, u_short port)
 {
   // Gets channel context
   if (channel_index >= channels_.size())
     return;
   auto ctx = channels_[channel_index];
 
-  ctx->address_ = address;
+  ctx->host_ = host;
   ctx->port_    = port;
   update_resolve_state(ctx);
 }
@@ -503,7 +505,7 @@ void io_service::set_endpoint(size_t channel_index, const ip::endpoint &ep)
 void io_service::service()
 { // The async event-loop
   // Set Thread Name: mini async socket io
-  _set_thread_name("mini-asio");
+  _set_thread_name("yasio");
 
   // Call once at startup
   this->ipsv_state_ = xxsocket::getipsv();
@@ -532,14 +534,14 @@ void io_service::service()
 
     if (nfds == 0)
     {
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       INET_LOG("socket.select is timeout, do perform_timeout_timers()");
 #endif
     }
     // Reset the interrupter.
     else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
       INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, "
                "was_interrupt:%s",
@@ -594,7 +596,7 @@ void io_service::perform_transports(fd_set *fds_array)
     if (transport->offset_ > 0 ||
         FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
     {
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] perform non-blocking read operation...", ctx->index_);
 #endif
       if (!do_read(transport))
@@ -609,7 +611,7 @@ void io_service::perform_transports(fd_set *fds_array)
     if (!transport->send_queue_.empty())
     {
       transport->send_queue_mtx_.lock();
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] perform non-blocking write operation...", ctx->index_);
 #endif
       if (!do_write(transport))
@@ -758,7 +760,7 @@ void io_service::handle_close(transport_ptr transport)
 
   // @Notify connection lost
   this->handle_event(event_ptr(
-      new io_event(ctx->index_, MASIO_EVENT_CONNECTION_LOST, transport->error_, transport)));
+      new io_event(ctx->index_, YASIO_EVENT_CONNECTION_LOST, transport->error_, transport)));
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT)
   {
@@ -818,6 +820,10 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 
 void io_service::write(transport_ptr transport, std::vector<char> data)
 {
+  this->write(transport.get(), std::move(data));
+}
+void io_service::write(io_transport* transport, std::vector<char> data)
+{
   if (transport && transport->socket_->is_open())
   {
     auto pdu =
@@ -831,10 +837,9 @@ void io_service::write(transport_ptr transport, std::vector<char> data)
   }
   else
   {
-    INET_LOG("[transport: %p] send failed, the connection not ok!", transport.get());
+    INET_LOG("[transport: %p] send failed, the connection not ok!", transport);
   }
 }
-
 void io_service::handle_event(event_ptr event)
 {
   if (options_.deferred_event_)
@@ -867,13 +872,13 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   {
     if (!ctx->socket_->is_open())
     { // cleanup descriptor if possible
-      INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->address_.c_str(),
+      INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
                ctx->port_);
     }
     else
     {
       close_internal(ctx);
-      INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->address_.c_str(),
+      INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
                ctx->port_);
     }
 
@@ -1054,7 +1059,7 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
            connection->peer_endpoint().to_string().c_str());
 
   this->handle_event(
-      event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 }
 
 void io_service::handle_connect_failed(io_channel *ctx, int error)
@@ -1064,10 +1069,10 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
   ctx->state_ = channel_state::INACTIVE;
 
   this->handle_event(
-      event_ptr(new io_event(ctx->index_, MASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
-           ctx->address_.c_str(), ctx->port_, error, io_service::strerror(error));
+           ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
 bool io_service::do_write(transport_ptr transport)
@@ -1089,7 +1094,7 @@ bool io_service::do_write(transport_ptr transport)
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         transport->send_queue_.pop_front();
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
         auto packet_size = static_cast<int>(v->data_.size());
         INET_LOG("[index: %d] do_write ok, A packet sent "
                  "success, packet size:%d",
@@ -1158,13 +1163,13 @@ bool io_service::do_read(transport_ptr transport)
 
     if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error()))
     {
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_, error_,
                io_service::strerror(error_));
 #endif
       if (n == -1)
         n = 0;
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       if (n > 0)
       {
         INET_LOG("[index: %d] do_read ok, received data len: %d, "
@@ -1251,13 +1256,13 @@ void io_service::do_unpack(transport_ptr ctx, int bytes_expected, int bytes_tran
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
     INET_LOG("[index: %d] received a properly packet from peer, "
              "packet size:%d",
              ctx->index_, ctx->expected_packet_size_);
 #endif
     this->handle_event(
-        event_ptr(new io_event(ctx->channel_index(), MASIO_EVENT_RECV_PACKET, ctx->take_packet())));
+        event_ptr(new io_event(ctx->channel_index(), YASIO_EVENT_RECV_PACKET, ctx->take_packet())));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu
@@ -1383,7 +1388,7 @@ but it's ok.
     {
       maxtv.tv_sec  = static_cast<long>(wait_duration / 1000000);
       maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
 #endif
@@ -1402,7 +1407,7 @@ but it's ok.
           ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, pmaxtv);
 #endif
 
-#if _MASIO_VERBOS_LOG
+#if _YASIO_VERBOS_LOG
       INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
     }
@@ -1450,7 +1455,7 @@ void io_service::update_resolve_state(io_channel *ctx)
   {
     ip::endpoint ep;
     ctx->endpoints_.clear();
-    ctx->dns_queries_needed_ = !ep.assign(ctx->address_.c_str(), ctx->port_);
+    ctx->dns_queries_needed_ = !ep.assign(ctx->host_.c_str(), ctx->port_);
     if (!ctx->dns_queries_needed_)
     {
       ctx->endpoints_.push_back(ep);
@@ -1471,14 +1476,14 @@ bool io_service::start_resolve(io_channel *ctx)
   ctx->resolve_state_ = resolve_state::INPRROGRESS;
   ctx->endpoints_.clear();
 
-  INET_LOG("[index: %d] start async resolving for %s", ctx->index_, ctx->address_.c_str());
+  INET_LOG("[index: %d] start async resolving for %s", ctx->index_, ctx->host_.c_str());
 #if !_USING_ARES_LIB // 6.563ms
   std::thread resolve_thread([=] {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
-    bool succeed = xresolv_ ? xresolv_(ctx->endpoints_, ctx->address_.c_str(), ctx->port_)
-                            : resolve(ctx->endpoints_, ctx->address_.c_str(), ctx->port_);
+    bool succeed = xresolv_ ? xresolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_)
+                            : resolve(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
 
     if (succeed && !ctx->endpoints_.empty())
     {
@@ -1486,7 +1491,7 @@ bool io_service::start_resolve(io_channel *ctx)
       ctx->dns_queries_timestamp_ = _highp_clock();
       auto &ep                    = ctx->endpoints_[0];
       INET_LOG("[index: %d] getaddrinfo: resolve %s succeed, ip:%s", ctx->index_,
-               ctx->address_.c_str(), ep.to_string().c_str());
+               ctx->host_.c_str(), ep.to_string().c_str());
     }
     else
     {
@@ -1520,7 +1525,7 @@ bool io_service::start_resolve(io_channel *ctx)
   {
     hint.ai_family = AF_INET6;
   }
-  ::ares_getaddrinfo((ares_channel)this->ares_, ctx->address_.c_str(), nullptr, &hint,
+  ::ares_getaddrinfo((ares_channel)this->ares_, ctx->host_.c_str(), nullptr, &hint,
                      ares_getaddrinfo_callback, ctx);
 
   ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));

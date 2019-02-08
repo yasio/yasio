@@ -8,8 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef MASIO_PIPE_SELECT_INTERRUPTER_IPP
-#define MASIO_PIPE_SELECT_INTERRUPTER_IPP
+#ifndef YASIO_PIPE_SELECT_INTERRUPTER_IPP
+#define YASIO_PIPE_SELECT_INTERRUPTER_IPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once

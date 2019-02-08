@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -61,7 +61,8 @@ public:
         return value;
     }
 
-    uint32_t read_i24();
+    int32_t  read_i24();
+    uint32_t read_u24();
 
     void read_v(std::string&);
     void read_v16(std::string&);

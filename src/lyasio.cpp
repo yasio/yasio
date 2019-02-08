@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.2
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -26,14 +26,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include "ibinarystream.h"
-#include "lmasio.h"
-#include "masio.h"
+#include "lyasio.h"
+#include "yasio.h"
 #include "obinarystream.h"
 #include "sol.hpp"
 
 extern "C" {
 
-MASIO_API int luaopen_masio(lua_State *L)
+YASIO_API int luaopen_yasio(lua_State *L)
 {
   using namespace purelib::inet;
   sol::state_view sol2(L);
@@ -45,20 +45,20 @@ MASIO_API int luaopen_masio(lua_State *L)
     t.set_function("loop", simple_timer::loop);
     t.set_function("kill", simple_timer::kill);
 #endif
-  auto masio = sol2.create_named_table("masio");
+  auto yasio = sol2.create_named_table("yasio");
 
-  masio.new_usertype<io_hostent>(
+  yasio.new_usertype<io_hostent>(
       "io_hostent", sol::constructors<io_hostent(), io_hostent(const std::string &, u_short)>(),
-      "address", &io_hostent::address_, "port", &io_hostent::port_);
+      "host", &io_hostent::host_, "port", &io_hostent::port_);
 
-  masio.new_usertype<io_event>("io_event", "channel_index", &io_event::channel_index, "kind",
-                               &io_event::type, "error_code", &io_event::error_code, "transport",
+  yasio.new_usertype<io_event>("io_event", "channel_index", &io_event::channel_index, "kind",
+                               &io_event::type, "status", &io_event::error_code, "transport",
                                &io_event::transport, "packet", [](io_event *event) {
                                  return std::unique_ptr<ibinarystream>(new ibinarystream(
                                      event->packet().data(), event->packet().size()));
                                });
 
-  masio.new_usertype<io_service>(
+  yasio.new_usertype<io_service>(
       "io_service", "start_service",
       sol::overload(
           static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_callback_t)>(
@@ -69,22 +69,22 @@ MASIO_API int luaopen_masio(lua_State *L)
       [](io_service *service, int opt, sol::variadic_args va) {
         switch (opt)
         {
-          case MASIO_OPT_TCP_KEEPALIVE:
+          case YASIO_OPT_TCP_KEEPALIVE:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]));
             break;
-          case MASIO_OPT_LFIB_PARAMS:
+          case YASIO_OPT_LFIB_PARAMS:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]), static_cast<int>(va[3]));
             break;
-          case MASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom
+          case YASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom
                                           // resolv function
             break;
-          case MASIO_OPT_IO_EVENT_CALLBACK:
+          case YASIO_OPT_IO_EVENT_CALLBACK:
             (void)0;
             {
               sol::function fn           = va[0];
-              io_event_callback_t fnwrap = [=](event_ptr e) mutable -> void { fn(e); };
+              io_event_callback_t fnwrap = [=](event_ptr e) mutable -> void { fn(std::move(e)); };
               service->set_option(opt, std::addressof(fnwrap));
             }
             break;
@@ -102,7 +102,7 @@ MASIO_API int luaopen_masio(lua_State *L)
           }));
 
   // ##-- obinarystream
-  masio.new_usertype<obinarystream>(
+  yasio.new_usertype<obinarystream>(
       "obstream", "push32", &obinarystream::push32, "pop32",
       sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
                     static_cast<void (obinarystream ::*)(uint32_t)>(&obinarystream::pop32)),
@@ -130,7 +130,7 @@ MASIO_API int luaopen_masio(lua_State *L)
       [](obinarystream *obs) { return std::string_view(obs->data(), obs->length()); });
 
   // ##-- ibinarystream
-  masio.new_usertype<ibinarystream>(
+  yasio.new_usertype<ibinarystream>(
       "ibstream",
       sol::constructors<ibinarystream(), ibinarystream(const void *, int),
                         ibinarystream(const obinarystream *)>(),
@@ -143,24 +143,24 @@ MASIO_API int luaopen_masio(lua_State *L)
       "read_string", static_cast<std::string_view (ibinarystream::*)()>(&ibinarystream::read_v),
       "to_string", [](ibinarystream *ibs) { return std::string_view(ibs->data(), ibs->size()); });
 
-  // ##-- masio enums
-  masio["CHANNEL_TCP_CLIENT"]           = channel_type::CHANNEL_TCP_CLIENT;
-  masio["CHANNEL_TCP_SERVER"]           = channel_type::CHANNEL_TCP_SERVER;
-  masio["MASIO_OPT_CONNECT_TIMEOUT"]    = MASIO_OPT_CONNECT_TIMEOUT;
-  masio["MASIO_OPT_SEND_TIMEOUT"]       = MASIO_OPT_CONNECT_TIMEOUT;
-  masio["MASIO_OPT_RECONNECT_TIMEOUT"]  = MASIO_OPT_RECONNECT_TIMEOUT;
-  masio["MASIO_OPT_DNS_CACHE_TIMEOUT"]  = MASIO_OPT_DNS_CACHE_TIMEOUT;
-  masio["MASIO_OPT_DEFER_EVENT"]        = MASIO_OPT_DEFER_EVENT;
-  masio["MASIO_OPT_TCP_KEEPALIVE"]      = MASIO_OPT_TCP_KEEPALIVE;
-  masio["MASIO_OPT_RESOLV_FUNCTION"]    = MASIO_OPT_RESOLV_FUNCTION;
-  masio["MASIO_OPT_LOG_FILE"]           = MASIO_OPT_LOG_FILE;
-  masio["MASIO_OPT_LFIB_PARAMS"]        = MASIO_OPT_LFIB_PARAMS;
-  masio["MASIO_OPT_IO_EVENT_CALLBACK"]  = MASIO_OPT_IO_EVENT_CALLBACK;
-  masio["MASIO_EVENT_CONNECT_RESPONSE"] = MASIO_EVENT_CONNECT_RESPONSE;
-  masio["MASIO_EVENT_CONNECTION_LOST"]  = MASIO_EVENT_CONNECTION_LOST;
-  masio["MASIO_EVENT_RECV_PACKET"]      = MASIO_EVENT_RECV_PACKET;
+  // ##-- yasio enums
+  yasio["CHANNEL_TCP_CLIENT"]           = channel_type::CHANNEL_TCP_CLIENT;
+  yasio["CHANNEL_TCP_SERVER"]           = channel_type::CHANNEL_TCP_SERVER;
+  yasio["YASIO_OPT_CONNECT_TIMEOUT"]    = YASIO_OPT_CONNECT_TIMEOUT;
+  yasio["YASIO_OPT_SEND_TIMEOUT"]       = YASIO_OPT_CONNECT_TIMEOUT;
+  yasio["YASIO_OPT_RECONNECT_TIMEOUT"]  = YASIO_OPT_RECONNECT_TIMEOUT;
+  yasio["YASIO_OPT_DNS_CACHE_TIMEOUT"]  = YASIO_OPT_DNS_CACHE_TIMEOUT;
+  yasio["YASIO_OPT_DEFER_EVENT"]        = YASIO_OPT_DEFER_EVENT;
+  yasio["YASIO_OPT_TCP_KEEPALIVE"]      = YASIO_OPT_TCP_KEEPALIVE;
+  yasio["YASIO_OPT_RESOLV_FUNCTION"]    = YASIO_OPT_RESOLV_FUNCTION;
+  yasio["YASIO_OPT_LOG_FILE"]           = YASIO_OPT_LOG_FILE;
+  yasio["YASIO_OPT_LFIB_PARAMS"]        = YASIO_OPT_LFIB_PARAMS;
+  yasio["YASIO_OPT_IO_EVENT_CALLBACK"]  = YASIO_OPT_IO_EVENT_CALLBACK;
+  yasio["YASIO_EVENT_CONNECT_RESPONSE"] = YASIO_EVENT_CONNECT_RESPONSE;
+  yasio["YASIO_EVENT_CONNECTION_LOST"]  = YASIO_EVENT_CONNECTION_LOST;
+  yasio["YASIO_EVENT_RECV_PACKET"]      = YASIO_EVENT_RECV_PACKET;
 
-  return masio.push(); /* return 'masio' table */
+  return yasio.push(); /* return 'yasio' table */
 }
 
 } /* extern "C" */

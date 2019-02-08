@@ -3,7 +3,7 @@
 -- Author: halx99
 -- Create Date: [2018-12-02 22:50:31]
 require 'protocol_enums'
-local obstream = masio.obstream
+local obstream = yasio.obstream
 
 proto.begin_encode = function (id)
     local obs = obstream.new()

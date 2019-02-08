@@ -25,8 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef _MASIO_SELECT_INTERRUPTER_HPP_
-#define _MASIO_SELECT_INTERRUPTER_HPP_
+#ifndef _YASIO_SELECT_INTERRUPTER_HPP_
+#define _YASIO_SELECT_INTERRUPTER_HPP_
 #include "xxsocket.h"
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
@@ -40,19 +40,19 @@ namespace inet {
 {
 public:
   // Constructor.
-  _MASIO_INLINE socket_select_interrupter();
+  _YASIO_INLINE socket_select_interrupter();
 
   // Destructor.
-  _MASIO_INLINE ~socket_select_interrupter();
+  _YASIO_INLINE ~socket_select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  _MASIO_INLINE void recreate();
+  _YASIO_INLINE void recreate();
 
   // Interrupt the select call.
-  _MASIO_INLINE void interrupt();
+  _YASIO_INLINE void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  _MASIO_INLINE bool reset();
+  _YASIO_INLINE bool reset();
 
   // Get the read descriptor to be passed to select.
   socket_native_type read_descriptor() const
@@ -62,10 +62,10 @@ public:
 
 private:
   // Open the descriptors. Throws on error.
-  _MASIO_INLINE void open_descriptors();
+  _YASIO_INLINE void open_descriptors();
 
   // Close the descriptors.
-  _MASIO_INLINE void close_descriptors();
+  _YASIO_INLINE void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -27,8 +27,8 @@ SOFTWARE.
 */
 #include "ibinarystream.h"
 #include "kaguya.hpp"
-#include "lmasio.h"
-#include "masio.h"
+#include "lyasio.h"
+#include "yasio.h"
 #include "obinarystream.h"
 
 /// customize the type conversion from/to lua
@@ -78,33 +78,33 @@ template <> struct lua_type_traits<std::vector<char>>
 
 extern "C" {
 
-MASIO_API int luaopen_masio(lua_State *L)
+YASIO_API int luaopen_yasio(lua_State *L)
 {
   using namespace purelib::inet;
   kaguya::State state(L);
 
-  auto masio     = state.newTable();
-  state["masio"] = masio;
+  auto yasio     = state.newTable();
+  state["yasio"] = yasio;
   // No any interface need export, only for holder
-  masio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
+  yasio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
 
-  masio["io_hostent"].setClass(
+  yasio["io_hostent"].setClass(
       kaguya::UserdataMetatable<io_hostent>()
           .setConstructors<io_hostent(), io_hostent(const std::string &, u_short)>()
-          .addProperty("address", &io_hostent::get_address, &io_hostent::set_address)
+          .addProperty("host", &io_hostent::get_address, &io_hostent::set_address)
           .addProperty("port", &io_hostent::get_port, &io_hostent::set_port));
 
-  masio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
+  yasio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
                                  .addFunction("channel_index", &io_event::channel_index)
                                  .addFunction("kind", &io_event::type)
-                                 .addFunction("error_code", &io_event::error_code)
+                                 .addFunction("status", &io_event::error_code)
                                  .addFunction("transport", &io_event::transport)
                                  .addStaticFunction("packet", [](io_event *ev) {
                                    return std::shared_ptr<ibinarystream>(
                                        new ibinarystream(ev->packet().data(), ev->packet().size()));
                                  }));
 
-  masio["io_service"].setClass(
+  yasio["io_service"].setClass(
       kaguya::UserdataMetatable<io_service>()
           .setConstructors<io_service()>()
           .addOverloadedFunctions(
@@ -125,18 +125,18 @@ MASIO_API int luaopen_masio(lua_State *L)
                                               kaguya::VariadicArgType args) {
             switch (opt)
             {
-              case MASIO_OPT_TCP_KEEPALIVE:
+              case YASIO_OPT_TCP_KEEPALIVE:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]));
                 break;
-              case MASIO_OPT_LFIB_PARAMS:
+              case YASIO_OPT_LFIB_PARAMS:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]), static_cast<int>(args[3]));
                 break;
-              case MASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom
+              case YASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom
                                               // resolv function
                 break;
-              case MASIO_OPT_IO_EVENT_CALLBACK:
+              case YASIO_OPT_IO_EVENT_CALLBACK:
                 (void)0;
                 {
                   kaguya::LuaFunction fn     = args[0];
@@ -150,7 +150,7 @@ MASIO_API int luaopen_masio(lua_State *L)
           }));
 
   // ##-- obinarystream
-  masio["obstream"].setClass(
+  yasio["obstream"].setClass(
       kaguya::UserdataMetatable<obinarystream>()
           .setConstructors<obinarystream(), obinarystream(int)>()
           .addFunction("push32", &obinarystream::push32)
@@ -191,7 +191,7 @@ MASIO_API int luaopen_masio(lua_State *L)
           }));
 
   // ##-- ibinarystream
-  masio["ibstream"].setClass(
+  yasio["ibstream"].setClass(
       kaguya::UserdataMetatable<ibinarystream>()
           .setConstructors<ibinarystream(), ibinarystream(const void *, int),
                            ibinarystream(const obinarystream *)>()
@@ -213,24 +213,24 @@ MASIO_API int luaopen_masio(lua_State *L)
             return std::string_view(ibs->data(), ibs->size());
           }));
 
-  // ##-- masio enums
-  masio["CHANNEL_TCP_CLIENT"]           = channel_type::CHANNEL_TCP_CLIENT;
-  masio["CHANNEL_TCP_SERVER"]           = channel_type::CHANNEL_TCP_SERVER;
-  masio["MASIO_OPT_CONNECT_TIMEOUT"]    = MASIO_OPT_CONNECT_TIMEOUT;
-  masio["MASIO_OPT_SEND_TIMEOUT"]       = MASIO_OPT_CONNECT_TIMEOUT;
-  masio["MASIO_OPT_RECONNECT_TIMEOUT"]  = MASIO_OPT_RECONNECT_TIMEOUT;
-  masio["MASIO_OPT_DNS_CACHE_TIMEOUT"]  = MASIO_OPT_DNS_CACHE_TIMEOUT;
-  masio["MASIO_OPT_DEFER_EVENT"]        = MASIO_OPT_DEFER_EVENT;
-  masio["MASIO_OPT_TCP_KEEPALIVE"]      = MASIO_OPT_TCP_KEEPALIVE;
-  masio["MASIO_OPT_RESOLV_FUNCTION"]    = MASIO_OPT_RESOLV_FUNCTION;
-  masio["MASIO_OPT_LOG_FILE"]           = MASIO_OPT_LOG_FILE;
-  masio["MASIO_OPT_LFIB_PARAMS"]        = MASIO_OPT_LFIB_PARAMS;
-  masio["MASIO_OPT_IO_EVENT_CALLBACK"]  = MASIO_OPT_IO_EVENT_CALLBACK;
-  masio["MASIO_EVENT_CONNECT_RESPONSE"] = MASIO_EVENT_CONNECT_RESPONSE;
-  masio["MASIO_EVENT_CONNECTION_LOST"]  = MASIO_EVENT_CONNECTION_LOST;
-  masio["MASIO_EVENT_RECV_PACKET"]      = MASIO_EVENT_RECV_PACKET;
+  // ##-- yasio enums
+  yasio["CHANNEL_TCP_CLIENT"]           = channel_type::CHANNEL_TCP_CLIENT;
+  yasio["CHANNEL_TCP_SERVER"]           = channel_type::CHANNEL_TCP_SERVER;
+  yasio["YASIO_OPT_CONNECT_TIMEOUT"]    = YASIO_OPT_CONNECT_TIMEOUT;
+  yasio["YASIO_OPT_SEND_TIMEOUT"]       = YASIO_OPT_CONNECT_TIMEOUT;
+  yasio["YASIO_OPT_RECONNECT_TIMEOUT"]  = YASIO_OPT_RECONNECT_TIMEOUT;
+  yasio["YASIO_OPT_DNS_CACHE_TIMEOUT"]  = YASIO_OPT_DNS_CACHE_TIMEOUT;
+  yasio["YASIO_OPT_DEFER_EVENT"]        = YASIO_OPT_DEFER_EVENT;
+  yasio["YASIO_OPT_TCP_KEEPALIVE"]      = YASIO_OPT_TCP_KEEPALIVE;
+  yasio["YASIO_OPT_RESOLV_FUNCTION"]    = YASIO_OPT_RESOLV_FUNCTION;
+  yasio["YASIO_OPT_LOG_FILE"]           = YASIO_OPT_LOG_FILE;
+  yasio["YASIO_OPT_LFIB_PARAMS"]        = YASIO_OPT_LFIB_PARAMS;
+  yasio["YASIO_OPT_IO_EVENT_CALLBACK"]  = YASIO_OPT_IO_EVENT_CALLBACK;
+  yasio["YASIO_EVENT_CONNECT_RESPONSE"] = YASIO_EVENT_CONNECT_RESPONSE;
+  yasio["YASIO_EVENT_CONNECTION_LOST"]  = YASIO_EVENT_CONNECTION_LOST;
+  yasio["YASIO_EVENT_RECV_PACKET"]      = YASIO_EVENT_RECV_PACKET;
 
-  return masio.push(); /* return 'masio' table */
+  return yasio.push(); /* return 'yasio' table */
 }
 
 } /* extern "C" */

@@ -106,6 +106,7 @@ public:
 			
 	    return buffer_.size();
     }
+    obinarystream sub(size_t offset, size_t count = -1);
 public:
     void save(const char* filename);
 

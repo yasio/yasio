@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -201,4 +201,17 @@ void obinarystream::save(const char * filename)
     if (!this->buffer_.empty())
         fout.write(&this->buffer_.front(), this->length());
     fout.close();
+}
+
+obinarystream obinarystream::sub(size_t offset, size_t count)
+{
+    obinarystream obs;
+    auto n = length();
+    if (offset < n) {
+        if (count > (n - offset))
+            count = (n - offset);
+
+        obs.buffer_.assign(this->data() + offset, this->data() + offset + count);
+    }
+    return obs;
 }

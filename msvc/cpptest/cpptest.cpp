@@ -1,9 +1,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "masio.h"
-#include "ibinarystream.h"
-#include "obinarystream.h"
+#include "../../src/yasio.h"
+#include "../../src/ibinarystream.h"
+#include "../../src/obinarystream.h"
 
 #if defined(_WIN32)
 #include <Shlwapi.h>
@@ -39,13 +39,13 @@ int main(int, char **) {
   auto v3 = ibs.read_i24();
   auto v4 = ibs.read_i24();
 
-  myasio->set_option(MASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
+  myasio->set_option(YASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
 
   resolv_fn_t resolv = [](std::vector<ip::endpoint> &endpoints, const char *hostname,
       unsigned short port) {
       return myasio->resolve(endpoints, hostname, port);
   };
-  myasio->set_option(MASIO_OPT_RESOLV_FUNCTION, &resolv);
+  myasio->set_option(YASIO_OPT_RESOLV_FUNCTION, &resolv);
 
   deadline_timer t0(*myasio);
 
@@ -55,18 +55,18 @@ int main(int, char **) {
   });
 
   std::vector<std::shared_ptr<io_transport>> transports;
-  myasio->set_option(MASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
-  myasio->set_option(MASIO_OPT_LOG_FILE, "mini-asio.log");
+  myasio->set_option(YASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
+  myasio->set_option(YASIO_OPT_LOG_FILE, "yasio.log");
   myasio->start_service(endpoints, _ARRAYSIZE(endpoints), 
       [&](event_ptr event) {
         switch (event->type()) {
-          case MASIO_EVENT_RECV_PACKET: {
+          case YASIO_EVENT_RECV_PACKET: {
             auto packet = event->take_packet();
             packet.push_back('\0');
             printf("receive data:%s", packet.data());
             break;
           }
-          case MASIO_EVENT_CONNECT_RESPONSE:
+          case YASIO_EVENT_CONNECT_RESPONSE:
             if (event->error_code() == 0) {
               auto transport = event->transport();
               std::vector<char> packet;
@@ -89,7 +89,7 @@ int main(int, char **) {
               myasio->write(transport, std::move(packet));
             }
             break;
-          case MASIO_EVENT_CONNECTION_LOST:
+          case YASIO_EVENT_CONNECTION_LOST:
             printf("The connection is lost(user end)!\n");
             break;
         }

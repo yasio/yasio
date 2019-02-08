@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -108,17 +108,17 @@ enum
 
 enum
 {
-  MASIO_OPT_CONNECT_TIMEOUT = 1,
-  MASIO_OPT_SEND_TIMEOUT,
-  MASIO_OPT_RECONNECT_TIMEOUT,
-  MASIO_OPT_DNS_CACHE_TIMEOUT,
-  MASIO_OPT_DEFER_EVENT,
-  MASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
-  MASIO_OPT_RESOLV_FUNCTION,
-  MASIO_OPT_LOG_FILE,
-  MASIO_OPT_LFIB_PARAMS,
-  MASIO_OPT_IO_EVENT_CALLBACK,
-  MASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
+  YASIO_OPT_CONNECT_TIMEOUT = 1,
+  YASIO_OPT_SEND_TIMEOUT,
+  YASIO_OPT_RECONNECT_TIMEOUT,
+  YASIO_OPT_DNS_CACHE_TIMEOUT,
+  YASIO_OPT_DEFER_EVENT,
+  YASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
+  YASIO_OPT_RESOLV_FUNCTION,
+  YASIO_OPT_LOG_FILE,
+  YASIO_OPT_LFIB_PARAMS,
+  YASIO_OPT_IO_EVENT_CALLBACK,
+  YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -186,14 +186,18 @@ public:
 struct io_hostent
 {
   io_hostent() {}
-  io_hostent(std::string_view addr, u_short port)
-      : address_(addr.data(), addr.length()), port_(port)
+  io_hostent(std::string_view ip, u_short port)
+      : host_(ip.data(), ip.length()), port_(port)
   {}
-  void set_address(const std::string &value) { address_ = value; }
-  const std::string &get_address() const { return address_; }
+  io_hostent(io_hostent&& rhs) : host_(std::move(rhs.host_)), port_(rhs.port_)
+  {}
+  io_hostent(const io_hostent& rhs) : host_(rhs.host_), port_(rhs.port_)
+  {}
+  void set_ip(const std::string &value) { host_ = value; }
+  const std::string &get_ip() const { return host_; }
   void set_port(u_short port) { port_ = port; }
   u_short get_port() const { return port_; }
-  std::string address_;
+  std::string host_;
   u_short port_;
 };
 
@@ -211,7 +215,7 @@ struct io_channel : public io_base
 
   int type_ = 0;
 
-  std::string address_;
+  std::string host_;
   u_short port_;
   bool dns_queries_needed_;
   highp_time_t dns_queries_timestamp_ = 0;
@@ -269,15 +273,15 @@ typedef std::shared_ptr<io_transport> transport_ptr;
 
 enum
 {
-  MASIO_EVENT_CONNECT_RESPONSE = 0,
-  MASIO_EVENT_CONNECTION_LOST,
-  MASIO_EVENT_RECV_PACKET,
+  YASIO_EVENT_CONNECT_RESPONSE = 0,
+  YASIO_EVENT_CONNECTION_LOST,
+  YASIO_EVENT_RECV_PACKET,
 };
 class io_event final
 {
 public:
   io_event(int channel_index, int type, int error, transport_ptr transport)
-      : channel_index_(channel_index), type_(type), error_code_(error), transport_(transport)
+      : channel_index_(channel_index), type_(type), error_code_(error), transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet)
       : channel_index_(channel_index), type_(type), error_code_(0), packet_(std::move(packet))
@@ -294,7 +298,7 @@ public:
   int type() const { return type_; }
   int error_code() const { return error_code_; }
 
-  transport_ptr transport() const { return transport_; }
+  transport_ptr transport() { return transport_; }
 
   const std::vector<char> &packet() const { return packet_; }
   std::vector<char> take_packet() { return std::move(packet_); }
@@ -310,7 +314,7 @@ private:
   transport_ptr transport_;
   std::vector<char> packet_;
 };
-typedef std::shared_ptr<io_event> event_ptr;
+typedef std::unique_ptr<io_event> event_ptr;
 
 class deadline_timer;
 
@@ -346,7 +350,7 @@ public:
 
   void stop_service();
 
-  void set_endpoint(size_t channel_index, const char *address, u_short port);
+  void set_endpoint(size_t channel_index, const char *host, u_short port);
   void set_endpoint(size_t channel_index, const ip::endpoint &ep);
 
   // should call at the thread who care about async io
@@ -356,15 +360,15 @@ public:
 
   size_t get_event_count(void) const;
 
-  /* option: MASIO_OPT_CONNECT_TIMEOUT   timeout:int
-             MASIO_OPT_SEND_TIMEOUT      timeout:int
-             MASIO_OPT_RECONNECT_TIMEOUT timeout:int
-             MASIO_OPT_DNS_CACHE_TIMEOUT timeout:int
-             MASIO_OPT_DEFER_EVENT       defer:int
-             MASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
-             MASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             MASIO_OPT_LFIB_PARAMS max_frame_length:int, length_field_offst:int,
-     length_field_length:int, length_adjustment:int MASIO_OPT_IO_EVENT_CALLBACK
+  /* option: YASIO_OPT_CONNECT_TIMEOUT   timeout:int
+             YASIO_OPT_SEND_TIMEOUT      timeout:int
+             YASIO_OPT_RECONNECT_TIMEOUT timeout:int
+             YASIO_OPT_DNS_CACHE_TIMEOUT timeout:int
+             YASIO_OPT_DEFER_EVENT       defer:int
+             YASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
+             YASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
+             YASIO_OPT_LFIB_PARAMS max_frame_length:int, length_field_offst:int,
+     length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
   */
   void set_option(int option, ...);
@@ -384,6 +388,7 @@ public:
   bool is_connected(size_t cahnnel_index = 0) const;
 
   void write(transport_ptr transport, std::vector<char> data);
+  void write(io_transport* transport, std::vector<char> data);
 
   // timer support
   void schedule_timer(deadline_timer *);

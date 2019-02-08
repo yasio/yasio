@@ -27,23 +27,7 @@ SOFTWARE.
 */
 
 #pragma once
+#include "jsapi.h"
 
-#if defined(MASIO_BUILD_AS_DLL)
-#  if defined(MASIO_LIB)
-#    define MASIO_API __declspec(dllexport)
-#  else
-#    define MASIO_API __declspec(dllimport)
-#  endif
-#else
-#  define MASIO_API
-#endif
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-struct lua_State;
-MASIO_API int luaopen_masio(lua_State *L);
-#if defined(__cplusplus)
-}
-#endif
+void register_yasio_bindings(JSContext *cx, JS::HandleObject global);
 

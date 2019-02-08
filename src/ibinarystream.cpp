@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -58,8 +58,22 @@ void ibinarystream::assign(const void* data, int size)
     size_ = size;
 }
 
-// TODO: rewrite a class uint24_t
-uint32_t ibinarystream::read_i24()
+int32_t ibinarystream::read_i24()
+{
+    uint32_t value = 0;
+    auto ptr = consume(3);
+    memcpy(&value, ptr, 3);
+    value = ntohl(value) >> 8;
+
+    if (value >> 23) {
+        return -(0x7FFFFF - (value & 0x7FFFFF)) - 1;
+    }
+    else {
+        return value & 0x7FFFFF;
+    }
+}
+
+uint32_t ibinarystream::read_u24()
 {
     uint32_t value = 0;
     auto ptr = consume(3);

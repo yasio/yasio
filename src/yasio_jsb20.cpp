@@ -950,7 +950,7 @@ bool js_yasio_io_service_start_service(se::State& s)
             se::Value jsThis(s.thisObject());
             se::Value jsFunc(args[1]);
             jsThis.toObject()->attachObject(jsFunc.toObject());
-            std::function<void(inet::event_ptr)> callback = [=](inet::event_ptr event)
+            io_event_callback_t callback = [=](inet::event_ptr event)
             {
                 se::ValueArray invokeArgs;
                 invokeArgs.resize(1);
@@ -1060,6 +1060,63 @@ bool js_yasio_io_service_dispatch_events(se::State& s)
 }
 SE_BIND_FUNC(js_yasio_io_service_dispatch_events)
 
+bool js_yasio_io_service_set_option(se::State& s)
+{
+    auto service = (io_service*)s.nativeThisObject();
+    SE_PRECONDITION2(service, false, __FUNCTION__ ": Invalid Native Object");
+    const auto& args = s.args();
+    size_t argc = args.size();
+
+    do {
+        if (argc >= 2) {
+            auto& arg0 = args[0];
+            auto opt = arg0.toInt32();
+            switch (opt) {
+            case YASIO_OPT_TCP_KEEPALIVE:
+                service->set_option(opt, args[1].toInt32(), args[2].toInt32(),
+                    args[3].toInt32());
+                break;
+            case YASIO_OPT_LFIB_PARAMS:
+                service->set_option(opt, args[1].toInt32(), args[2].toInt32(),
+                    args[3].toInt32(), args[4].toInt32());
+                break;
+            case YASIO_OPT_RESOLV_FUNCTION: // jsb does not support set custom
+                                      // resolv function
+                break;
+            case YASIO_OPT_IO_EVENT_CALLBACK:
+                (void)0;
+                {
+                    se::Value jsThis(s.thisObject());
+                    se::Value jsFunc(args[1]);
+                    jsThis.toObject()->attachObject(jsFunc.toObject());
+                    io_event_callback_t callback = [=](inet::event_ptr event)
+                    {
+                        se::ValueArray invokeArgs;
+                        invokeArgs.resize(1);
+                        native_ptr_to_seval<io_event>(event.release(), &invokeArgs[0]);
+                        se::Object* thisObj = jsThis.isObject() ? jsThis.toObject() : nullptr;
+                        se::Object* funcObj = jsFunc.toObject();
+                        bool succeed = funcObj->call(invokeArgs, thisObj);
+                        if (!succeed) {
+                            se::ScriptEngine::getInstance()->clearException();
+                        }
+                    };
+                    service->set_option(opt, std::addressof(callback));
+                }
+                break;
+            default:
+                service->set_option(opt, args[1].toInt32());
+            }
+
+            return true;
+        }
+    } while (false);
+
+    SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 2);
+    return false;
+}
+SE_BIND_FUNC(js_yasio_io_service_set_option)
+
 bool js_yasio_io_service_write(se::State& s)
 {
     auto cobj = (io_service*)s.nativeThisObject();
@@ -1103,6 +1160,7 @@ void js_register_yasio_io_service(se::Object* obj)
 #define DEFINE_IO_SERVICE_FUNC(funcName) cls->defineFunction(#funcName, _SE(js_yasio_io_service_##funcName))
     auto cls = se::Class::create("io_service", obj, nullptr, _SE(jsb_yasio_io_service_constructor));
 
+    DEFINE_IO_SERVICE_FUNC(set_option);
     DEFINE_IO_SERVICE_FUNC(start_service);
     DEFINE_IO_SERVICE_FUNC(stop_service);
     DEFINE_IO_SERVICE_FUNC(open);

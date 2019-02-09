@@ -1235,7 +1235,7 @@ bool js_yasio_io_service_start_service(JSContext *ctx, uint32_t argc, jsval *vp)
 
             JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
             std::shared_ptr<JSFunctionWrapper> func(new JSFunctionWrapper(ctx, jstarget, arg1, args.thisv()));
-            std::function<void(inet::event_ptr)> callback = [=](inet::event_ptr event)
+            io_event_callback_t callback = [=](inet::event_ptr event)
             {
                 JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
                 jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
@@ -1358,6 +1358,63 @@ bool js_yasio_io_service_dispatch_events(JSContext *ctx, uint32_t argc, jsval *v
     return false;
 }
 
+bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+    bool ok = true;
+    io_service* service = nullptr;
+
+    JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+    JS::RootedObject obj(ctx);
+    obj.set(args.thisv().toObjectOrNull());
+    js_proxy_t *proxy = jsb_get_js_proxy(obj);
+    service = (io_service *)(proxy ? proxy->ptr : nullptr);
+    JSB_PRECONDITION2(service, ctx, false, "js_yasio_io_service_set_option : Invalid Native Object");
+
+    do {
+        if (argc >= 2) {
+            auto& arg0 = args[0];
+            auto opt = arg0.toInt32();
+            switch (opt) {
+            case YASIO_OPT_TCP_KEEPALIVE:
+                service->set_option(opt, args[1].toInt32(), args[2].toInt32(),
+                    args[3].toInt32());
+                break;
+            case YASIO_OPT_LFIB_PARAMS:
+                service->set_option(opt, args[1].toInt32(), args[2].toInt32(),
+                    args[3].toInt32(), args[4].toInt32());
+                break;
+            case YASIO_OPT_RESOLV_FUNCTION: // jsb does not support set custom
+                                      // resolv function
+                break;
+            case YASIO_OPT_IO_EVENT_CALLBACK:
+                (void)0;
+                {
+                    JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
+                    std::shared_ptr<JSFunctionWrapper> func(new JSFunctionWrapper(ctx, jstarget, args[1], args.thisv()));
+                    io_event_callback_t callback = [=](inet::event_ptr event)
+                    {
+                        JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
+                        jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
+                        JS::RootedValue rval(ctx);
+                        bool succeed = func->invoke(1, &jevent, &rval);
+                        if (!succeed && JS_IsExceptionPending(ctx)) {
+                            JS_ReportPendingException(ctx);
+                        }
+                    };
+                    service->set_option(opt, std::addressof(callback));
+                }
+                break;
+            default:
+                service->set_option(opt, args[1].toInt32());
+            }
+            return true;
+        }
+    } while (false);
+
+    JS_ReportError(ctx, "js_yasio_io_service_set_option : wrong number of arguments");
+    return false;
+}
+
 bool js_yasio_io_service_write(JSContext *ctx, uint32_t argc, jsval *vp)
 {
     bool ok = true;
@@ -1420,6 +1477,7 @@ void js_register_yasio_io_service(JSContext *ctx, JS::HandleObject global) {
         JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
         JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
         JS_FN("dispatch_events", js_yasio_io_service_dispatch_events, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+        JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
         JS_FN("write", js_yasio_io_service_write, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
         JS_FS_END
     };

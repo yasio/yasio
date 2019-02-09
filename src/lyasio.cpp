@@ -122,8 +122,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "write_u8", &obinarystream::write_i<uint8_t>, "write_u16", &obinarystream::write_i<uint16_t>,
       "write_u32", &obinarystream::write_i<uint32_t>, "write_u64",
       &obinarystream::write_i<uint64_t>, "write_f",
-      static_cast<size_t (obinarystream::*)(float)>(&obinarystream::write_i), "write_lf",
-      static_cast<size_t (obinarystream::*)(double)>(&obinarystream::write_i),
+      &obinarystream::write_i<float>, "write_lf",
+      &obinarystream::write_i<double>,
 
       "write_string",
       static_cast<size_t (obinarystream::*)(std::string_view)>(&obinarystream::write_v), "length",

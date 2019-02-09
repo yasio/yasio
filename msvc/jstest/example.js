@@ -59,31 +59,30 @@ function yasioTest() {
 		else if(kind == yasio.YASIO_EVENT_RECV_PACKET) {
 			cc.log("yasio client --> receive a packet from server, kind=%d, close connect after 3 seconds", event.kind()); 
 			var ibs = event.take_packet();
-			if(ibs != null) {
-				var msg = {};
-				ibs.read_i32(); // skip length field
-				msg.bval1 = ibs.read_bool();
-				msg.bval2 = ibs.read_bool();
-				msg.u8val = ibs.read_i8();
-				msg.i16val = ibs.read_i16();
-				msg.i24val = ibs.read_i24();
-				msg.u24val = ibs.read_u24();
-				msg.i32val = ibs.read_i32();
-				msg.fval = ibs.read_f();
-				msg.lfval = ibs.read_lf();
-				msg.strval = ibs.read_string();
-				cc.log("receive msg from server -->\n msg.bval1=%s\n msg.bval2=%s\n msg.i8val=%d\n msg.i16val=%d\n msg.i24val=%d\n msg.u24val=%d\n msg.i32val=%d\n msg.fval=%s\n msg.lfval=%s\n msg.strval=%s\n", 
-				msg.bval1.toString(),
-				msg.bval2.toString(),
-				msg.u8val,
-				msg.i16val,
-				msg.i24val,
-				msg.u24val,
-				msg.i32val,
-				msg.fval.toString(),
-				msg.lfval.toString(),
-				msg.strval);
-			}
+
+            var msg = {};
+            ibs.read_i32(); // skip length field
+            msg.bval1 = ibs.read_bool();
+            msg.bval2 = ibs.read_bool();
+            msg.u8val = ibs.read_i8();
+            msg.i16val = ibs.read_i16();
+            msg.i24val = ibs.read_i24();
+            msg.u24val = ibs.read_u24();
+            msg.i32val = ibs.read_i32();
+            msg.fval = ibs.read_f();
+            msg.lfval = ibs.read_lf();
+            msg.strval = ibs.read_string();
+            cc.log("receive msg from server -->\n msg.bval1=%s\n msg.bval2=%s\n msg.i8val=%d\n msg.i16val=%d\n msg.i24val=%d\n msg.u24val=%d\n msg.i32val=%d\n msg.fval=%s\n msg.lfval=%s\n msg.strval=%s\n", 
+            msg.bval1.toString(),
+            msg.bval2.toString(),
+            msg.u8val,
+            msg.i16val,
+            msg.i24val,
+            msg.u24val,
+            msg.i32val,
+            msg.fval.toString(),
+            msg.lfval.toString(),
+            msg.strval);
 			
 			yasio.setTimeout(function(){
 				yasio.clearInterval(cc.yclientID);

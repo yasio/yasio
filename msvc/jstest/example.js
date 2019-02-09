@@ -9,39 +9,40 @@ function yasioTest() {
 
 	yserver.start_service(hostents, function(event){	
         var kind = event.kind();
-		if(kind == yasio.YASIO_EVENT_CONNECT_RESPONSE) {
-			cc.log("yasio event --> a connection income, kind=%d", event.kind());
-			var tsport = event.transport();
-			var obs = new yasio.obstream(256);
-			obs.push32();
-			obs.write_bool(true);
-			obs.write_bool(false);
-			obs.write_i8(256);
-			obs.write_i16(20001);
-			obs.write_i24(-298);
-			obs.write_i24(16777215);
-			obs.write_i32(20191011);
-			obs.write_f(28.9);
-			obs.write_lf(209.79);
-			obs.write_string("hello client!");
-			obs.pop32();
-			
-			cc.log("yasio server: will send partial1 of data after 3 seconds...");
-			var partial1 = obs.sub(0, 10);
-			yasio.setTimeout(function(){
-				cc.log("yasio server --> send data partial1, length=%d", partial1.length());
-				yserver.write(tsport, partial1);
-				
-				var partial2 = obs.sub(10);
-				cc.log("yasio server: will send partial2 of data after 2 seconds...");
-				
-				yasio.setTimeout(function(){
-					cc.log("yasio server --> send data partial2, length=%d", partial2.length());
-				    yserver.write(tsport, partial2);
-				}, 2);
-			}, 3);
-		}
-		else if(kind == yasio.YASIO_EVENT_CONNECTION_LOST) {
+        if (kind == yasio.YASIO_EVENT_CONNECT_RESPONSE)
+        {
+          cc.log("yasio event --> a connection income, kind=%d", event.kind());
+          var tsport = event.transport();
+          var obs    = new yasio.obstream(256);
+          obs.push32();
+          obs.write_bool(true);
+          obs.write_bool(false);
+          obs.write_i8(256);
+          obs.write_i16(20001);
+          obs.write_i24(-298);
+          obs.write_i24(16777215);
+          obs.write_i32(20191011);
+          obs.write_f(28.9);
+          obs.write_lf(209.79);
+          obs.write_string("hello client!");
+          obs.pop32();
+
+          cc.log("yasio server: will send partial1 of data after 3 seconds...");
+          var partial1 = obs.sub(0, 10);
+          yasio.setTimeout(function() {
+            cc.log("yasio server --> send data partial1, length=%d", partial1.length());
+            yserver.write(tsport, partial1);
+
+            var partial2 = obs.sub(10);
+            cc.log("yasio server: will send partial2 of data after 2 seconds...");
+
+            yasio.setTimeout(function() {
+              cc.log("yasio server --> send data partial2, length=%d", partial2.length());
+              yserver.write(tsport, partial2);
+            }, 2);
+          }, 3);
+        }
+                else if(kind == yasio.YASIO_EVENT_CONNECTION_LOST) {
 			cc.log("yasio server: The connection is lost!");
 		}
 	});

@@ -1,3 +1,7 @@
+/*
+ If you compile with tolua runtime at windows platform, you need add this source to your build system.
+ tolua runtime repo: https://github.com/jarjin/tolua_rumtime
+*/
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "libluajit.a")
 #include <math.h>

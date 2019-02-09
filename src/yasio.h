@@ -240,7 +240,7 @@ public:
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int channel_index() const { return ctx_->index_; }
-  int error_code() const { return error_; }
+  int status() const { return error_; }
   inline std::vector<char> take_packet()
   {
     expected_packet_size_ = -1;
@@ -281,13 +281,13 @@ class io_event final
 {
 public:
   io_event(int channel_index, int type, int error, transport_ptr transport)
-      : channel_index_(channel_index), type_(type), error_code_(error), transport_(std::move(transport))
+      : channel_index_(channel_index), type_(type), status_(error), transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet)
-      : channel_index_(channel_index), type_(type), error_code_(0), packet_(std::move(packet))
+      : channel_index_(channel_index), type_(type), status_(0), packet_(std::move(packet))
   {}
   io_event(io_event &&rhs)
-      : channel_index_(rhs.channel_index_), type_(rhs.type_), error_code_(rhs.error_code_),
+      : channel_index_(rhs.channel_index_), type_(rhs.type_), status_(rhs.status_),
         transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_))
   {}
 
@@ -296,7 +296,7 @@ public:
   int channel_index() const { return channel_index_; }
 
   int type() const { return type_; }
-  int error_code() const { return error_code_; }
+  int status() const { return status_; }
 
   transport_ptr transport() { return transport_; }
 
@@ -310,7 +310,7 @@ public:
 private:
   int channel_index_;
   int type_;
-  int error_code_;
+  int status_;
   transport_ptr transport_;
   std::vector<char> packet_;
 };

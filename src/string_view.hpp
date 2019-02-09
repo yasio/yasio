@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app version: 3.9.3
+// universal app version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -56,6 +56,10 @@ See: https://github.com/bitwizeshift/string_view-standalone
 
 #if !defined(_HAS_STD_STRING_VIEW)
 #  define _HAS_STD_STRING_VIEW 0
+#endif
+
+#if !defined(_HAS_CXX17)
+#  define _HAS_CXX17 _HAS_STD_STRING_VIEW
 #endif
 
 #if _HAS_STD_STRING_VIEW

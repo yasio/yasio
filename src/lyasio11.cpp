@@ -31,6 +31,8 @@ SOFTWARE.
 #include "yasio.h"
 #include "obinarystream.h"
 
+#if !_HAS_CXX17
+
 /// customize the type conversion from/to lua
 namespace kaguya
 {
@@ -97,7 +99,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
   yasio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
                                  .addFunction("channel_index", &io_event::channel_index)
                                  .addFunction("kind", &io_event::type)
-                                 .addFunction("status", &io_event::error_code)
+                                 .addFunction("status", &io_event::status)
                                  .addFunction("transport", &io_event::transport)
                                  .addStaticFunction("packet", [](io_event *ev) {
                                    return std::shared_ptr<ibinarystream>(
@@ -117,7 +119,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("dispatch_events", &io_service::dispatch_events)
           .addFunction("open", &io_service::open)
           .addOverloadedFunctions(
-              "write", &io_service::write,
+              "write",
+              static_cast<void (io_service::*)(transport_ptr transport, std::vector<char> data)>(
+                  &io_service::write),
               [](io_service *service, transport_ptr transport, obinarystream *obs) {
                 service->write(transport, obs->take_buffer());
               })
@@ -203,6 +207,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("read_i64", &ibinarystream::read_ix<int64_t>)
           .addFunction("read_u8", &ibinarystream::read_ix<uint8_t>)
           .addFunction("read_u16", &ibinarystream::read_ix<uint16_t>)
+          .addFunction("read_u24", &ibinarystream::read_u24)
           .addFunction("read_u32", &ibinarystream::read_ix<uint32_t>)
           .addFunction("read_u64", &ibinarystream::read_ix<uint64_t>)
           .addFunction("read_f", &ibinarystream::read_ix<float>)
@@ -234,3 +239,5 @@ YASIO_API int luaopen_yasio(lua_State *L)
 }
 
 } /* extern "C" */
+
+#endif

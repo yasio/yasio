@@ -31,6 +31,7 @@ SOFTWARE.
 #include "obinarystream.h"
 #include "sol.hpp"
 
+#if _HAS_CXX17
 extern "C" {
 
 YASIO_API int luaopen_yasio(lua_State *L)
@@ -38,13 +39,13 @@ YASIO_API int luaopen_yasio(lua_State *L)
   using namespace purelib::inet;
   sol::state_view sol2(L);
 
-#if 0
+#  if 0
     auto t = sol2.create_named_table("simple_timer");
     // the simple timer implementation is here: https://github.com/halx99/x-studio365/blob/master/cocos2d-x-patch/cocos/editor-support/cocostudio/ext/SimpleTimer.h
     t.set_function("delay", simple_timer::delay);
     t.set_function("loop", simple_timer::loop);
     t.set_function("kill", simple_timer::kill);
-#endif
+#  endif
   auto yasio = sol2.create_named_table("yasio");
 
   yasio.new_usertype<io_hostent>(
@@ -52,7 +53,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "host", &io_hostent::host_, "port", &io_hostent::port_);
 
   yasio.new_usertype<io_event>("io_event", "channel_index", &io_event::channel_index, "kind",
-                               &io_event::type, "status", &io_event::error_code, "transport",
+                               &io_event::type, "status", &io_event::status, "transport",
                                &io_event::transport, "packet", [](io_event *event) {
                                  return std::unique_ptr<ibinarystream>(new ibinarystream(
                                      event->packet().data(), event->packet().size()));
@@ -138,6 +139,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "read_i16", &ibinarystream::read_ix<int16_t>, "read_i24", &ibinarystream::read_i24,
       "read_i32", &ibinarystream::read_ix<int32_t>, "read_i64", &ibinarystream::read_ix<int64_t>,
       "read_u8", &ibinarystream::read_ix<uint8_t>, "read_u16", &ibinarystream::read_ix<uint16_t>,
+      "read_u24", &ibinarystream::read_u24,
       "read_u32", &ibinarystream::read_ix<uint32_t>, "read_u64", &ibinarystream::read_ix<uint64_t>,
       "read_f", &ibinarystream::read_ix<float>, "read_lf", &ibinarystream::read_ix<double>,
       "read_string", static_cast<std::string_view (ibinarystream::*)()>(&ibinarystream::read_v),
@@ -164,3 +166,5 @@ YASIO_API int luaopen_yasio(lua_State *L)
 }
 
 } /* extern "C" */
+
+#endif

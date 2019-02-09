@@ -1099,7 +1099,7 @@ bool js_yasio_io_event_status(JSContext *ctx, uint32_t argc, jsval *vp)
     cobj = (io_event *)(proxy ? proxy->ptr : nullptr);
     JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_status : Invalid Native Object");
 
-    args.rval().set(int32_to_jsval(ctx, cobj->error_code()));
+    args.rval().set(int32_to_jsval(ctx, cobj->status()));
 
     return true;
 }

@@ -430,12 +430,12 @@ public:
     switch (sa_.sa_family)
     {
       case AF_INET:
-        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), addr.length()));
+        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
         n += sprintf(&addr.front() + n, ":%u", this->port());
         break;
       case AF_INET6:
         n = strlen(
-            compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, addr.length() - 1));
+            compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
         n += sprintf(&addr.front() + n, "]:%u", this->port());
         break;
     }

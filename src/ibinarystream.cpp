@@ -45,7 +45,7 @@ ibinarystream::ibinarystream(const void* data, int size)
 ibinarystream::ibinarystream(const obinarystream* obs)
 {
     auto& buffer = obs->buffer();
-    this->assign(!buffer.empty() ? buffer.data() : "", buffer.size());
+    this->assign(!buffer.empty() ? buffer.data() : "", static_cast<int>(buffer.size()));
 }
 
 ibinarystream::~ibinarystream()
@@ -60,7 +60,7 @@ void ibinarystream::assign(const void* data, int size)
 
 int32_t ibinarystream::read_i24()
 {
-    uint32_t value = 0;
+    int32_t value = 0;
     auto ptr = consume(3);
     memcpy(&value, ptr, 3);
     value = ntohl(value) >> 8;

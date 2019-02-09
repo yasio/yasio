@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "luatest", "luatest\luatest.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yasio", "yasio\yasio.vcxproj", "{7783C512-B4B0-4210-9E3F-494D9A341672}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lyasio", "lyasio\lyasio.vcxproj", "{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +43,14 @@ Global
 		{7783C512-B4B0-4210-9E3F-494D9A341672}.Release|x64.Build.0 = Release|x64
 		{7783C512-B4B0-4210-9E3F-494D9A341672}.Release|x86.ActiveCfg = Release|Win32
 		{7783C512-B4B0-4210-9E3F-494D9A341672}.Release|x86.Build.0 = Release|Win32
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Debug|x64.ActiveCfg = Debug|x64
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Debug|x64.Build.0 = Debug|x64
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Debug|x86.ActiveCfg = Debug|Win32
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Debug|x86.Build.0 = Debug|Win32
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Release|x64.ActiveCfg = Release|x64
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Release|x64.Build.0 = Release|x64
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Release|x86.ActiveCfg = Release|Win32
+		{35971D89-4D68-46B6-8C87-D13AA7B3C2F8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

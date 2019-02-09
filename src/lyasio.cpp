@@ -56,7 +56,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                &io_event::type, "status", &io_event::status, "transport",
                                &io_event::transport, "packet", [](io_event *event) {
                                  return std::unique_ptr<ibinarystream>(new ibinarystream(
-                                     event->packet().data(), event->packet().size()));
+                                     event->packet().data(), static_cast<int>(event->packet().size())));
                                });
 
   yasio.new_usertype<io_service>(

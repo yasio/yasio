@@ -344,7 +344,7 @@ public:
   {
     if (!channel_eps.empty())
     {
-      this->start_service(&channel_eps.front(), channel_eps.size(), std::move(cb));
+      this->start_service(&channel_eps.front(), static_cast<int>(channel_eps.size()), std::move(cb));
     }
   }
 

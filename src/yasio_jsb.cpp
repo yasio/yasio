@@ -1464,11 +1464,11 @@ void register_yasio_bindings(JSContext *ctx, JS::HandleObject global)
     js_register_yasio_io_service(ctx, yasio); 
 
     // ##-- yasio enums
-#define YASIO_SET_INT_PROP(name, value) \
-    rv = INT_TO_JSVAL(value); \
-    JS_SetProperty(ctx, yasio, name, rv)
+    JS::RootedValue __jsvalIntVal(ctx);
 
-    JS::RootedValue rv(ctx);
+#define YASIO_SET_INT_PROP(name, value) \
+    __jsvalIntVal = INT_TO_JSVAL(value); \
+    JS_SetProperty(ctx, yasio, name, __jsvalIntVal)
 
     YASIO_SET_INT_PROP("CHANNEL_TCP_CLIENT", channel_type::CHANNEL_TCP_CLIENT);
     YASIO_SET_INT_PROP("CHANNEL_TCP_CLIENT", channel_type::CHANNEL_TCP_CLIENT);

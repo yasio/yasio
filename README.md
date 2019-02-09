@@ -34,11 +34,28 @@ lua intergation:
 1. Compile src\xxsocket.cpp src\yasio.cpp src\ibinarystream.cpp src\obinarystream.cpp [src\lyasio.cpp(for c++17) or src\lyasio11.cpp(for c++11)] with your project  
 2. call luaopen_masio after LUA VM initialized.  
 luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj by x-studio365 IDE  
+  
 
+#JSB integration
+cocos2d-x jsb integration:
+1. copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb.cpp with your native project  
+2. add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(register_yasio_bindings);```
+  
+CocosCreator jsb2.0 integration:
+1. copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb20.cpp with your native project  
+2. add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(register_all_yasio);```  
+  
+JS demo:
+see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js
+  
+  
 #Quick test at linux platform with gcc compiler:  
 ```g++ src/xxsocket.cpp src/yasio.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./src -o cpptest && ./cpptest```  
   
 #pitfall: For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: C/C++ --> Advance -->'Forced Include File' to it(such as pch.h).  
   
-#Unity integration showcase:  
+#Unity integration:  
+see: https://github.com/halx99/LuaFramework_UGUI  
+showcase:  
 ![image](https://github.com/halx99/mini-asio/raw/master/showcaseunity.png)
+

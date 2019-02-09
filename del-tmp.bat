@@ -11,8 +11,9 @@ rmdir /q /s msvc\yasio\Debug
 rmdir /q /s msvc\cpptest\Release
 rmdir /q /s msvc\luatest\Release
 rmdir /q /s msvc\yasio\Release
+rmdir /q /s msvc\x64
 rmdir /q /s msvc\yasio\x64
-rmdir /q /s msvc\yasio\lyasio\x64
+rmdir /q /s msvc\lyasio\x64
 del /q /f /s *.iobj
 del /q /f /s *.ipdb
 del /q /f /s *.sdf

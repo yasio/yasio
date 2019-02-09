@@ -51,8 +51,6 @@ public:
 
     template<typename _Nty>
     void read_i(_Nty& ov);
-    void read_i(float& ov);
-    void read_i(double& ov);
 
     template<typename _Nty>
     _Nty read_ix() {
@@ -108,12 +106,14 @@ inline void ibinarystream::read_i(_Nty & ov)
     ov = purelib::endian::ntohv(*((_Nty*)consume(sizeof(_Nty))));
 }
 
-inline void ibinarystream::read_i(float& ov)
+template<>
+inline void ibinarystream::read_i<float>(float& ov)
 {
     ov = ntohf(*((uint32_t*)consume(sizeof(ov))));
 }
 
-inline void ibinarystream::read_i(double& ov)
+template<>
+inline void ibinarystream::read_i<double>(double& ov)
 {
     ov = ntohd(*((uint64_t*)consume(sizeof(uint64_t))));
 }

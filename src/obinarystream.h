@@ -63,10 +63,8 @@ public:
     std::vector<char> take_buffer();
 
     template<typename _Nty>
-    size_t write_i(const _Nty value);
+    size_t write_i(_Nty value);
 
-    size_t write_i(float);
-    size_t write_i(double);
     size_t write_i24(uint32_t value); // highest byte ignored
 
     size_t write_v(std::string_view);
@@ -116,7 +114,7 @@ protected:
 };
 
 template <typename _Nty>
-inline size_t obinarystream::write_i(const _Nty value)
+inline size_t obinarystream::write_i(_Nty value)
 {
     size_t offset = buffer_.size();
     auto nv = purelib::endian::htonv(value);
@@ -124,7 +122,8 @@ inline size_t obinarystream::write_i(const _Nty value)
     return offset;
 }
 
-inline size_t obinarystream::write_i(float value)
+template <>
+inline size_t obinarystream::write_i<float>(float value)
 {
     size_t offset = buffer_.size();
     auto nv = htonf(value);
@@ -132,7 +131,8 @@ inline size_t obinarystream::write_i(float value)
     return offset;
 }
 
-inline size_t obinarystream::write_i(double value)
+template<>
+inline size_t obinarystream::write_i<double>(double value)
 {
     size_t offset = buffer_.size();
     auto nv = htond(value);

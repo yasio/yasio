@@ -36,7 +36,7 @@ lua intergation:
 luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj by x-studio365 IDE  
   
 
-#JSB integration
+#JSB integration  
 cocos2d-x jsb integration:
 1. Copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb.cpp with your native project  
 2. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(register_yasio_bindings);```, please include yasio_jsb.h firstly.

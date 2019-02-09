@@ -264,52 +264,6 @@ bool seval_to_std_vector_hostent(const se::Value& v, std::vector<inet::io_hosten
     return false;
 }
 
-#if 0
-template<typename T>
-static jsval jsb_yasio_to_jsval(JSContext *ctx, std::unique_ptr<T> value)
-{
-    auto cobj = value.release();
-    js_type_class_t *typeClass = js_get_type_from_native<T>(cobj);
-
-    // link the native object with the javascript object 
-    JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<T>::s_name()));
-
-    return OBJECT_TO_JSVAL(jsobj);
-}
-
-static jsval jsb_yasio_to_jsval(JSContext *ctx, transport_ptr value)
-{
-    auto cobj = new transport_ptr(value);
-    js_type_class_t *typeClass = js_get_type_from_native<transport_ptr>(cobj);
-
-    // link the native object with the javascript object 
-    JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<transport_ptr>::s_name()));
-
-    return OBJECT_TO_JSVAL(jsobj);
-}
-
-static transport_ptr jsb_yasio_jsval_to_transport_ptr(JSContext *ctx, const JS::HandleValue& vp)
-{
-    JS::RootedObject jsobj(ctx);
-    jsobj.set(vp.toObjectOrNull());
-    auto proxy = jsb_get_js_proxy(jsobj);
-    auto pptr = (transport_ptr *)(proxy ? proxy->ptr : nullptr);
-    if (pptr) {
-        return *pptr;
-    }
-    return nullptr;
-}
-
-static obinarystream* jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue& vp)
-{
-    JS::RootedObject jsobj(ctx);
-    jsobj.set(vp.toObjectOrNull());
-    auto proxy = jsb_get_js_proxy(jsobj);
-    return (obinarystream *)(proxy ? proxy->ptr : nullptr);
-}
-
-#endif
-
 //////////////////// common template functions //////////////
 
 template<typename T>

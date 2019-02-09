@@ -1,3 +1,7 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store
+// universal app version: 3.9.6
+//////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/pipe_select_interrupter.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -14,16 +18,6 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
-
-//#include <boost/asio/detail/config.hpp>
-//
-//#if !defined(BOOST_ASIO_WINDOWS)
-//#if !defined(BOOST_ASIO_WINDOWS_RUNTIME)
-//#if !defined(__CYGWIN__)
-//#if !defined(__SYMBIAN32__)
-//#if !defined(BOOST_ASIO_HAS_EVENTFD)
-//
-//#include <boost/asio/detail/push_options.hpp>
 
 namespace purelib {
 namespace inet {
@@ -77,11 +71,4 @@ private:
 
 # include "pipe_select_interrupter.ipp"
 
-
-//#endif // !defined(BOOST_ASIO_HAS_EVENTFD)
-//#endif // !defined(__SYMBIAN32__)
-//#endif // !defined(__CYGWIN__)
-//#endif // !defined(BOOST_ASIO_WINDOWS_RUNTIME)
-//#endif // !defined(BOOST_ASIO_WINDOWS)
-
-#endif // BOOST_ASIO_DETAIL_PIPE_SELECT_INTERRUPTER_HPP
+#endif // YASIO_PIPE_SELECT_INTERRUPTER_HPP

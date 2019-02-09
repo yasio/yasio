@@ -83,14 +83,13 @@ extern "C" {
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 #define MAX_PDU_BUFFER_SIZE                                                                        \
-  static_cast<int>(SZ(1, M)) // max pdu buffer length, avoid large memory allocation when \
-        // application layer decode a huge length field.
+  static_cast<int>(SZ(1, M)) /* max pdu buffer length, avoid large memory allocation when 
+        application layer decode a huge length field. */
 
 namespace purelib
 {
 namespace inet
 {
-
 namespace
 {
 // The high precision micro seconds timestamp

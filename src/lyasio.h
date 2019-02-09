@@ -41,8 +41,8 @@ SOFTWARE.
 #if defined(__cplusplus)
 extern "C" {
 #endif
-struct lua_State;
-YASIO_API int luaopen_yasio(lua_State *L);
+struct lua_State; 
+YASIO_API int luaopen_yasio(lua_State *L); 
 #if defined(__cplusplus)
 }
 #endif

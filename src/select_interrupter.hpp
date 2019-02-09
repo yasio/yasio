@@ -1,3 +1,7 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store
+// universal app version: 3.9.6
+//////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/select_interrupter.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,4 +46,4 @@ typedef pipe_select_interrupter select_interrupter;
 } // namespace inet
 } // namespace purelib
 
-#endif // BOOST_ASIO_DETAIL_SELECT_INTERRUPTER_HPP
+#endif // YASIO_SELECT_INTERRUPTER_HPP

@@ -1,3 +1,7 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store universal app
+// version: 3.9.6
+//////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/impl/eventfd_select_interrupter.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,4 +161,4 @@ bool eventfd_select_interrupter::reset()
 } // namespace inet
 } // namespace purelib
 
-#endif // BOOST_ASIO_DETAIL_IMPL_EVENTFD_SELECT_INTERRUPTER_IPP
+#endif // YASIO_EVENTFD_SELECT_INTERRUPTER_IPP

@@ -1,11 +1,11 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// version: 3.0
+// version: 3.9.6
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2017 halx99
+Copyright (c) 2012-2019 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -84,4 +84,4 @@ private:
 
 #include "socket_select_interrupter.ipp"
 
-#endif // BOOST_ASIO_DETAIL_SOCKET_SELECT_INTERRUPTER_HPP
+#endif // YASIO_SOCKET_SELECT_INTERRUPTER_HPP

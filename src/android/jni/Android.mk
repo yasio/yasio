@@ -18,5 +18,3 @@ LOCAL_SRC_FILES := ../../xxsocket.cpp \
 
 include $(BUILD_SHARED_LIBRARY)
 
-#$(call import-module,.)
-

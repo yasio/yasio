@@ -1,3 +1,7 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store
+// universal app version: 3.9.6
+//////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/impl/pipe_select_interrupter.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,4 +104,4 @@ bool pipe_select_interrupter::reset()
 
 
 
-#endif // BOOST_ASIO_DETAIL_IMPL_PIPE_SELECT_INTERRUPTER_IPP
+#endif // YASIO_PIPE_SELECT_INTERRUPTER_IPP

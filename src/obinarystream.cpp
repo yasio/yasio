@@ -114,7 +114,6 @@ void obinarystream::pop32(uint32_t value)
 
 obinarystream::obinarystream(const obinarystream& right) : buffer_(right.buffer_)
 {
-
 }
 
 obinarystream::obinarystream(obinarystream && right) : buffer_(std::move(right.buffer_))

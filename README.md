@@ -38,12 +38,12 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
 
 #JSB integration
 cocos2d-x jsb integration:
-1. copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb.cpp with your native project  
-2. add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(register_yasio_bindings);```
+1. Copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb.cpp with your native project  
+2. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(register_yasio_bindings);```, please include yasio_jsb.h firstly.
   
 CocosCreator jsb2.0 integration:
-1. copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb20.cpp with your native project  
-2. add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(register_all_yasio);```  
+1. Copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb20.cpp with your native project  
+2. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(register_all_yasio);``` , please include yasio_jsb20.h firstly. 
   
 JS demo:
 see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js

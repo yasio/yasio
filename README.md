@@ -33,7 +33,7 @@ cpptest: https://github.com/halx99/yasio/blob/master/msvc/cpptest/cpptest.cpp
     
 ### Lua intergation: 
 1. Compile src\xxsocket.cpp src\yasio.cpp src\ibinarystream.cpp src\obinarystream.cpp [src\lyasio.cpp(for c++17) or src\lyasio11.cpp(for c++11)] with your project  
-2. call luaopen_masio after LUA VM initialized.  
+2. call luaopen_yasio after LUA VM initialized.  
 luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj by x-studio365 IDE  
   
 

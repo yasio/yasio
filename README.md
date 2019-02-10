@@ -47,7 +47,7 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
 2. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(register_all_yasio);``` , please include yasio_jsb20.h firstly. 
   
 #### JS demo:
-see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js
+see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js  
 showcase:  
 ![image](https://github.com/halx99/yasio/raw/master/showcasejsb.jpg)  
   

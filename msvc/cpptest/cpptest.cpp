@@ -67,7 +67,7 @@ int main(int, char **) {
             break;
           }
           case YASIO_EVENT_CONNECT_RESPONSE:
-            if (event->error_code() == 0) {
+            if (event->status() == 0) {
               auto transport = event->transport();
               std::vector<char> packet;
               append_string(packet, "GET /index.htm HTTP/1.1\r\n");

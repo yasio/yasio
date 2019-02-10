@@ -401,8 +401,7 @@ static bool js_yasio_ibstream_read_string(se::State& s)
 
     auto sv = cobj->_impl.read_v();
     
-    std::string ntcs(sv.data(), sv.size());
-    s.rval().setString(ntcs.c_str());
+    s.rval().setString(std::string(sv.data(), sv.length()));
 
     return true;
 }

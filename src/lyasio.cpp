@@ -32,6 +32,26 @@ SOFTWARE.
 #include "sol.hpp"
 
 #if _HAS_CXX17
+
+namespace lyasio
+{
+class ibstream : public ibinarystream
+{
+public:
+  ibstream(std::vector<char> blob) : ibinarystream(), blob_(std::move(blob))
+  {
+    this->assign(blob_.data(), blob_.size());
+  }
+  ibstream(const obinarystream *obs) : ibinarystream(), blob_(obs->buffer())
+  {
+    this->assign(blob_.data(), blob_.size());
+  }
+
+private:
+  std::vector<char> blob_;
+};
+} // namespace lyasio
+
 extern "C" {
 
 YASIO_API int luaopen_yasio(lua_State *L)
@@ -52,12 +72,11 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "io_hostent", sol::constructors<io_hostent(), io_hostent(const std::string &, u_short)>(),
       "host", &io_hostent::host_, "port", &io_hostent::port_);
 
-  yasio.new_usertype<io_event>("io_event", "channel_index", &io_event::channel_index, "kind",
-                               &io_event::type, "status", &io_event::status, "transport",
-                               &io_event::transport, "packet", [](io_event *event) {
-                                 return std::unique_ptr<ibinarystream>(new ibinarystream(
-                                     event->packet().data(), static_cast<int>(event->packet().size())));
-                               });
+  yasio.new_usertype<io_event>(
+      "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::type, "status",
+      &io_event::status, "transport", &io_event::transport, "take_packet", [](io_event *event) {
+        return std::unique_ptr<lyasio::ibstream>(new lyasio::ibstream(event->take_packet()));
+      });
 
   yasio.new_usertype<io_service>(
       "io_service", "start_service",
@@ -102,7 +121,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
             service->write(transport, obs->take_buffer());
           }));
 
-  // ##-- obinarystream
+  // ##-- obstream
   yasio.new_usertype<obinarystream>(
       "obstream", "push32", &obinarystream::push32, "pop32",
       sol::overload(static_cast<void (obinarystream ::*)()>(&obinarystream::pop32),
@@ -129,20 +148,21 @@ YASIO_API int luaopen_yasio(lua_State *L)
       &obinarystream::length, "to_string",
       [](obinarystream *obs) { return std::string_view(obs->data(), obs->length()); });
 
-  // ##-- ibinarystream
-  yasio.new_usertype<ibinarystream>(
-      "ibstream",
-      sol::constructors<ibinarystream(), ibinarystream(const void *, int),
-                        ibinarystream(const obinarystream *)>(),
-      "read_bool", &ibinarystream::read_ix<bool>, "read_i8", &ibinarystream::read_ix<int8_t>,
-      "read_i16", &ibinarystream::read_ix<int16_t>, "read_i24", &ibinarystream::read_i24,
-      "read_i32", &ibinarystream::read_ix<int32_t>, "read_i64", &ibinarystream::read_ix<int64_t>,
-      "read_u8", &ibinarystream::read_ix<uint8_t>, "read_u16", &ibinarystream::read_ix<uint16_t>,
-      "read_u24", &ibinarystream::read_u24,
-      "read_u32", &ibinarystream::read_ix<uint32_t>, "read_u64", &ibinarystream::read_ix<uint64_t>,
-      "read_f", &ibinarystream::read_ix<float>, "read_lf", &ibinarystream::read_ix<double>,
-      "read_string", static_cast<std::string_view (ibinarystream::*)()>(&ibinarystream::read_v),
-      "to_string", [](ibinarystream *ibs) { return std::string_view(ibs->data(), ibs->size()); });
+  // ##-- lyasio::ibstream
+  yasio.new_usertype<lyasio::ibstream>(
+      "lyasio::ibstream",
+      sol::constructors<lyasio::ibstream(std::vector<char>),
+                        lyasio::ibstream(const obinarystream *)>(),
+      "read_bool", &lyasio::ibstream::read_ix<bool>, "read_i8", &lyasio::ibstream::read_ix<int8_t>,
+      "read_i16", &lyasio::ibstream::read_ix<int16_t>, "read_i24", &lyasio::ibstream::read_i24,
+      "read_i32", &lyasio::ibstream::read_ix<int32_t>, "read_i64",
+      &lyasio::ibstream::read_ix<int64_t>, "read_u8", &lyasio::ibstream::read_ix<uint8_t>,
+      "read_u16", &lyasio::ibstream::read_ix<uint16_t>, "read_u24", &lyasio::ibstream::read_u24,
+      "read_u32", &lyasio::ibstream::read_ix<uint32_t>, "read_u64",
+      &lyasio::ibstream::read_ix<uint64_t>, "read_f", &lyasio::ibstream::read_ix<float>, "read_lf",
+      &lyasio::ibstream::read_ix<double>, "read_string",
+      static_cast<std::string_view (lyasio::ibstream::*)()>(&lyasio::ibstream::read_v), "to_string",
+      [](lyasio::ibstream *ibs) { return std::string_view(ibs->data(), ibs->size()); });
 
   // ##-- yasio enums
   yasio["CHANNEL_TCP_CLIENT"]           = channel_type::CHANNEL_TCP_CLIENT;

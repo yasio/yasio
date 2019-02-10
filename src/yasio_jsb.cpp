@@ -440,7 +440,7 @@ static bool js_yasio_ibstream_read_u24(JSContext *ctx, uint32_t argc, jsval *vp)
     obj.set(args.thisv().toObjectOrNull());
     js_proxy_t *proxy = jsb_get_js_proxy(obj);
     cobj = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
-    JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_push32 : Invalid Native Object");
+    JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_u24 : Invalid Native Object");
 
     args.rval().set(UINT_TO_JSVAL(cobj->_impl.read_u24()));
 
@@ -457,7 +457,7 @@ static bool js_yasio_ibstream_read_string(JSContext *ctx, uint32_t argc, jsval *
     obj.set(args.thisv().toObjectOrNull());
     js_proxy_t *proxy = jsb_get_js_proxy(obj);
     cobj = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
-    JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_push32 : Invalid Native Object");
+    JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_string : Invalid Native Object");
 
     auto sv = cobj->_impl.read_v();
     

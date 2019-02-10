@@ -22,8 +22,6 @@ local data_partial2 = nil
 server:start_service(hostents, function(event)
         local t = event:kind()
         if t == yasio.YASIO_EVENT_RECV_PACKET then
-            local packet = event:packet()
-            print(packet)
         elseif(t == yasio.YASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
             if(event:status() == 0) then
                 local transport = event:transport()
@@ -69,7 +67,7 @@ client:set_option(yasio.YASIO_OPT_LFIB_PARAMS,
 client:start_service(hostent, function(event)
     local t = event:kind()
     if t == yasio.YASIO_EVENT_RECV_PACKET then
-        local ibs = event:packet()
+        local ibs = event:take_packet()
         local msg = proto.d101(ibs)
         print(string.format('receve data from server: %s', msg.passwd))
         stopFlag = stopFlag + 1
@@ -78,7 +76,7 @@ client:start_service(hostent, function(event)
         print(result)
     elseif(t == yasio.YASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
         if(event:status() == 0) then
-            print("connect serve succeed.")
+            print("connect server succeed.")
             -- local transport = event:transport()
             -- local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
             -- client:write(transport, obs)
@@ -99,9 +97,9 @@ httpclient:set_option(yasio.YASIO_OPT_LFIB_PARAMS, 65535, -1, 0, 0)
 httpclient:start_service(hostent, function(event)
         local t = event:kind()
         if t == yasio.YASIO_EVENT_RECV_PACKET then
-            local ibs = event:packet()
+            local ibs = event:take_packet()
             print(string.format('receve data from server: %s', ibs:to_string()))
-            -- print(packet)
+            
         elseif(t == yasio.YASIO_EVENT_CONNECT_RESPONSE) then -- connect responseType
             if(event:status() == 0) then
                 local transport = event:transport()

@@ -33,6 +33,25 @@ SOFTWARE.
 
 #if !_HAS_CXX17
 
+namespace lyasio
+{
+class ibstream : public ibinarystream
+{
+public:
+  ibstream(std::vector<char> blob) : ibinarystream(), blob_(std::move(blob))
+  {
+    this->assign(blob_.data(), blob_.size());
+  }
+  ibstream(const obinarystream *obs) : ibinarystream(), blob_(obs->buffer())
+  {
+    this->assign(blob_.data(), blob_.size());
+  }
+
+private:
+  std::vector<char> blob_;
+};
+} // namespace lyasio
+
 /// customize the type conversion from/to lua
 namespace kaguya
 {
@@ -101,9 +120,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                  .addFunction("kind", &io_event::type)
                                  .addFunction("status", &io_event::status)
                                  .addFunction("transport", &io_event::transport)
-                                 .addStaticFunction("packet", [](io_event *ev) {
-                                   return std::shared_ptr<ibinarystream>(
-                                       new ibinarystream(ev->packet().data(), ev->packet().size()));
+                                 .addStaticFunction("take_packet", [](io_event *ev) {
+                                   return std::shared_ptr<lyasio::ibstream>(
+                                       new lyasio::ibstream(ev->take_packet()));
                                  }));
 
   yasio["io_service"].setClass(
@@ -193,7 +212,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
           }));
 
   // ##-- ibinarystream
-  yasio["ibstream"].setClass(
+  yasio["ibinarystream"].setClass(
       kaguya::UserdataMetatable<ibinarystream>()
           .setConstructors<ibinarystream(), ibinarystream(const void *, int),
                            ibinarystream(const obinarystream *)>()
@@ -215,6 +234,11 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addStaticFunction("to_string", [](ibinarystream *ibs) {
             return std::string_view(ibs->data(), ibs->size());
           }));
+
+  // ##-- ibstream
+  state["ibstream"].setClass(kaguya::UserdataMetatable<lyasio::ibstream, ibinarystream>()
+                                 .setConstructors<lyasio::ibstream(std::vector<char>),
+                                                  lyasio::ibstream(const obinarystream *)>());
 
   // ##-- yasio enums
   yasio["CHANNEL_TCP_CLIENT"]           = channel_type::CHANNEL_TCP_CLIENT;

@@ -109,14 +109,20 @@ namespace yasio_jsb {
         Application::getInstance()->getScheduler()->unschedule(key, timerId);
     }
 
-    class ibstream {
+    class ibstream : public ibinarystream
+    {
     public:
-        ibstream(std::vector<char> data) : _buf(std::move(data)){
-            _impl.assign(_buf.data(), _buf.size());
+        ibstream(std::vector<char> blob) : ibinarystream(), blob_(std::move(blob))
+        {
+            this->assign(blob_.data(), blob_.size());
         }
-        std::vector<char> _buf;
-    public:
-        ibinarystream _impl;
+        ibstream(const obinarystream *obs) : ibinarystream(), blob_(obs->buffer())
+        {
+            this->assign(blob_.data(), blob_.size());
+        }
+
+    private:
+        std::vector<char> blob_;
     };
 }
 
@@ -300,7 +306,7 @@ static bool js_yasio_ibstream_read_bool(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    s.rval().setBoolean(cobj->_impl.read_ix<bool>());
+    s.rval().setBoolean(cobj->read_ix<bool>());
 
     return true;
 }
@@ -315,7 +321,7 @@ static bool js_yasio_ibstream_read_ix(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    s.rval().setInt32(cobj->_impl.read_ix<T>());
+    s.rval().setInt32(cobj->read_ix<T>());
 
     return true;
 }
@@ -335,7 +341,7 @@ static bool js_yasio_ibstream_read_ux(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    s.rval().setUint32(cobj->_impl.read_ix<T>());
+    s.rval().setUint32(cobj->read_ix<T>());
 
     return true;
 }
@@ -355,7 +361,7 @@ static bool js_yasio_ibstream_read_dx(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    s.rval().setNumber(double(cobj->_impl.read_ix<T>()));
+    s.rval().setNumber(double(cobj->read_ix<T>()));
 
     return true;
 }
@@ -373,7 +379,7 @@ static bool js_yasio_ibstream_read_i24(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    s.rval().setInt32(cobj->_impl.read_i24());
+    s.rval().setInt32(cobj->read_i24());
      
     return true;
 }
@@ -386,7 +392,7 @@ static bool js_yasio_ibstream_read_u24(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    s.rval().setUint32(cobj->_impl.read_u24());
+    s.rval().setUint32(cobj->read_u24());
 
     return true;
 }
@@ -399,7 +405,7 @@ static bool js_yasio_ibstream_read_string(se::State& s)
     const auto& args = s.args();
     size_t argc = args.size();
 
-    auto sv = cobj->_impl.read_v();
+    auto sv = cobj->read_v();
     
     s.rval().setString(std::string(sv.data(), sv.length()));
 

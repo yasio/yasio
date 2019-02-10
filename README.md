@@ -48,6 +48,8 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
   
 #### JS demo:
 see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js
+showcase:  
+![image](https://github.com/halx99/yasio/raw/master/showcasejsb.jpg)  
   
   
 ## Quick test at linux platform with gcc compiler:  
@@ -59,5 +61,5 @@ For Microsoft Visual Studio, if your project has specific precompiled header, yo
 ## Unity tolua integration:  
 see: https://github.com/halx99/LuaFramework_UGUI  
 showcase:  
-![image](https://github.com/halx99/mini-asio/raw/master/showcaseunity.png)
+![image](https://github.com/halx99/yasio/raw/master/showcaseunity.png)  
 

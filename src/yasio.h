@@ -47,7 +47,6 @@ SOFTWARE.
 #include "string_view.hpp"
 
 #define _USING_ARES_LIB 0
-#define _USING_SHARED_PTR 1
 #define _USING_OBJECT_POOL 1
 
 #if !defined(_ARRAYSIZE)
@@ -134,11 +133,7 @@ static const int socket_recv_buffer_size = 65536; // 64K
 
 class a_pdu; // application layer protocol data unit.
 
-#if _USING_SHARED_PTR
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
-#else
-typedef a_pdu *a_pdu_ptr;
-#endif
 
 class io_service;
 

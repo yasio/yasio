@@ -50,6 +50,13 @@ function yasioTest() {
   var yclient = new yasio.io_service();
 
   var tsport_c = null;
+  yclient.set_option(yasio.YASIO_OPT_LFIB_PARAMS, 
+    65535, -- maxFrameLength, 最大包长度
+    0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
+    4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
+    0 -- lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
+);
+
   yclient.start_service({ host: "127.0.0.1", port: 8081 }, function (event) {
     var kind = event.kind();
     if (kind == yasio.YASIO_EVENT_CONNECT_RESPONSE) {

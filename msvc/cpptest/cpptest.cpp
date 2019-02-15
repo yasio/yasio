@@ -50,7 +50,7 @@ void yasioTest()
   service.set_option(YASIO_OPT_RESOLV_FUNCTION, &resolv);
 
 
-  std::vector<std::shared_ptr<io_transport>> transports;
+  std::vector<transport_ptr> transports;
   service.set_option(YASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
   service.set_option(YASIO_OPT_LOG_FILE, "yasio.log");
 

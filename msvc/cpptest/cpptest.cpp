@@ -18,14 +18,10 @@ template <size_t _Size> void append_string(std::vector<char> &packet, const char
   packet.insert(packet.end(), message, message + _Size - 1);
 }
 
-int main(int, char **)
+void yasioTest()
 {
-  purelib::inet::io_hostent endpoints[] = {{"203.162.71.67", 80} // http client
-                                           ,
-                                           {"www.ip138.com", 80}
-                                           //  { "www.ip138.com", 80 },  // http client
-                                           ,
-                                           {"192.168.103.183", 59281},
+  purelib::inet::io_hostent endpoints[] = {{"www.ip138.com", 80},       // http client
+                                           {"192.168.103.183", 59281},  // udp server
                                            {"192.168.103.183", 59281}}; // udp client
 
   obinarystream obs;
@@ -43,23 +39,24 @@ int main(int, char **)
   auto v3 = ibs.read_i24();
   auto v4 = ibs.read_i24();
 
-  myasio->set_option(YASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
+  io_service service;
 
-  resolv_fn_t resolv = [](std::vector<ip::endpoint> &endpoints, const char *hostname,
-                          unsigned short port) {
-    return myasio->resolve(endpoints, hostname, port);
+  service.set_option(YASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
+
+  resolv_fn_t resolv = [&](std::vector<ip::endpoint> &endpoints, const char *hostname,
+                           unsigned short port) {
+    return service.resolve(endpoints, hostname, port);
   };
-  myasio->set_option(YASIO_OPT_RESOLV_FUNCTION, &resolv);
+  service.set_option(YASIO_OPT_RESOLV_FUNCTION, &resolv);
 
-  deadline_timer t0(*myasio);
 
   std::vector<std::shared_ptr<io_transport>> transports;
-  myasio->set_option(YASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
-  myasio->set_option(YASIO_OPT_LOG_FILE, "yasio.log");
+  service.set_option(YASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
+  service.set_option(YASIO_OPT_LOG_FILE, "yasio.log");
 
-  transport_ptr transport2;
-  transport_ptr transport3;
-  myasio->start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
+  deadline_timer udpconn_delay(service);
+  deadline_timer udp_heartbeat(service);
+  service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
     switch (event->type())
     {
       case YASIO_EVENT_RECV_PACKET:
@@ -67,38 +64,46 @@ int main(int, char **)
         auto packet = event->take_packet();
         packet.push_back('\0');
         printf("index:%d, receive data:%s", event->transport()->channel_index(), packet.data());
+        if (event->channel_index() == 1)
+        { // response udp client
+          std::vector<char> packet;
+          append_string(packet, "hello udp client!\n");
+          service.write(event->transport(), std::move(packet));
+        }
         break;
       }
       case YASIO_EVENT_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
-          if (event->channel_index() == 3)
-            transport3 = event->transport();
+          auto transport = event->transport();
+          if (event->channel_index() == 0)
+          {
+            std::vector<char> packet;
+            append_string(packet, "GET /index.htm HTTP/1.1\r\n");
 
+            append_string(packet, "Host: www.ip138.com\r\n");
+
+            append_string(packet, "User-Agent: Mozilla/5.0 (Windows NT 10.0; "
+                                  "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                                  "Chrome/51.0.2704.106 Safari/537.36\r\n");
+            append_string(packet, "Accept: */*;q=0.8\r\n");
+            append_string(packet, "Connection: Close\r\n\r\n");
+
+            service.write(transport, std::move(packet));
+          }
           else if (event->channel_index() == 2)
-            transport2 = event->transport();
+          { // Sends message to server every per 3 seconds.
+            udp_heartbeat.expires_from_now(std::chrono::seconds(1), 3);
+            udp_heartbeat.async_wait([&service, transport](bool) { // called at network thread
+              std::vector<char> packet;
+              append_string(packet, "hello udp server!\n");
+              service.write(transport, std::move(packet));
+            });
+          }
+
+          
+          transports.push_back(transport);
         }
-        // if (event->status() == 0)
-        //{
-        //  auto transport = event->transport();
-        //  std::vector<char> packet;
-        //  append_string(packet, "GET /index.htm HTTP/1.1\r\n");
-        //
-        //  if (transport->channel_index() == 0)
-        //    append_string(packet, "Host: 203.162.71.67\r\n");
-        //  else
-        //    append_string(packet, "Host: www.ip138.com\r\n");
-        //
-        //  append_string(packet, "User-Agent: Mozilla/5.0 (Windows NT 10.0; "
-        //                        "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
-        //                        "Chrome/51.0.2704.106 Safari/537.36\r\n");
-        //  append_string(packet, "Accept: */*;q=0.8\r\n");
-        //  append_string(packet, "Connection: Close\r\n\r\n");
-        //
-        //  transports.push_back(transport);
-        //
-        //  myasio->write(transport, std::move(packet));
-        //}
         break;
       case YASIO_EVENT_CONNECTION_LOST:
         printf("The connection is lost(user end)!\n");
@@ -107,35 +112,23 @@ int main(int, char **)
   });
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  // myasio->open(0);
-  // myasio->open(1);
-  myasio->open(2, CHANNEL_UDP_SERVER);
+  service.open(0); // open http client
+  service.open(1, CHANNEL_UDP_SERVER); // open udp server
 
-  deadline_timer t1(*myasio);
-  t0.expires_from_now(std::chrono::seconds(3));
-  t0.async_wait([&](bool) { // called at network thread
-    printf("open channel 3 to connect udp server.\n");
-    myasio->open(3, CHANNEL_UDP_CLIENT);
-
-    t1.expires_from_now(std::chrono::seconds(3), true);
-    t1.async_wait([&](bool) { // called at network thread
-      std::vector<char> packet;
-      append_string(packet, "hello server!\n");
-      myasio->write(transport3, std::move(packet));
-
-      append_string(packet, "hello client!\n");
-      myasio->write(transport2, std::move(packet));
-    });
+  udpconn_delay.expires_from_now(std::chrono::seconds(3));
+  udpconn_delay.async_wait([&](bool) { // called at network thread
+    printf("Open channel 2 to connect udp server.\n");
+    service.open(2, CHANNEL_UDP_CLIENT); // open udp client
   });
 
   time_t duration = 0;
   while (true)
   {
-    myasio->dispatch_events();
-    if (duration >= 600000)
+    service.dispatch_events();
+    if (duration >= 60000)
     {
       for (auto transport : transports)
-        myasio->close(transport);
+        service.close(transport);
       break;
     }
     duration += 50;
@@ -143,8 +136,11 @@ int main(int, char **)
   }
 
   std::this_thread::sleep_for(std::chrono::seconds(60));
+}
 
-  myasio->stop_service();
+int main(int, char **)
+{
+  yasioTest();
 
   return 0;
 }

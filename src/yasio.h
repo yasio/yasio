@@ -60,8 +60,14 @@ namespace inet
 {
 enum channel_type
 {
-  CHANNEL_TCP_CLIENT = 1,
-  CHANNEL_TCP_SERVER = 2,
+  CHANNEL_CLIENT     = 1,
+  CHANNEL_SERVER     = 1 << 1,
+  CHANNEL_TCP        = 1 << 2,
+  CHANNEL_UDP        = 1 << 3,
+  CHANNEL_TCP_CLIENT = CHANNEL_TCP | CHANNEL_CLIENT,
+  CHANNEL_TCP_SERVER = CHANNEL_TCP | CHANNEL_SERVER,
+  CHANNEL_UDP_CLIENT = CHANNEL_UDP | CHANNEL_CLIENT,
+  CHANNEL_UDP_SERVER = CHANNEL_UDP | CHANNEL_SERVER,
 };
 
 enum class channel_state
@@ -278,8 +284,9 @@ public:
   io_event(int channel_index, int type, int error, transport_ptr transport)
       : channel_index_(channel_index), type_(type), status_(error), transport_(std::move(transport))
   {}
-  io_event(int channel_index, int type, std::vector<char> packet)
-      : channel_index_(channel_index), type_(type), status_(0), packet_(std::move(packet))
+  io_event(int channel_index, int type, std::vector<char> packet, transport_ptr transport)
+      : channel_index_(channel_index), type_(type), status_(0), packet_(std::move(packet)),
+        transport_(std::move(transport))
   {}
   io_event(io_event &&rhs)
       : channel_index_(rhs.channel_index_), type_(rhs.type_), status_(rhs.status_),
@@ -414,7 +421,7 @@ private:
   bool do_nonblocking_connect(io_channel *);
   bool do_nonblocking_connect_completion(fd_set *fds_array, io_channel *);
 
-  void handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
+  transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(io_channel *, int error);
 
   void register_descriptor(const socket_native_type fd, int flags);

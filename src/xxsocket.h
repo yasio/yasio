@@ -403,7 +403,7 @@ public:
 
   void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
 
-  void address(const char *addr)
+  void ip(const char *addr)
   {
     /*
      * Windows XP no inet_pton or inet_ntop

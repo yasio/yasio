@@ -1178,21 +1178,23 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 {
   transport_ptr transport(new io_transport(ctx));
 
-  if (ctx->type_ == CHANNEL_TCP_CLIENT)
-  { // The client channl
-    unregister_descriptor(socket->native_handle(),
-                          socket_event_write); // remove write event avoid
+  if (ctx->type_ & CHANNEL_CLIENT)
+  {
+    ctx->state_ = channel_state::CONNECTED;
 
-    // apply tcp keepalive options
-    if (options_.tcp_keepalive.onoff)
-    {
-      socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                            options_.tcp_keepalive.probs);
+    if (ctx->type_ & CHANNEL_TCP)
+    { // The tcp client channl
+      // remove write event avoid high-CPU occupation
+      unregister_descriptor(socket->native_handle(), socket_event_write);
+
+      // apply tcp keepalive options
+      if (options_.tcp_keepalive.onoff)
+      {
+        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                              options_.tcp_keepalive.probs);
+      }
     }
-  }
-
-  // high-CPU occupation
-  ctx->state_ = channel_state::CONNECTED;
+  } // else server channel, always CONNECTING to wait next client connect.
 
   transport->socket_ = socket;
   this->transports_.push_back(transport);
@@ -1395,7 +1397,7 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
 
   transport->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
   if (transport->offset_ >= 0)
-  {                       // pdu received properly
+  {                             // pdu received properly
     if (transport->offset_ > 0) // move remain data to head of buffer and hold offset.
     {
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);

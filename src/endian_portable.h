@@ -7,7 +7,7 @@
 #  if defined(_DEBUG)
 #    define ASSERT(exp) assert(exp)
 #  else
-#    define ASSERT(exp) ((VOID)0)
+#    define ASSERT(exp) ((void)0)
 #  endif
 #endif
 

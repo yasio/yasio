@@ -54,7 +54,6 @@ void socket_select_interrupter::open_descriptors()
     // return 0.0.0.0 when the socket is actually bound to 127.0.0.1. We
     // explicitly specify the target address here to work around this problem.
     // addr.sin_addr.s_addr = socket_ops::host_to_network_long(INADDR_LOOPBACK);
-    // cp.address("127.0.0.1");
     ep.ip("127.0.0.1");
     error = acceptor.listen();
 

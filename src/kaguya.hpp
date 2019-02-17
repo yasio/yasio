@@ -94,7 +94,7 @@ extern "C" {
 #endif
 
 #ifndef KAGUYA_USE_CXX_ABI_DEMANGLE
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) && !defined(__clang__) // || defined(__clang__) // Fix crash, clang at android does not support
 #define KAGUYA_USE_CXX_ABI_DEMANGLE 1
 #else
 #define KAGUYA_USE_CXX_ABI_DEMANGLE 0
@@ -4402,7 +4402,10 @@ inline std::string pretty_name(const std::type_info &t) {
     deleter(char *d) : data(d) {}
     ~deleter() { std::free(data); }
   } d(demangle_name);
-  return demangle_name;
+  if(demangle_name != nullptr)
+    return demangle_name;
+  else
+    return t.name();
 #else
   return t.name();
 #endif

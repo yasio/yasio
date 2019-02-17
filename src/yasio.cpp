@@ -1164,7 +1164,7 @@ void io_service::do_nonblocking_accept_completion(fd_set *fds_array, io_channel 
                 INET_LOG("udp-server: bind a random local port: %s", localep.to_string().c_str());
                 client_sock->set_nonblocking(true);
                 register_descriptor(client_sock->native_handle(), socket_event_read);
-                auto transport = handle_connect_succeed(ctx, client_sock);
+                handle_connect_succeed(ctx, client_sock);
                 // Sends new local port as ACK to peer.
                 auto local_port_netval = htons(localep.port());
                 ctx->socket_->sendto_i(&local_port_netval, sizeof(local_port_netval), peer);
@@ -1185,7 +1185,7 @@ void io_service::do_nonblocking_accept_completion(fd_set *fds_array, io_channel 
   }
 }
 
-transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport(new io_transport(ctx));
 
@@ -1217,8 +1217,6 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
-
-  return transport;
 }
 
 void io_service::handle_connect_failed(io_channel *ctx, int error)

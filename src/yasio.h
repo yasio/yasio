@@ -423,7 +423,7 @@ private:
   bool do_nonblocking_connect(io_channel *);
   bool do_nonblocking_connect_completion(fd_set *fds_array, io_channel *);
 
-  transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
+  void handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(io_channel *, int error);
 
   void register_descriptor(const socket_native_type fd, int flags);

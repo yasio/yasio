@@ -998,6 +998,6 @@ namespace net = inet;
 #pragma warning(pop)
 
 /*
- * Copyright (c) 2012-2018, HALX99, ALL RIGHTS RESERVED.
+ * Copyright (c) 2012-2019, HALX99, ALL RIGHTS RESERVED.
  * Consult your license regarding permissions and restrictions.
  **/

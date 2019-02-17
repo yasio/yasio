@@ -587,7 +587,7 @@ static int getipsv_internal(void)
 
 int xxsocket::getipsv(void) { return getipsv_internal(); }
 
-int xxsocket::xpconnect(const char *hostname, u_short port)
+int xxsocket::xpconnect(const char *hostname, u_short port, u_short local_port)
 {
   auto flags = getipsv();
 
@@ -600,19 +600,19 @@ int xxsocket::xpconnect(const char *hostname, u_short port)
           case AF_INET:
             if (flags & ipsv_ipv4)
             {
-              error = pconnect(ep);
+              error = pconnect(ep, local_port);
             }
             else if (flags & ipsv_ipv6)
             {
               xxsocket::resolve_i(
-                  [&](const ip::endpoint &ep6) { return 0 == (error = pconnect(ep6)); }, hostname,
-                  port, AF_INET6, AI_V4MAPPED);
+                  [&](const ip::endpoint &ep6) { return 0 == (error = pconnect(ep6, local_port)); },
+                  hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
           case AF_INET6:
             if (flags & ipsv_ipv6)
             {
-              error = pconnect(ep);
+              error = pconnect(ep, local_port);
             }
             break;
         }
@@ -625,7 +625,7 @@ int xxsocket::xpconnect(const char *hostname, u_short port)
 }
 
 int xxsocket::xpconnect_n(const char *hostname, u_short port,
-                          const std::chrono::microseconds &wtimeout)
+                          const std::chrono::microseconds &wtimeout, u_short local_port)
 {
   auto flags = getipsv();
 
@@ -638,19 +638,21 @@ int xxsocket::xpconnect_n(const char *hostname, u_short port,
           case AF_INET:
             if (flags & ipsv_ipv4)
             {
-              error = pconnect_n(ep, wtimeout);
+              error = pconnect_n(ep, wtimeout, local_port);
             }
             else if (flags & ipsv_ipv6)
             {
               xxsocket::resolve_i(
-                  [&](const ip::endpoint &ep6) { return 0 == (error = pconnect_n(ep6, wtimeout)); },
+                  [&](const ip::endpoint &ep6) {
+                    return 0 == (error = pconnect_n(ep6, wtimeout, local_port));
+                  },
                   hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
           case AF_INET6:
             if (flags & ipsv_ipv6)
             {
-              error = pconnect_n(ep, wtimeout);
+              error = pconnect_n(ep, wtimeout, local_port);
             }
             break;
         }
@@ -662,58 +664,66 @@ int xxsocket::xpconnect_n(const char *hostname, u_short port,
   return error;
 }
 
-int xxsocket::pconnect(const char *hostname, u_short port)
-{
-  int error = -1;
-  xxsocket::resolve_i([&](const ip::endpoint &ep) { return 0 == (error = pconnect(ep)); }, hostname,
-                      port);
-  return error;
-}
-
-int xxsocket::pconnect_n(const char *hostname, u_short port,
-                         const std::chrono::microseconds &wtimeout)
+int xxsocket::pconnect(const char *hostname, u_short port, u_short local_port)
 {
   int error = -1;
   xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) { return 0 == (error = pconnect_n(ep, wtimeout)); }, hostname,
+      [&](const ip::endpoint &ep) { return 0 == (error = pconnect(ep, local_port)); }, hostname,
       port);
   return error;
 }
 
-int xxsocket::pconnect_n(const char *hostname, u_short port)
+int xxsocket::pconnect_n(const char *hostname, u_short port,
+                         const std::chrono::microseconds &wtimeout, u_short local_port)
+{
+  int error = -1;
+  xxsocket::resolve_i(
+      [&](const ip::endpoint &ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
+      hostname, port);
+  return error;
+}
+
+int xxsocket::pconnect_n(const char *hostname, u_short port, u_short local_port)
 {
   int error = -1;
   xxsocket::resolve_i(
       [&](const ip::endpoint &ep) {
-        (error = pconnect_n(ep));
+        (error = pconnect_n(ep, local_port));
         return true;
       },
       hostname, port);
   return error;
 }
 
-int xxsocket::pconnect(const ip::endpoint &ep)
+int xxsocket::pconnect(const ip::endpoint &ep, u_short local_port)
 {
   if (this->reopen(ep.af()))
   {
+    if (local_port != 0)
+      this->bind("0.0.0.0", local_port);
     return this->connect(ep);
   }
   return -1;
 }
 
-int xxsocket::pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout)
+int xxsocket::pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout,
+                         u_short local_port)
 {
   if (this->reopen(ep.af()))
   {
+    if (local_port != 0)
+      this->bind("0.0.0.0", local_port);
     return this->connect_n(ep, wtimeout);
   }
   return -1;
 }
 
-int xxsocket::pconnect_n(const ip::endpoint &ep)
+int xxsocket::pconnect_n(const ip::endpoint &ep, u_short local_port)
 {
   if (this->reopen(ep.af()))
   {
+    if (local_port != 0)
+      this->bind("0.0.0.0", local_port);
     return xxsocket::connect_n(this->fd, ep);
   }
   return -1;

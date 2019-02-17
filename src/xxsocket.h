@@ -498,18 +498,21 @@ public:
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
   // for support ipv6 ONLY network.
-  int xpconnect(const char *hostname, u_short port);
-  int xpconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout);
+  int xpconnect(const char *hostname, u_short port, u_short local_port = 0);
+  int xpconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout,
+                  u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  int pconnect(const char *hostname, u_short port);
-  int pconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout);
-  int pconnect_n(const char *hostname, u_short port);
+  int pconnect(const char *hostname, u_short port, u_short local_port = 0);
+  int pconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout,
+                 u_short local_port = 0);
+  int pconnect_n(const char *hostname, u_short port, u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  int pconnect(const ip::endpoint &ep);
-  int pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout);
-  int pconnect_n(const ip::endpoint &ep);
+  int pconnect(const ip::endpoint &ep, u_short local_port = 0);
+  int pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout,
+                 u_short local_port = 0);
+  int pconnect_n(const ip::endpoint &ep, u_short local_port = 0);
 
   // easy to create a tcp ipv4 or ipv6 server socket.
   int pserv(const char *addr, u_short port);

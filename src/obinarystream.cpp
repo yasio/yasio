@@ -140,32 +140,18 @@ size_t obinarystream::write_v(std::string_view value)
 {
   return write_v(value.data(), static_cast<int>(value.size()));
 }
-
+size_t obinarystream::write_v16(std::string_view value)
+{
+  return write_v16(value.data(), static_cast<int>(value.size()));
+}
 size_t obinarystream::write_v8(std::string_view value)
 {
   return write_v8(value.data(), static_cast<int>(value.size()));
 }
 
-size_t obinarystream::write_v16(std::string_view value)
-{
-  return write_v16(value.data(), static_cast<int>(value.size()));
-}
-
-size_t obinarystream::write_v32(std::string_view value)
-{
-  return write_v32(value.data(), static_cast<int>(value.size()));
-}
-
-size_t obinarystream::write_v(const void *v, int size)
-{
-  return write_vx<LENGTH_FIELD_TYPE>(v, size);
-}
-
-size_t obinarystream::write_v8(const void *v, int size) { return write_vx<uint8_t>(v, size); }
-
+size_t obinarystream::write_v(const void *v, int size) { return write_vx<uint32_t>(v, size); }
 size_t obinarystream::write_v16(const void *v, int size) { return write_vx<uint16_t>(v, size); }
-
-size_t obinarystream::write_v32(const void *v, int size) { return write_vx<uint32_t>(v, size); }
+size_t obinarystream::write_v8(const void *v, int size) { return write_vx<uint8_t>(v, size); }
 
 size_t obinarystream::write_bytes(std::string_view v)
 {

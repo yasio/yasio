@@ -66,16 +66,17 @@ public:
 
   size_t write_i24(uint32_t value); // highest byte ignored
 
+  /* 32 bits length field */
   size_t write_v(std::string_view);
-  size_t write_v8(std::string_view);
+  /* 16 bits length field */
   size_t write_v16(std::string_view);
-  size_t write_v32(std::string_view);
+  /* 8 bits length field */
+  size_t write_v8(std::string_view);
 
   size_t write_v(const void *v, int size);
-  size_t write_v8(const void *v, int size);
   size_t write_v16(const void *v, int size);
-  size_t write_v32(const void *v, int size);
-
+  size_t write_v8(const void *v, int size);
+ 
   size_t write_bytes(std::string_view);
   size_t write_bytes(const void *v, int vl);
 

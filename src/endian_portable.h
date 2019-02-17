@@ -163,9 +163,7 @@ inline unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, u
 
 }; // namespace purelib
 
-#define LENGTH_FIELD_TYPE uint32_t
-
 /*
- * Copyright (c) 2012-2018 by HALX99  ALL RIGHTS RESERVED.
+ * Copyright (c) 2012-2019 by HALX99  ALL RIGHTS RESERVED.
  * Consult your license regarding permissions and restrictions.
  **/

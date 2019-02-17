@@ -1310,7 +1310,7 @@ int xxsocket::recvfrom_i(void *buf, int len, ip::endpoint &from, int flags) cons
   return ::recvfrom(this->fd, (char *)buf, len, flags, &from.sa_, &addrlen);
 }
 
-int xxsocket::sendto_i(const void *buf, int len, ip::endpoint &to, int flags) const
+int xxsocket::sendto_i(const void *buf, int len, const ip::endpoint &to, int flags) const
 {
   return ::sendto(this->fd, (const char *)buf, len, flags, &to.sa_, sizeof(to));
 }
@@ -1342,14 +1342,19 @@ int xxsocket::handle_connect_ready(socket_native_type s, timeval *timeo)
   return -1;
 }
 
-int xxsocket::handle_read_ready(timeval *timeo) const
+int xxsocket::handle_read_ready(const std::chrono::microseconds &wtimeout) const
 {
-  /*fd_set fds_rd;
-  FD_ZERO(&fds_rd);
-  FD_SET(this->fd, &fds_rd);
-  int ret = ::select(this->fd + 1, &fds_rd, nullptr, nullptr, timeo);
-  return ret;*/
-  return handle_read_ready(this->fd, timeo);
+  return handle_read_ready(this->fd, wtimeout);
+}
+
+int xxsocket::handle_read_ready(timeval *timeo) const { return handle_read_ready(this->fd, timeo); }
+
+int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microseconds &wtimeout)
+{
+  timeval timeout;
+  timeout.tv_sec  = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
+  timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
+  return handle_read_ready(s, &timeout);
 }
 
 int xxsocket::handle_read_ready(socket_native_type s, timeval *timeo)

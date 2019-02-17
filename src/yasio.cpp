@@ -392,6 +392,15 @@ void io_service::set_option(int option, ...)
     case YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->xdec_len_ = std::move(*va_arg(ap, decode_frame_length_fn_t *));
       break;
+    case YASIO_OPT_CHANNEL_LOCAL_PORT:
+    {
+      int index = va_arg(ap, int);
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
+      }
+    }
+    break;
   }
 
   va_end(ap);
@@ -889,6 +898,8 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
       if (ctx->socket_->reopen(ep.af()))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+        if (ctx->local_port_ != 0)
+          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
         ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
       }
 

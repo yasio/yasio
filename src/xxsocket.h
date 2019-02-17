@@ -430,12 +430,13 @@ public:
     switch (sa_.sa_family)
     {
       case AF_INET:
-        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
+        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(),
+                                     static_cast<socklen_t>(addr.length())));
         n += sprintf(&addr.front() + n, ":%u", this->port());
         break;
       case AF_INET6:
-        n = strlen(
-            compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
+        n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1,
+                                     static_cast<socklen_t>(addr.length() - 1)));
         n += sprintf(&addr.front() + n, "]:%u", this->port());
         break;
     }
@@ -465,6 +466,10 @@ public:
   }
   unsigned short port(void) const { return ntohs(in4_.sin_port); }
   void port(unsigned short value) { in4_.sin_port = htons(value); }
+
+  bool operator<(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
+  bool operator==(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
+
   sockaddr sa_;
   sockaddr_in in4_;
   sockaddr_in6 in6_;
@@ -738,7 +743,7 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  int sendto_i(const void *buf, int len, ip::endpoint &to, int flags = 0) const;
+  int sendto_i(const void *buf, int len, const ip::endpoint &to, int flags = 0) const;
 
   /* @brief: Receives a datagram and stores the source address
   ** @params: omit
@@ -754,7 +759,10 @@ public:
   static int handle_write_ready(socket_native_type s, timeval *timeo);
   static int handle_connect_ready(socket_native_type s, timeval *timeo);
 
+  int handle_read_ready(const std::chrono::microseconds &wtimeout) const;
   int handle_read_ready(timeval *timeo) const;
+
+  static int handle_read_ready(socket_native_type s, const std::chrono::microseconds &wtimeout);
   static int handle_read_ready(socket_native_type s, timeval *timeo);
 
   /* @brief: Get local address info

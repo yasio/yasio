@@ -124,6 +124,7 @@ enum
   YASIO_OPT_LFIB_PARAMS,
   YASIO_OPT_IO_EVENT_CALLBACK,
   YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
+  YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -187,13 +188,9 @@ public:
 struct io_hostent
 {
   io_hostent() {}
-  io_hostent(std::string_view ip, u_short port)
-      : host_(ip.data(), ip.length()), port_(port)
-  {}
-  io_hostent(io_hostent&& rhs) : host_(std::move(rhs.host_)), port_(rhs.port_)
-  {}
-  io_hostent(const io_hostent& rhs) : host_(rhs.host_), port_(rhs.port_)
-  {}
+  io_hostent(std::string_view ip, u_short port) : host_(ip.data(), ip.length()), port_(port) {}
+  io_hostent(io_hostent &&rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
+  io_hostent(const io_hostent &rhs) : host_(rhs.host_), port_(rhs.port_) {}
   void set_ip(const std::string &value) { host_ = value; }
   const std::string &get_ip() const { return host_; }
   void set_port(u_short port) { port_ = port; }
@@ -215,6 +212,9 @@ struct io_channel : public io_base
   io_channel(io_service &service);
 
   int type_ = 0;
+
+  // specific local port, if not zero, tcp/udp client will use it as fixed port
+  u_short local_port_ = 0;
 
   std::string host_;
   u_short port_;
@@ -346,7 +346,8 @@ public:
   {
     if (!channel_eps.empty())
     {
-      this->start_service(&channel_eps.front(), static_cast<int>(channel_eps.size()), std::move(cb));
+      this->start_service(&channel_eps.front(), static_cast<int>(channel_eps.size()),
+                          std::move(cb));
     }
   }
 
@@ -372,6 +373,7 @@ public:
              YASIO_OPT_LFIB_PARAMS max_frame_length:int, length_field_offst:int,
      length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
+             YASIO_OPT_CHANNEL_FLAGS  index:int, flags:int
   */
   void set_option(int option, ...);
 
@@ -390,7 +392,7 @@ public:
   bool is_connected(size_t cahnnel_index = 0) const;
 
   void write(transport_ptr transport, std::vector<char> data);
-  void write(io_transport* transport, std::vector<char> data);
+  void write(io_transport *transport, std::vector<char> data);
 
   // timer support
   void schedule_timer(deadline_timer *);
@@ -462,8 +464,8 @@ private:
 
   // -1 indicate failed, connection will be closed
   int builtin_decode_frame_length(void *ptr, int len);
-  
-  static const char* strerror(int error);
+
+  static const char *strerror(int error);
 
 private:
   bool stopping_;

@@ -36,115 +36,112 @@ SOFTWARE.
 class obinarystream
 {
 public:
-    obinarystream(size_t buffersize = 256);
-    obinarystream(const obinarystream& right);
-    obinarystream(obinarystream&& right);
-    ~obinarystream();
+  obinarystream(size_t buffersize = 256);
+  obinarystream(const obinarystream &right);
+  obinarystream(obinarystream &&right);
+  ~obinarystream();
 
-    void push8();
-    void pop8();
-    void pop8(uint8_t);
+  void push8();
+  void pop8();
+  void pop8(uint8_t);
 
-    void push16();
-    void pop16();
-    void pop16(uint16_t);
+  void push16();
+  void pop16();
+  void pop16(uint16_t);
 
-    void push24();
-    void pop24();
-    void pop24(uint32_t);
+  void push24();
+  void pop24();
+  void pop24(uint32_t);
 
-    void push32();
-    void pop32();
-    void pop32(uint32_t);
+  void push32();
+  void pop32();
+  void pop32(uint32_t);
 
-    obinarystream& operator=(const obinarystream& right);
-    obinarystream& operator=(obinarystream&& right);
+  obinarystream &operator=(const obinarystream &right);
+  obinarystream &operator=(obinarystream &&right);
 
-    std::vector<char> take_buffer();
+  std::vector<char> take_buffer();
 
-    template<typename _Nty>
-    size_t write_i(_Nty value);
+  template <typename _Nty> size_t write_i(_Nty value);
 
-    size_t write_i24(uint32_t value); // highest byte ignored
+  size_t write_i24(uint32_t value); // highest byte ignored
 
-    size_t write_v(std::string_view);
-    size_t write_v16(std::string_view);
-    size_t write_v32(std::string_view);
-    
-    size_t write_v(const void* v, int size);
-    size_t write_v16(const void* v, int size);
-    size_t write_v32(const void* v, int size);
+  /* 32 bits length field */
+  size_t write_v(std::string_view);
+  /* 16 bits length field */
+  size_t write_v16(std::string_view);
+  /* 8 bits length field */
+  size_t write_v8(std::string_view);
 
-    size_t write_bytes(std::string_view);
-    size_t write_bytes(const void* v, int vl);
+  size_t write_v(const void *v, int size);
+  size_t write_v16(const void *v, int size);
+  size_t write_v8(const void *v, int size);
+ 
+  size_t write_bytes(std::string_view);
+  size_t write_bytes(const void *v, int vl);
 
-    size_t length() const { return buffer_.size(); }
-    const char* data() const { return buffer_.data(); }
+  size_t length() const { return buffer_.size(); }
+  const char *data() const { return buffer_.data(); }
 
-    const std::vector<char>& buffer() const { return buffer_; }
-    std::vector<char>& buffer() { return buffer_; }
-    
-    char* wdata(size_t offset = 0) { return &buffer_.front() + offset; }
+  const std::vector<char> &buffer() const { return buffer_; }
+  std::vector<char> &buffer() { return buffer_; }
 
-    template<typename _Nty>
-    void set_i(std::streamoff offset, const _Nty value);
+  char *wdata(size_t offset = 0) { return &buffer_.front() + offset; }
 
-    template<typename _LenT>
-    size_t write_vx(const void* v, int size)
-    {
-        auto l = purelib::endian::htonv(static_cast<_LenT>(size));
+  template <typename _Nty> void set_i(std::streamoff offset, const _Nty value);
 
-        auto append_size = sizeof(l) + size;
-        auto offset = buffer_.size();
-        buffer_.resize(offset + append_size);
+  template <typename _LenT> size_t write_vx(const void *v, int size)
+  {
+    auto l = purelib::endian::htonv(static_cast<_LenT>(size));
 
-        ::memcpy(buffer_.data() + offset, &l, sizeof(l));
-        if (size > 0)
-            ::memcpy(buffer_.data() + offset + sizeof l, v, size);
-			
-	    return buffer_.size();
-    }
-    obinarystream sub(size_t offset, size_t count = -1);
+    auto append_size = sizeof(l) + size;
+    auto offset      = buffer_.size();
+    buffer_.resize(offset + append_size);
+
+    ::memcpy(buffer_.data() + offset, &l, sizeof(l));
+    if (size > 0)
+      ::memcpy(buffer_.data() + offset + sizeof l, v, size);
+
+    return buffer_.size();
+  }
+  obinarystream sub(size_t offset, size_t count = -1);
+
 public:
-    void save(const char* filename);
+  void save(const char *filename);
 
 protected:
-    std::vector<char>  buffer_;
-    std::stack<size_t> offset_stack_;
+  std::vector<char> buffer_;
+  std::stack<size_t> offset_stack_;
 };
 
-template <typename _Nty>
-inline size_t obinarystream::write_i(_Nty value)
+template <typename _Nty> inline size_t obinarystream::write_i(_Nty value)
 {
-    size_t offset = buffer_.size();
-    auto nv = purelib::endian::htonv(value);
-    buffer_.insert(buffer_.end(), (const char*)&nv, (const char*)&nv + sizeof(nv));
-    return offset;
+  size_t offset = buffer_.size();
+  auto nv       = purelib::endian::htonv(value);
+  buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
+  return offset;
 }
 
-template <>
-inline size_t obinarystream::write_i<float>(float value)
+template <> inline size_t obinarystream::write_i<float>(float value)
 {
-    size_t offset = buffer_.size();
-    auto nv = htonf(value);
-    buffer_.insert(buffer_.end(), (const char*)&nv, (const char*)&nv + sizeof(nv));
-    return offset;
+  size_t offset = buffer_.size();
+  auto nv       = htonf(value);
+  buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
+  return offset;
 }
 
-template<>
-inline size_t obinarystream::write_i<double>(double value)
+template <> inline size_t obinarystream::write_i<double>(double value)
 {
-    size_t offset = buffer_.size();
-    auto nv = htond(value);
-    buffer_.insert(buffer_.end(), (const char*)&nv, (const char*)&nv + sizeof(nv));
-    return offset;
+  size_t offset = buffer_.size();
+  auto nv       = htond(value);
+  buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
+  return offset;
 }
 
-template <typename _Nty>
-inline void obinarystream::set_i(std::streamoff offset, const _Nty value)
+template <typename _Nty> inline void obinarystream::set_i(std::streamoff offset, const _Nty value)
 {
-    auto pvalue = (_Nty*)(buffer_.data() + offset);
-    *pvalue = purelib::endian::htonv(value);
+  auto pvalue = (_Nty *)(buffer_.data() + offset);
+  *pvalue     = purelib::endian::htonv(value);
 }
 
 #endif

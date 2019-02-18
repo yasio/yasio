@@ -59,7 +59,7 @@ extern "C" {
 #  define INET_LOG(format, ...)                                                                    \
     do                                                                                             \
     {                                                                                              \
-      auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);   \
+      auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);       \
       OutputDebugStringA(content.c_str());                                                         \
       if (options_.outf)                                                                           \
         fprintf(options_.outf, "%s", content.c_str());                                             \
@@ -68,13 +68,13 @@ extern "C" {
 #  include <android/log.h>
 #  include <jni.h>
 #  define INET_LOG(format, ...)                                                                    \
-    __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),          \
+    __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),              \
                         ##__VA_ARGS__);                                                            \
     if (options_.outf)                                                                             \
     fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #else
 #  define INET_LOG(format, ...)                                                                    \
-    fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);            \
+    fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);                \
     if (options_.outf)                                                                             \
     fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
@@ -82,9 +82,10 @@ extern "C" {
 #define ASYNC_RESOLVE_TIMEOUT 45 // 45 seconds
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
-#define MAX_PDU_BUFFER_SIZE                                                                        \
-  static_cast<int>(SZ(1, M)) /* max pdu buffer length, avoid large memory allocation when 
-        application layer decode a huge length field. */
+
+/* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
+ * field. */
+#define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
 namespace purelib
 {
@@ -391,6 +392,15 @@ void io_service::set_option(int option, ...)
     case YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->xdec_len_ = std::move(*va_arg(ap, decode_frame_length_fn_t *));
       break;
+    case YASIO_OPT_CHANNEL_LOCAL_PORT:
+    {
+      int index = va_arg(ap, int);
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
+      }
+    }
+    break;
   }
 
   va_end(ap);
@@ -400,9 +410,9 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 {
   auto ctx = new io_channel(*this);
   ctx->reset();
-  ctx->host_ = ep.host_;
-  ctx->port_    = ep.port_;
-  ctx->index_   = static_cast<int>(this->channels_.size());
+  ctx->host_  = ep.host_;
+  ctx->port_  = ep.port_;
+  ctx->index_ = static_cast<int>(this->channels_.size());
   update_resolve_state(ctx);
   this->channels_.push_back(ctx);
   return ctx;
@@ -485,7 +495,7 @@ void io_service::set_endpoint(size_t channel_index, const char *host, u_short po
   auto ctx = channels_[channel_index];
 
   ctx->host_ = host;
-  ctx->port_    = port;
+  ctx->port_ = port;
   update_resolve_state(ctx);
 }
 
@@ -503,7 +513,7 @@ void io_service::set_endpoint(size_t channel_index, const ip::endpoint &ep)
 
 void io_service::service()
 { // The async event-loop
-  // Set Thread Name: mini async socket io
+  // Set Thread Name: yasio async socket io
   _set_thread_name("yasio");
 
   // Call once at startup
@@ -534,7 +544,7 @@ void io_service::service()
     if (nfds == 0)
     {
 #if _YASIO_VERBOS_LOG
-      INET_LOG("socket.select is timeout, do perform_timeout_timers()");
+      INET_LOG("%s", "socket.select is timeout, do perform_timeout_timers()");
 #endif
     }
     // Reset the interrupter.
@@ -596,7 +606,7 @@ void io_service::perform_transports(fd_set *fds_array)
         FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
     {
 #if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] perform non-blocking read operation...", ctx->index_);
+      INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
 #endif
       if (!do_read(transport))
       {
@@ -611,7 +621,7 @@ void io_service::perform_transports(fd_set *fds_array)
     {
       transport->send_queue_mtx_.lock();
 #if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] perform non-blocking write operation...", ctx->index_);
+      INET_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
 #endif
       if (!do_write(transport))
       { // TODO: check would block? for client, may
@@ -642,36 +652,34 @@ void io_service::perform_channels(fd_set *fds_array)
     {
       auto ctx    = *iter;
       bool finish = false;
-      switch (ctx->type_)
+      if (ctx->type_ & CHANNEL_CLIENT)
       {
-        case CHANNEL_TCP_CLIENT:
-          switch (ctx->state_)
-          {
-            case channel_state::REQUEST_CONNECT:
-              finish = do_nonblocking_connect(ctx);
-              break;
-            case channel_state::CONNECTING:
-              finish = do_nonblocking_connect_completion(fds_array, ctx);
-              break;
-            default:; // do nothing
-          }
-          break;
-        case CHANNEL_TCP_SERVER:
-
-          switch (ctx->state_)
-          {
-            case channel_state::REQUEST_CONNECT:
-              do_nonblocking_accept(ctx);
-              break;
-            case channel_state::CONNECTING:
-              do_nonblocking_accept_completion(fds_array, ctx);
-              break;
-            case channel_state::INACTIVE:
-              finish = true;
-              break;
-            default:; // do nothing
-          }
-          break;
+        switch (ctx->state_)
+        {
+          case channel_state::REQUEST_CONNECT:
+            finish = do_nonblocking_connect(ctx);
+            break;
+          case channel_state::CONNECTING:
+            finish = do_nonblocking_connect_completion(fds_array, ctx);
+            break;
+          default:; // do nothing
+        }
+      }
+      else if (ctx->type_ & CHANNEL_SERVER)
+      {
+        switch (ctx->state_)
+        {
+          case channel_state::REQUEST_CONNECT:
+            do_nonblocking_accept(ctx);
+            break;
+          case channel_state::CONNECTING:
+            do_nonblocking_accept_completion(fds_array, ctx);
+            break;
+          case channel_state::INACTIVE:
+            finish = true;
+            break;
+          default:; // do nothing
+        }
       }
 
       if (finish)
@@ -821,7 +829,7 @@ void io_service::write(transport_ptr transport, std::vector<char> data)
 {
   this->write(transport.get(), std::move(data));
 }
-void io_service::write(io_transport* transport, std::vector<char> data)
+void io_service::write(io_transport *transport, std::vector<char> data)
 {
   if (transport && transport->socket_->is_open())
   {
@@ -883,43 +891,83 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
     ctx->state_ = channel_state::CONNECTING;
 
-    int ret  = -1;
-    auto &ep = ctx->endpoints_[0];
-    if (ctx->socket_->reopen(ep.af()))
+    if (ctx->type_ & CHANNEL_TCP)
     {
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
-    }
-
-    if (ret < 0)
-    { // setup no blocking connect
-      int error = xxsocket::get_last_errno();
-      if (error != EINPROGRESS && error != EWOULDBLOCK)
+      int ret  = -1;
+      auto &ep = ctx->endpoints_[0];
+      if (ctx->socket_->reopen(ep.af()))
       {
-        this->handle_connect_failed(ctx, error);
+        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+        if (ctx->local_port_ != 0)
+          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+        ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+      }
+
+      if (ret < 0)
+      { // setup no blocking connect
+        int error = xxsocket::get_last_errno();
+        if (error != EINPROGRESS && error != EWOULDBLOCK)
+        {
+          this->handle_connect_failed(ctx, error);
+          return true;
+        }
+        else
+        {
+          register_descriptor(ctx->socket_->native_handle(),
+                              socket_event_read | socket_event_write);
+
+          ctx->deadline_timer_.expires_from_now(
+              std::chrono::microseconds(options_.connect_timeout_));
+          ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+            if (!cancelled && ctx->state_ != channel_state::CONNECTED)
+            {
+              handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+            }
+          });
+
+          return false;
+        }
+      }
+      else if (ret == 0)
+      { // connect server succed immidiately.
+        handle_connect_succeed(ctx, ctx->socket_);
         return true;
-      }
-      else
+      } // NEVER GO HERE
+    }
+    else // CHANNEL_UDP
+    {
+      int ret = -1;
+      if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
       {
-        register_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write);
+        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+        ret = xxsocket::connect(ctx->socket_->native_handle(), ctx->endpoints_[0]);
+        if (ret == 0)
+        {
+          ctx->socket_->set_nonblocking(true);
+          register_descriptor(ctx->socket_->native_handle(), socket_event_read);
 
-        ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
-        ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-          if (!cancelled && ctx->state_ != channel_state::CONNECTED)
-          {
-            handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
-          }
-        });
+          // Sends connect cmd
+          char cmd[4] = "SYN";
+          ctx->socket_->sendto_i(&cmd, 3, ctx->endpoints_[0]);
 
-        return false;
+          ctx->deadline_timer_.expires_from_now(
+              std::chrono::microseconds(options_.connect_timeout_));
+          ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+            if (!cancelled && ctx->state_ != channel_state::CONNECTED)
+            {
+              handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+            }
+          });
+
+          return false;
+        }
+        else
+        {
+          this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+          return true;
+        }
       }
     }
-    else if (ret == 0)
-    { // connect server succed immidiately.
-      handle_connect_succeed(ctx, ctx->socket_);
-      return true;
-    }
-    // NEVER GO HERE
   }
   else if (ctx->resolve_state_ == resolve_state::FAILED)
   {
@@ -939,26 +987,65 @@ bool io_service::do_nonblocking_connect_completion(fd_set *fds_array, io_channel
   if (ctx->state_ == channel_state::CONNECTING)
   {
     int error = -1;
-    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
-        FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+    if (ctx->type_ & CHANNEL_TCP)
     {
-      socklen_t len = sizeof(error);
-      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
-              0 &&
-          error == 0)
+      if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
+          FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
       {
-        handle_connect_succeed(ctx, ctx->socket_);
-        ctx->deadline_timer_.cancel();
-      }
-      else
-      {
-        handle_connect_failed(ctx, ERR_CONNECT_FAILED);
-        ctx->deadline_timer_.cancel();
-      }
+        socklen_t len = sizeof(error);
+        if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error,
+                         &len) >= 0 &&
+            error == 0)
+        {
+          handle_connect_succeed(ctx, ctx->socket_);
+          ctx->deadline_timer_.cancel();
+        }
+        else
+        {
+          handle_connect_failed(ctx, ERR_CONNECT_FAILED);
+          ctx->deadline_timer_.cancel();
+        }
 
-      return true;
+        return true;
+      }
     }
-    // else  ; // Check whether connect is timeout.
+    else // UDP
+    {
+      u_short peer_port_netval = 0;
+
+      ip::endpoint peer;
+      auto &s = ctx->socket_;
+      int n   = s->recvfrom_i(&peer_port_netval, 2, peer);
+      if (n == 2)
+      {
+        peer.port(htons(peer_port_netval));
+
+        ip::endpoint ep = ctx->socket_->local_endpoint();
+        close_internal(ctx);
+
+        // make a transport local --> peer udp session
+        int ret = -1;
+        if (s->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+        {
+          s->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+          ret = s->bind(ep) == 0 ? xxsocket::connect(s->native_handle(), peer) : -1;
+          if (ret == 0)
+          {
+            ctx->deadline_timer_.cancel();
+
+            INET_LOG("udp-client: bind the local port: %s", ep.to_string().c_str());
+            s->set_nonblocking(true);
+            register_descriptor(s->native_handle(), socket_event_read);
+            handle_connect_succeed(ctx, s);
+          }
+          else
+          {
+            handle_connect_failed(ctx, ERR_CONNECT_FAILED);
+            ctx->deadline_timer_.cancel();
+          }
+        }
+      }
+    }
   }
 
   return false;
@@ -968,36 +1055,62 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
   close_internal(ctx);
 
-  if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+  if (ctx->type_ & CHANNEL_TCP)
   {
-    ctx->state_ = channel_state::CONNECTING;
-
-    ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-    ctx->socket_->set_nonblocking(true);
-    int error = 0;
-    if (ctx->socket_->bind(ep) != 0)
+    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
     {
-      error = xxsocket::get_last_errno();
-      INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-               io_service::strerror(error));
-      ctx->socket_->close();
-      ctx->state_ = channel_state::INACTIVE;
-      return;
-    }
+      ctx->state_ = channel_state::CONNECTING;
 
-    if (ctx->socket_->listen(1) != 0)
+      ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+      ctx->socket_->set_nonblocking(true);
+      int error = 0;
+      if (ctx->socket_->bind(ep) != 0)
+      {
+        error = xxsocket::get_last_errno();
+        INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+                 io_service::strerror(error));
+        ctx->socket_->close();
+        ctx->state_ = channel_state::INACTIVE;
+        return;
+      }
+
+      if (ctx->socket_->listen(1) != 0)
+      {
+        error = xxsocket::get_last_errno();
+        INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
+                 io_service::strerror(error));
+        ctx->socket_->close();
+        ctx->state_ = channel_state::INACTIVE;
+        return;
+      }
+
+      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
+      register_descriptor(ctx->socket_->native_handle(), socket_event_read);
+    }
+  }
+  else // CHANNEL_UDP
+  {
+    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
     {
-      error = xxsocket::get_last_errno();
-      INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-               io_service::strerror(error));
-      ctx->socket_->close();
-      ctx->state_ = channel_state::INACTIVE;
-      return;
+      ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+      ctx->socket_->set_nonblocking(true);
+      if (ctx->socket_->bind(ep) == 0)
+      {
+        INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
+        ctx->state_ = channel_state::CONNECTING;
+        register_descriptor(ctx->socket_->native_handle(), socket_event_read);
+      }
+      else
+      {
+        int error = 0;
+        INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error,
+                 this->strerror(error));
+        ctx->socket_->close();
+        ctx->state_ = channel_state::INACTIVE;
+      }
     }
-
-    INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
-    register_descriptor(ctx->socket_->native_handle(), socket_event_read);
   }
 }
 
@@ -1013,14 +1126,55 @@ void io_service::do_nonblocking_accept_completion(fd_set *fds_array, io_channel 
               0 &&
           error == 0)
       {
-        xxsocket client_sock = ctx->socket_->accept();
-        if (client_sock.is_open())
+        if (ctx->type_ & CHANNEL_TCP)
         {
-          register_descriptor(client_sock.native_handle(), socket_event_read);
+          xxsocket client_sock = ctx->socket_->accept();
+          if (client_sock.is_open())
+          {
+            register_descriptor(client_sock.native_handle(), socket_event_read);
 
-          handle_connect_succeed(ctx,
-                                 std::shared_ptr<xxsocket>(new xxsocket(std::move(client_sock))));
-          ctx->state_ = channel_state::CONNECTING;
+            handle_connect_succeed(ctx,
+                                   std::shared_ptr<xxsocket>(new xxsocket(std::move(client_sock))));
+            ctx->state_ = channel_state::CONNECTING;
+          }
+        }
+        else // CHANNEL_UDP
+        {
+          ip::endpoint peer;
+
+          char buffer[3];
+          int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
+          if (n > 0)
+          {
+            INET_LOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
+
+            // make a transport local --> peer udp session, simlar to tcp accept
+            int ret = -1;
+            std::shared_ptr<xxsocket> client_sock(new xxsocket());
+            if (client_sock->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+            {
+              client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+              ip::endpoint ep(ctx->endpoints_[0].ip().c_str(), 0); // bind a random
+              ret = client_sock->bind(ep) == 0
+                        ? xxsocket::connect(client_sock->native_handle(), peer)
+                        : -1;
+              if (ret == 0)
+              {
+                ip::endpoint localep = client_sock->local_endpoint();
+                INET_LOG("udp-server: bind a random local port: %s", localep.to_string().c_str());
+                client_sock->set_nonblocking(true);
+                register_descriptor(client_sock->native_handle(), socket_event_read);
+                handle_connect_succeed(ctx, client_sock);
+                // Sends new local port as ACK to peer.
+                auto local_port_netval = htons(localep.port());
+                ctx->socket_->sendto_i(&local_port_netval, sizeof(local_port_netval), peer);
+              }
+              else
+              {
+                this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+              }
+            }
+          }
         }
       }
       else
@@ -1035,19 +1189,23 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
 {
   transport_ptr transport(new io_transport(ctx));
 
-  if (ctx->type_ == CHANNEL_TCP_CLIENT)
-  { // The client channl
-    unregister_descriptor(socket->native_handle(),
-                          socket_event_write); // remove write event avoid
-    // high-CPU occupation
-    ctx->state_ = channel_state::CONNECTED;
-  }
-
-  if (options_.tcp_keepalive.onoff)
+  if (ctx->type_ & CHANNEL_CLIENT)
   {
-    socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                          options_.tcp_keepalive.probs);
-  }
+    ctx->state_ = channel_state::CONNECTED;
+
+    if (ctx->type_ & CHANNEL_TCP)
+    { // The tcp client channl
+      // remove write event avoid high-CPU occupation
+      unregister_descriptor(socket->native_handle(), socket_event_write);
+
+      // apply tcp keepalive options
+      if (options_.tcp_keepalive.onoff)
+      {
+        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                              options_.tcp_keepalive.probs);
+      }
+    }
+  } // else server channel, always CONNECTING to wait next client connect.
 
   transport->socket_ = socket;
   this->transports_.push_back(transport);
@@ -1097,7 +1255,8 @@ bool io_service::do_write(transport_ptr transport)
         auto packet_size = static_cast<int>(v->data_.size());
         INET_LOG("[index: %d] do_write ok, A packet sent "
                  "success, packet size:%d",
-                 ctx->index_, packet_size);
+                 ctx->index_, packet_size, transport->socket_->local_endpoint().to_string().c_str(),
+                 transport->socket_->peer_endpoint().to_string().c_str());
 #endif
         handle_send_finished(v, error_number::ERR_OK);
       }
@@ -1163,8 +1322,8 @@ bool io_service::do_read(transport_ptr transport)
     if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error()))
     {
 #if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", ctx->index_, error_,
-               io_service::strerror(error_));
+      INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
+               transport->error_, io_service::strerror(transport->error_));
 #endif
       if (n == -1)
         n = 0;
@@ -1174,7 +1333,7 @@ bool io_service::do_read(transport_ptr transport)
         INET_LOG("[index: %d] do_read ok, received data len: %d, "
                  "buffer data "
                  "len: %d",
-                 ctx->index_, n, n + ctx->offset_);
+                 transport->channel_index(), n, n + transport->offset_);
       }
 #endif
       if (transport->expected_packet_size_ == -1)
@@ -1238,18 +1397,19 @@ bool io_service::do_read(transport_ptr transport)
   return bRet;
 }
 
-void io_service::do_unpack(transport_ptr ctx, int bytes_expected, int bytes_transferred)
+void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
 {
-  auto bytes_available = bytes_transferred + ctx->offset_;
-  ctx->expected_packet_.insert(ctx->expected_packet_.end(), ctx->buffer_,
-                               ctx->buffer_ + (std::min)(bytes_expected, bytes_available));
+  auto bytes_available = bytes_transferred + transport->offset_;
+  transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
+                                     transport->buffer_ +
+                                         (std::min)(bytes_expected, bytes_available));
 
-  ctx->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
-  if (ctx->offset_ >= 0)
-  {                       // pdu received properly
-    if (ctx->offset_ > 0) // move remain data to head of buffer and hold offset.
+  transport->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
+  if (transport->offset_ >= 0)
+  {                             // pdu received properly
+    if (transport->offset_ > 0) // move remain data to head of buffer and hold offset.
     {
-      ::memmove(ctx->buffer_, ctx->buffer_ + bytes_expected, ctx->offset_);
+      ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
       // not all data consumed, so add events for this context
       ++this->outstanding_work_;
     }
@@ -1258,15 +1418,15 @@ void io_service::do_unpack(transport_ptr ctx, int bytes_expected, int bytes_tran
 #if _YASIO_VERBOS_LOG
     INET_LOG("[index: %d] received a properly packet from peer, "
              "packet size:%d",
-             ctx->index_, ctx->expected_packet_size_);
+             transport->channel_index(), transport->expected_packet_size_);
 #endif
-    this->handle_event(
-        event_ptr(new io_event(ctx->channel_index(), YASIO_EVENT_RECV_PACKET, ctx->take_packet())));
+    this->handle_event(event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
+                                              transport->take_packet(), transport)));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu
     // incomplete, continue recv remain data.
-    ctx->offset_ = 0;
+    transport->offset_ = 0;
   }
 }
 

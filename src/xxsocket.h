@@ -403,7 +403,7 @@ public:
 
   void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
 
-  void address(const char *addr)
+  void ip(const char *addr)
   {
     /*
      * Windows XP no inet_pton or inet_ntop
@@ -430,12 +430,13 @@ public:
     switch (sa_.sa_family)
     {
       case AF_INET:
-        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
+        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(),
+                                     static_cast<socklen_t>(addr.length())));
         n += sprintf(&addr.front() + n, ":%u", this->port());
         break;
       case AF_INET6:
-        n = strlen(
-            compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
+        n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1,
+                                     static_cast<socklen_t>(addr.length() - 1)));
         n += sprintf(&addr.front() + n, "]:%u", this->port());
         break;
     }
@@ -465,6 +466,10 @@ public:
   }
   unsigned short port(void) const { return ntohs(in4_.sin_port); }
   void port(unsigned short value) { in4_.sin_port = htons(value); }
+
+  bool operator<(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
+  bool operator==(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
+
   sockaddr sa_;
   sockaddr_in in4_;
   sockaddr_in6 in6_;
@@ -493,18 +498,21 @@ public:
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
   // for support ipv6 ONLY network.
-  int xpconnect(const char *hostname, u_short port);
-  int xpconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout);
+  int xpconnect(const char *hostname, u_short port, u_short local_port = 0);
+  int xpconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout,
+                  u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  int pconnect(const char *hostname, u_short port);
-  int pconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout);
-  int pconnect_n(const char *hostname, u_short port);
+  int pconnect(const char *hostname, u_short port, u_short local_port = 0);
+  int pconnect_n(const char *hostname, u_short port, const std::chrono::microseconds &wtimeout,
+                 u_short local_port = 0);
+  int pconnect_n(const char *hostname, u_short port, u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  int pconnect(const ip::endpoint &ep);
-  int pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout);
-  int pconnect_n(const ip::endpoint &ep);
+  int pconnect(const ip::endpoint &ep, u_short local_port = 0);
+  int pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout,
+                 u_short local_port = 0);
+  int pconnect_n(const ip::endpoint &ep, u_short local_port = 0);
 
   // easy to create a tcp ipv4 or ipv6 server socket.
   int pserv(const char *addr, u_short port);
@@ -738,7 +746,7 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  int sendto_i(const void *buf, int len, ip::endpoint &to, int flags = 0) const;
+  int sendto_i(const void *buf, int len, const ip::endpoint &to, int flags = 0) const;
 
   /* @brief: Receives a datagram and stores the source address
   ** @params: omit
@@ -754,7 +762,10 @@ public:
   static int handle_write_ready(socket_native_type s, timeval *timeo);
   static int handle_connect_ready(socket_native_type s, timeval *timeo);
 
+  int handle_read_ready(const std::chrono::microseconds &wtimeout) const;
   int handle_read_ready(timeval *timeo) const;
+
+  static int handle_read_ready(socket_native_type s, const std::chrono::microseconds &wtimeout);
   static int handle_read_ready(socket_native_type s, timeval *timeo);
 
   /* @brief: Get local address info
@@ -990,6 +1001,6 @@ namespace net = inet;
 #pragma warning(pop)
 
 /*
- * Copyright (c) 2012-2018, HALX99, ALL RIGHTS RESERVED.
+ * Copyright (c) 2012-2019, HALX99, ALL RIGHTS RESERVED.
  * Consult your license regarding permissions and restrictions.
  **/

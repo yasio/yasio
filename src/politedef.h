@@ -251,7 +251,7 @@ namespace polite = ::purelib;
 
 #endif /* _POLITEDEF_H_ */
 /*
-* Copyright (c) 2012-2018 by HALX99, ALL RIGHTS RESERVED.
+* Copyright (c) 2012-2019 by HALX99, ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
 ***/
 

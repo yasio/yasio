@@ -159,7 +159,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\lyasio11.cpp" />
+    <ClCompile Include="..\..\src\lyasio.cpp" />
     <ClCompile Include="..\..\src\tolua_link.cpp" />
   </ItemGroup>
   <ItemGroup>

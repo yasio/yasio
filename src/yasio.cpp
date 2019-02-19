@@ -28,6 +28,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+// UDP server: https://cloud.tencent.com/developer/article/1004555
 #include "yasio.h"
 #include <limits>
 #include <stdarg.h>
@@ -940,32 +942,23 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
       if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+
+        if (ctx->local_port_ != 0)
+          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
         ret = xxsocket::connect(ctx->socket_->native_handle(), ctx->endpoints_[0]);
         if (ret == 0)
         {
           ctx->socket_->set_nonblocking(true);
           register_descriptor(ctx->socket_->native_handle(), socket_event_read);
 
-          // Sends connect cmd
-          char cmd[4] = "SYN";
-          ctx->socket_->sendto_i(&cmd, 3, ctx->endpoints_[0]);
-
-          ctx->deadline_timer_.expires_from_now(
-              std::chrono::microseconds(options_.connect_timeout_));
-          ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-            if (!cancelled && ctx->state_ != channel_state::CONNECTED)
-            {
-              handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
-            }
-          });
-
-          return false;
+          handle_connect_succeed(ctx, ctx->socket_);
         }
         else
         {
           this->handle_connect_failed(ctx, xxsocket::get_last_errno());
-          return true;
         }
+
+        return true;
       }
     }
   }
@@ -1009,43 +1002,6 @@ bool io_service::do_nonblocking_connect_completion(fd_set *fds_array, io_channel
         return true;
       }
     }
-    else // UDP
-    {
-      u_short peer_port_netval = 0;
-
-      ip::endpoint peer;
-      auto &s = ctx->socket_;
-      int n   = s->recvfrom_i(&peer_port_netval, 2, peer);
-      if (n == 2)
-      {
-        peer.port(htons(peer_port_netval));
-
-        ip::endpoint ep = ctx->socket_->local_endpoint();
-        close_internal(ctx);
-
-        // make a transport local --> peer udp session
-        int ret = -1;
-        if (s->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
-        {
-          s->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-          ret = s->bind(ep) == 0 ? xxsocket::connect(s->native_handle(), peer) : -1;
-          if (ret == 0)
-          {
-            ctx->deadline_timer_.cancel();
-
-            INET_LOG("udp-client: bind the local port: %s", ep.to_string().c_str());
-            s->set_nonblocking(true);
-            register_descriptor(s->native_handle(), socket_event_read);
-            handle_connect_succeed(ctx, s);
-          }
-          else
-          {
-            handle_connect_failed(ctx, ERR_CONNECT_FAILED);
-            ctx->deadline_timer_.cancel();
-          }
-        }
-      }
-    }
   }
 
   return false;
@@ -1063,7 +1019,6 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      ctx->socket_->set_nonblocking(true);
       int error = 0;
       if (ctx->socket_->bind(ep) != 0)
       {
@@ -1085,6 +1040,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         return;
       }
 
+      ctx->socket_->set_nonblocking(true);
       INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
       register_descriptor(ctx->socket_->native_handle(), socket_event_read);
     }
@@ -1094,12 +1050,16 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
     if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
     {
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      ctx->socket_->set_nonblocking(true);
+#if !defined(_WIN32)
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+#endif
       if (ctx->socket_->bind(ep) == 0)
       {
         INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
         ctx->state_ = channel_state::CONNECTING;
+        ctx->socket_->set_nonblocking(true);
         register_descriptor(ctx->socket_->native_handle(), socket_event_read);
       }
       else
@@ -1135,39 +1095,37 @@ void io_service::do_nonblocking_accept_completion(fd_set *fds_array, io_channel 
 
             handle_connect_succeed(ctx,
                                    std::shared_ptr<xxsocket>(new xxsocket(std::move(client_sock))));
-            ctx->state_ = channel_state::CONNECTING;
           }
         }
         else // CHANNEL_UDP
         {
           ip::endpoint peer;
 
-          char buffer[3];
+          char buffer[65535];
           int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
           if (n > 0)
           {
             INET_LOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
 
-            // make a transport local --> peer udp session, simlar to tcp accept
-            int ret = -1;
+            // make a transport local --> peer udp session, just like tcp accept
             std::shared_ptr<xxsocket> client_sock(new xxsocket());
             if (client_sock->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
             {
               client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-              ip::endpoint ep(ctx->endpoints_[0].ip().c_str(), 0); // bind a random
-              ret = client_sock->bind(ep) == 0
-                        ? xxsocket::connect(client_sock->native_handle(), peer)
-                        : -1;
-              if (ret == 0)
+#if !defined(_WIN32)
+              client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+#endif
+              error = client_sock->bind("0.0.0.0", ctx->port_) == 0
+                          ? xxsocket::connect(client_sock->native_handle(), peer)
+                          : -1;
+              if (error == 0)
               {
-                ip::endpoint localep = client_sock->local_endpoint();
-                INET_LOG("udp-server: bind a random local port: %s", localep.to_string().c_str());
                 client_sock->set_nonblocking(true);
                 register_descriptor(client_sock->native_handle(), socket_event_read);
-                handle_connect_succeed(ctx, client_sock);
-                // Sends new local port as ACK to peer.
-                auto local_port_netval = htons(localep.port());
-                ctx->socket_->sendto_i(&local_port_netval, sizeof(local_port_netval), peer);
+                auto transport = handle_connect_succeed(ctx, client_sock);
+                this->handle_event(
+                    event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
+                                           std::vector<char>(buffer, buffer + n), transport)));
               }
               else
               {
@@ -1185,7 +1143,7 @@ void io_service::do_nonblocking_accept_completion(fd_set *fds_array, io_channel 
   }
 }
 
-void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport(new io_transport(ctx));
 
@@ -1217,6 +1175,8 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
 
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+
+  return transport;
 }
 
 void io_service::handle_connect_failed(io_channel *ctx, int error)
@@ -1545,6 +1505,7 @@ but it's ok.
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
+      // WSAPoll()
       maxtv.tv_sec  = static_cast<long>(wait_duration / 1000000);
       maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
 #if _YASIO_VERBOS_LOG

@@ -605,7 +605,7 @@ public:
   **         If no error occurs, bind returns [0]. Otherwise, it returns SOCKET_ERROR
   */
   int bind(const char *addr, unsigned short port) const;
-  int bind(const ip::endpoint &);
+  int bind(const ip::endpoint &) const;
 
   /* @brief: Places this socket in a state in which it is listening for an incoming connection
   ** @params:

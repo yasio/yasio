@@ -936,14 +936,14 @@ bool xxsocket::is_nonblocking() const
 
 int xxsocket::bind(const char *addr, unsigned short port) const
 {
-  ip::endpoint local(addr, port);
+  ip::endpoint local_ep(addr, port);
 
-  return ::bind(this->fd, &local.sa_, sizeof(local));
+  return this->bind(local_ep);
 }
 
-int xxsocket::bind(const ip::endpoint &endpoint)
+int xxsocket::bind(const ip::endpoint &ep) const
 {
-  return ::bind(this->fd, &endpoint.sa_, sizeof(endpoint));
+  return ::bind(this->fd, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
 }
 
 int xxsocket::listen(int backlog) const { return ::listen(this->fd, backlog); }
@@ -1322,7 +1322,8 @@ int xxsocket::recvfrom_i(void *buf, int len, ip::endpoint &from, int flags) cons
 
 int xxsocket::sendto_i(const void *buf, int len, const ip::endpoint &to, int flags) const
 {
-  return ::sendto(this->fd, (const char *)buf, len, flags, &to.sa_, sizeof(to));
+  return ::sendto(this->fd, (const char *)buf, len, flags, &to.sa_,
+                  to.af() == AF_INET6 ? sizeof(to.in6_) : sizeof(to.in4_));
 }
 
 int xxsocket::handle_write_ready(timeval *timeo) const

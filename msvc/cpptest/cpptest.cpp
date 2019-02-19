@@ -21,8 +21,8 @@ template <size_t _Size> void append_string(std::vector<char> &packet, const char
 void yasioTest()
 {
   purelib::inet::io_hostent endpoints[] = {{"www.ip138.com", 80},       // http client
-                                           {"192.168.103.183", 59281},  // udp server
-                                           {"192.168.103.183", 59281}}; // udp client
+                                           {"0.0.0.0", 30001},  // udp server
+                                           {"127.0.0.1", 59281}}; // udp client
 
   obinarystream obs;
   obs.push24();
@@ -63,7 +63,7 @@ void yasioTest()
       {
         auto packet = event->take_packet();
         packet.push_back('\0');
-        printf("index:%d, receive data:%s", event->transport()->channel_index(), packet.data());
+        printf("index:%d, receive data:%s\n", event->transport()->channel_index(), packet.data());
         if (event->channel_index() == 1)
         { // response udp client
           std::vector<char> packet;
@@ -93,12 +93,14 @@ void yasioTest()
           }
           else if (event->channel_index() == 2)
           { // Sends message to server every per 3 seconds.
+#if 0
             udp_heartbeat.expires_from_now(std::chrono::seconds(1), 3);
             udp_heartbeat.async_wait([&service, transport](bool) { // called at network thread
               std::vector<char> packet;
               append_string(packet, "hello udp server!\n");
               service.write(transport, std::move(packet));
             });
+#endif
           }
 
           
@@ -115,17 +117,20 @@ void yasioTest()
   service.open(0); // open http client
   service.open(1, CHANNEL_UDP_SERVER); // open udp server
 
+#if 0
   udpconn_delay.expires_from_now(std::chrono::seconds(3));
   udpconn_delay.async_wait([&](bool) { // called at network thread
     printf("Open channel 2 to connect udp server.\n");
+    service.set_option(YASIO_OPT_CHANNEL_LOCAL_PORT, 2, 4000);
     service.open(2, CHANNEL_UDP_CLIENT); // open udp client
   });
+#endif
 
   time_t duration = 0;
   while (true)
   {
     service.dispatch_events();
-    if (duration >= 60000)
+    if (duration >= 6000000)
     {
       for (auto transport : transports)
         service.close(transport);

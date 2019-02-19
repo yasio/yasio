@@ -164,6 +164,7 @@
     <ClInclude Include="..\..\src\ibinarystream.h" />
     <ClInclude Include="..\..\src\obinarystream.h" />
     <ClInclude Include="..\..\src\xxsocket.h" />
+    <ClInclude Include="..\..\src\yasio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

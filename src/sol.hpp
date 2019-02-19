@@ -20,8 +20,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // This file was generated with a script.
-// Generated 2018-11-28 08:50:22.534324 UTC
-// This header was generated with sol v2.20.6 (revision 9b782ff)
+// Generated 2019-01-26 08:24:35.370911 UTC
+// This header was generated with sol v2.20.6 (revision e63f840)
 // https://github.com/ThePhD/sol2
 
 #ifndef SOL_SINGLE_INCLUDE_HPP
@@ -13717,6 +13717,14 @@ namespace sol {
 			}
 		};
 
+		template <typename T, typename Y, bool is_index, bool is_variable, bool checked, int boost, bool clean_stack, typename C>
+		struct lua_call_wrapper<T, yielding_t<Y>, is_index, is_variable, checked, boost, clean_stack, C> {
+			template <typename F>
+			static int call(lua_State* L, F&& f) {
+				return lua_call_wrapper<T, meta::unqualified_t<Y>, is_index, is_variable, checked, boost, clean_stack>{}.call(L, f.func);
+			}
+		};
+
 		template <typename T, typename Sig, typename P, bool is_index, bool is_variable, bool checked, int boost, bool clean_stack, typename C>
 		struct lua_call_wrapper<T, function_arguments<Sig, P>, is_index, is_variable, checked, boost, clean_stack, C> {
 			template <typename F>
@@ -15650,7 +15658,7 @@ namespace sol {
 		}
 
 		proxy& force() {
-			if (this->valid()) {
+			if (!this->valid()) {
 				this->set(new_table());
 			}
 			return *this;

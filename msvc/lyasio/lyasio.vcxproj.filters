@@ -18,7 +18,7 @@
     <ClCompile Include="..\..\src\tolua_link.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\lyasio11.cpp">
+    <ClCompile Include="..\..\src\lyasio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

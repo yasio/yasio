@@ -158,7 +158,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\lyasio.cpp" />
-    <ClCompile Include="..\..\src\lyasio11.cpp" />
     <ClCompile Include="luatest.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -93,7 +93,6 @@ client:open(0, yasio.CHANNEL_TCP_CLIENT)
 local httpclient = io_service.new()
 hostent.host = "ip138.com"
 hostent.port = 80
-httpclient:set_option(yasio.YASIO_OPT_LFIB_PARAMS, 65535, -1, 0, 0)
 httpclient:start_service(hostent, function(event)
         local t = event:kind()
         if t == yasio.YASIO_EVENT_RECV_PACKET then
@@ -112,7 +111,9 @@ httpclient:start_service(hostent, function(event)
             print("The http connection is lost!")
             stopFlag = stopFlag + 1
         end
-end)
+    end)
+httpclient:set_option(yasio.YASIO_OPT_LFIB_PARAMS, 65535, -1, 0, 0)
+httpclient:set_option(yasio.YASIO_OPT_CHANNEL_LOCAL_PORT, 0, 36253)
 httpclient:open(0, yasio.CHANNEL_TCP_CLIENT)    
 
 local elapsedTime = 0

@@ -46,7 +46,6 @@ SOFTWARE.
 #include "xxsocket.h"
 #include "string_view.hpp"
 
-#define _USING_ARES_LIB 0
 #define _USING_OBJECT_POOL 1
 
 #if !defined(_ARRAYSIZE)
@@ -125,6 +124,8 @@ enum
   YASIO_OPT_IO_EVENT_CALLBACK,
   YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
+  YASIO_OPT_CHANNEL_REMOTE_ADDR,
+  YASIO_OPT_CHANNEL_REMOTE_PORT,
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -353,9 +354,6 @@ public:
 
   void stop_service();
 
-  void set_endpoint(size_t channel_index, const char *host, u_short port);
-  void set_endpoint(size_t channel_index, const ip::endpoint &ep);
-
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
@@ -405,10 +403,6 @@ public:
 
   bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
 
-#if _USING_ARES_LIB
-  void handle_ares_work_finish(channel_context *);
-#endif
-
 private:
   void open_internal(io_channel *);
 
@@ -418,10 +412,10 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  int do_select(fd_set *fds_array, timeval &timeout);
+  int do_evpoll(fd_set *fds_array, timeval &timeout);
 
   bool do_nonblocking_connect(io_channel *);
-  bool do_nonblocking_connect_completion(fd_set *fds_array, io_channel *);
+  bool do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
 
   transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(io_channel *, int error);
@@ -460,7 +454,7 @@ private:
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
-  void do_nonblocking_accept_completion(fd_set *fds_array, io_channel *);
+  void do_nonblocking_accept_completion(io_channel *, fd_set *fds_array);
 
   // -1 indicate failed, connection will be closed
   int builtin_decode_frame_length(void *ptr, int len);
@@ -545,11 +539,6 @@ private:
   // The resolve function
   resolv_fn_t xresolv_;
 
-#if _USING_ARES_LIB
-  // non blocking io dns resolve support
-  void *ares_; // the ares handle
-  int ares_outstanding_work_;
-#endif
   int ipsv_state_; // local network state
 };                 // io_service
 };                 // namespace inet

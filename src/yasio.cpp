@@ -35,22 +35,6 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
-#if _USING_ARES_LIB
-#  if !defined(CARES_STATICLIB)
-#    define CARES_STATICLIB 1
-#  endif
-extern "C" {
-#  include "c-ares/ares.h"
-}
-#  if defined(_WIN32)
-#    if defined(_DEBUG)
-#      pragma comment(lib, "libcaresd.lib")
-#    else
-#      pragma comment(lib, "libcares.lib")
-#    endif
-#  endif
-#endif
-
 #if !defined(MICROSECONDS_PER_SECOND)
 #  define MICROSECONDS_PER_SECOND 1000000LL
 #endif
@@ -157,35 +141,6 @@ static std::string _sfmt(const char *format, ...)
   return buffer;
 }
 
-#if _USING_ARES_LIB
-static void ares_getaddrinfo_callback(void *arg, int status, addrinfo *answerlist)
-{
-  auto ctx = (channel *)arg;
-  if (status == ARES_SUCCESS)
-  {
-    if (answerlist != nullptr)
-    {
-      ip::endpoint ep(answerlist);
-      ep.port(ctx->port_);
-      std::string ip = ep.to_string();
-      ctx->endpoints_.push_back(ep);
-      ctx->dns_queries_timestamp_ = _highp_clock();
-      INET_LOG("[index: %d] ares_getaddrinfo_callback: resolve %s succeed, ip:%s", ctx->index_,
-               ctx->host_.c_str(), ip.c_str());
-    }
-  }
-  else
-  {
-    INET_LOG("[index: %d] ares_getaddrinfo_callback: resolve %s failed, status:%d", ctx->index_,
-             ctx->host_.c_str(), status);
-  }
-
-  ctx->deadline_timer_.cancel();
-  ctx->resolve_state_ = !ctx->endpoints_.empty() ? resolve_state::READY : resolve_state::FAILED;
-  ctx->deadline_timer_.service_.handle_ares_work_finish(ctx);
-}
-#endif
-
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #  pragma pack(push, 8)
@@ -290,10 +245,7 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
 
   maxfdp_           = 0;
   outstanding_work_ = 0;
-#if _USING_ARES_LIB
-  ares_                  = nullptr;
-  ares_outstanding_work_ = 0;
-#endif
+
   ipsv_state_ = 0;
 
   this->xdec_len_ = [](io_service *service, void *ptr, int len) {
@@ -326,13 +278,6 @@ void io_service::stop_service()
 
     unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
     thread_started_ = false;
-#if _USING_ARES_LIB
-    if (this->ares_ != nullptr)
-    {
-      ::ares_destroy((ares_channel)this->ares_);
-      this->ares_ = nullptr;
-    }
-#endif
 
     this->on_event_ = nullptr;
   }
@@ -460,21 +405,6 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
 
     stopping_       = false;
     thread_started_ = true;
-#if _USING_ARES_LIB
-    /* Initialize the library */
-    ::ares_library_init(ARES_LIB_INIT_ALL);
-
-    int ret = ::ares_init((ares_channel *)&ares_);
-
-    if (ret == ARES_SUCCESS)
-    {
-      // set dns servers, optional, comment follow code, ares also work well.
-      // ::ares_set_servers_csv((ares_channel )ares_,
-      // "114.114.114.114,8.8.8.8");
-    }
-    else
-      INET_LOG("Initialize ares failed: %d!", ret);
-#endif
 
     register_descriptor(interrupter_.read_descriptor(), socket_event_read);
 
@@ -487,30 +417,6 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
 
     worker_thread_ = std::thread(&io_service::service, this);
   }
-}
-
-void io_service::set_endpoint(size_t channel_index, const char *host, u_short port)
-{
-  // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
-  auto ctx = channels_[channel_index];
-
-  ctx->host_ = host;
-  ctx->port_ = port;
-  update_resolve_state(ctx);
-}
-
-void io_service::set_endpoint(size_t channel_index, const ip::endpoint &ep)
-{
-  // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
-  auto ctx = channels_[channel_index];
-
-  ctx->endpoints_.clear();
-  ctx->endpoints_.push_back(ep);
-  ctx->resolve_state_ = resolve_state::READY;
 }
 
 void io_service::service()
@@ -527,7 +433,7 @@ void io_service::service()
 
   for (; !stopping_;)
   {
-    int nfds = do_select(fds_array, timeout);
+    int nfds = do_evpoll(fds_array, timeout);
 
     if (stopping_)
       break;
@@ -562,27 +468,6 @@ void io_service::service()
 #endif
       --nfds;
     }
-#if _USING_ARES_LIB
-    /// perform possible domain resolve requests.
-    if (this->ares_outstanding_work_ > 0)
-    {
-      ares_socket_t socks[ARES_GETSOCK_MAXNUM] = {0};
-      int bitmask = ares_getsock((ares_channel)this->ares_, socks, _ARRAYSIZE(socks));
-
-      for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
-      {
-        if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
-        {
-          auto fd = socks[i];
-          ::ares_process_fd((ares_channel)this->ares_,
-                            FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD,
-                            FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
-        }
-        else
-          break;
-      }
-    }
-#endif
 
     // perform active transports
     perform_transports(fds_array);
@@ -975,7 +860,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   return !(ctx->resolve_state_ == resolve_state::INPRROGRESS);
 }
 
-bool io_service::do_nonblocking_connect_completion(fd_set *fds_array, io_channel *ctx)
+bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_array)
 {
   if (ctx->state_ == channel_state::CONNECTING)
   {
@@ -1074,7 +959,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
 }
 
-void io_service::do_nonblocking_accept_completion(fd_set *fds_array, io_channel *ctx)
+void io_service::do_nonblocking_accept_completion( io_channel *ctx, fd_set *fds_array)
 {
   if (ctx->state_ == channel_state::CONNECTING)
   {
@@ -1147,6 +1032,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 {
   transport_ptr transport(new io_transport(ctx));
 
+  transport->socket_ = socket;
   if (ctx->type_ & CHANNEL_CLIENT)
   {
     ctx->state_ = channel_state::CONNECTED;
@@ -1165,7 +1051,6 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
     }
   } // else server channel, always CONNECTING to wait next client connect.
 
-  transport->socket_ = socket;
   this->transports_.push_back(transport);
 
   auto connection = transport->socket_;
@@ -1488,7 +1373,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_select(fd_set *fds_array, timeval &maxtv)
+int io_service::do_evpoll(fd_set *fds_array, timeval &maxtv)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1512,20 +1397,9 @@ but it's ok.
       INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
 #endif
-#if !_USING_ARES_LIB
+
       nfds =
           ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
-#else
-      timeval *pmaxtv = &maxtv;
-      if (this->ares_outstanding_work_ > 0 &&
-          ::ares_fds((ares_channel)this->ares_, &fds_array[read_op], &fds_array[write_op]) > 0)
-      {
-        struct timeval tv = {0};
-        pmaxtv            = ::ares_timeout((ares_channel)this->ares_, &maxtv, &tv);
-      }
-      nfds =
-          ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, pmaxtv);
-#endif
 
 #if _YASIO_VERBOS_LOG
       INET_LOG("socket.select waked up, retval=%d", nfds);
@@ -1597,7 +1471,7 @@ bool io_service::start_resolve(io_channel *ctx)
   ctx->endpoints_.clear();
 
   INET_LOG("[index: %d] start async resolving for %s", ctx->index_, ctx->host_.c_str());
-#if !_USING_ARES_LIB // 6.563ms
+  // 6.563ms
   std::thread resolve_thread([=] {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
@@ -1633,33 +1507,6 @@ bool io_service::start_resolve(io_channel *ctx)
     this->interrupt();
   });
   resolve_thread.detach();
-#else
-  addrinfo hint; // 333.921ms
-  memset(&hint, 0x0, sizeof(hint));
-
-  if (this->ipsv_state_ & ipsv_ipv4)
-  {
-    hint.ai_family = AF_INET;
-  }
-  else
-  {
-    hint.ai_family = AF_INET6;
-  }
-  ::ares_getaddrinfo((ares_channel)this->ares_, ctx->host_.c_str(), nullptr, &hint,
-                     ares_getaddrinfo_callback, ctx);
-
-  ctx->deadline_timer_.expires_from_now(std::chrono::seconds(ASYNC_RESOLVE_TIMEOUT));
-  ctx->deadline_timer_.async_wait([=](bool cancelled) {
-    if (!cancelled)
-    {
-      ::ares_cancel((ares_channel)this->ares_); // It's seems not trigger socket close,
-      // because ares_getaddrinfo has bug yet.
-      handle_connect_failed(ctx, ERR_RESOLVE_HOST_TIMEOUT);
-    }
-  });
-
-  ++this->ares_outstanding_work_;
-#endif
 
   return false; // waiting async resolve complete.
 }
@@ -1678,15 +1525,6 @@ bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostn
   }
   return false;
 }
-
-#if _USING_ARES_LIB
-void io_service::handle_ares_work_finish(channel *)
-{ // Only call at event-loop thread, so no
-  // need to consider thread safe.
-  --this->ares_outstanding_work_;
-  ++this->outstanding_work_;
-}
-#endif
 
 int io_service::builtin_decode_frame_length(void *ud, int n)
 {

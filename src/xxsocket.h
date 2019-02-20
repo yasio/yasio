@@ -56,6 +56,7 @@ SOFTWARE.
 #  include <Wspiapi.h>
 typedef SOCKET socket_native_type;
 typedef int socklen_t;
+typedef WSAPOLLFD pollfd;
 #  pragma comment(lib, "ws2_32.lib")
 #else
 #  include <unistd.h>

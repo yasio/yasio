@@ -484,8 +484,6 @@ private:
   std::vector<deadline_timer *> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 
-  // socket event set
-  int maxfdp_;
   enum
   {
     read_op,  // for async read and write(trigger by interrupt)

@@ -65,7 +65,9 @@ typedef WSAPOLLFD pollfd;
 #  include <netdb.h>
 #  include <sys/types.h>
 #  include <sys/poll.h>
-// #include <sys/epoll.h>
+#if defined(__linux__)
+#include <sys/epoll.h>
+#endif
 #  include <sys/select.h>
 #  include <sys/socket.h>
 #  include <netinet/in.h>
@@ -91,6 +93,10 @@ typedef int socket_native_type;
 #  undef socket
 #endif
 #include <fcntl.h> // common platform header
+
+#ifndef SO_REUSEPORT
+#define SO_REUSEPORT SO_REUSEADDR
+#endif
 
 // redefine socket error code for posix api
 #ifdef _WIN32

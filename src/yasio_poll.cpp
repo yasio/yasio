@@ -249,7 +249,6 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
   // Default: 10 minutes.
   options_.dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
 
-  maxfdp_           = 0;
   outstanding_work_ = 0;
 
   ipsv_state_ = 0;
@@ -1439,10 +1438,6 @@ but it's ok.
       // WSAPoll()
       maxtv.tv_sec  = static_cast<long>(wait_duration / 1000000);
       maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
-#if _YASIO_VERBOS_LOG
-      INET_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-               maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
-#endif
 
       nfds = WSAPoll(&fds_array.front(), fds_array.size(), maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
 

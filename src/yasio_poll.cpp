@@ -232,7 +232,7 @@ void io_channel::reset()
   deadline_timer_.cancel();
 }
 
-static bool poll_fd_isset(socket_native_type fd, std::vector<pollfd> &fds_array, SHORT event)
+static bool poll_fd_isset(socket_native_type fd, std::vector<pollfd> &fds_array, short event)
 {
   auto pollfd_it = std::find_if(fds_array.begin(), fds_array.end(),
                                 [=](const pollfd &pollfd) { return pollfd.fd == fd; });

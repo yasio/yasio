@@ -30,7 +30,7 @@ SOFTWARE.
 */
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
-#include "yasio.h"
+#include "yasio_poll.h"
 #include <limits>
 #include <stdarg.h>
 #include <string>
@@ -709,7 +709,7 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
   int events = 0;
   if ((flags & socket_event_read) != 0)
   {
-    events |= POLLIN;
+    events |= POLLIN | POLLPRI;
   }
 
   if ((flags & socket_event_write) != 0)
@@ -719,17 +719,14 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
 
   if ((flags & socket_event_except) != 0)
   {
-    events |= POLLERR;
+    events |= (POLLERR | POLLHUP;
   }
 
-  pollfd pollfd;
-  pollfd.fd = fd;
-  pollfd.events  = events;
-  pollfd.revents = 0;
-  this->poll_fds_.push_back(pollfd);
-
-  if (maxfdp_ < static_cast<int>(fd) + 1)
-    maxfdp_ = static_cast<int>(fd) + 1;
+  pollfd pfd;
+  pfd.fd = fd;
+  pfd.events  = events;
+  pfd.revents = 0;
+  this->poll_fds_.push_back(pfd);
 }
 
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)

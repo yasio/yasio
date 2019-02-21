@@ -975,14 +975,13 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       {
         if (ctx->type_ & CHANNEL_TCP)
         {
-          xxsocket client_sock = ctx->socket_->accept();
-          if (client_sock.is_open())
+          std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
+          if (client_sock->is_open())
           {
-            client_sock.set_nonblocking(true);
-            register_descriptor(client_sock.native_handle(), socket_event_read);
+            client_sock->set_nonblocking(true);
+            register_descriptor(client_sock->native_handle(), socket_event_read);
 
-            handle_connect_succeed(ctx,
-                                   std::shared_ptr<xxsocket>(new xxsocket(std::move(client_sock))));
+            handle_connect_succeed(ctx, client_sock);
           }
         }
         else // CHANNEL_UDP
@@ -1042,8 +1041,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
     ctx->state_ = channel_state::CONNECTED;
 
     if (ctx->type_ & CHANNEL_TCP)
-    { // The tcp client channl
-      // apply tcp keepalive options
+    { // apply tcp keepalive options
       if (options_.tcp_keepalive.onoff)
       {
         socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,

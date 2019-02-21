@@ -224,7 +224,7 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
 
 void io_channel::reset()
 {
-  state_ = channel_state::INACTIVE;
+  state_ = channel_state::CLOSED;
 
   resolve_state_         = resolve_state::FAILED;
   dns_queries_timestamp_ = 0;
@@ -245,12 +245,49 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
 
   ipsv_state_ = 0;
 
+  epoll_fd_ = epoll_create(19);
+
   this->xdec_len_ = [](io_service *service, void *ptr, int len) {
     return service->builtin_decode_frame_length(ptr, len);
   };
 }
 
-io_service::~io_service() { stop_service(); }
+io_service::~io_service()
+{
+  stop_service();
+  if (epoll_fd_ != -1)
+    close(epoll_fd_);
+}
+
+void io_service::start_service(const io_hostent *channel_eps, int channel_count,
+                               io_event_callback_t cb)
+{
+  if (!thread_started_)
+  {
+    if (channel_count <= 0)
+      return;
+    if (cb)
+      this->on_event_ = std::move(cb);
+
+    stopping_       = false;
+    thread_started_ = true;
+
+    // Add the interrupter's descriptor to epoll.
+    epoll_event ev = {0, {0}};
+    ev.events      = EPOLLIN | EPOLLERR | EPOLLET;
+    ev.data.ptr    = &interrupter_;
+    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, interrupter_.read_descriptor(), &ev);
+
+    // Initialize channels
+    for (auto i = 0; i < channel_count; ++i)
+    {
+      auto &channel_ep = channel_eps[i];
+      (void)new_channel(channel_ep);
+    }
+
+    worker_thread_ = std::thread(&io_service::service, this);
+  }
+}
 
 void io_service::stop_service()
 {
@@ -273,7 +310,9 @@ void io_service::stop_service()
 
     clear_channels();
 
-    unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
+    epoll_event ev = {0, {0}};
+    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, interrupter_.read_descriptor(), &ev);
+
     thread_started_ = false;
 
     this->on_event_ = nullptr;
@@ -390,36 +429,10 @@ void io_service::dispatch_events(int count)
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
-void io_service::start_service(const io_hostent *channel_eps, int channel_count,
-                               io_event_callback_t cb)
-{
-  if (!thread_started_)
-  {
-    if (channel_count <= 0)
-      return;
-    if (cb)
-      this->on_event_ = std::move(cb);
-
-    stopping_       = false;
-    thread_started_ = true;
-
-    register_descriptor(interrupter_.read_descriptor(), socket_event_read, nullptr);
-
-    // Initialize channels
-    for (auto i = 0; i < channel_count; ++i)
-    {
-      auto &channel_ep = channel_eps[i];
-      (void)new_channel(channel_ep);
-    }
-
-    worker_thread_ = std::thread(&io_service::service, this);
-  }
-}
-
 void io_service::service()
 { // The async event-loop
   // Set Thread Name: yasio async socket io
-  _set_thread_name("yasio");
+  _set_thread_name("yasio-evloop");
 
   // Call once at startup
   this->ipsv_state_ = xxsocket::getipsv();
@@ -430,7 +443,7 @@ void io_service::service()
   for (; !stopping_;)
   {
     epoll_event events[128] = {0};
-    int nfds = do_evpoll(events, _ARRAYSIZE(events));
+    int nfds                = do_evpoll(events, _ARRAYSIZE(events));
 
     if (stopping_)
       break;
@@ -455,114 +468,135 @@ void io_service::service()
     // Reset the interrupter.
     else if (nfds > 0)
     {
-#if _YASIO_VERBOS_LOG
-      bool was_interrupt = interrupter_.reset();
-      INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, "
-               "was_interrupt:%s",
-               this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
-#else
-      interrupter_.reset();
-#endif
-      for(int i = 0; i < nfds; ++i) {
-        auto& event = events[i];
-        if(event.data.ptr == &this->interrupter_) {
-          interrupter_.reset();
+      for (int i = 0; i < nfds; ++i)
+      {
+        auto &event = events[i];
+        if (event.data.ptr == &this->interrupter_)
+        {
+          // No need to reset the interrupter since we're leaving the descriptor
+          // in a ready-to-read state and relying on edge-triggered notifications
+          // to make it so that we only get woken up when the descriptor's epoll
+          // registration is updated.
+          continue;
         }
-        else {
-          io_base* ud = (io_base*)event.data.ptr;
-          if(ud->class_id_ == IO_CLASS_TRANSPORT) {
-            perform_transports(this->transports_[static_cast<io_transport*>(ud)->store_index_], event);
-          }
-          else if(ud->class_id_ == IO_CLASS_CHANNEL) {
-            perform_channels(static_cast<io_channel*>(ud), event);
-          }
-          // else, unknown object
+
+        io_base *ud = (io_base *)event.data.ptr;
+        if (ud->class_id_ == IO_CLASS_TRANSPORT)
+        {
+          do_io(this->transports_[static_cast<io_transport *>(ud)->store_index_], event);
         }
+        else if (ud->class_id_ == IO_CLASS_CHANNEL)
+        {
+          do_open_completion(static_cast<io_channel *>(ud), event);
+        }
+        // else, unknown object
       }
     }
 
-    // perform timeout timers
-    perform_timers();
+    // update active channels
+    if (!active_channels_.empty())
+    {
+      active_channels_mtx_.lock();
+      for (auto iter = active_channels_.begin(); iter != active_channels_.end();)
+      {
+        auto ctx = *iter;
+        if (ctx->state_ == channel_state::OPENING)
+          do_open(ctx);
+
+        if (ctx->resolve_state_ != resolve_state::INPRROGRESS)
+          iter = active_channels_.erase(iter);
+        else
+          ++iter;
+      }
+      active_channels_mtx_.unlock();
+    }
+
+    // update timers
+    do_timeout_timers();
   }
 
 _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-void io_service::perform_transports(transport_ptr ctx, const epoll_event& event)
+void io_service::do_open(io_channel *ctx)
 {
-    if (ctx->offset_ > 0 || (event.events & (EPOLLIN | EPOLLHUP | EPOLLERR)))
-    {
-#if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
-#endif
-      if (!do_read(ctx))
-      {
-        handle_close(ctx);
-        // iter = transports_.erase(iter); // TODO: remove transport from transport list
-        return;
-      }
-    }
-
-    // perform write operations
-    if (!ctx->send_queue_.empty())
-    {
-      ctx->send_queue_mtx_.lock();
-#if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
-#endif
-      if (!do_write(ctx))
-      { // TODO: check would block? for client, may
-        // be unnecessary.
-        ctx->send_queue_mtx_.unlock();
-        handle_close(ctx);
-        // iter = transports_.erase(iter); // TODO: remove transport from transport list
-        return;
-      }
-
-      if (!ctx->send_queue_.empty())
-        ++this->outstanding_work_;
-
-      ctx->send_queue_mtx_.unlock();
-    }
+  assert(ctx->state_ == channel_state::OPENING);
+  if (ctx->type_ & CHANNEL_CLIENT)
+  {
+    do_nonblocking_connect(ctx);
+  }
+  else if (ctx->type_ & CHANNEL_SERVER)
+  {
+    do_nonblocking_accept(ctx);
+  }
 }
 
-void io_service::perform_channels(io_channel* ctx, const epoll_event& event)
-{
-      bool finish = false;
-      if (ctx->type_ & CHANNEL_CLIENT)
-      {
-        switch (ctx->state_)
-        {
-          case channel_state::REQUEST_CONNECT:
-            finish = do_nonblocking_connect(ctx);
-            break;
-          case channel_state::CONNECTING:
-            finish = do_nonblocking_connect_completion(ctx, event);
-            break;
-          default:; // do nothing
-        }
-      }
-      else if (ctx->type_ & CHANNEL_SERVER)
-      {
-        switch (ctx->state_)
-        {
-          case channel_state::REQUEST_CONNECT:
-            do_nonblocking_accept(ctx);
-            break;
-          case channel_state::CONNECTING:
-            do_nonblocking_accept_completion(ctx, event);
-            break;
-          case channel_state::INACTIVE:
-            finish = true;
-            break;
-          default:; // do nothing
-        }
-      }
+void io_service::do_open_completion(io_channel *ctx, const epoll_event &event)
+{ // client: OPENING, server: OPENED
+  if (ctx->type_ & CHANNEL_CLIENT)
+  {
+    do_nonblocking_connect_completion(ctx, event);
+  }
+  else if (ctx->type_ & CHANNEL_SERVER)
+  {
+    do_nonblocking_accept_completion(ctx, event);
+  }
+}
 
-      if(finish) {
-        (void)0;
-      }
+void io_service::do_io(transport_ptr ctx, const epoll_event &event)
+{
+  int n          = -1;
+  epoll_event ev = {0, {0}};
+  if (ctx->offset_ > 0 || (event.events & (EPOLLIN | EPOLLHUP | EPOLLERR)))
+  {
+#if _YASIO_VERBOS_LOG
+    INET_LOG("[index: %d] perform non-blocking read operation...", ctx->channel_index());
+#endif
+    n = do_read(ctx);
+    if (n < 0)
+    {
+      handle_close(ctx);
+      // iter = transports_.erase(iter); // TODO: remove transport from transport list
+      return;
+    }
+    else if (n > 0)
+    {
+      ev.events = EPOLLIN;
+    }
+  }
+
+  // perform write operations
+  if (!ctx->send_queue_.empty())
+  {
+    ctx->send_queue_mtx_.lock();
+#if _YASIO_VERBOS_LOG
+    INET_LOG("[index: %d] perform non-blocking write operation...", ctx->channel_index());
+#endif
+
+    if (!do_write(ctx))
+    { // TODO: check would block? for client, may
+      // be unnecessary.
+      ctx->send_queue_mtx_.unlock();
+      handle_close(ctx);
+      // iter = transports_.erase(iter); // TODO: remove transport from transport list
+      return;
+    }
+
+    if (!ctx->send_queue_.empty())
+    {
+      ev.events |= EPOLLOUT;
+    }
+
+    ctx->send_queue_mtx_.unlock();
+  }
+
+  if (ev.events != 0)
+  {
+    ev.data.ptr = ctx.get();
+    outstanding_events_.push_back(ev);
+    ++this->outstanding_work_;
+  }
 }
 
 void io_service::close(size_t channel_index)
@@ -575,10 +609,10 @@ void io_service::close(size_t channel_index)
   assert(ctx->type_ == CHANNEL_TCP_SERVER);
   if (ctx->type_ != CHANNEL_TCP_SERVER)
     return;
-  if (ctx->state_ != channel_state::INACTIVE)
+  if (ctx->state_ != channel_state::CLOSED)
   {
-    ctx->state_ = channel_state::INACTIVE;
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
+    ctx->state_ = channel_state::CLOSED;
+    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read, ctx);
     ctx->socket_->close();
     interrupt();
   }
@@ -598,13 +632,13 @@ void io_service::close(transport_ptr &transport)
   }
 }
 
-bool io_service::is_connected(size_t channel_index) const
+bool io_service::is_open(size_t channel_index) const
 {
   // Gets channel
   if (channel_index >= channels_.size())
     return false;
   auto ctx = channels_[channel_index];
-  return ctx->state_ == channel_state::CONNECTED;
+  return ctx->state_ == channel_state::OPENED;
 }
 
 void io_service::reopen(transport_ptr transport)
@@ -645,8 +679,8 @@ void io_service::handle_close(transport_ptr transport)
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT)
   {
-    if (channel_state::REQUEST_CONNECT != ctx->state_)
-      ctx->state_ = channel_state::INACTIVE;
+    if (ctx->state_ != channel_state::OPENING)
+      ctx->state_ = channel_state::CLOSED;
     if (options_.reconnect_timeout_ > 0)
     {
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
@@ -660,13 +694,14 @@ void io_service::handle_close(transport_ptr transport)
   }
 }
 
-void io_service::register_descriptor(const socket_native_type fd, int flags, io_base* ud)
+void io_service::register_descriptor(const socket_native_type fd, int flags, io_base *ud)
 {
-  epoll_event ev = { 0, { 0 } };
-  ev.data.ptr = ud;
+  epoll_event ev = {ud->registered_events_, {0}};
+  ev.data.ptr    = ud;
+  ev.events |= EPOLLET;
   if ((flags & socket_event_read) != 0)
   {
-    ev.events |= (EPOLLIN | EPOLLPRI | EPOLLET);
+    ev.events |= (EPOLLIN | EPOLLPRI);
   }
 
   if ((flags & socket_event_write) != 0)
@@ -679,33 +714,44 @@ void io_service::register_descriptor(const socket_native_type fd, int flags, io_
     ev.events |= (EPOLLERR | EPOLLHUP);
   }
 
-  epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev);
+  if (ud->registered_events_ == 0)
+  {
+    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev);
+  }
+  else
+  {
+    epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev);
+  }
+  ud->registered_events_ = ev.events;
 }
 
-void io_service::unregister_descriptor(const socket_native_type fd, int flags)
+void io_service::unregister_descriptor(const socket_native_type fd, int flags, io_base *ud)
 {
-//  auto pollfd_it = std::find_if(this->poll_fds_.begin(), this->poll_fds_.end(),
-//                                [=](const pollfd &pollfd) { return pollfd.fd == fd; });
-//  if (pollfd_it != this->poll_fds_.end())
-//  {
-//    if ((flags & socket_event_read) != 0)
-//    {
-//      pollfd_it->events &= ~(POLLIN | POLLPRI);
-//    }
-//
-//    if ((flags & socket_event_write) != 0)
-//    {
-//      pollfd_it->events &= ~POLLOUT;
-//    }
-//
-//    if ((flags & socket_event_except) != 0)
-//    {
-//      pollfd_it->events &= ~(POLLERR | POLLHUP);
-//    }
-//
-//    if (pollfd_it->events == 0)
-//      this->poll_fds_.erase(pollfd_it);
-//  }
+  epoll_event ev = {ud->registered_events_, {0}};
+  ev.data.ptr    = ud;
+  if ((flags & socket_event_read) != 0)
+  {
+    ev.events &= ~(EPOLLIN | EPOLLPRI);
+  }
+
+  if ((flags & socket_event_write) != 0)
+  {
+    ev.events &= ~EPOLLOUT;
+  }
+
+  if ((flags & socket_event_except) != 0)
+  {
+    ev.events &= ~(EPOLLERR | EPOLLHUP);
+  }
+
+  if (ev.events & (EPOLLIN | EPOLLPRI | EPOLLOUT))
+  {
+    epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev);
+  }
+  else
+  {
+    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, &ev);
+  }
 }
 
 void io_service::write(transport_ptr transport, std::vector<char> data)
@@ -723,7 +769,8 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    interrupter_.interrupt();
+    // interrupter_.interrupt();
+    register_descriptor(transport->socket_->native_handle(), socket_event_write, transport);
   }
   else
   {
@@ -744,11 +791,9 @@ void io_service::handle_event(event_ptr event)
   }
 }
 
-bool io_service::do_nonblocking_connect(io_channel *ctx)
+void io_service::do_nonblocking_connect(io_channel *ctx)
 {
-  assert(ctx->state_ == channel_state::REQUEST_CONNECT);
-  if (ctx->state_ != channel_state::REQUEST_CONNECT)
-    return true;
+  assert(ctx->state_ == channel_state::OPENING);
 
   if (this->ipsv_state_ == 0)
     this->ipsv_state_ = xxsocket::getipsv();
@@ -772,8 +817,6 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
                ctx->port_);
     }
 
-    ctx->state_ = channel_state::CONNECTING;
-
     if (ctx->type_ & CHANNEL_TCP)
     {
       int ret  = -1;
@@ -792,30 +835,26 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
         if (error != EINPROGRESS && error != EWOULDBLOCK)
         {
           this->handle_connect_failed(ctx, error);
-          return true;
         }
         else
         {
           // register connect socket with connect channel.
-          register_descriptor(ctx->socket_->native_handle(),
-                              socket_event_read | socket_event_write, ctx);
+          register_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write,
+                              ctx);
 
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
           ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-            if (!cancelled && ctx->state_ != channel_state::CONNECTED)
+            if (!cancelled && ctx->state_ != channel_state::OPENED)
             {
               handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
             }
           });
-
-          return false;
         }
       }
       else if (ret == 0)
       { // connect server succed immidiately.
         handle_connect_succeed(ctx, ctx->socket_);
-        return true;
       } // NEVER GO HERE
     }
     else // CHANNEL_UDP
@@ -836,32 +875,27 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
         {
           this->handle_connect_failed(ctx, xxsocket::get_last_errno());
         }
-
-        return true;
       }
     }
   }
   else if (ctx->resolve_state_ == resolve_state::FAILED)
   {
     handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
-    return true;
   } // DIRTY,Try resolve address nonblocking
   else if (ctx->resolve_state_ == resolve_state::DIRTY)
   {
-    return start_resolve(ctx);
+    start_resolve(ctx);
   }
-
-  return !(ctx->resolve_state_ == resolve_state::INPRROGRESS);
 }
 
-bool io_service::do_nonblocking_connect_completion(io_channel *ctx, const epoll_event& event)
+void io_service::do_nonblocking_connect_completion(io_channel *ctx, const epoll_event &event)
 {
-  if (ctx->state_ == channel_state::CONNECTING)
+  if (ctx->state_ == channel_state::OPENING)
   {
     int error = -1;
     if (ctx->type_ & CHANNEL_TCP)
     {
-      if (event.events & EPOLLOUT || event.events & EPOLLIN)
+      if (event.events & (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP))
       {
         socklen_t len = sizeof(error);
         if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error,
@@ -876,13 +910,9 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, const epoll_
           handle_connect_failed(ctx, ERR_CONNECT_FAILED);
           ctx->deadline_timer_.cancel();
         }
-
-        return true;
       }
     }
   }
-
-  return false;
 }
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
@@ -893,7 +923,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   {
     if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
     {
-      ctx->state_ = channel_state::CONNECTING;
+      ctx->state_ = channel_state::OPENING;
 
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
@@ -904,7 +934,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
                  io_service::strerror(error));
         ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
+        ctx->state_ = channel_state::CLOSED;
         return;
       }
 
@@ -914,15 +944,19 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
                  io_service::strerror(error));
         ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
+        ctx->state_ = channel_state::CLOSED;
         return;
       }
+
+      ctx->state_ = channel_state::OPENED;
 
       ctx->socket_->set_nonblocking(true);
       register_descriptor(ctx->socket_->native_handle(), socket_event_read, ctx);
 
-      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
+      INET_LOG("[index: %d] tcp server: listening at %s...", ctx->index_, ep.to_string().c_str());
     }
+    else
+      ctx->state_ = channel_state::CLOSED;
   }
   else // CHANNEL_UDP
   {
@@ -935,11 +969,11 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
       if (ctx->socket_->bind(ep) == 0)
       {
-        ctx->state_ = channel_state::CONNECTING;
+        ctx->state_ = channel_state::OPENED;
         ctx->socket_->set_nonblocking(true);
         register_descriptor(ctx->socket_->native_handle(), socket_event_read, ctx);
 
-        INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
+        INET_LOG("[index: %d] udp server: listening at: %s.", ctx->index_, ep.to_string().c_str());
       }
       else
       {
@@ -947,18 +981,20 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error,
                  this->strerror(error));
         ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
+        ctx->state_ = channel_state::CLOSED;
       }
     }
+    else
+      ctx->state_ = channel_state::CLOSED;
   }
 }
 
-void io_service::do_nonblocking_accept_completion(io_channel* ctx, const epoll_event& event)
+void io_service::do_nonblocking_accept_completion(io_channel *ctx, const epoll_event &event)
 {
-  if (ctx->state_ == channel_state::CONNECTING)
+  if (ctx->state_ == channel_state::OPENED)
   {
     int error = -1;
-    if (event.events & EPOLLIN)
+    if (event.events & (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP))
     {
       socklen_t len = sizeof(error);
       if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
@@ -1026,7 +1062,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 
   if (ctx->type_ & CHANNEL_CLIENT)
   {
-    ctx->state_ = channel_state::CONNECTED;
+    ctx->state_ = channel_state::OPENED;
 
     if (ctx->type_ & CHANNEL_TCP)
     { // apply tcp keepalive options
@@ -1036,7 +1072,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
                               options_.tcp_keepalive.probs);
       }
     }
-  } // else server channel, always CONNECTING to wait next client connect.
+  } // else server channel, always OPENING to wait next client connect.
 
   transport->store_index_ = static_cast<int>(this->transports_.size());
   this->transports_.push_back(transport);
@@ -1056,7 +1092,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 {
   close_internal(ctx);
 
-  ctx->state_ = channel_state::INACTIVE;
+  ctx->state_ = channel_state::CLOSED;
 
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
@@ -1140,10 +1176,10 @@ bool io_service::do_write(transport_ptr transport)
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/) {}
 
-bool io_service::do_read(transport_ptr transport)
+int io_service::do_read(transport_ptr transport)
 {
-  bool bRet = false;
-  auto ctx  = transport->ctx_;
+  int iRet = -1;
+  auto ctx = transport->ctx_;
   do
   {
     if (!transport->socket_->is_open())
@@ -1223,11 +1259,11 @@ bool io_service::do_read(transport_ptr transport)
       break;
     }
 
-    bRet = true;
+    iRet = n;
 
   } while (false);
 
-  return bRet;
+  return iRet;
 }
 
 void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
@@ -1244,7 +1280,7 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     {
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
       // not all data consumed, so add events for this context
-      ++this->outstanding_work_;
+      // ++this->outstanding_work_;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
@@ -1301,16 +1337,16 @@ void io_service::cancel_timer(deadline_timer *timer)
 
 void io_service::open_internal(io_channel *ctx)
 {
-  if (ctx->state_ == channel_state::REQUEST_CONNECT || ctx->state_ == channel_state::CONNECTING)
-  { // in-progress, do nothing
-    INET_LOG("[index: %d] the connect request is already in progress!", ctx->index_);
+  if (ctx->state_ != channel_state::CLOSED)
+  {
+    INET_LOG("[index: %d] can't open the channel again!", ctx->index_);
     return;
   }
 
   if (ctx->resolve_state_ != resolve_state::READY)
     update_resolve_state(ctx);
 
-  ctx->state_ = channel_state::REQUEST_CONNECT;
+  ctx->state_ = channel_state::OPENING;
   if (ctx->socket_->is_open())
   {
     ctx->socket_->shutdown();
@@ -1323,7 +1359,7 @@ void io_service::open_internal(io_channel *ctx)
   interrupter_.interrupt();
 }
 
-void io_service::perform_timers()
+void io_service::do_timeout_timers()
 {
   if (this->timer_queue_.empty())
     return;
@@ -1361,7 +1397,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(epoll_event* events, int n)
+int io_service::do_evpoll(epoll_event *events, int n)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1377,7 +1413,10 @@ but it's ok.
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
-      nfds = epoll_wait(epoll_fd_, events,  n, static_cast<long>(wait_duration / 1000)); // WSAPoll(&fds_array.front(), fds_array.size(), maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
+      nfds = epoll_wait(
+          epoll_fd_, events, n,
+          static_cast<long>(wait_duration / 1000)); // WSAPoll(&fds_array.front(), fds_array.size(),
+                                                    // maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
 
 #if _YASIO_VERBOS_LOG
       INET_LOG("socket.select waked up, retval=%d", nfds);
@@ -1387,6 +1426,18 @@ but it's ok.
     {
       nfds = static_cast<int>(channels_.size()) << 1;
     }
+  }
+  else
+  {
+    if (!outstanding_events_.empty())
+    {
+      nfds = (std::min)(static_cast<int>(outstanding_events_.size()), n);
+      auto endit = std::next(outstanding_events_.begin(), nfds);
+      std::copy(outstanding_events_.begin(), endit, events);
+      outstanding_events_.erase(outstanding_events_.begin(), endit);
+    }
+    else
+      nfds = 0;
   }
 
   return nfds;
@@ -1414,7 +1465,8 @@ bool io_service::close_internal(io_base *ctx)
 {
   if (ctx->socket_->is_open())
   {
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write);
+    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write,
+                          ctx);
     ctx->socket_->close();
     return true;
   }
@@ -1440,11 +1492,11 @@ void io_service::update_resolve_state(io_channel *ctx)
     ctx->resolve_state_ = resolve_state::FAILED;
 }
 
-bool io_service::start_resolve(io_channel *ctx)
+void io_service::start_resolve(io_channel *ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
   if (ctx->resolve_state_ != resolve_state::DIRTY)
-    return false;
+    return;
   ctx->resolve_state_ = resolve_state::INPRROGRESS;
   ctx->endpoints_.clear();
 
@@ -1485,8 +1537,6 @@ bool io_service::start_resolve(io_channel *ctx)
     this->interrupt();
   });
   resolve_thread.detach();
-
-  return false; // waiting async resolve complete.
 }
 
 bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
@@ -1542,7 +1592,13 @@ int io_service::builtin_decode_frame_length(void *ud, int n)
   return n;
 }
 
-void io_service::interrupt() { interrupter_.interrupt(); }
+void io_service::interrupt()
+{
+  epoll_event ev = {0, {0}};
+  ev.events      = EPOLLIN | EPOLLERR | EPOLLET;
+  ev.data.ptr    = &interrupter_;
+  epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, interrupter_.read_descriptor(), &ev);
+}
 
 const char *io_service::strerror(int error)
 {

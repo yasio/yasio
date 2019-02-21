@@ -71,10 +71,9 @@ enum channel_type
 
 enum class channel_state
 {
-  INACTIVE,
-  REQUEST_CONNECT,
-  CONNECTING,
-  CONNECTED,
+  CLOSED,
+  OPENING,
+  OPENED,
 };
 
 enum class resolve_state
@@ -202,14 +201,14 @@ struct io_hostent
 
 struct io_transport;
 
-enum {
-    IO_CLASS_CHANNEL,
-    IO_CLASS_TRANSPORT,
+enum
+{
+  IO_CLASS_CHANNEL,
+  IO_CLASS_TRANSPORT,
 };
 struct io_base
 {
   std::shared_ptr<xxsocket> socket_;
-  channel_state state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
   int registered_events_ = 0;
   int class_id_;
 };
@@ -218,6 +217,7 @@ struct io_channel : public io_base
 {
   io_channel(io_service &service);
 
+  channel_state state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
   int type_ = 0;
 
   // specific local port, if not zero, tcp/udp client will use it as fixed port
@@ -256,7 +256,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED);  class_id_ = IO_CLASS_TRANSPORT; }
+  io_transport(io_channel *ctx) : ctx_(ctx) { class_id_ = IO_CLASS_TRANSPORT; }
   io_channel *ctx_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
@@ -270,7 +270,7 @@ private:
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
 
-  int store_index_  = -1;
+  int store_index_ = -1;
 
   int get_socket_error()
   {
@@ -394,8 +394,8 @@ public:
   // close server
   void close(size_t channel_index = 0);
 
-  // Whether the client-->server connection established.
-  bool is_connected(size_t cahnnel_index = 0) const;
+  // check whether channel is open
+  bool is_open(size_t cahnnel_index = 0) const;
 
   void write(transport_ptr transport, std::vector<char> data);
   void write(io_transport *transport, std::vector<char> data);
@@ -407,35 +407,36 @@ public:
   void interrupt();
 
   // Start a async resolve, It's only for internal use
-  bool start_resolve(io_channel *);
+  void start_resolve(io_channel *);
 
   bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
 
 private:
   void open_internal(io_channel *);
 
-  void perform_transports(transport_ptr ctx, const epoll_event& event);
-  void perform_channels(io_channel* ctx, const epoll_event& event);
-  void perform_timers();
+  void do_io(transport_ptr ctx, const epoll_event &event);
+  void do_open(io_channel *ctx);
+  void do_open_completion(io_channel *ctx, const epoll_event &event);
+  void do_timeout_timers();
 
   long long get_wait_duration(long long usec);
 
-  int do_evpoll(epoll_event* events, int n);
+  int do_evpoll(epoll_event *events, int n);
 
-  bool do_nonblocking_connect(io_channel *);
-  bool do_nonblocking_connect_completion(io_channel* ctx, const epoll_event& event);
+  void do_nonblocking_connect(io_channel *);
+  void do_nonblocking_connect_completion(io_channel *ctx, const epoll_event &event);
 
   transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(io_channel *, int error);
 
-  void register_descriptor(const socket_native_type fd, int flags, io_base* ctx);
-  void unregister_descriptor(const socket_native_type fd, int flags);
+  void register_descriptor(const socket_native_type fd, int flags, io_base *ctx);
+  void unregister_descriptor(const socket_native_type fd, int flags, io_base* ctx);
 
   // The major async event-loop
   void service(void);
 
   bool do_write(transport_ptr);
-  bool do_read(transport_ptr);
+  int do_read(transport_ptr);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   void handle_close(transport_ptr);
@@ -462,7 +463,7 @@ private:
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
-  void do_nonblocking_accept_completion(io_channel *, const epoll_event& event);
+  void do_nonblocking_accept_completion(io_channel *, const epoll_event &event);
 
   // -1 indicate failed, connection will be closed
   int builtin_decode_frame_length(void *ptr, int len);
@@ -502,6 +503,8 @@ private:
 
   // optimize record incomplete works
   int outstanding_work_;
+  
+  std::vector<epoll_event> outstanding_events_;
 
   // the event callback
   io_event_callback_t on_event_;

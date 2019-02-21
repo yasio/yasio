@@ -71,10 +71,10 @@ enum channel_type
 
 enum class channel_state
 {
-  INACTIVE,
-  REQUEST_CONNECT,
-  CONNECTING,
-  CONNECTED,
+  CLOSED,
+  REQUEST_OPEN,
+  OPENING,
+  OPENED,
 };
 
 enum class resolve_state
@@ -205,13 +205,14 @@ struct io_transport;
 struct io_base
 {
   std::shared_ptr<xxsocket> socket_;
-  channel_state state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+
 };
 
 struct io_channel : public io_base
 {
   io_channel(io_service &service);
 
+  channel_state state_; // 0: CLOSED, 1: OPENING, 2: OPENED
   int type_ = 0;
 
   // specific local port, if not zero, tcp/udp client will use it as fixed port
@@ -250,7 +251,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx) : ctx_(ctx) { state_ = (channel_state::CONNECTED); }
+  io_transport(io_channel *ctx) : ctx_(ctx) { }
   io_channel *ctx_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
@@ -386,8 +387,8 @@ public:
   // close server
   void close(size_t channel_index = 0);
 
-  // Whether the client-->server connection established.
-  bool is_connected(size_t cahnnel_index = 0) const;
+  // check whether the channel is open
+  bool is_open(size_t cahnnel_index = 0) const;
 
   void write(transport_ptr transport, std::vector<char> data);
   void write(io_transport *transport, std::vector<char> data);

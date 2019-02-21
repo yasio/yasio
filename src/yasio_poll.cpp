@@ -459,7 +459,8 @@ void io_service::service()
 #endif
     }
     // Reset the interrupter.
-    else if (nfds > 0 && poll_fd_isset(this->interrupter_.read_descriptor(), fds_array, socket_event_read))
+    else if (nfds > 0 &&
+             poll_fd_isset(this->interrupter_.read_descriptor(), fds_array, socket_event_read))
     {
 #if _YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
@@ -492,8 +493,8 @@ void io_service::perform_transports(std::vector<pollfd> &fds_array)
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto &transport = *iter;
-    if (transport->offset_ > 0 ||
-        poll_fd_isset(transport->socket_->native_handle(), fds_array, socket_event_read | socket_event_except))
+    if (transport->offset_ > 0 || poll_fd_isset(transport->socket_->native_handle(), fds_array,
+                                                socket_event_read | socket_event_except))
     {
 #if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
@@ -637,9 +638,10 @@ void io_service::open(size_t channel_index, int channel_type)
 #if defined(_WIN32)
   if (channel_type == CHANNEL_UDP_SERVER)
   {
-    INET_LOG("[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
-             "CHANNEL_UDP_CLIENT to communicate with peer!",
-             channel_index);
+    INET_LOG(
+        "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
+        "CHANNEL_UDP_CLIENT to communicate with peer!",
+        channel_index);
     return;
   }
 #endif
@@ -692,7 +694,7 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
                                 [=](const pollfd &pollfd) { return pollfd.fd == fd; });
   if (pollfd_it == poll_fds_.end())
     poll_fds_.push_back(pollfd{fd, (short)flags, 0});
-  else 
+  else
     pollfd_it->events = flags;
 }
 
@@ -1388,7 +1390,7 @@ but it's ok.
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
-      nfds = WSAPoll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration / 1000));
+      nfds = ::poll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration / 1000));
 
 #if _YASIO_VERBOS_LOG
       INET_LOG("do_evpoll waked up, retval=%d", nfds);

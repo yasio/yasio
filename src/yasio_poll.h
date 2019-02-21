@@ -250,7 +250,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx) : ctx_(ctx) { }
+  io_transport(io_channel *ctx) : ctx_(ctx) {}
   io_channel *ctx_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer

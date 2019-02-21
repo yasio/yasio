@@ -634,9 +634,10 @@ void io_service::open(size_t channel_index, int channel_type)
 #if defined(_WIN32)
   if (channel_type == CHANNEL_UDP_SERVER)
   {
-    INET_LOG("[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
-             "CHANNEL_UDP_CLIENT to communicate with peer!",
-             channel_index);
+    INET_LOG(
+        "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
+        "CHANNEL_UDP_CLIENT to communicate with peer!",
+        channel_index);
     return;
   }
 #endif

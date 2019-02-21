@@ -451,7 +451,7 @@ void io_service::service()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      INET_LOG("socket.select failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
+      INET_LOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
       {
         goto _L_end;
@@ -462,7 +462,7 @@ void io_service::service()
     if (nfds == 0)
     {
 #if _YASIO_VERBOS_LOG
-      INET_LOG("%s", "socket.select is timeout, do perform_timeout_timers()");
+      INET_LOG("%s", "do_evpoll is timeout!");
 #endif
     }
     // Reset the interrupter.
@@ -483,11 +483,11 @@ void io_service::service()
         io_base *ud = (io_base *)event.data.ptr;
         if (ud->class_id_ == IO_CLASS_TRANSPORT)
         {
-          do_io(this->transports_[static_cast<io_transport *>(ud)->store_index_], event);
+          perform_io(this->transports_[static_cast<io_transport *>(ud)->store_index_], event);
         }
         else if (ud->class_id_ == IO_CLASS_CHANNEL)
         {
-          do_open_completion(static_cast<io_channel *>(ud), event);
+          perform_channel_completion(static_cast<io_channel *>(ud), event);
         }
         // else, unknown object
       }
@@ -501,7 +501,7 @@ void io_service::service()
       {
         auto ctx = *iter;
         if (ctx->state_ == channel_state::OPENING)
-          do_open(ctx);
+          perform_channel(ctx);
 
         if (ctx->resolve_state_ != resolve_state::INPRROGRESS)
           iter = active_channels_.erase(iter);
@@ -512,14 +512,14 @@ void io_service::service()
     }
 
     // update timers
-    do_timeout_timers();
+    perform_timers();
   }
 
 _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-void io_service::do_open(io_channel *ctx)
+void io_service::perform_channel(io_channel *ctx)
 {
   assert(ctx->state_ == channel_state::OPENING);
   if (ctx->type_ & CHANNEL_CLIENT)
@@ -532,7 +532,7 @@ void io_service::do_open(io_channel *ctx)
   }
 }
 
-void io_service::do_open_completion(io_channel *ctx, const epoll_event &event)
+void io_service::perform_channel_completion(io_channel *ctx, const epoll_event &event)
 { // client: OPENING, server: OPENED
   if (ctx->type_ & CHANNEL_CLIENT)
   {
@@ -544,7 +544,7 @@ void io_service::do_open_completion(io_channel *ctx, const epoll_event &event)
   }
 }
 
-void io_service::do_io(transport_ptr ctx, const epoll_event &event)
+void io_service::perform_io(transport_ptr ctx, const epoll_event &event)
 {
   int n          = -1;
   epoll_event ev = {0, {0}};
@@ -1359,7 +1359,7 @@ void io_service::open_internal(io_channel *ctx)
   interrupter_.interrupt();
 }
 
-void io_service::do_timeout_timers()
+void io_service::perform_timers()
 {
   if (this->timer_queue_.empty())
     return;
@@ -1431,7 +1431,7 @@ but it's ok.
   {
     if (!outstanding_events_.empty())
     {
-      nfds = (std::min)(static_cast<int>(outstanding_events_.size()), n);
+      nfds       = (std::min)(static_cast<int>(outstanding_events_.size()), n);
       auto endit = std::next(outstanding_events_.begin(), nfds);
       std::copy(outstanding_events_.begin(), endit, events);
       outstanding_events_.erase(outstanding_events_.begin(), endit);

@@ -217,7 +217,7 @@ struct io_channel : public io_base
 {
   io_channel(io_service &service);
 
-  channel_state state_; // 0: INACTIVE, 1: REQUEST_CONNECT, 2: CONNECTING, 3: CONNECTED
+  channel_state state_; // 0: CLOSED, 1: OPENING, 2: OPENED
   int type_ = 0;
 
   // specific local port, if not zero, tcp/udp client will use it as fixed port
@@ -269,8 +269,6 @@ private:
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
-
-  int store_index_ = -1;
 
   int get_socket_error()
   {
@@ -394,7 +392,7 @@ public:
   // close server
   void close(size_t channel_index = 0);
 
-  // check whether channel is open
+  // check whether the channel is open
   bool is_open(size_t cahnnel_index = 0) const;
 
   void write(transport_ptr transport, std::vector<char> data);
@@ -414,10 +412,10 @@ public:
 private:
   void open_internal(io_channel *);
 
-  void do_io(transport_ptr ctx, const epoll_event &event);
-  void do_open(io_channel *ctx);
-  void do_open_completion(io_channel *ctx, const epoll_event &event);
-  void do_timeout_timers();
+  void perform_io(transport_ptr ctx, const epoll_event &event);
+  void perform_channel(io_channel *ctx);
+  void perform_channel_completion(io_channel *ctx, const epoll_event &event);
+  void perform_timers();
 
   long long get_wait_duration(long long usec);
 
@@ -430,7 +428,7 @@ private:
   void handle_connect_failed(io_channel *, int error);
 
   void register_descriptor(const socket_native_type fd, int flags, io_base *ctx);
-  void unregister_descriptor(const socket_native_type fd, int flags, io_base* ctx);
+  void unregister_descriptor(const socket_native_type fd, int flags, io_base *ctx);
 
   // The major async event-loop
   void service(void);
@@ -503,7 +501,7 @@ private:
 
   // optimize record incomplete works
   int outstanding_work_;
-  
+
   std::vector<epoll_event> outstanding_events_;
 
   // the event callback

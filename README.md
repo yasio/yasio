@@ -8,7 +8,8 @@ support deadline timer.
 processing tcp sticky internal, user do not need to care it.  
 support lua bindings  
 support cocos2d-x jsb  
-support CocosCreator jsb2.0**
+support CocosCreator jsb2.0  
+support Unity3D tolua**
   
 ## simple usage:  
 1. Only compile src\xxsocket.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />

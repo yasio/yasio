@@ -483,7 +483,7 @@ void io_service::service()
         io_base *ud = (io_base *)event.data.ptr;
         if (ud->class_id_ == IO_CLASS_TRANSPORT)
         {
-          perform_io(this->transports_[static_cast<io_transport *>(ud)->store_index_], event);
+          perform_io(this->transports_[static_cast<io_transport *>(ud)->index_], event);
         }
         else if (ud->class_id_ == IO_CLASS_CHANNEL)
         {
@@ -647,7 +647,7 @@ void io_service::reopen(transport_ptr transport)
   {
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
   }
-  open_internal(transport->ctx_);
+  open_internal(transport->channel_);
 }
 
 void io_service::open(size_t channel_index, int channel_type)
@@ -671,9 +671,9 @@ void io_service::handle_close(transport_ptr transport)
 
   close_internal(transport.get());
 
-  auto ctx = transport->ctx_;
+  auto ctx = transport->channel_;
 
-  // @Notify connection lost
+  // @notify connection lost
   this->handle_event(event_ptr(
       new io_event(ctx->index_, YASIO_EVENT_CONNECTION_LOST, transport->error_, transport)));
 
@@ -682,7 +682,7 @@ void io_service::handle_close(transport_ptr transport)
     if (ctx->state_ != channel_state::OPENING)
       ctx->state_ = channel_state::CLOSED;
     if (options_.reconnect_timeout_ > 0)
-    {
+    { // !Auto reconnect support.
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
       timer->expires_from_now(std::chrono::microseconds(options_.reconnect_timeout_));
       timer->async_wait(
@@ -692,6 +692,10 @@ void io_service::handle_close(transport_ptr transport)
           });
     }
   }
+
+  // @we don't real delete it, just push to free list, make sure all objects' index in transports_
+  // never change.
+  this->transport_free_list_.push_back(transport.get());
 }
 
 void io_service::register_descriptor(const socket_native_type fd, int flags, io_base *ud)
@@ -1054,7 +1058,20 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, const epoll_e
 
 transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
-  transport_ptr transport(new io_transport(ctx));
+  transport_ptr transport;
+  if (!transport_free_list_.empty())
+  { // allocate from free list, and do not need push to transports_ again.
+    auto index = transport_free_list_.back()->index_;
+    transport  = transports_[index];
+    transport_free_list_.pop_back();
+    INET_LOG("allocate a transport from free list, index=%d, channel_index=%d", index, ctx->index_)
+  }
+  else
+  {
+    transport.reset(new io_transport(ctx));
+    transport->index_ = static_cast<int>(this->transports_.size());
+    this->transports_.push_back(transport);
+  }
 
   transport->socket_ = socket;
   socket->set_nonblocking(true);
@@ -1073,9 +1090,6 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
       }
     }
   } // else server channel, always OPENING to wait next client connect.
-
-  transport->store_index_ = static_cast<int>(this->transports_.size());
-  this->transports_.push_back(transport);
 
   auto connection = transport->socket_;
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
@@ -1104,7 +1118,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 bool io_service::do_write(transport_ptr transport)
 {
   bool bRet = false;
-  auto ctx  = transport->ctx_;
+  auto ctx  = transport->channel_;
   do
   {
     int n;
@@ -1179,7 +1193,7 @@ void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/)
 int io_service::do_read(transport_ptr transport)
 {
   int iRet = -1;
-  auto ctx = transport->ctx_;
+  auto ctx = transport->channel_;
   do
   {
     if (!transport->socket_->is_open())

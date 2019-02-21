@@ -208,6 +208,7 @@ enum
 };
 struct io_base
 {
+  int index_; // channel: index in channels, transport: index in transports
   std::shared_ptr<xxsocket> socket_;
   int registered_events_ = 0;
   int class_id_;
@@ -256,8 +257,8 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx) : ctx_(ctx) { class_id_ = IO_CLASS_TRANSPORT; }
-  io_channel *ctx_;
+  io_transport(io_channel *channel) : channel_(channel) { class_id_ = IO_CLASS_TRANSPORT; }
+  io_channel *channel_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
   int offset_ = 0;                           // recv buffer offset
@@ -482,6 +483,7 @@ private:
   std::vector<io_channel *> active_channels_;
 
   std::vector<transport_ptr> transports_;
+  std::vector<io_transport*> transport_free_list_; // weak pointer, it's ok
 
   // select interrupter
   select_interrupter interrupter_;

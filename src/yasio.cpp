@@ -631,6 +631,16 @@ void io_service::reopen(transport_ptr transport)
 
 void io_service::open(size_t channel_index, int channel_type)
 {
+#if defined(_WIN32)
+  if (channel_type == CHANNEL_UDP_SERVER)
+  {
+    INET_LOG("[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
+             "CHANNEL_UDP_CLIENT to communicate with peer!",
+             channel_index);
+    return;
+  }
+#endif
+
   // Gets channel
   if (channel_index >= channels_.size())
     return;
@@ -982,6 +992,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
 
             handle_connect_succeed(ctx, client_sock);
           }
+          else
+            INET_LOG("%s", "udp-server: accept client socket fd failed!");
         }
         else // CHANNEL_UDP
         {
@@ -1016,7 +1028,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
               }
               else
               {
-                this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+                INET_LOG("%s", "udp-server: open socket fd failed!");
               }
             }
           }
@@ -1024,6 +1036,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       }
       else
       {
+        INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
         close_internal(ctx);
       }
     }

@@ -424,30 +424,6 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
   }
 }
 
-void io_service::set_endpoint(size_t channel_index, const char *host, u_short port)
-{
-  // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
-  auto ctx = channels_[channel_index];
-
-  ctx->host_ = host;
-  ctx->port_ = port;
-  update_resolve_state(ctx);
-}
-
-void io_service::set_endpoint(size_t channel_index, const ip::endpoint &ep)
-{
-  // Gets channel context
-  if (channel_index >= channels_.size())
-    return;
-  auto ctx = channels_[channel_index];
-
-  ctx->endpoints_.clear();
-  ctx->endpoints_.push_back(ep);
-  ctx->resolve_state_ = resolve_state::READY;
-}
-
 void io_service::service()
 { // The async event-loop
   // Set Thread Name: yasio async socket io
@@ -457,13 +433,10 @@ void io_service::service()
   this->ipsv_state_ = xxsocket::getipsv();
 
   // event loop
-  // fd_set fds_array[3];
-
-  timeval timeout;
   std::vector<pollfd> fds_array;
   for (; !stopping_;)
   {
-    int nfds = do_select(fds_array, timeout);
+    int nfds = do_evpoll(fds_array);
 
     if (stopping_)
       break;
@@ -519,8 +492,8 @@ void io_service::perform_transports(std::vector<pollfd> &fds_array)
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto &transport = *iter;
-    if (transport->offset_ > 0 || poll_fd_isset(transport->socket_->native_handle(), fds_array,
-                                                POLLIN | POLLHUP | POLLERR | POLLNVAL))
+    if (transport->offset_ > 0 ||
+        poll_fd_isset(transport->socket_->native_handle(), fds_array, POLLIN | POLLHUP | POLLERR))
     {
 #if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
@@ -577,7 +550,7 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
             finish = do_nonblocking_connect(ctx);
             break;
           case channel_state::CONNECTING:
-            finish = do_nonblocking_connect_completion(fds_array, ctx);
+            finish = do_nonblocking_connect_completion(ctx, fds_array);
             break;
           default:; // do nothing
         }
@@ -590,7 +563,7 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
             do_nonblocking_accept(ctx);
             break;
           case channel_state::CONNECTING:
-            do_nonblocking_accept_completion(fds_array, ctx);
+            do_nonblocking_accept_completion(ctx, fds_array);
             break;
           case channel_state::INACTIVE:
             finish = true;
@@ -705,26 +678,23 @@ void io_service::handle_close(transport_ptr transport)
 
 void io_service::register_descriptor(const socket_native_type fd, int flags)
 {
-  int events = 0;
+  pollfd pfd = {fd, 0, 0};
+
   if ((flags & socket_event_read) != 0)
   {
-    events |= POLLIN | POLLPRI;
+    pfd.events |= (POLLIN | POLLPRI);
   }
 
   if ((flags & socket_event_write) != 0)
   {
-    events |= POLLOUT;
+    pfd.events |= POLLOUT;
   }
 
   if ((flags & socket_event_except) != 0)
   {
-    events |= (POLLERR | POLLHUP;
+    pfd.events |= (POLLERR | POLLHUP);
   }
 
-  pollfd pfd;
-  pfd.fd = fd;
-  pfd.events  = events;
-  pfd.revents = 0;
   this->poll_fds_.push_back(pfd);
 }
 
@@ -736,7 +706,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
   {
     if ((flags & socket_event_read) != 0)
     {
-      pollfd_it->events &= ~POLLIN;
+      pollfd_it->events &= ~(POLLIN | POLLPRI);
     }
 
     if ((flags & socket_event_write) != 0)
@@ -746,7 +716,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 
     if ((flags & socket_event_except) != 0)
     {
-      pollfd_it->events &= ~POLLERR;
+      pollfd_it->events &= ~(POLLERR | POLLHUP);
     }
 
     if (pollfd_it->events == 0)
@@ -902,8 +872,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   return !(ctx->resolve_state_ == resolve_state::INPRROGRESS);
 }
 
-bool io_service::do_nonblocking_connect_completion(std::vector<pollfd> &fds_array,
-                                                   io_channel *ctx)
+bool io_service::do_nonblocking_connect_completion(io_channel *ctx, std::vector<pollfd> &fds_array)
 {
   if (ctx->state_ == channel_state::CONNECTING)
   {
@@ -918,6 +887,8 @@ bool io_service::do_nonblocking_connect_completion(std::vector<pollfd> &fds_arra
                          &len) >= 0 &&
             error == 0)
         {
+          // remove write event avoid high-CPU occupation
+          unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
           handle_connect_succeed(ctx, ctx->socket_);
           ctx->deadline_timer_.cancel();
         }
@@ -1002,8 +973,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
 }
 
-void io_service::do_nonblocking_accept_completion(std::vector<pollfd> &fds_array,
-                                                  io_channel *ctx)
+void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<pollfd> &fds_array)
 {
   if (ctx->state_ == channel_state::CONNECTING)
   {
@@ -1020,6 +990,7 @@ void io_service::do_nonblocking_accept_completion(std::vector<pollfd> &fds_array
           xxsocket client_sock = ctx->socket_->accept();
           if (client_sock.is_open())
           {
+            client_sock.set_nonblocking(true);
             register_descriptor(client_sock.native_handle(), socket_event_read);
 
             handle_connect_succeed(ctx,
@@ -1051,6 +1022,7 @@ void io_service::do_nonblocking_accept_completion(std::vector<pollfd> &fds_array
               {
                 client_sock->set_nonblocking(true);
                 register_descriptor(client_sock->native_handle(), socket_event_read);
+
                 auto transport = handle_connect_succeed(ctx, client_sock);
                 this->handle_event(
                     event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
@@ -1076,15 +1048,13 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 {
   transport_ptr transport(new io_transport(ctx));
 
+  transport->socket_ = socket;
   if (ctx->type_ & CHANNEL_CLIENT)
   {
     ctx->state_ = channel_state::CONNECTED;
 
     if (ctx->type_ & CHANNEL_TCP)
     { // The tcp client channl
-      // remove write event avoid high-CPU occupation
-      unregister_descriptor(socket->native_handle(), socket_event_write);
-
       // apply tcp keepalive options
       if (options_.tcp_keepalive.onoff)
       {
@@ -1094,7 +1064,6 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
     }
   } // else server channel, always CONNECTING to wait next client connect.
 
-  transport->socket_ = socket;
   this->transports_.push_back(transport);
 
   auto connection = transport->socket_;
@@ -1417,7 +1386,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_select(std::vector<pollfd> &fds_array, timeval &maxtv)
+int io_service::do_evpoll(std::vector<pollfd> &fds_array)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1428,18 +1397,13 @@ but it's ok.
   int nfds = 0;
   std::swap(nfds, this->outstanding_work_);
 
-  // ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
   fds_array = this->poll_fds_;
   if (nfds <= 0)
   {
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
-      // WSAPoll()
-      maxtv.tv_sec  = static_cast<long>(wait_duration / 1000000);
-      maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
-
-      nfds = WSAPoll(&fds_array.front(), fds_array.size(), maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
+      nfds = WSAPoll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration / 1000));
 
 #if _YASIO_VERBOS_LOG
       INET_LOG("socket.select waked up, retval=%d", nfds);

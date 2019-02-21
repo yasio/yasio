@@ -124,6 +124,8 @@ enum
   YASIO_OPT_IO_EVENT_CALLBACK,
   YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
+  YASIO_OPT_CHANNEL_REMOTE_ADDR,
+  YASIO_OPT_CHANNEL_REMOTE_PORT,
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -352,9 +354,6 @@ public:
 
   void stop_service();
 
-  void set_endpoint(size_t channel_index, const char *host, u_short port);
-  void set_endpoint(size_t channel_index, const ip::endpoint &ep);
-
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
@@ -413,10 +412,10 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  int do_select(std::vector<pollfd>& fds_array, timeval &timeout);
+  int do_evpoll(std::vector<pollfd> &fds_array);
 
   bool do_nonblocking_connect(io_channel *);
-  bool do_nonblocking_connect_completion(std::vector<pollfd> &fds_array, io_channel *);
+  bool do_nonblocking_connect_completion(io_channel *, std::vector<pollfd> &fds_array);
 
   transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(io_channel *, int error);
@@ -455,7 +454,7 @@ private:
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
-  void do_nonblocking_accept_completion(std::vector<pollfd> &fds_array, io_channel *);
+  void do_nonblocking_accept_completion(io_channel *, std::vector<pollfd> &fds_array);
 
   // -1 indicate failed, connection will be closed
   int builtin_decode_frame_length(void *ptr, int len);

@@ -547,7 +547,7 @@ void io_service::perform_channels(fd_set *fds_array)
             finish = do_nonblocking_connect(ctx);
             break;
           case channel_state::CONNECTING:
-            finish = do_nonblocking_connect_completion(fds_array, ctx);
+            finish = do_nonblocking_connect_completion(ctx, fds_array);
             break;
           default:; // do nothing
         }
@@ -560,7 +560,7 @@ void io_service::perform_channels(fd_set *fds_array)
             do_nonblocking_accept(ctx);
             break;
           case channel_state::CONNECTING:
-            do_nonblocking_accept_completion(fds_array, ctx);
+            do_nonblocking_accept_completion(ctx, fds_array);
             break;
           case channel_state::INACTIVE:
             finish = true;
@@ -802,7 +802,6 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
         {
           register_descriptor(ctx->socket_->native_handle(),
                               socket_event_read | socket_event_write);
-
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
           ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
@@ -817,6 +816,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
       }
       else if (ret == 0)
       { // connect server succed immidiately.
+        register_descriptor(ctx->socket_->native_handle(), socket_event_read);
         handle_connect_succeed(ctx, ctx->socket_);
         return true;
       } // NEVER GO HERE
@@ -875,6 +875,8 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_
                          &len) >= 0 &&
             error == 0)
         {
+          // remove write event avoid high-CPU occupation
+          unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
           handle_connect_succeed(ctx, ctx->socket_);
           ctx->deadline_timer_.cancel();
         }
@@ -959,7 +961,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
 }
 
-void io_service::do_nonblocking_accept_completion( io_channel *ctx, fd_set *fds_array)
+void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_array)
 {
   if (ctx->state_ == channel_state::CONNECTING)
   {
@@ -976,6 +978,7 @@ void io_service::do_nonblocking_accept_completion( io_channel *ctx, fd_set *fds_
           xxsocket client_sock = ctx->socket_->accept();
           if (client_sock.is_open())
           {
+            client_sock.set_nonblocking(true);
             register_descriptor(client_sock.native_handle(), socket_event_read);
 
             handle_connect_succeed(ctx,
@@ -1007,6 +1010,7 @@ void io_service::do_nonblocking_accept_completion( io_channel *ctx, fd_set *fds_
               {
                 client_sock->set_nonblocking(true);
                 register_descriptor(client_sock->native_handle(), socket_event_read);
+
                 auto transport = handle_connect_succeed(ctx, client_sock);
                 this->handle_event(
                     event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
@@ -1039,9 +1043,6 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 
     if (ctx->type_ & CHANNEL_TCP)
     { // The tcp client channl
-      // remove write event avoid high-CPU occupation
-      unregister_descriptor(socket->native_handle(), socket_event_write);
-
       // apply tcp keepalive options
       if (options_.tcp_keepalive.onoff)
       {

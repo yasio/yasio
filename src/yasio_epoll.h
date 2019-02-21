@@ -210,7 +210,7 @@ struct io_base
 {
   int index_; // channel: index in channels, transport: index in transports
   std::shared_ptr<xxsocket> socket_;
-  int registered_events_ = 0;
+  unsigned int registered_events_ = 0;
   int class_id_;
 };
 
@@ -248,7 +248,7 @@ public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
-  int channel_index() const { return ctx_->index_; }
+  int channel_index() const { return channel_->index_; }
   int status() const { return error_; }
   inline std::vector<char> take_packet()
   {

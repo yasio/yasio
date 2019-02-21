@@ -1064,7 +1064,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
     auto index = transport_free_list_.back()->index_;
     transport  = transports_[index];
     transport_free_list_.pop_back();
-    INET_LOG("allocate a transport from free list, index=%d, channel_index=%d", index, ctx->index_)
+    INET_LOG("allocate a transport from free list, index=%d, channel_index=%d", index, ctx->index_);
   }
   else
   {

@@ -105,9 +105,9 @@ enum error_number
 
 enum
 {
-  socket_event_read   = 1,
-  socket_event_write  = 2,
-  socket_event_except = 4,
+  socket_event_read   = POLLIN | POLLPRI,
+  socket_event_write  = POLLOUT,
+  socket_event_except = POLLERR | POLLHUP,
 };
 
 enum

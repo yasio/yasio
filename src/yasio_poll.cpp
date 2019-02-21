@@ -459,7 +459,7 @@ void io_service::service()
 #endif
     }
     // Reset the interrupter.
-    else if (nfds > 0 && poll_fd_isset(this->interrupter_.read_descriptor(), fds_array, POLLIN))
+    else if (nfds > 0 && poll_fd_isset(this->interrupter_.read_descriptor(), fds_array, socket_event_read))
     {
 #if _YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
@@ -493,7 +493,7 @@ void io_service::perform_transports(std::vector<pollfd> &fds_array)
   {
     auto &transport = *iter;
     if (transport->offset_ > 0 ||
-        poll_fd_isset(transport->socket_->native_handle(), fds_array, POLLIN | POLLHUP | POLLERR))
+        poll_fd_isset(transport->socket_->native_handle(), fds_array, socket_event_read | socket_event_except))
     {
 #if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
@@ -688,24 +688,12 @@ void io_service::handle_close(transport_ptr transport)
 
 void io_service::register_descriptor(const socket_native_type fd, int flags)
 {
-  pollfd pfd = {fd, 0, 0};
-
-  if ((flags & socket_event_read) != 0)
-  {
-    pfd.events |= (POLLIN | POLLPRI);
-  }
-
-  if ((flags & socket_event_write) != 0)
-  {
-    pfd.events |= POLLOUT;
-  }
-
-  if ((flags & socket_event_except) != 0)
-  {
-    pfd.events |= (POLLERR | POLLHUP);
-  }
-
-  this->poll_fds_.push_back(pfd);
+  auto pollfd_it = std::find_if(poll_fds_.begin(), poll_fds_.end(),
+                                [=](const pollfd &pollfd) { return pollfd.fd == fd; });
+  if (pollfd_it == poll_fds_.end())
+    poll_fds_.push_back(pollfd{fd, (short)flags, 0});
+  else 
+    pollfd_it->events = flags;
 }
 
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)
@@ -714,20 +702,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
                                 [=](const pollfd &pollfd) { return pollfd.fd == fd; });
   if (pollfd_it != this->poll_fds_.end())
   {
-    if ((flags & socket_event_read) != 0)
-    {
-      pollfd_it->events &= ~(POLLIN | POLLPRI);
-    }
-
-    if ((flags & socket_event_write) != 0)
-    {
-      pollfd_it->events &= ~POLLOUT;
-    }
-
-    if ((flags & socket_event_except) != 0)
-    {
-      pollfd_it->events &= ~(POLLERR | POLLHUP);
-    }
+    pollfd_it->events &= ~flags;
 
     if (pollfd_it->events == 0)
       this->poll_fds_.erase(pollfd_it);
@@ -889,8 +864,8 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, std::vector<
     int error = -1;
     if (ctx->type_ & CHANNEL_TCP)
     {
-      if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, POLLOUT) ||
-          poll_fd_isset(ctx->socket_->native_handle(), fds_array, POLLIN))
+      if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_read) ||
+          poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_write))
       {
         socklen_t len = sizeof(error);
         if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error,
@@ -987,7 +962,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
   if (ctx->state_ == channel_state::OPENED)
   {
     int error = -1;
-    if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, POLLIN))
+    if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_read))
     {
       socklen_t len = sizeof(error);
       if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=

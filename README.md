@@ -1,7 +1,7 @@
 # yasio - yet another socket io service
 A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
 The core design is reference from https://github.com/chriskohlhoff/asio but very small.  
-**This lib has been used by project http://hongjing.qq.com/ and run at millions of devices.  
+**This lib has been used by project http://hongjing.qq.com/ and run at millions of devices.**
 ## features: 
 * support IPv6-only network.  
 * support multi-connections at one thread.  

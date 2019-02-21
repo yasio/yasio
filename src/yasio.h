@@ -205,7 +205,6 @@ struct io_transport;
 struct io_base
 {
   std::shared_ptr<xxsocket> socket_;
-
 };
 
 struct io_channel : public io_base

@@ -223,7 +223,7 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
 
 void io_channel::reset()
 {
-  state_ = channel_state::INACTIVE;
+  state_ = channel_state::CLOSED;
 
   resolve_state_         = resolve_state::FAILED;
   dns_queries_timestamp_ = 0;
@@ -444,7 +444,7 @@ void io_service::service()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      INET_LOG("socket.select failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
+      INET_LOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
       {
         goto _L_end;
@@ -455,7 +455,7 @@ void io_service::service()
     if (nfds == 0)
     {
 #if _YASIO_VERBOS_LOG
-      INET_LOG("%s", "socket.select is timeout, do perform_timeout_timers()");
+      INET_LOG("%s", "do_evpoll is timeout, do perform_timeout_timers()");
 #endif
     }
     // Reset the interrupter.
@@ -546,10 +546,10 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
       {
         switch (ctx->state_)
         {
-          case channel_state::REQUEST_CONNECT:
+          case channel_state::REQUEST_OPEN:
             finish = do_nonblocking_connect(ctx);
             break;
-          case channel_state::CONNECTING:
+          case channel_state::OPENING:
             finish = do_nonblocking_connect_completion(ctx, fds_array);
             break;
           default:; // do nothing
@@ -559,13 +559,13 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
       {
         switch (ctx->state_)
         {
-          case channel_state::REQUEST_CONNECT:
+          case channel_state::REQUEST_OPEN:
             do_nonblocking_accept(ctx);
             break;
-          case channel_state::CONNECTING:
+          case channel_state::OPENED:
             do_nonblocking_accept_completion(ctx, fds_array);
             break;
-          case channel_state::INACTIVE:
+          case channel_state::CLOSED:
             finish = true;
             break;
           default:; // do nothing
@@ -591,9 +591,9 @@ void io_service::close(size_t channel_index)
   assert(ctx->type_ == CHANNEL_TCP_SERVER);
   if (ctx->type_ != CHANNEL_TCP_SERVER)
     return;
-  if (ctx->state_ != channel_state::INACTIVE)
+  if (ctx->state_ != channel_state::CLOSED)
   {
-    ctx->state_ = channel_state::INACTIVE;
+    ctx->state_ = channel_state::CLOSED;
     unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
     ctx->socket_->close();
     interrupt();
@@ -614,13 +614,13 @@ void io_service::close(transport_ptr &transport)
   }
 }
 
-bool io_service::is_connected(size_t channel_index) const
+bool io_service::is_open(size_t channel_index) const
 {
   // Gets channel
   if (channel_index >= channels_.size())
     return false;
   auto ctx = channels_[channel_index];
-  return ctx->state_ == channel_state::CONNECTED;
+  return ctx->state_ == channel_state::OPENED;
 }
 
 void io_service::reopen(transport_ptr transport)
@@ -634,6 +634,16 @@ void io_service::reopen(transport_ptr transport)
 
 void io_service::open(size_t channel_index, int channel_type)
 {
+#if defined(_WIN32)
+  if (channel_type == CHANNEL_UDP_SERVER)
+  {
+    INET_LOG("[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
+             "CHANNEL_UDP_CLIENT to communicate with peer!",
+             channel_index);
+    return;
+  }
+#endif
+
   // Gets channel
   if (channel_index >= channels_.size())
     return;
@@ -661,8 +671,8 @@ void io_service::handle_close(transport_ptr transport)
 
   if (ctx->type_ == CHANNEL_TCP_CLIENT)
   {
-    if (channel_state::REQUEST_CONNECT != ctx->state_)
-      ctx->state_ = channel_state::INACTIVE;
+    if (ctx->state_ != channel_state::REQUEST_OPEN)
+      ctx->state_ = channel_state::CLOSED;
     if (options_.reconnect_timeout_ > 0)
     {
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
@@ -762,8 +772,8 @@ void io_service::handle_event(event_ptr event)
 
 bool io_service::do_nonblocking_connect(io_channel *ctx)
 {
-  assert(ctx->state_ == channel_state::REQUEST_CONNECT);
-  if (ctx->state_ != channel_state::REQUEST_CONNECT)
+  assert(ctx->state_ == channel_state::REQUEST_OPEN);
+  if (ctx->state_ != channel_state::REQUEST_OPEN)
     return true;
 
   if (this->ipsv_state_ == 0)
@@ -788,7 +798,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
                ctx->port_);
     }
 
-    ctx->state_ = channel_state::CONNECTING;
+    ctx->state_ = channel_state::OPENING;
 
     if (ctx->type_ & CHANNEL_TCP)
     {
@@ -814,11 +824,10 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
         {
           register_descriptor(ctx->socket_->native_handle(),
                               socket_event_read | socket_event_write);
-
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
           ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-            if (!cancelled && ctx->state_ != channel_state::CONNECTED)
+            if (!cancelled && ctx->state_ != channel_state::OPENED)
             {
               handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
             }
@@ -829,6 +838,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
       }
       else if (ret == 0)
       { // connect server succed immidiately.
+        register_descriptor(ctx->socket_->native_handle(), socket_event_read);
         handle_connect_succeed(ctx, ctx->socket_);
         return true;
       } // NEVER GO HERE
@@ -874,7 +884,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
 bool io_service::do_nonblocking_connect_completion(io_channel *ctx, std::vector<pollfd> &fds_array)
 {
-  if (ctx->state_ == channel_state::CONNECTING)
+  if (ctx->state_ == channel_state::OPENING)
   {
     int error = -1;
     if (ctx->type_ & CHANNEL_TCP)
@@ -914,8 +924,6 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   {
     if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
     {
-      ctx->state_ = channel_state::CONNECTING;
-
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
       int error = 0;
@@ -925,7 +933,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
                  io_service::strerror(error));
         ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
+        ctx->state_ = channel_state::CLOSED;
         return;
       }
 
@@ -935,13 +943,14 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
                  io_service::strerror(error));
         ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
+        ctx->state_ = channel_state::CLOSED;
         return;
       }
 
+      ctx->state_ = channel_state::OPENED;
       ctx->socket_->set_nonblocking(true);
-      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
       register_descriptor(ctx->socket_->native_handle(), socket_event_read);
+      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
   }
   else // CHANNEL_UDP
@@ -957,7 +966,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
       if (ctx->socket_->bind(ep) == 0)
       {
         INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
-        ctx->state_ = channel_state::CONNECTING;
+        ctx->state_ = channel_state::OPENED;
         ctx->socket_->set_nonblocking(true);
         register_descriptor(ctx->socket_->native_handle(), socket_event_read);
       }
@@ -967,7 +976,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error,
                  this->strerror(error));
         ctx->socket_->close();
-        ctx->state_ = channel_state::INACTIVE;
+        ctx->state_ = channel_state::CLOSED;
       }
     }
   }
@@ -975,7 +984,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
 void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<pollfd> &fds_array)
 {
-  if (ctx->state_ == channel_state::CONNECTING)
+  if (ctx->state_ == channel_state::OPENED)
   {
     int error = -1;
     if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, POLLIN))
@@ -987,15 +996,16 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
       {
         if (ctx->type_ & CHANNEL_TCP)
         {
-          xxsocket client_sock = ctx->socket_->accept();
-          if (client_sock.is_open())
+          std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
+          if (client_sock->is_open())
           {
-            client_sock.set_nonblocking(true);
-            register_descriptor(client_sock.native_handle(), socket_event_read);
+            client_sock->set_nonblocking(true);
+            register_descriptor(client_sock->native_handle(), socket_event_read);
 
-            handle_connect_succeed(ctx,
-                                   std::shared_ptr<xxsocket>(new xxsocket(std::move(client_sock))));
+            handle_connect_succeed(ctx, client_sock);
           }
+          else
+            INET_LOG("%s", "udp-server: accept client socket fd failed!");
         }
         else // CHANNEL_UDP
         {
@@ -1030,7 +1040,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
               }
               else
               {
-                this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+                INET_LOG("%s", "udp-server: open socket fd failed!");
               }
             }
           }
@@ -1038,6 +1048,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
       }
       else
       {
+        INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
         close_internal(ctx);
       }
     }
@@ -1051,11 +1062,10 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
   transport->socket_ = socket;
   if (ctx->type_ & CHANNEL_CLIENT)
   {
-    ctx->state_ = channel_state::CONNECTED;
+    ctx->state_ = channel_state::OPENED;
 
     if (ctx->type_ & CHANNEL_TCP)
-    { // The tcp client channl
-      // apply tcp keepalive options
+    { // apply tcp keepalive options
       if (options_.tcp_keepalive.onoff)
       {
         socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
@@ -1081,7 +1091,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 {
   close_internal(ctx);
 
-  ctx->state_ = channel_state::INACTIVE;
+  ctx->state_ = channel_state::CLOSED;
 
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
@@ -1326,16 +1336,16 @@ void io_service::cancel_timer(deadline_timer *timer)
 
 void io_service::open_internal(io_channel *ctx)
 {
-  if (ctx->state_ == channel_state::REQUEST_CONNECT || ctx->state_ == channel_state::CONNECTING)
-  { // in-progress, do nothing
-    INET_LOG("[index: %d] the connect request is already in progress!", ctx->index_);
+  if (ctx->state_ == channel_state::REQUEST_OPEN || ctx->state_ == channel_state::OPENING)
+  { // in-opening, do nothing
+    INET_LOG("[index: %d] the channel is in opening!", ctx->index_);
     return;
   }
 
   if (ctx->resolve_state_ != resolve_state::READY)
     update_resolve_state(ctx);
 
-  ctx->state_ = channel_state::REQUEST_CONNECT;
+  ctx->state_ = channel_state::REQUEST_OPEN;
   if (ctx->socket_->is_open())
   {
     ctx->socket_->shutdown();
@@ -1406,7 +1416,7 @@ but it's ok.
       nfds = WSAPoll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration / 1000));
 
 #if _YASIO_VERBOS_LOG
-      INET_LOG("socket.select waked up, retval=%d", nfds);
+      INET_LOG("do_evpoll waked up, retval=%d", nfds);
 #endif
     }
     else

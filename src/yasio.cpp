@@ -441,7 +441,7 @@ void io_service::service()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      INET_LOG("socket.select failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
+      INET_LOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
       {
         goto _L_end;
@@ -452,7 +452,7 @@ void io_service::service()
     if (nfds == 0)
     {
 #if _YASIO_VERBOS_LOG
-      INET_LOG("%s", "socket.select is timeout, do perform_timeout_timers()");
+      INET_LOG("%s", "do_evpoll is timeout, do perform_timeout_timers()");
 #endif
     }
     // Reset the interrupter.
@@ -1401,7 +1401,6 @@ but it's ok.
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
-      // WSAPoll()
       maxtv.tv_sec  = static_cast<long>(wait_duration / 1000000);
       maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
 #if _YASIO_VERBOS_LOG
@@ -1413,7 +1412,7 @@ but it's ok.
           ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
 
 #if _YASIO_VERBOS_LOG
-      INET_LOG("socket.select waked up, retval=%d", nfds);
+      INET_LOG("do_evpoll waked up, retval=%d", nfds);
 #endif
     }
     else

@@ -554,7 +554,7 @@ void io_service::perform_io(transport_ptr ctx, const epoll_event &event)
 {
   int n          = -1;
   epoll_event ev = {0, {0}};
-  if (ctx->offset_ > 0 || (event.events & (EPOLLIN | EPOLLHUP | EPOLLERR)))
+  if (ctx->offset_ > 0 || (event.events & (YASIO_EPOLLIN)))
   {
 #if _YASIO_VERBOS_LOG
     INET_LOG("[index: %d] perform non-blocking read operation...", ctx->channel_index());
@@ -825,7 +825,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         else
         {
           // register connect socket with connect channel.
-          register_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN, ctx);
+          register_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN | YASIO_EPOLLOUT, ctx);
 
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
@@ -880,7 +880,7 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx, const epoll_
     int error = -1;
     if (ctx->type_ & CHANNEL_TCP)
     {
-      if (event.events & (EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP))
+      if (event.events & (YASIO_EPOLLIN | YASIO_EPOLLOUT))
       {
         socklen_t len = sizeof(error);
         if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error,
@@ -979,7 +979,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, const epoll_e
   if (ctx->state_ == channel_state::OPENED)
   {
     int error = -1;
-    if (event.events & (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP))
+    if (event.events & YASIO_EPOLLIN)
     {
       socklen_t len = sizeof(error);
       if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
@@ -1061,6 +1061,8 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
   if (ctx->type_ & CHANNEL_CLIENT)
   {
     ctx->state_ = channel_state::OPENED;
+
+    unregister_descriptor(socket->native_handle(), YASIO_EPOLLOUT, transport.get());
 
     if (ctx->type_ & CHANNEL_TCP)
     { // apply tcp keepalive options

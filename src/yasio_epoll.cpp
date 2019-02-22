@@ -30,6 +30,7 @@ SOFTWARE.
 */
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
+// EPOLLET, EPOLLLT, yasio use EPOLLET mode
 #include "yasio_epoll.h"
 #include <limits>
 #include <stdarg.h>
@@ -451,18 +452,23 @@ void io_service::service()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      INET_LOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
       {
+        INET_LOG("do_evpoll failed, ec:%d, detail:%s, the service will exit!\n", ec,
+                 io_service::strerror(ec));
         goto _L_end;
       }
+      INET_LOG("do_evpoll waked up improperly, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       continue; // try select again.
     }
 
     if (nfds == 0)
     {
-#if _YASIO_VERBOS_LOG
+#if !_YASIO_VERBOS_LOG
+      (void)0;
+#else
       INET_LOG("%s", "do_evpoll is timeout!");
+
 #endif
     }
     // Reset the interrupter.
@@ -612,7 +618,7 @@ void io_service::close(size_t channel_index)
   if (ctx->state_ != channel_state::CLOSED)
   {
     ctx->state_ = channel_state::CLOSED;
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read, ctx);
+    unregister_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN, ctx);
     ctx->socket_->close();
     interrupt();
   }
@@ -698,25 +704,11 @@ void io_service::handle_close(transport_ptr transport)
   this->transport_free_list_.push_back(transport.get());
 }
 
-void io_service::register_descriptor(const socket_native_type fd, int flags, io_base *ud)
+void io_service::register_descriptor(const socket_native_type fd, unsigned int events, io_base *ud)
 {
   epoll_event ev = {ud->registered_events_, {0}};
   ev.data.ptr    = ud;
-  ev.events |= EPOLLET;
-  if ((flags & socket_event_read) != 0)
-  {
-    ev.events |= (EPOLLIN | EPOLLPRI);
-  }
-
-  if ((flags & socket_event_write) != 0)
-  {
-    ev.events |= EPOLLOUT;
-  }
-
-  if ((flags & socket_event_except) != 0)
-  {
-    ev.events |= (EPOLLERR | EPOLLHUP);
-  }
+  ev.events |= events;
 
   if (ud->registered_events_ == 0)
   {
@@ -729,26 +721,15 @@ void io_service::register_descriptor(const socket_native_type fd, int flags, io_
   ud->registered_events_ = ev.events;
 }
 
-void io_service::unregister_descriptor(const socket_native_type fd, int flags, io_base *ud)
+void io_service::unregister_descriptor(const socket_native_type fd, unsigned int events,
+                                       io_base *ud)
 {
   epoll_event ev = {ud->registered_events_, {0}};
   ev.data.ptr    = ud;
-  if ((flags & socket_event_read) != 0)
-  {
-    ev.events &= ~(EPOLLIN | EPOLLPRI);
-  }
 
-  if ((flags & socket_event_write) != 0)
-  {
-    ev.events &= ~EPOLLOUT;
-  }
+  ev.events &= ~(events);
 
-  if ((flags & socket_event_except) != 0)
-  {
-    ev.events &= ~(EPOLLERR | EPOLLHUP);
-  }
-
-  if (ev.events & (EPOLLIN | EPOLLPRI | EPOLLOUT))
+  if (ev.events != 0)
   {
     epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev);
   }
@@ -756,6 +737,8 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags, i
   {
     epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, &ev);
   }
+
+  ud->registered_events_ = ev.events;
 }
 
 void io_service::write(transport_ptr transport, std::vector<char> data)
@@ -773,8 +756,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    // interrupter_.interrupt();
-    register_descriptor(transport->socket_->native_handle(), socket_event_write, transport);
+    register_descriptor(transport->socket_->native_handle(), YASIO_EPOLLOUT, transport);
   }
   else
   {
@@ -843,8 +825,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         else
         {
           // register connect socket with connect channel.
-          register_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write,
-                              ctx);
+          register_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN, ctx);
 
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
@@ -955,7 +936,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
       ctx->state_ = channel_state::OPENED;
 
       ctx->socket_->set_nonblocking(true);
-      register_descriptor(ctx->socket_->native_handle(), socket_event_read, ctx);
+      register_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN, ctx);
 
       INET_LOG("[index: %d] tcp server: listening at %s...", ctx->index_, ep.to_string().c_str());
     }
@@ -975,7 +956,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
       {
         ctx->state_ = channel_state::OPENED;
         ctx->socket_->set_nonblocking(true);
-        register_descriptor(ctx->socket_->native_handle(), socket_event_read, ctx);
+        register_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN, ctx);
 
         INET_LOG("[index: %d] udp server: listening at: %s.", ctx->index_, ep.to_string().c_str());
       }
@@ -1075,7 +1056,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
 
   transport->socket_ = socket;
   socket->set_nonblocking(true);
-  register_descriptor(socket->native_handle(), socket_event_read, transport.get());
+  register_descriptor(socket->native_handle(), YASIO_EPOLLIN, transport.get());
 
   if (ctx->type_ & CHANNEL_CLIENT)
   {
@@ -1260,7 +1241,7 @@ int io_service::do_read(transport_ptr transport)
       const char *errormsg = io_service::strerror(error);
       if (n == 0)
       {
-        INET_LOG("[index: %d] do_read error, the server close the "
+        INET_LOG("[index: %d] do_read error, the remote host close the "
                  "connection, retval=%d, ec:%d, detail:%s",
                  ctx->index_, n, error, errormsg);
       }
@@ -1479,8 +1460,7 @@ bool io_service::close_internal(io_base *ctx)
 {
   if (ctx->socket_->is_open())
   {
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write,
-                          ctx);
+    unregister_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN | YASIO_EPOLLOUT, ctx);
     ctx->socket_->close();
     return true;
   }

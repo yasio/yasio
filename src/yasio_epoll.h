@@ -104,9 +104,9 @@ enum error_number
 
 enum
 {
-  socket_event_read   = 1,
-  socket_event_write  = 2,
-  socket_event_except = 4,
+  YASIO_EPOLLIN       = (EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP | EPOLLET),
+  YASIO_EPOLLOUT      = EPOLLOUT,
+  YASIO_EPOLLERR      = (EPOLLERR | EPOLLHUP),
 };
 
 enum
@@ -428,8 +428,8 @@ private:
   transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_failed(io_channel *, int error);
 
-  void register_descriptor(const socket_native_type fd, int flags, io_base *ctx);
-  void unregister_descriptor(const socket_native_type fd, int flags, io_base *ctx);
+  void register_descriptor(const socket_native_type fd, unsigned int flags, io_base *ctx);
+  void unregister_descriptor(const socket_native_type fd, unsigned int flags, io_base *ctx);
 
   // The major async event-loop
   void service(void);
@@ -483,7 +483,7 @@ private:
   std::vector<io_channel *> active_channels_;
 
   std::vector<transport_ptr> transports_;
-  std::vector<io_transport*> transport_free_list_; // weak pointer, it's ok
+  std::vector<io_transport *> transport_free_list_; // weak pointer, it's ok
 
   // select interrupter
   select_interrupter interrupter_;

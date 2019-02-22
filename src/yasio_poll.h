@@ -485,13 +485,6 @@ private:
   std::vector<deadline_timer *> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 
-  enum
-  {
-    read_op,  // for async read and write(trigger by interrupt)
-    write_op, // for async connect
-    except_op,
-  };
-
   std::vector<pollfd> poll_fds_;
 
   // optimize record incomplete works

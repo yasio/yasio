@@ -1409,6 +1409,10 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
       auto opt   = arg0.toInt32();
       switch (opt)
       {
+        case YASIO_OPT_CHANNEL_REMOTE_HOST:
+          service->set_option(opt, args[1].toInt32(), args[2].toString().c_str());
+          break;
+        case YASIO_OPT_CHANNEL_REMOTE_PORT:
         case YASIO_OPT_CHANNEL_LOCAL_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
@@ -1578,6 +1582,8 @@ void register_yasio_bindings(JSContext *ctx, JS::HandleObject global)
   YASIO_SET_INT_PROP("YASIO_OPT_LFIB_PARAMS", YASIO_OPT_LFIB_PARAMS);
   YASIO_SET_INT_PROP("YASIO_OPT_IO_EVENT_CALLBACK", YASIO_OPT_IO_EVENT_CALLBACK);
   YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_LOCAL_PORT", YASIO_OPT_CHANNEL_LOCAL_PORT);
+  YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_REMOTE_HOST", YASIO_OPT_CHANNEL_REMOTE_HOST);
+  YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_REMOTE_PORT", YASIO_OPT_CHANNEL_REMOTE_PORT);
   YASIO_SET_INT_PROP("YASIO_EVENT_CONNECT_RESPONSE", YASIO_EVENT_CONNECT_RESPONSE);
   YASIO_SET_INT_PROP("YASIO_EVENT_CONNECTION_LOST", YASIO_EVENT_CONNECTION_LOST);
   YASIO_SET_INT_PROP("YASIO_EVENT_RECV_PACKET", YASIO_EVENT_RECV_PACKET);

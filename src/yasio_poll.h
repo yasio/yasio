@@ -124,7 +124,7 @@ enum
   YASIO_OPT_IO_EVENT_CALLBACK,
   YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
-  YASIO_OPT_CHANNEL_REMOTE_ADDR,
+  YASIO_OPT_CHANNEL_REMOTE_HOST,
   YASIO_OPT_CHANNEL_REMOTE_PORT,
 };
 
@@ -372,6 +372,8 @@ public:
      length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
              YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
+             YASIO_OPT_CHANNEL_REMOTE_HOST index:int, host:const char*
+             YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
   */
   void set_option(int option, ...);
 

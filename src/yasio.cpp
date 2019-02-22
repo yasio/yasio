@@ -347,6 +347,7 @@ void io_service::set_option(int option, ...)
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
       }
     }
+    break;
     case YASIO_OPT_CHANNEL_REMOTE_HOST:
     {
       int index = va_arg(ap, int);
@@ -365,7 +366,6 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-      break;
   }
 
   va_end(ap);

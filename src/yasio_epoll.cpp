@@ -385,6 +385,24 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
+    case YASIO_OPT_CHANNEL_REMOTE_HOST:
+    {
+      int index = va_arg(ap, int);
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->host_ = va_arg(ap, const char *);
+      }
+    }
+    break;
+    case YASIO_OPT_CHANNEL_REMOTE_PORT:
+    {
+      int index = va_arg(ap, int);
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->port_ = (u_short)va_arg(ap, int);
+      }
+    }
+    break;
   }
 
   va_end(ap);

@@ -372,6 +372,8 @@ public:
      length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
              YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
+             YASIO_OPT_CHANNEL_REMOTE_HOST index:int, host:const char*
+             YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
   */
   void set_option(int option, ...);
 

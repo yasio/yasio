@@ -1012,7 +1012,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
             handle_connect_succeed(ctx, client_sock);
           }
           else
-            INET_LOG("%s", "udp-server: accept client socket fd failed!");
+            INET_LOG("%s", "tcp-server: accept client socket fd failed!");
         }
         else // CHANNEL_UDP
         {
@@ -1065,6 +1065,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
 transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport(new io_transport(ctx));
+  this->transports_.push_back(transport);
 
   transport->socket_ = socket;
   if (ctx->type_ & CHANNEL_CLIENT)
@@ -1079,9 +1080,7 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
                               options_.tcp_keepalive.probs);
       }
     }
-  } // else server channel, always CONNECTING to wait next client connect.
-
-  this->transports_.push_back(transport);
+  } // else server channel, always OPENING to wait next client connect.
 
   auto connection = transport->socket_;
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
@@ -1252,7 +1251,7 @@ bool io_service::do_read(transport_ptr transport)
       const char *errormsg = io_service::strerror(error);
       if (n == 0)
       {
-        INET_LOG("[index: %d] do_read error, remote host close the "
+        INET_LOG("[index: %d] do_read error, the remote host close the "
                  "connection, retval=%d, ec:%d, detail:%s",
                  ctx->index_, n, error, errormsg);
       }

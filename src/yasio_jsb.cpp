@@ -1410,7 +1410,11 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
       switch (opt)
       {
         case YASIO_OPT_CHANNEL_REMOTE_HOST:
-          service->set_option(opt, args[1].toInt32(), args[2].toString().c_str());
+          if (args[2].isString())
+          {
+            JSStringWrapper str(args[2].toString());
+            service->set_option(opt, args[1].toInt32(), str.get());
+          }
           break;
         case YASIO_OPT_CHANNEL_REMOTE_PORT:
         case YASIO_OPT_CHANNEL_LOCAL_PORT:

@@ -467,7 +467,7 @@ void io_service::service()
       {
         goto _L_end;
       }
-      continue; // try select again.
+      continue; // just continue.
     }
 
     if (nfds == 0)
@@ -482,7 +482,7 @@ void io_service::service()
     {
 #if _YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
-      INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, "
+      INET_LOG("do_evpoll waked up by interrupt, interrupter fd:%d, "
                "was_interrupt:%s",
                this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
 #else
@@ -1394,7 +1394,7 @@ int io_service::do_evpoll(std::vector<pollfd> &fds_array)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
-be perform when no need to call socket.select However, the
+be perform when no need to call poll However, the
 connection exception will detected through do_read or do_write,
 but it's ok.
 */
@@ -1410,7 +1410,7 @@ but it's ok.
       nfds = ::poll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration / 1000));
 
 #if _YASIO_VERBOS_LOG
-      INET_LOG("do_evpoll waked up, retval=%d", nfds);
+      INET_LOG("poll waked up, retval=%d", nfds);
 #endif
     }
     else
@@ -1500,18 +1500,6 @@ bool io_service::start_resolve(io_channel *ctx)
       ctx->resolve_state_ = resolve_state::FAILED;
     }
 
-    /*
-    The getaddrinfo behavior at win32 is strange:
-    If the channel 0 is in non-blocking connect, and waiting at select, than
-    channel 1 request connect(need dns queries), it's wake up the select call,
-    do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET
-    without select call, FD_ISSET will always return true, even through the
-    TCP connection handshake is not complete.
-
-    Try write data to a incomplete TCP will trigger error: 10057
-    Another result at this situation is: Try get local endpoint by getsockname
-    will return 0.0.0.0
-    */
     this->interrupt();
   });
   resolve_thread.detach();

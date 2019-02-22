@@ -464,7 +464,7 @@ void io_service::service()
       {
         goto _L_end;
       }
-      continue; // try select again.
+      continue; // just continue.
     }
 
     if (nfds == 0)
@@ -478,7 +478,7 @@ void io_service::service()
     {
 #if _YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
-      INET_LOG("socket.select waked up by interrupt, interrupter fd:%d, "
+      INET_LOG("do_evpoll waked up by interrupt, interrupter fd:%d, "
                "was_interrupt:%s",
                this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
 #else
@@ -1430,7 +1430,7 @@ but it's ok.
           ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
 
 #if _YASIO_VERBOS_LOG
-      INET_LOG("do_evpoll waked up, retval=%d", nfds);
+      INET_LOG("socket.select waked up, retval=%d", nfds);
 #endif
     }
     else

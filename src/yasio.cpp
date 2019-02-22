@@ -1252,7 +1252,7 @@ bool io_service::do_read(transport_ptr transport)
       const char *errormsg = io_service::strerror(error);
       if (n == 0)
       {
-        INET_LOG("[index: %d] do_read error, the server close the "
+        INET_LOG("[index: %d] do_read error, remote host close the "
                  "connection, retval=%d, ec:%d, detail:%s",
                  ctx->index_, n, error, errormsg);
       }

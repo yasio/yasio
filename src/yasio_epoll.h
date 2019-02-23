@@ -293,8 +293,8 @@ public:
       : channel_index_(channel_index), type_(type), status_(error), transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet, transport_ptr transport)
-      : channel_index_(channel_index), type_(type), status_(0), packet_(std::move(packet)),
-        transport_(std::move(transport))
+      : channel_index_(channel_index), type_(type), status_(0), transport_(std::move(transport)),
+        packet_(std::move(packet))
   {}
   io_event(io_event &&rhs)
       : channel_index_(rhs.channel_index_), type_(rhs.type_), status_(rhs.status_),

@@ -87,6 +87,7 @@ static long long _highp_clock()
   return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 }
 
+#if defined(_WIN32)
 /*--- This is a C++ universal sprintf in the future.
  **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
  *different
@@ -100,7 +101,7 @@ static long long _highp_clock()
  */
 static std::string _sfmt(const char *format, ...)
 {
-#define CC_VSNPRINTF_BUFFER_LENGTH 512
+#  define CC_VSNPRINTF_BUFFER_LENGTH 512
   va_list args;
   std::string buffer(CC_VSNPRINTF_BUFFER_LENGTH, '\0');
 
@@ -141,6 +142,7 @@ static std::string _sfmt(const char *format, ...)
 
   return buffer;
 }
+#endif
 
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
@@ -378,7 +380,7 @@ void io_service::set_option(int option, ...)
       break;
     case YASIO_OPT_CHANNEL_LOCAL_PORT:
     {
-      int index = va_arg(ap, int);
+      auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
@@ -387,7 +389,7 @@ void io_service::set_option(int option, ...)
     break;
     case YASIO_OPT_CHANNEL_REMOTE_HOST:
     {
-      int index = va_arg(ap, int);
+      auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
         this->channels_[index]->host_ = va_arg(ap, const char *);
@@ -396,7 +398,7 @@ void io_service::set_option(int option, ...)
     break;
     case YASIO_OPT_CHANNEL_REMOTE_PORT:
     {
-      int index = va_arg(ap, int);
+      auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
         this->channels_[index]->port_ = (u_short)va_arg(ap, int);
@@ -457,8 +459,6 @@ void io_service::service()
   this->ipsv_state_ = xxsocket::getipsv();
 
   // event loop
-  timeval timeout;
-
   for (; !stopping_;)
   {
     epoll_event events[128] = {0};
@@ -1232,13 +1232,14 @@ int io_service::do_read(transport_ptr transport)
         transport->expected_packet_.reserve(
             (std::min)(transport->expected_packet_size_,
                        MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid // memory reallocte.
-        n = do_unpack(transport, transport->expected_packet_size_, n);
+        return do_unpack(transport, transport->expected_packet_size_, n);
       }
       else if (length == 0)
       {
         // header insufficient, wait readfd ready at
         // next event step.
         transport->offset_ += n;
+        return n;
       }
       else
       {
@@ -1247,15 +1248,15 @@ int io_service::do_read(transport_ptr transport)
                  "pdu failed, "
                  "the connection should be closed!",
                  ctx->index_);
-        n = -1;
+        return -1;
       }
     }
     else
     { // process incompleted pdu
-      n = do_unpack(transport,
-                    transport->expected_packet_size_ -
-                        static_cast<int>(transport->expected_packet_.size()),
-                    n);
+      return do_unpack(transport,
+                       transport->expected_packet_size_ -
+                           static_cast<int>(transport->expected_packet_.size()),
+                       n);
     }
   }
   else
@@ -1275,15 +1276,12 @@ int io_service::do_read(transport_ptr transport)
                ctx->index_, n, error, errormsg);
     }
 
-    n = -1;
+    return -1;
   }
-
-  return n;
 }
 
 int io_service::do_unpack(transport_ptr transport, int bytes_expected, int n)
 {
-  // Indicate whether still have data in user layer's recv buffer
   auto bytes_available = n + transport->offset_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
                                      transport->buffer_ +

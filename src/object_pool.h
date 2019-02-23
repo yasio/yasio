@@ -16,8 +16,10 @@
 #define OBJECT_POOL_DECL
 #endif
 
+#if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable:4200)
+#endif
 
 namespace purelib {
 namespace gc {
@@ -223,7 +225,9 @@ public:
 #include "object_pool.cpp"
 #endif
 
+#if defined(_WIN32)
 #pragma warning(pop)
+#endif
 
 #endif
 /*

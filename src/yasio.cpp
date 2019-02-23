@@ -100,7 +100,7 @@ static long long _highp_clock()
  */
 static std::string _sfmt(const char *format, ...)
 {
-#define CC_VSNPRINTF_BUFFER_LENGTH 512
+#  define CC_VSNPRINTF_BUFFER_LENGTH 512
   va_list args;
   std::string buffer(CC_VSNPRINTF_BUFFER_LENGTH, '\0');
 

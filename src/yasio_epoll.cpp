@@ -307,7 +307,7 @@ void io_service::stop_service()
       }
     }
 
-    interrupter_.interrupt();
+    this->interrupt();
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
@@ -581,7 +581,6 @@ void io_service::perform_io(transport_ptr ctx, const epoll_event &event)
     if (n < 0)
     {
       handle_close(ctx);
-      // iter = transports_.erase(iter); // TODO: remove transport from transport list
       return;
     }
     else if (n > 0)
@@ -603,7 +602,6 @@ void io_service::perform_io(transport_ptr ctx, const epoll_event &event)
       // be unnecessary.
       ctx->send_queue_mtx_.unlock();
       handle_close(ctx);
-      // iter = transports_.erase(iter); // TODO: remove transport from transport list
       return;
     }
 
@@ -638,7 +636,7 @@ void io_service::close(size_t channel_index)
     ctx->state_ = channel_state::CLOSED;
     unregister_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLIN, ctx);
     ctx->socket_->close();
-    interrupt();
+    this->interrupt();
   }
 }
 
@@ -652,7 +650,7 @@ void io_service::close(transport_ptr &transport)
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
     transport.reset();
-    interrupter_.interrupt();
+    this->interrupt();
   }
 }
 
@@ -1280,21 +1278,21 @@ int io_service::do_read(transport_ptr transport)
   }
 }
 
-int io_service::do_unpack(transport_ptr transport, int bytes_expected, int n)
+int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
 {
-  auto bytes_available = n + transport->offset_;
+  auto &offset         = transport->offset_;
+  auto bytes_available = bytes_transferred + offset;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
                                      transport->buffer_ +
                                          (std::min)(bytes_expected, bytes_available));
 
-  transport->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
-  if (transport->offset_ >= 0)
-  {                             // pdu received properly
-    if (transport->offset_ > 0) // move remain data to head of buffer and hold offset.
+  offset = bytes_available - bytes_expected; // set offset to bytes of remain buffer
+  if (offset >= 0)
+  {                 // pdu received properly
+    if (offset > 0) // move remain data to head of buffer and hold offset.
     {
-      ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
-      // not all data consumed
-      n = 1;
+      ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, offset);
+      // not all data consumed, so add events for this context
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
@@ -1309,10 +1307,10 @@ int io_service::do_unpack(transport_ptr transport, int bytes_expected, int n)
   else
   { // all buffer consumed, set offset to ZERO, pdu
     // incomplete, continue recv remain data.
-    transport->offset_ = 0;
+    offset = 0;
   }
 
-  return n;
+  return offset;
 }
 
 void io_service::schedule_timer(deadline_timer *timer)
@@ -1335,7 +1333,7 @@ void io_service::schedule_timer(deadline_timer *timer)
             });
 
   if (timer == *this->timer_queue_.begin())
-    interrupter_.interrupt();
+    this->interrupt();
 }
 
 void io_service::cancel_timer(deadline_timer *timer)
@@ -1372,7 +1370,7 @@ void io_service::open_internal(io_channel *ctx)
   this->active_channels_.push_back(ctx);
   active_channels_mtx_.unlock();
 
-  interrupter_.interrupt();
+  this->interrupt();
 }
 
 void io_service::perform_timers()

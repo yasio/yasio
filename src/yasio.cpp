@@ -255,6 +255,32 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
 
 io_service::~io_service() { stop_service(); }
 
+void io_service::start_service(const io_hostent *channel_eps, int channel_count,
+                               io_event_callback_t cb)
+{
+  if (!thread_started_)
+  {
+    if (channel_count <= 0)
+      return;
+    if (cb)
+      this->on_event_ = std::move(cb);
+
+    stopping_       = false;
+    thread_started_ = true;
+
+    register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+
+    // Initialize channels
+    for (auto i = 0; i < channel_count; ++i)
+    {
+      auto &channel_ep = channel_eps[i];
+      (void)new_channel(channel_ep);
+    }
+
+    worker_thread_ = std::thread(&io_service::service, this);
+  }
+}
+
 void io_service::stop_service()
 {
   if (thread_started_)
@@ -409,32 +435,6 @@ void io_service::dispatch_events(int count)
     this->event_queue_.pop_front();
     this->on_event_(std::move(event));
   } while (!this->event_queue_.empty() && --count > 0);
-}
-
-void io_service::start_service(const io_hostent *channel_eps, int channel_count,
-                               io_event_callback_t cb)
-{
-  if (!thread_started_)
-  {
-    if (channel_count <= 0)
-      return;
-    if (cb)
-      this->on_event_ = std::move(cb);
-
-    stopping_       = false;
-    thread_started_ = true;
-
-    register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-
-    // Initialize channels
-    for (auto i = 0; i < channel_count; ++i)
-    {
-      auto &channel_ep = channel_eps[i];
-      (void)new_channel(channel_ep);
-    }
-
-    worker_thread_ = std::thread(&io_service::service, this);
-  }
 }
 
 void io_service::service()

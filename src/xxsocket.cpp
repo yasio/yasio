@@ -67,8 +67,10 @@ SOFTWARE.
 #  define IN4_IS_ADDR_LINKLOCAL(paddr) IN_LINKLOCAL(ntohl((paddr)->s_addr))
 #endif
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#endif
 
 using namespace purelib;
 using namespace purelib::inet;
@@ -169,7 +171,7 @@ static const char *inet_ntop4(const u_char *src, char *dst, socklen_t size)
   static const char fmt[] = "%u.%u.%u.%u";
   char tmp[sizeof "255.255.255.255"];
 
-  if (SPRINTF((tmp, fmt, src[0], src[1], src[2], src[3])) >= size)
+  if (SPRINTF((tmp, fmt, src[0], src[1], src[2], src[3])) >= static_cast<int>(size))
   {
     errno = (ENOSPC);
     return (NULL);
@@ -1280,7 +1282,7 @@ bool xxsocket::read_until(std::string &buffer, const char *delims, size_t len)
     }
 
     buffer.append(buf, n);
-    if (static_cast<int>(buffer.size()) >= len)
+    if (buffer.size() >= len)
     {
       auto eof = &buffer[buffer.size() - len];
       if (0 == memcmp(eof, delims, len))
@@ -1508,4 +1510,6 @@ ws2_32_gc __ws32_lib_gc;
 }; // namespace
 #endif
 
-#pragma warning(pop)
+#if defined(_MSC_VER)
+#  pragma warning(pop)
+#endif

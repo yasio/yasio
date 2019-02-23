@@ -41,10 +41,12 @@ SOFTWARE.
 #include <chrono>
 #include "politedef.h"
 
-#ifdef _WIN32
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#endif
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
+#ifdef _WIN32
 
 #  include <WinSock2.h>
 
@@ -1007,8 +1009,8 @@ namespace net = inet;
 
 }; // namespace purelib
 
-#if defined(_WIN32)
-#pragma warning(pop)
+#if defined(_MSC_VER)
+#  pragma warning(pop)
 #endif
 
 /*

@@ -86,6 +86,7 @@ static long long _highp_clock()
   return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 }
 
+#if defined(_WIN32)
 /*--- This is a C++ universal sprintf in the future.
  **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
  *different
@@ -140,6 +141,7 @@ static std::string _sfmt(const char *format, ...)
 
   return buffer;
 }
+#endif
 
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
@@ -367,7 +369,7 @@ void io_service::set_option(int option, ...)
       break;
     case YASIO_OPT_CHANNEL_LOCAL_PORT:
     {
-      int index = va_arg(ap, int);
+      auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
@@ -376,7 +378,7 @@ void io_service::set_option(int option, ...)
     break;
     case YASIO_OPT_CHANNEL_REMOTE_HOST:
     {
-      int index = va_arg(ap, int);
+      auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
         this->channels_[index]->host_ = va_arg(ap, const char *);
@@ -385,7 +387,7 @@ void io_service::set_option(int option, ...)
     break;
     case YASIO_OPT_CHANNEL_REMOTE_PORT:
     {
-      int index = va_arg(ap, int);
+      auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
         this->channels_[index]->port_ = (u_short)va_arg(ap, int);

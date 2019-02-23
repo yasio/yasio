@@ -208,10 +208,13 @@ enum
 };
 struct io_base
 {
+
+  int class_id_; 
   int index_; // channel: index in channels, transport: index in transports
+  
   std::shared_ptr<xxsocket> socket_;
   unsigned int registered_events_ = 0;
-  int class_id_;
+  
 };
 
 struct io_channel : public io_base
@@ -494,12 +497,6 @@ private:
   std::vector<deadline_timer *> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 
-  enum
-  {
-    read_op,  // for async read and write(trigger by interrupt)
-    write_op, // for async connect
-    except_op,
-  };
 
   int epoll_fd_;
 

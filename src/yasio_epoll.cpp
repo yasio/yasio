@@ -1426,13 +1426,10 @@ but it's ok.
 
   if (nfds <= 0)
   {
-    auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
+    auto wait_duration = get_wait_duration(MAX_WAIT_DURATION) / 1000;
     if (wait_duration > 0)
     {
-      nfds = ::epoll_wait(
-          epoll_fd_, events, n,
-          static_cast<long>(wait_duration / 1000)); // WSAPoll(&fds_array.front(), fds_array.size(),
-                                                    // maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
+      nfds = ::epoll_wait(epoll_fd_, events, n, static_cast<long>(wait_duration));
 
 #if _YASIO_VERBOS_LOG
       INET_LOG("epoll_wait waked up, retval=%d", nfds);

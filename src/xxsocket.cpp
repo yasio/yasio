@@ -83,6 +83,7 @@ using namespace purelib::inet;
 #if defined(_WIN32) && !defined(_WINSTORE)
 extern LPFN_ACCEPTEX __accept_ex;
 extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
+extern LPFN_CONNECTEX __connect_ex;
 #endif
 
 namespace purelib
@@ -866,6 +867,14 @@ bool xxsocket::open_ex(int af, int type, int protocol)
                      nullptr);
     }
 
+    if (nullptr == __connect_ex)
+    {
+      GUID guidConnectEx = WSAID_CONNECTEX;
+      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidConnectEx,
+                     sizeof(guidConnectEx), &__connect_ex, sizeof(__connect_ex), &dwBytes, nullptr,
+                     nullptr);
+    }
+
     if (nullptr == __get_accept_ex_sockaddrs)
     {
       GUID guidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
@@ -889,6 +898,13 @@ bool xxsocket::accept_ex(SOCKET sockfd_listened, SOCKET sockfd_prepared, PVOID l
   return __accept_ex(sockfd_listened, sockfd_prepared, lpOutputBuffer, dwReceiveDataLength,
                      dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived,
                      lpOverlapped) != FALSE;
+}
+
+bool xxsocket::connect_ex(SOCKET s, const struct sockaddr *name, int namelen, PVOID lpSendBuffer,
+                DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
+{
+  return __connect_ex(s, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent,
+                      lpOverlapped);
 }
 
 void xxsocket::translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
@@ -1490,6 +1506,7 @@ const char *xxsocket::strerror(int error)
 #if defined(_WIN32) && !defined(_WINSTORE)
 LPFN_ACCEPTEX __accept_ex                           = nullptr;
 LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
+LPFN_CONNECTEX __connect_ex                         = nullptr;
 #endif
 
 #ifdef _WIN32

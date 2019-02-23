@@ -567,6 +567,11 @@ public:
                         DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived,
                         LPOVERLAPPED lpOverlapped);
 
+  static bool connect_ex(SOCKET s, const struct sockaddr  *name,
+                        int namelen, PVOID lpSendBuffer,
+                        DWORD dwSendDataLength,  LPDWORD lpdwBytesSent,
+                        LPOVERLAPPED lpOverlapped);
+
   static void translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
                                   DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
                                   sockaddr **LocalSockaddr, LPINT LocalSockaddrLength,

@@ -100,7 +100,7 @@ static long long _highp_clock()
  */
 static std::string _sfmt(const char *format, ...)
 {
-#define CC_VSNPRINTF_BUFFER_LENGTH 512
+#  define CC_VSNPRINTF_BUFFER_LENGTH 512
   va_list args;
   std::string buffer(CC_VSNPRINTF_BUFFER_LENGTH, '\0');
 
@@ -1406,10 +1406,10 @@ but it's ok.
   fds_array = this->poll_fds_;
   if (nfds <= 0)
   {
-    auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
+    auto wait_duration = get_wait_duration(MAX_WAIT_DURATION) / 1000;
     if (wait_duration > 0)
     {
-      nfds = ::poll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration / 1000));
+      nfds = ::poll(&fds_array.front(), fds_array.size(), static_cast<int>(wait_duration));
 
 #if _YASIO_VERBOS_LOG
       INET_LOG("poll waked up, retval=%d", nfds);

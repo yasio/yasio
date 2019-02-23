@@ -1196,7 +1196,9 @@ void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/)
 
 int io_service::do_read(transport_ptr transport)
 {
-  int iRet = -1;
+  // Indicate whether still have avail data in kernel or user layer's recv buffer. < 0, the
+  // connection should be closed.
+  int iret = -1;
   auto ctx = transport->channel_;
   do
   {
@@ -1232,13 +1234,14 @@ int io_service::do_read(transport_ptr transport)
           transport->expected_packet_.reserve(
               (std::min)(transport->expected_packet_size_,
                          MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid // memory reallocte.
-          do_unpack(transport, transport->expected_packet_size_, n);
+          iret = do_unpack(transport, transport->expected_packet_size_, n);
         }
         else if (length == 0)
         {
           // header insufficient, wait readfd ready at
           // next event step.
           transport->offset_ += n;
+          iret = n;
         }
         else
         {
@@ -1252,10 +1255,10 @@ int io_service::do_read(transport_ptr transport)
       }
       else
       { // process incompleted pdu
-        do_unpack(transport,
-                  transport->expected_packet_size_ -
-                      static_cast<int>(transport->expected_packet_.size()),
-                  n);
+        iret = do_unpack(transport,
+                         transport->expected_packet_size_ -
+                             static_cast<int>(transport->expected_packet_.size()),
+                         n);
       }
     }
     else
@@ -1276,16 +1279,15 @@ int io_service::do_read(transport_ptr transport)
       }
       break;
     }
-
-    iRet = n;
-
   } while (false);
 
-  return iRet;
+  return iret;
 }
 
-void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
+int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
 {
+  // Indicate whether still have data in user layer's recv buffer
+  int iret             = 0;
   auto bytes_available = bytes_transferred + transport->offset_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
                                      transport->buffer_ +
@@ -1297,8 +1299,8 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     if (transport->offset_ > 0) // move remain data to head of buffer and hold offset.
     {
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
-      // not all data consumed, so add events for this context
-      // ++this->outstanding_work_;
+      // not all data consumed
+      iret = 1;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
@@ -1315,6 +1317,8 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     // incomplete, continue recv remain data.
     transport->offset_ = 0;
   }
+
+  return iret;
 }
 
 void io_service::schedule_timer(deadline_timer *timer)

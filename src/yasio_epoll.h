@@ -438,7 +438,7 @@ private:
 
   bool do_write(transport_ptr);
   int do_read(transport_ptr);
-  void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
+  int do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   void handle_close(transport_ptr);
 

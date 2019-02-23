@@ -236,6 +236,8 @@ struct io_channel : public io_base
   // The deadline timer for resolve & connect
   deadline_timer deadline_timer_;
 
+  char buffer_[(sizeof(SOCKADDR_IN) + 16) * 2]; // small buffer for AcceptEx
+
   void reset();
 };
 
@@ -432,11 +434,15 @@ private:
   void do_nonblocking_connect(io_channel *);
   void do_nonblocking_connect_completion(io_channel *, iocp_event *);
 
-  transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
-  void handle_connect_failed(io_channel *, int error);
+  // @client connect server succeed
+  void handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
 
-  void register_descriptor(const socket_native_type fd, int flags);
-  void unregister_descriptor(const socket_native_type fd, int flags);
+  // @server new client income.
+  void handle_connect_succeed(transport_ptr);
+
+  transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
+
+  void handle_connect_failed(io_channel *, int error);
 
   // The major async event-loop
   void service(void);
@@ -476,7 +482,7 @@ private:
 
   static const char *strerror(int error);
 
-  template <typename _T> void register_handle(_T handle)
+  template <typename _T> void register_descriptor(_T handle)
   {
     ::CreateIoCompletionPort(reinterpret_cast<HANDLE>(handle), iocp_.handle, 0, 0);
   }

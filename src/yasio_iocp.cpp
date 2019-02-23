@@ -273,15 +273,6 @@ void io_channel::reset()
   deadline_timer_.cancel();
 }
 
-static bool poll_fd_isset(socket_native_type fd, std::vector<pollfd> &fds_array, short event)
-{
-  auto pollfd_it = std::find_if(fds_array.begin(), fds_array.end(),
-                                [=](const pollfd &pollfd) { return pollfd.fd == fd; });
-  if (pollfd_it != fds_array.end())
-    return pollfd_it->revents & event;
-  return false;
-}
-
 io_service::io_service() : stopping_(false), thread_started_(false)
 {
   options_.connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
@@ -659,7 +650,6 @@ void io_service::close(size_t channel_index)
   if (ctx->state_ != channel_state::CLOSED)
   {
     ctx->state_ = channel_state::CLOSED;
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
     ctx->socket_->close();
     interrupt();
   }
@@ -752,29 +742,6 @@ void io_service::handle_close(transport_ptr transport)
   }
 }
 
-void io_service::register_descriptor(const socket_native_type fd, int flags)
-{
-  auto pollfd_it = std::find_if(poll_fds_.begin(), poll_fds_.end(),
-                                [=](const pollfd &pollfd) { return pollfd.fd == fd; });
-  if (pollfd_it == poll_fds_.end())
-    poll_fds_.push_back(pollfd{fd, (short)flags, 0});
-  else
-    pollfd_it->events = flags;
-}
-
-void io_service::unregister_descriptor(const socket_native_type fd, int flags)
-{
-  auto pollfd_it = std::find_if(this->poll_fds_.begin(), this->poll_fds_.end(),
-                                [=](const pollfd &pollfd) { return pollfd.fd == fd; });
-  if (pollfd_it != this->poll_fds_.end())
-  {
-    pollfd_it->events &= ~flags;
-
-    if (pollfd_it->events == 0)
-      this->poll_fds_.erase(pollfd_it);
-  }
-}
-
 void io_service::write(transport_ptr transport, std::vector<char> data)
 {
   this->write(transport.get(), std::move(data));
@@ -849,10 +816,10 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-        // register_handle(ctx->socket_->native_handle());
+        // register_descriptor(ctx->socket_->native_handle());
         ctx->socket_->set_nonblocking(true);
         ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        register_handle(ctx->socket_->native_handle());
+        register_descriptor(ctx->socket_->native_handle());
         ret = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_), nullptr,
                                    0, nullptr, ctx);
       }
@@ -862,8 +829,6 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         int error = xxsocket::get_last_errno();
         if (error == WSA_IO_PENDING)
         {
-          ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
-                                   ctx->socket_->native_handle());
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
           ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
@@ -880,7 +845,8 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
       }
       else
       {
-        register_handle(ctx->socket_->native_handle());
+        ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
+                                 ctx->socket_->native_handle());
         handle_connect_succeed(ctx, ctx->socket_);
       }
     }
@@ -897,8 +863,6 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         if (ret == 0)
         {
           ctx->socket_->set_nonblocking(true);
-          register_descriptor(ctx->socket_->native_handle(), socket_event_read);
-
           handle_connect_succeed(ctx, ctx->socket_);
         }
         else
@@ -922,7 +886,6 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
 
 void io_service::do_nonblocking_connect_completion(io_channel *ctx, iocp_event *event)
 {
-#if 1
   if (ctx->state_ == channel_state::OPENING)
   {
     int error = -1;
@@ -933,6 +896,8 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx, iocp_event *
               0 &&
           error == 0)
       {
+        ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
+                                 ctx->socket_->native_handle());
         handle_connect_succeed(ctx, ctx->socket_);
         ctx->deadline_timer_.cancel();
       }
@@ -943,7 +908,6 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx, iocp_event *
       }
     }
   }
-#endif
 }
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
@@ -952,7 +916,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
   if (ctx->type_ & CHANNEL_TCP)
   {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+    if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
     {
       ctx->state_ = channel_state::OPENING;
 
@@ -981,7 +945,28 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
       ctx->state_ = channel_state::OPENED;
       ctx->socket_->set_nonblocking(true);
-      register_descriptor(ctx->socket_->native_handle(), socket_event_read);
+
+      register_descriptor(ctx->socket_->native_handle());
+
+      std::shared_ptr<xxsocket> prepared_sock(new xxsocket());
+      if (prepared_sock->open_ex(AF_INET))
+      {
+        auto transport        = allocate_transport(ctx, prepared_sock);
+        DWORD dwBytesReceived = 0;
+        ctx->Pointer          = transport.get();
+        bool result           = xxsocket::accept_ex(
+            ctx->socket_->native_handle(), prepared_sock->native_handle(), ctx->buffer_,
+            0 /* Set to 0, we do not wait read any data during handshake */,
+            sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytesReceived, ctx);
+        DWORD last_error = ::WSAGetLastError();
+        if (!result && last_error != WSA_IO_PENDING)
+        {
+          handle_connect_succeed(transport);
+        }
+        else
+          (void)0; // iocp_service_.on_pending(op);
+      }
+      // register_descriptor(ctx->socket_->native_handle(), socket_event_read);
       INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
     else
@@ -1002,7 +987,6 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
         ctx->state_ = channel_state::OPENED;
         ctx->socket_->set_nonblocking(true);
-        register_descriptor(ctx->socket_->native_handle(), socket_event_read);
       }
       else
       {
@@ -1020,80 +1004,130 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
 void io_service::do_nonblocking_accept_completion(io_channel *ctx, iocp_event *event)
 {
-#if 0
   if (ctx->state_ == channel_state::OPENED)
   {
     int error = -1;
-    if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_read))
+
+    socklen_t len = sizeof(error);
+    if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
+            0 &&
+        error == 0)
     {
-      socklen_t len = sizeof(error);
-      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
-              0 &&
-          error == 0)
+      if (ctx->type_ & CHANNEL_TCP)
       {
-        if (ctx->type_ & CHANNEL_TCP)
+        auto transport = (io_transport *)ctx->Pointer;
+        if (event->ec == 0)
         {
-          std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
-          if (client_sock->is_open())
-          {
-            client_sock->set_nonblocking(true);
-            register_descriptor(client_sock->native_handle(), socket_event_read);
-
-            handle_connect_succeed(ctx, client_sock);
-          }
-          else
-            INET_LOG("%s", "tcp-server: accept client socket fd failed!");
+          auto &client_sock = transport->socket_;
+          
+          handle_connect_succeed(this->transports_[transport->index_]);
         }
-        else // CHANNEL_UDP
+      }
+      else // CHANNEL_UDP
+      {
+#if 0
+        ip::endpoint peer;
+
+        char buffer[65535];
+        int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
+        if (n > 0)
         {
-          ip::endpoint peer;
+          INET_LOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
 
-          char buffer[65535];
-          int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
-          if (n > 0)
+          // make a transport local --> peer udp session, just like tcp accept
+          std::shared_ptr<xxsocket> client_sock(new xxsocket());
+          if (client_sock->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
           {
-            INET_LOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
-
-            // make a transport local --> peer udp session, just like tcp accept
-            std::shared_ptr<xxsocket> client_sock(new xxsocket());
-            if (client_sock->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+            client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+            error = client_sock->bind("0.0.0.0", ctx->port_) == 0
+                        ? xxsocket::connect(client_sock->native_handle(), peer)
+                        : -1;
+            if (error == 0)
             {
-              client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-#  if !defined(_WIN32)
-              client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-#  endif
-              error = client_sock->bind("0.0.0.0", ctx->port_) == 0
-                          ? xxsocket::connect(client_sock->native_handle(), peer)
-                          : -1;
-              if (error == 0)
-              {
-                client_sock->set_nonblocking(true);
-                register_descriptor(client_sock->native_handle(), socket_event_read);
+              client_sock->set_nonblocking(true);
+              register_descriptor(client_sock->native_handle(), socket_event_read);
 
-                auto transport = handle_connect_succeed(ctx, client_sock);
-                this->handle_event(
-                    event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
-                                           std::vector<char>(buffer, buffer + n), transport)));
-              }
-              else
-              {
-                INET_LOG("%s", "udp-server: open socket fd failed!");
-              }
+             /* auto transport = handle_connect_succeed(ctx, client_sock);
+              this->handle_event(
+                  event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
+                                         std::vector<char>(buffer, buffer + n), transport)));*/
+            }
+            else
+            {
+              INET_LOG("%s", "udp-server: open socket fd failed!");
             }
           }
         }
-      }
-      else
-      {
-        INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
-        close_internal(ctx);
+#endif
       }
     }
+    else
+    {
+      INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
+      close_internal(ctx);
+    }
   }
-#endif
 }
 
-transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+{
+  transport_ptr transport = allocate_transport(ctx, socket);
+
+  if (ctx->type_ & CHANNEL_CLIENT)
+  {
+    ctx->state_ = channel_state::OPENED;
+    if (ctx->type_ & CHANNEL_TCP)
+    { // apply tcp keepalive options
+      if (options_.tcp_keepalive.onoff)
+      {
+        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                              options_.tcp_keepalive.probs);
+      }
+    }
+  } // else server channel, always OPENING to wait next client connect.
+
+  auto &connection = transport->socket_;
+  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+           connection->local_endpoint().to_string().c_str(),
+           connection->peer_endpoint().to_string().c_str());
+
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+
+  // IOCP: post the first async recv op.
+  DWORD bytes_transferred = 0;
+  WSABUF wsabuf           = {sizeof(transport->buffer_), transport->buffer_};
+  DWORD flags             = 0;
+  WSARecv(connection->native_handle(), &wsabuf, 1, &bytes_transferred, &flags, transport.get(),
+          nullptr);
+}
+
+void io_service::handle_connect_succeed(transport_ptr transport)
+{
+  auto ctx = transport->channel_;
+  
+  // xxsocket::translate
+  auto &connection = transport->socket_;
+
+  register_descriptor(connection->native_handle());
+  connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
+
+  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+           connection->local_endpoint().to_string().c_str(),
+           connection->peer_endpoint().to_string().c_str());
+
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+
+  // IOCP: post the first async recv op.
+  DWORD bytes_transferred = 0;
+  WSABUF wsabuf           = {sizeof(transport->buffer_), transport->buffer_};
+  DWORD flags             = 0;
+  WSARecv(connection->native_handle(), &wsabuf, 1, &bytes_transferred, &flags, transport.get(),
+          nullptr);
+}
+
+transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport;
   if (!transport_free_list_.empty())
@@ -1111,34 +1145,6 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
   }
 
   transport->socket_ = socket;
-
-  if (ctx->type_ & CHANNEL_CLIENT)
-  {
-    ctx->state_ = channel_state::OPENED;
-    if (ctx->type_ & CHANNEL_TCP)
-    { // apply tcp keepalive options
-      if (options_.tcp_keepalive.onoff)
-      {
-        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                              options_.tcp_keepalive.probs);
-      }
-    }
-  } // else server channel, always OPENING to wait next client connect.
-
-  auto connection = transport->socket_;
-  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
-           connection->local_endpoint().to_string().c_str(),
-           connection->peer_endpoint().to_string().c_str());
-
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
-
-  // IOCP: post the first async recv op.
-  DWORD bytes_transferred = 0;
-  WSABUF wsabuf           = {sizeof(transport->buffer_), transport->buffer_};
-  DWORD flags             = 0;
-  WSARecv(connection->native_handle(), &wsabuf, 1, &bytes_transferred, &flags, transport.get(),
-          nullptr);
 
   return transport;
 }
@@ -1472,7 +1478,6 @@ bool io_service::close_internal(io_base *ctx)
 {
   if (ctx->socket_->is_open())
   {
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write);
     ctx->socket_->close();
     return true;
   }

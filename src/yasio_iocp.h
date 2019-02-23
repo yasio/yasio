@@ -103,13 +103,6 @@ enum error_number
 
 enum
 {
-  socket_event_read   = POLLIN | POLLPRI,
-  socket_event_write  = POLLOUT,
-  socket_event_except = POLLERR | POLLHUP,
-};
-
-enum
-{
   YASIO_OPT_CONNECT_TIMEOUT = 1,
   YASIO_OPT_SEND_TIMEOUT,
   YASIO_OPT_RECONNECT_TIMEOUT,
@@ -212,6 +205,7 @@ struct io_base : public OVERLAPPED
   int class_id_ = -1;
   int index_    = -1; // channel: index in channels, transport: index in transports
 
+  int error_ = 0; // socket error(>= -1), application error(< -1)
   std::shared_ptr<xxsocket> socket_;
 };
 
@@ -258,7 +252,14 @@ public:
   }
 
 private:
-  io_transport(io_channel *channel) : channel_(channel) { class_id_ = IO_CLASS_TRANSPORT; }
+  io_transport(io_channel *channel) : channel_(channel)
+  {
+    class_id_ = IO_CLASS_TRANSPORT;
+
+#if defined(_DEBUG)
+    memset(buffer_, 0, sizeof(buffer_));
+#endif
+  }
   io_channel *channel_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
@@ -266,8 +267,6 @@ private:
 
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
-
-  int error_ = 0; // socket error(>= -1), application error(< -1)
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
@@ -424,15 +423,15 @@ public:
 private:
   void open_internal(io_channel *);
 
-  void perform_io_completion(transport_ptr, iocp_event *event);
+  void do_read_completion(transport_ptr, int bytes_transferred);
   void perform_channel(io_channel *ctx);
-  void perform_channel_completion(io_channel *ctx, iocp_event *event);
+  void perform_channel_completion(io_channel *ctx);
   void perform_timers();
 
   long long get_wait_duration(long long usec);
 
   void do_nonblocking_connect(io_channel *);
-  void do_nonblocking_connect_completion(io_channel *, iocp_event *);
+  void do_nonblocking_connect_completion(io_channel *);
 
   // @client connect server succeed
   void handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
@@ -447,8 +446,9 @@ private:
   // The major async event-loop
   void service(void);
 
-  bool do_write(transport_ptr);
-  int do_read(transport_ptr, iocp_event *ev);
+  void do_write(transport_ptr);
+  bool do_write_internal(transport_ptr);
+  int do_read(transport_ptr, int bytes_transferred);
   int do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   void handle_close(transport_ptr);
@@ -475,7 +475,7 @@ private:
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
-  void do_nonblocking_accept_completion(io_channel *, iocp_event *);
+  void do_nonblocking_accept_completion(io_channel *);
 
   void do_nonblocking_accept_internal(io_channel *);
 

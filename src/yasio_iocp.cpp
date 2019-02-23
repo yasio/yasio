@@ -98,10 +98,7 @@ enum
   // completed operations.
   wake_for_dispatch = 1,
 
-  // Completion key value to indicate that an operation has posted with the
-  // original last_error and bytes_transferred values stored in the fields of
-  // the OVERLAPPED structure.
-  overlapped_contains_result = 2
+  wake_for_write = 2,
 };
 
 // The high precision micro seconds timestamp
@@ -490,27 +487,33 @@ void io_service::service()
   for (; !stopping_;)
   {
     // Get the next operation from the queue.
-    iocp_event ev;
+    DWORD bytes_transferred   = 0;
+    DWORD_PTR completion_key  = 0;
+    LPOVERLAPPED lpOverlapped = nullptr;
     ::SetLastError(0);
     auto msec = get_wait_duration(MAX_WAIT_DURATION) / 1000;
     BOOL ok =
-        ::GetQueuedCompletionStatus(iocp_.handle, &ev.bytes_transferred, &ev.completion_key,
-                                    &ev.overlapped, msec < gqcs_timeout_ ? msec : gqcs_timeout_);
+        ::GetQueuedCompletionStatus(iocp_.handle, &bytes_transferred, &completion_key,
+                                    &lpOverlapped, msec < gqcs_timeout_ ? msec : gqcs_timeout_);
 
     if (stopping_)
       break;
 
-    if (ev.overlapped)
+    if (lpOverlapped)
     { // process completeion events.
-      ev.ec       = WSAGetLastError();
-      auto object = (io_base *)ev.overlapped;
+      auto object    = (io_base *)lpOverlapped;
+      object->error_ = WSAGetLastError();
       if (object->class_id_ == IO_CLASS_CHANNEL)
       {
-        perform_channel_completion(static_cast<io_channel *>(object), &ev);
+        perform_channel_completion(static_cast<io_channel *>(object));
       }
       else if (object->class_id_ == IO_CLASS_TRANSPORT)
       {
-        perform_io_completion(transports_[object->index_], &ev);
+        auto transport = transports_[object->index_];
+        if (completion_key != wake_for_write)
+          do_read_completion(transport, bytes_transferred);
+        else
+          do_write(transport);
       }
     }
 
@@ -553,27 +556,27 @@ void io_service::perform_channel(io_channel *ctx)
   }
 }
 
-void io_service::perform_channel_completion(io_channel *ctx, iocp_event *event)
+void io_service::perform_channel_completion(io_channel *ctx)
 { // client: OPENING, server: OPENED
   if (ctx->type_ & CHANNEL_CLIENT)
   {
-    do_nonblocking_connect_completion(ctx, event);
+    do_nonblocking_connect_completion(ctx);
   }
   else if (ctx->type_ & CHANNEL_SERVER)
   {
-    do_nonblocking_accept_completion(ctx, event);
+    do_nonblocking_accept_completion(ctx);
   }
 }
 
-void io_service::perform_io_completion(transport_ptr ctx, iocp_event *ev)
+void io_service::do_read_completion(transport_ptr ctx, int bytes_transferred)
 {
   int n = -1;
-  if (ctx->offset_ > 0 || ev->ec == 0)
+  if (ctx->offset_ > 0 || ctx->error_ == 0)
   {
 #if _YASIO_VERBOS_LOG
     INET_LOG("[index: %d] perform non-blocking read operation...", ctx->channel_index());
 #endif
-    n = do_read(ctx, ev);
+    n = do_read(ctx, bytes_transferred);
     if (n < 0)
     {
       handle_close(ctx);
@@ -604,7 +607,10 @@ void io_service::perform_io_completion(transport_ptr ctx, iocp_event *ev)
 #endif
     }
   }
+}
 
+void io_service::do_write(transport_ptr ctx)
+{
   // perform write operations
   if (!ctx->send_queue_.empty())
   {
@@ -613,7 +619,7 @@ void io_service::perform_io_completion(transport_ptr ctx, iocp_event *ev)
     INET_LOG("[index: %d] perform non-blocking write operation...", ctx->channel_index());
 #endif
 
-    if (!do_write(ctx))
+    if (!do_write_internal(ctx))
     { // TODO: check would block? for client, may
       // be unnecessary.
       ctx->send_queue_mtx_.unlock();
@@ -623,18 +629,11 @@ void io_service::perform_io_completion(transport_ptr ctx, iocp_event *ev)
     }
 
     if (!ctx->send_queue_.empty())
-    {
+    { // TODO;
     }
 
     ctx->send_queue_mtx_.unlock();
   }
-
-  /*if (ev.events != 0)
-  {
-    ev.data.ptr = ctx.get();
-    outstanding_events_.push_back(ev);
-    ++this->outstanding_work_;
-  }*/
 }
 
 void io_service::close(size_t channel_index)
@@ -757,7 +756,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    interrupt();
+    ::PostQueuedCompletionStatus(iocp_.handle, 0, wake_for_write, transport);
   }
   else
   {
@@ -816,18 +815,21 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-        // register_descriptor(ctx->socket_->native_handle());
         ctx->socket_->set_nonblocking(true);
         ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        register_descriptor(ctx->socket_->native_handle());
-        ret = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_), nullptr,
-                                   0, nullptr, ctx);
-      }
 
-      if (!ret)
-      { // setup no blocking connect
-        int error = xxsocket::get_last_errno();
-        if (error == WSA_IO_PENDING)
+        // must register register_descriptor before call connect_ex
+        register_descriptor(ctx->socket_->native_handle());
+
+        bool result = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_),
+                                           nullptr, 0, nullptr, ctx);
+
+        DWORD last_error = ::WSAGetLastError();
+        if (!result && last_error != WSA_IO_PENDING)
+        {
+          handle_connect_succeed(ctx, ctx->socket_);
+        }
+        else
         {
           ctx->deadline_timer_.expires_from_now(
               std::chrono::microseconds(options_.connect_timeout_));
@@ -838,16 +840,6 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
             }
           });
         }
-        else
-        {
-          this->handle_connect_failed(ctx, error);
-        }
-      }
-      else
-      {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
-                                 ctx->socket_->native_handle());
-        handle_connect_succeed(ctx, ctx->socket_);
       }
     }
     else // CHANNEL_UDP
@@ -884,30 +876,21 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
   }
 }
 
-void io_service::do_nonblocking_connect_completion(io_channel *ctx, iocp_event *event)
-{
-  if (ctx->state_ == channel_state::OPENING)
+void io_service::do_nonblocking_connect_completion(io_channel *ctx)
+{ // only tcp client will call this function
+  assert(CHANNEL_TCP_CLIENT == ctx->type_);
+  assert(ctx->state_ == channel_state::OPENING);
+
+  if (ctx->error_ == 0)
   {
-    int error = -1;
-    if (ctx->type_ & CHANNEL_TCP)
-    {
-      socklen_t len = sizeof(error);
-      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
-              0 &&
-          error == 0)
-      {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
-                                 ctx->socket_->native_handle());
-        handle_connect_succeed(ctx, ctx->socket_);
-        ctx->deadline_timer_.cancel();
-      }
-      else
-      {
-        handle_connect_failed(ctx, ERR_CONNECT_FAILED);
-        ctx->deadline_timer_.cancel();
-      }
-    }
+    handle_connect_succeed(ctx, ctx->socket_);
   }
+  else
+  {
+    handle_connect_failed(ctx, ERR_CONNECT_FAILED);
+  }
+
+  ctx->deadline_timer_.cancel();
 }
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
@@ -1007,26 +990,19 @@ void io_service::do_nonblocking_accept_internal(io_channel *ctx)
   }
 }
 
-void io_service::do_nonblocking_accept_completion(io_channel *ctx, iocp_event *event)
+void io_service::do_nonblocking_accept_completion(io_channel *ctx)
 {
   if (ctx->state_ == channel_state::OPENED)
   {
-    int error = -1;
-
-    socklen_t len = sizeof(error);
-    if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
-            0 &&
-        error == 0)
+    if (ctx->error_ == 0)
     {
       if (ctx->type_ & CHANNEL_TCP)
       {
         auto transport = (io_transport *)ctx->Pointer;
-        if (event->ec == 0)
-        {
-          auto &client_sock = transport->socket_;
 
-          handle_connect_succeed(this->transports_[transport->index_]);
-        }
+        auto &client_sock = transport->socket_;
+
+        handle_connect_succeed(this->transports_[transport->index_]);
       }
       else // CHANNEL_UDP
       {
@@ -1082,7 +1058,11 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
   {
     ctx->state_ = channel_state::OPENED;
     if (ctx->type_ & CHANNEL_TCP)
-    { // apply tcp keepalive options
+    {
+      ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
+                               ctx->socket_->native_handle());
+
+      // apply tcp keepalive options
       if (options_.tcp_keepalive.onoff)
       {
         socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
@@ -1169,7 +1149,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
            ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-bool io_service::do_write(transport_ptr transport)
+bool io_service::do_write_internal(transport_ptr transport)
 {
   bool bRet = false;
   auto ctx  = transport->channel_;
@@ -1244,18 +1224,18 @@ bool io_service::do_write(transport_ptr transport)
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/) {}
 
-int io_service::do_read(transport_ptr transport, iocp_event *ev)
+int io_service::do_read(transport_ptr transport, int bytes_transferred)
 { // return: whether the transport buffer still have data, -1: error, connection should be close.
   auto ctx = transport->channel_;
 
+  int ec = transport->error_;
   if (!transport->socket_->is_open())
     return -1;
 
-  int n =
-      ev->bytes_transferred; /*transport->socket_->recv_i(transport->buffer_ + transport->offset_,
+  int n = bytes_transferred; /*transport->socket_->recv_i(transport->buffer_ + transport->offset_,
                                      socket_recv_buffer_size - transport->offset_);*/
 
-  if (n > 0 || !SHOULD_CLOSE_0(n, ev->ec))
+  if (n > 0 || !SHOULD_CLOSE_0(n, ec))
   {
 #if _YASIO_VERBOS_LOG
     INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),

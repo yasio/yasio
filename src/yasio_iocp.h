@@ -477,6 +477,8 @@ private:
   void do_nonblocking_accept(io_channel *);
   void do_nonblocking_accept_completion(io_channel *, iocp_event *);
 
+  void do_nonblocking_accept_internal(io_channel *);
+
   // -1 indicate failed, connection will be closed
   int builtin_decode_frame_length(void *ptr, int len);
 

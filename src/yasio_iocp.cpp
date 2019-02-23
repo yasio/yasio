@@ -933,7 +933,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         return;
       }
 
-      if (ctx->socket_->listen(1) != 0)
+      if (ctx->socket_->listen(19) != 0)
       {
         error = xxsocket::get_last_errno();
         INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
@@ -948,25 +948,8 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
       register_descriptor(ctx->socket_->native_handle());
 
-      std::shared_ptr<xxsocket> prepared_sock(new xxsocket());
-      if (prepared_sock->open_ex(AF_INET))
-      {
-        auto transport        = allocate_transport(ctx, prepared_sock);
-        DWORD dwBytesReceived = 0;
-        ctx->Pointer          = transport.get();
-        bool result           = xxsocket::accept_ex(
-            ctx->socket_->native_handle(), prepared_sock->native_handle(), ctx->buffer_,
-            0 /* Set to 0, we do not wait read any data during handshake */,
-            sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytesReceived, ctx);
-        DWORD last_error = ::WSAGetLastError();
-        if (!result && last_error != WSA_IO_PENDING)
-        {
-          handle_connect_succeed(transport);
-        }
-        else
-          (void)0; // iocp_service_.on_pending(op);
-      }
-      // register_descriptor(ctx->socket_->native_handle(), socket_event_read);
+      do_nonblocking_accept_internal(ctx);
+
       INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
     else
@@ -1002,6 +985,28 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
 }
 
+void io_service::do_nonblocking_accept_internal(io_channel *ctx)
+{
+  std::shared_ptr<xxsocket> prepared_sock(new xxsocket());
+  if (prepared_sock->open_ex(AF_INET))
+  {
+    auto transport        = allocate_transport(ctx, prepared_sock);
+    DWORD dwBytesReceived = 0;
+    ctx->Pointer          = transport.get();
+    bool result           = xxsocket::accept_ex(
+        ctx->socket_->native_handle(), prepared_sock->native_handle(), ctx->buffer_,
+        0 /* Set to 0, we do not wait read any data during handshake */, sizeof(SOCKADDR_IN) + 16,
+        sizeof(SOCKADDR_IN) + 16, &dwBytesReceived, ctx);
+    DWORD last_error = ::WSAGetLastError();
+    if (!result && last_error != WSA_IO_PENDING)
+    {
+      handle_connect_succeed(transport);
+    }
+    else
+      (void)0; // iocp_service_.on_pending(op);
+  }
+}
+
 void io_service::do_nonblocking_accept_completion(io_channel *ctx, iocp_event *event)
 {
   if (ctx->state_ == channel_state::OPENED)
@@ -1019,7 +1024,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, iocp_event *e
         if (event->ec == 0)
         {
           auto &client_sock = transport->socket_;
-          
+
           handle_connect_succeed(this->transports_[transport->index_]);
         }
       }
@@ -1105,7 +1110,7 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
 void io_service::handle_connect_succeed(transport_ptr transport)
 {
   auto ctx = transport->channel_;
-  
+
   // xxsocket::translate
   auto &connection = transport->socket_;
 
@@ -1125,6 +1130,8 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   DWORD flags             = 0;
   WSARecv(connection->native_handle(), &wsabuf, 1, &bytes_transferred, &flags, transport.get(),
           nullptr);
+
+  do_nonblocking_accept_internal(ctx);
 }
 
 transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)

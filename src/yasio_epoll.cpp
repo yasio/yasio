@@ -1196,99 +1196,95 @@ void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/)
 
 int io_service::do_read(transport_ptr transport)
 {
-  // Indicate whether still have avail data in kernel or user layer's recv buffer. < 0, the
-  // connection should be closed.
-  int iret = -1;
+  // return value: Indicate whether still have avail data in kernel or user layer's recv buffer. <
+  // 0, the connection should be closed.
   auto ctx = transport->channel_;
-  do
+
+  if (!transport->socket_->is_open())
+    return -1;
+
+  int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
+                                     socket_recv_buffer_size - transport->offset_);
+
+  if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error()))
   {
-    if (!transport->socket_->is_open())
-      break;
-
-    int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
-                                       socket_recv_buffer_size - transport->offset_);
-
-    if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error()))
+#if _YASIO_VERBOS_LOG
+    INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
+             transport->error_, io_service::strerror(transport->error_));
+#endif
+    if (n == -1)
+      n = 0;
+#if _YASIO_VERBOS_LOG
+    if (n > 0)
     {
-#if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
-               transport->error_, io_service::strerror(transport->error_));
+      INET_LOG("[index: %d] do_read ok, received data len: %d, "
+               "buffer data "
+               "len: %d",
+               transport->channel_index(), n, n + transport->offset_);
+    }
 #endif
-      if (n == -1)
-        n = 0;
-#if _YASIO_VERBOS_LOG
-      if (n > 0)
+    if (transport->expected_packet_size_ == -1)
+    { // decode length
+      int length = this->xdec_len_(this, transport->buffer_, transport->offset_ + n);
+      if (length > 0)
       {
-        INET_LOG("[index: %d] do_read ok, received data len: %d, "
-                 "buffer data "
-                 "len: %d",
-                 transport->channel_index(), n, n + transport->offset_);
+        transport->expected_packet_size_ = length;
+        transport->expected_packet_.reserve(
+            (std::min)(transport->expected_packet_size_,
+                       MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid // memory reallocte.
+        n = do_unpack(transport, transport->expected_packet_size_, n);
       }
-#endif
-      if (transport->expected_packet_size_ == -1)
-      { // decode length
-        int length = this->xdec_len_(this, transport->buffer_, transport->offset_ + n);
-        if (length > 0)
-        {
-          transport->expected_packet_size_ = length;
-          transport->expected_packet_.reserve(
-              (std::min)(transport->expected_packet_size_,
-                         MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid // memory reallocte.
-          iret = do_unpack(transport, transport->expected_packet_size_, n);
-        }
-        else if (length == 0)
-        {
-          // header insufficient, wait readfd ready at
-          // next event step.
-          transport->offset_ += n;
-          iret = n;
-        }
-        else
-        {
-          // set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
-          INET_LOG("[index: %d] do_read error, decode length of "
-                   "pdu failed, "
-                   "the connection should be closed!",
-                   ctx->index_);
-          break;
-        }
+      else if (length == 0)
+      {
+        // header insufficient, wait readfd ready at
+        // next event step.
+        transport->offset_ += n;
       }
       else
-      { // process incompleted pdu
-        iret = do_unpack(transport,
-                         transport->expected_packet_size_ -
-                             static_cast<int>(transport->expected_packet_.size()),
-                         n);
+      {
+        // set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
+        INET_LOG("[index: %d] do_read error, decode length of "
+                 "pdu failed, "
+                 "the connection should be closed!",
+                 ctx->index_);
+        n = -1;
       }
     }
     else
-    {
-      int error            = transport->error_;
-      const char *errormsg = io_service::strerror(error);
-      if (n == 0)
-      {
-        INET_LOG("[index: %d] do_read error, the remote host close the "
-                 "connection, retval=%d, ec:%d, detail:%s",
-                 ctx->index_, n, error, errormsg);
-      }
-      else
-      {
-        INET_LOG("[index: %d] do_read error, the connection should be "
-                 "closed, retval=%d, ec:%d, detail:%s",
-                 ctx->index_, n, error, errormsg);
-      }
-      break;
+    { // process incompleted pdu
+      n = do_unpack(transport,
+                    transport->expected_packet_size_ -
+                        static_cast<int>(transport->expected_packet_.size()),
+                    n);
     }
-  } while (false);
+  }
+  else
+  {
+    int error            = transport->error_;
+    const char *errormsg = io_service::strerror(error);
+    if (n == 0)
+    {
+      INET_LOG("[index: %d] do_read error, the remote host close the "
+               "connection, retval=%d, ec:%d, detail:%s",
+               ctx->index_, n, error, errormsg);
+    }
+    else
+    {
+      INET_LOG("[index: %d] do_read error, the connection should be "
+               "closed, retval=%d, ec:%d, detail:%s",
+               ctx->index_, n, error, errormsg);
+    }
 
-  return iret;
+    n = -1;
+  }
+
+  return n;
 }
 
-int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
+int io_service::do_unpack(transport_ptr transport, int bytes_expected, int n)
 {
   // Indicate whether still have data in user layer's recv buffer
-  int iret             = bytes_transferred;
-  auto bytes_available = bytes_transferred + transport->offset_;
+  auto bytes_available = n + transport->offset_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
                                      transport->buffer_ +
                                          (std::min)(bytes_expected, bytes_available));
@@ -1300,7 +1296,7 @@ int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes
     {
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
       // not all data consumed
-      iret = 1;
+      n = 1;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
@@ -1318,7 +1314,7 @@ int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes
     transport->offset_ = 0;
   }
 
-  return iret;
+  return n;
 }
 
 void io_service::schedule_timer(deadline_timer *timer)

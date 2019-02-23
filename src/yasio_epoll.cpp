@@ -1287,7 +1287,7 @@ int io_service::do_read(transport_ptr transport)
 int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
 {
   // Indicate whether still have data in user layer's recv buffer
-  int iret             = 0;
+  int iret             = bytes_transferred;
   auto bytes_available = bytes_transferred + transport->offset_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
                                      transport->buffer_ +

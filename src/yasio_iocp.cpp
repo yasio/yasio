@@ -609,7 +609,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key,
 void io_service::start_receive_op(transport_ptr transport)
 {
   DWORD bytes_transferred = 0;
-  WSABUF wsabuf           = {socket_recv_buffer_size - transport->offset_,
+  WSABUF wsabuf           = {static_cast<ULONG>(sizeof(transport->buffer_) - transport->offset_),
                    transport->buffer_ + transport->offset_};
   DWORD flags             = 0;
 
@@ -678,16 +678,20 @@ void io_service::reopen(transport_ptr transport)
 
 void io_service::open(size_t channel_index, int channel_type)
 {
-#if defined(_WIN32)
   if (channel_type == CHANNEL_UDP_SERVER)
   {
+    /*
+    Because Bind() the client socket to the socket address of the listening socket.  On Linux this
+    essentially passes the responsibility for receiving data for the client session from the
+    well-known listening socket, to the newly allocated client socket.  It is important to note that
+    this behavior is not the same on other platforms, like Windows (unfortunately), detail see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux */
     INET_LOG(
         "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
         "CHANNEL_UDP_CLIENT to communicate with peer!",
         channel_index);
     return;
   }
-#endif
 
   // Gets channel
   if (channel_index >= channels_.size())
@@ -885,81 +889,52 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx)
 void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
   close_internal(ctx);
+  assert(ctx->type_ == CHANNEL_TCP_SERVER);
 
-  if (ctx->type_ & CHANNEL_TCP)
+  if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
   {
-    if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+    ctx->state_ = channel_state::OPENING;
+
+    ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+    int error = 0;
+    if (ctx->socket_->bind(ep) != 0)
     {
-      ctx->state_ = channel_state::OPENING;
-
-      ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      int error = 0;
-      if (ctx->socket_->bind(ep) != 0)
-      {
-        error = xxsocket::get_last_errno();
-        INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-                 io_service::strerror(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::CLOSED;
-        return;
-      }
-
-      if (ctx->socket_->listen(19) != 0)
-      {
-        error = xxsocket::get_last_errno();
-        INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-                 io_service::strerror(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::CLOSED;
-        return;
-      }
-
-      ctx->state_ = channel_state::OPENED;
-      ctx->socket_->set_nonblocking(true);
-
-      register_descriptor(ctx->socket_->native_handle());
-
-      do_nonblocking_accept_internal(ctx);
-
-      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
-    }
-    else
+      error = xxsocket::get_last_errno();
+      INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+               io_service::strerror(error));
+      ctx->socket_->close();
       ctx->state_ = channel_state::CLOSED;
-  }
-  else // CHANNEL_UDP
-  {
-    if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
+      return;
+    }
+
+    if (ctx->socket_->listen(19) != 0)
     {
-      ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
-
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-#if !defined(_WIN32)
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-#endif
-      if (ctx->socket_->bind(ep) == 0)
-      {
-        INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
-        ctx->state_ = channel_state::OPENED;
-        ctx->socket_->set_nonblocking(true);
-        register_descriptor(ctx->socket_->native_handle());
-      }
-      else
-      {
-        int error = 0;
-        INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error,
-                 this->strerror(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::CLOSED;
-      }
-    }
-    else
+      error = xxsocket::get_last_errno();
+      INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
+               io_service::strerror(error));
+      ctx->socket_->close();
       ctx->state_ = channel_state::CLOSED;
+      return;
+    }
+
+    ctx->state_ = channel_state::OPENED;
+    ctx->socket_->set_nonblocking(true);
+
+    register_descriptor(ctx->socket_->native_handle());
+
+    do_nonblocking_accept_internal(ctx);
+
+    INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
   }
+  else
+    ctx->state_ = channel_state::CLOSED;
 }
 
 void io_service::do_nonblocking_accept_internal(io_channel *ctx)
 {
+  assert(ctx->type_ == CHANNEL_TCP_SERVER);
+
   std::shared_ptr<xxsocket> prepared_sock(new xxsocket());
   if (prepared_sock->open_ex(AF_INET))
   {
@@ -975,64 +950,22 @@ void io_service::do_nonblocking_accept_internal(io_channel *ctx)
     {
       handle_connect_succeed(transport);
     }
-    else
-      (void)0; // iocp_service_.on_pending(op);
   }
 }
 
 void io_service::do_nonblocking_accept_completion(io_channel *ctx)
 {
+  assert(ctx->type_ & CHANNEL_TCP);
   if (ctx->state_ == channel_state::OPENED)
   {
     if (ctx->error_ == 0)
     {
-      if (ctx->type_ & CHANNEL_TCP)
-      {
-        auto transport = (io_transport *)ctx->Pointer;
+      auto transport = (io_transport *)ctx->Pointer;
 
-        auto &client_sock = transport->socket_;
-
-        handle_connect_succeed(this->transports_[transport->index_]);
-      }
-      else // CHANNEL_UDP
-      {
-#if 0
-        ip::endpoint peer;
-
-        char buffer[65535];
-        int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
-        if (n > 0)
-        {
-          INET_LOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
-
-          // make a transport local --> peer udp session, just like tcp accept
-          std::shared_ptr<xxsocket> client_sock(new xxsocket());
-          if (client_sock->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
-          {
-            client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-            error = client_sock->bind("0.0.0.0", ctx->port_) == 0
-                        ? xxsocket::connect(client_sock->native_handle(), peer)
-                        : -1;
-            if (error == 0)
-            {
-              client_sock->set_nonblocking(true);
-              register_descriptor(client_sock->native_handle(), socket_event_read);
-
-             /* auto transport = handle_connect_succeed(ctx, client_sock);
-              this->handle_event(
-                  event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
-                                         std::vector<char>(buffer, buffer + n), transport)));*/
-            }
-            else
-            {
-              INET_LOG("%s", "udp-server: open socket fd failed!");
-            }
-          }
-        }
-#endif
-      }
+      auto &client_sock = transport->socket_;
+      handle_connect_succeed(this->transports_[transport->index_]);
     }
-    else
+    else if (ctx->error_ != ERROR_IO_PENDING)
     {
       INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
       close_internal(ctx);
@@ -1070,7 +1003,6 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
-  // IOCP: post the first async recv op.
   start_receive_op(transport);
 }
 
@@ -1081,8 +1013,10 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   // xxsocket::translate
   auto &connection = transport->socket_;
 
+  connection->set_nonblocking(true);
   register_descriptor(connection->native_handle());
-  connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
+  if (ctx->type_ & CHANNEL_TCP)
+    connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
 
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
            connection->local_endpoint().to_string().c_str(),

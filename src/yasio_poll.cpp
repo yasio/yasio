@@ -303,7 +303,7 @@ void io_service::stop_service()
       }
     }
 
-    interrupter_.interrupt();
+    this->interrupt();
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
@@ -617,7 +617,7 @@ void io_service::close(size_t channel_index)
     ctx->state_ = channel_state::CLOSED;
     unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
     ctx->socket_->close();
-    interrupt();
+    this->interrupt();
   }
 }
 
@@ -631,7 +631,7 @@ void io_service::close(transport_ptr &transport)
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
     transport.reset();
-    interrupter_.interrupt();
+    this->interrupt();
   }
 }
 
@@ -658,6 +658,12 @@ void io_service::open(size_t channel_index, int channel_type)
 #if defined(_WIN32)
   if (channel_type == CHANNEL_UDP_SERVER)
   {
+    /*
+    Because Bind() the client socket to the socket address of the listening socket.  On Linux this
+    essentially passes the responsibility for receiving data for the client session from the
+    well-known listening socket, to the newly allocated client socket.  It is important to note that
+    this behavior is not the same on other platforms, like Windows (unfortunately), detail see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux */
     INET_LOG(
         "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
         "CHANNEL_UDP_CLIENT to communicate with peer!",
@@ -746,7 +752,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    interrupter_.interrupt();
+    this->interrupt();
   }
   else
   {
@@ -797,11 +803,11 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
     ctx->state_ = channel_state::OPENING;
 
+    auto &ep = ctx->endpoints_[0];
     if (ctx->type_ & CHANNEL_TCP)
     {
-      int ret  = -1;
-      auto &ep = ctx->endpoints_[0];
-      if (ctx->socket_->reopen(ep.af()))
+      int ret = -1;
+      if (ctx->socket_->open(ep.af()))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
         if (ctx->local_port_ != 0)
@@ -843,13 +849,12 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
     else // CHANNEL_UDP
     {
       int ret = -1;
-      if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+      if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-        if (ctx->local_port_ != 0)
-          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        ret = xxsocket::connect(ctx->socket_->native_handle(), ctx->endpoints_[0]);
+        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+        ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
         if (ret == 0)
         {
           ctx->socket_->set_nonblocking(true);
@@ -919,7 +924,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
   if (ctx->type_ & CHANNEL_TCP)
   {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+    if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
     {
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
@@ -934,7 +939,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         return;
       }
 
-      if (ctx->socket_->listen(1) != 0)
+      if (ctx->socket_->listen(19) != 0)
       {
         error = xxsocket::get_last_errno();
         INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
@@ -952,7 +957,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
   else // CHANNEL_UDP
   {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
+    if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
     {
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 
@@ -1314,7 +1319,7 @@ void io_service::schedule_timer(deadline_timer *timer)
             });
 
   if (timer == *this->timer_queue_.begin())
-    interrupter_.interrupt();
+    this->interrupt();
 }
 
 void io_service::cancel_timer(deadline_timer *timer)
@@ -1351,7 +1356,7 @@ void io_service::open_internal(io_channel *ctx)
   this->active_channels_.push_back(ctx);
   active_channels_mtx_.unlock();
 
-  interrupter_.interrupt();
+  this->interrupt();
 }
 
 void io_service::perform_timers()
@@ -1502,6 +1507,18 @@ bool io_service::start_resolve(io_channel *ctx)
       ctx->resolve_state_ = resolve_state::FAILED;
     }
 
+    /*
+    The getaddrinfo behavior at win32 is strange:
+    If the channel 0 is in non-blocking connect, and waiting at select, than
+    channel 1 request connect(need dns queries), it's wake up the select call,
+    do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET
+    without select call, FD_ISSET will always return true, even through the
+    TCP connection handshake is not complete.
+
+    Try write data to a incomplete TCP will trigger error: 10057
+    Another result at this situation is: Try get local endpoint by getsockname
+    will return 0.0.0.0
+    */
     this->interrupt();
   });
   resolve_thread.detach();

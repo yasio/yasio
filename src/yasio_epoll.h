@@ -209,12 +209,11 @@ enum
 struct io_base
 {
 
-  int class_id_; 
+  int class_id_;
   int index_; // channel: index in channels, transport: index in transports
-  
+
   std::shared_ptr<xxsocket> socket_;
   unsigned int registered_events_ = 0;
-  
 };
 
 struct io_channel : public io_base
@@ -263,7 +262,7 @@ private:
   io_transport(io_channel *ctx) : ctx_(ctx) { class_id_ = IO_CLASS_TRANSPORT; }
   io_channel *ctx_;
 
-  char buffer_[socket_recv_buffer_size + 1]; // recv buffer
+  char buffer_[socket_recv_buffer_size]; // recv buffer
   int offset_ = 0;                           // recv buffer offset
 
   std::vector<char> expected_packet_;
@@ -496,7 +495,6 @@ private:
   // timer support
   std::vector<deadline_timer *> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
-
 
   int epoll_fd_;
 

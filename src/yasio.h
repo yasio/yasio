@@ -253,7 +253,7 @@ private:
   io_transport(io_channel *ctx) : ctx_(ctx) {}
   io_channel *ctx_;
 
-  char buffer_[socket_recv_buffer_size + 1]; // recv buffer
+  char buffer_[socket_recv_buffer_size]; // recv buffer
   int offset_ = 0;                           // recv buffer offset
 
   std::vector<char> expected_packet_;

@@ -819,11 +819,11 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
                ctx->port_);
     }
 
+    auto &ep = ctx->endpoints_[0];
     if (ctx->type_ & CHANNEL_TCP)
     {
-      int ret  = -1;
-      auto &ep = ctx->endpoints_[0];
-      if (ctx->socket_->reopen(ep.af()))
+      int ret = -1;
+      if (ctx->socket_->open(ep.af()))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
         if (ctx->local_port_ != 0)
@@ -861,13 +861,12 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
     else // CHANNEL_UDP
     {
       int ret = -1;
-      if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+      if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-        if (ctx->local_port_ != 0)
-          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        ret = xxsocket::connect(ctx->socket_->native_handle(), ctx->endpoints_[0]);
+        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+        ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
         if (ret == 0)
         {
           handle_connect_succeed(ctx, ctx->socket_);
@@ -922,7 +921,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
   if (ctx->type_ & CHANNEL_TCP)
   {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+    if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
     {
       ctx->state_ = channel_state::OPENING;
 
@@ -939,7 +938,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         return;
       }
 
-      if (ctx->socket_->listen(1) != 0)
+      if (ctx->socket_->listen(19) != 0)
       {
         error = xxsocket::get_last_errno();
         INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
@@ -961,7 +960,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
   else // CHANNEL_UDP
   {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
+    if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
     {
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 

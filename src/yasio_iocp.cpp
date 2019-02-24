@@ -526,9 +526,6 @@ void io_service::service()
     // perform timeout timers
     perform_timers();
   }
-
-_L_end:
-  (void)0; // ONLY for xcode compiler happy.
 }
 
 void io_service::do_channel(io_channel *ctx)
@@ -733,6 +730,10 @@ void io_service::handle_close(transport_ptr transport)
           });
     }
   }
+
+  // @we don't real delete it, just push to free list, make sure all objects' index in transports_
+  // never change.
+  this->transport_free_list_.push_back(transport.get());
 }
 
 void io_service::write(transport_ptr transport, std::vector<char> data)

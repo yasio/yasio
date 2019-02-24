@@ -251,7 +251,7 @@ public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
-  int channel_index() const { return channel_->index_; }
+  int channel_index() const { return ctx_->index_; }
   int status() const { return error_; }
   inline std::vector<char> take_packet()
   {
@@ -260,8 +260,8 @@ public:
   }
 
 private:
-  io_transport(io_channel *channel) : channel_(channel) { class_id_ = IO_CLASS_TRANSPORT; }
-  io_channel *channel_;
+  io_transport(io_channel *ctx) : ctx_(ctx) { class_id_ = IO_CLASS_TRANSPORT; }
+  io_channel *ctx_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
   int offset_ = 0;                           // recv buffer offset

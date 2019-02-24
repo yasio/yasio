@@ -568,19 +568,19 @@ void io_service::perform_channel_completion(io_channel *ctx, const epoll_event &
   }
 }
 
-void io_service::perform_io(transport_ptr ctx, const epoll_event &event)
+void io_service::perform_io(transport_ptr transport, const epoll_event &event)
 {
   int n          = -1;
   epoll_event ev = {0, {0}};
-  if (ctx->offset_ > 0 || (event.events & (YASIO_EPOLLIN)))
+  if (transport->offset_ > 0 || (event.events & (YASIO_EPOLLIN)))
   {
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] perform non-blocking read operation...", ctx->channel_index());
+    INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
 #endif
-    n = do_read(ctx);
+    n = do_read(transport);
     if (n < 0)
     {
-      handle_close(ctx);
+      handle_close(transport);
       return;
     }
     else if (n > 0)
@@ -590,32 +590,32 @@ void io_service::perform_io(transport_ptr ctx, const epoll_event &event)
   }
 
   // perform write operations
-  if (!ctx->send_queue_.empty())
+  if (!transport->send_queue_.empty())
   {
-    ctx->send_queue_mtx_.lock();
+    transport->send_queue_mtx_.lock();
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] perform non-blocking write operation...", ctx->channel_index());
+    INET_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
 #endif
 
-    if (!do_write(ctx))
+    if (!do_write(transport))
     { // TODO: check would block? for client, may
       // be unnecessary.
-      ctx->send_queue_mtx_.unlock();
-      handle_close(ctx);
+      transport->send_queue_mtx_.unlock();
+      handle_close(transport);
       return;
     }
 
-    if (!ctx->send_queue_.empty())
+    if (!transport->send_queue_.empty())
     {
       ev.events |= EPOLLOUT;
     }
 
-    ctx->send_queue_mtx_.unlock();
+    transport->send_queue_mtx_.unlock();
   }
 
   if (ev.events != 0)
   {
-    ev.data.ptr = ctx.get();
+    ev.data.ptr = transport.get();
     outstanding_events_.push_back(ev);
     ++this->outstanding_work_;
   }
@@ -669,7 +669,7 @@ void io_service::reopen(transport_ptr transport)
   {
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
   }
-  open_internal(transport->channel_);
+  open_internal(transport->ctx_);
 }
 
 void io_service::open(size_t channel_index, int channel_type)
@@ -693,7 +693,7 @@ void io_service::handle_close(transport_ptr transport)
 
   close_internal(transport.get());
 
-  auto ctx = transport->channel_;
+  auto ctx = transport->ctx_;
 
   // @notify connection lost
   this->handle_event(event_ptr(
@@ -1120,7 +1120,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 bool io_service::do_write(transport_ptr transport)
 {
   bool bRet = false;
-  auto ctx  = transport->channel_;
+  auto ctx  = transport->ctx_;
   do
   {
     int n;
@@ -1196,7 +1196,7 @@ int io_service::do_read(transport_ptr transport)
 {
   // return value: Indicate whether still have avail data in kernel or user layer's recv buffer. <
   // 0, the connection should be closed.
-  auto ctx = transport->channel_;
+  auto ctx = transport->ctx_;
 
   if (!transport->socket_->is_open())
     return -1;

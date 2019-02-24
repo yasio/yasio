@@ -79,7 +79,6 @@ namespace inet
 {
 namespace
 {
-
 enum
 {
   // Timeout to use with GetQueuedCompletionStatus on older versions of
@@ -93,12 +92,6 @@ enum
 
   // Maximum waitable timer timeout, in microseconds.
   max_timeout_usec = max_timeout_msec * 1000,
-
-  // Completion key value used to wake up a thread to dispatch timers or
-  // completed operations.
-  wake_for_dispatch = 1,
-
-  wake_for_write = 2,
 };
 
 // The high precision micro seconds timestamp
@@ -306,8 +299,6 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
     stopping_       = false;
     thread_started_ = true;
 
-    // register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-
     // Initialize channels
     for (auto i = 0; i < channel_count; ++i)
     {
@@ -334,7 +325,7 @@ void io_service::stop_service()
       }
     }
 
-    interrupt();
+    wakeup();
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
@@ -501,19 +492,16 @@ void io_service::service()
 
     if (lpOverlapped)
     { // process completeion events.
-      auto object    = (io_base *)lpOverlapped;
-      object->error_ = WSAGetLastError();
-      if (object->class_id_ == IO_CLASS_CHANNEL)
+      auto objIO = (io_base *)lpOverlapped;
+      objIO->update_error();
+      if (objIO->class_id_ == IO_CLASS_CHANNEL)
       {
-        perform_channel_completion(static_cast<io_channel *>(object));
+        do_channel_completion(static_cast<io_channel *>(objIO));
       }
-      else if (object->class_id_ == IO_CLASS_TRANSPORT)
+      else if (objIO->class_id_ == IO_CLASS_TRANSPORT)
       {
-        auto transport = transports_[object->index_];
-        if (completion_key != wake_for_write)
-          do_read_completion(transport, bytes_transferred);
-        else
-          do_write(transport);
+        auto transport = transports_[objIO->index_];
+        do_io_completion(transport, completion_key, bytes_transferred);
       }
     }
 
@@ -525,7 +513,7 @@ void io_service::service()
       {
         auto ctx = *iter;
         if (ctx->state_ == channel_state::OPENING)
-          perform_channel(ctx);
+          do_channel(ctx);
 
         if (ctx->resolve_state_ != resolve_state::INPRROGRESS)
           iter = active_channels_.erase(iter);
@@ -543,7 +531,7 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-void io_service::perform_channel(io_channel *ctx)
+void io_service::do_channel(io_channel *ctx)
 {
   assert(ctx->state_ == channel_state::OPENING);
   if (ctx->type_ & CHANNEL_CLIENT)
@@ -556,7 +544,7 @@ void io_service::perform_channel(io_channel *ctx)
   }
 }
 
-void io_service::perform_channel_completion(io_channel *ctx)
+void io_service::do_channel_completion(io_channel *ctx)
 { // client: OPENING, server: OPENED
   if (ctx->type_ & CHANNEL_CLIENT)
   {
@@ -568,71 +556,73 @@ void io_service::perform_channel_completion(io_channel *ctx)
   }
 }
 
-void io_service::do_read_completion(transport_ptr ctx, int bytes_transferred)
+void io_service::do_io_completion(transport_ptr transport, DWORD completion_key,
+                                  int bytes_transferred)
 {
   int n = -1;
-  if (ctx->offset_ > 0 || ctx->error_ == 0)
+  if (transport->offset_ > 0 || bytes_transferred > 0 || completion_key == 0)
   {
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] perform non-blocking read operation...", ctx->channel_index());
+    INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
 #endif
-    n = do_read(ctx, bytes_transferred);
+    n = do_read(transport, bytes_transferred);
     if (n < 0)
     {
-      handle_close(ctx);
+      handle_close(transport);
       return;
     }
     else if (n > 0)
     { // still have data to perform at next frame
-      // TODO:
+      this->wakeup(transport.get());
     }
     else // == 0, all buffer consumed, continue recv
     {
-      DWORD bytes_transferred = 0;
-      WSABUF wsabuf = {socket_recv_buffer_size - ctx->offset_, ctx->buffer_ + ctx->offset_};
-      DWORD flags   = 0;
-
-      int result = WSARecv(ctx->socket_->native_handle(), &wsabuf, 1, &bytes_transferred, &flags,
-                           ctx.get(), nullptr);
-      (void)result;
-#if 0
-      DWORD last_error = ::WSAGetLastError();
-      if (last_error == ERROR_NETNAME_DELETED)
-        last_error = WSAECONNRESET;
-      else if (last_error == ERROR_PORT_UNREACHABLE)
-        last_error = WSAECONNREFUSED;
-      if (result != 0 && last_error != WSA_IO_PENDING)
-      {
-      }
-#endif
+      start_receive_op(transport);
     }
   }
-}
 
-void io_service::do_write(transport_ptr ctx)
-{
   // perform write operations
-  if (!ctx->send_queue_.empty())
+  if (!transport->send_queue_.empty())
   {
-    ctx->send_queue_mtx_.lock();
+    transport->send_queue_mtx_.lock();
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] perform non-blocking write operation...", ctx->channel_index());
+    INET_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
 #endif
 
-    if (!do_write_internal(ctx))
+    if (do_write(transport) < 0)
     { // TODO: check would block? for client, may
       // be unnecessary.
-      ctx->send_queue_mtx_.unlock();
-      handle_close(ctx);
-      // iter = transports_.erase(iter); // TODO: remove transport from transport list
+      transport->send_queue_mtx_.unlock();
+      handle_close(transport);
       return;
     }
 
-    if (!ctx->send_queue_.empty())
-    { // TODO;
+    if (!transport->send_queue_.empty())
+    {
+      this->wakeup(transport.get());
     }
 
-    ctx->send_queue_mtx_.unlock();
+    transport->send_queue_mtx_.unlock();
+  }
+}
+
+void io_service::start_receive_op(transport_ptr transport)
+{
+  DWORD bytes_transferred = 0;
+  WSABUF wsabuf           = {socket_recv_buffer_size - transport->offset_,
+                   transport->buffer_ + transport->offset_};
+  DWORD flags             = 0;
+
+  int result = WSARecv(transport->socket_->native_handle(), &wsabuf, 1, &bytes_transferred, &flags,
+                       transport.get(), nullptr);
+  DWORD last_error = transport->update_error();
+  if (last_error == ERROR_NETNAME_DELETED)
+    last_error = WSAECONNRESET;
+  else if (last_error == ERROR_PORT_UNREACHABLE)
+    last_error = WSAECONNREFUSED;
+  if (result != 0 && last_error != WSA_IO_PENDING)
+  {
+    this->wakeup(transport.get(), 0, bytes_transferred);
   }
 }
 
@@ -650,7 +640,7 @@ void io_service::close(size_t channel_index)
   {
     ctx->state_ = channel_state::CLOSED;
     ctx->socket_->close();
-    interrupt();
+    wakeup(ctx);
   }
 }
 
@@ -664,7 +654,7 @@ void io_service::close(transport_ptr &transport)
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
     transport.reset();
-    interrupt();
+    wakeup(transport.get());
   }
 }
 
@@ -683,7 +673,7 @@ void io_service::reopen(transport_ptr transport)
   {
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
   }
-  open_internal(transport->channel_);
+  open_internal(transport->ctx_);
 }
 
 void io_service::open(size_t channel_index, int channel_type)
@@ -718,7 +708,7 @@ void io_service::handle_close(transport_ptr transport)
 
   close_internal(transport.get());
 
-  auto ctx = transport->channel_;
+  auto ctx = transport->ctx_;
 
   // @Notify connection lost
   this->handle_event(event_ptr(
@@ -756,7 +746,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    ::PostQueuedCompletionStatus(iocp_.handle, 0, wake_for_write, transport);
+    this->wakeup(transport);
   }
   else
   {
@@ -807,10 +797,10 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
 
     ctx->state_ = channel_state::OPENING;
 
+    auto &ep = ctx->endpoints_[0];
     if (ctx->type_ & CHANNEL_TCP)
     {
       BOOL ret = false;
-      auto &ep = ctx->endpoints_[0];
       if (ctx->socket_->open_ex(ep.af()))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
@@ -824,7 +814,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         bool result = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_),
                                            nullptr, 0, nullptr, ctx);
 
-        DWORD last_error = ::WSAGetLastError();
+        DWORD last_error = ctx->update_error();
         if (!result && last_error != WSA_IO_PENDING)
         {
           handle_connect_succeed(ctx, ctx->socket_);
@@ -845,24 +835,23 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
     else // CHANNEL_UDP
     {
       int ret = -1;
-      if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+      if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-        if (ctx->local_port_ != 0)
-          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        ret = xxsocket::connect(ctx->socket_->native_handle(), ctx->endpoints_[0]);
+        ctx->socket_->set_nonblocking(true);
+        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+
+        register_descriptor(ctx->socket_->native_handle());
+        ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
         if (ret == 0)
         {
-          ctx->socket_->set_nonblocking(true);
           handle_connect_succeed(ctx, ctx->socket_);
         }
         else
         {
           this->handle_connect_failed(ctx, xxsocket::get_last_errno());
         }
-
-        return;
       }
     }
   }
@@ -940,7 +929,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
   }
   else // CHANNEL_UDP
   {
-    if (ctx->socket_->reopen(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
+    if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
     {
       ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 
@@ -953,6 +942,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
         INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
         ctx->state_ = channel_state::OPENED;
         ctx->socket_->set_nonblocking(true);
+        register_descriptor(ctx->socket_->native_handle());
       }
       else
       {
@@ -980,7 +970,7 @@ void io_service::do_nonblocking_accept_internal(io_channel *ctx)
         ctx->socket_->native_handle(), prepared_sock->native_handle(), ctx->buffer_,
         0 /* Set to 0, we do not wait read any data during handshake */, sizeof(SOCKADDR_IN) + 16,
         sizeof(SOCKADDR_IN) + 16, &dwBytesReceived, ctx);
-    DWORD last_error = ::WSAGetLastError();
+    DWORD last_error = ctx->update_error();
     if (!result && last_error != WSA_IO_PENDING)
     {
       handle_connect_succeed(transport);
@@ -1057,6 +1047,7 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
   if (ctx->type_ & CHANNEL_CLIENT)
   {
     ctx->state_ = channel_state::OPENED;
+
     if (ctx->type_ & CHANNEL_TCP)
     {
       ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
@@ -1080,16 +1071,12 @@ void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocke
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
   // IOCP: post the first async recv op.
-  DWORD bytes_transferred = 0;
-  WSABUF wsabuf           = {sizeof(transport->buffer_), transport->buffer_};
-  DWORD flags             = 0;
-  WSARecv(connection->native_handle(), &wsabuf, 1, &bytes_transferred, &flags, transport.get(),
-          nullptr);
+  start_receive_op(transport);
 }
 
 void io_service::handle_connect_succeed(transport_ptr transport)
 {
-  auto ctx = transport->channel_;
+  auto ctx = transport->ctx_;
 
   // xxsocket::translate
   auto &connection = transport->socket_;
@@ -1104,12 +1091,7 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
-  // IOCP: post the first async recv op.
-  DWORD bytes_transferred = 0;
-  WSABUF wsabuf           = {sizeof(transport->buffer_), transport->buffer_};
-  DWORD flags             = 0;
-  WSARecv(connection->native_handle(), &wsabuf, 1, &bytes_transferred, &flags, transport.get(),
-          nullptr);
+  start_receive_op(transport);
 
   do_nonblocking_accept_internal(ctx);
 }
@@ -1149,91 +1131,83 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
            ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-bool io_service::do_write_internal(transport_ptr transport)
+int io_service::do_write(transport_ptr transport)
 {
-  bool bRet = false;
-  auto ctx  = transport->channel_;
-  do
+  if (!transport->socket_->is_open())
+    return -1;
+
+  int n = 0;
+  if (!transport->send_queue_.empty())
   {
-    int n;
-
-    if (!transport->socket_->is_open())
-      break;
-
-    if (!transport->send_queue_.empty())
-    {
-      auto v                 = transport->send_queue_.front();
-      auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-      n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
-      if (n == outstanding_bytes)
-      { // All pdu bytes sent.
-        transport->send_queue_.pop_front();
+    auto ctx               = transport->ctx_;
+    auto v                 = transport->send_queue_.front();
+    auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
+    n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
+    if (n == outstanding_bytes)
+    { // All pdu bytes sent.
+      transport->send_queue_.pop_front();
 #if _YASIO_VERBOS_LOG
-        auto packet_size = static_cast<int>(v->data_.size());
-        INET_LOG("[index: %d] do_write ok, A packet sent "
-                 "success, packet size:%d",
-                 ctx->index_, packet_size, transport->socket_->local_endpoint().to_string().c_str(),
-                 transport->socket_->peer_endpoint().to_string().c_str());
+      auto packet_size = static_cast<int>(v->data_.size());
+      INET_LOG("[index: %d] do_write ok, A packet sent "
+               "success, packet size:%d",
+               ctx->index_, packet_size, transport->socket_->local_endpoint().to_string().c_str(),
+               transport->socket_->peer_endpoint().to_string().c_str());
 #endif
-        handle_send_finished(v, error_number::ERR_OK);
-      }
-      else if (n > 0)
-      { // TODO: add time
-        if (!v->expired())
-        { // change offset, remain data will
-          // send next time.
-          // v->data_.erase(v->data_.begin(), v->data_.begin() +
-          // n);
-          v->offset_ += n;
-          outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-          INET_LOG("[index: %d] do_write pending, %dbytes still "
-                   "outstanding, "
-                   "%dbytes was sent!",
-                   ctx->index_, outstanding_bytes, n);
-        }
-        else
-        { // send timeout
-          transport->send_queue_.pop_front();
-
-          auto packet_size = static_cast<int>(v->data_.size());
-          INET_LOG("[index: %d] do_write packet timeout, packet "
-                   "size:%d",
-                   ctx->index_, packet_size);
-          handle_send_finished(v, error_number::ERR_SEND_TIMEOUT);
-        }
+      handle_send_finished(v, error_number::ERR_OK);
+    }
+    else if (n > 0)
+    { // TODO: add time
+      if (!v->expired())
+      { // change offset, remain data will
+        // send next time.
+        // v->data_.erase(v->data_.begin(), v->data_.begin() +
+        // n);
+        v->offset_ += n;
+        outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
+        INET_LOG("[index: %d] do_write pending, %dbytes still "
+                 "outstanding, "
+                 "%dbytes was sent!",
+                 ctx->index_, outstanding_bytes, n);
       }
       else
-      { // n <= 0, TODO: add time
-        int error = transport->get_socket_error();
-        if (SHOULD_CLOSE_1(n, error))
-        {
-          INET_LOG("[index: %d] do_write error, the connection "
-                   "should be "
-                   "closed, retval=%d, ec:%d, detail:%s",
-                   ctx->index_, n, error, io_service::strerror(error));
-          break;
-        }
+      { // send timeout
+        transport->send_queue_.pop_front();
+
+        auto packet_size = static_cast<int>(v->data_.size());
+        INET_LOG("[index: %d] do_write packet timeout, packet "
+                 "size:%d",
+                 ctx->index_, packet_size);
+        handle_send_finished(v, error_number::ERR_SEND_TIMEOUT);
       }
     }
+    else
+    { // n <= 0, TODO: add time
+      int error = transport->update_error();
+      if (SHOULD_CLOSE_1(n, error))
+      {
+        INET_LOG("[index: %d] do_write error, the connection "
+                 "should be "
+                 "closed, retval=%d, ec:%d, detail:%s",
+                 ctx->index_, n, error, io_service::strerror(error));
+        return -1;
+      }
+    }
+  }
 
-    bRet = true;
-  } while (false);
-
-  return bRet;
+  return n;
 }
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/) {}
 
 int io_service::do_read(transport_ptr transport, int bytes_transferred)
 { // return: whether the transport buffer still have data, -1: error, connection should be close.
-  auto ctx = transport->channel_;
+  auto ctx = transport->ctx_;
 
   int ec = transport->error_;
   if (!transport->socket_->is_open())
     return -1;
 
-  int n = bytes_transferred; /*transport->socket_->recv_i(transport->buffer_ + transport->offset_,
-                                     socket_recv_buffer_size - transport->offset_);*/
+  int n = bytes_transferred;
 
   if (n > 0 || !SHOULD_CLOSE_0(n, ec))
   {
@@ -1365,7 +1339,7 @@ void io_service::schedule_timer(deadline_timer *timer)
             });
 
   if (timer == *this->timer_queue_.begin())
-    interrupt();
+    wakeup();
 }
 
 void io_service::cancel_timer(deadline_timer *timer)
@@ -1402,7 +1376,7 @@ void io_service::open_internal(io_channel *ctx)
   this->active_channels_.push_back(ctx);
   active_channels_mtx_.unlock();
 
-  this->interrupt();
+  this->wakeup();
 }
 
 void io_service::perform_timers()
@@ -1520,7 +1494,7 @@ void io_service::start_resolve(io_channel *ctx)
       ctx->resolve_state_ = resolve_state::FAILED;
     }
 
-    this->interrupt();
+    this->wakeup();
   });
   resolve_thread.detach();
 }
@@ -1578,9 +1552,9 @@ int io_service::builtin_decode_frame_length(void *ud, int n)
   return n;
 }
 
-void io_service::interrupt()
+void io_service::wakeup(LPOVERLAPPED lpOverlapped, DWORD completion_key, DWORD bytes_transferred)
 {
-  ::PostQueuedCompletionStatus(iocp_.handle, 0, wake_for_dispatch, 0);
+  ::PostQueuedCompletionStatus(iocp_.handle, bytes_transferred, completion_key, lpOverlapped);
 }
 
 const char *io_service::strerror(int error)

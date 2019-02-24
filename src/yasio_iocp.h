@@ -206,6 +206,9 @@ struct io_base : public OVERLAPPED
   int index_    = -1; // channel: index in channels, transport: index in transports
 
   int error_ = 0; // socket error(>= -1), application error(< -1)
+
+  int update_error() { return (error_ = xxsocket::get_last_errno()); }
+
   std::shared_ptr<xxsocket> socket_;
 };
 
@@ -243,7 +246,7 @@ public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
-  int channel_index() const { return channel_->index_; }
+  int channel_index() const { return ctx_->index_; }
   int status() const { return error_; }
   inline std::vector<char> take_packet()
   {
@@ -252,7 +255,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *channel) : channel_(channel)
+  io_transport(io_channel *ctx) : ctx_(ctx)
   {
     class_id_ = IO_CLASS_TRANSPORT;
 
@@ -260,7 +263,7 @@ private:
     memset(buffer_, 0, sizeof(buffer_));
 #endif
   }
-  io_channel *channel_;
+  io_channel *ctx_;
 
   char buffer_[socket_recv_buffer_size + 1]; // recv buffer
   int offset_ = 0;                           // recv buffer offset
@@ -270,12 +273,6 @@ private:
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
-
-  int get_socket_error()
-  {
-    error_ = xxsocket::get_last_errno();
-    return error_;
-  }
 };
 
 typedef std::shared_ptr<io_transport> transport_ptr;
@@ -332,12 +329,11 @@ typedef std::function<void(error_number)> send_pdu_callback_t;
 typedef std::function<void(event_ptr)> io_event_callback_t;
 typedef std::function<int(io_service *service, void *ptr, int len)> decode_frame_length_fn_t;
 
-struct iocp_event
+enum
 {
-  DWORD bytes_transferred  = 0;
-  DWORD_PTR completion_key = 0;
-  LPOVERLAPPED overlapped  = nullptr;
-  int ec                   = 0;
+  // Completion key value used to wake up to process send queue or to dispatch timers
+  YASIO_WAKEUP_FOR_WRITE    = 2019,
+  YASIO_WAKEUP_FOR_DISPATCH = 2020,
 };
 
 class io_service
@@ -413,7 +409,8 @@ public:
   void schedule_timer(deadline_timer *);
   void cancel_timer(deadline_timer *);
 
-  void interrupt();
+  void wakeup(LPOVERLAPPED lpOverlapped = nullptr, DWORD comple_key = YASIO_WAKEUP_FOR_DISPATCH,
+              DWORD bytes_transferred = 0);
 
   // Start a async resolve, It's only for internal use
   void start_resolve(io_channel *);
@@ -423,10 +420,12 @@ public:
 private:
   void open_internal(io_channel *);
 
-  void do_read_completion(transport_ptr, int bytes_transferred);
-  void perform_channel(io_channel *ctx);
-  void perform_channel_completion(io_channel *ctx);
+  void do_io_completion(transport_ptr, DWORD completion_key, int bytes_transferred);
+  void do_channel(io_channel *ctx);
+  void do_channel_completion(io_channel *ctx);
   void perform_timers();
+
+  void start_receive_op(transport_ptr);
 
   long long get_wait_duration(long long usec);
 
@@ -446,8 +445,7 @@ private:
   // The major async event-loop
   void service(void);
 
-  void do_write(transport_ptr);
-  bool do_write_internal(transport_ptr);
+  int do_write(transport_ptr);
   int do_read(transport_ptr, int bytes_transferred);
   int do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 

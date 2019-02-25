@@ -65,7 +65,7 @@ SOFTWARE.
     fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
 
-#define ASYNC_RESOLVE_TIMEOUT 45 // 45 seconds
+#define YASIO_SOMAXCONN 19
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 
@@ -908,24 +908,25 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
       return;
     }
 
-    if (ctx->socket_->listen(19) != 0)
+    if (ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
+    {
+      ctx->state_ = channel_state::OPENED;
+      ctx->socket_->set_nonblocking(true);
+
+      register_descriptor(ctx->socket_->native_handle());
+
+      do_nonblocking_accept_internal(ctx);
+
+      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
+    }
+    else
     {
       error = xxsocket::get_last_errno();
       INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
                io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = channel_state::CLOSED;
-      return;
     }
-
-    ctx->state_ = channel_state::OPENED;
-    ctx->socket_->set_nonblocking(true);
-
-    register_descriptor(ctx->socket_->native_handle());
-
-    do_nonblocking_accept_internal(ctx);
-
-    INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
   }
   else
     ctx->state_ = channel_state::CLOSED;

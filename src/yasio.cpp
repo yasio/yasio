@@ -65,7 +65,7 @@ SOFTWARE.
     fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
 
-#define ASYNC_RESOLVE_TIMEOUT 45 // 45 seconds
+#define YASIO_SOMAXCONN 19
 
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 
@@ -674,6 +674,10 @@ void io_service::open(size_t channel_index, int channel_type)
   auto ctx = channels_[channel_index];
 
   ctx->type_ = channel_type;
+  if (channel_type & CHANNEL_TCP)
+    ctx->protocol_ = SOCK_STREAM;
+  else if (channel_type & CHANNEL_UDP)
+    ctx->protocol_ = SOCK_DGRAM;
 
   open_internal(ctx);
 }
@@ -901,29 +905,27 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_
   if (ctx->state_ == channel_state::OPENING)
   {
     int error = -1;
-    if (ctx->type_ & CHANNEL_TCP)
+    assert(ctx->type_ & CHANNEL_TCP); // only tcp client will go here.
+    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
+        FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
     {
-      if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
-          FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+      socklen_t len = sizeof(error);
+      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
+              0 &&
+          error == 0)
       {
-        socklen_t len = sizeof(error);
-        if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error,
-                         &len) >= 0 &&
-            error == 0)
-        {
-          // remove write event avoid high-CPU occupation
-          unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
-          handle_connect_succeed(ctx, ctx->socket_);
-          ctx->deadline_timer_.cancel();
-        }
-        else
-        {
-          handle_connect_failed(ctx, ERR_CONNECT_FAILED);
-          ctx->deadline_timer_.cancel();
-        }
-
-        return true;
+        // remove write event avoid high-CPU occupation
+        unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
+        handle_connect_succeed(ctx, ctx->socket_);
       }
+      else
+      {
+        handle_connect_failed(ctx, ERR_CONNECT_FAILED);
+      }
+
+      ctx->deadline_timer_.cancel();
+
+      return true;
     }
   }
 
@@ -934,64 +936,40 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
   close_internal(ctx);
 
-  if (ctx->type_ & CHANNEL_TCP)
+  ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+
+  if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
-    if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+#if !defined(_WIN32)
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+#endif
+
+    int error = 0;
+    if (ctx->socket_->bind(ep) != 0)
     {
-      ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      int error = 0;
-      if (ctx->socket_->bind(ep) != 0)
-      {
-        error = xxsocket::get_last_errno();
-        INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-                 io_service::strerror(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::CLOSED;
-        return;
-      }
+      error = xxsocket::get_last_errno();
+      INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+               io_service::strerror(error));
+      ctx->socket_->close();
+      ctx->state_ = channel_state::CLOSED;
+      return;
+    }
 
-      if (ctx->socket_->listen(19) != 0)
-      {
-        error = xxsocket::get_last_errno();
-        INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-                 io_service::strerror(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::CLOSED;
-        return;
-      }
-
+    if ((ctx->type_ & CHANNEL_UDP) || ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
+    {
       ctx->state_ = channel_state::OPENED;
       ctx->socket_->set_nonblocking(true);
       register_descriptor(ctx->socket_->native_handle(), socket_event_read);
       INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
-  }
-  else // CHANNEL_UDP
-  {
-    if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM))
+    else
     {
-      ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
-
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-#if !defined(_WIN32)
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-#endif
-      if (ctx->socket_->bind(ep) == 0)
-      {
-        INET_LOG("[index: %d] udp server, listening at: %s.", ctx->index_, ep.to_string().c_str());
-        ctx->state_ = channel_state::OPENED;
-        ctx->socket_->set_nonblocking(true);
-        register_descriptor(ctx->socket_->native_handle(), socket_event_read);
-      }
-      else
-      {
-        int error = 0;
-        INET_LOG("[index: %d] create udp server failed, ec:%d, detail:%s", ctx->index_, error,
-                 this->strerror(error));
-        ctx->socket_->close();
-        ctx->state_ = channel_state::CLOSED;
-      }
+      error = xxsocket::get_last_errno();
+      INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
+               io_service::strerror(error));
+      ctx->socket_->close();
+      ctx->state_ = channel_state::CLOSED;
     }
   }
 }

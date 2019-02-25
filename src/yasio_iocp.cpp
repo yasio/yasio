@@ -474,7 +474,6 @@ void io_service::service()
   this->ipsv_state_ = xxsocket::getipsv();
 
   // event loop
-  std::vector<pollfd> fds_array;
   for (; !stopping_;)
   {
     // Get the next operation from the queue.

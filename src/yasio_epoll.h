@@ -188,7 +188,7 @@ public:
 struct io_hostent
 {
   io_hostent() {}
-  io_hostent(std::string_view ip, u_short port) : host_(ip.data(), ip.length()), port_(port) {}
+  io_hostent(stdport::string_view ip, u_short port) : host_(ip.data(), ip.length()), port_(port) {}
   io_hostent(io_hostent &&rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
   io_hostent(const io_hostent &rhs) : host_(rhs.host_), port_(rhs.port_) {}
   void set_ip(const std::string &value) { host_ = value; }

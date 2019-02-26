@@ -45,11 +45,11 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
 ### JSB integration  
 #### cocos2d-x jsb integration:
 1. Copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb.cpp with your native project  
-2. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(register_yasio_bindings);```, please include yasio_jsb.h firstly.
+2. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio_jsb.h``` firstly.
   
 #### CocosCreator jsb2.0 integration:
 1. Copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, yasio_jsb20.cpp with your native project  
-2. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(register_all_yasio);``` , please include yasio_jsb20.h firstly. 
+2. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio_jsb20.h``` firstly. 
   
 #### JS demo:
 see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js  
@@ -62,7 +62,7 @@ showcase:
   
 ## pitfall: 
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  
-2. For MSVC C++17, you must set compile option: ```C/C++ --> Language --> Conformance mode``` to **No**, otherwise, you will got compiling error: ```sol.hpp(8060): error C3779: 'sol::stack::get': a function that returns 'decltype(auto)' cannot be used before it is defined```
+2. For Microsoft Visual Studio 2019 preview3 MSVC C++17, you must set compile option: ```C/C++ --> Language --> Conformance mode``` to **No**, otherwise, you will got compiling error: ```sol.hpp(8060): error C3779: 'sol::stack::get': a function that returns 'decltype(auto)' cannot be used before it is defined```
   
 ## Unity tolua integration:  
 see: https://github.com/halx99/LuaFramework_UGUI  

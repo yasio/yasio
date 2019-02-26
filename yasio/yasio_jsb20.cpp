@@ -1199,7 +1199,7 @@ void js_register_yasio_io_service(se::Object *obj)
   se::ScriptEngine::getInstance()->clearException();
 }
 
-bool register_all_yasio(se::Object *obj)
+bool jsb_register_yasio(se::Object *obj)
 {
   // Get the ns
   se::Value nsVal;

@@ -1405,7 +1405,7 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
   {
     if (argc >= 2)
     {
-      auto &arg0 = args[0];
+      auto arg0 = args[0];
       auto opt   = arg0.toInt32();
       switch (opt)
       {
@@ -1548,7 +1548,7 @@ void js_register_yasio_io_service(JSContext *ctx, JS::HandleObject global)
   jsb_register_class<io_service>(ctx, jsb_io_service_class, proto, JS::NullPtr());
 }
 
-void register_yasio_bindings(JSContext *ctx, JS::HandleObject global)
+void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
 {
   JS::RootedObject yasio(ctx);
   get_or_create_js_obj(ctx, global, "yasio", &yasio);

@@ -29,5 +29,5 @@ SOFTWARE.
 #pragma once
 #include "jsapi.h"
 
-void register_yasio_bindings(JSContext *cx, JS::HandleObject global);
+void jsb_register_yasio(JSContext *cx, JS::HandleObject global);
 

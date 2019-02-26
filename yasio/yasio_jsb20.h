@@ -31,6 +31,6 @@ namespace se {
     class Object;
 }
 
-bool register_all_yasio(se::Object* obj);
+bool jsb_register_yasio(se::Object* obj);
 
 

@@ -93,9 +93,9 @@ void ibinarystream::read_v8(std::string &oav)
   oav.assign(sv.data(), sv.length());
 }
 
-std::string_view ibinarystream::read_v() { return read_vx<uint32_t>(); }
-std::string_view ibinarystream::read_v16() { return read_vx<uint16_t>(); }
-std::string_view ibinarystream::read_v8() { return read_vx<uint8_t>(); }
+stdport::string_view ibinarystream::read_v() { return read_vx<uint32_t>(); }
+stdport::string_view ibinarystream::read_v16() { return read_vx<uint16_t>(); }
+stdport::string_view ibinarystream::read_v8() { return read_vx<uint8_t>(); }
 
 void ibinarystream::read_v(void *oav, int len) { read_vx<uint32_t>().copy((char *)oav, len); }
 void ibinarystream::read_v16(void *oav, int len) { read_vx<uint16_t>().copy((char *)oav, len); }
@@ -118,12 +118,12 @@ void ibinarystream::read_bytes(void *oav, int len)
   }
 }
 
-std::string_view ibinarystream::read_bytes(int len)
+stdport::string_view ibinarystream::read_bytes(int len)
 {
-  std::string_view sv;
+  stdport::string_view sv;
   if (len > 0)
   {
-    sv = std::string_view(consume(len), len);
+    sv = stdport::string_view(consume(len), len);
   }
   return sv;
 }

@@ -136,15 +136,15 @@ size_t obinarystream::write_i24(uint32_t value)
   return buffer_.size();
 }
 
-size_t obinarystream::write_v(std::string_view value)
+size_t obinarystream::write_v(stdport::string_view value)
 {
   return write_v(value.data(), static_cast<int>(value.size()));
 }
-size_t obinarystream::write_v16(std::string_view value)
+size_t obinarystream::write_v16(stdport::string_view value)
 {
   return write_v16(value.data(), static_cast<int>(value.size()));
 }
-size_t obinarystream::write_v8(std::string_view value)
+size_t obinarystream::write_v8(stdport::string_view value)
 {
   return write_v8(value.data(), static_cast<int>(value.size()));
 }
@@ -153,7 +153,7 @@ size_t obinarystream::write_v(const void *v, int size) { return write_vx<uint32_
 size_t obinarystream::write_v16(const void *v, int size) { return write_vx<uint16_t>(v, size); }
 size_t obinarystream::write_v8(const void *v, int size) { return write_vx<uint8_t>(v, size); }
 
-size_t obinarystream::write_bytes(std::string_view v)
+size_t obinarystream::write_bytes(stdport::string_view v)
 {
   return write_bytes(v.data(), static_cast<int>(v.size()));
 }

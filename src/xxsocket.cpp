@@ -542,9 +542,7 @@ static int getipsv_internal(void)
   flags = ipsv_ipv4; // Could not found any methods to get ip currently, so fixed return ipsv_ipv4;
 #else // __APPLE__ or complete linux support getifaddrs
   struct ifaddrs *ifaddr, *ifa;
-#  ifdef _DEBUG
-  char localhost[NI_MAXHOST + 16];
-#  endif
+
   if (getifaddrs(&ifaddr) == -1)
   {
     perror("getifaddrs");
@@ -561,8 +559,8 @@ static int getipsv_internal(void)
     ep.assign(ifa->ifa_addr);
 
 #  ifdef _DEBUG
-    ep.to_cstring(localhost);
-    printf("xxsocket::getipsv --- endpoint:%s\n", localhost);
+    auto localhost = ep.to_string();
+    printf("xxsocket::getipsv --- endpoint:%s\n", localhost.c_str());
 #  endif
 
     switch (ep.af())

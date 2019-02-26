@@ -67,6 +67,11 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  if __has_include(<string_view>)
 #    include <string_view>
 #  endif
+namespace stdport
+{
+using std::string_view;
+using std::wstring_view;
+} // namespace stdport
 #else
 //#pragma message("_HAS_STD_STRING_VIEW = 0")
 
@@ -74,7 +79,7 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  include <exception>
 #  include <stdexcept>
 #  include <string.h>
-namespace std
+namespace stdport
 {
 template <class _Traits>
 inline size_t __xxtraits_find(const typename _Traits::char_type *_Haystack, const size_t _Hay_size,
@@ -679,78 +684,6 @@ private:
   const char_type *m_str; ///< The internal string type
   size_type m_size;       ///< The size of this string
 };
-
-//--------------------------------------------------------------------------
-// Public Functions
-//--------------------------------------------------------------------------
-
-/// \brief Overload for ostream output of basic_string_view
-///
-/// \param o   The output stream to print to
-/// \param str the string to print
-/// \return reference to the output stream
-template <typename CharT, typename Traits>
-std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &o,
-                                              const basic_string_view<CharT, Traits> &str);
-
-template <typename CharT, typename Traits>
-void swap(basic_string_view<CharT, Traits> &lhs, basic_string_view<CharT, Traits> &rhs);
-
-//--------------------------------------------------------------------------
-// Comparison Functions
-//--------------------------------------------------------------------------
-
-/// \brief Compares equality between the two basic_string_views
-///
-/// \param lhs the left string view
-/// \param rhs the right string view
-/// \return true if the two strings are the same
-template <typename CharT, typename Traits>
-bool operator==(const basic_string_view<CharT, Traits> &lhs,
-                const basic_string_view<CharT, Traits> &rhs);
-
-/// \brief Compares inequality between the two basic_string_views
-///
-/// \param lhs the left string view
-/// \param rhs the right string view
-/// \return true if the two strings are different
-template <typename CharT, typename Traits>
-bool operator!=(const basic_string_view<CharT, Traits> &lhs,
-                const basic_string_view<CharT, Traits> &rhs);
-
-/// \brief Checks if the left string is less than the right substring
-///
-/// \param lhs the left string view
-/// \param rhs the right string view
-/// \return true if the left string has a character less than the right
-///         string, or if the right string is shorter than the left string
-template <typename CharT, typename Traits>
-bool operator<(const basic_string_view<CharT, Traits> &lhs,
-               const basic_string_view<CharT, Traits> &rhs);
-
-///
-/// \param lhs
-/// \param rhs
-/// \return
-template <typename CharT, typename Traits>
-bool operator>(const basic_string_view<CharT, Traits> &lhs,
-               const basic_string_view<CharT, Traits> &rhs);
-
-///
-/// \param lhs
-/// \param rhs
-/// \return
-template <typename CharT, typename Traits>
-bool operator<=(const basic_string_view<CharT, Traits> &lhs,
-                const basic_string_view<CharT, Traits> &rhs);
-
-///
-/// \param lhs
-/// \param rhs
-/// \return
-template <typename CharT, typename Traits>
-bool operator>=(const basic_string_view<CharT, Traits> &lhs,
-                const basic_string_view<CharT, Traits> &rhs);
 
 //--------------------------------------------------------------------------
 // Type Aliases
@@ -1430,6 +1363,6 @@ inline bool operator>=(const basic_string_view<CharT, Traits> &lhs,
 {
   return lhs >= basic_string_view<CharT, Traits>(rhs);
 }
-} // namespace std
+} // namespace stdport
 
 #endif

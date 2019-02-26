@@ -72,16 +72,16 @@ public:
   void read_bytes(std::string &oav, int len);
   void read_bytes(void *oav, int len);
 
-  std::string_view read_v();
-  std::string_view read_v16();
-  std::string_view read_v8();
+  stdport::string_view read_v();
+  stdport::string_view read_v16();
+  stdport::string_view read_v8();
 
-  std::string_view read_bytes(int len);
+  stdport::string_view read_bytes(int len);
 
   inline const char *data() { return ptr_; }
   inline int size(void) { return size_; }
 
-  template <typename _LenT> std::string_view read_vx()
+  template <typename _LenT> stdport::string_view read_vx()
   {
     _LenT n = purelib::endian::ntohv(*(_LenT *)consume(sizeof(n)));
 

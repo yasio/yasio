@@ -13,7 +13,7 @@ The core design is reference from https://github.com/chriskohlhoff/asio but very
 * support Unity3D tolua
   
 ## simple usage:  
-1. Only compile src\xxsocket.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
+1. Only compile yasio\xxsocket.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
 2. demo code:
 ```
 #include "xxsocket.h"
@@ -32,12 +32,12 @@ void test_connect()
 
 ## asio usage:  
 ### cpp intergation: 
-Compile src\xxsocket.cpp src\yasio.cpp with your project  
+Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
 cpptest: https://github.com/halx99/yasio/blob/master/msvc/cpptest/cpptest.cpp  
   
     
 ### Lua intergation: 
-1. Compile ```src\xxsocket.cpp``` ```src\yasio.cpp``` ```src\ibinarystream.cpp``` ```src\obinarystream.cpp``` ```src\lyasio.cpp``` with your project  
+1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibinarystream.cpp``` ```yasio\obinarystream.cpp``` ```yasio\lyasio.cpp``` with your project  
 2. call luaopen_yasio after LUA VM initialized.  
 luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj by x-studio365 IDE  
   
@@ -58,7 +58,7 @@ showcase:
   
   
 ## Quick test at linux platform with gcc compiler:  
-```g++ src/xxsocket.cpp src/yasio.cpp src/ibinarystream.cpp src/obinarystream.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./src -o cpptest && ./cpptest```  
+```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibinarystream.cpp yasio/obinarystream.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./yasio -o cpptest && ./cpptest```  
   
 ## pitfall: 
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  

@@ -11,10 +11,10 @@ LOCAL_CPPFLAGS := -std=c++11 -pthread -frtti -fexceptions -DBOOST_ERROR_CODE_HEA
 LOCAL_C_INCLUDES := D:/dev/engines/cocos2d-x/external/lua/luajit/include
 LOCAL_LDFLAGS += -llog
 
-LOCAL_SRC_FILES := ../../xxsocket.cpp \
-    ../../yasio.cpp \
-    ../../ibinarystream.cpp \
-    ../../obinarystream.cpp
+LOCAL_SRC_FILES := ../xxsocket.cpp \
+    ../yasio.cpp \
+    ../ibinarystream.cpp \
+    ../obinarystream.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 

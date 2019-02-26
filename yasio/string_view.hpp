@@ -42,18 +42,6 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  endif // C++17 features macro
 #endif   // C++17 features check
 
-#if !defined(_HAS_STD_STRING_VIEW) && !defined(__APPLE__)
-#  if defined(__clang__)
-// #pragma message("clang version is: " to_literal(__clang_major__) "."
-// to_literal(__clang_minor__))
-#    if defined(__has_include)
-#      if __has_include(<string_view> )
-#        define _HAS_STD_STRING_VIEW 1
-#      endif
-#    endif
-#  endif
-#endif
-
 #if !defined(_HAS_STD_STRING_VIEW)
 #  define _HAS_STD_STRING_VIEW 0
 #endif

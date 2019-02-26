@@ -122,7 +122,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
       },
       "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "write",
       sol::overload(
-          [](io_service *service, transport_ptr transport, std::string_view s) {
+          [](io_service *service, transport_ptr transport, stdport::string_view s) {
             service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
           },
           [](io_service *service, transport_ptr transport, obinarystream *obs) {
@@ -152,9 +152,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
       &obinarystream::write_i<double>,
 
       "write_string",
-      static_cast<size_t (obinarystream::*)(std::string_view)>(&obinarystream::write_v), "length",
-      &obinarystream::length, "to_string",
-      [](obinarystream *obs) { return std::string_view(obs->data(), obs->length()); });
+      static_cast<size_t (obinarystream::*)(stdport::string_view)>(&obinarystream::write_v),
+      "length", &obinarystream::length, "to_string",
+      [](obinarystream *obs) { return stdport::string_view(obs->data(), obs->length()); });
 
   // ##-- lyasio::ibstream
   yasio.new_usertype<lyasio::ibstream>(
@@ -169,8 +169,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "read_u32", &lyasio::ibstream::read_ix<uint32_t>, "read_u64",
       &lyasio::ibstream::read_ix<uint64_t>, "read_f", &lyasio::ibstream::read_ix<float>, "read_lf",
       &lyasio::ibstream::read_ix<double>, "read_string",
-      static_cast<std::string_view (lyasio::ibstream::*)()>(&lyasio::ibstream::read_v), "to_string",
-      [](lyasio::ibstream *ibs) { return std::string_view(ibs->data(), ibs->size()); });
+      static_cast<stdport::string_view (lyasio::ibstream::*)()>(&lyasio::ibstream::read_v),
+      "to_string",
+      [](lyasio::ibstream *ibs) { return stdport::string_view(ibs->data(), ibs->size()); });
 
   // ##-- yasio enums
   yasio["CHANNEL_TCP_CLIENT"]            = channel_type::CHANNEL_TCP_CLIENT;
@@ -205,11 +206,11 @@ YASIO_API int luaopen_yasio(lua_State *L)
 /// customize the type conversion from/to lua
 namespace kaguya
 {
-// std::string_view
-template <> struct lua_type_traits<std::string_view>
+// stdport::string_view
+template <> struct lua_type_traits<stdport::string_view>
 {
-  typedef std::string_view get_type;
-  typedef std::string_view push_type;
+  typedef stdport::string_view get_type;
+  typedef stdport::string_view push_type;
 
   static bool strictCheckType(lua_State *l, int index) { return lua_type(l, index) == LUA_TSTRING; }
   static bool checkType(lua_State *l, int index) { return lua_isstring(l, index) != 0; }
@@ -217,7 +218,7 @@ template <> struct lua_type_traits<std::string_view>
   {
     size_t size        = 0;
     const char *buffer = lua_tolstring(l, index, &size);
-    return std::string_view(buffer, size);
+    return stdport::string_view(buffer, size);
   }
   static int push(lua_State *l, push_type s)
   {
@@ -299,7 +300,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
             switch (opt)
             {
               case YASIO_OPT_CHANNEL_REMOTE_HOST:
-                service->set_option(opt, static_cast<int>(args[0]), static_cast<const char *>(args[1]));
+                service->set_option(opt, static_cast<int>(args[0]),
+                                    static_cast<const char *>(args[1]));
                 break;
               case YASIO_OPT_CHANNEL_REMOTE_PORT:
               case YASIO_OPT_CHANNEL_LOCAL_PORT:
@@ -361,11 +363,11 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("write_u64", &obinarystream::write_i<uint64_t>)
           .addFunction("write_f", &obinarystream::write_i<float>)
           .addFunction("write_lf", &obinarystream::write_i<double>)
-          .addFunction("write_string", static_cast<size_t (obinarystream::*)(std::string_view)>(
+          .addFunction("write_string", static_cast<size_t (obinarystream::*)(stdport::string_view)>(
                                            &obinarystream::write_v))
           .addFunction("length", &obinarystream::length)
           .addStaticFunction("to_string", [](obinarystream *obs) {
-            return std::string_view(obs->data(), obs->length());
+            return stdport::string_view(obs->data(), obs->length());
           }));
 
   // ##-- ibinarystream
@@ -386,10 +388,10 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("read_u64", &ibinarystream::read_ix<uint64_t>)
           .addFunction("read_f", &ibinarystream::read_ix<float>)
           .addFunction("read_lf", &ibinarystream::read_ix<double>)
-          .addFunction("read_string",
-                       static_cast<std::string_view (ibinarystream::*)()>(&ibinarystream::read_v))
+          .addFunction("read_string", static_cast<stdport::string_view (ibinarystream::*)()>(
+                                          &ibinarystream::read_v))
           .addStaticFunction("to_string", [](ibinarystream *ibs) {
-            return std::string_view(ibs->data(), ibs->size());
+            return stdport::string_view(ibs->data(), ibs->size());
           }));
 
   // ##-- ibstream

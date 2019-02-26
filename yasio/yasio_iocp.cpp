@@ -1019,8 +1019,9 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   transport_ptr transport;
   if (!transport_free_list_.empty())
   { // allocate from free list, and do not need push to transports_ again.
-    auto index = transport_free_list_.back()->index_;
-    transport  = transports_[index];
+    auto index      = transport_free_list_.back()->index_;
+    transport       = transports_[index];
+    transport->ctx_ = ctx; // !important, update context.
     transport_free_list_.pop_back();
     INET_LOG("allocate a transport from free list, index=%d, channel_index=%d", index, ctx->index_);
   }

@@ -307,6 +307,8 @@ void io_service::stop_service()
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
+    this->transports_.clear();
+
     clear_channels();
 
     unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);

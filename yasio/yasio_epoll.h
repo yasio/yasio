@@ -233,9 +233,6 @@ struct io_channel : public io_base
 
   std::vector<ip::endpoint> endpoints_;
   std::atomic<resolve_state> resolve_state_;
-
-  int index_ = -1;
-
   int protocol_ = 0;
 
   // The deadline timer for resolve & connect
@@ -431,8 +428,11 @@ private:
   void do_nonblocking_connect(io_channel *);
   void do_nonblocking_connect_completion(io_channel *ctx, const epoll_event &event);
 
-  transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
+  void handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
+  void handle_connect_succeed(transport_ptr);
   void handle_connect_failed(io_channel *, int error);
+
+  transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
   void register_descriptor(const socket_native_type fd, unsigned int flags, io_base *ctx);
   void unregister_descriptor(const socket_native_type fd, unsigned int flags, io_base *ctx);

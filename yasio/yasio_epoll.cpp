@@ -311,6 +311,9 @@ void io_service::stop_service()
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
+    this->transports_.clear();
+    this->transport_free_list_.clear();
+
     clear_channels();
 
     epoll_event ev = {0, {0}};
@@ -873,6 +876,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
         if (ret == 0)
         {
+          ctx->socket_->set_nonblocking(true);
           handle_connect_succeed(ctx, ctx->socket_);
         }
         else
@@ -906,6 +910,7 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx, const epoll_
                          &len) >= 0 &&
             error == 0)
         {
+          unregister_descriptor(socket->native_handle(), YASIO_EPOLLOUT, ctx);
           handle_connect_succeed(ctx, ctx->socket_);
           ctx->deadline_timer_.cancel();
         }
@@ -976,7 +981,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, const epoll_e
           std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
           if (client_sock->is_open())
           {
-            handle_connect_succeed(ctx, client_sock);
+            handle_connect_succeed(ctx, std::move(client_sock));
           }
           else
             INET_LOG("%s", "tcp-server: accept client socket fd failed!");
@@ -1003,7 +1008,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, const epoll_e
                           : -1;
               if (error == 0)
               {
-                auto transport = handle_connect_succeed(ctx, client_sock);
+                auto transport = allocate_transport(ctx, std::move(client_sock));
+                handle_connect_succeed(transport);
                 this->handle_event(
                     event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
                                            std::vector<char>(buffer, buffer + n), transport)));
@@ -1025,7 +1031,55 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, const epoll_e
   }
 }
 
-transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+{
+  handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
+}
+
+void io_service::handle_connect_succeed(transport_ptr transport)
+{
+  auto ctx = transport->ctx_;
+
+  auto &connection = transport->socket_;
+
+  if (ctx->type_ & CHANNEL_CLIENT)
+  {
+    ctx->state_ = channel_state::OPENED;
+  }
+  else
+  { // new client income
+    connection->set_nonblocking(true);
+    register_descriptor(connection->native_handle(), YASIO_EPOLLIN, transport.get());
+  }
+
+  if ((ctx->type_ & CHANNEL_TCP) && options_.tcp_keepalive.onoff)
+  { // apply tcp keepalive options
+    socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                          options_.tcp_keepalive.probs);
+  }
+
+  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+           connection->local_endpoint().to_string().c_str(),
+           connection->peer_endpoint().to_string().c_str());
+
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+}
+
+void io_service::handle_connect_failed(io_channel *ctx, int error)
+{
+  close_internal(ctx);
+
+  ctx->state_ = channel_state::CLOSED;
+
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
+
+  INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
+           ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
+}
+
+transport_ptr io_service::allocate_transport(io_channel *, std::shared_ptr<xxsocket>)
 {
   transport_ptr transport;
   if (!transport_free_list_.empty())
@@ -1043,47 +1097,8 @@ transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_pt
   }
 
   transport->socket_ = socket;
-  socket->set_nonblocking(true);
-  register_descriptor(socket->native_handle(), YASIO_EPOLLIN, transport.get());
-
-  if (ctx->type_ & CHANNEL_CLIENT)
-  {
-    ctx->state_ = channel_state::OPENED;
-
-    unregister_descriptor(socket->native_handle(), YASIO_EPOLLOUT, transport.get());
-
-    if (ctx->type_ & CHANNEL_TCP)
-    { // apply tcp keepalive options
-      if (options_.tcp_keepalive.onoff)
-      {
-        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                              options_.tcp_keepalive.probs);
-      }
-    }
-  } // else server channel, always OPENING to wait next client connect.
-
-  auto connection = transport->socket_;
-  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
-           connection->local_endpoint().to_string().c_str(),
-           connection->peer_endpoint().to_string().c_str());
-
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
   return transport;
-}
-
-void io_service::handle_connect_failed(io_channel *ctx, int error)
-{
-  close_internal(ctx);
-
-  ctx->state_ = channel_state::CLOSED;
-
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
-
-  INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
-           ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
 bool io_service::do_write(transport_ptr transport)

@@ -329,6 +329,9 @@ void io_service::stop_service()
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
+    this->transports_.clear();
+    this->transport_free_list_.clear();
+
     clear_channels();
 
     thread_started_ = false;
@@ -974,61 +977,41 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx)
   }
 }
 
-void io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
-{
-  transport_ptr transport = allocate_transport(ctx, socket);
-
-  if (ctx->type_ & CHANNEL_CLIENT)
-  {
-    ctx->state_ = channel_state::OPENED;
-
-    if (ctx->type_ & CHANNEL_TCP)
-    {
-      ctx->socket_->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
-                               ctx->socket_->native_handle());
-
-      // apply tcp keepalive options
-      if (options_.tcp_keepalive.onoff)
-      {
-        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                              options_.tcp_keepalive.probs);
-      }
-    }
-  } // else server channel, always OPENING to wait next client connect.
-
-  auto &connection = transport->socket_;
-  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
-           connection->local_endpoint().to_string().c_str(),
-           connection->peer_endpoint().to_string().c_str());
-
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
-
-  start_receive_op(transport);
-}
-
 void io_service::handle_connect_succeed(transport_ptr transport)
 {
   auto ctx = transport->ctx_;
 
-  // xxsocket::translate
   auto &connection = transport->socket_;
-
-  connection->set_nonblocking(true);
-  register_descriptor(connection->native_handle());
+  if (ctx->type_ & CHANNEL_CLIENT)
+    ctx->state_ = channel_state::OPENED;
+  else
+  { // tcp server, accept a new client session
+    connection->set_nonblocking(true);
+    register_descriptor(connection->native_handle());
+  }
   if (ctx->type_ & CHANNEL_TCP)
-    connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
+  {
+    if (ctx->type_ & CHANNEL_CLIENT)
+      connection->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, ctx->socket_->native_handle());
+    else
+      connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
+
+    // apply tcp keepalive options
+    if (options_.tcp_keepalive.onoff)
+      connection->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                                options_.tcp_keepalive.probs);
+  }
 
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
            connection->local_endpoint().to_string().c_str(),
            connection->peer_endpoint().to_string().c_str());
-
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
   start_receive_op(transport);
 
-  do_nonblocking_accept_internal(ctx);
+  if (ctx->type_ == CHANNEL_TCP_SERVER)
+    do_nonblocking_accept_internal(ctx);
 }
 
 transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)

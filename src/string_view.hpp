@@ -42,7 +42,7 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  endif // C++17 features macro
 #endif   // C++17 features check
 
-#if !defined(_HAS_STD_STRING_VIEW)
+#if !defined(_HAS_STD_STRING_VIEW) && !defined(__APPLE__)
 #  if defined(__clang__)
 // #pragma message("clang version is: " to_literal(__clang_major__) "."
 // to_literal(__clang_minor__))
@@ -58,8 +58,8 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  define _HAS_STD_STRING_VIEW 0
 #endif
 
-#if !defined(_HAS_CXX17)
-#  define _HAS_CXX17 _HAS_STD_STRING_VIEW
+#if !defined(_HAS_CXX17_FULL_FEATURES)
+#  define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
 #endif
 
 #if _HAS_STD_STRING_VIEW

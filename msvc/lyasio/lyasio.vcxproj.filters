@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\tolua_link.cpp">
+    <ClCompile Include="..\..\yasio\tolua_link.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\lyasio.cpp">
+    <ClCompile Include="..\..\yasio\lyasio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

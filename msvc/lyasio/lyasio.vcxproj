@@ -159,8 +159,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\lyasio.cpp" />
-    <ClCompile Include="..\..\src\tolua_link.cpp" />
+    <ClCompile Include="..\..\yasio\lyasio.cpp" />
+    <ClCompile Include="..\..\yasio\tolua_link.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\yasio\yasio.vcxproj">

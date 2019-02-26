@@ -155,16 +155,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\ibinarystream.cpp" />
-    <ClCompile Include="..\..\src\obinarystream.cpp" />
-    <ClCompile Include="..\..\src\xxsocket.cpp" />
-    <ClCompile Include="..\..\src\yasio.cpp" />
+    <ClCompile Include="..\..\yasio\ibinarystream.cpp" />
+    <ClCompile Include="..\..\yasio\obinarystream.cpp" />
+    <ClCompile Include="..\..\yasio\xxsocket.cpp" />
+    <ClCompile Include="..\..\yasio\yasio.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\ibinarystream.h" />
-    <ClInclude Include="..\..\src\obinarystream.h" />
-    <ClInclude Include="..\..\src\xxsocket.h" />
-    <ClInclude Include="..\..\src\yasio.h" />
+    <ClInclude Include="..\..\yasio\ibinarystream.h" />
+    <ClInclude Include="..\..\yasio\obinarystream.h" />
+    <ClInclude Include="..\..\yasio\xxsocket.h" />
+    <ClInclude Include="..\..\yasio\yasio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

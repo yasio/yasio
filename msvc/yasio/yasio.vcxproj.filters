@@ -15,30 +15,30 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\ibinarystream.cpp">
+    <ClCompile Include="..\..\yasio\ibinarystream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\obinarystream.cpp">
+    <ClCompile Include="..\..\yasio\obinarystream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\xxsocket.cpp">
+    <ClCompile Include="..\..\yasio\xxsocket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\yasio.cpp">
+    <ClCompile Include="..\..\yasio\yasio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\ibinarystream.h">
+    <ClInclude Include="..\..\yasio\ibinarystream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\obinarystream.h">
+    <ClInclude Include="..\..\yasio\obinarystream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\xxsocket.h">
+    <ClInclude Include="..\..\yasio\xxsocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\yasio.h">
+    <ClInclude Include="..\..\yasio\yasio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

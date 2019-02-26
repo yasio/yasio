@@ -1,9 +1,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../src/yasio.h"
-#include "../../src/ibinarystream.h"
-#include "../../src/obinarystream.h"
+#include "../../yasio/yasio.h"
+#include "../../yasio/ibinarystream.h"
+#include "../../yasio/obinarystream.h"
 
 #if defined(_WIN32)
 #  include <Shlwapi.h>

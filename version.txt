@@ -1,28 +1,28 @@
-V3.9.7
-1. Optimize template specialization. 
+yasio-3.9.7
+  1. Optimize template specialization. 
 
-2. Add some API for io binarysteam.
+  2. Add some API for io binarysteam.
 
-3. Merge lua bindings c++17/11 sources to lyasio.cpp.
+  3. Merge lua bindings c++17/11 sources to lyasio.cpp.
 
-4. Add udp support.
+  4. Add udp support.
 
-5. Fix crash lyasio at android with clang compiler.
+  5. Fix crash lyasio at android with clang compiler.
 
-7. Add bind local port for pconnect, xpconnect of xxsocket.
+  7. Add bind local port for pconnect, xpconnect of xxsocket.
 
-8. Add YASIO_OPT_CHANNEL_LOCAL_PORT to support bind local port for client channel.
+  8. Add YASIO_OPT_CHANNEL_LOCAL_PORT to support bind local port for client channel.
 
-9. Fix bind error: Invalid argument at unix like system.
+  9. Fix bind error: Invalid argument at unix like system.
 
-10. Fix ios & android c++11 compile issue.
+  10. Fix ios & android c++11 compile issue.
 
-11. Add Android.mk for cocos2d-x lua bindings.
+  11. Add Android.mk for cocos2d-x lua bindings.
 
-12. Add Android.mk for cocos2d-x js bindings.
+  12. Add Android.mk for cocos2d-x js bindings.
 
-13. Unify jsb & jsb20 binding API to jsb_register_yasio.
+  13. Unify jsb & jsb20 binding API to jsb_register_yasio.
 
-14. Remove unused sources & files.
+  14. Remove unused sources & files.
 
-15. Add experimental implementations: epoll, iocp, poll.
+  15. Add experimental implementations: epoll, iocp, poll.

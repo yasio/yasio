@@ -49,7 +49,7 @@ private:
 };
 } // namespace lyasio
 
-#if _HAS_CXX17
+#if _HAS_CXX17_FULL_FEATURES
 
 #  include "sol.hpp"
 
@@ -424,4 +424,4 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
 } /* extern "C" */
 
-#endif /* _HAS_CXX17 */
+#endif /* _HAS_CXX17_FULL_FEATURES */

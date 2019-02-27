@@ -26,3 +26,5 @@ yasio-3.9.7
   14. Remove unused sources & files.
 
   15. Add experimental implementations: epoll, iocp, poll.
+
+  16. Add new integration guide, more easy to integration with cocos2d-x lua.

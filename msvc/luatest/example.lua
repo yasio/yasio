@@ -1,4 +1,4 @@
--- yasio 3.9.6 demo
+-- yasio 3.9.7 demo
 require 'protocol_base'
 require 'protocol_enc'
 require 'protocol_dec'
@@ -118,7 +118,8 @@ httpclient:open(0, yasio.CHANNEL_TCP_CLIENT)
 
 local elapsedTime = 0
 local partial2Sent = false
-function global_update(dt)
+    
+local function yasio_update(dt)
     server:dispatch_events(128)
     client:dispatch_events(128)
     httpclient:dispatch_events(128)
@@ -130,4 +131,12 @@ function global_update(dt)
     return stopFlag >= 2
 end
 
+if(yasio.loop) then
+    yasio.loop(-1, 0.01, function()
+        yasio_update(0.01)
+    end)
+end
+
 print('done')
+
+return yasio_update

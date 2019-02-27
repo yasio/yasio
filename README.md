@@ -44,11 +44,16 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
   
 #### cocos2d-x lua integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external```
-2. Add yasio to your application Android.mk files, such as:  
+2. 
+##### Android 
+Add yasio to your application Android.mk files, such as:  
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/android-lua)
 ```
+##### Win32 & Apple platform
+Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibinarystream.cpp``` ```yasio\obinarystream.cpp``` ```yasio\lyasio.cpp```
+```yasio\yasio_cclua.cpp``` to libluacocos2d project of your Visual Studio or xcode solution.
 3. Call luaopen_yasio_cclua(L) at your AppDelegate.cpp, please remember ```#include "yasio/yasio_cclua.h"``` firstly.  
 
 ### JSB integration  

@@ -53,7 +53,7 @@ $(call import-module, external/yasio/android-lua)
 ```
 ##### For Win32 & Apple platform:
 Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibinarystream.cpp``` ```yasio\obinarystream.cpp``` ```yasio\lyasio.cpp```
-```yasio\yasio_cclua.cpp``` to libluacocos2d project of your Visual Studio or xcode solution.
+```yasio\yasio_cclua.cpp``` to libluacocos2d project of your Visual Studio or xcode solution.  
 3. Call luaopen_yasio_cclua(L) at your AppDelegate.cpp, please remember ```#include "yasio/yasio_cclua.h"``` firstly.  
 
 ### JSB integration  

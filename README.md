@@ -96,8 +96,8 @@ transport: response for data transition
 client: per channel, per transport  
 server: per channel, multi transports  
 
-call service open:
-open a channel as client, the channel will try connect remote host  
+call service open:  
+open a channel as client, the channel will try connect remote host    
 open a channel as server, the channel will start listening  
 
 events: connect response, connection lost, a packet received.  

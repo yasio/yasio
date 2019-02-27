@@ -60,13 +60,6 @@ YASIO_API int luaopen_yasio(lua_State *L)
   using namespace purelib::inet;
   sol::state_view sol2(L);
 
-#  if 0
-    auto t = sol2.create_named_table("simple_timer");
-    // the simple timer implementation is here: https://github.com/halx99/x-studio365/blob/master/cocos2d-x-patch/cocos/editor-support/cocostudio/ext/SimpleTimer.h
-    t.set_function("delay", simple_timer::delay);
-    t.set_function("loop", simple_timer::loop);
-    t.set_function("kill", simple_timer::kill);
-#  endif
   auto yasio = sol2.create_named_table("yasio");
 
   yasio.new_usertype<io_hostent>(

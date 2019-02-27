@@ -421,8 +421,14 @@ private:
   bool do_nonblocking_connect(io_channel *);
   bool do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
 
-  transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
+  inline void handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+  {
+    handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
+  }
+  void handle_connect_succeed(transport_ptr);
   void handle_connect_failed(io_channel *, int error);
+
+  transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
   void register_descriptor(const socket_native_type fd, int flags);
   void unregister_descriptor(const socket_native_type fd, int flags);

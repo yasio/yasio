@@ -993,10 +993,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
           std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
           if (client_sock->is_open())
           {
-            client_sock->set_nonblocking(true);
-            register_descriptor(client_sock->native_handle(), socket_event_read);
-
-            handle_connect_succeed(ctx, client_sock);
+            handle_connect_succeed(ctx, std::move(client_sock));
           }
           else
             INET_LOG("%s", "tcp-server: accept client socket fd failed!");
@@ -1024,10 +1021,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
                           : -1;
               if (error == 0)
               {
-                client_sock->set_nonblocking(true);
-                register_descriptor(client_sock->native_handle(), socket_event_read);
-
-                auto transport = handle_connect_succeed(ctx, client_sock);
+                auto transport = allocate_transport(ctx, std::move(client_sock));
+                handle_connect_succeed(transport);
                 this->handle_event(
                     event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
                                            std::vector<char>(buffer, buffer + n), transport)));
@@ -1042,40 +1037,46 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       }
       else
       {
-        INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
+        INET_LOG("The channel:%d has socket error:%d, will be closed!", ctx->index_, error);
         close_internal(ctx);
       }
     }
   }
 }
 
-transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+void io_service::handle_connect_succeed(transport_ptr transport)
+{
+  auto ctx = transport->ctx_;
+
+  auto &connection = transport->socket_;
+  if (ctx->type_ & CHANNEL_CLIENT)
+    ctx->state_ = channel_state::OPENED;
+  else
+  { // tcp/udp server, accept a new client session
+    connection->set_nonblocking(true);
+    register_descriptor(connection->native_handle(), socket_event_read);
+  }
+  if (ctx->type_ & CHANNEL_TCP)
+  {
+    // apply tcp keepalive options
+    if (options_.tcp_keepalive.onoff)
+      connection->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                                options_.tcp_keepalive.probs);
+  }
+
+  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+           connection->local_endpoint().to_string().c_str(),
+           connection->peer_endpoint().to_string().c_str());
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+}
+
+transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport(new io_transport(ctx));
   this->transports_.push_back(transport);
 
   transport->socket_ = socket;
-  if (ctx->type_ & CHANNEL_CLIENT)
-  {
-    ctx->state_ = channel_state::OPENED;
-
-    if (ctx->type_ & CHANNEL_TCP)
-    { // apply tcp keepalive options
-      if (options_.tcp_keepalive.onoff)
-      {
-        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                              options_.tcp_keepalive.probs);
-      }
-    }
-  } // else server channel, always OPENING to wait next client connect.
-
-  auto connection = transport->socket_;
-  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
-           connection->local_endpoint().to_string().c_str(),
-           connection->peer_endpoint().to_string().c_str());
-
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
   return transport;
 }

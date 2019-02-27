@@ -502,8 +502,10 @@ void io_service::service()
       }
       else if (objIO->class_id_ == IO_CLASS_TRANSPORT)
       {
-        auto transport = transports_[objIO->index_];
-        do_io_completion(transport, completion_key, bytes_transferred);
+        auto transport    = transports_[objIO->index_];
+        transport->OffsetHigh = bytes_transferred;
+        do_io_completion(transport, completion_key);
+        transport->OffsetHigh = 0;
       }
     }
 
@@ -555,16 +557,16 @@ void io_service::do_channel_completion(io_channel *ctx)
   }
 }
 
-void io_service::do_io_completion(transport_ptr transport, DWORD completion_key,
-                                  int bytes_transferred)
+void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
 {
   int n = -1;
+  auto bytes_transferred = transport->OffsetHigh;
   if (transport->offset_ > 0 || bytes_transferred > 0 || completion_key == 0)
   {
 #if _YASIO_VERBOS_LOG
     INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
 #endif
-    n = do_read(transport, bytes_transferred);
+    n = do_read(transport, static_cast<int>(bytes_transferred));
     if (n < 0)
     {
       handle_close(transport);

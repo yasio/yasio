@@ -420,7 +420,7 @@ public:
 private:
   void open_internal(io_channel *);
 
-  void do_io_completion(transport_ptr, DWORD completion_key, int bytes_transferred);
+  void do_io_completion(transport_ptr, DWORD completion_key);
   void do_channel(io_channel *ctx);
   void do_channel_completion(io_channel *ctx);
   void perform_timers();

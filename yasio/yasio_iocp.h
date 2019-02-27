@@ -433,7 +433,7 @@ private:
   void do_nonblocking_connect_completion(io_channel *);
 
   // @client connect server succeed
-  void handle_connect_succeed(io_channel * ctx, std::shared_ptr<xxsocket> socket)
+  void handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
   {
     handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
   }

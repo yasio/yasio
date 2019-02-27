@@ -16,7 +16,8 @@ LOCAL_SRC_FILES := ../xxsocket.cpp \
     ../yasio.cpp \
     ../ibinarystream.cpp \
     ../obinarystream.cpp \
-    ../lyasio.cpp
+    ../lyasio.cpp \
+    ../yasio_cclua.cpp
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
 

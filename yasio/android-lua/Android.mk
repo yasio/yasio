@@ -19,6 +19,6 @@ LOCAL_SRC_FILES := ../xxsocket.cpp \
     ../lyasio.cpp \
     ../yasio_cclua.cpp
 
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
+LOCAL_STATIC_LIBRARIES := cocos2dx_internal_static
 
 include $(BUILD_STATIC_LIBRARY)

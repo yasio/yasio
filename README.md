@@ -86,3 +86,19 @@ see: https://github.com/halx99/LuaFramework_UGUI
 showcase:  
 ![image](https://github.com/halx99/yasio/raw/master/showcaseunity.png)  
 
+## Simple proactor design mode:
+The core objects: service, channel, transport  
+
+service: event-loop, manage channel, transport, peek events  
+channel: manage connection session  
+transport: response for data transition  
+
+client: per channel, per transport  
+server: per channel, multi transports  
+
+call service open:
+open a channel as client, the channel will try connect remote host  
+open a channel as server, the channel will start listening  
+
+events: connect response, connection lost, a packet received.  
+

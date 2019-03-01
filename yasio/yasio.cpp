@@ -585,6 +585,8 @@ void io_service::perform_channels(fd_set *fds_array)
             do_nonblocking_accept_completion(ctx, fds_array);
             break;
           case channel_state::CLOSED:
+            close_internal(ctx);
+            INET_LOG("The channel: %d is closed!", ctx->index_);
             finish = true;
             break;
           default:; // do nothing
@@ -613,13 +615,11 @@ void io_service::close(size_t channel_index)
   if (ctx->state_ != channel_state::CLOSED)
   {
     ctx->state_ = channel_state::CLOSED;
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
-    ctx->socket_->close();
     this->interrupt();
   }
 }
 
-void io_service::close(transport_ptr &transport)
+void io_service::close(transport_ptr transport)
 {
   if (transport->is_open())
   {
@@ -628,7 +628,6 @@ void io_service::close(transport_ptr &transport)
              transport->socket_->peer_endpoint().to_string().c_str());
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
-    transport.reset();
     this->interrupt();
   }
 }

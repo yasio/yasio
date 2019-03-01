@@ -553,7 +553,14 @@ void io_service::do_channel_completion(io_channel *ctx)
   }
   else if (ctx->type_ & CHANNEL_SERVER)
   {
-    do_nonblocking_accept_completion(ctx);
+    if (ctx->error_ == 0)
+    {
+      do_nonblocking_accept_completion(ctx);
+    }
+    else if (ctx->error_ == ERROR_OPERATION_ABORTED)
+    {
+      INET_LOG("The tcp server channel: %d has been closed, reason:%s, it will be never accept new client connection!", ctx->index_, this->strerror(ctx->error_));
+    }
   }
 }
 
@@ -641,11 +648,11 @@ void io_service::close(size_t channel_index)
   {
     ctx->state_ = channel_state::CLOSED;
     ctx->socket_->close();
-    wakeup(ctx);
+    // wakeup(ctx);
   }
 }
 
-void io_service::close(transport_ptr &transport)
+void io_service::close(transport_ptr transport)
 {
   if (transport->is_open())
   {
@@ -654,8 +661,6 @@ void io_service::close(transport_ptr &transport)
              transport->socket_->peer_endpoint().to_string().c_str());
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
-    transport.reset();
-    wakeup(transport.get());
   }
 }
 
@@ -684,9 +689,11 @@ void io_service::open(size_t channel_index, int channel_type)
     /*
     Because Bind() the client socket to the socket address of the listening socket.  On Linux this
     essentially passes the responsibility for receiving data for the client session from the
-    well-known listening socket, to the newly allocated client socket.  It is important to note that
-    this behavior is not the same on other platforms, like Windows (unfortunately), detail see:
-    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux */
+    well-known listening socket, to the newly allocated client socket.  It is important to note
+    that this behavior is not the same on other platforms, like Windows (unfortunately), detail
+    see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+  */
     INET_LOG(
         "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
         "CHANNEL_UDP_CLIENT to communicate with peer!",

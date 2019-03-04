@@ -623,7 +623,7 @@ void io_service::close(size_t channel_index)
   }
 }
 
-void io_service::close(transport_ptr &transport)
+void io_service::close(transport_ptr transport)
 {
   if (transport->is_open())
   {

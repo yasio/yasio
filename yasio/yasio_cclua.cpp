@@ -127,11 +127,12 @@ struct lua_State;
 YASIO_API int luaopen_yasio_cclua(lua_State *L)
 {
   int n = luaopen_yasio(L);
-  sol::stack_table yasio(L, 1);
+  sol::stack_table yasio(L, n);
   yasio.set_function("delay", lyasio::simple_timer::delay);
   yasio.set_function("loop", lyasio::simple_timer::loop);
   yasio.set_function("kill", lyasio::simple_timer::kill);
-  return n;
+  yasio.pop();
+  return 0;
 }
 }
 
@@ -143,16 +144,15 @@ extern "C" {
 struct lua_State;
 YASIO_API int luaopen_yasio_cclua(lua_State *L)
 {
-  int n = luaopen_yasio(L);
+  luaopen_yasio(L);
 
   kaguya::State state(L);
   auto yasio = state.popFromStack();
   yasio.setField("delay", lyasio::simple_timer::delay);
   yasio.setField("loop", lyasio::simple_timer::loop);
   yasio.setField("kill", lyasio::simple_timer::kill);
-  state.pushToStack(yasio);
 
-  return n;
+  return 0;
 }
 }
 #endif

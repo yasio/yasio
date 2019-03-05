@@ -234,7 +234,7 @@ void io_channel::reset()
   deadline_timer_.cancel();
 }
 
-io_service::io_service() : stopping_(false), thread_started_(false), interrupter_()
+io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
   options_.connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
   options_.send_timeout_      = (std::numeric_limits<int>::max)();
@@ -255,39 +255,42 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
   };
 }
 
-io_service::~io_service() { stop_service(); }
+io_service::~io_service()
+{
+  stop_service();
+  if (this->state_ == io_service::state::STOPPED)
+    cleanup();
+}
 
 void io_service::start_service(const io_hostent *channel_eps, int channel_count,
                                io_event_callback_t cb)
 {
-  if (!thread_started_)
+  if (state_ == io_service::state::IDLE)
   {
-    if (channel_count <= 0)
-      return;
-    if (cb)
-      this->on_event_ = std::move(cb);
+    init(channel_eps, channel_count, cb);
 
-    stopping_       = false;
-    thread_started_ = true;
-
-    register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-
-    // Initialize channels
-    for (auto i = 0; i < channel_count; ++i)
+    this->state_ = io_service::state::RUNNING;
+    if (!options_.no_new_thread_)
     {
-      auto &channel_ep = channel_eps[i];
-      (void)new_channel(channel_ep);
+      this->worker_thread_ = std::thread(&io_service::run, this);
+      this->worker_id_     = worker_thread_.get_id();
     }
-
-    worker_thread_ = std::thread(&io_service::service, this);
+    else
+    {
+      this->worker_id_               = std::this_thread::get_id();
+      this->options_.deferred_event_ = false;
+      run();
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
   }
 }
 
 void io_service::stop_service()
 {
-  if (thread_started_)
+  if (this->state_ == io_service::state::RUNNING)
   {
-    stopping_ = true;
+    this->state_ = io_service::state::STOPPING;
 
     for (auto ctx : channels_)
     {
@@ -299,17 +302,58 @@ void io_service::stop_service()
     }
 
     this->interrupt();
+
     if (this->worker_thread_.joinable())
       this->worker_thread_.join();
 
+    if (!options_.no_new_thread_)
+    {
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
+  }
+}
+
+void io_service::wait_service()
+{
+  if (this->worker_thread_.joinable())
+    this->worker_thread_.join();
+}
+
+void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb)
+{
+  if (this->state_ != io_service::state::IDLE)
+    return;
+  if (channel_count <= 0)
+    return;
+  if (cb)
+    this->on_event_ = std::move(cb);
+
+  register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+
+  // Initialize channels
+  for (auto i = 0; i < channel_count; ++i)
+  {
+    auto &channel_ep = channel_eps[i];
+    (void)new_channel(channel_ep);
+  }
+
+  this->state_ = io_service::state::INITIALIZED;
+}
+
+void io_service::cleanup()
+{
+  if (this->state_ == io_service::state::STOPPED)
+  {
     this->transports_.clear();
 
     clear_channels();
 
     unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
-    thread_started_ = false;
 
     this->on_event_ = nullptr;
+
+    this->state_ = io_service::state::IDLE;
   }
 }
 
@@ -396,6 +440,9 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
+    case YASIO_OPT_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
   }
 
   va_end(ap);
@@ -441,7 +488,7 @@ void io_service::dispatch_events(int count)
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
-void io_service::service()
+void io_service::run()
 { // The async event-loop
   // Set Thread Name: yasio async socket io
   _set_thread_name("yasio");
@@ -453,11 +500,11 @@ void io_service::service()
   fd_set fds_array[3];
   timeval timeout;
 
-  for (; !stopping_;)
+  for (; this->state_ == io_service::state::RUNNING;)
   {
     int nfds = do_evpoll(fds_array, timeout);
 
-    if (stopping_)
+    if (this->state_ != io_service::state::RUNNING)
       break;
 
     if (nfds == -1)

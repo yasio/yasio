@@ -126,6 +126,7 @@ enum
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
   YASIO_OPT_CHANNEL_REMOTE_HOST,
   YASIO_OPT_CHANNEL_REMOTE_PORT,
+  YASIO_OPT_NO_NEW_THREAD, //
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -334,6 +335,14 @@ public:
   // connection callbacks
   typedef std::function<void(transport_ptr)> connection_lost_callback_t;
   typedef std::function<void(size_t, transport_ptr, int ec)> connect_response_callback_t;
+  enum class state
+  {
+    IDLE,
+    INITIALIZED,
+    RUNNING,
+    STOPPING,
+    STOPPED,
+  };
 
 public:
   io_service();
@@ -355,6 +364,7 @@ public:
   }
 
   void stop_service();
+  void wait_service();
 
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
@@ -407,7 +417,11 @@ public:
 
   bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
 
+  void cleanup();
+
 private:
+  void init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
+
   void open_internal(io_channel *);
 
   void perform_transports(fd_set *fds_array);
@@ -434,7 +448,7 @@ private:
   void unregister_descriptor(const socket_native_type fd, int flags);
 
   // The major async event-loop
-  void service(void);
+  void run(void);
 
   bool do_write(transport_ptr);
   bool do_read(transport_ptr);
@@ -472,9 +486,9 @@ private:
   static const char *strerror(int error);
 
 private:
-  bool stopping_;
-  bool thread_started_;
+  state state_;
   std::thread worker_thread_;
+  std::thread::id worker_id_;
 
   std::mutex event_queue_mtx_;
   std::deque<event_ptr> event_queue_;
@@ -539,8 +553,8 @@ private:
       int length_adjustment   = 0;
       int max_frame_length    = SZ(10, M);
     } lfib;
-    FILE *outf = nullptr;
-
+    FILE *outf          = nullptr;
+    bool no_new_thread_ = false;
   } options_;
 
   // The decode frame length function

@@ -112,7 +112,7 @@ httpclient:start_service(hostent, function(event)
             stopFlag = stopFlag + 1
         end
     end)
-httpclient:set_option(yasio.YASIO_OPT_LFIB_PARAMS, 65535, -1, 0, 0)
+httpclient:set_option(yasio.YASIO_OPT_LFBFD_PARAMS, 65535, -1, 0, 0)
 httpclient:set_option(yasio.YASIO_OPT_CHANNEL_LOCAL_PORT, 0, 36253)
 httpclient:open(0, yasio.CHANNEL_TCP_CLIENT)    
 

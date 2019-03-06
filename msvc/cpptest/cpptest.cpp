@@ -20,8 +20,8 @@ template <size_t _Size> void append_string(std::vector<char> &packet, const char
 
 void yasioTest()
 {
-  purelib::inet::io_hostent endpoints[] = {{"www.ip138.com", 80},       // http client
-                                           {"0.0.0.0", 30001},  // udp server
+  purelib::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}, // http client
+                                           {"0.0.0.0", 30001},    // tcp server
                                            {"127.0.0.1", 59281}}; // udp client
 
   obinarystream obs;
@@ -49,9 +49,8 @@ void yasioTest()
   };
   service.set_option(YASIO_OPT_RESOLV_FUNCTION, &resolv);
 
-
   std::vector<transport_ptr> transports;
-  service.set_option(YASIO_OPT_LFIB_PARAMS, 16384, -1, 0, 0);
+  service.set_option(YASIO_OPT_LFBFD_PARAMS, 16384, -1, 0, 0);
   service.set_option(YASIO_OPT_LOG_FILE, "yasio.log");
 
   deadline_timer udpconn_delay(service);
@@ -91,19 +90,20 @@ void yasioTest()
 
             service.write(transport, std::move(packet));
           }
-          else if (event->channel_index() == 2)
+          else if (event->channel_index() == 1)
           { // Sends message to server every per 3 seconds.
-#if 0
-            udp_heartbeat.expires_from_now(std::chrono::seconds(1), 3);
-            udp_heartbeat.async_wait([&service, transport](bool) { // called at network thread
-              std::vector<char> packet;
-              append_string(packet, "hello udp server!\n");
-              service.write(transport, std::move(packet));
-            });
+#if 1
+            udp_heartbeat.expires_from_now(std::chrono::seconds(3));
+            udp_heartbeat.async_wait(
+                [&service, transport](bool) mutable { // called at network thread
+                                                      // std::vector<char> packet;
+                  // append_string(packet, "hello udp server!\n");
+                  // service.write(transport, std::move(packet));
+                  service.stop_service();
+                });
 #endif
           }
 
-          
           transports.push_back(transport);
         }
         break;
@@ -114,20 +114,20 @@ void yasioTest()
   });
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  service.open(0); // open http client
-  service.open(1, CHANNEL_UDP_SERVER); // open udp server
-
+  // service.open(0); // open http client
+  service.open(1, CHANNEL_TCP_SERVER); // open tcp server
+  // service.open(2, CHANNEL_UDP_SERVER);
 #if 0
   udpconn_delay.expires_from_now(std::chrono::seconds(3));
   udpconn_delay.async_wait([&](bool) { // called at network thread
     printf("Open channel 2 to connect udp server.\n");
-    service.set_option(YASIO_OPT_CHANNEL_LOCAL_PORT, 2, 4000);
+    //service.set_option(YASIO_OPT_CHANNEL_LOCAL_PORT, 2, 4000);
     service.open(2, CHANNEL_UDP_CLIENT); // open udp client
   });
 #endif
 
   time_t duration = 0;
-  while (true)
+  while (service.is_running())
   {
     service.dispatch_events();
     if (duration >= 6000000)
@@ -139,8 +139,6 @@ void yasioTest()
     duration += 50;
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
-
-  std::this_thread::sleep_for(std::chrono::seconds(60));
 }
 
 int main(int, char **)

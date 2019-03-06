@@ -47,8 +47,8 @@ SOFTWARE.
     {                                                                                              \
       auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);       \
       OutputDebugStringA(content.c_str());                                                         \
-      if (options_.outf)                                                                           \
-        fprintf(options_.outf, "%s", content.c_str());                                             \
+      if (options_.outf_)                                                                          \
+        fprintf(options_.outf_, "%s", content.c_str());                                            \
     } while (false)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
@@ -56,13 +56,13 @@ SOFTWARE.
 #  define INET_LOG(format, ...)                                                                    \
     __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),              \
                         ##__VA_ARGS__);                                                            \
-    if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    if (options_.outf_)                                                                            \
+    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #else
 #  define INET_LOG(format, ...)                                                                    \
     fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);                \
-    if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    if (options_.outf_)                                                                            \
+    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
 
 #define YASIO_SOMAXCONN 19
@@ -243,7 +243,7 @@ static bool poll_fd_isset(socket_native_type fd, std::vector<pollfd> &fds_array,
   return false;
 }
 
-io_service::io_service() : stopping_(false), thread_started_(false), interrupter_()
+io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
   options_.connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
   options_.send_timeout_      = (std::numeric_limits<int>::max)();
@@ -260,39 +260,42 @@ io_service::io_service() : stopping_(false), thread_started_(false), interrupter
   };
 }
 
-io_service::~io_service() { stop_service(); }
+io_service::~io_service()
+{
+  stop_service();
+  if (this->state_ == io_service::state::STOPPED)
+    cleanup();
+}
 
 void io_service::start_service(const io_hostent *channel_eps, int channel_count,
                                io_event_callback_t cb)
 {
-  if (!thread_started_)
+  if (state_ == io_service::state::IDLE)
   {
-    if (channel_count <= 0)
-      return;
-    if (cb)
-      this->on_event_ = std::move(cb);
+    init(channel_eps, channel_count, cb);
 
-    stopping_       = false;
-    thread_started_ = true;
-
-    register_descriptor(interrupter_.read_descriptor(), socket_event_read);
-
-    // Initialize channels
-    for (auto i = 0; i < channel_count; ++i)
+    this->state_ = io_service::state::RUNNING;
+    if (!options_.no_new_thread_)
     {
-      auto &channel_ep = channel_eps[i];
-      (void)new_channel(channel_ep);
+      this->worker_thread_ = std::thread(&io_service::run, this);
+      this->worker_id_     = worker_thread_.get_id();
     }
-
-    worker_thread_ = std::thread(&io_service::service, this);
+    else
+    {
+      this->worker_id_               = std::this_thread::get_id();
+      this->options_.deferred_event_ = false;
+      run();
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
   }
 }
 
 void io_service::stop_service()
 {
-  if (thread_started_)
+  if (this->state_ == io_service::state::RUNNING)
   {
-    stopping_ = true;
+    this->state_ = io_service::state::STOPPING;
 
     for (auto ctx : channels_)
     {
@@ -304,17 +307,63 @@ void io_service::stop_service()
     }
 
     this->interrupt();
-    if (this->worker_thread_.joinable())
-      this->worker_thread_.join();
+    this->wait_service();
+  }
+  else if (this->state_ == io_service::state::STOPPING)
+  {
+    this->wait_service();
+  }
+}
 
+void io_service::wait_service()
+{
+  if (this->worker_thread_.joinable())
+  {
+    if (std::this_thread::get_id() != this->worker_id_)
+    {
+      this->worker_thread_.join();
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
+    else
+      errno = EAGAIN;
+  }
+}
+
+void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb)
+{
+  if (this->state_ != io_service::state::IDLE)
+    return;
+  if (channel_count <= 0)
+    return;
+  if (cb)
+    this->on_event_ = std::move(cb);
+
+  register_descriptor(interrupter_.read_descriptor(), socket_event_read);
+
+  // Initialize channels
+  for (auto i = 0; i < channel_count; ++i)
+  {
+    auto &channel_ep = channel_eps[i];
+    (void)new_channel(channel_ep);
+  }
+
+  this->state_ = io_service::state::INITIALIZED;
+}
+
+void io_service::cleanup()
+{
+  if (this->state_ == io_service::state::STOPPED)
+  {
     this->transports_.clear();
 
     clear_channels();
 
     unregister_descriptor(interrupter_.read_descriptor(), socket_event_read);
-    thread_started_ = false;
 
     this->on_event_ = nullptr;
+
+    this->state_ = io_service::state::IDLE;
   }
 }
 
@@ -349,24 +398,24 @@ void io_service::set_option(int option, ...)
       options_.deferred_event_ = !!va_arg(ap, int);
       break;
     case YASIO_OPT_TCP_KEEPALIVE:
-      options_.tcp_keepalive.onoff    = 1;
-      options_.tcp_keepalive.idle     = va_arg(ap, int);
-      options_.tcp_keepalive.interval = va_arg(ap, int);
-      options_.tcp_keepalive.probs    = va_arg(ap, int);
+      options_.tcp_keepalive_.onoff    = 1;
+      options_.tcp_keepalive_.idle     = va_arg(ap, int);
+      options_.tcp_keepalive_.interval = va_arg(ap, int);
+      options_.tcp_keepalive_.probs    = va_arg(ap, int);
       break;
     case YASIO_OPT_RESOLV_FUNCTION:
       this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
     case YASIO_OPT_LOG_FILE:
-      if (options_.outf)
-        fclose(options_.outf);
-      options_.outf = fopen(va_arg(ap, const char *), "wb");
+      if (options_.outf_)
+        fclose(options_.outf_);
+      options_.outf_ = fopen(va_arg(ap, const char *), "wb");
       break;
-    case YASIO_OPT_LFIB_PARAMS:
-      options_.lfib.max_frame_length    = va_arg(ap, int);
-      options_.lfib.length_field_offset = va_arg(ap, int);
-      options_.lfib.length_field_length = va_arg(ap, int);
-      options_.lfib.length_adjustment   = va_arg(ap, int);
+    case YASIO_OPT_LFBFD_PARAMS:
+      options_.lfb_.max_frame_length    = va_arg(ap, int);
+      options_.lfb_.length_field_offset = va_arg(ap, int);
+      options_.lfb_.length_field_length = va_arg(ap, int);
+      options_.lfb_.length_adjustment   = va_arg(ap, int);
       break;
     case YASIO_OPT_IO_EVENT_CALLBACK:
       this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
@@ -401,6 +450,9 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
+    case YASIO_OPT_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
   }
 
   va_end(ap);
@@ -420,6 +472,7 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 
 void io_service::clear_channels()
 {
+  this->active_channels_.clear();
   for (auto iter = channels_.begin(); iter != channels_.end();)
   {
     (*iter)->socket_->close();
@@ -437,7 +490,7 @@ void io_service::dispatch_events(int count)
   if (this->event_queue_.empty())
     return;
 
-  std::lock_guard<std::mutex> lck(this->event_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
   do
   {
     auto event = std::move(this->event_queue_.front());
@@ -446,7 +499,7 @@ void io_service::dispatch_events(int count)
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
-void io_service::service()
+void io_service::run()
 { // The async event-loop
   // Set Thread Name: yasio async socket io
   _set_thread_name("yasio");
@@ -456,11 +509,11 @@ void io_service::service()
 
   // event loop
   std::vector<pollfd> fds_array;
-  for (; !stopping_;)
+  for (; this->state_ == io_service::state::RUNNING;)
   {
     int nfds = do_evpoll(fds_array);
 
-    if (stopping_)
+    if (this->state_ != io_service::state::RUNNING)
       break;
 
     if (nfds == -1)
@@ -589,6 +642,8 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
             do_nonblocking_accept_completion(ctx, fds_array);
             break;
           case channel_state::CLOSED:
+            close_internal(ctx);
+            INET_LOG("The channel: %d is closed!", ctx->index_);
             finish = true;
             break;
           default:; // do nothing
@@ -617,8 +672,6 @@ void io_service::close(size_t channel_index)
   if (ctx->state_ != channel_state::CLOSED)
   {
     ctx->state_ = channel_state::CLOSED;
-    unregister_descriptor(ctx->socket_->native_handle(), socket_event_read);
-    ctx->socket_->close();
     this->interrupt();
   }
 }
@@ -632,7 +685,6 @@ void io_service::close(transport_ptr transport)
              transport->socket_->peer_endpoint().to_string().c_str());
     transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
     transport->socket_->shutdown();
-    transport.reset();
     this->interrupt();
   }
 }
@@ -663,9 +715,11 @@ void io_service::open(size_t channel_index, int channel_type)
     /*
     Because Bind() the client socket to the socket address of the listening socket.  On Linux this
     essentially passes the responsibility for receiving data for the client session from the
-    well-known listening socket, to the newly allocated client socket.  It is important to note that
-    this behavior is not the same on other platforms, like Windows (unfortunately), detail see:
-    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux */
+    well-known listening socket, to the newly allocated client socket.  It is important to note
+    that this behavior is not the same on other platforms, like Windows (unfortunately), detail
+    see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+  */
     INET_LOG(
         "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
         "CHANNEL_UDP_CLIENT to communicate with peer!",
@@ -983,10 +1037,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
           std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
           if (client_sock->is_open())
           {
-            client_sock->set_nonblocking(true);
-            register_descriptor(client_sock->native_handle(), socket_event_read);
-
-            handle_connect_succeed(ctx, client_sock);
+            handle_connect_succeed(ctx, std::move(client_sock));
           }
           else
             INET_LOG("%s", "tcp-server: accept client socket fd failed!");
@@ -1014,10 +1065,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
                           : -1;
               if (error == 0)
               {
-                client_sock->set_nonblocking(true);
-                register_descriptor(client_sock->native_handle(), socket_event_read);
-
-                auto transport = handle_connect_succeed(ctx, client_sock);
+                auto transport = allocate_transport(ctx, std::move(client_sock));
+                handle_connect_succeed(transport);
                 this->handle_event(
                     event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
                                            std::vector<char>(buffer, buffer + n), transport)));
@@ -1032,40 +1081,46 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, std::vector<p
       }
       else
       {
-        INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
+        INET_LOG("The channel:%d has socket error:%d, will be closed!", ctx->index_, error);
         close_internal(ctx);
       }
     }
   }
 }
 
-transport_ptr io_service::handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+void io_service::handle_connect_succeed(transport_ptr transport)
+{
+  auto ctx = transport->ctx_;
+
+  auto &connection = transport->socket_;
+  if (ctx->type_ & CHANNEL_CLIENT)
+    ctx->state_ = channel_state::OPENED;
+  else
+  { // tcp/udp server, accept a new client session
+    connection->set_nonblocking(true);
+    register_descriptor(connection->native_handle(), socket_event_read);
+  }
+  if (ctx->type_ & CHANNEL_TCP)
+  {
+    // apply tcp keepalive options
+    if (options_.tcp_keepalive_.onoff)
+      connection->set_keepalive(options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval,
+                                options_.tcp_keepalive_.probs);
+  }
+
+  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+           connection->local_endpoint().to_string().c_str(),
+           connection->peer_endpoint().to_string().c_str());
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+}
+
+transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport(new io_transport(ctx));
   this->transports_.push_back(transport);
 
   transport->socket_ = socket;
-  if (ctx->type_ & CHANNEL_CLIENT)
-  {
-    ctx->state_ = channel_state::OPENED;
-
-    if (ctx->type_ & CHANNEL_TCP)
-    { // apply tcp keepalive options
-      if (options_.tcp_keepalive.onoff)
-      {
-        socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                              options_.tcp_keepalive.probs);
-      }
-    }
-  } // else server channel, always OPENING to wait next client connect.
-
-  auto connection = transport->socket_;
-  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
-           connection->local_endpoint().to_string().c_str(),
-           connection->peer_endpoint().to_string().c_str());
-
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
 
   return transport;
 }
@@ -1525,34 +1580,34 @@ bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostn
 
 int io_service::builtin_decode_frame_length(void *ud, int n)
 {
-  if (options_.lfib.length_field_offset >= 0)
+  if (options_.lfb_.length_field_offset >= 0)
   {
-    if (n >= (options_.lfib.length_field_offset + options_.lfib.length_field_length))
+    if (n >= (options_.lfb_.length_field_offset + options_.lfb_.length_field_length))
     {
       int32_t length = -1;
-      switch (options_.lfib.length_field_length)
+      switch (options_.lfb_.length_field_length)
       {
         case 4:
           length = ntohl(*reinterpret_cast<int32_t *>((unsigned char *)ud +
-                                                      options_.lfib.length_field_offset)) +
-                   options_.lfib.length_adjustment;
+                                                      options_.lfb_.length_field_offset)) +
+                   options_.lfb_.length_adjustment;
           break;
         case 3:
           length = 0;
-          memcpy(&length, (unsigned char *)ud + options_.lfib.length_field_offset, 3);
-          length = (ntohl(length) >> 8) + options_.lfib.length_adjustment;
+          memcpy(&length, (unsigned char *)ud + options_.lfb_.length_field_offset, 3);
+          length = (ntohl(length) >> 8) + options_.lfb_.length_adjustment;
           break;
         case 2:
           length = ntohs(*reinterpret_cast<uint16_t *>((unsigned char *)ud +
-                                                       options_.lfib.length_field_offset)) +
-                   options_.lfib.length_adjustment;
+                                                       options_.lfb_.length_field_offset)) +
+                   options_.lfb_.length_adjustment;
           break;
         case 1:
-          length = *((unsigned char *)ud + options_.lfib.length_field_offset) +
-                   options_.lfib.length_adjustment;
+          length = *((unsigned char *)ud + options_.lfb_.length_field_offset) +
+                   options_.lfb_.length_adjustment;
           break;
       }
-      if (length > options_.lfib.max_frame_length)
+      if (length > options_.lfb_.max_frame_length)
         length = -1;
       return length;
     }

@@ -120,12 +120,13 @@ enum
   YASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   YASIO_OPT_RESOLV_FUNCTION,
   YASIO_OPT_LOG_FILE,
-  YASIO_OPT_LFIB_PARAMS,
+  YASIO_OPT_LFBFD_PARAMS, // length field based frame decode params
   YASIO_OPT_IO_EVENT_CALLBACK,
   YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
   YASIO_OPT_CHANNEL_REMOTE_HOST,
   YASIO_OPT_CHANNEL_REMOTE_PORT,
+  YASIO_OPT_NO_NEW_THREAD, // Don't start a new thread to run event loop
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -334,6 +335,14 @@ public:
   // connection callbacks
   typedef std::function<void(transport_ptr)> connection_lost_callback_t;
   typedef std::function<void(size_t, transport_ptr, int ec)> connect_response_callback_t;
+  enum class state
+  {
+    IDLE,
+    INITIALIZED,
+    RUNNING,
+    STOPPING,
+    STOPPED,
+  };
 
 public:
   io_service();
@@ -355,6 +364,9 @@ public:
   }
 
   void stop_service();
+  void wait_service();
+
+  bool is_running() const { return this->state_ == io_service::state::RUNNING; }
 
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
@@ -370,12 +382,13 @@ public:
              YASIO_OPT_DEFER_EVENT       defer:int
              YASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              YASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             YASIO_OPT_LFIB_PARAMS max_frame_length:int, length_field_offst:int,
+             YASIO_OPT_LFBFD_PARAMS max_frame_length:int, length_field_offst:int,
      length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
              YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
              YASIO_OPT_CHANNEL_REMOTE_HOST index:int, host:const char*
              YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
+             YASIO_OPT_NO_NEW_THREAD value:int
   */
   void set_option(int option, ...);
 
@@ -407,7 +420,11 @@ public:
 
   bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
 
+  void cleanup();
+
 private:
+  void init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
+
   void open_internal(io_channel *);
 
   void perform_transports(std::vector<pollfd> &fds_array);
@@ -421,14 +438,20 @@ private:
   bool do_nonblocking_connect(io_channel *);
   bool do_nonblocking_connect_completion(io_channel *, std::vector<pollfd> &fds_array);
 
-  transport_ptr handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
+  inline void handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+  {
+    handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
+  }
+  void handle_connect_succeed(transport_ptr);
   void handle_connect_failed(io_channel *, int error);
+
+  transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
   void register_descriptor(const socket_native_type fd, int flags);
   void unregister_descriptor(const socket_native_type fd, int flags);
 
-  // The major async event-loop
-  void service(void);
+  // The major non-blocking event-loop
+  void run(void);
 
   bool do_write(transport_ptr);
   bool do_read(transport_ptr);
@@ -466,16 +489,16 @@ private:
   static const char *strerror(int error);
 
 private:
-  bool stopping_;
-  bool thread_started_;
+  state state_;
   std::thread worker_thread_;
+  std::thread::id worker_id_;
 
-  std::mutex event_queue_mtx_;
+  std::recursive_mutex event_queue_mtx_;
   std::deque<event_ptr> event_queue_;
 
   std::vector<io_channel *> channels_;
 
-  std::mutex active_channels_mtx_;
+  std::recursive_mutex active_channels_mtx_;
   std::vector<io_channel *> active_channels_;
 
   std::vector<transport_ptr> transports_;
@@ -516,7 +539,7 @@ private:
       int idle     = 7200;
       int interval = 75;
       int probs    = 10;
-    } tcp_keepalive;
+    } tcp_keepalive_;
 
     struct
     {
@@ -524,9 +547,9 @@ private:
       int length_field_length = 4; // 1,2,3,4
       int length_adjustment   = 0;
       int max_frame_length    = SZ(10, M);
-    } lfib;
-    FILE *outf = nullptr;
-
+    } lfb_;
+    FILE *outf_          = nullptr;
+    bool no_new_thread_ = false;
   } options_;
 
   // The decode frame length function

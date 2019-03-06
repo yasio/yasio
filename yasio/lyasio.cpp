@@ -94,7 +94,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]));
             break;
-          case YASIO_OPT_LFIB_PARAMS:
+          case YASIO_OPT_LFBFD_PARAMS:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]), static_cast<int>(va[3]));
             break;
@@ -179,7 +179,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
   yasio["YASIO_OPT_TCP_KEEPALIVE"]       = YASIO_OPT_TCP_KEEPALIVE;
   yasio["YASIO_OPT_RESOLV_FUNCTION"]     = YASIO_OPT_RESOLV_FUNCTION;
   yasio["YASIO_OPT_LOG_FILE"]            = YASIO_OPT_LOG_FILE;
-  yasio["YASIO_OPT_LFIB_PARAMS"]         = YASIO_OPT_LFIB_PARAMS;
+  yasio["YASIO_OPT_LFBFD_PARAMS"]        = YASIO_OPT_LFBFD_PARAMS;
   yasio["YASIO_OPT_IO_EVENT_CALLBACK"]   = YASIO_OPT_IO_EVENT_CALLBACK;
   yasio["YASIO_OPT_CHANNEL_LOCAL_PORT"]  = YASIO_OPT_CHANNEL_LOCAL_PORT;
   yasio["YASIO_OPT_CHANNEL_REMOTE_HOST"] = YASIO_OPT_CHANNEL_REMOTE_HOST;
@@ -304,7 +304,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]));
                 break;
-              case YASIO_OPT_LFIB_PARAMS:
+              case YASIO_OPT_LFBFD_PARAMS:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]), static_cast<int>(args[3]));
                 break;
@@ -405,7 +405,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
   yasio["YASIO_OPT_TCP_KEEPALIVE"]       = YASIO_OPT_TCP_KEEPALIVE;
   yasio["YASIO_OPT_RESOLV_FUNCTION"]     = YASIO_OPT_RESOLV_FUNCTION;
   yasio["YASIO_OPT_LOG_FILE"]            = YASIO_OPT_LOG_FILE;
-  yasio["YASIO_OPT_LFIB_PARAMS"]         = YASIO_OPT_LFIB_PARAMS;
+  yasio["YASIO_OPT_LFBFD_PARAMS"]        = YASIO_OPT_LFBFD_PARAMS;
   yasio["YASIO_OPT_IO_EVENT_CALLBACK"]   = YASIO_OPT_IO_EVENT_CALLBACK;
   yasio["YASIO_OPT_CHANNEL_LOCAL_PORT"]  = YASIO_OPT_CHANNEL_LOCAL_PORT;
   yasio["YASIO_OPT_CHANNEL_REMOTE_HOST"] = YASIO_OPT_CHANNEL_REMOTE_HOST;

@@ -613,7 +613,7 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
   if (!active_channels_.empty())
   {
     // perform active channels
-    active_channels_mtx_.lock();
+    std::lock_guard<std::recursive_mutex> lck(active_channels_mtx_);
     for (auto iter = active_channels_.begin(); iter != active_channels_.end();)
     {
       auto ctx    = *iter;
@@ -655,7 +655,6 @@ void io_service::perform_channels(std::vector<pollfd> &fds_array)
       else
         ++iter;
     }
-    active_channels_mtx_.unlock();
   }
 }
 

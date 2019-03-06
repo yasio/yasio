@@ -577,7 +577,7 @@ void io_service::run()
     // update active channels
     if (!active_channels_.empty())
     {
-      active_channels_mtx_.lock();
+      std::lock_guard<std::recursive_mutex> lck(active_channels_mtx_);
       for (auto iter = active_channels_.begin(); iter != active_channels_.end();)
       {
         auto ctx = *iter;
@@ -589,7 +589,6 @@ void io_service::run()
         else
           ++iter;
       }
-      active_channels_mtx_.unlock();
     }
 
     // update timers

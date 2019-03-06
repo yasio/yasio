@@ -1423,7 +1423,7 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
         case YASIO_OPT_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
-        case YASIO_OPT_LFIB_PARAMS:
+        case YASIO_OPT_LFBFD_PARAMS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
                               args[4].toInt32());
           break;
@@ -1583,7 +1583,7 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
   YASIO_SET_INT_PROP("YASIO_OPT_TCP_KEEPALIVE", YASIO_OPT_TCP_KEEPALIVE);
   YASIO_SET_INT_PROP("YASIO_OPT_RESOLV_FUNCTION", YASIO_OPT_RESOLV_FUNCTION);
   YASIO_SET_INT_PROP("YASIO_OPT_LOG_FILE", YASIO_OPT_LOG_FILE);
-  YASIO_SET_INT_PROP("YASIO_OPT_LFIB_PARAMS", YASIO_OPT_LFIB_PARAMS);
+  YASIO_SET_INT_PROP("YASIO_OPT_LFBFD_PARAMS", YASIO_OPT_LFBFD_PARAMS);
   YASIO_SET_INT_PROP("YASIO_OPT_IO_EVENT_CALLBACK", YASIO_OPT_IO_EVENT_CALLBACK);
   YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_LOCAL_PORT", YASIO_OPT_CHANNEL_LOCAL_PORT);
   YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_REMOTE_HOST", YASIO_OPT_CHANNEL_REMOTE_HOST);

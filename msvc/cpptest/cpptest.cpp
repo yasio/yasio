@@ -1,7 +1,15 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(YASIO_IOCP)
+#include "../../yasio/yasio_iocp.h"
+#elif defined(YASIO_POLL)
+#include "../../yasio/yasio_poll.h"
+#elif defined(YASIO_EPOLL)
+#include "../../yasio/yasio_epoll.h"
+#else
 #include "../../yasio/yasio.h"
+#endif
 #include "../../yasio/ibinarystream.h"
 #include "../../yasio/obinarystream.h"
 

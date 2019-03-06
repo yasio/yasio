@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -884,7 +884,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         bool result = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_),
                                            nullptr, 0, nullptr, ctx);
 
-        DWORD last_error = ctx->update_error();
+        auto last_error = ctx->update_error();
         if (!result && last_error != WSA_IO_PENDING)
         {
           handle_connect_succeed(ctx, ctx->socket_);
@@ -896,7 +896,8 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
           ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
             if (!cancelled && ctx->state_ != channel_state::OPENED)
             {
-              handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+              ctx->update_error(ETIMEDOUT);
+              handle_connect_failed(ctx);
             }
           });
         }
@@ -920,14 +921,16 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
         }
         else
         {
-          this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+          ctx->update_error();
+          this->handle_connect_failed(ctx);
         }
       }
     }
   }
   else if (ctx->resolve_state_ == resolve_state::FAILED)
   {
-    handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
+    ctx->update_error(ERR_RESOLVE_HOST_FAILED);
+    handle_connect_failed(ctx);
   } // DIRTY,Try resolve address nonblocking
   else if (ctx->resolve_state_ == resolve_state::DIRTY)
   {
@@ -937,7 +940,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
 
 void io_service::do_nonblocking_connect_completion(io_channel *ctx)
 { // only tcp client will call this function
-  assert(CHANNEL_TCP_CLIENT == ctx->type_);
+  assert(ctx->type_ == CHANNEL_TCP_CLIENT);
   assert(ctx->state_ == channel_state::OPENING);
 
   if (ctx->error_ == 0)
@@ -946,7 +949,8 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx)
   }
   else
   {
-    handle_connect_failed(ctx, ERR_CONNECT_FAILED);
+    ctx->update_error(ERR_CONNECT_FAILED);
+    handle_connect_failed(ctx);
   }
 
   ctx->deadline_timer_.cancel();
@@ -1100,12 +1104,12 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   return transport;
 }
 
-void io_service::handle_connect_failed(io_channel *ctx, int error)
+void io_service::handle_connect_failed(io_channel *ctx)
 {
   close_internal(ctx);
-
   ctx->state_ = channel_state::CLOSED;
 
+  int error = ctx->error_;
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 

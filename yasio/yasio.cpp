@@ -961,32 +961,31 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
 bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_array)
 {
-  if (ctx->state_ == channel_state::OPENING)
+  assert(ctx->type_ == CHANNEL_TCP_CLIENT);
+  assert(ctx->state_ == channel_state::OPENING);
+
+  int error = -1;
+  if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
+      FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
   {
-    int error = -1;
-    assert(ctx->type_ & CHANNEL_TCP); // only tcp client will go here.
-    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
-        FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+    socklen_t len = sizeof(error);
+    if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
+            0 &&
+        error == 0)
     {
-      socklen_t len = sizeof(error);
-      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
-              0 &&
-          error == 0)
-      {
-        // remove write event avoid high-CPU occupation
-        unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
-        handle_connect_succeed(ctx, ctx->socket_);
-      }
-      else
-      {
-        ctx->update_error(ERR_CONNECT_FAILED);
-        handle_connect_failed(ctx);
-      }
-
-      ctx->deadline_timer_.cancel();
-
-      return true;
+      // remove write event avoid high-CPU occupation
+      unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
+      handle_connect_succeed(ctx, ctx->socket_);
     }
+    else
+    {
+      ctx->update_error(ERR_CONNECT_FAILED);
+      handle_connect_failed(ctx);
+    }
+
+    ctx->deadline_timer_.cancel();
+
+    return true;
   }
 
   return false;
@@ -1145,11 +1144,12 @@ void io_service::handle_connect_failed(io_channel *ctx)
 
   ctx->state_ = channel_state::CLOSED;
 
+  int error = ctx->error_;
   this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, ctx->error_, nullptr)));
+      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
-           ctx->host_.c_str(), ctx->port_, ctx->error_, io_service::strerror(ctx->error_));
+           ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
 bool io_service::do_write(transport_ptr transport)

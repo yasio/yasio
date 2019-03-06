@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -209,12 +209,15 @@ enum
 };
 struct io_base
 {
-
+  std::shared_ptr<xxsocket> socket_;
   int class_id_;
   int index_; // channel: index in channels, transport: index in transports
 
-  std::shared_ptr<xxsocket> socket_;
+  int error_                      = 0;
   unsigned int registered_events_ = 0;
+
+  int update_error() { return (error_ = xxsocket::get_last_errno()); }
+  void update_error(int error) { error_ = error; }
 };
 
 struct io_channel : public io_base
@@ -268,16 +271,8 @@ private:
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
 
-  int error_ = 0; // socket error(>= -1), application error(< -1)
-
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
-
-  int get_socket_error()
-  {
-    error_ = xxsocket::get_last_errno();
-    return error_;
-  }
 };
 
 typedef std::shared_ptr<io_transport> transport_ptr;
@@ -447,7 +442,7 @@ private:
 
   void handle_connect_succeed(io_channel *, std::shared_ptr<xxsocket>);
   void handle_connect_succeed(transport_ptr);
-  void handle_connect_failed(io_channel *, int error);
+  void handle_connect_failed(io_channel *);
 
   transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 

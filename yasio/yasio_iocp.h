@@ -209,7 +209,7 @@ struct io_base : public OVERLAPPED
   int error_ = 0; // socket error(>= -1), application error(< -1)
 
   int update_error() { return (error_ = xxsocket::get_last_errno()); }
-
+  void update_error(int error) { error_ = error; }
   std::shared_ptr<xxsocket> socket_;
 };
 
@@ -460,7 +460,7 @@ private:
 
   transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
-  void handle_connect_failed(io_channel *, int error);
+  void handle_connect_failed(io_channel *);
 
   // The major non-blocking event-loop
   void run(void);

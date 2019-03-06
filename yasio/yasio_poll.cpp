@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -877,10 +877,10 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
       if (ret < 0)
       { // setup no blocking connect
-        int error = xxsocket::get_last_errno();
+        int error = ctx->update_error();
         if (error != EINPROGRESS && error != EWOULDBLOCK)
         {
-          this->handle_connect_failed(ctx, error);
+          this->handle_connect_failed(ctx);
           return true;
         }
         else
@@ -892,7 +892,8 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
           ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
             if (!cancelled && ctx->state_ != channel_state::OPENED)
             {
-              handle_connect_failed(ctx, ERR_CONNECT_TIMEOUT);
+              ctx->update_error(ETIMEDOUT);
+              handle_connect_failed(ctx);
             }
           });
 
@@ -924,7 +925,8 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
         }
         else
         {
-          this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+          ctx->update_error();
+          this->handle_connect_failed(ctx);
         }
 
         return true;
@@ -933,7 +935,8 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   }
   else if (ctx->resolve_state_ == resolve_state::FAILED)
   {
-    handle_connect_failed(ctx, ERR_RESOLVE_HOST_FAILED);
+    ctx->update_error(ERR_RESOLVE_HOST_FAILED);
+    handle_connect_failed(ctx);
     return true;
   } // DIRTY,Try resolve address nonblocking
   else if (ctx->resolve_state_ == resolve_state::DIRTY)
@@ -946,33 +949,30 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
 bool io_service::do_nonblocking_connect_completion(io_channel *ctx, std::vector<pollfd> &fds_array)
 {
-  if (ctx->state_ == channel_state::OPENING)
-  {
-    int error = -1;
-    if (ctx->type_ & CHANNEL_TCP)
-    {
-      if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_read) ||
-          poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_write))
-      {
-        socklen_t len = sizeof(error);
-        if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error,
-                         &len) >= 0 &&
-            error == 0)
-        {
-          // remove write event avoid high-CPU occupation
-          unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
-          handle_connect_succeed(ctx, ctx->socket_);
-          ctx->deadline_timer_.cancel();
-        }
-        else
-        {
-          handle_connect_failed(ctx, ERR_CONNECT_FAILED);
-          ctx->deadline_timer_.cancel();
-        }
+  assert(ctx->type_ == CHANNEL_TCP_CLIENT);
+  assert(ctx->state_ == channel_state::OPENING);
 
-        return true;
-      }
+  int error = -1;
+  if (poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_read) ||
+      poll_fd_isset(ctx->socket_->native_handle(), fds_array, socket_event_write))
+  {
+    socklen_t len = sizeof(error);
+    if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char *)&error, &len) >=
+            0 &&
+        error == 0)
+    {
+      // remove write event avoid high-CPU occupation
+      unregister_descriptor(ctx->socket_->native_handle(), socket_event_write);
+      handle_connect_succeed(ctx, ctx->socket_);
     }
+    else
+    {
+      ctx->update_error(ERR_CONNECT_FAILED);
+      handle_connect_failed(ctx);
+    }
+
+    ctx->deadline_timer_.cancel();
+    return true;
   }
 
   return false;
@@ -1125,12 +1125,13 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   return transport;
 }
 
-void io_service::handle_connect_failed(io_channel *ctx, int error)
+void io_service::handle_connect_failed(io_channel *ctx)
 {
   close_internal(ctx);
 
   ctx->state_ = channel_state::CLOSED;
 
+  int error = ctx->error_;
   this->handle_event(
       event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
 
@@ -1193,7 +1194,7 @@ bool io_service::do_write(transport_ptr transport)
       }
       else
       { // n <= 0, TODO: add time
-        int error = transport->get_socket_error();
+        int error = transport->update_error();
         if (SHOULD_CLOSE_1(n, error))
         {
           INET_LOG("[index: %d] do_write error, the connection "
@@ -1225,7 +1226,7 @@ bool io_service::do_read(transport_ptr transport)
     int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
                                        socket_recv_buffer_size - transport->offset_);
 
-    if (n > 0 || !SHOULD_CLOSE_0(n, transport->get_socket_error()))
+    if (n > 0 || !SHOULD_CLOSE_0(n, transport->update_error()))
     {
 #if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),

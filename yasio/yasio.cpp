@@ -497,7 +497,7 @@ void io_service::dispatch_events(int count)
 void io_service::run()
 { // The async event-loop
   // Set Thread Name: yasio async socket io
-  _set_thread_name("yasio");
+  _set_thread_name("yasio-evloop");
 
   // Call once at startup
   this->ipsv_state_ = xxsocket::getipsv();

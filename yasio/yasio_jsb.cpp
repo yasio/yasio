@@ -1406,7 +1406,7 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
     if (argc >= 2)
     {
       auto arg0 = args[0];
-      auto opt   = arg0.toInt32();
+      auto opt  = arg0.toInt32();
       switch (opt)
       {
         case YASIO_OPT_CHANNEL_REMOTE_HOST:

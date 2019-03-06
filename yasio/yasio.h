@@ -556,7 +556,7 @@ private:
       int length_adjustment   = 0;
       int max_frame_length    = SZ(10, M);
     } lfb_;
-    FILE *outf_          = nullptr;
+    FILE *outf_         = nullptr;
     bool no_new_thread_ = false;
   } options_;
 

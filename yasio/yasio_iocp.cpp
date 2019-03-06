@@ -47,8 +47,8 @@ SOFTWARE.
     {                                                                                              \
       auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);       \
       OutputDebugStringA(content.c_str());                                                         \
-      if (options_.outf)                                                                           \
-        fprintf(options_.outf, "%s", content.c_str());                                             \
+      if (options_.outf_)                                                                          \
+        fprintf(options_.outf_, "%s", content.c_str());                                            \
     } while (false)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
@@ -56,13 +56,13 @@ SOFTWARE.
 #  define INET_LOG(format, ...)                                                                    \
     __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),              \
                         ##__VA_ARGS__);                                                            \
-    if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    if (options_.outf_)                                                                            \
+    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #else
 #  define INET_LOG(format, ...)                                                                    \
     fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);                \
-    if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    if (options_.outf_)                                                                            \
+    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
 
 #define YASIO_SOMAXCONN 19
@@ -263,7 +263,7 @@ void io_channel::reset()
   deadline_timer_.cancel();
 }
 
-io_service::io_service() : stopping_(false), thread_started_(false)
+io_service::io_service() : state_(io_service::state::IDLE)
 {
   options_.connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
   options_.send_timeout_      = (std::numeric_limits<int>::max)();
@@ -284,37 +284,42 @@ io_service::io_service() : stopping_(false), thread_started_(false)
   };
 }
 
-io_service::~io_service() { stop_service(); }
+io_service::~io_service()
+{
+  stop_service();
+  if (this->state_ == io_service::state::STOPPED)
+    cleanup();
+}
 
 void io_service::start_service(const io_hostent *channel_eps, int channel_count,
                                io_event_callback_t cb)
 {
-  if (!thread_started_)
+  if (state_ == io_service::state::IDLE)
   {
-    if (channel_count <= 0)
-      return;
-    if (cb)
-      this->on_event_ = std::move(cb);
+    init(channel_eps, channel_count, cb);
 
-    stopping_       = false;
-    thread_started_ = true;
-
-    // Initialize channels
-    for (auto i = 0; i < channel_count; ++i)
+    this->state_ = io_service::state::RUNNING;
+    if (!options_.no_new_thread_)
     {
-      auto &channel_ep = channel_eps[i];
-      (void)new_channel(channel_ep);
+      this->worker_thread_ = std::thread(&io_service::run, this);
+      this->worker_id_     = worker_thread_.get_id();
     }
-
-    worker_thread_ = std::thread(&io_service::service, this);
+    else
+    {
+      this->worker_id_               = std::this_thread::get_id();
+      this->options_.deferred_event_ = false;
+      run();
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
   }
 }
 
 void io_service::stop_service()
 {
-  if (thread_started_)
+  if (this->state_ == io_service::state::RUNNING)
   {
-    stopping_ = true;
+    this->state_ = io_service::state::STOPPING;
 
     for (auto ctx : channels_)
     {
@@ -325,18 +330,61 @@ void io_service::stop_service()
       }
     }
 
-    wakeup();
-    if (this->worker_thread_.joinable())
-      this->worker_thread_.join();
+    this->interrupt();
+    this->wait_service();
+  }
+  else if (this->state_ == io_service::state::STOPPING)
+  {
+    this->wait_service();
+  }
+}
 
-    this->transports_.clear();
+void io_service::wait_service()
+{
+  if (this->worker_thread_.joinable())
+  {
+    if (std::this_thread::get_id() != this->worker_id_)
+    {
+      this->worker_thread_.join();
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
+    else
+      errno = EAGAIN;
+  }
+}
+
+void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb)
+{
+  if (this->state_ != io_service::state::IDLE)
+    return;
+  if (channel_count <= 0)
+    return;
+  if (cb)
+    this->on_event_ = std::move(cb);
+
+  // Initialize channels
+  for (auto i = 0; i < channel_count; ++i)
+  {
+    auto &channel_ep = channel_eps[i];
+    (void)new_channel(channel_ep);
+  }
+
+  this->state_ = io_service::state::INITIALIZED;
+}
+
+void io_service::cleanup()
+{
+  if (this->state_ == io_service::state::STOPPED)
+  {
     this->transport_free_list_.clear();
+    this->transports_.clear();
 
     clear_channels();
 
-    thread_started_ = false;
-
     this->on_event_ = nullptr;
+
+    this->state_ = io_service::state::IDLE;
   }
 }
 
@@ -371,24 +419,24 @@ void io_service::set_option(int option, ...)
       options_.deferred_event_ = !!va_arg(ap, int);
       break;
     case YASIO_OPT_TCP_KEEPALIVE:
-      options_.tcp_keepalive.onoff    = 1;
-      options_.tcp_keepalive.idle     = va_arg(ap, int);
-      options_.tcp_keepalive.interval = va_arg(ap, int);
-      options_.tcp_keepalive.probs    = va_arg(ap, int);
+      options_.tcp_keepalive_.onoff    = 1;
+      options_.tcp_keepalive_.idle     = va_arg(ap, int);
+      options_.tcp_keepalive_.interval = va_arg(ap, int);
+      options_.tcp_keepalive_.probs    = va_arg(ap, int);
       break;
     case YASIO_OPT_RESOLV_FUNCTION:
       this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
     case YASIO_OPT_LOG_FILE:
-      if (options_.outf)
-        fclose(options_.outf);
-      options_.outf = fopen(va_arg(ap, const char *), "wb");
+      if (options_.outf_)
+        fclose(options_.outf_);
+      options_.outf_ = fopen(va_arg(ap, const char *), "wb");
       break;
-    case YASIO_OPT_LFIB_PARAMS:
-      options_.lfib.max_frame_length    = va_arg(ap, int);
-      options_.lfib.length_field_offset = va_arg(ap, int);
-      options_.lfib.length_field_length = va_arg(ap, int);
-      options_.lfib.length_adjustment   = va_arg(ap, int);
+    case YASIO_OPT_LFBFD_PARAMS:
+      options_.lfb_.max_frame_length    = va_arg(ap, int);
+      options_.lfb_.length_field_offset = va_arg(ap, int);
+      options_.lfb_.length_field_length = va_arg(ap, int);
+      options_.lfb_.length_adjustment   = va_arg(ap, int);
       break;
     case YASIO_OPT_IO_EVENT_CALLBACK:
       this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
@@ -423,6 +471,9 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
+    case YASIO_OPT_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
   }
 
   va_end(ap);
@@ -442,6 +493,7 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 
 void io_service::clear_channels()
 {
+  this->active_channels_.clear();
   for (auto iter = channels_.begin(); iter != channels_.end();)
   {
     (*iter)->socket_->close();
@@ -459,7 +511,7 @@ void io_service::dispatch_events(int count)
   if (this->event_queue_.empty())
     return;
 
-  std::lock_guard<std::mutex> lck(this->event_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
   do
   {
     auto event = std::move(this->event_queue_.front());
@@ -468,16 +520,16 @@ void io_service::dispatch_events(int count)
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
-void io_service::service()
+void io_service::run()
 { // The async event-loop
   // Set Thread Name: yasio async socket io
-  _set_thread_name("yasio");
+  _set_thread_name("yasio-evloop");
 
   // Call once at startup
   this->ipsv_state_ = xxsocket::getipsv();
 
   // event loop
-  for (; !stopping_;)
+  for (; this->state_ == io_service::state::RUNNING;)
   {
     // Get the next operation from the queue.
     DWORD bytes_transferred   = 0;
@@ -485,11 +537,11 @@ void io_service::service()
     LPOVERLAPPED lpOverlapped = nullptr;
     ::SetLastError(0);
     auto msec = get_wait_duration(MAX_WAIT_DURATION) / 1000;
-    BOOL ok =
-        ::GetQueuedCompletionStatus(iocp_.handle, &bytes_transferred, &completion_key,
-                                    &lpOverlapped, msec < gqcs_timeout_ ? msec : gqcs_timeout_);
+    BOOL ok   = ::GetQueuedCompletionStatus(
+        iocp_.handle, &bytes_transferred, &completion_key, &lpOverlapped,
+        static_cast<DWORD>(msec < gqcs_timeout_ ? msec : gqcs_timeout_));
 
-    if (stopping_)
+    if (this->state_ != io_service::state::RUNNING)
       break;
 
     if (lpOverlapped)
@@ -559,7 +611,9 @@ void io_service::do_channel_completion(io_channel *ctx)
     }
     else if (ctx->error_ == ERROR_OPERATION_ABORTED)
     {
-      INET_LOG("The tcp server channel: %d has been closed, reason:%s, it will be never accept new client connection!", ctx->index_, this->strerror(ctx->error_));
+      INET_LOG("The tcp server channel: %d has been closed, reason:%s, it will be never accept new "
+               "client connection!",
+               ctx->index_, this->strerror(ctx->error_));
     }
   }
 }
@@ -581,7 +635,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
     }
     else if (n > 0)
     { // still have data to perform at next frame
-      this->wakeup(transport.get());
+      this->interrupt(transport.get());
     }
     else // == 0, all buffer consumed, continue recv
     {
@@ -607,7 +661,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
 
     if (!transport->send_queue_.empty())
     {
-      this->wakeup(transport.get());
+      this->interrupt(transport.get());
     }
 
     transport->send_queue_mtx_.unlock();
@@ -630,7 +684,7 @@ void io_service::start_receive_op(transport_ptr transport)
     last_error = WSAECONNREFUSED;
   if (result != 0 && last_error != WSA_IO_PENDING)
   {
-    this->wakeup(transport.get(), 0, bytes_transferred);
+    this->interrupt(transport.get(), 0, bytes_transferred);
   }
 }
 
@@ -648,7 +702,7 @@ void io_service::close(size_t channel_index)
   {
     ctx->state_ = channel_state::CLOSED;
     ctx->socket_->close();
-    // wakeup(ctx);
+    // interrupt(ctx);
   }
 }
 
@@ -762,7 +816,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    this->wakeup(transport);
+    this->interrupt(transport);
   }
   else
   {
@@ -1006,9 +1060,9 @@ void io_service::handle_connect_succeed(transport_ptr transport)
       connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
 
     // apply tcp keepalive options
-    if (options_.tcp_keepalive.onoff)
-      connection->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                                options_.tcp_keepalive.probs);
+    if (options_.tcp_keepalive_.onoff)
+      connection->set_keepalive(options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval,
+                                options_.tcp_keepalive_.probs);
   }
 
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
@@ -1267,7 +1321,7 @@ void io_service::schedule_timer(deadline_timer *timer)
             });
 
   if (timer == *this->timer_queue_.begin())
-    wakeup();
+    interrupt();
 }
 
 void io_service::cancel_timer(deadline_timer *timer)
@@ -1304,7 +1358,7 @@ void io_service::open_internal(io_channel *ctx)
   this->active_channels_.push_back(ctx);
   active_channels_mtx_.unlock();
 
-  this->wakeup();
+  this->interrupt();
 }
 
 void io_service::perform_timers()
@@ -1422,7 +1476,7 @@ void io_service::start_resolve(io_channel *ctx)
       ctx->resolve_state_ = resolve_state::FAILED;
     }
 
-    this->wakeup();
+    this->interrupt();
   });
   resolve_thread.detach();
 }
@@ -1444,34 +1498,34 @@ bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostn
 
 int io_service::builtin_decode_frame_length(void *ud, int n)
 {
-  if (options_.lfib.length_field_offset >= 0)
+  if (options_.lfb_.length_field_offset >= 0)
   {
-    if (n >= (options_.lfib.length_field_offset + options_.lfib.length_field_length))
+    if (n >= (options_.lfb_.length_field_offset + options_.lfb_.length_field_length))
     {
       int32_t length = -1;
-      switch (options_.lfib.length_field_length)
+      switch (options_.lfb_.length_field_length)
       {
         case 4:
           length = ntohl(*reinterpret_cast<int32_t *>((unsigned char *)ud +
-                                                      options_.lfib.length_field_offset)) +
-                   options_.lfib.length_adjustment;
+                                                      options_.lfb_.length_field_offset)) +
+                   options_.lfb_.length_adjustment;
           break;
         case 3:
           length = 0;
-          memcpy(&length, (unsigned char *)ud + options_.lfib.length_field_offset, 3);
-          length = (ntohl(length) >> 8) + options_.lfib.length_adjustment;
+          memcpy(&length, (unsigned char *)ud + options_.lfb_.length_field_offset, 3);
+          length = (ntohl(length) >> 8) + options_.lfb_.length_adjustment;
           break;
         case 2:
           length = ntohs(*reinterpret_cast<uint16_t *>((unsigned char *)ud +
-                                                       options_.lfib.length_field_offset)) +
-                   options_.lfib.length_adjustment;
+                                                       options_.lfb_.length_field_offset)) +
+                   options_.lfb_.length_adjustment;
           break;
         case 1:
-          length = *((unsigned char *)ud + options_.lfib.length_field_offset) +
-                   options_.lfib.length_adjustment;
+          length = *((unsigned char *)ud + options_.lfb_.length_field_offset) +
+                   options_.lfb_.length_adjustment;
           break;
       }
-      if (length > options_.lfib.max_frame_length)
+      if (length > options_.lfb_.max_frame_length)
         length = -1;
       return length;
     }
@@ -1480,7 +1534,7 @@ int io_service::builtin_decode_frame_length(void *ud, int n)
   return n;
 }
 
-void io_service::wakeup(LPOVERLAPPED lpOverlapped, DWORD completion_key, DWORD bytes_transferred)
+void io_service::interrupt(LPOVERLAPPED lpOverlapped, DWORD completion_key, DWORD bytes_transferred)
 {
   ::PostQueuedCompletionStatus(iocp_.handle, bytes_transferred, completion_key, lpOverlapped);
 }

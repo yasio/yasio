@@ -485,7 +485,7 @@ void io_service::dispatch_events(int count)
   if (this->event_queue_.empty())
     return;
 
-  std::lock_guard<std::mutex> lck(this->event_queue_mtx_);
+  std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
   do
   {
     auto event = std::move(this->event_queue_.front());

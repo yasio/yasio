@@ -493,12 +493,12 @@ private:
   std::thread worker_thread_;
   std::thread::id worker_id_;
 
-  std::mutex event_queue_mtx_;
+  std::recursive_mutex event_queue_mtx_;
   std::deque<event_ptr> event_queue_;
 
   std::vector<io_channel *> channels_;
 
-  std::mutex active_channels_mtx_;
+  std::recursive_mutex active_channels_mtx_;
   std::vector<io_channel *> active_channels_;
 
   std::vector<transport_ptr> transports_;

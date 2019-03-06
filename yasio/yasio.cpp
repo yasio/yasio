@@ -388,24 +388,24 @@ void io_service::set_option(int option, ...)
       options_.deferred_event_ = !!va_arg(ap, int);
       break;
     case YASIO_OPT_TCP_KEEPALIVE:
-      options_.tcp_keepalive_.onoff    = 1;
-      options_.tcp_keepalive_.idle     = va_arg(ap, int);
-      options_.tcp_keepalive_.interval = va_arg(ap, int);
-      options_.tcp_keepalive_.probs    = va_arg(ap, int);
+      options_.tcp_keepalive.onoff    = 1;
+      options_.tcp_keepalive.idle     = va_arg(ap, int);
+      options_.tcp_keepalive.interval = va_arg(ap, int);
+      options_.tcp_keepalive.probs    = va_arg(ap, int);
       break;
     case YASIO_OPT_RESOLV_FUNCTION:
       this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
     case YASIO_OPT_LOG_FILE:
-      if (options_.outf_)
-        fclose(options_.outf_);
-      options_.outf_ = fopen(va_arg(ap, const char *), "wb");
+      if (options_.outf)
+        fclose(options_.outf);
+      options_.outf = fopen(va_arg(ap, const char *), "wb");
       break;
-    case YASIO_OPT_LFBFD_PARAMS:
-      options_.lfb_.max_frame_length    = va_arg(ap, int);
-      options_.lfb_.length_field_offset = va_arg(ap, int);
-      options_.lfb_.length_field_length = va_arg(ap, int);
-      options_.lfb_.length_adjustment   = va_arg(ap, int);
+    case YASIO_OPT_LFIB_PARAMS:
+      options_.lfib.max_frame_length    = va_arg(ap, int);
+      options_.lfib.length_field_offset = va_arg(ap, int);
+      options_.lfib.length_field_length = va_arg(ap, int);
+      options_.lfib.length_adjustment   = va_arg(ap, int);
       break;
     case YASIO_OPT_IO_EVENT_CALLBACK:
       this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
@@ -1105,9 +1105,9 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   if (ctx->type_ & CHANNEL_TCP)
   {
     // apply tcp keepalive options
-    if (options_.tcp_keepalive_.onoff)
-      connection->set_keepalive(options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval,
-                                options_.tcp_keepalive_.probs);
+    if (options_.tcp_keepalive.onoff)
+      connection->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
+                                options_.tcp_keepalive.probs);
   }
 
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
@@ -1590,34 +1590,34 @@ bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostn
 
 int io_service::builtin_decode_frame_length(void *ud, int n)
 {
-  if (options_.lfb_.length_field_offset >= 0)
+  if (options_.lfib.length_field_offset >= 0)
   {
-    if (n >= (options_.lfb_.length_field_offset + options_.lfb_.length_field_length))
+    if (n >= (options_.lfib.length_field_offset + options_.lfib.length_field_length))
     {
       int32_t length = -1;
-      switch (options_.lfb_.length_field_length)
+      switch (options_.lfib.length_field_length)
       {
         case 4:
           length = ntohl(*reinterpret_cast<int32_t *>((unsigned char *)ud +
-                                                      options_.lfb_.length_field_offset)) +
-                   options_.lfb_.length_adjustment;
+                                                      options_.lfib.length_field_offset)) +
+                   options_.lfib.length_adjustment;
           break;
         case 3:
           length = 0;
-          memcpy(&length, (unsigned char *)ud + options_.lfb_.length_field_offset, 3);
-          length = (ntohl(length) >> 8) + options_.lfb_.length_adjustment;
+          memcpy(&length, (unsigned char *)ud + options_.lfib.length_field_offset, 3);
+          length = (ntohl(length) >> 8) + options_.lfib.length_adjustment;
           break;
         case 2:
           length = ntohs(*reinterpret_cast<uint16_t *>((unsigned char *)ud +
-                                                       options_.lfb_.length_field_offset)) +
-                   options_.lfb_.length_adjustment;
+                                                       options_.lfib.length_field_offset)) +
+                   options_.lfib.length_adjustment;
           break;
         case 1:
-          length = *((unsigned char *)ud + options_.lfb_.length_field_offset) +
-                   options_.lfb_.length_adjustment;
+          length = *((unsigned char *)ud + options_.lfib.length_field_offset) +
+                   options_.lfib.length_adjustment;
           break;
       }
-      if (length > options_.lfb_.max_frame_length)
+      if (length > options_.lfib.max_frame_length)
         length = -1;
       return length;
     }

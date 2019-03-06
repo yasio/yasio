@@ -386,6 +386,7 @@ public:
              YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
              YASIO_OPT_CHANNEL_REMOTE_HOST index:int, host:const char*
              YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
+             YASIO_OPT_NO_NEW_THREAD value:int
   */
   void set_option(int option, ...);
 

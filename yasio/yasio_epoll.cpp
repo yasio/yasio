@@ -341,6 +341,7 @@ void io_service::init(const io_hostent *channel_eps, int channel_count, io_event
   ev.events      = EPOLLIN | EPOLLERR | EPOLLET;
   ev.data.ptr    = &interrupter_;
   epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, interrupter_.read_descriptor(), &ev);
+  interrupter_.interrupt();
 
   // Initialize channels
   for (auto i = 0; i < channel_count; ++i)

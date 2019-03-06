@@ -959,7 +959,7 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx, const epoll_
                          &len) >= 0 &&
             error == 0)
         {
-          unregister_descriptor(socket->native_handle(), YASIO_EPOLLOUT, ctx);
+          unregister_descriptor(ctx->socket_->native_handle(), YASIO_EPOLLOUT, ctx);
           handle_connect_succeed(ctx, ctx->socket_);
           ctx->deadline_timer_.cancel();
         }
@@ -1101,10 +1101,10 @@ void io_service::handle_connect_succeed(transport_ptr transport)
     register_descriptor(connection->native_handle(), YASIO_EPOLLIN, transport.get());
   }
 
-  if ((ctx->type_ & CHANNEL_TCP) && options_.tcp_keepalive.onoff)
+  if ((ctx->type_ & CHANNEL_TCP) && options_.tcp_keepalive_.onoff)
   { // apply tcp keepalive options
-    socket->set_keepalive(options_.tcp_keepalive.idle, options_.tcp_keepalive.interval,
-                          options_.tcp_keepalive.probs);
+    connection->set_keepalive(options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval,
+                          options_.tcp_keepalive_.probs);
   }
 
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
@@ -1128,7 +1128,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
            ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-transport_ptr io_service::allocate_transport(io_channel *, std::shared_ptr<xxsocket>)
+transport_ptr io_service::allocate_transport(io_channel * ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport;
   if (!transport_free_list_.empty())

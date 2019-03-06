@@ -120,13 +120,13 @@ enum
   YASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   YASIO_OPT_RESOLV_FUNCTION,
   YASIO_OPT_LOG_FILE,
-  YASIO_OPT_LFBFD_PARAMS, // length field based frame decode params
+  YASIO_OPT_LFIB_PARAMS,
   YASIO_OPT_IO_EVENT_CALLBACK,
   YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
   YASIO_OPT_CHANNEL_REMOTE_HOST,
   YASIO_OPT_CHANNEL_REMOTE_PORT,
-  YASIO_OPT_NO_NEW_THREAD, // Don't start a new thread to run event loop
+  YASIO_OPT_NO_NEW_THREAD, //
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -380,13 +380,12 @@ public:
              YASIO_OPT_DEFER_EVENT       defer:int
              YASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              YASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             YASIO_OPT_LFBFD_PARAMS max_frame_length:int, length_field_offst:int,
+             YASIO_OPT_LFIB_PARAMS max_frame_length:int, length_field_offst:int,
      length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
              YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
              YASIO_OPT_CHANNEL_REMOTE_HOST index:int, host:const char*
              YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
-             YASIO_OPT_NO_NEW_THREAD value:int
   */
   void set_option(int option, ...);
 
@@ -448,7 +447,7 @@ private:
   void register_descriptor(const socket_native_type fd, int flags);
   void unregister_descriptor(const socket_native_type fd, int flags);
 
-  // The major non-blocking event-loop
+  // The major async event-loop
   void run(void);
 
   bool do_write(transport_ptr);
@@ -545,7 +544,7 @@ private:
       int idle     = 7200;
       int interval = 75;
       int probs    = 10;
-    } tcp_keepalive_;
+    } tcp_keepalive;
 
     struct
     {
@@ -553,8 +552,8 @@ private:
       int length_field_length = 4; // 1,2,3,4
       int length_adjustment   = 0;
       int max_frame_length    = SZ(10, M);
-    } lfb_;
-    FILE *outf_          = nullptr;
+    } lfib;
+    FILE *outf          = nullptr;
     bool no_new_thread_ = false;
   } options_;
 

@@ -366,6 +366,8 @@ public:
   void stop_service();
   void wait_service();
 
+  bool is_running() const { return this->state_ == io_service::state::RUNNING; }
+
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.

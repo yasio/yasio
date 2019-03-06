@@ -47,8 +47,8 @@ SOFTWARE.
     {                                                                                              \
       auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);       \
       OutputDebugStringA(content.c_str());                                                         \
-      if (options_.outf)                                                                           \
-        fprintf(options_.outf, "%s", content.c_str());                                             \
+      if (options_.outf_)                                                                          \
+        fprintf(options_.outf_, "%s", content.c_str());                                            \
     } while (false)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
@@ -56,13 +56,13 @@ SOFTWARE.
 #  define INET_LOG(format, ...)                                                                    \
     __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),              \
                         ##__VA_ARGS__);                                                            \
-    if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    if (options_.outf_)                                                                            \
+    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #else
 #  define INET_LOG(format, ...)                                                                    \
     fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);                \
-    if (options_.outf)                                                                             \
-    fprintf(options_.outf, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
+    if (options_.outf_)                                                                            \
+    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
 #endif
 
 #define YASIO_SOMAXCONN 19
@@ -302,22 +302,27 @@ void io_service::stop_service()
     }
 
     this->interrupt();
-
-    if (this->worker_thread_.joinable())
-      this->worker_thread_.join();
-
-    if (!options_.no_new_thread_)
-    {
-      this->state_ = io_service::state::STOPPED;
-      cleanup();
-    }
+    this->wait_service();
+  }
+  else if (this->state_ == io_service::state::STOPPING)
+  {
+    this->wait_service();
   }
 }
 
 void io_service::wait_service()
 {
   if (this->worker_thread_.joinable())
-    this->worker_thread_.join();
+  {
+    if (std::this_thread::get_id() != this->worker_id_)
+    {
+      this->worker_thread_.join();
+      this->state_ = io_service::state::STOPPED;
+      cleanup();
+    }
+    else
+      errno = EAGAIN;
+  }
 }
 
 void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb)
@@ -462,6 +467,7 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 
 void io_service::clear_channels()
 {
+  this->active_channels_.clear();
   for (auto iter = channels_.begin(); iter != channels_.end();)
   {
     (*iter)->socket_->close();
@@ -705,9 +711,11 @@ void io_service::open(size_t channel_index, int channel_type)
     /*
     Because Bind() the client socket to the socket address of the listening socket.  On Linux this
     essentially passes the responsibility for receiving data for the client session from the
-    well-known listening socket, to the newly allocated client socket.  It is important to note that
-    this behavior is not the same on other platforms, like Windows (unfortunately), detail see:
-    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux */
+    well-known listening socket, to the newly allocated client socket.  It is important to note
+    that this behavior is not the same on other platforms, like Windows (unfortunately), detail
+    see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+  */
     INET_LOG(
         "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
         "CHANNEL_UDP_CLIENT to communicate with peer!",

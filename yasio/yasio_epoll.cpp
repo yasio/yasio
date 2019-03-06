@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -341,6 +341,10 @@ void io_service::init(const io_hostent *channel_eps, int channel_count, io_event
   ev.events      = EPOLLIN | EPOLLERR | EPOLLET;
   ev.data.ptr    = &interrupter_;
   epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, interrupter_.read_descriptor(), &ev);
+
+  /* !!!Important: Make the descriptor in a ready-to-read state and relying on edge-triggered
+   * notifications to make it so that we only get woken up when the descriptor's epoll registration
+   * is updated. */
   interrupter_.interrupt();
 
   // Initialize channels
@@ -1105,7 +1109,7 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   if ((ctx->type_ & CHANNEL_TCP) && options_.tcp_keepalive_.onoff)
   { // apply tcp keepalive options
     connection->set_keepalive(options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval,
-                          options_.tcp_keepalive_.probs);
+                              options_.tcp_keepalive_.probs);
   }
 
   INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
@@ -1129,7 +1133,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
            ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-transport_ptr io_service::allocate_transport(io_channel * ctx, std::shared_ptr<xxsocket> socket)
+transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport;
   if (!transport_free_list_.empty())

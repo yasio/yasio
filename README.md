@@ -75,7 +75,7 @@ showcase:
   
   
 ## Quick test at linux platform with gcc compiler:  
-```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibinarystream.cpp yasio/obinarystream.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./yasio -o cpptest && ./cpptest```  
+```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibinarystream.cpp yasio/obinarystream.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./ -o cpptest && ./cpptest```  
   
 ## pitfall: 
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  

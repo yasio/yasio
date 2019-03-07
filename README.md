@@ -68,7 +68,7 @@ Add yasio to your application Android.mk files, such as:
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/build/android-jsb)
-  
+```
 #### CocosCreator jsb2.0 integration:
 1. Copy all sources to your Classes\yasio and compile obinarystream.cpp, ibinarystream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb20.cpp with your native project  
 2. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio_jsb20.h``` firstly. 

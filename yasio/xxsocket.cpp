@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -1452,17 +1452,8 @@ void xxsocket::close(void)
   }
 }
 
-#if defined(_WINSTORE)
-#  undef _naked_mark
-#  define _naked_mark
-#endif
-void _naked_mark xxsocket::init_ws32_lib(void)
+void xxsocket::init_ws32_lib(void)
 {
-#if defined(_WIN32) && !defined(_WIN64) && !defined(_WINSTORE)
-  _asm ret;
-#else
-  return;
-#endif
 }
 
 int xxsocket::get_last_errno(void)

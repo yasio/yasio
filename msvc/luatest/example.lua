@@ -1,4 +1,4 @@
--- yasio 3.9.7 demo
+-- yasio 3.9.8 demo
 require 'protocol_base'
 require 'protocol_enc'
 require 'protocol_dec'

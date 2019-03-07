@@ -39,12 +39,12 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 #include <functional>
-#include "endian_portable.h"
-#include "object_pool.h"
-#include "select_interrupter.hpp"
-#include "singleton.h"
-#include "xxsocket.h"
-#include "string_view.hpp"
+#include "yasio/detail/endian_portable.h"
+#include "yasio/detail/object_pool.h"
+#include "yasio/detail/select_interrupter.hpp"
+#include "yasio/detail/singleton.h"
+#include "yasio/detail/string_view.hpp"
+#include "yasio/xxsocket.h"
 
 #define _USING_OBJECT_POOL 1
 

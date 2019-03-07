@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -28,11 +28,11 @@ SOFTWARE.
 #ifndef _OBINARYSTREAM_H_
 #define _OBINARYSTREAM_H_
 #include <string>
-#include "string_view.hpp"
+#include "yasio/detail/string_view.hpp"
 #include <sstream>
 #include <vector>
 #include <stack>
-#include "endian_portable.h"
+#include "yasio/detail/endian_portable.h"
 class obinarystream
 {
 public:
@@ -76,7 +76,7 @@ public:
   size_t write_v(const void *v, int size);
   size_t write_v16(const void *v, int size);
   size_t write_v8(const void *v, int size);
- 
+
   size_t write_bytes(stdport::string_view);
   size_t write_bytes(const void *v, int vl);
 

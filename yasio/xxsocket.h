@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -39,7 +39,6 @@ SOFTWARE.
 #include <sstream>
 #include <vector>
 #include <chrono>
-#include "politedef.h"
 
 #if defined(_MSC_VER)
 #  pragma warning(push)

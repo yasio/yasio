@@ -1,17 +1,20 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define YASIO_IOCP 1
+
 #if defined(YASIO_IOCP)
-#include "../../yasio/yasio_iocp.h"
+#include "yasio/experimental/yasio_iocp.h"
 #elif defined(YASIO_POLL)
-#include "../../yasio/yasio_poll.h"
+#include "yasio/experimental/yasio_poll.h"
 #elif defined(YASIO_EPOLL)
-#include "../../yasio/yasio_epoll.h"
+#include "yasio/experimental/yasio_epoll.h"
 #else
-#include "../../yasio/yasio.h"
+#include "yasio/yasio.h"
 #endif
-#include "../../yasio/ibinarystream.h"
-#include "../../yasio/obinarystream.h"
+#include "yasio/ibinarystream.h"
+#include "yasio/obinarystream.h"
 
 #if defined(_WIN32)
 #  include <Shlwapi.h>

@@ -267,6 +267,9 @@ private:
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
+
+public:
+  void *ud_ = nullptr;
 };
 
 typedef std::shared_ptr<io_transport> transport_ptr;

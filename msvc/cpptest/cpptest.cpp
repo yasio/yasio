@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define YASIO_IOCP 1
-
 #if defined(YASIO_IOCP)
 #include "yasio/experimental/yasio_iocp.h"
 #elif defined(YASIO_POLL)

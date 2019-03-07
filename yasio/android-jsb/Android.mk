@@ -17,7 +17,7 @@ LOCAL_SRC_FILES := ../xxsocket.cpp \
     ../yasio.cpp \
     ../ibinarystream.cpp \
     ../obinarystream.cpp \
-    ../jsb/yasio_jsb.cpp
+    ../impl/yasio_jsb.cpp
 
 LOCAL_STATIC_LIBRARIES := cocos2dx_internal_static
 

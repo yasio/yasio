@@ -26,8 +26,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "yasio_cclua.h"
-#include "lyasio.h"
+#include "yasio/yasio_cclua.h"
+#include "yasio/lyasio.h"
 #include "yasio/detail/object_pool.h"
 #include "yasio/detail/ref_ptr.h"
 #include "yasio/detail/string_view.hpp"
@@ -121,7 +121,7 @@ void kill(TIMER_ID timerId)
 
 #if _HAS_CXX17_FULL_FEATURES
 
-#  include "sol.hpp"
+#  include "yasio/detail/sol.hpp"
 
 extern "C" {
 struct lua_State;
@@ -139,7 +139,7 @@ YASIO_API int luaopen_yasio_cclua(lua_State *L)
 
 #else
 
-#  include "kaguya.hpp"
+#  include "yasio/detail/kaguya.hpp"
 
 extern "C" {
 struct lua_State;

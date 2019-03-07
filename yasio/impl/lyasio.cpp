@@ -28,7 +28,7 @@ SOFTWARE.
 #include "yasio/ibinarystream.h"
 #include "yasio/obinarystream.h"
 #include "yasio/yasio.h"
-#include "lyasio.h"
+#include "yasio/lyasio.h"
 
 namespace lyasio
 {

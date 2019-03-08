@@ -48,6 +48,10 @@ SOFTWARE.
 
 #define _USING_OBJECT_POOL 1
 
+#if !defined(MICROSECONDS_PER_SECOND)
+#  define MICROSECONDS_PER_SECOND 1000000LL
+#endif
+
 #if !defined(_ARRAYSIZE)
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
@@ -534,16 +538,17 @@ private:
   options_.max_pdu_size: default value=10M
   options_.log_file:
   */
-  struct
+  struct __unnamed_options
   {
-    highp_time_t connect_timeout_;
-    highp_time_t send_timeout_;
-    highp_time_t reconnect_timeout_;
-    highp_time_t dns_cache_timeout_;
+    highp_time_t connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
+    highp_time_t send_timeout_      = (std::numeric_limits<int>::max)();
+    highp_time_t reconnect_timeout_ = -1;
+    // Default dns cache time: 10 minutes
+    highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
 
     bool deferred_event_ = true;
     // tcp keepalive settings
-    struct
+    struct __unnamed01
     {
       int onoff    = 0;
       int idle     = 7200;
@@ -551,7 +556,7 @@ private:
       int probs    = 10;
     } tcp_keepalive_;
 
-    struct
+    struct __unnamed02
     {
       int length_field_offset = 0;
       int length_field_length = 4; // 1,2,3,4
@@ -568,9 +573,10 @@ private:
   // The resolve function
   resolv_fn_t xresolv_;
 
-  int ipsv_state_; // local network state
-};                 // io_service
-};                 // namespace inet
-};                 /* namespace purelib */
+  // The ip stack version supported by local host
+  int ipsv_;
+}; // io_service
+}; // namespace inet
+}; /* namespace purelib */
 
 #define myasio purelib::gc::singleton<purelib::inet::io_service>::instance()

@@ -35,10 +35,6 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string>
 
-#if !defined(MICROSECONDS_PER_SECOND)
-#  define MICROSECONDS_PER_SECOND 1000000LL
-#endif
-
 #define _YASIO_VERBOS_LOG 0
 
 #if defined(_WIN32)
@@ -236,11 +232,6 @@ void io_channel::reset()
 
 io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
-  options_.connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
-  options_.send_timeout_      = (std::numeric_limits<int>::max)();
-  options_.reconnect_timeout_ = -1;
-  // Default: 10 minutes.
-  options_.dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
@@ -248,7 +239,7 @@ io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
   maxfdp_           = 0;
   outstanding_work_ = 0;
 
-  ipsv_state_ = 0;
+  ipsv_ = 0;
 
   this->xdec_len_ = [](io_service *service, void *ptr, int len) {
     return service->builtin_decode_frame_length(ptr, len);
@@ -511,7 +502,7 @@ void io_service::run()
   _set_thread_name("yasio-evloop");
 
   // Call once at startup
-  this->ipsv_state_ = xxsocket::getipsv();
+  this->ipsv_ = xxsocket::getipsv();
 
   // event loop
   fd_set fds_array[3];
@@ -861,8 +852,8 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   if (ctx->state_ != channel_state::REQUEST_OPEN)
     return true;
 
-  if (this->ipsv_state_ == 0)
-    this->ipsv_state_ = xxsocket::getipsv();
+  if (this->ipsv_ == 0)
+    this->ipsv_ = xxsocket::getipsv();
 
   auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
   if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY &&
@@ -932,7 +923,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
     else // CHANNEL_UDP
     {
       int ret = -1;
-      if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+      if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
       {
         ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
@@ -1005,9 +996,9 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
   close_internal(ctx);
 
-  ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+  ip::endpoint ep(ipsv_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 
-  if (ctx->socket_->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
+  if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 #if !defined(_WIN32)
@@ -1077,7 +1068,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
 
             // make a transport local --> peer udp session, just like tcp accept
             std::shared_ptr<xxsocket> client_sock(new xxsocket());
-            if (client_sock->open(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+            if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
             {
               client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 #if !defined(_WIN32)
@@ -1598,11 +1589,11 @@ bool io_service::start_resolve(io_channel *ctx)
 bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
                          unsigned short port)
 {
-  if (this->ipsv_state_ & ipsv_ipv4)
+  if (this->ipsv_ & ipsv_ipv4)
   {
     return xxsocket::resolve_v4(endpoints, hostname, port);
   }
-  else if (this->ipsv_state_ & ipsv_ipv6)
+  else if (this->ipsv_ & ipsv_ipv6)
   { // localhost is IPV6 ONLY network
     return xxsocket::resolve_v6(endpoints, hostname, port) ||
            xxsocket::resolve_v4to6(endpoints, hostname, port);

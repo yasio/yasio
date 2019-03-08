@@ -478,8 +478,6 @@ void io_service::clear_channels()
   }
 }
 
-size_t io_service::get_event_count(void) const { return this->event_queue_.size(); }
-
 void io_service::dispatch_events(int count)
 {
   assert(this->on_event_ != nullptr);
@@ -702,7 +700,7 @@ bool io_service::is_open(size_t channel_index) const
   return ctx->state_ == channel_state::OPENED;
 }
 
-void io_service::open(transport_ptr transport)
+void io_service::reopen(transport_ptr transport)
 {
   auto ctx = transport->ctx_;
   if (ctx->type_ & CHANNEL_CLIENT)

@@ -1,8 +1,8 @@
 //
-// Copyright (c) 2014-2018 HALX99 - All Rights Reserved
+// Copyright (c) 2014-2019 HALX99 - All Rights Reserved
 //
-#ifndef _SINGLETON_H_
-#define _SINGLETON_H_
+#ifndef _YASIO_SINGLETON_H_
+#define _YASIO_SINGLETON_H_
 #include <new>
 #include <memory>
 #include <functional>
@@ -27,7 +27,7 @@ namespace purelib {
             typedef _Ty* pointer;
         public:
             template<typename ..._Args>
-            static pointer instance(_Args...args)
+            static pointer instance(_Args&&...args)
             {
                 if (nullptr == _Myt::__single__.get())
                 {
@@ -71,7 +71,7 @@ namespace purelib {
             typedef _Ty* pointer;
         public:
             template<typename ..._Args>
-            static pointer instance(_Args...args)
+            static pointer instance(_Args&&...args)
             {
                 if (nullptr == _Myt::__single__.get())
                 {
@@ -102,19 +102,19 @@ namespace purelib {
         private:
 
             template<typename _Fty, typename..._Args>
-            static void delay_init(const _Fty& memf, _Args...args)
+            static void delay_init(_Fty&& memf, _Args&&...args)
             { // init use specific member func with more than 1 args
                 std::mem_fn(memf)(_Myt::__single__.get(), args...);
             }
 
             template<typename _Fty, typename _Arg>
-            static void delay_init(const _Fty& memf, const _Arg& arg)
+            static void delay_init(_Fty&& memf, _Arg&& arg)
             { // init use specific member func with 1 arg
                 std::mem_fn(memf)(_Myt::__single__.get(), arg);
             }
 
             template<typename _Fty>
-            static void delay_init(const _Fty& memf)
+            static void delay_init(_Fty&& memf)
             { // init use specific member func without arg
                 std::mem_fn(memf)(_Myt::__single__.get());
             }
@@ -157,5 +157,5 @@ namespace purelib {
 /*
 * Copyright (c) 2012-2019 by HALX99, ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
-V3.0:2011 */
+V3.1:2019 */
 

@@ -489,7 +489,7 @@ private:
   void close_internal(io_channel*);
   
   // ensure event fd unregistered & closed.
-  bool do_close_internal(io_base *ctx);
+  bool do_close(io_base *ctx);
 
   // Update resolve state for new endpoint set
   void update_resolve_state(io_channel *ctx);

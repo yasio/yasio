@@ -683,13 +683,14 @@ void io_service::close(size_t channel_index)
 
 void io_service::close(transport_ptr transport)
 {
-  if (transport->is_open())
+  if (transport->is_open() && transport->shutdown_mask_ == 0)
   {
     INET_LOG("close the transport: %s --> %s",
              transport->socket_->local_endpoint().to_string().c_str(),
              transport->socket_->peer_endpoint().to_string().c_str());
     transport->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
-    transport->socket_->shutdown();
+    if(transport->ctx_->type_ & CHANNEL_TCP)
+      transport->socket_->shutdown();
     this->interrupt();
   }
 }

@@ -648,7 +648,7 @@ void io_service::perform_channels(fd_set *fds_array)
             do_nonblocking_accept_completion(ctx, fds_array);
             break;
           case channel_state::CLOSED:
-            close_internal(ctx);
+            do_close(ctx);
             INET_LOG("The channel: %d is closed!", ctx->index_);
             finish = true;
             break;
@@ -751,7 +751,7 @@ void io_service::handle_close(transport_ptr transport)
            transport->peer_endpoint().to_string().c_str(), transport->error_,
            io_service::strerror(transport->error_));
 
-  close_internal(transport.get());
+  do_close(transport.get());
 
   auto ctx = transport->ctx_;
   ctx->shutdown_mask_ &= YASIO_SHUTDOWN_TRANSPORT;
@@ -870,7 +870,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   {
     if (ctx->socket_->is_open())
     { // cleanup descriptor if possible
-      close_internal(ctx);
+      do_close(ctx);
     }
 
     ctx->state_ = channel_state::OPENING;
@@ -996,7 +996,7 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
-  close_internal(ctx);
+  do_close(ctx);
 
   ip::endpoint ep(ipsv_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 
@@ -1098,7 +1098,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       else
       {
         INET_LOG("The channel:%d has socket error:%d, will be closed!", ctx->index_, error);
-        close_internal(ctx);
+        do_close(ctx);
       }
     }
   }
@@ -1143,7 +1143,7 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
 
 void io_service::handle_connect_failed(io_channel *ctx)
 {
-  close_internal(ctx);
+  do_close(ctx);
 
   ctx->state_ = channel_state::CLOSED;
 
@@ -1521,7 +1521,7 @@ long long io_service::get_wait_duration(long long usec)
     return usec;
 }
 
-bool io_service::close_internal(io_base *ctx)
+bool io_service::do_close(io_base *ctx)
 {
   ctx->shutdown_mask_ = 0;
   if (ctx->socket_->is_open())

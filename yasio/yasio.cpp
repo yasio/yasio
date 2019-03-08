@@ -684,7 +684,7 @@ void io_service::close(transport_ptr transport)
     INET_LOG("close the transport: %s --> %s",
              transport->socket_->local_endpoint().to_string().c_str(),
              transport->socket_->peer_endpoint().to_string().c_str());
-    transport->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
+    transport->shutdown_mask_ |= YASIO_SD_TRANSPORT;
     if(transport->ctx_->type_ & CHANNEL_TCP)
       transport->socket_->shutdown();
     this->interrupt();
@@ -748,11 +748,10 @@ void io_service::handle_close(transport_ptr transport)
            transport->local_endpoint().to_string().c_str(),
            transport->peer_endpoint().to_string().c_str(), transport->error_,
            io_service::strerror(transport->error_));
-
-  do_close(transport.get());
-
+  
   auto ctx = transport->ctx_;
-  ctx->shutdown_mask_ &= YASIO_SHUTDOWN_TRANSPORT;
+  ctx->shutdown_mask_ &= YASIO_SD_TRANSPORT;
+  do_close(transport.get());
 
   // @Notify connection lost
   this->handle_event(event_ptr(
@@ -1414,12 +1413,12 @@ void io_service::close_internal(io_channel* ctx)
   {
     if (ctx->type_ & CHANNEL_CLIENT)
     {
-      ctx->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
+      ctx->shutdown_mask_ |= YASIO_SD_TRANSPORT;
       if (ctx->type_ & CHANNEL_TCP)
         ctx->socket_->shutdown();
     }
     else
-      ctx->shutdown_mask_ |= YASIO_SHUTDOWN_CHANNEL;
+      ctx->shutdown_mask_ |= YASIO_SD_CHANNEL;
   }
 }
     

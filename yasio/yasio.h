@@ -486,6 +486,8 @@ private:
 
   // int        set_errorno(channel_context* ctx, int error);
 
+  void shutdown_internal(io_channel*);
+  
   // ensure event fd unregistered & closed.
   bool close_internal(io_base *ctx);
 

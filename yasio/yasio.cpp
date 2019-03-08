@@ -703,13 +703,11 @@ bool io_service::is_open(size_t channel_index) const
   return ctx->state_ == channel_state::OPENED;
 }
 
-void io_service::reopen(transport_ptr transport)
+void io_service::open(transport_ptr transport)
 {
-  if (transport->is_open())
-  {
-    transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
-  }
-  open_internal(transport->ctx_);
+  auto ctx = transport->ctx_;
+  if (ctx->type_ & CHANNEL_CLIENT)
+    open_internal(transport->ctx_);
 }
 
 void io_service::open(size_t channel_index, int channel_type)

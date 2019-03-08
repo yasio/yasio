@@ -138,8 +138,8 @@ enum
 
 enum
 {
-  YASIO_SHUTDOWN_CHANNEL   = 1,
-  YASIO_SHUTDOWN_TRANSPORT = 2,
+  YASIO_SD_CHANNEL   = 1,
+  YASIO_SD_TRANSPORT = 2,
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;

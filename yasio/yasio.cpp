@@ -579,6 +579,14 @@ void io_service::perform_transports(fd_set *fds_array)
         continue;
       }
     }
+    else if ((transport->shutdown_mask_ | transport->ctx_->shutdown_mask_) &
+             YASIO_SHUTDOWN_TRANSPORT)
+    {
+      transport->update_error(ESHUTDOWN);
+      handle_close(transport);
+      iter = transports_.erase(iter);
+      continue;
+    }
 
     // perform write operations
     if (!transport->send_queue_.empty())
@@ -680,7 +688,7 @@ void io_service::close(transport_ptr transport)
     INET_LOG("close the transport: %s --> %s",
              transport->socket_->local_endpoint().to_string().c_str(),
              transport->socket_->peer_endpoint().to_string().c_str());
-    transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
+    transport->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
     transport->socket_->shutdown();
     this->interrupt();
   }
@@ -749,6 +757,7 @@ void io_service::handle_close(transport_ptr transport)
   close_internal(transport.get());
 
   auto ctx = transport->ctx_;
+  ctx->shutdown_mask_ &= YASIO_SHUTDOWN_TRANSPORT;
 
   // @Notify connection lost
   this->handle_event(event_ptr(
@@ -862,16 +871,9 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
 
   if (ctx->resolve_state_ == resolve_state::READY)
   {
-    if (!ctx->socket_->is_open())
+    if (ctx->socket_->is_open())
     { // cleanup descriptor if possible
-      INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
-               ctx->port_);
-    }
-    else
-    {
       close_internal(ctx);
-      INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
-               ctx->port_);
     }
 
     ctx->state_ = channel_state::OPENING;
@@ -879,6 +881,9 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
     auto &ep = ctx->endpoints_[0];
     if (ctx->type_ & CHANNEL_TCP)
     {
+      INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
+               ctx->port_);
+
       int ret = -1;
       if (ctx->socket_->open(ep.af()))
       {
@@ -1401,7 +1406,14 @@ void io_service::open_internal(io_channel *ctx)
   ctx->state_ = channel_state::REQUEST_OPEN;
   if (ctx->socket_->is_open())
   {
-    ctx->socket_->shutdown();
+    if (ctx->type_ & CHANNEL_CLIENT)
+    {
+      ctx->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
+      if (ctx->type_ & CHANNEL_TCP)
+        ctx->socket_->shutdown();
+    }
+    else
+      ctx->shutdown_mask_ |= YASIO_SHUTDOWN_CHANNEL;
   }
 
   active_channels_mtx_.lock();
@@ -1509,6 +1521,7 @@ long long io_service::get_wait_duration(long long usec)
 
 bool io_service::close_internal(io_base *ctx)
 {
+  ctx->shutdown_mask_ = 0;
   if (ctx->socket_->is_open())
   {
     unregister_descriptor(ctx->socket_->native_handle(), socket_event_read | socket_event_write);

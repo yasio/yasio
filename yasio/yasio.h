@@ -63,7 +63,7 @@ namespace purelib
 
 namespace inet
 {
-enum channel_type
+enum channel_type : u_short
 {
   CHANNEL_CLIENT     = 1,
   CHANNEL_SERVER     = 1 << 1,
@@ -75,7 +75,7 @@ enum channel_type
   CHANNEL_UDP_SERVER = CHANNEL_UDP | CHANNEL_SERVER,
 };
 
-enum class channel_state
+enum class channel_state : u_short
 {
   CLOSED,
   REQUEST_OPEN,
@@ -136,6 +136,12 @@ enum
   YASIO_OPT_NO_NEW_THREAD,           // Don't start a new thread to run event loop
 };
 
+enum
+{
+  YASIO_SHUTDOWN_CHANNEL   = 1,
+  YASIO_SHUTDOWN_TRANSPORT = 2,
+};
+
 typedef std::chrono::high_resolution_clock highp_clock_t;
 typedef long long highp_time_t;
 
@@ -145,7 +151,7 @@ typedef std::function<bool(std::vector<ip::endpoint> &endpoints, const char *hos
                            unsigned short port)>
     resolv_fn_t;
 
-static const int socket_recv_buffer_size = 65536; // 64K
+static const int socket_recv_buffer_size = 65535; // 64K
 
 class a_pdu; // application layer protocol data unit.
 
@@ -212,25 +218,27 @@ struct io_transport;
 
 struct io_base
 {
-  std::shared_ptr<xxsocket> socket_;
-  int error_ = 0; // socket error(>= -1), application error(< -1)
   int update_error() { return (error_ = xxsocket::get_last_errno()); }
   void update_error(int error) { error_ = error; }
+
+  std::shared_ptr<xxsocket> socket_;
+  int error_             = 0; // socket error(>= -1), application error(< -1)
+  u_short shutdown_mask_ = 0;
 };
 
 struct io_channel : public io_base
 {
   io_channel(io_service &service);
 
+  u_short type_ = 0;
   channel_state state_; // 0: CLOSED, 1: OPENING, 2: OPENED
-  int type_ = 0;
 
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
-
-  std::string host_;
   u_short port_;
   bool dns_queries_needed_;
+
+  std::string host_;
   highp_time_t dns_queries_timestamp_ = 0;
 
   std::vector<ip::endpoint> endpoints_;
@@ -264,7 +272,6 @@ public:
 
 private:
   io_transport(io_channel *ctx) : ctx_(ctx) {}
-  io_channel *ctx_;
 
   char buffer_[socket_recv_buffer_size]; // recv buffer
   int offset_ = 0;                       // recv buffer offset
@@ -274,6 +281,8 @@ private:
 
   std::recursive_mutex send_queue_mtx_;
   std::deque<a_pdu_ptr> send_queue_;
+
+  io_channel *ctx_;
 
 public:
   void *ud_ = nullptr;

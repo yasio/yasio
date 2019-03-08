@@ -91,7 +91,7 @@
       <PreprocessorDefinitions>_DEBUG;LYASIO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);YASIO_BUILD_AS_DLL=1;YASIO_LIB=1</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;LYASIO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);YASIO_BUILD_AS_DLL=1;YASIO_LIB=1</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,7 +127,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;LYASIO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);YASIO_BUILD_AS_DLL=1;YASIO_LIB=1</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -147,7 +147,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;LYASIO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);YASIO_BUILD_AS_DLL=1;YASIO_LIB=1</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
@@ -159,13 +159,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\yasio\lyasio.cpp" />
-    <ClCompile Include="..\..\yasio\tolua_link.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\yasio\yasio.vcxproj">
       <Project>{7783c512-b4b0-4210-9e3f-494d9a341672}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\yasio\impl\lyasio.cpp" />
+    <ClCompile Include="..\..\yasio\impl\tolua_link.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,10 +18,7 @@
     <ClCompile Include="luatest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\yasio\lyasio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\yasio\lyasio11.cpp">
+    <ClCompile Include="..\..\yasio\impl\lyasio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

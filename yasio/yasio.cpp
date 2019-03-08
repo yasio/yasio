@@ -671,12 +671,10 @@ void io_service::close(size_t channel_index)
     return;
   auto ctx = channels_[channel_index];
 
-  assert(ctx->type_ == CHANNEL_TCP_SERVER);
-  if (ctx->type_ != CHANNEL_TCP_SERVER)
-    return;
   if (ctx->state_ != channel_state::CLOSED)
   {
     ctx->state_ = channel_state::CLOSED;
+    close_internal(ctx);
     this->interrupt();
   }
 }
@@ -1403,6 +1401,17 @@ void io_service::open_internal(io_channel *ctx)
     update_resolve_state(ctx);
 
   ctx->state_ = channel_state::REQUEST_OPEN;
+  close_internal(ctx);
+
+  active_channels_mtx_.lock();
+  this->active_channels_.push_back(ctx);
+  active_channels_mtx_.unlock();
+
+  this->interrupt();
+}
+
+void io_service::close_internal(io_channel* ctx)
+{
   if (ctx->socket_->is_open())
   {
     if (ctx->type_ & CHANNEL_CLIENT)
@@ -1414,14 +1423,8 @@ void io_service::open_internal(io_channel *ctx)
     else
       ctx->shutdown_mask_ |= YASIO_SHUTDOWN_CHANNEL;
   }
-
-  active_channels_mtx_.lock();
-  this->active_channels_.push_back(ctx);
-  active_channels_mtx_.unlock();
-
-  this->interrupt();
 }
-
+    
 void io_service::perform_timers()
 {
   if (this->timer_queue_.empty())

@@ -578,7 +578,7 @@ void io_service::perform_transports(fd_set *fds_array)
       }
     }
     else if ((transport->shutdown_mask_ | transport->ctx_->shutdown_mask_) &
-             YASIO_SHUTDOWN_TRANSPORT)
+             YASIO_SD_TRANSPORT)
     {
       transport->update_error(ESHUTDOWN);
       handle_close(transport);

@@ -410,7 +410,7 @@ public:
   // open a channel, default: TCP_CLIENT
   void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
 
-  void reopen(transport_ptr);
+  void open(transport_ptr);
 
   // close client
   void close(transport_ptr transport);
@@ -486,8 +486,10 @@ private:
 
   // int        set_errorno(channel_context* ctx, int error);
 
+  void close_internal(io_channel*);
+  
   // ensure event fd unregistered & closed.
-  bool close_internal(io_base *ctx);
+  bool do_close(io_base *ctx);
 
   // Update resolve state for new endpoint set
   void update_resolve_state(io_channel *ctx);

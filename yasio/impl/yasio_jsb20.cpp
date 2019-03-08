@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -1086,6 +1086,10 @@ bool js_yasio_io_service_set_option(se::State &s)
         case YASIO_OPT_CHANNEL_LOCAL_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
+        case YASIO_OPT_CHANNEL_REMOTE_ENDPOINT:
+          service->set_option(opt, args[1].toInt32(), args[2].toString().c_str(),
+                              args[3].toInt32());
+          break;
         case YASIO_OPT_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
@@ -1244,6 +1248,7 @@ bool jsb_register_yasio(se::Object *obj)
   YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_LOCAL_PORT", YASIO_OPT_CHANNEL_LOCAL_PORT);
   YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_REMOTE_HOST", YASIO_OPT_CHANNEL_REMOTE_HOST);
   YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_REMOTE_PORT", YASIO_OPT_CHANNEL_REMOTE_PORT);
+  YASIO_SET_INT_PROP("YASIO_OPT_CHANNEL_REMOTE_ENDPOINT", YASIO_OPT_CHANNEL_REMOTE_ENDPOINT);
   YASIO_SET_INT_PROP("YASIO_EVENT_CONNECT_RESPONSE", YASIO_EVENT_CONNECT_RESPONSE);
   YASIO_SET_INT_PROP("YASIO_EVENT_CONNECTION_LOST", YASIO_EVENT_CONNECTION_LOST);
   YASIO_SET_INT_PROP("YASIO_EVENT_RECV_PACKET", YASIO_EVENT_RECV_PACKET);

@@ -445,6 +445,17 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
+    case YASIO_OPT_CHANNEL_REMOTE_ENDPOINT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        auto channel   = this->channels_[index];
+        channel->host_ = va_arg(ap, const char *);
+        channel->port_ = (u_short)va_arg(ap, int);
+      }
+    }
+    break;
     case YASIO_OPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;

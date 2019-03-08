@@ -126,7 +126,8 @@ enum
   YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
   YASIO_OPT_CHANNEL_REMOTE_HOST,
   YASIO_OPT_CHANNEL_REMOTE_PORT,
-  YASIO_OPT_NO_NEW_THREAD, // Don't start a new thread to run event loop
+  YASIO_OPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
+  YASIO_OPT_NO_NEW_THREAD,           // Don't start a new thread to run event loop
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -384,8 +385,9 @@ public:
      length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
              YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
-             YASIO_OPT_CHANNEL_REMOTE_HOST index:int, host:const char*
+             YASIO_OPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
              YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
+             YASIO_OPT_CHANNEL_REMOTE_ENDPOINT index:int, ip:const char*, port:int
              YASIO_OPT_NO_NEW_THREAD value:int
   */
   void set_option(int option, ...);

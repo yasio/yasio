@@ -67,7 +67,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "host", &io_hostent::host_, "port", &io_hostent::port_);
 
   yasio.new_usertype<io_event>(
-      "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::type, "status",
+      "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::kind, "status",
       &io_event::status, "transport", &io_event::transport, "take_packet", [](io_event *event) {
         return std::unique_ptr<lyasio::ibstream>(new lyasio::ibstream(event->take_packet()));
       });
@@ -266,7 +266,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   yasio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
                                  .addFunction("channel_index", &io_event::channel_index)
-                                 .addFunction("kind", &io_event::type)
+                                 .addFunction("kind", &io_event::kind)
                                  .addFunction("status", &io_event::status)
                                  .addFunction("transport", &io_event::transport)
                                  .addStaticFunction("take_packet", [](io_event *ev) {

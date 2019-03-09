@@ -341,8 +341,6 @@ public:
   // any other game engines' render thread.
   void dispatch_events(int count = 512);
 
-  size_t get_event_count(void) const;
-
   /* option: YASIO_OPT_CONNECT_TIMEOUT   timeout:int
              YASIO_OPT_SEND_TIMEOUT      timeout:int
              YASIO_OPT_RECONNECT_TIMEOUT timeout:int
@@ -366,8 +364,8 @@ public:
 
   void reopen(transport_ptr);
 
-  // close client
-  void close(transport_ptr transport);
+  // close transport
+  void close(transport_ptr);
 
   // close server
   void close(size_t channel_index = 0);
@@ -426,6 +424,8 @@ private:
   bool do_read(transport_ptr);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
+  bool do_close(io_base *ctx);
+  
   void handle_close(transport_ptr);
 
   void handle_event(event_ptr event);
@@ -438,10 +438,7 @@ private:
   // Clear all channels after service exit.
   void clear_channels(); // destroy all channels
 
-  // int        set_errorno(channel_context* ctx, int error);
-
-  // ensure event fd unregistered & closed.
-  bool close_internal(io_base *ctx);
+  void close_internal(io_channel*);
 
   // Update resolve state for new endpoint set
   void update_resolve_state(io_channel *ctx);

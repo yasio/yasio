@@ -526,8 +526,6 @@ void io_service::clear_channels()
   }
 }
 
-size_t io_service::get_event_count(void) const { return this->event_queue_.size(); }
-
 void io_service::dispatch_events(int count)
 {
   assert(this->on_event_ != nullptr);
@@ -628,7 +626,7 @@ void io_service::perform_transports(fd_set *fds_array)
       }
     }
     else if ((transport->shutdown_mask_ | transport->ctx_->shutdown_mask_) &
-             YASIO_SHUTDOWN_TRANSPORT)
+             YASIO_SD_TRANSPORT)
     {
       transport->update_error(ESHUTDOWN);
       handle_close(transport);
@@ -696,7 +694,7 @@ void io_service::perform_channels(fd_set *fds_array)
             do_nonblocking_accept_completion(ctx, fds_array);
             break;
           case channel_state::CLOSED:
-            close_internal(ctx);
+            do_close(ctx);
             INET_LOG("The channel: %d is closed!", ctx->index_);
             finish = true;
             break;
@@ -719,25 +717,24 @@ void io_service::close(size_t channel_index)
     return;
   auto ctx = channels_[channel_index];
 
-  assert(ctx->type_ == CHANNEL_TCP_SERVER);
-  if (ctx->type_ != CHANNEL_TCP_SERVER)
-    return;
   if (ctx->state_ != channel_state::CLOSED)
   {
     ctx->state_ = channel_state::CLOSED;
+    close_internal(ctx);
     this->interrupt();
   }
 }
 
 void io_service::close(transport_ptr transport)
 {
-  if (transport->is_open())
+  if (transport->is_open() && transport->shutdown_mask_ == 0)
   {
     INET_LOG("close the transport: %s --> %s",
              transport->socket_->local_endpoint().to_string().c_str(),
              transport->socket_->peer_endpoint().to_string().c_str());
-    transport->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
-    transport->socket_->shutdown();
+    transport->shutdown_mask_ |= YASIO_SD_TRANSPORT;
+    if(transport->ctx_->type_ & CHANNEL_TCP)
+      transport->socket_->shutdown();
     this->interrupt();
   }
 }
@@ -753,11 +750,9 @@ bool io_service::is_open(size_t channel_index) const
 
 void io_service::reopen(transport_ptr transport)
 {
-  if (transport->is_open())
-  {
-    transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
-  }
-  open_internal(transport->ctx_);
+  auto ctx = transport->ctx_;
+  if (ctx->type_ & CHANNEL_CLIENT)
+    open_internal(transport->ctx_);
 }
 
 void io_service::open(size_t channel_index, int channel_type)
@@ -801,11 +796,10 @@ void io_service::handle_close(transport_ptr transport)
            transport->local_endpoint().to_string().c_str(),
            transport->peer_endpoint().to_string().c_str(), transport->error_,
            io_service::strerror(transport->error_));
-
-  close_internal(transport.get());
-
+  
   auto ctx = transport->ctx_;
-  ctx->shutdown_mask_ &= YASIO_SHUTDOWN_TRANSPORT;
+  ctx->shutdown_mask_ &= YASIO_SD_TRANSPORT;
+  do_close(transport.get());
 
   // @Notify connection lost
   this->handle_event(event_ptr(
@@ -921,7 +915,7 @@ bool io_service::do_nonblocking_connect(io_channel *ctx)
   {
     if (ctx->socket_->is_open())
     { // cleanup descriptor if possible
-      close_internal(ctx);
+      do_close(ctx);
     }
 
     ctx->state_ = channel_state::OPENING;
@@ -1047,7 +1041,7 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
-  close_internal(ctx);
+  do_close(ctx);
 
   ip::endpoint ep(ipsv_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 
@@ -1149,7 +1143,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       else
       {
         INET_LOG("The channel:%d has socket error:%d, will be closed!", ctx->index_, error);
-        close_internal(ctx);
+        do_close(ctx);
       }
     }
   }
@@ -1194,7 +1188,7 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
 
 void io_service::handle_connect_failed(io_channel *ctx)
 {
-  close_internal(ctx);
+  do_close(ctx);
 
   ctx->state_ = channel_state::CLOSED;
 
@@ -1452,17 +1446,7 @@ void io_service::open_internal(io_channel *ctx)
     update_resolve_state(ctx);
 
   ctx->state_ = channel_state::REQUEST_OPEN;
-  if (ctx->socket_->is_open())
-  {
-    if (ctx->type_ & CHANNEL_CLIENT)
-    {
-      ctx->shutdown_mask_ |= YASIO_SHUTDOWN_TRANSPORT;
-      if (ctx->type_ & CHANNEL_TCP)
-        ctx->socket_->shutdown();
-    }
-    else
-      ctx->shutdown_mask_ |= YASIO_SHUTDOWN_CHANNEL;
-  }
+  close_internal(ctx);
 
   active_channels_mtx_.lock();
   this->active_channels_.push_back(ctx);
@@ -1471,6 +1455,21 @@ void io_service::open_internal(io_channel *ctx)
   this->interrupt();
 }
 
+void io_service::close_internal(io_channel* ctx)
+{
+  if (ctx->socket_->is_open())
+  {
+    if (ctx->type_ & CHANNEL_CLIENT)
+    {
+      ctx->shutdown_mask_ |= YASIO_SD_TRANSPORT;
+      if (ctx->type_ & CHANNEL_TCP)
+        ctx->socket_->shutdown();
+    }
+    else
+      ctx->shutdown_mask_ |= YASIO_SD_CHANNEL;
+  }
+}
+    
 void io_service::perform_timers()
 {
   if (this->timer_queue_.empty())
@@ -1567,7 +1566,7 @@ long long io_service::get_wait_duration(long long usec)
     return usec;
 }
 
-bool io_service::close_internal(io_base *ctx)
+bool io_service::do_close(io_base *ctx)
 {
   ctx->shutdown_mask_ = 0;
   if (ctx->socket_->is_open())

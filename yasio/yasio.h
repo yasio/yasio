@@ -60,86 +60,48 @@ namespace yasio = ::purelib;
 
 namespace purelib
 {
-
 namespace inet
 {
-enum channel_type : u_short
-{
-  CHANNEL_CLIENT     = 1,
-  CHANNEL_SERVER     = 1 << 1,
-  CHANNEL_TCP        = 1 << 2,
-  CHANNEL_UDP        = 1 << 3,
-  CHANNEL_TCP_CLIENT = CHANNEL_TCP | CHANNEL_CLIENT,
-  CHANNEL_TCP_SERVER = CHANNEL_TCP | CHANNEL_SERVER,
-  CHANNEL_UDP_CLIENT = CHANNEL_UDP | CHANNEL_CLIENT,
-  CHANNEL_UDP_SERVER = CHANNEL_UDP | CHANNEL_SERVER,
-};
-
-enum class channel_state : u_short
-{
-  CLOSED,
-  REQUEST_OPEN,
-  OPENING,
-  OPENED,
-};
-
-enum class resolve_state
-{
-  READY,
-  DIRTY,
-  INPRROGRESS,
-  FAILED = -1,
-};
-
-enum error_number
-{
-  ERR_OK,                         // NO ERROR
-  ERR_CONNECT_FAILED = -201,      // connect failed
-  ERR_CONNECT_TIMEOUT,            // connect timeout
-  ERR_SEND_FAILED,                // send error, failed
-  ERR_SEND_TIMEOUT,               // send timeout
-  ERR_RECV_FAILED,                // recv failed
-  ERR_NETWORK_UNREACHABLE,        // wifi or 2,3,4G not open
-  ERR_CONNECTION_LOST,            // connection lost
-  ERR_DPL_ILLEGAL_PDU,            // decode pdu error.
-  ERR_RESOLVE_HOST_FAILED,        // resolve host failed.
-  ERR_RESOLVE_HOST_TIMEOUT,       // resolve host ip timeout.
-  ERR_RESOLVE_HOST_IPV6_REQUIRED, // resolve host ip failed, a valid ipv6 host
-  // required.
-  ERR_INVALID_PORT, // invalid port.
-};
-
+// options
 enum
 {
-  socket_event_read   = 1,
-  socket_event_write  = 2,
-  socket_event_except = 4,
+  YOPT_CONNECT_TIMEOUT = 1,
+  YOPT_SEND_TIMEOUT,
+  YOPT_RECONNECT_TIMEOUT,
+  YOPT_DNS_CACHE_TIMEOUT,
+  YOPT_DEFER_EVENT,
+  YOPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
+  YOPT_RESOLV_FUNCTION,
+  YOPT_LOG_FILE,
+  YOPT_LFBFD_PARAMS, // length field based frame decode params
+  YOPT_IO_EVENT_CALLBACK,
+  YOPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
+  YOPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
+  YOPT_CHANNEL_REMOTE_HOST,
+  YOPT_CHANNEL_REMOTE_PORT,
+  YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
+  YOPT_NO_NEW_THREAD,           // Don't start a new thread to run event loop
 };
 
+// channel mask
 enum
 {
-  YASIO_OPT_CONNECT_TIMEOUT = 1,
-  YASIO_OPT_SEND_TIMEOUT,
-  YASIO_OPT_RECONNECT_TIMEOUT,
-  YASIO_OPT_DNS_CACHE_TIMEOUT,
-  YASIO_OPT_DEFER_EVENT,
-  YASIO_OPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
-  YASIO_OPT_RESOLV_FUNCTION,
-  YASIO_OPT_LOG_FILE,
-  YASIO_OPT_LFBFD_PARAMS, // length field based frame decode params
-  YASIO_OPT_IO_EVENT_CALLBACK,
-  YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
-  YASIO_OPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
-  YASIO_OPT_CHANNEL_REMOTE_HOST,
-  YASIO_OPT_CHANNEL_REMOTE_PORT,
-  YASIO_OPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
-  YASIO_OPT_NO_NEW_THREAD,           // Don't start a new thread to run event loop
+  YCM_CLIENT     = 1,
+  YCM_SERVER     = 1 << 1,
+  YCM_TCP        = 1 << 2,
+  YCM_UDP        = 1 << 3,
+  YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
+  YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
+  YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
+  YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
 };
 
+// event kinds
 enum
 {
-  YASIO_SHUTDOWN_CHANNEL   = 1,
-  YASIO_SHUTDOWN_TRANSPORT = 2,
+  YEK_CONN_RESP = 0,
+  YEK_CONN_LOST,
+  YEK_PACKET,
 };
 
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -150,8 +112,6 @@ typedef std::function<void()> vdcallback_t;
 typedef std::function<bool(std::vector<ip::endpoint> &endpoints, const char *hostname,
                            unsigned short port)>
     resolv_fn_t;
-
-static const int socket_recv_buffer_size = 65535; // 64K
 
 class a_pdu; // application layer protocol data unit.
 
@@ -231,21 +191,21 @@ struct io_channel : public io_base
   io_channel(io_service &service);
 
   u_short type_ = 0;
-  channel_state state_; // 0: CLOSED, 1: OPENING, 2: OPENED
 
+  u_short state_; // 0: CLOSED, 1: OPENING, 2: OPENED
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
-  u_short port_;
-  bool dns_queries_needed_;
 
+  bool dns_queries_needed_;
+  u_short port_;
   std::string host_;
-  highp_time_t dns_queries_timestamp_ = 0;
 
   std::vector<ip::endpoint> endpoints_;
   std::atomic<resolve_state> resolve_state_;
 
-  int index_ = -1;
+  highp_time_t dns_queries_timestamp_ = 0;
 
+  int index_ = -1;
   int protocol_ = 0;
 
   // The deadline timer for resolve & connect
@@ -273,8 +233,8 @@ public:
 private:
   io_transport(io_channel *ctx) : ctx_(ctx) {}
 
-  char buffer_[socket_recv_buffer_size]; // recv buffer
-  int offset_ = 0;                       // recv buffer offset
+  char buffer_[65535]; // recv buffer, 64K
+  int offset_ = 0;     // recv buffer offset
 
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
@@ -290,24 +250,18 @@ public:
 
 typedef std::shared_ptr<io_transport> transport_ptr;
 
-enum
-{
-  YASIO_EVENT_CONNECT_RESPONSE = 0,
-  YASIO_EVENT_CONNECTION_LOST,
-  YASIO_EVENT_RECV_PACKET,
-};
 class io_event final
 {
 public:
-  io_event(int channel_index, int type, int error, transport_ptr transport)
-      : channel_index_(channel_index), type_(type), status_(error), transport_(std::move(transport))
+  io_event(int channel_index, int kind, int error, transport_ptr transport)
+      : channel_index_(channel_index), kind_(kind), status_(error), transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet, transport_ptr transport)
-      : channel_index_(channel_index), type_(type), status_(0), transport_(std::move(transport)),
+      : channel_index_(channel_index), kind_(type), status_(0), transport_(std::move(transport)),
         packet_(std::move(packet))
   {}
   io_event(io_event &&rhs)
-      : channel_index_(rhs.channel_index_), type_(rhs.type_), status_(rhs.status_),
+      : channel_index_(rhs.channel_index_), kind_(rhs.kind_), status_(rhs.status_),
         transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_))
   {}
 
@@ -315,7 +269,7 @@ public:
 
   int channel_index() const { return channel_index_; }
 
-  int type() const { return type_; }
+  int kind() const { return kind_; }
   int status() const { return status_; }
 
   transport_ptr transport() { return transport_; }
@@ -329,7 +283,7 @@ public:
 
 private:
   int channel_index_;
-  int type_;
+  int kind_;
   int status_;
   transport_ptr transport_;
   std::vector<char> packet_;
@@ -407,8 +361,8 @@ public:
   */
   void set_option(int option, ...);
 
-  // open a channel, default: TCP_CLIENT
-  void open(size_t channel_index, int channel_type = CHANNEL_TCP_CLIENT);
+  // open a channel, default: YCM_TCP_CLIENT
+  void open(size_t channel_index, int channel_mask = YCM_TCP_CLIENT);
 
   void reopen(transport_ptr);
 

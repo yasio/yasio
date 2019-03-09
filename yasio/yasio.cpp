@@ -75,6 +75,54 @@ namespace inet
 {
 namespace
 {
+
+enum class channel_state : u_short
+{
+  CLOSED,
+  REQUEST_OPEN,
+  OPENING,
+  OPENED,
+};
+
+enum class resolve_state
+{
+  READY,
+  DIRTY,
+  INPRROGRESS,
+  FAILED = -1,
+};
+
+enum error_number
+{
+  ERR_OK,                         // NO ERROR
+  ERR_CONNECT_FAILED = -201,      // connect failed
+  ERR_CONNECT_TIMEOUT,            // connect timeout
+  ERR_SEND_FAILED,                // send error, failed
+  ERR_SEND_TIMEOUT,               // send timeout
+  ERR_RECV_FAILED,                // recv failed
+  ERR_NETWORK_UNREACHABLE,        // wifi or 2,3,4G not open
+  ERR_CONNECTION_LOST,            // connection lost
+  ERR_DPL_ILLEGAL_PDU,            // decode pdu error.
+  ERR_RESOLVE_HOST_FAILED,        // resolve host failed.
+  ERR_RESOLVE_HOST_TIMEOUT,       // resolve host ip timeout.
+  ERR_RESOLVE_HOST_IPV6_REQUIRED, // resolve host ip failed, a valid ipv6 host
+  // required.
+  ERR_INVALID_PORT, // invalid port.
+};
+
+enum
+{
+  socket_event_read   = 1,
+  socket_event_write  = 2,
+  socket_event_except = 4,
+};
+
+enum
+{
+  YASIO_SHUTDOWN_CHANNEL   = 1,
+  YASIO_SHUTDOWN_TRANSPORT = 2,
+};
+
 // The high precision micro seconds timestamp
 static long long _highp_clock()
 {

@@ -83,29 +83,29 @@ YASIO_API int luaopen_yasio(lua_State *L)
       [](io_service *service, int opt, sol::variadic_args va) {
         switch (opt)
         {
-          case YASIO_OPT_CHANNEL_REMOTE_HOST:
+          case YOPT_CHANNEL_REMOTE_HOST:
             service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char *>());
             break;
-          case YASIO_OPT_CHANNEL_REMOTE_PORT:
-          case YASIO_OPT_CHANNEL_LOCAL_PORT:
+          case YOPT_CHANNEL_REMOTE_PORT:
+          case YOPT_CHANNEL_LOCAL_PORT:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]));
             break;
-          case YASIO_OPT_CHANNEL_REMOTE_ENDPOINT:
+          case YOPT_CHANNEL_REMOTE_ENDPOINT:
             service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char *>(),
                                 static_cast<int>(va[2]));
             break;
-          case YASIO_OPT_TCP_KEEPALIVE:
+          case YOPT_TCP_KEEPALIVE:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]));
             break;
-          case YASIO_OPT_LFBFD_PARAMS:
+          case YOPT_LFBFD_PARAMS:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]), static_cast<int>(va[3]));
             break;
-          case YASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom
-                                          // resolv function
+          case YOPT_RESOLV_FUNCTION: // lua does not support set custom
+                                     // resolv function
             break;
-          case YASIO_OPT_IO_EVENT_CALLBACK:
+          case YOPT_IO_EVENT_CALLBACK:
             (void)0;
             {
               sol::function fn           = va[0];
@@ -171,27 +171,27 @@ YASIO_API int luaopen_yasio(lua_State *L)
       [](lyasio::ibstream *ibs) { return stdport::string_view(ibs->data(), ibs->size()); });
 
   // ##-- yasio enums
-  yasio["CHANNEL_TCP_CLIENT"]                = channel_type::CHANNEL_TCP_CLIENT;
-  yasio["CHANNEL_TCP_SERVER"]                = channel_type::CHANNEL_TCP_SERVER;
-  yasio["CHANNEL_UDP_CLIENT"]                = channel_type::CHANNEL_UDP_CLIENT;
-  yasio["CHANNEL_UDP_SERVER"]                = channel_type::CHANNEL_UDP_SERVER;
-  yasio["YASIO_OPT_CONNECT_TIMEOUT"]         = YASIO_OPT_CONNECT_TIMEOUT;
-  yasio["YASIO_OPT_SEND_TIMEOUT"]            = YASIO_OPT_CONNECT_TIMEOUT;
-  yasio["YASIO_OPT_RECONNECT_TIMEOUT"]       = YASIO_OPT_RECONNECT_TIMEOUT;
-  yasio["YASIO_OPT_DNS_CACHE_TIMEOUT"]       = YASIO_OPT_DNS_CACHE_TIMEOUT;
-  yasio["YASIO_OPT_DEFER_EVENT"]             = YASIO_OPT_DEFER_EVENT;
-  yasio["YASIO_OPT_TCP_KEEPALIVE"]           = YASIO_OPT_TCP_KEEPALIVE;
-  yasio["YASIO_OPT_RESOLV_FUNCTION"]         = YASIO_OPT_RESOLV_FUNCTION;
-  yasio["YASIO_OPT_LOG_FILE"]                = YASIO_OPT_LOG_FILE;
-  yasio["YASIO_OPT_LFBFD_PARAMS"]            = YASIO_OPT_LFBFD_PARAMS;
-  yasio["YASIO_OPT_IO_EVENT_CALLBACK"]       = YASIO_OPT_IO_EVENT_CALLBACK;
-  yasio["YASIO_OPT_CHANNEL_LOCAL_PORT"]      = YASIO_OPT_CHANNEL_LOCAL_PORT;
-  yasio["YASIO_OPT_CHANNEL_REMOTE_HOST"]     = YASIO_OPT_CHANNEL_REMOTE_HOST;
-  yasio["YASIO_OPT_CHANNEL_REMOTE_PORT"]     = YASIO_OPT_CHANNEL_REMOTE_PORT;
-  yasio["YASIO_OPT_CHANNEL_REMOTE_ENDPOINT"] = YASIO_OPT_CHANNEL_REMOTE_ENDPOINT;
-  yasio["YASIO_EVENT_CONNECT_RESPONSE"]      = YASIO_EVENT_CONNECT_RESPONSE;
-  yasio["YASIO_EVENT_CONNECTION_LOST"]       = YASIO_EVENT_CONNECTION_LOST;
-  yasio["YASIO_EVENT_RECV_PACKET"]           = YASIO_EVENT_RECV_PACKET;
+  yasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
+  yasio["YCM_TCP_SERVER"]               = YCM_TCP_SERVER;
+  yasio["YCM_UDP_CLIENT"]               = YCM_UDP_CLIENT;
+  yasio["YCM_UDP_SERVER"]               = YCM_UDP_SERVER;
+  yasio["YEK_CONNECT_RESPONSE"]         = YEK_CONNECT_RESPONSE;
+  yasio["YEK_CONNECTION_LOST"]          = YEK_CONNECTION_LOST;
+  yasio["YEK_PACKET"]                   = YEK_PACKET;
+  yasio["YOPT_CONNECT_TIMEOUT"]         = YOPT_CONNECT_TIMEOUT;
+  yasio["YOPT_SEND_TIMEOUT"]            = YOPT_CONNECT_TIMEOUT;
+  yasio["YOPT_RECONNECT_TIMEOUT"]       = YOPT_RECONNECT_TIMEOUT;
+  yasio["YOPT_DNS_CACHE_TIMEOUT"]       = YOPT_DNS_CACHE_TIMEOUT;
+  yasio["YOPT_DEFER_EVENT"]             = YOPT_DEFER_EVENT;
+  yasio["YOPT_TCP_KEEPALIVE"]           = YOPT_TCP_KEEPALIVE;
+  yasio["YOPT_RESOLV_FUNCTION"]         = YOPT_RESOLV_FUNCTION;
+  yasio["YOPT_LOG_FILE"]                = YOPT_LOG_FILE;
+  yasio["YOPT_LFBFD_PARAMS"]            = YOPT_LFBFD_PARAMS;
+  yasio["YOPT_IO_EVENT_CALLBACK"]       = YOPT_IO_EVENT_CALLBACK;
+  yasio["YOPT_CHANNEL_LOCAL_PORT"]      = YOPT_CHANNEL_LOCAL_PORT;
+  yasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
+  yasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
+  yasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
 
   return yasio.push(); /* return 'yasio' table */
 }
@@ -297,30 +297,30 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                               kaguya::VariadicArgType args) {
             switch (opt)
             {
-              case YASIO_OPT_CHANNEL_REMOTE_HOST:
+              case YOPT_CHANNEL_REMOTE_HOST:
                 service->set_option(opt, static_cast<int>(args[0]),
                                     static_cast<const char *>(args[1]));
                 break;
-              case YASIO_OPT_CHANNEL_REMOTE_PORT:
-              case YASIO_OPT_CHANNEL_LOCAL_PORT:
+              case YOPT_CHANNEL_REMOTE_PORT:
+              case YOPT_CHANNEL_LOCAL_PORT:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                 break;
-              case YASIO_OPT_CHANNEL_REMOTE_ENDPOINT:
+              case YOPT_CHANNEL_REMOTE_ENDPOINT:
                 service->set_option(opt, static_cast<int>(va[0]),
                                     static_cast<const char *>(args[1]), static_cast<int>(va[2]));
                 break;
-              case YASIO_OPT_TCP_KEEPALIVE:
+              case YOPT_TCP_KEEPALIVE:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]));
                 break;
-              case YASIO_OPT_LFBFD_PARAMS:
+              case YOPT_LFBFD_PARAMS:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]), static_cast<int>(args[3]));
                 break;
-              case YASIO_OPT_RESOLV_FUNCTION: // lua does not support set custom
-                                              // resolv function
+              case YOPT_RESOLV_FUNCTION: // lua does not support set custom
+                                         // resolv function
                 break;
-              case YASIO_OPT_IO_EVENT_CALLBACK:
+              case YOPT_IO_EVENT_CALLBACK:
                 (void)0;
                 {
                   kaguya::LuaFunction fn     = args[0];
@@ -402,27 +402,27 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                                   lyasio::ibstream(const obinarystream *)>());
 
   // ##-- yasio enums
-  yasio["CHANNEL_TCP_CLIENT"]                = channel_type::CHANNEL_TCP_CLIENT;
-  yasio["CHANNEL_TCP_SERVER"]                = channel_type::CHANNEL_TCP_SERVER;
-  yasio["CHANNEL_UDP_CLIENT"]                = channel_type::CHANNEL_UDP_CLIENT;
-  yasio["CHANNEL_UDP_SERVER"]                = channel_type::CHANNEL_UDP_SERVER;
-  yasio["YASIO_OPT_CONNECT_TIMEOUT"]         = YASIO_OPT_CONNECT_TIMEOUT;
-  yasio["YASIO_OPT_SEND_TIMEOUT"]            = YASIO_OPT_CONNECT_TIMEOUT;
-  yasio["YASIO_OPT_RECONNECT_TIMEOUT"]       = YASIO_OPT_RECONNECT_TIMEOUT;
-  yasio["YASIO_OPT_DNS_CACHE_TIMEOUT"]       = YASIO_OPT_DNS_CACHE_TIMEOUT;
-  yasio["YASIO_OPT_DEFER_EVENT"]             = YASIO_OPT_DEFER_EVENT;
-  yasio["YASIO_OPT_TCP_KEEPALIVE"]           = YASIO_OPT_TCP_KEEPALIVE;
-  yasio["YASIO_OPT_RESOLV_FUNCTION"]         = YASIO_OPT_RESOLV_FUNCTION;
-  yasio["YASIO_OPT_LOG_FILE"]                = YASIO_OPT_LOG_FILE;
-  yasio["YASIO_OPT_LFBFD_PARAMS"]            = YASIO_OPT_LFBFD_PARAMS;
-  yasio["YASIO_OPT_IO_EVENT_CALLBACK"]       = YASIO_OPT_IO_EVENT_CALLBACK;
-  yasio["YASIO_OPT_CHANNEL_LOCAL_PORT"]      = YASIO_OPT_CHANNEL_LOCAL_PORT;
-  yasio["YASIO_OPT_CHANNEL_REMOTE_HOST"]     = YASIO_OPT_CHANNEL_REMOTE_HOST;
-  yasio["YASIO_OPT_CHANNEL_REMOTE_PORT"]     = YASIO_OPT_CHANNEL_REMOTE_PORT;
-  yasio["YASIO_OPT_CHANNEL_REMOTE_ENDPOINT"] = YASIO_OPT_CHANNEL_REMOTE_ENDPOINT;
-  yasio["YASIO_EVENT_CONNECT_RESPONSE"]      = YASIO_EVENT_CONNECT_RESPONSE;
-  yasio["YASIO_EVENT_CONNECTION_LOST"]       = YASIO_EVENT_CONNECTION_LOST;
-  yasio["YASIO_EVENT_RECV_PACKET"]           = YASIO_EVENT_RECV_PACKET;
+  yasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
+  yasio["YCM_TCP_SERVER"]               = YCM_TCP_SERVER;
+  yasio["YCM_UDP_CLIENT"]               = YCM_UDP_CLIENT;
+  yasio["YCM_UDP_SERVER"]               = YCM_UDP_SERVER;
+  yasio["YEK_CONNECT_RESPONSE"]         = YEK_CONNECT_RESPONSE;
+  yasio["YEK_CONNECTION_LOST"]          = YEK_CONNECTION_LOST;
+  yasio["YEK_PACKET"]                   = YEK_PACKET;
+  yasio["YOPT_CONNECT_TIMEOUT"]         = YOPT_CONNECT_TIMEOUT;
+  yasio["YOPT_SEND_TIMEOUT"]            = YOPT_CONNECT_TIMEOUT;
+  yasio["YOPT_RECONNECT_TIMEOUT"]       = YOPT_RECONNECT_TIMEOUT;
+  yasio["YOPT_DNS_CACHE_TIMEOUT"]       = YOPT_DNS_CACHE_TIMEOUT;
+  yasio["YOPT_DEFER_EVENT"]             = YOPT_DEFER_EVENT;
+  yasio["YOPT_TCP_KEEPALIVE"]           = YOPT_TCP_KEEPALIVE;
+  yasio["YOPT_RESOLV_FUNCTION"]         = YOPT_RESOLV_FUNCTION;
+  yasio["YOPT_LOG_FILE"]                = YOPT_LOG_FILE;
+  yasio["YOPT_LFBFD_PARAMS"]            = YOPT_LFBFD_PARAMS;
+  yasio["YOPT_IO_EVENT_CALLBACK"]       = YOPT_IO_EVENT_CALLBACK;
+  yasio["YOPT_CHANNEL_LOCAL_PORT"]      = YOPT_CHANNEL_LOCAL_PORT;
+  yasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
+  yasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
+  yasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
 
   return yasio.push(); /* return 'yasio' table */
 }

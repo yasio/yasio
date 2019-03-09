@@ -30,7 +30,7 @@ template <size_t _Size> void append_string(std::vector<char> &packet, const char
 void yasioTest()
 {
   purelib::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}, // http client
-                                           {"0.0.0.0", 30001},    // tcp server
+                                           {"127.0.0.1", 30001}, // tcp server
                                            {"127.0.0.1", 59281}}; // udp client
 
   obinarystream obs;
@@ -50,24 +50,24 @@ void yasioTest()
 
   io_service service;
 
-  service.set_option(YASIO_OPT_TCP_KEEPALIVE, 60, 30, 3);
+  service.set_option(YOPT_TCP_KEEPALIVE, 60, 30, 3);
 
   resolv_fn_t resolv = [&](std::vector<ip::endpoint> &endpoints, const char *hostname,
                            unsigned short port) {
     return service.resolve(endpoints, hostname, port);
   };
-  service.set_option(YASIO_OPT_RESOLV_FUNCTION, &resolv);
+  service.set_option(YOPT_RESOLV_FUNCTION, &resolv);
 
   std::vector<transport_ptr> transports;
-  service.set_option(YASIO_OPT_LFBFD_PARAMS, 16384, -1, 0, 0);
-  service.set_option(YASIO_OPT_LOG_FILE, "yasio.log");
+  service.set_option(YOPT_LFBFD_PARAMS, 16384, -1, 0, 0);
+  service.set_option(YOPT_LOG_FILE, "yasio.log");
 
   deadline_timer udpconn_delay(service);
   deadline_timer udp_heartbeat(service);
   service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
-    switch (event->type())
+    switch (event->kind())
     {
-      case YASIO_EVENT_RECV_PACKET:
+      case YEK_PACKET:
       {
         auto packet = event->take_packet();
         packet.push_back('\0');
@@ -80,7 +80,7 @@ void yasioTest()
         }
         break;
       }
-      case YASIO_EVENT_CONNECT_RESPONSE:
+      case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
           auto transport = event->transport();
@@ -101,14 +101,15 @@ void yasioTest()
           }
           else if (event->channel_index() == 1)
           { // Sends message to server every per 3 seconds.
-#if 1
+#if 0
             udp_heartbeat.expires_from_now(std::chrono::seconds(3));
             udp_heartbeat.async_wait(
                 [&service, transport](bool) mutable { // called at network thread
                                                       // std::vector<char> packet;
                   // append_string(packet, "hello udp server!\n");
                   // service.write(transport, std::move(packet));
-                  service.stop_service();
+                  // service.stop_service();
+                  service.reopen(transport);
                 });
 #endif
           }
@@ -116,7 +117,7 @@ void yasioTest()
           transports.push_back(transport);
         }
         break;
-      case YASIO_EVENT_CONNECTION_LOST:
+      case YEK_CONNECTION_LOST:
         printf("The connection is lost(user end)!\n");
         break;
     }
@@ -124,14 +125,16 @@ void yasioTest()
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
   // service.open(0); // open http client
-  service.open(1, CHANNEL_TCP_SERVER); // open tcp server
+
+  service.set_option(YOPT_RECONNECT_TIMEOUT, 3);
+  service.open(1, YCM_TCP_CLIENT); // open tcp server
   // service.open(2, CHANNEL_UDP_SERVER);
 #if 0
   udpconn_delay.expires_from_now(std::chrono::seconds(3));
   udpconn_delay.async_wait([&](bool) { // called at network thread
-    printf("Open channel 2 to connect udp server.\n");
+    printf("Open channel 1.\n");
     //service.set_option(YASIO_OPT_CHANNEL_LOCAL_PORT, 2, 4000);
-    service.open(2, CHANNEL_UDP_CLIENT); // open udp client
+    service.open(1, YCM_TCP_CLIENT); // open udp client
   });
 #endif
 

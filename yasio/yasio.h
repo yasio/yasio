@@ -99,25 +99,44 @@ enum
 // event kinds
 enum
 {
-  YEK_CONN_RESP = 0,
-  YEK_CONN_LOST,
+  YEK_CONNECT_RESPONSE = 0,
+  YEK_CONNECTION_LOST,
   YEK_PACKET,
 };
 
-typedef std::chrono::high_resolution_clock highp_clock_t;
-typedef long long highp_time_t;
-
-typedef std::function<void()> vdcallback_t;
-
-typedef std::function<bool(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                           unsigned short port)>
-    resolv_fn_t;
-
+// class fwds
 class a_pdu; // application layer protocol data unit.
+class deadline_timer;
+class io_event;
+class io_channel;
+class io_transport;
+class io_service;
+
+// typedefs
+typedef long long highp_time_t;
+typedef std::chrono::high_resolution_clock highp_clock_t;
 
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
+typedef std::shared_ptr<io_transport> transport_ptr;
+typedef std::unique_ptr<io_event> event_ptr;
 
-class io_service;
+typedef std::function<void(event_ptr)> io_event_callback_t;
+typedef std::function<int(io_service *, void *ptr, int len)> decode_len_fn_t;
+typedef std::function<bool(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
+
+struct io_hostent
+{
+  io_hostent() {}
+  io_hostent(stdport::string_view ip, u_short port) : host_(ip.data(), ip.length()), port_(port) {}
+  io_hostent(io_hostent &&rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
+  io_hostent(const io_hostent &rhs) : host_(rhs.host_), port_(rhs.port_) {}
+  void set_ip(const std::string &value) { host_ = value; }
+  const std::string &get_ip() const { return host_; }
+  void set_port(u_short port) { port_ = port; }
+  u_short get_port() const { return port_; }
+  std::string host_;
+  u_short port_;
+};
 
 class deadline_timer
 {
@@ -160,52 +179,38 @@ public:
   std::function<void(bool cancelled)> callback_;
 };
 
-struct io_hostent
-{
-  io_hostent() {}
-  io_hostent(stdport::string_view ip, u_short port) : host_(ip.data(), ip.length()), port_(port) {}
-  io_hostent(io_hostent &&rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
-  io_hostent(const io_hostent &rhs) : host_(rhs.host_), port_(rhs.port_) {}
-  void set_ip(const std::string &value) { host_ = value; }
-  const std::string &get_ip() const { return host_; }
-  void set_port(u_short port) { port_ = port; }
-  u_short get_port() const { return port_; }
-  std::string host_;
-  u_short port_;
-};
-
-struct io_transport;
-
 struct io_base
 {
   int update_error() { return (error_ = xxsocket::get_last_errno()); }
   void update_error(int error) { error_ = error; }
 
   std::shared_ptr<xxsocket> socket_;
-  int error_             = 0; // socket error(>= -1), application error(< -1)
-  u_short shutdown_mask_ = 0;
+  int error_ = 0; // socket error(>= -1), application error(< -1)
+
+  u_short op_mask_ = 0;
+  u_short state_   = 0;
 };
 
-struct io_channel : public io_base
+class io_channel : public io_base
 {
+public:
   io_channel(io_service &service);
 
-  u_short type_ = 0;
+  u_short mask_ = 0;
 
-  u_short state_; // 0: CLOSED, 1: OPENING, 2: OPENED
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
 
   bool dns_queries_needed_;
+  std::atomic<short> dns_queries_state_;
   u_short port_;
   std::string host_;
 
   std::vector<ip::endpoint> endpoints_;
-  std::atomic<resolve_state> resolve_state_;
 
   highp_time_t dns_queries_timestamp_ = 0;
 
-  int index_ = -1;
+  int index_    = -1;
   int protocol_ = 0;
 
   // The deadline timer for resolve & connect
@@ -214,7 +219,7 @@ struct io_channel : public io_base
   void reset();
 };
 
-struct io_transport : public io_base
+class io_transport : public io_base
 {
   friend class io_service;
 
@@ -231,7 +236,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx) : ctx_(ctx) {}
+  io_transport(io_channel *ctx);
 
   char buffer_[65535]; // recv buffer, 64K
   int offset_ = 0;     // recv buffer offset
@@ -247,8 +252,6 @@ private:
 public:
   void *ud_ = nullptr;
 };
-
-typedef std::shared_ptr<io_transport> transport_ptr;
 
 class io_event final
 {
@@ -288,21 +291,10 @@ private:
   transport_ptr transport_;
   std::vector<char> packet_;
 };
-typedef std::unique_ptr<io_event> event_ptr;
-
-class deadline_timer;
-
-typedef std::function<void(error_number)> send_pdu_callback_t;
-typedef std::function<void(event_ptr)> io_event_callback_t;
-typedef std::function<int(io_service *service, void *ptr, int len)> decode_frame_length_fn_t;
 
 class io_service
 {
 public:
-  // End user pdu decode length func
-  // connection callbacks
-  typedef std::function<void(transport_ptr)> connection_lost_callback_t;
-  typedef std::function<void(size_t, transport_ptr, int ec)> connect_response_callback_t;
   enum class state
   {
     IDLE,
@@ -341,21 +333,21 @@ public:
   // any other game engines' render thread.
   void dispatch_events(int count = 512);
 
-  /* option: YASIO_OPT_CONNECT_TIMEOUT   timeout:int
-             YASIO_OPT_SEND_TIMEOUT      timeout:int
-             YASIO_OPT_RECONNECT_TIMEOUT timeout:int
-             YASIO_OPT_DNS_CACHE_TIMEOUT timeout:int
-             YASIO_OPT_DEFER_EVENT       defer:int
-             YASIO_OPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
-             YASIO_OPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             YASIO_OPT_LFBFD_PARAMS max_frame_length:int, length_field_offst:int,
-     length_field_length:int, length_adjustment:int YASIO_OPT_IO_EVENT_CALLBACK
+  /* option: YOPT_CONNECT_TIMEOUT   timeout:int
+             YOPT_SEND_TIMEOUT      timeout:int
+             YOPT_RECONNECT_TIMEOUT timeout:int
+             YOPT_DNS_CACHE_TIMEOUT timeout:int
+             YOPT_DEFER_EVENT       defer:int
+             YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
+             YOPT_RESOLV_FUNCTION   func:resolv_fn_t*
+             YOPT_LFBFD_PARAMS max_frame_length:int, length_field_offst:int,
+     length_field_length:int, length_adjustment:int YOPT_IO_EVENT_CALLBACK
      func:io_event_callback_t*
-             YASIO_OPT_CHANNEL_LOCAL_PORT  index:int, port:int
-             YASIO_OPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
-             YASIO_OPT_CHANNEL_REMOTE_PORT index:int, port:int
-             YASIO_OPT_CHANNEL_REMOTE_ENDPOINT index:int, ip:const char*, port:int
-             YASIO_OPT_NO_NEW_THREAD value:int
+             YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
+             YOPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
+             YOPT_CHANNEL_REMOTE_PORT index:int, port:int
+             YOPT_CHANNEL_REMOTE_ENDPOINT index:int, ip:const char*, port:int
+             YOPT_NO_NEW_THREAD value:int
   */
   void set_option(int option, ...);
 
@@ -380,8 +372,6 @@ public:
   void schedule_timer(deadline_timer *);
   void cancel_timer(deadline_timer *);
 
-  void interrupt();
-
   // Start a async resolve, It's only for internal use
   bool start_resolve(io_channel *);
 
@@ -392,11 +382,13 @@ public:
 private:
   void init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
 
-  void open_internal(io_channel *);
+  void open_internal(io_channel *, bool ignore_state = false);
 
   void perform_transports(fd_set *fds_array);
   void perform_channels(fd_set *fds_array);
   void perform_timers();
+
+  void interrupt();
 
   long long get_wait_duration(long long usec);
 
@@ -424,8 +416,9 @@ private:
   bool do_read(transport_ptr);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
+  // The op mask will be cleared, the state will be set CLOSED
   bool do_close(io_base *ctx);
-  
+
   void handle_close(transport_ptr);
 
   void handle_event(event_ptr event);
@@ -438,12 +431,12 @@ private:
   // Clear all channels after service exit.
   void clear_channels(); // destroy all channels
 
-  void close_internal(io_channel*);
+  bool close_internal(io_channel *);
 
   // Update resolve state for new endpoint set
   void update_resolve_state(io_channel *ctx);
 
-  void handle_send_finished(a_pdu_ptr, error_number);
+  void handle_send_finished(a_pdu_ptr, int);
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
@@ -464,8 +457,8 @@ private:
 
   std::vector<io_channel *> channels_;
 
-  std::recursive_mutex active_channels_mtx_;
-  std::vector<io_channel *> active_channels_;
+  std::recursive_mutex channel_ops_mtx_;
+  std::vector<io_channel *> channel_ops_;
 
   std::vector<transport_ptr> transports_;
 
@@ -528,10 +521,10 @@ private:
   } options_;
 
   // The decode frame length function
-  decode_frame_length_fn_t xdec_len_;
+  decode_len_fn_t decode_len_;
 
   // The resolve function
-  resolv_fn_t xresolv_;
+  resolv_fn_t resolv_;
 
   // The ip stack version supported by local host
   int ipsv_;

@@ -623,50 +623,14 @@ void io_service::perform_transports(fd_set *fds_array)
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto &transport = *iter;
-    if (transport->offset_ > 0 ||
-        FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
+    bool ok         = do_read(transport) && do_write(transport);
+    if (ok)
+      ++iter;
+    else
     {
-#if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
-#endif
-      if (!do_read(transport))
-      {
-        handle_close(transport);
-        iter = transports_.erase(iter);
-        continue;
-      }
-    }
-    else if ((transport->op_mask_ | transport->ctx_->op_mask_) & YOPM_CLOSE_TRANSPORT)
-    {
-      transport->update_error(ESHUTDOWN);
       handle_close(transport);
       iter = transports_.erase(iter);
-      continue;
     }
-
-    // perform write operations
-    if (!transport->send_queue_.empty())
-    {
-      transport->send_queue_mtx_.lock();
-#if _YASIO_VERBOS_LOG
-      INET_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
-#endif
-      if (!do_write(transport))
-      { // TODO: check would block? for client, may
-        // be unnecessary.
-        transport->send_queue_mtx_.unlock();
-        handle_close(transport);
-        iter = transports_.erase(iter);
-        continue;
-      }
-
-      if (!transport->send_queue_.empty())
-        ++this->outstanding_work_;
-
-      transport->send_queue_mtx_.unlock();
-    }
-
-    ++iter;
   }
 }
 
@@ -1221,6 +1185,8 @@ bool io_service::do_write(transport_ptr transport)
 
     if (!transport->send_queue_.empty())
     {
+      std::lock_guard<std::recursive_mutex> lck(transport->send_queue_mtx_);
+
       auto v                 = transport->send_queue_.front();
       auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
       n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
@@ -1235,20 +1201,22 @@ bool io_service::do_write(transport_ptr transport)
                  transport->socket_->peer_endpoint().to_string().c_str());
 #endif
         handle_send_finished(v, YERR_OK);
+
+        if (!transport->send_queue_.empty())
+          ++this->outstanding_work_;
       }
       else if (n > 0)
       { // TODO: add time
         if (!v->expired())
-        { // change offset, remain data will
-          // send next time.
-          // v->data_.erase(v->data_.begin(), v->data_.begin() +
-          // n);
+        { // #performance: change offset only, remain data will be send next time.
           v->offset_ += n;
           outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
           INET_LOG("[index: %d] do_write pending, %dbytes still "
                    "outstanding, "
                    "%dbytes was sent!",
                    ctx->index_, outstanding_bytes, n);
+
+          ++this->outstanding_work_;
         }
         else
         { // send timeout
@@ -1259,6 +1227,8 @@ bool io_service::do_write(transport_ptr transport)
                    "size:%d",
                    ctx->index_, packet_size);
           handle_send_finished(v, YERR_SEND_TIMEOUT);
+          if (!transport->send_queue_.empty())
+            ++this->outstanding_work_;
         }
       }
       else
@@ -1291,6 +1261,16 @@ bool io_service::do_read(transport_ptr transport)
   {
     if (!transport->socket_->is_open())
       break;
+
+    if ((transport->op_mask_ | transport->ctx_->op_mask_) & YOPM_CLOSE_TRANSPORT)
+    {
+      transport->update_error(ESHUTDOWN);
+      break;
+    }
+
+    /*  if(transport->offset_ > 0 || FD_ISSET(transport->socket_->native_handle(),
+      &(fds_array[read_op]))) {
+      }*/
 
     int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
                                        sizeof(transport->buffer_) - transport->offset_);
@@ -1331,7 +1311,6 @@ bool io_service::do_read(transport_ptr transport)
         }
         else
         {
-          // set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
           INET_LOG("[index: %d] do_read error, decode length of "
                    "pdu failed, "
                    "the connection should be closed!",
@@ -1625,7 +1604,7 @@ bool io_service::start_resolve(io_channel *ctx)
     memset(&hint, 0x0, sizeof(hint));
 
     bool succeed = resolv_ ? resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_)
-                            : resolve(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
+                           : resolve(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
 
     if (succeed && !ctx->endpoints_.empty())
     {

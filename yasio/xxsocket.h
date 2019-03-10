@@ -30,7 +30,6 @@ SOFTWARE.
  * http://blog.csdn.net/baidu_25743639/article/details/51351638
  * http://www.cnblogs.com/SUPER-F/p/IPV6.html
  */
-
 #pragma once
 
 #include <errno.h>

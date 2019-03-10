@@ -1,5 +1,5 @@
 // object_pool.h: a simple & high-performance object pool implementation v1.3
-#ifndef _OBJECT_POOL_H_
+#if !defined(_OBJECT_POOL_H_)
 #  define _OBJECT_POOL_H_
 
 #  include "politedef.h"

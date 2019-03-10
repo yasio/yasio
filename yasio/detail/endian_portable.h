@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(_ENDIAN_PORTABLE_H_)
+#define _ENDIAN_PORTABLE_H_
 
 #include "politedef.h"
 #include <assert.h>
@@ -167,3 +168,4 @@ inline unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, u
  * Copyright (c) 2012-2019 by HALX99  ALL RIGHTS RESERVED.
  * Consult your license regarding permissions and restrictions.
  **/
+#endif

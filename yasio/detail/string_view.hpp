@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -27,46 +27,47 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 See: https://github.com/bitwizeshift/string_view-standalone
 */
-#pragma once
-#include <string>
+#if !defined(_YASIO_STRING_VIEW_HPP_)
+#  define _YASIO_STRING_VIEW_HPP_
+#  include <string>
 
-#define _to_literal(s) #s
-#define to_literal(s) _to_literal(s)
+#  define _to_literal(s) #  s
+#  define to_literal(s) _to_literal(s)
 
-#if (defined(__cplusplus) && __cplusplus == 201703L) ||                                            \
-    (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                       \
-     ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                  \
-      (defined(_MSVC_LANG) && (_MSVC_LANG > 201402L))))
-#  ifndef _HAS_STD_STRING_VIEW
-#    define _HAS_STD_STRING_VIEW 1
-#  endif // C++17 features macro
-#endif   // C++17 features check
+#  if (defined(__cplusplus) && __cplusplus == 201703L) ||                                          \
+      (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                     \
+       ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                \
+        (defined(_MSVC_LANG) && (_MSVC_LANG > 201402L))))
+#    ifndef _HAS_STD_STRING_VIEW
+#      define _HAS_STD_STRING_VIEW 1
+#    endif // C++17 features macro
+#  endif   // C++17 features check
 
-#if !defined(_HAS_STD_STRING_VIEW)
-#  define _HAS_STD_STRING_VIEW 0
-#endif
-
-#if !defined(_HAS_CXX17_FULL_FEATURES)
-#  define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
-#endif
-
-#if _HAS_STD_STRING_VIEW
-//#pragma message("_HAS_STD_STRING_VIEW = 1")
-#  if __has_include(<string_view>)
-#    include <string_view>
+#  if !defined(_HAS_STD_STRING_VIEW)
+#    define _HAS_STD_STRING_VIEW 0
 #  endif
+
+#  if !defined(_HAS_CXX17_FULL_FEATURES)
+#    define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
+#  endif
+
+#  if _HAS_STD_STRING_VIEW
+//#pragma message("_HAS_STD_STRING_VIEW = 1")
+#    if __has_include(<string_view>)
+#      include <string_view>
+#    endif
 namespace stdport
 {
 using std::string_view;
 using std::wstring_view;
 } // namespace stdport
-#else
+#  else
 //#pragma message("_HAS_STD_STRING_VIEW = 0")
 
-#  include <algorithm>
-#  include <exception>
-#  include <stdexcept>
-#  include <string.h>
+#    include <algorithm>
+#    include <exception>
+#    include <stdexcept>
+#    include <string.h>
 namespace stdport
 {
 template <class _Traits>
@@ -1352,5 +1353,7 @@ inline bool operator>=(const basic_string_view<CharT, Traits> &lhs,
   return lhs >= basic_string_view<CharT, Traits>(rhs);
 }
 } // namespace stdport
+
+#  endif
 
 #endif

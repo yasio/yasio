@@ -86,11 +86,11 @@ enum : u_short
 // error code
 enum
 {
-  YERR_OK,                        // NO ERROR.
-  YERR_SEND_TIMEOUT,              // Send timeout.
-  YERR_DPL_ILLEGAL_PDU,           // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED,        // Resolve host failed.
-  YERR_NO_AVAIL_ADDR,             // No available address to connect.
+  YERR_OK,                 // NO ERROR.
+  YERR_SEND_TIMEOUT,       // Send timeout.
+  YERR_DPL_ILLEGAL_PDU,    // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED, // Resolve host failed.
+  YERR_NO_AVAIL_ADDR,      // No available address to connect.
 };
 
 // event mask

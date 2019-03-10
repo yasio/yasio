@@ -306,8 +306,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                 break;
               case YOPT_CHANNEL_REMOTE_ENDPOINT:
-                service->set_option(opt, static_cast<int>(va[0]),
-                                    static_cast<const char *>(args[1]), static_cast<int>(va[2]));
+                service->set_option(opt, static_cast<int>(args[0]),
+                                    static_cast<const char *>(args[1]), static_cast<int>(args[2]));
                 break;
               case YOPT_TCP_KEEPALIVE:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),

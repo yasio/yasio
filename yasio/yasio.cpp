@@ -101,7 +101,6 @@ enum
 {
   YERR_OK,                        // NO ERROR
   YERR_CONNECT_FAILED = -201,     // connect failed
-  YERR_CONNECT_TIMEOUT,           // connect timeout
   YERR_SEND_FAILED,               // send error, failed
   YERR_SEND_TIMEOUT,              // send timeout
   YERR_RECV_FAILED,               // recv failed
@@ -764,10 +763,11 @@ void io_service::open(size_t channel_index, int channel_mask)
 
 void io_service::handle_close(transport_ptr transport)
 {
+  int error = transport->error_;
   INET_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
            transport->local_endpoint().to_string().c_str(),
-           transport->peer_endpoint().to_string().c_str(), transport->error_,
-           io_service::strerror(transport->error_));
+           transport->peer_endpoint().to_string().c_str(), error,
+           io_service::strerror(error));
 
   do_close(transport.get());
 
@@ -783,7 +783,7 @@ void io_service::handle_close(transport_ptr transport)
 
   // @Notify connection lost
   this->handle_event(
-      event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, transport->error_, transport)));
+      event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, error, transport)));
 
   // @Process tcp client reconnect
   if (ctx->mask_ == YCM_TCP_CLIENT)
@@ -1159,11 +1159,10 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
 
 void io_service::handle_connect_failed(io_channel *ctx)
 {
+  int error = ctx->error_;
+
   do_close(ctx);
 
-  ctx->state_ = YCS_CLOSED;
-
-  int error = ctx->error_;
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 
   INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,

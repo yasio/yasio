@@ -9,7 +9,7 @@ function yasioTest() {
 
   yserver.start_service(hostents, function (event) {
     var kind = event.kind();
-    if (kind == yasio.YASIO_EVENT_CONNECT_RESPONSE) {
+    if (kind == yasio.YEK_CONNECT_RESPONSE) {
       cc.log("yasio event --> a connection income, kind=%d", event.kind());
       var tsport = event.transport();
       var obs = new yasio.obstream(256);
@@ -41,29 +41,29 @@ function yasioTest() {
         }, 2);
       }, 3);
     }
-    else if (kind == yasio.YASIO_EVENT_CONNECTION_LOST) {
+    else if (kind == yasio.YEK_CONNECTION_LOST) {
       cc.log("yasio server: The connection is lost!");
     }
   });
-  yserver.open(0, yasio.CHANNEL_TCP_SERVER);
+  yserver.open(0, yasio.YCM_TCP_SERVER);
 
   var yclient = new yasio.io_service();
 
   var tsport_c = null;
-  yclient.set_option(yasio.YASIO_OPT_LFBFD_PARAMS, 
-    65535, -- maxFrameLength, 最大包长度
-    0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
-    4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
-    0 -- lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
+  yclient.set_option(yasio.YOPT_LFBFD_PARAMS, 
+    65535, // maxFrameLength, 最大包长度
+    0,  // lenghtFieldOffset, 长度字段偏移，相对于包起始字节
+    4, // lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
+    0 // lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
 );
 
   yclient.start_service({ host: "127.0.0.1", port: 8081 }, function (event) {
     var kind = event.kind();
-    if (kind == yasio.YASIO_EVENT_CONNECT_RESPONSE) {
+    if (kind == yasio.YEK_CONNECT_RESPONSE) {
       cc.log("yasio event --> connect server succeed, kind=%d", event.kind());
       tsport_c = event.transport();
     }
-    else if (kind == yasio.YASIO_EVENT_RECV_PACKET) {
+    else if (kind == yasio.YEK_PACKET) {
       cc.log("yasio client --> receive a packet from server, kind=%d, close connect after 3 seconds", event.kind());
       var ibs = event.take_packet();
 
@@ -98,7 +98,7 @@ function yasioTest() {
       }, 3);
     }
   });
-  yclient.open(0, yasio.CHANNEL_TCP_CLIENT);
+  yclient.open(0, yasio.YCM_TCP_CLIENT);
 
   // run the event-loop
   cc.yserverID = yasio.setInterval(function () {

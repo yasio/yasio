@@ -255,9 +255,9 @@ public:
 };
 
 /// deadline_timer
-void deadline_timer::async_wait(const std::function<void(bool cancelled)> &callback)
+void deadline_timer::async_wait(std::function<void(bool cancelled)> callback)
 {
-  this->callback_ = callback;
+  this->callback_ = std::move(callback);
   this->service_.schedule_timer(this);
 }
 
@@ -623,7 +623,7 @@ void io_service::perform_transports(fd_set *fds_array)
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto &transport = *iter;
-    bool ok         = do_read(transport) && do_write(transport);
+    bool ok         = do_read(transport, fds_array) && do_write(transport);
     if (ok)
       ++iter;
     else
@@ -778,6 +778,7 @@ void io_service::handle_close(transport_ptr transport)
   {
     ctx->state_ = YCS_CLOSED;
     ctx->op_mask_ &= ~YOPM_CLOSE_TRANSPORT;
+    ctx->error_ = 0;
   } // server channel, do nothing.
 
   // @Notify connection lost
@@ -790,13 +791,10 @@ void io_service::handle_close(transport_ptr transport)
     if (options_.reconnect_timeout_ > 0 && ctx->state_ != YCS_OPENING)
     {
       ctx->state_ = YCS_OPENING;
-      std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
-      timer->expires_from_now(std::chrono::microseconds(options_.reconnect_timeout_));
-      timer->async_wait(
-          [this, ctx, timer /*!important, hold on by lambda expression */](bool cancelled) {
-            if (!cancelled)
-              this->open_internal(ctx, true);
-          });
+      this->schedule(options_.reconnect_timeout_, [=](bool cancelled) {
+        if (!cancelled)
+          this->open_internal(ctx, true);
+      });
     }
   }
 }
@@ -1253,7 +1251,7 @@ bool io_service::do_write(transport_ptr transport)
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
 
-bool io_service::do_read(transport_ptr transport)
+bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
 {
   bool bRet = false;
   auto ctx  = transport->ctx_;
@@ -1268,14 +1266,17 @@ bool io_service::do_read(transport_ptr transport)
       break;
     }
 
-    /*  if(transport->offset_ > 0 || FD_ISSET(transport->socket_->native_handle(),
-      &(fds_array[read_op]))) {
-      }*/
+    int n = -1;
+    if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
+    {
+      n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
+                                     sizeof(transport->buffer_) - transport->offset_);
+      transport->update_error();
+    }
+    else
+      transport->update_error(EWOULDBLOCK);
 
-    int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
-                                       sizeof(transport->buffer_) - transport->offset_);
-
-    if (n > 0 || !SHOULD_CLOSE_0(n, transport->update_error()))
+    if (n > 0 || !SHOULD_CLOSE_0(n, transport->error_))
     {
 #if _YASIO_VERBOS_LOG
       INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
@@ -1330,18 +1331,9 @@ bool io_service::do_read(transport_ptr transport)
     {
       int error            = transport->error_;
       const char *errormsg = io_service::strerror(error);
-      if (n == 0)
-      {
-        INET_LOG("[index: %d] do_read error, the remote host close the "
-                 "connection, retval=%d, ec:%d, detail:%s",
-                 ctx->index_, n, error, errormsg);
-      }
-      else
-      {
-        INET_LOG("[index: %d] do_read error, the connection should be "
-                 "closed, retval=%d, ec:%d, detail:%s",
-                 ctx->index_, n, error, errormsg);
-      }
+      INET_LOG("[index: %d] do_read error, %s, retval=%d, ec:%d, detail:%s", ctx->index_,
+               n == 0 ? "the remote host close the connection" : "the connection should be closed",
+               n, error, errormsg);
       break;
     }
 
@@ -1383,6 +1375,17 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     // incomplete, continue recv remain data.
     transport->offset_ = 0;
   }
+}
+
+std::shared_ptr<deadline_timer> io_service::schedule(highp_time_t duration,
+                                                     std::function<void(bool cancelled)> callback,
+                                                     bool repeated)
+{
+  std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
+  timer->expires_from_now(std::chrono::microseconds(duration), repeated);
+  timer->async_wait([this, timer /*!important, hold on by lambda expression */,
+                     callback](bool cancelled) { callback(cancelled); });
+  return timer;
 }
 
 void io_service::schedule_timer(deadline_timer *timer)
@@ -1560,7 +1563,7 @@ bool io_service::do_close(io_base *ctx)
 {
   ctx->op_mask_ = 0;
   ctx->state_   = YCS_CLOSED;
-
+  ctx->error_   = 0;
   if (ctx->socket_->is_open())
   {
     unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
@@ -1723,6 +1726,5 @@ const char *io_service::strerror(int error)
       return xxsocket::strerror(error);
   }
 }
-
 } // namespace inet
 } // namespace purelib

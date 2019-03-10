@@ -154,7 +154,7 @@ public:
   void expires_from_now() { expire_time_ = highp_clock_t::now() + this->duration_; }
 
   // Wait timer timeout or cancelled.
-  void async_wait(const std::function<void(bool cancelled)> &callback);
+  void async_wait(std::function<void(bool cancelled)> callback);
 
   // Cancel the timer
   void cancel();
@@ -368,18 +368,21 @@ public:
   void write(transport_ptr transport, std::vector<char> data);
   void write(io_transport *transport, std::vector<char> data);
 
-  // timer support
+  // The deadlien_timer support, !important, the callback is called on the thread of io_service
+  std::shared_ptr<deadline_timer>
+  schedule(highp_time_t duration, std::function<void(bool cancelled)>, bool repeated = false);
+
   void schedule_timer(deadline_timer *);
   void cancel_timer(deadline_timer *);
-
-  // Start a async resolve, It's only for internal use
-  bool start_resolve(io_channel *);
 
   bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
 
   void cleanup();
 
 private:
+  // Start a async resolve, It's only for internal use
+  bool start_resolve(io_channel *);
+
   void init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
 
   void open_internal(io_channel *, bool ignore_state = false);
@@ -413,7 +416,7 @@ private:
   void run(void);
 
   bool do_write(transport_ptr);
-  bool do_read(transport_ptr);
+  bool do_read(transport_ptr, fd_set *fds_array);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   // The op mask will be cleared, the state will be set CLOSED

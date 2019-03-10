@@ -345,18 +345,14 @@ void io_service::stop_service()
     {
       ctx->deadline_timer_.cancel();
       if (ctx->socket_->is_open())
-      {
         ctx->socket_->shutdown();
-      }
     }
 
     this->interrupt();
     this->wait_service();
   }
   else if (this->state_ == io_service::state::STOPPING)
-  {
     this->wait_service();
-  }
 }
 
 void io_service::wait_service()
@@ -576,9 +572,7 @@ void io_service::run()
       int ec = xxsocket::get_last_errno();
       INET_LOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
-      {
         goto _L_end;
-      }
       continue; // just continue.
     }
 
@@ -646,32 +640,21 @@ void io_service::perform_channels(fd_set *fds_array)
       if (ctx->mask_ & YCM_CLIENT)
       {
         if (ctx->op_mask_ & YOPM_OPEN_CHANNEL)
-        {
           finish = do_nonblocking_connect(ctx);
-        }
         else if (ctx->state_ == YCS_OPENING)
-        {
           finish = do_nonblocking_connect_completion(ctx, fds_array);
-        }
       }
       else if (ctx->mask_ & YCM_SERVER)
       {
         if (ctx->op_mask_ & YOPM_CLOSE_CHANNEL)
-        {
           do_close(ctx);
-          INET_LOG("The channel: %d is closed!", ctx->index_);
-        }
 
         if (ctx->op_mask_ & YOPM_OPEN_CHANNEL)
-        {
           do_nonblocking_accept(ctx);
-        }
-
-        if (ctx->state_ == YCS_OPENED)
-        {
+        
+        finish = (ctx->state_ != YCS_OPENED);
+        if (!finish)
           do_nonblocking_accept_completion(ctx, fds_array);
-          finish = (ctx->state_ != YCS_OPENED);
-        }
       }
 
       if (finish)
@@ -723,8 +706,8 @@ bool io_service::is_open(size_t channel_index) const
 void io_service::reopen(transport_ptr transport)
 {
   auto ctx = transport->ctx_;
-  if (ctx->mask_ & YCM_CLIENT) // Only client support reopen
-    open_internal(transport->ctx_);
+  if (ctx->mask_ & YCM_CLIENT) // Only client channel support reopen by transport
+    open_internal(ctx);
 }
 
 void io_service::open(size_t channel_index, int channel_mask)
@@ -740,7 +723,7 @@ void io_service::open(size_t channel_index, int channel_mask)
     see:
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
   */
-    INET_LOG("[index: %d], YCM_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
+    INET_LOG("[index: %d], YCM_UDP_SERVER does'n supported by Microsoft Winsock provider, you can use "
              "YCM_UDP_CLIENT to communicate with peer!",
              channel_index);
     return;
@@ -861,7 +844,7 @@ void io_service::handle_event(event_ptr event)
 bool io_service::do_nonblocking_connect(io_channel *ctx)
 {
   assert((ctx->op_mask_ & YOPM_OPEN_CHANNEL));
-  if ((ctx->op_mask_ & YOPM_OPEN_CHANNEL) == 0)
+  if (!(ctx->op_mask_ & YOPM_OPEN_CHANNEL))
     return true;
 
   if (this->ipsv_ == 0)

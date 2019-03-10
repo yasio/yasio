@@ -915,7 +915,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
   else // YCM_UDP
   {
     int ret = -1;
-    if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+    if (ctx->socket_->open(ep.af(), SOCK_DGRAM, 0))
     {
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 

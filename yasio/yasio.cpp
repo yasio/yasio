@@ -691,7 +691,7 @@ void io_service::close(size_t channel_index)
 
   if (!(ctx->op_mask_ & YOPM_CLOSE_CHANNEL))
   {
-    if ((ctx))
+    if (close_internal(ctx))
       this->interrupt();
   }
 }
@@ -802,19 +802,13 @@ void io_service::handle_close(transport_ptr transport)
 void io_service::register_descriptor(const socket_native_type fd, int flags)
 {
   if ((flags & YEM_POLLIN) != 0)
-  {
     FD_SET(fd, &(fds_array_[read_op]));
-  }
 
   if ((flags & YEM_POLLOUT) != 0)
-  {
     FD_SET(fd, &(fds_array_[write_op]));
-  }
 
   if ((flags & YEM_POLLERR) != 0)
-  {
     FD_SET(fd, &(fds_array_[except_op]));
-  }
 
   if (maxfdp_ < static_cast<int>(fd) + 1)
     maxfdp_ = static_cast<int>(fd) + 1;
@@ -823,19 +817,13 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 {
   if ((flags & YEM_POLLIN) != 0)
-  {
     FD_CLR(fd, &(fds_array_[read_op]));
-  }
 
   if ((flags & YEM_POLLOUT) != 0)
-  {
     FD_CLR(fd, &(fds_array_[write_op]));
-  }
 
   if ((flags & YEM_POLLERR) != 0)
-  {
     FD_CLR(fd, &(fds_array_[except_op]));
-  }
 }
 
 void io_service::write(transport_ptr transport, std::vector<char> data)
@@ -856,9 +844,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     this->interrupt();
   }
   else
-  {
     INET_LOG("[transport: %p] send failed, the connection not ok!", transport);
-  }
 }
 void io_service::handle_event(event_ptr event)
 {
@@ -869,9 +855,7 @@ void io_service::handle_event(event_ptr event)
     event_queue_mtx_.unlock();
   }
   else
-  {
     this->on_event_(std::move(event));
-  }
 }
 
 bool io_service::do_nonblocking_connect(io_channel *ctx)
@@ -1105,9 +1089,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
                                            std::vector<char>(buffer, buffer + n), transport)));
               }
               else
-              {
                 INET_LOG("%s", "udp-server: open socket fd failed!");
-              }
             }
           }
         }
@@ -1484,10 +1466,7 @@ void io_service::perform_timers()
         loop_timers.push_back(earliest);
       }
     }
-    else
-    {
-      break;
-    }
+    else break;
   }
 
   if (!loop_timers.empty())
@@ -1532,9 +1511,7 @@ but it's ok.
 #endif
     }
     else
-    {
       nfds = static_cast<int>(channels_.size()) << 1;
-    }
   }
 
   return nfds;
@@ -1543,9 +1520,7 @@ but it's ok.
 long long io_service::get_wait_duration(long long usec)
 {
   if (this->timer_queue_.empty())
-  {
     return usec;
-  }
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
   deadline_timer *earliest = timer_queue_.back();
@@ -1617,9 +1592,7 @@ bool io_service::start_resolve(io_channel *ctx)
                ctx->host_.c_str(), ep.to_string().c_str());
     }
     else
-    {
       ctx->dns_queries_state_ = YDQS_FAILED;
-    }
 
     /*
     The getaddrinfo behavior at win32 is strange:
@@ -1644,9 +1617,7 @@ bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostn
                          unsigned short port)
 {
   if (this->ipsv_ & ipsv_ipv4)
-  {
     return xxsocket::resolve_v4(endpoints, hostname, port);
-  }
   else if (this->ipsv_ & ipsv_ipv6)
   { // localhost is IPV6 ONLY network
     return xxsocket::resolve_v6(endpoints, hostname, port) ||

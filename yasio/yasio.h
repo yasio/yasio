@@ -121,8 +121,8 @@ typedef std::shared_ptr<io_transport> transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 
 typedef std::function<void(event_ptr)> io_event_callback_t;
-typedef std::function<int(io_service *, void *ptr, int len)> decode_len_fn_t;
-typedef std::function<bool(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
+typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
+typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
 
 struct io_hostent
 {
@@ -142,13 +142,14 @@ class deadline_timer
 {
 public:
   ~deadline_timer() {}
-  deadline_timer(io_service &service) : repeated_(false), service_(service) {}
+  deadline_timer(io_service &service) : service_(service), repeated_(false), cancelled_(false) {}
 
   void expires_from_now(const std::chrono::microseconds &duration, bool repeated = false)
   {
-    this->duration_ = duration;
-    this->repeated_ = repeated;
-    expire_time_    = highp_clock_t::now() + this->duration_;
+    this->duration_  = duration;
+    this->repeated_  = repeated;
+    this->cancelled_ = false;
+    expire_time_     = highp_clock_t::now() + this->duration_;
   }
 
   void expires_from_now() { expire_time_ = highp_clock_t::now() + this->duration_; }
@@ -162,8 +163,8 @@ public:
   // Check if timer is expired?
   bool expired() const { return wait_duration().count() <= 0; }
 
-  // Let timer expire immidlately
-  void expire() { expire_time_ = highp_clock_t::now() - duration_; }
+  // Remove from io_service's timer queue
+  void unschedule();
 
   // Gets wait duration of timer.
   std::chrono::microseconds wait_duration() const
@@ -172,8 +173,10 @@ public:
                                                                  highp_clock_t::now());
   }
 
-  bool repeated_;
   io_service &service_;
+
+  bool cancelled_;
+  bool repeated_;
   std::chrono::microseconds duration_;
   std::chrono::time_point<highp_clock_t> expire_time_;
   std::function<void(bool cancelled)> callback_;
@@ -201,8 +204,7 @@ public:
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
 
-  bool dns_queries_needed_;
-  std::atomic<short> dns_queries_state_;
+  std::atomic<u_short> dns_queries_state_;
   u_short port_;
   std::string host_;
 
@@ -294,6 +296,8 @@ private:
 
 class io_service
 {
+  friend class deadline_timer;
+
 public:
   enum class state
   {
@@ -372,16 +376,19 @@ public:
   std::shared_ptr<deadline_timer>
   schedule(highp_time_t duration, std::function<void(bool cancelled)>, bool repeated = false);
 
-  void schedule_timer(deadline_timer *);
-  void cancel_timer(deadline_timer *);
-
-  bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname, unsigned short port = 0);
-
   void cleanup();
 
+  int __builtin_resolv(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                       unsigned short port = 0);
+  // -1 indicate failed, connection will be closed
+  int __builtin_decode_len(void *ptr, int len);
+
 private:
+  void schedule_timer(deadline_timer *);
+  void remove_timer(deadline_timer *);
+
   // Start a async resolve, It's only for internal use
-  bool start_resolve(io_channel *);
+  void start_resolve(io_channel *);
 
   void init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
 
@@ -397,15 +404,15 @@ private:
 
   int do_evpoll(fd_set *fds_array, timeval &timeout);
 
-  bool do_nonblocking_connect(io_channel *);
-  bool do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
+  void do_nonblocking_connect(io_channel *);
+  void do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
 
   inline void handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
   {
     handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
   }
   void handle_connect_succeed(transport_ptr);
-  void handle_connect_failed(io_channel *);
+  void handle_connect_failed(io_channel *, int ec);
 
   transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
@@ -437,16 +444,13 @@ private:
   bool close_internal(io_channel *);
 
   // Update resolve state for new endpoint set
-  void update_resolve_state(io_channel *ctx);
+  u_short update_dns_queries_state(io_channel *ctx, bool update_name);
 
   void handle_send_finished(a_pdu_ptr, int);
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
   void do_nonblocking_accept_completion(io_channel *, fd_set *fds_array);
-
-  // -1 indicate failed, connection will be closed
-  int builtin_decode_frame_length(void *ptr, int len);
 
   static const char *strerror(int error);
 

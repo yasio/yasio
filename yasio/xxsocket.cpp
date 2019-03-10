@@ -26,11 +26,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <assert.h>
-#include "xxsocket.h"
-
 #ifdef _DEBUG
 #  include <stdio.h>
 #endif
+#include "xxsocket.h"
 
 // For apple bsd socket implemention
 #if !defined(TCP_KEEPIDLE)
@@ -74,11 +73,6 @@ SOFTWARE.
 
 using namespace purelib;
 using namespace purelib::inet;
-
-#ifdef _WIN32
-#  undef gai_strerror
-#  define gai_strerror gai_strerrorA
-#endif
 
 #if defined(_WIN32) && !defined(_WINSTORE)
 extern LPFN_ACCEPTEX __accept_ex;
@@ -536,7 +530,7 @@ static int getipsv_internal(void)
   }
   else
   {
-    errmsg = gai_strerror(iret);
+    errmsg = xxsocket::gai_strerror(iret);
   }
 #elif defined(ANDROID)
   flags = ipsv_ipv4; // Could not found any methods to get ip currently, so fixed return ipsv_ipv4;
@@ -748,8 +742,8 @@ int xxsocket::pserv(const char *addr, u_short port)
   return this->listen();
 }
 
-bool xxsocket::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                       unsigned short port)
+int xxsocket::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                      unsigned short port)
 {
   return resolve_i(
       [&](const ip::endpoint &ep) {
@@ -759,8 +753,8 @@ bool xxsocket::resolve(std::vector<ip::endpoint> &endpoints, const char *hostnam
       hostname, port, AF_UNSPEC, AI_ALL);
 }
 
-bool xxsocket::resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                          unsigned short port)
+int xxsocket::resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                         unsigned short port)
 {
   return resolve_i(
       [&](const ip::endpoint &ep) {
@@ -770,8 +764,8 @@ bool xxsocket::resolve_v4(std::vector<ip::endpoint> &endpoints, const char *host
       hostname, port, AF_INET, 0);
 }
 
-bool xxsocket::resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                          unsigned short port)
+int xxsocket::resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                         unsigned short port)
 {
   return resolve_i(
       [&](const ip::endpoint &ep) {
@@ -781,8 +775,8 @@ bool xxsocket::resolve_v6(std::vector<ip::endpoint> &endpoints, const char *host
       hostname, port, AF_INET6, 0);
 }
 
-bool xxsocket::resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                             unsigned short port)
+int xxsocket::resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                            unsigned short port)
 {
   return xxsocket::resolve_i(
       [&](const ip::endpoint &ep) {
@@ -792,8 +786,8 @@ bool xxsocket::resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *h
       hostname, port, AF_INET6, AI_V4MAPPED);
 }
 
-bool xxsocket::force_resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                                unsigned short port)
+int xxsocket::force_resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                               unsigned short port)
 {
   return resolve_i(
       [&](const ip::endpoint &ep) {
@@ -1485,6 +1479,15 @@ const char *xxsocket::strerror(int error)
   return error_msg;
 #else
   return ::strerror(error);
+#endif
+}
+
+const char *xxsocket::gai_strerror(int error)
+{
+#if defined(_WIN32)
+  return xxsocket::strerror(error);
+#else
+  return ::gai_strerror(error);
 #endif
 }
 

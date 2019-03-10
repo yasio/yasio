@@ -61,6 +61,8 @@ typedef int socklen_t;
 typedef WSAPOLLFD pollfd;
 #  define poll WSAPoll
 #  pragma comment(lib, "ws2_32.lib")
+
+#  undef gai_strerror
 #else
 #  include <unistd.h>
 #  include <signal.h>
@@ -143,6 +145,7 @@ typedef int socket_native_type;
 #  undef EREMOTE
 #  undef EBADF
 #  undef EFAULT
+#  undef EAGAIN
 
 #  define EWOULDBLOCK WSAEWOULDBLOCK
 #  define EINPROGRESS WSAEINPROGRESS
@@ -183,7 +186,7 @@ typedef int socket_native_type;
 #  define EREMOTE WSAEREMOTE
 #  define EBADF WSAEBADF
 #  define EFAULT WSAEFAULT
-
+#  define EAGAIN WSATRY_AGAIN
 #endif
 
 // shoulde close connection condition when retval of recv <= 0
@@ -896,44 +899,46 @@ public:
 
   static int get_last_errno(void);
   static void set_last_errno(int error);
+
   static const char *strerror(int error);
+  static const char *gai_strerror(int error);
 
   /// <summary>
   /// Resolve all as ipv4 or ipv6 endpoints
   /// </summary>
-  static bool resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                      unsigned short port = 0);
+  static int resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                     unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only.
   /// </summary>
-  static bool resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                         unsigned short port = 0);
+  static int resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                        unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv6 address only.
   /// </summary>
-  static bool resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                         unsigned short port = 0);
+  static int resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                        unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only and convert to V4MAPPED format.
   /// </summary>
-  static bool resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                            unsigned short port = 0);
+  static int resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                           unsigned short port = 0);
 
   /// <summary>
   /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
   /// </summary>
-  static bool force_resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                               unsigned short port = 0);
+  static int force_resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                              unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 or ipv6 endpoints with callback
   /// </summary>
   template <typename _Fty>
-  inline static bool resolve_i(const _Fty &callback, const char *hostname, unsigned short port = 0,
-                               int af = 0, int flags = 0)
+  inline static int resolve_i(const _Fty &callback, const char *hostname, unsigned short port = 0,
+                              int af = 0, int flags = 0)
   {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
@@ -948,9 +953,9 @@ public:
       sprintf(buffer, "%u", port); // It's enough for unsigned short, so use sprintf ok.
       service = buffer;
     }
-    getaddrinfo(hostname, service, &hint, &answerlist);
+    int error = getaddrinfo(hostname, service, &hint, &answerlist);
     if (nullptr == answerlist)
-      return false;
+      return error;
 
     for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next)
     {
@@ -963,12 +968,12 @@ public:
 
     freeaddrinfo(answerlist);
 
-    return true;
+    return error;
   }
 
 private:
   socket_native_type fd;
-};
+}; // namespace inet
 
 template <typename T> inline int xxsocket::set_optval(int level, int optname, const T &optval)
 {
@@ -1008,7 +1013,6 @@ template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd
 }; // namespace inet
 
 namespace net = inet;
-
 }; // namespace purelib
 
 #if defined(_MSC_VER)

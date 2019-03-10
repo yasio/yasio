@@ -73,10 +73,6 @@ namespace purelib
 {
 namespace inet
 {
-
-static const int CHANNEL_SZ   = sizeof(io_channel);
-static const int TRANSPORT_SZ = sizeof(io_transport);
-
 namespace
 {
 // channel state
@@ -87,31 +83,14 @@ enum : u_short
   YCS_OPENED,
 };
 
-// dns queries state
-enum : short
-{
-  YDQS_READY,
-  YDQS_DIRTY,
-  YDQS_INPRROGRESS,
-  YDQS_FAILED = -1,
-};
-
 // error code
 enum
 {
-  YERR_OK,                        // NO ERROR
-  YERR_CONNECT_FAILED = -201,     // connect failed
-  YERR_SEND_FAILED,               // send error, failed
-  YERR_SEND_TIMEOUT,              // send timeout
-  YERR_RECV_FAILED,               // recv failed
-  YERR_NETWORK_UNREACHABLE,       // wifi or 2,3,4G not open
-  YERR_CONNECTION_LOST,           // connection lost
-  YERR_DPL_ILLEGAL_PDU,           // decode pdu error.
-  YERR_RESOLV_HOST_FAILED,        // resolve host failed.
-  YERR_RESOLV_HOST_TIMEOUT,       // resolve host ip timeout.
-  YERR_RESOLV_HOST_IPV6_REQUIRED, // resolve host ip failed, a valid ipv6 host
-  // required.
-  YERR_INVALID_PORT, // invalid port.
+  YERR_OK,                        // NO ERROR.
+  YERR_SEND_TIMEOUT,              // Send timeout.
+  YERR_DPL_ILLEGAL_PDU,           // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED,        // Resolve host failed.
+  YERR_NO_AVAIL_ADDR,             // No available address to connect.
 };
 
 // event mask
@@ -130,6 +109,20 @@ enum
   YOPM_CLOSE_TRANSPORT = 1 << 2,
   YOPM_REOPEN_CHANNEL  = 1 << 3,
 };
+
+// dns queries state
+enum : u_short
+{
+  YDQS_READY = 1,
+  YDQS_DIRTY,
+  YDQS_INPRROGRESS,
+  YDQS_FAILED,
+  YDQSF_QUERIES_NEEDED = 1 << 8
+};
+
+#define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
+#define YDQS_SET_STATE(what, value) (what = (what & 0xff00) | value)
+#define YDQS_GET_STATE(what) (what & 0x00ff)
 
 // The high precision micro seconds timestamp
 static long long _highp_clock()
@@ -264,10 +257,13 @@ void deadline_timer::cancel()
 {
   if (!expired())
   {
-    this->service_.cancel_timer(this);
-    this->expire();
+    this->expire_time_ = highp_clock_t::now() - duration_;
+    this->cancelled_   = true;
+    this->service_.interrupt();
   }
 }
+
+void deadline_timer::unschedule() { this->service_.remove_timer(this); }
 
 /// io_channel
 io_channel::io_channel(io_service &service) : deadline_timer_(service)
@@ -281,9 +277,8 @@ void io_channel::reset()
 
   dns_queries_state_     = YDQS_FAILED;
   dns_queries_timestamp_ = 0;
-  dns_queries_needed_    = false;
   endpoints_.clear();
-  deadline_timer_.cancel();
+  deadline_timer_.unschedule();
 }
 
 io_transport::io_transport(io_channel *ctx) : ctx_(ctx) { this->state_ = YCS_OPENED; }
@@ -297,11 +292,13 @@ io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
   maxfdp_           = 0;
   outstanding_work_ = 0;
 
-  ipsv_ = 0;
+  this->decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 
-  this->decode_len_ = [](io_service *service, void *ptr, int len) {
-    return service->builtin_decode_frame_length(ptr, len);
+  this->resolv_ = [=](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
+    return this->__builtin_resolv(eps, host, port);
   };
+
+  ipsv_ = 0;
 }
 
 io_service::~io_service()
@@ -309,6 +306,9 @@ io_service::~io_service()
   stop_service();
   if (this->state_ == io_service::state::STOPPED)
     cleanup();
+
+  this->decode_len_ = nullptr;
+  this->resolv_     = nullptr;
 }
 
 void io_service::start_service(const io_hostent *channel_eps, int channel_count,
@@ -316,7 +316,7 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
 {
   if (state_ == io_service::state::IDLE)
   {
-    init(channel_eps, channel_count, cb);
+    this->init(channel_eps, channel_count, cb);
 
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
@@ -396,7 +396,6 @@ void io_service::cleanup()
   if (this->state_ == io_service::state::STOPPED)
   {
     this->transports_.clear();
-
     clear_channels();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
@@ -478,6 +477,7 @@ void io_service::set_option(int option, ...)
       if (index < this->channels_.size())
       {
         this->channels_[index]->host_ = va_arg(ap, const char *);
+        update_dns_queries_state(this->channels_[index], true);
       }
     }
     break;
@@ -487,6 +487,7 @@ void io_service::set_option(int option, ...)
       if (index < this->channels_.size())
       {
         this->channels_[index]->port_ = (u_short)va_arg(ap, int);
+        update_dns_queries_state(this->channels_[index], true);
       }
     }
     break;
@@ -498,6 +499,7 @@ void io_service::set_option(int option, ...)
         auto channel   = this->channels_[index];
         channel->host_ = va_arg(ap, const char *);
         channel->port_ = (u_short)va_arg(ap, int);
+        update_dns_queries_state(this->channels_[index], true);
       }
     }
     break;
@@ -516,7 +518,7 @@ io_channel *io_service::new_channel(const io_hostent &ep)
   ctx->host_  = ep.host_;
   ctx->port_  = ep.port_;
   ctx->index_ = static_cast<int>(this->channels_.size());
-  update_resolve_state(ctx);
+  update_dns_queries_state(ctx, true);
   this->channels_.push_back(ctx);
   return ctx;
 }
@@ -638,11 +640,27 @@ void io_service::perform_channels(fd_set *fds_array)
       auto ctx    = *iter;
       bool finish = true;
       if (ctx->mask_ & YCM_CLIENT)
-      {
+      { // resolving, opening
         if (ctx->op_mask_ & YOPM_OPEN_CHANNEL)
-          finish = do_nonblocking_connect(ctx);
+        {
+          switch (this->update_dns_queries_state(ctx, false))
+          {
+            case YDQS_READY:
+              do_nonblocking_connect(ctx);
+              break;
+            case YDQS_FAILED:
+              INET_LOG("[index: %d] getaddrinfo failed, ec:%d, detail:%s", ctx->index_, ctx->error_,
+                       xxsocket::gai_strerror(ctx->error_));
+              handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
+              break;
+            default:; // YDQS_INPRROGRESS
+          }
+        }
         else if (ctx->state_ == YCS_OPENING)
-          finish = do_nonblocking_connect_completion(ctx, fds_array);
+        {
+          do_nonblocking_connect_completion(ctx, fds_array);
+        }
+        finish = ctx->error_ != EINPROGRESS;
       }
       else if (ctx->mask_ & YCM_SERVER)
       {
@@ -651,7 +669,7 @@ void io_service::perform_channels(fd_set *fds_array)
 
         if (ctx->op_mask_ & YOPM_OPEN_CHANNEL)
           do_nonblocking_accept(ctx);
-        
+
         finish = (ctx->state_ != YCS_OPENED);
         if (!finish)
           do_nonblocking_accept_completion(ctx, fds_array);
@@ -723,9 +741,10 @@ void io_service::open(size_t channel_index, int channel_mask)
     see:
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
   */
-    INET_LOG("[index: %d], YCM_UDP_SERVER does'n supported by Microsoft Winsock provider, you can use "
-             "YCM_UDP_CLIENT to communicate with peer!",
-             channel_index);
+    INET_LOG(
+        "[index: %d], YCM_UDP_SERVER does'n supported by Microsoft Winsock provider, you can use "
+        "YCM_UDP_CLIENT to communicate with peer!",
+        channel_index);
     return;
   }
 #endif
@@ -749,8 +768,7 @@ void io_service::handle_close(transport_ptr transport)
   int error = transport->error_;
   INET_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
            transport->local_endpoint().to_string().c_str(),
-           transport->peer_endpoint().to_string().c_str(), error,
-           io_service::strerror(error));
+           transport->peer_endpoint().to_string().c_str(), error, io_service::strerror(error));
 
   do_close(transport.get());
 
@@ -765,8 +783,7 @@ void io_service::handle_close(transport_ptr transport)
   } // server channel, do nothing.
 
   // @Notify connection lost
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, error, transport)));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, error, transport)));
 
   // @Process tcp client reconnect
   if (ctx->mask_ == YCM_TCP_CLIENT)
@@ -841,112 +858,84 @@ void io_service::handle_event(event_ptr event)
     this->on_event_(std::move(event));
 }
 
-bool io_service::do_nonblocking_connect(io_channel *ctx)
+void io_service::do_nonblocking_connect(io_channel *ctx)
 {
-  assert((ctx->op_mask_ & YOPM_OPEN_CHANNEL));
-  if (!(ctx->op_mask_ & YOPM_OPEN_CHANNEL))
-    return true;
-
+  assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY));
   if (this->ipsv_ == 0)
     this->ipsv_ = xxsocket::getipsv();
-
-  auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
-  if (ctx->dns_queries_needed_ && ctx->dns_queries_state_ == YDQS_READY &&
-      diff >= options_.dns_cache_timeout_)
-    ctx->dns_queries_state_ = YDQS_DIRTY;
-
-  if (ctx->dns_queries_state_ == YDQS_READY)
-  {
+  if (ctx->socket_->is_open())
     do_close(ctx);
-    ctx->state_ = YCS_OPENING;
 
-    auto &ep = ctx->endpoints_[0];
-    if (ctx->mask_ & YCM_TCP)
+  ctx->op_mask_ &= ~YOPM_OPEN_CHANNEL;
+
+  if (ctx->endpoints_.empty())
+  {
+    this->handle_connect_failed(ctx, YERR_NO_AVAIL_ADDR);
+    return;
+  }
+
+  ctx->state_ = YCS_OPENING;
+  auto &ep    = ctx->endpoints_[0];
+  if (ctx->mask_ & YCM_TCP)
+  {
+    INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(), ctx->port_);
+    int ret = -1;
+    if (ctx->socket_->open(ep.af()))
     {
-      INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
-               ctx->port_);
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+      if (ctx->local_port_ != 0)
+        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+      ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+    }
 
-      int ret = -1;
-      if (ctx->socket_->open(ep.af()))
+    if (ret < 0)
+    { // setup no blocking connect
+      int error = xxsocket::get_last_errno();
+      if (error != EINPROGRESS && error != EWOULDBLOCK)
       {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-        if (ctx->local_port_ != 0)
-          ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+        this->handle_connect_failed(ctx, error);
       }
-
-      if (ret < 0)
-      { // setup no blocking connect
-        int error = ctx->update_error();
-        if (error != EINPROGRESS && error != EWOULDBLOCK)
-        {
-          this->handle_connect_failed(ctx);
-          return true;
-        }
-        else
-        {
-          register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
-          ctx->deadline_timer_.expires_from_now(
-              std::chrono::microseconds(options_.connect_timeout_));
-          ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-            if (!cancelled && ctx->state_ != YCS_OPENED)
-            {
-              ctx->update_error(ETIMEDOUT);
-              handle_connect_failed(ctx);
-            }
-          });
-
-          return false;
-        }
+      else
+      {
+        ctx->update_error(EINPROGRESS);
+        register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
+        ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
+        ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+          if (!cancelled && ctx->state_ != YCS_OPENED)
+            handle_connect_failed(ctx, ETIMEDOUT);
+        });
       }
-      else if (ret == 0)
-      { // connect server succed immidiately.
+    }
+    else if (ret == 0)
+    { // connect server succed immidiately.
+      register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
+      handle_connect_succeed(ctx, ctx->socket_);
+    } // NEVER GO HERE
+  }
+  else // YCM_UDP
+  {
+    int ret = -1;
+    if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+    {
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+
+      ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+      ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
+      if (ret == 0)
+      {
+        ctx->socket_->set_nonblocking(true);
         register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
         handle_connect_succeed(ctx, ctx->socket_);
-        return true;
-      } // NEVER GO HERE
-    }
-    else // YCM_UDP
-    {
-      int ret = -1;
-      if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+      }
+      else
       {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-
-        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-        ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
-        if (ret == 0)
-        {
-          ctx->socket_->set_nonblocking(true);
-          register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-
-          handle_connect_succeed(ctx, ctx->socket_);
-        }
-        else
-        {
-          ctx->update_error();
-          this->handle_connect_failed(ctx);
-        }
-
-        return true;
+        this->handle_connect_failed(ctx, xxsocket::get_last_errno());
       }
     }
   }
-  else if (ctx->dns_queries_state_ == YDQS_FAILED)
-  {
-    ctx->update_error(YERR_RESOLV_HOST_FAILED);
-    handle_connect_failed(ctx);
-    return true;
-  } // DIRTY,Try resolve address nonblocking
-  else if (ctx->dns_queries_state_ == YDQS_DIRTY)
-  {
-    return start_resolve(ctx);
-  }
-
-  return !(ctx->dns_queries_state_ == YDQS_INPRROGRESS);
 }
 
-bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_array)
+void io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_array)
 {
   assert(ctx->mask_ == YCM_TCP_CLIENT);
   assert(ctx->state_ == YCS_OPENING);
@@ -966,16 +955,11 @@ bool io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_
     }
     else
     {
-      ctx->update_error(YERR_CONNECT_FAILED);
-      handle_connect_failed(ctx);
+      handle_connect_failed(ctx, error);
     }
 
     ctx->deadline_timer_.cancel();
-
-    return true;
   }
-
-  return false;
 }
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
@@ -1088,8 +1072,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
 
 void io_service::handle_connect_succeed(transport_ptr transport)
 {
-  auto ctx = transport->ctx_;
-
+  auto ctx         = transport->ctx_;
+  ctx->error_      = 0;
   auto &connection = transport->socket_;
   if (ctx->mask_ & YCM_CLIENT)
     ctx->state_ = YCS_OPENED;
@@ -1122,10 +1106,8 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   return transport;
 }
 
-void io_service::handle_connect_failed(io_channel *ctx)
+void io_service::handle_connect_failed(io_channel *ctx, int error)
 {
-  int error = ctx->error_;
-
   do_close(ctx);
 
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
@@ -1259,7 +1241,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
 #endif
       if (transport->expected_packet_size_ == -1)
       { // decode length
-        int length = this->decode_len_(this, transport->buffer_, transport->offset_ + n);
+        int length = this->decode_len_(transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
           transport->expected_packet_size_ = length;
@@ -1280,6 +1262,8 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
                    "pdu failed, "
                    "the connection should be closed!",
                    ctx->index_);
+
+          ctx->update_error(YERR_DPL_ILLEGAL_PDU);
           break;
         }
       }
@@ -1375,15 +1359,13 @@ void io_service::schedule_timer(deadline_timer *timer)
     this->interrupt();
 }
 
-void io_service::cancel_timer(deadline_timer *timer)
+void io_service::remove_timer(deadline_timer *timer)
 {
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
   auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
   if (iter != timer_queue_.end())
   {
-    auto callback = timer->callback_;
-    callback(true);
     timer_queue_.erase(iter);
   }
 }
@@ -1395,9 +1377,6 @@ void io_service::open_internal(io_channel *ctx, bool ignore_state)
     INET_LOG("[index: %d] the channel is in opening!", ctx->index_);
     return;
   }
-
-  if (ctx->dns_queries_state_ != YDQS_READY)
-    update_resolve_state(ctx);
 
   close_internal(ctx);
 
@@ -1442,14 +1421,15 @@ void io_service::perform_timers()
     {
       timer_queue_.pop_back();
       auto callback = earliest->callback_;
-      callback(false);
+      callback(earliest->cancelled_);
       if (earliest->repeated_)
       {
         earliest->expires_from_now();
         loop_timers.push_back(earliest);
       }
     }
-    else break;
+    else
+      break;
   }
 
   if (!loop_timers.empty())
@@ -1530,53 +1510,70 @@ bool io_service::do_close(io_base *ctx)
   return false;
 }
 
-void io_service::update_resolve_state(io_channel *ctx)
+u_short io_service::update_dns_queries_state(io_channel *ctx, bool update_name)
 {
-  if (ctx->port_ > 0)
+  if (!update_name)
   {
-    ip::endpoint ep;
-    ctx->endpoints_.clear();
-    ctx->dns_queries_needed_ = !ep.assign(ctx->host_.c_str(), ctx->port_);
-    if (!ctx->dns_queries_needed_)
+    if ((ctx->dns_queries_state_ & YDQSF_QUERIES_NEEDED) &&
+        !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
     {
-      ctx->endpoints_.push_back(ep);
-      ctx->dns_queries_state_ = YDQS_READY;
+      auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
+      if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY) &&
+          diff >= options_.dns_cache_timeout_)
+        YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_DIRTY);
+
+      if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY))
+        start_resolve(ctx);
     }
-    else
-      ctx->dns_queries_state_ = YDQS_DIRTY;
   }
   else
-    ctx->dns_queries_state_ = YDQS_FAILED;
-}
-
-bool io_service::start_resolve(io_channel *ctx)
-{ // Only call at event-loop thread, so
-  // no need to consider thread safe.
-  if (ctx->dns_queries_state_ != YDQS_DIRTY)
-    return false;
-  ctx->dns_queries_state_ = YDQS_INPRROGRESS;
-  ctx->endpoints_.clear();
-
-  INET_LOG("[index: %d] start async resolving for %s", ctx->index_, ctx->host_.c_str());
-  // 6.563ms
-  std::thread resolve_thread([=] {
-    addrinfo hint;
-    memset(&hint, 0x0, sizeof(hint));
-
-    bool succeed = resolv_ ? resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_)
-                           : resolve(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
-
-    if (succeed && !ctx->endpoints_.empty())
+  {
+    ctx->endpoints_.clear();
+    if (ctx->port_ > 0)
     {
-      ctx->dns_queries_state_     = YDQS_READY;
-      ctx->dns_queries_timestamp_ = _highp_clock();
-      auto &ep                    = ctx->endpoints_[0];
-      INET_LOG("[index: %d] getaddrinfo: resolve %s succeed, ip:%s", ctx->index_,
-               ctx->host_.c_str(), ep.to_string().c_str());
+      ip::endpoint ep;
+      if (ep.assign(ctx->host_.c_str(), ctx->port_))
+      {
+        ctx->endpoints_.push_back(ep);
+        ctx->dns_queries_state_ = YDQS_READY;
+      }
+      else
+        ctx->dns_queries_state_ = YDQSF_QUERIES_NEEDED | YDQS_DIRTY;
     }
     else
       ctx->dns_queries_state_ = YDQS_FAILED;
+  }
 
+  return YDQS_GET_STATE(ctx->dns_queries_state_);
+}
+
+void io_service::start_resolve(io_channel *ctx)
+{ // Only call at event-loop thread, so
+  // no need to consider thread safe.
+  assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY));
+
+  ctx->error_ = EINPROGRESS;
+
+  YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
+
+  INET_LOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());
+
+  ctx->endpoints_.clear();
+  std::thread resolv_thread([=] { // 6.563ms
+    addrinfo hint;
+    memset(&hint, 0x0, sizeof(hint));
+
+    int error = this->resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
+    if (error == 0)
+    {
+      ctx->dns_queries_state_     = YDQS_READY;
+      ctx->dns_queries_timestamp_ = _highp_clock();
+    }
+    else
+    {
+      ctx->error_ = error;
+      YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
+    }
     /*
     The getaddrinfo behavior at win32 is strange:
     If the channel 0 is in non-blocking connect, and waiting at select, than
@@ -1591,25 +1588,22 @@ bool io_service::start_resolve(io_channel *ctx)
     */
     this->interrupt();
   });
-  resolve_thread.detach();
-
-  return false; // waiting async resolve complete.
+  resolv_thread.detach();
 }
 
-bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                         unsigned short port)
+int io_service::__builtin_resolv(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                                 unsigned short port)
 {
   if (this->ipsv_ & ipsv_ipv4)
     return xxsocket::resolve_v4(endpoints, hostname, port);
-  else if (this->ipsv_ & ipsv_ipv6)
-  { // localhost is IPV6 ONLY network
-    return xxsocket::resolve_v6(endpoints, hostname, port) ||
-           xxsocket::resolve_v4to6(endpoints, hostname, port);
-  }
-  return false;
+  else if (this->ipsv_ & ipsv_ipv6) // localhost is IPV6 ONLY network
+    return xxsocket::resolve_v6(endpoints, hostname, port) != 0
+               ? xxsocket::resolve_v4to6(endpoints, hostname, port)
+               : 0;
+  return -1;
 }
 
-int io_service::builtin_decode_frame_length(void *ud, int n)
+int io_service::__builtin_decode_len(void *ud, int n)
 {
   if (options_.lfb_.length_field_offset >= 0)
   {
@@ -1653,28 +1647,16 @@ const char *io_service::strerror(int error)
 {
   switch (error)
   {
-    case YERR_CONNECT_FAILED:
-      return "connect failed!";
-    case YERR_CONNECT_TIMEOUT:
-      return "connect timeout!";
-    case YERR_SEND_FAILED:
-      return "send failed!";
+    case -1:
+      return "Unknown error!";
     case YERR_SEND_TIMEOUT:
-      return "send timeout!";
-    case YERR_RECV_FAILED:
-      return "recv failed!";
-    case YERR_NETWORK_UNREACHABLE:
-      return "the network unreachable!";
-    case YERR_CONNECTION_LOST:
-      return "the connection lost!";
+      return "Send timeout!";
     case YERR_DPL_ILLEGAL_PDU:
-      return "decode frame length failed!";
+      return "Decode frame length failed!";
     case YERR_RESOLV_HOST_FAILED:
-      return "resolve host failed!";
-    case YERR_RESOLV_HOST_TIMEOUT:
-      return "resolve host timeout!";
-    case YERR_RESOLV_HOST_IPV6_REQUIRED:
-      return "resolve host ipv6 required!";
+      return "Resolve host failed!";
+    case YERR_NO_AVAIL_ADDR:
+      return "No available address!";
     default:
       return xxsocket::strerror(error);
   }

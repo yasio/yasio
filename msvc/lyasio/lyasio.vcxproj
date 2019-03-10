@@ -126,7 +126,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;LYASIO_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);YASIO_BUILD_AS_DLL=1;YASIO_LIB=1</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>..\..\;D:\msys64\usr\local\src\tolua_rumtime\luajit-2.1\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

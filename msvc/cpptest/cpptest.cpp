@@ -54,7 +54,7 @@ void yasioTest()
 
   resolv_fn_t resolv = [&](std::vector<ip::endpoint> &endpoints, const char *hostname,
                            unsigned short port) {
-    return service.resolve(endpoints, hostname, port);
+    return service.__builtin_resolv(endpoints, hostname, port);
   };
   service.set_option(YOPT_RESOLV_FUNCTION, &resolv);
 
@@ -124,9 +124,9 @@ void yasioTest()
   });
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  // service.open(0); // open http client
+  service.open(0); // open http client
 
-  service.set_option(YOPT_RECONNECT_TIMEOUT, 3);
+  //service.set_option(YOPT_RECONNECT_TIMEOUT, 3);
   service.open(1, YCM_TCP_CLIENT); // open tcp server
   // service.open(2, CHANNEL_UDP_SERVER);
 #if 0

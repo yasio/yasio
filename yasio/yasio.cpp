@@ -247,11 +247,7 @@ public:
 };
 
 /// deadline_timer
-void deadline_timer::async_wait(std::function<void(bool cancelled)> callback)
-{
-  this->callback_ = std::move(callback);
-  this->service_.schedule_timer(this);
-}
+void deadline_timer::async_wait(timer_cb_t cb) { this->service_.schedule_timer(this, cb); }
 
 void deadline_timer::cancel()
 {
@@ -311,8 +307,7 @@ io_service::~io_service()
   this->resolv_     = nullptr;
 }
 
-void io_service::start_service(const io_hostent *channel_eps, int channel_count,
-                               io_event_callback_t cb)
+void io_service::start_service(const io_hostent *channel_eps, int channel_count, io_event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
@@ -370,7 +365,7 @@ void io_service::wait_service()
   }
 }
 
-void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb)
+void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_cb_t &cb)
 {
   if (this->state_ != io_service::state::IDLE)
     return;
@@ -457,7 +452,7 @@ void io_service::set_option(int option, ...)
       options_.lfb_.length_adjustment   = va_arg(ap, int);
       break;
     case YOPT_IO_EVENT_CALLBACK:
-      this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
+      this->on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
       break;
     case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
@@ -1325,37 +1320,31 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
   }
 }
 
-std::shared_ptr<deadline_timer> io_service::schedule(highp_time_t duration,
-                                                     std::function<void(bool cancelled)> callback,
+std::shared_ptr<deadline_timer> io_service::schedule(highp_time_t duration, timer_cb_t cb,
                                                      bool repeated)
 {
   std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
   timer->expires_from_now(std::chrono::microseconds(duration), repeated);
   timer->async_wait([this, timer /*!important, hold on by lambda expression */,
-                     callback](bool cancelled) { callback(cancelled); });
+                     cb](bool cancelled) { cb(cancelled); });
   return timer;
 }
 
-void io_service::schedule_timer(deadline_timer *timer)
+void io_service::schedule_timer(deadline_timer *timer_ctl, timer_cb_t &timer_cb)
 {
   // pitfall: this service only hold the weak pointer of the timer
   // object, so before dispose the timer object need call
   // cancel_timer to cancel it.
-  if (timer == nullptr)
+  if (timer_ctl == nullptr)
     return;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
+  if (this->find_timer(timer_ctl) != timer_queue_.end())
     return;
 
-  this->timer_queue_.push_back(timer);
-
-  std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-            [](deadline_timer *lhs, deadline_timer *rhs) {
-              return lhs->wait_duration() > rhs->wait_duration();
-            });
-
-  if (timer == *this->timer_queue_.begin())
+  this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
+  this->sort_timers_unlocked();
+  if (timer_ctl == this->timer_queue_.begin()->first)
     this->interrupt();
 }
 
@@ -1363,7 +1352,7 @@ void io_service::remove_timer(deadline_timer *timer)
 {
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
-  auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
+  auto iter = this->find_timer(timer);
   if (iter != timer_queue_.end())
     timer_queue_.erase(iter);
 }
@@ -1411,22 +1400,22 @@ void io_service::perform_timers()
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
-  std::vector<deadline_timer *> loop_timers;
+  std::vector<timer_impl_t> loop_timers;
   while (!this->timer_queue_.empty())
   {
-    auto earliest = timer_queue_.back();
-    if (earliest->expired())
+    if (timer_queue_.back().first->expired())
     {
-      timer_queue_.pop_back();
-      auto callback = earliest->callback_;
-      callback(earliest->cancelled_);
-      if (earliest->repeated_)
+      auto earliest  = std::move(timer_queue_.back());
+      auto timer_ctl = earliest.first;
+      auto& timer_cb  = earliest.second;
+      timer_queue_.pop_back(); // pop the expired timer from timer queue
+
+      timer_cb(timer_ctl->cancelled_);
+      if (timer_ctl->repeated_)
       {
-        earliest->expires_from_now();
+        timer_ctl->expires_from_now();
         loop_timers.push_back(earliest);
       }
-      else
-        earliest->callback_ = nullptr;
     }
     else
       break;
@@ -1435,10 +1424,7 @@ void io_service::perform_timers()
   if (!loop_timers.empty())
   {
     this->timer_queue_.insert(this->timer_queue_.end(), loop_timers.begin(), loop_timers.end());
-    std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-              [](deadline_timer *lhs, deadline_timer *rhs) {
-                return lhs->wait_duration() > rhs->wait_duration();
-              });
+    this->sort_timers_unlocked();
   }
 }
 
@@ -1486,7 +1472,7 @@ long long io_service::get_wait_duration(long long usec)
     return usec;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  deadline_timer *earliest = timer_queue_.back();
+  auto earliest = timer_queue_.back().first;
 
   // microseconds
   auto duration = earliest->wait_duration();

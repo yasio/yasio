@@ -120,7 +120,7 @@ typedef std::shared_ptr<io_transport> transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 
 typedef std::function<void(bool cancelled)> timer_cb_t;
-typedef std::pair<deadline_timer*,timer_cb_t> timer_impl_t;
+typedef std::pair<deadline_timer *, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr)> io_event_cb_t;
 typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
@@ -156,7 +156,7 @@ public:
   void expires_from_now() { expire_time_ = highp_clock_t::now() + this->duration_; }
 
   // Wait timer timeout or cancelled.
-  void async_wait(std::function<void(bool cancelled)> callback);
+  void async_wait(timer_cb_t);
 
   // Cancel the timer
   void cancel();
@@ -313,12 +313,12 @@ public:
   ~io_service();
 
   // start async socket io service
-  void start_service(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
-  void start_service(const io_hostent *channel_eps, io_event_callback_t cb)
+  void start_service(const io_hostent *channel_eps, int channel_count, io_event_cb_t cb);
+  void start_service(const io_hostent *channel_eps, io_event_cb_t cb)
   {
     this->start_service(channel_eps, 1, std::move(cb));
   }
-  void start_service(std::vector<io_hostent> channel_eps, io_event_callback_t cb)
+  void start_service(std::vector<io_hostent> channel_eps, io_event_cb_t cb)
   {
     if (!channel_eps.empty())
     {
@@ -373,8 +373,8 @@ public:
   void write(io_transport *transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
-  std::shared_ptr<deadline_timer>
-  schedule(highp_time_t duration, std::function<void(bool cancelled)>, bool repeated = false);
+  std::shared_ptr<deadline_timer> schedule(highp_time_t duration, timer_cb_t,
+                                           bool repeated = false);
 
   void cleanup();
 
@@ -384,13 +384,26 @@ public:
   int __builtin_decode_len(void *ptr, int len);
 
 private:
-  void schedule_timer(deadline_timer *);
+  void schedule_timer(deadline_timer *, timer_cb_t &);
   void remove_timer(deadline_timer *);
+
+  inline std::vector<timer_impl_t>::iterator find_timer(deadline_timer *key)
+  {
+    return std::find_if(timer_queue_.begin(), timer_queue_.end(),
+                        [=](const timer_impl_t &timer) { return timer.first == key; });
+  }
+  inline void sort_timers_unlocked()
+  {
+    std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
+              [](const timer_impl_t &lhs, const timer_impl_t &rhs) {
+                return lhs.first->wait_duration() > rhs.first->wait_duration();
+              });
+  }
 
   // Start a async resolve, It's only for internal use
   void start_resolve(io_channel *);
 
-  void init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb);
+  void init(const io_hostent *channel_eps, int channel_count, io_event_cb_t &cb);
 
   void open_internal(io_channel *, bool ignore_state = false);
 
@@ -430,17 +443,14 @@ private:
   bool do_close(io_base *ctx);
 
   void handle_close(transport_ptr);
-
   void handle_event(event_ptr event);
 
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime
   // dynmaically: because this API is not thread safe.
   io_channel *new_channel(const io_hostent &ep);
-
   // Clear all channels after service exit.
   void clear_channels(); // destroy all channels
-
   bool close_internal(io_channel *);
 
   // Update resolve state for new endpoint set
@@ -490,7 +500,7 @@ private:
   int outstanding_work_;
 
   // the event callback
-  io_event_callback_t on_event_;
+  io_event_cb_t on_event_;
 
   /*
   options_.tcp.keepalive.

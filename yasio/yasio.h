@@ -190,8 +190,8 @@ struct io_base
   std::shared_ptr<xxsocket> socket_;
   int error_ = 0; // socket error(>= -1), application error(< -1)
 
-  u_short op_mask_ = 0;
-  u_short state_   = 0;
+  u_short opmask_ = 0;
+  u_short state_  = 0;
 };
 
 class io_channel : public io_base
@@ -487,9 +487,9 @@ private:
   int maxfdp_;
   enum
   {
+    except_op,
     read_op,  // for async read and write(trigger by interrupt)
     write_op, // for async connect
-    except_op,
   };
   fd_set fds_array_[3];
 

@@ -93,11 +93,12 @@ enum : u_short
 // error code
 enum
 {
-  YERR_OK,                 // NO ERROR.
-  YERR_SEND_TIMEOUT,       // Send timeout.
-  YERR_DPL_ILLEGAL_PDU,    // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED, // Resolve host failed.
-  YERR_NO_AVAIL_ADDR,      // No available address to connect.
+  YERR_OK,                  // NO ERROR.
+  YERR_SEND_TIMEOUT = -500, // Send timeout.
+  YERR_DPL_ILLEGAL_PDU,     // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED,  // Resolve host failed.
+  YERR_NO_AVAIL_ADDR,       // No available address to connect.
+  YERR_LOCAL_SHUTDOWN,      // Local shutdown the connection.
 };
 
 // event mask
@@ -613,8 +614,7 @@ void io_service::perform_transports(fd_set *fds_array)
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto &transport = *iter;
-    bool ok         = do_read(transport, fds_array) && do_write(transport);
-    if (ok)
+    if (do_read(transport, fds_array) && do_write(transport))
       ++iter;
     else
     {
@@ -636,7 +636,7 @@ void io_service::perform_channels(fd_set *fds_array)
       bool finish = true;
       if (ctx->mask_ & YCM_CLIENT)
       { // resolving, opening
-        if (ctx->op_mask_ & YOPM_OPEN_CHANNEL)
+        if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
         {
           switch (this->update_dns_queries_state(ctx, false))
           {
@@ -659,10 +659,10 @@ void io_service::perform_channels(fd_set *fds_array)
       }
       else if (ctx->mask_ & YCM_SERVER)
       {
-        if (ctx->op_mask_ & YOPM_CLOSE_CHANNEL)
+        if (ctx->opmask_ & YOPM_CLOSE_CHANNEL)
           do_close(ctx);
 
-        if (ctx->op_mask_ & YOPM_OPEN_CHANNEL)
+        if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
           do_nonblocking_accept(ctx);
 
         finish = (ctx->state_ != YCS_OPENED);
@@ -685,7 +685,7 @@ void io_service::close(size_t channel_index)
     return;
   auto ctx = channels_[channel_index];
 
-  if (!(ctx->op_mask_ & YOPM_CLOSE_CHANNEL))
+  if (!(ctx->opmask_ & YOPM_CLOSE_CHANNEL))
   {
     if (close_internal(ctx))
       this->interrupt();
@@ -694,13 +694,9 @@ void io_service::close(size_t channel_index)
 
 void io_service::close(transport_ptr transport)
 {
-  if (transport->is_open() && !(transport->op_mask_ & YOPM_CLOSE_TRANSPORT))
+  if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE_TRANSPORT))
   {
-    YASIO_LOG("close the transport: %s --> %s",
-              transport->socket_->local_endpoint().to_string().c_str(),
-              transport->socket_->peer_endpoint().to_string().c_str());
-
-    transport->op_mask_ |= YOPM_CLOSE_TRANSPORT;
+    transport->opmask_ |= YOPM_CLOSE_TRANSPORT;
     if (transport->ctx_->mask_ & YCM_TCP)
       transport->socket_->shutdown();
     this->interrupt();
@@ -760,20 +756,19 @@ void io_service::open(size_t channel_index, int channel_mask)
 
 void io_service::handle_close(transport_ptr transport)
 {
-  int error = transport->error_;
-  YASIO_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
+  auto ctx   = transport->ctx_;
+  auto error = transport->error_;
+  YASIO_LOG("[index: %d] the connection [%s] --> [%s] is lost, error:%d, detail:%s", ctx->index_,
             transport->local_endpoint().to_string().c_str(),
             transport->peer_endpoint().to_string().c_str(), error, io_service::strerror(error));
 
   do_close(transport.get());
 
-  auto ctx = transport->ctx_;
-
   // @Update state
   if (ctx->mask_ & YCM_CLIENT)
   {
     ctx->state_ = YCS_CLOSED;
-    ctx->op_mask_ &= ~YOPM_CLOSE_TRANSPORT;
+    ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
     ctx->error_ = 0;
   } // server channel, do nothing.
 
@@ -829,8 +824,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
 {
   if (transport && transport->socket_->is_open())
   {
-    auto pdu =
-        a_pdu_ptr(new a_pdu(std::move(data), std::chrono::microseconds(options_.send_timeout_)));
+    a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options_.send_timeout_)));
 
     transport->send_queue_mtx_.lock();
     transport->send_queue_.push_back(pdu);
@@ -861,7 +855,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
   if (ctx->socket_->is_open())
     do_close(ctx);
 
-  ctx->op_mask_ &= ~YOPM_OPEN_CHANNEL;
+  ctx->opmask_ &= ~YOPM_OPEN_CHANNEL;
 
   if (ctx->endpoints_.empty())
   {
@@ -1062,7 +1056,7 @@ void io_service::handle_connect_succeed(transport_ptr transport)
                                 options_.tcp_keepalive_.probs);
   }
 
-  YASIO_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+  YASIO_LOG("[index: %d] the connection [%s] --> [%s] is established.", ctx->index_,
             connection->local_endpoint().to_string().c_str(),
             connection->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
@@ -1152,13 +1146,7 @@ bool io_service::do_write(transport_ptr transport)
       { // n <= 0, TODO: add time
         int error = transport->update_error();
         if (SHOULD_CLOSE_1(n, error))
-        {
-          YASIO_LOG("[index: %d] do_write error, the connection "
-                    "should be "
-                    "closed, retval=%d, ec:%d, detail:%s",
-                    ctx->index_, n, error, io_service::strerror(error));
           break;
-        }
       }
     }
 
@@ -1178,10 +1166,9 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
   {
     if (!transport->socket_->is_open())
       break;
-
-    if ((transport->op_mask_ | transport->ctx_->op_mask_) & YOPM_CLOSE_TRANSPORT)
+    if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
-      transport->update_error(ESHUTDOWN);
+      transport->update_error(YERR_LOCAL_SHUTDOWN);
       break;
     }
 
@@ -1231,11 +1218,6 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         }
         else
         {
-          YASIO_LOG("[index: %d] do_read error, decode length of "
-                    "pdu failed, "
-                    "the connection should be closed!",
-                    ctx->index_);
-
           ctx->update_error(YERR_DPL_ILLEGAL_PDU);
           break;
         }
@@ -1248,15 +1230,9 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
                   n);
       }
     }
-    else
-    {
-      int error            = transport->error_;
-      const char *errormsg = io_service::strerror(error);
-      YASIO_LOG("[index: %d] do_read error, %s, retval=%d, ec:%d, detail:%s", ctx->index_,
-                n == 0 ? "the remote host close the connection" : "the connection should be closed",
-                n, error, errormsg);
+    else // n == 0: Indicate the tcp connection ended with handsake normally, otherwise, the error
+         // indicate the reason.
       break;
-    }
 
     bRet = true;
 
@@ -1345,7 +1321,7 @@ void io_service::open_internal(io_channel *ctx, bool ignore_state)
 
   close_internal(ctx);
 
-  ctx->op_mask_ |= YOPM_OPEN_CHANNEL;
+  ctx->opmask_ |= YOPM_OPEN_CHANNEL;
 
   this->channel_ops_mtx_.lock();
   this->channel_ops_.push_back(ctx);
@@ -1360,12 +1336,12 @@ bool io_service::close_internal(io_channel *ctx)
   {
     if (ctx->mask_ & YCM_CLIENT)
     {
-      ctx->op_mask_ |= YOPM_CLOSE_TRANSPORT;
+      ctx->opmask_ |= YOPM_CLOSE_TRANSPORT;
       if (ctx->mask_ & YCM_TCP)
         ctx->socket_->shutdown();
     }
     else
-      ctx->op_mask_ |= YOPM_CLOSE_CHANNEL;
+      ctx->opmask_ |= YOPM_CLOSE_CHANNEL;
     return true;
   }
   return false;
@@ -1462,9 +1438,9 @@ long long io_service::get_wait_duration(long long usec)
 
 bool io_service::do_close(io_base *ctx)
 {
-  ctx->op_mask_ = 0;
-  ctx->state_   = YCS_CLOSED;
-  ctx->error_   = 0;
+  ctx->opmask_ = 0;
+  ctx->state_  = YCS_CLOSED;
+  ctx->error_  = 0;
   if (ctx->socket_->is_open())
   {
     unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
@@ -1621,6 +1597,8 @@ const char *io_service::strerror(int error)
       return "Resolve host failed!";
     case YERR_NO_AVAIL_ADDR:
       return "No available address!";
+    case YERR_LOCAL_SHUTDOWN:
+      return "An existing connection was forcibly closed by the local host!";
     default:
       return xxsocket::strerror(error);
   }

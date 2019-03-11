@@ -95,7 +95,7 @@ public:
 
 protected:
   // will throw std::logic_error
-  const char *consume(size_t size) noexcept(false);
+  const char *consume(size_t size);
 
 protected:
   const char *ptr_;

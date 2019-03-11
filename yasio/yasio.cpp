@@ -265,16 +265,8 @@ void deadline_timer::unschedule() { this->service_.remove_timer(this); }
 io_channel::io_channel(io_service &service) : deadline_timer_(service)
 {
   socket_.reset(new xxsocket());
-}
-
-void io_channel::reset()
-{
-  state_ = YCS_CLOSED;
-
-  dns_queries_state_     = YDQS_FAILED;
-  dns_queries_timestamp_ = 0;
-  endpoints_.clear();
-  deadline_timer_.unschedule();
+  state_             = YCS_CLOSED;
+  dns_queries_state_ = YDQS_FAILED;
 }
 
 io_transport::io_transport(io_channel *ctx) : ctx_(ctx) { this->state_ = YCS_OPENED; }
@@ -509,7 +501,6 @@ void io_service::set_option(int option, ...)
 io_channel *io_service::new_channel(const io_hostent &ep)
 {
   auto ctx = new io_channel(*this);
-  ctx->reset();
   ctx->host_  = ep.host_;
   ctx->port_  = ep.port_;
   ctx->index_ = static_cast<int>(this->channels_.size());
@@ -1407,7 +1398,7 @@ void io_service::perform_timers()
     {
       auto earliest  = std::move(timer_queue_.back());
       auto timer_ctl = earliest.first;
-      auto& timer_cb  = earliest.second;
+      auto &timer_cb = earliest.second;
       timer_queue_.pop_back(); // pop the expired timer from timer queue
 
       timer_cb(timer_ctl->cancelled_);

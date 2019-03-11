@@ -500,7 +500,7 @@ void io_service::set_option(int option, ...)
 
 io_channel *io_service::new_channel(const io_hostent &ep)
 {
-  auto ctx = new io_channel(*this);
+  auto ctx    = new io_channel(*this);
   ctx->host_  = ep.host_;
   ctx->port_  = ep.port_;
   ctx->index_ = static_cast<int>(this->channels_.size());
@@ -862,18 +862,14 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
 
   ctx->state_ = YCS_OPENING;
   auto &ep    = ctx->endpoints_[0];
-  if (ctx->mask_ & YCM_TCP)
+  INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(), ctx->port_);
+  int ret = -1;
+  if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
-    INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(), ctx->port_);
-    int ret = -1;
-    if (ctx->socket_->open(ep.af()))
-    {
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-      if (ctx->local_port_ != 0)
-        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-      ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
-    }
-
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+    if (ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP)
+      ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+    ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     if (ret < 0)
     { // setup no blocking connect
       int error = xxsocket::get_last_errno();
@@ -896,29 +892,10 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
     { // connect server succed immidiately.
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       handle_connect_succeed(ctx, ctx->socket_);
-    } // NEVER GO HERE
+    } // !!!NEVER GO HERE
   }
-  else // YCM_UDP
-  {
-    int ret = -1;
-    if (ctx->socket_->open(ep.af(), SOCK_DGRAM, 0))
-    {
-      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-
-      ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-      ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
-      if (ret == 0)
-      {
-        ctx->socket_->set_nonblocking(true);
-        register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-        handle_connect_succeed(ctx, ctx->socket_);
-      }
-      else
-      {
-        this->handle_connect_failed(ctx, xxsocket::get_last_errno());
-      }
-    }
-  }
+  else
+    this->handle_connect_failed(ctx, xxsocket::get_last_errno());
 }
 
 void io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_array)

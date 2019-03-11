@@ -200,7 +200,6 @@ public:
   io_channel(io_service &service);
 
   u_short mask_ = 0;
-
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
 
@@ -217,8 +216,6 @@ public:
 
   // The deadline timer for resolve & connect
   deadline_timer deadline_timer_;
-
-  void reset();
 };
 
 class io_transport : public io_base

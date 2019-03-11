@@ -237,7 +237,9 @@ public:
 private:
   io_transport(io_channel *ctx);
 
-  char buffer_[65535]; // recv buffer, 64K
+  unsigned int id_;
+
+  char buffer_[65536]; // recv buffer, 64K
   int offset_ = 0;     // recv buffer offset
 
   std::vector<char> expected_packet_;

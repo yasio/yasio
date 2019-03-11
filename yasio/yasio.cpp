@@ -80,6 +80,9 @@ namespace purelib
 {
 namespace inet
 {
+
+static const int TRANSPORT_SZ = sizeof(io_transport);
+
 namespace
 {
 // channel state
@@ -275,7 +278,12 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 }
 
-io_transport::io_transport(io_channel *ctx) : ctx_(ctx) { this->state_ = YCS_OPENED; }
+io_transport::io_transport(io_channel *ctx) : ctx_(ctx)
+{
+  static unsigned int s_object_id = 0;
+  this->state_                    = YCS_OPENED;
+  this->id_                       = ++s_object_id;
+}
 
 io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
@@ -401,113 +409,6 @@ void io_service::cleanup()
   }
 }
 
-void io_service::set_option(int option, ...)
-{
-  va_list ap;
-  va_start(ap, option);
-
-  switch (option)
-  {
-    case YOPT_CONNECT_TIMEOUT:
-      options_.connect_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YOPT_SEND_TIMEOUT:
-      options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YOPT_RECONNECT_TIMEOUT:
-    {
-      int value = va_arg(ap, int);
-      if (value > 0)
-        options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
-      else
-        options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
-    }
-    break;
-    case YOPT_DNS_CACHE_TIMEOUT:
-      options_.dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YOPT_DEFER_EVENT:
-      options_.deferred_event_ = !!va_arg(ap, int);
-      break;
-    case YOPT_TCP_KEEPALIVE:
-      options_.tcp_keepalive_.onoff    = 1;
-      options_.tcp_keepalive_.idle     = va_arg(ap, int);
-      options_.tcp_keepalive_.interval = va_arg(ap, int);
-      options_.tcp_keepalive_.probs    = va_arg(ap, int);
-      break;
-    case YOPT_RESOLV_FUNCTION:
-      this->resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
-      break;
-    case YOPT_LOG_FILE:
-      if (options_.outf_ != -1)
-        ::close(options_.outf_);
-      options_.outf_ = ::open(va_arg(ap, const char *), YASIO_O_OPEN_FLAGS);
-      if (options_.outf_ != -1)
-        ::lseek(options_.outf_, 0, SEEK_END);
-      break;
-    case YOPT_LFBFD_PARAMS:
-      options_.lfb_.max_frame_length    = va_arg(ap, int);
-      options_.lfb_.length_field_offset = va_arg(ap, int);
-      options_.lfb_.length_field_length = va_arg(ap, int);
-      options_.lfb_.length_adjustment   = va_arg(ap, int);
-      break;
-    case YOPT_IO_EVENT_CALLBACK:
-      this->on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
-      break;
-    case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
-      this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
-      break;
-    case YOPT_CHANNEL_LOCAL_PORT:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
-      }
-    }
-    break;
-    case YOPT_CHANNEL_REMOTE_HOST:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->host_ = va_arg(ap, const char *);
-        update_dns_queries_state(this->channels_[index], true);
-      }
-    }
-    break;
-    case YOPT_CHANNEL_REMOTE_PORT:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->port_ = (u_short)va_arg(ap, int);
-        update_dns_queries_state(this->channels_[index], true);
-      }
-    }
-    break;
-    case YOPT_CHANNEL_REMOTE_ENDPOINT:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        auto channel   = this->channels_[index];
-        channel->host_ = va_arg(ap, const char *);
-        channel->port_ = (u_short)va_arg(ap, int);
-        update_dns_queries_state(this->channels_[index], true);
-      }
-    }
-    break;
-    case YOPT_NO_NEW_THREAD:
-      this->options_.no_new_thread_ = !!va_arg(ap, int);
-      break;
-  }
-
-  va_end(ap);
-}
-
 io_channel *io_service::new_channel(const io_hostent &ep)
 {
   auto ctx    = new io_channel(*this);
@@ -547,8 +448,7 @@ void io_service::dispatch_events(int count)
 }
 
 void io_service::run()
-{ // The async event-loop
-  // Set Thread Name: yasio async socket io
+{
   _set_thread_name("yasio-evloop");
 
   // Call once at startup
@@ -561,7 +461,6 @@ void io_service::run()
   for (; this->state_ == io_service::state::RUNNING;)
   {
     int nfds = do_evpoll(fds_array, timeout);
-
     if (this->state_ != io_service::state::RUNNING)
       break;
 
@@ -759,9 +658,9 @@ void io_service::handle_close(transport_ptr transport)
   auto ptr = transport.get();
   auto ctx = ptr->ctx_;
   auto ec  = ptr->error_;
-
-  YASIO_LOG("[index: %d] the connection %p is lost, offset=%d, ec:%d, detail:%s", ctx->index_, ptr,
-            ptr->offset_, ec, io_service::strerror(ec));
+  // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
+  YASIO_LOG("[index: %d] the connection %u is lost, offset:%d, ec:%d, detail:%s", ctx->index_,
+            ptr->id_, ptr->offset_, ec, io_service::strerror(ec));
 
   do_close(ptr);
 
@@ -1023,7 +922,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       }
       else
       {
-        YASIO_LOG("The channel:%d has socket error:%d, will be closed!", ctx->index_, error);
+        YASIO_LOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
         do_close(ctx);
       }
     }
@@ -1050,8 +949,8 @@ void io_service::handle_connect_succeed(transport_ptr transport)
                                 options_.tcp_keepalive_.probs);
   }
 
-  YASIO_LOG("[index: %d] the connection [%s] --> [%s] is established.", ctx->index_,
-            connection->local_endpoint().to_string().c_str(),
+  YASIO_LOG("[index: %d] the connection %u [%s] --> [%s] is established.", ctx->index_,
+            transport->id_, connection->local_endpoint().to_string().c_str(),
             connection->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }
@@ -1577,7 +1476,6 @@ int io_service::__builtin_decode_len(void *ud, int n)
 }
 
 void io_service::interrupt() { interrupter_.interrupt(); }
-
 const char *io_service::strerror(int error)
 {
   switch (error)
@@ -1597,6 +1495,113 @@ const char *io_service::strerror(int error)
     default:
       return xxsocket::strerror(error);
   }
+}
+
+void io_service::set_option(int option, ...)
+{
+  va_list ap;
+  va_start(ap, option);
+
+  switch (option)
+  {
+    case YOPT_CONNECT_TIMEOUT:
+      options_.connect_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_SEND_TIMEOUT:
+      options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_RECONNECT_TIMEOUT:
+    {
+      int value = va_arg(ap, int);
+      if (value > 0)
+        options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
+      else
+        options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
+    }
+    break;
+    case YOPT_DNS_CACHE_TIMEOUT:
+      options_.dns_cache_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_DEFER_EVENT:
+      options_.deferred_event_ = !!va_arg(ap, int);
+      break;
+    case YOPT_TCP_KEEPALIVE:
+      options_.tcp_keepalive_.onoff    = 1;
+      options_.tcp_keepalive_.idle     = va_arg(ap, int);
+      options_.tcp_keepalive_.interval = va_arg(ap, int);
+      options_.tcp_keepalive_.probs    = va_arg(ap, int);
+      break;
+    case YOPT_RESOLV_FUNCTION:
+      this->resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
+      break;
+    case YOPT_LOG_FILE:
+      if (options_.outf_ != -1)
+        ::close(options_.outf_);
+      options_.outf_ = ::open(va_arg(ap, const char *), YASIO_O_OPEN_FLAGS);
+      if (options_.outf_ != -1)
+        ::lseek(options_.outf_, 0, SEEK_END);
+      break;
+    case YOPT_LFBFD_PARAMS:
+      options_.lfb_.max_frame_length    = va_arg(ap, int);
+      options_.lfb_.length_field_offset = va_arg(ap, int);
+      options_.lfb_.length_field_length = va_arg(ap, int);
+      options_.lfb_.length_adjustment   = va_arg(ap, int);
+      break;
+    case YOPT_IO_EVENT_CALLBACK:
+      this->on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
+      break;
+    case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
+      this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
+      break;
+    case YOPT_CHANNEL_LOCAL_PORT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
+      }
+    }
+    break;
+    case YOPT_CHANNEL_REMOTE_HOST:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->host_ = va_arg(ap, const char *);
+        update_dns_queries_state(this->channels_[index], true);
+      }
+    }
+    break;
+    case YOPT_CHANNEL_REMOTE_PORT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->port_ = (u_short)va_arg(ap, int);
+        update_dns_queries_state(this->channels_[index], true);
+      }
+    }
+    break;
+    case YOPT_CHANNEL_REMOTE_ENDPOINT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        auto channel   = this->channels_[index];
+        channel->host_ = va_arg(ap, const char *);
+        channel->port_ = (u_short)va_arg(ap, int);
+        update_dns_queries_state(this->channels_[index], true);
+      }
+    }
+    break;
+    case YOPT_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
+  }
+
+  va_end(ap);
 }
 } // namespace inet
 } // namespace purelib

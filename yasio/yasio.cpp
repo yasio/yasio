@@ -42,9 +42,9 @@ SOFTWARE.
 #  include <unistd.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU
 #endif
-#  include <sys/types.h>
-#  include <sys/stat.h>
-#  include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define _YASIO_VERBOS_LOG 0
 #define YASIO_SOMAXCONN 19
@@ -151,7 +151,7 @@ static long long _highp_clock()
  */
 static std::string _sfmt(const char *format, ...)
 {
-#  define YASIO_VSNPRINTF_BUFFER_LENGTH 256
+#define YASIO_VSNPRINTF_BUFFER_LENGTH 256
   va_list args;
   std::string buffer(YASIO_VSNPRINTF_BUFFER_LENGTH, '\0');
 

@@ -756,13 +756,14 @@ void io_service::open(size_t channel_index, int channel_mask)
 
 void io_service::handle_close(transport_ptr transport)
 {
-  auto ctx   = transport->ctx_;
-  auto error = transport->error_;
-  YASIO_LOG("[index: %d] the connection [%s] --> [%s] is lost, error:%d, detail:%s", ctx->index_,
-            transport->local_endpoint().to_string().c_str(),
-            transport->peer_endpoint().to_string().c_str(), error, io_service::strerror(error));
+  auto ptr = transport.get();
+  auto ctx = ptr->ctx_;
+  auto ec  = ptr->error_;
 
-  do_close(transport.get());
+  YASIO_LOG("[index: %d] the connection %p is lost, offset=%d, ec:%d, detail:%s", ctx->index_, ptr,
+            ptr->offset_, ec, io_service::strerror(ec));
+
+  do_close(ptr);
 
   // @Update state
   if (ctx->mask_ & YCM_CLIENT)
@@ -773,7 +774,7 @@ void io_service::handle_close(transport_ptr transport)
   } // server channel, do nothing.
 
   // @Notify connection lost
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, error, transport)));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, transport)));
 
   // @Process tcp client reconnect
   if (ctx->mask_ == YCM_TCP_CLIENT)
@@ -1081,8 +1082,6 @@ bool io_service::do_write(transport_ptr transport)
   auto ctx  = transport->ctx_;
   do
   {
-    int n;
-
     if (!transport->socket_->is_open())
       break;
 
@@ -1092,7 +1091,7 @@ bool io_service::do_write(transport_ptr transport)
 
       auto v                 = transport->send_queue_.front();
       auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-      n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
+      int n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         transport->send_queue_.pop_front();
@@ -1139,7 +1138,10 @@ bool io_service::do_write(transport_ptr transport)
       { // n <= 0, TODO: add time
         int error = transport->update_error();
         if (SHOULD_CLOSE_1(n, error))
+        {
+          transport->offset_ = n;
           break;
+        }
       }
     }
 
@@ -1223,9 +1225,11 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
                   n);
       }
     }
-    else // n == 0: Indicate the tcp connection ended with handsake normally, otherwise, the error
-         // indicate the reason.
+    else
+    { // n == 0: The return value will be 0 when the peer has performed an orderly shutdown.
+      transport->offset_ = n;
       break;
+    }
 
     bRet = true;
 
@@ -1484,9 +1488,7 @@ void io_service::start_resolve(io_channel *ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
   assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY));
-
   ctx->error_ = EINPROGRESS;
-
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
   YASIO_LOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());

@@ -119,7 +119,9 @@ typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef std::shared_ptr<io_transport> transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 
-typedef std::function<void(event_ptr)> io_event_callback_t;
+typedef std::function<void(bool cancelled)> timer_cb_t;
+typedef std::pair<deadline_timer*,timer_cb_t> timer_impl_t;
+typedef std::function<void(event_ptr)> io_event_cb_t;
 typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
 
@@ -178,7 +180,6 @@ public:
   bool repeated_;
   std::chrono::microseconds duration_;
   std::chrono::time_point<highp_clock_t> expire_time_;
-  std::function<void(bool cancelled)> callback_;
 };
 
 struct io_base
@@ -471,8 +472,8 @@ private:
   // select interrupter
   select_interrupter interrupter_;
 
-  // timer support
-  std::vector<deadline_timer *> timer_queue_;
+  // timer support timer_pair
+  std::vector<timer_impl_t> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 
   // socket event set

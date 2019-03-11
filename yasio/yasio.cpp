@@ -40,11 +40,11 @@ SOFTWARE.
 #  define ftruncate _chsize
 #else
 #  include <unistd.h>
+#  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU
+#endif
 #  include <sys/types.h>
 #  include <sys/stat.h>
 #  include <fcntl.h>
-#  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU
-#endif
 
 #define _YASIO_VERBOS_LOG 0
 #define YASIO_SOMAXCONN 19
@@ -138,7 +138,6 @@ static long long _highp_clock()
   return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 }
 
-#if defined(_WIN32)
 /*--- This is a C++ universal sprintf in the future.
  **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
  *different
@@ -152,9 +151,9 @@ static long long _highp_clock()
  */
 static std::string _sfmt(const char *format, ...)
 {
-#  define CC_VSNPRINTF_BUFFER_LENGTH 512
+#  define YASIO_VSNPRINTF_BUFFER_LENGTH 256
   va_list args;
-  std::string buffer(CC_VSNPRINTF_BUFFER_LENGTH, '\0');
+  std::string buffer(YASIO_VSNPRINTF_BUFFER_LENGTH, '\0');
 
   va_start(args, format);
   int nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
@@ -193,7 +192,6 @@ static std::string _sfmt(const char *format, ...)
 
   return buffer;
 }
-#endif
 
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;

@@ -294,6 +294,9 @@ io_service::~io_service()
   stop_service();
   if (this->state_ == io_service::state::STOPPED)
     cleanup();
+    
+  if(options_.outf_)
+    fclose(options_.outf_);
 
   this->decode_len_ = nullptr;
   this->resolv_     = nullptr;

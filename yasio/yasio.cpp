@@ -1365,9 +1365,7 @@ void io_service::remove_timer(deadline_timer *timer)
 
   auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
   if (iter != timer_queue_.end())
-  {
     timer_queue_.erase(iter);
-  }
 }
 
 void io_service::open_internal(io_channel *ctx, bool ignore_state)
@@ -1427,6 +1425,8 @@ void io_service::perform_timers()
         earliest->expires_from_now();
         loop_timers.push_back(earliest);
       }
+      else
+        earliest->callback_ = nullptr;
     }
     else
       break;

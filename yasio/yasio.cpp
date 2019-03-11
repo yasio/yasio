@@ -869,7 +869,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
   int ret = -1;
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP)
       ctx->socket_->bind("0.0.0.0", ctx->local_port_);
     ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
@@ -936,12 +936,8 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
   if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-#if !defined(_WIN32)
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-#endif
-
     int error = 0;
+    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
@@ -1006,10 +1002,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
             std::shared_ptr<xxsocket> client_sock(new xxsocket());
             if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
             {
-              client_sock->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-#if !defined(_WIN32)
               client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-#endif
               error = client_sock->bind("0.0.0.0", ctx->port_) == 0
                           ? xxsocket::connect(client_sock->native_handle(), peer)
                           : -1;

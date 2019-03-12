@@ -293,7 +293,6 @@ io_transport::io_transport(io_channel *ctx) : ctx_(ctx)
 
 io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
-
   outstanding_work_ = 0;
 
   this->decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
@@ -301,8 +300,6 @@ io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
   this->resolv_ = [=](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
     return this->__builtin_resolv(eps, host, port);
   };
-
-  ipsv_ = 0;
 }
 
 io_service::~io_service()

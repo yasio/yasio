@@ -414,7 +414,7 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  int do_evpoll(fd_set *fds_array, timeval &timeout);
+  int do_evpoll(fd_set *fds_array);
 
   void do_nonblocking_connect(io_channel *);
   void do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);

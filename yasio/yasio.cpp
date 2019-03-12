@@ -453,11 +453,9 @@ void io_service::run()
 
   // event loop
   fd_set fds_array[3];
-  timeval timeout;
-
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int nfds = do_evpoll(fds_array, timeout);
+    int nfds = do_evpoll(fds_array);
     if (this->state_ != io_service::state::RUNNING)
       break;
 
@@ -1275,7 +1273,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set *fds_array, timeval &maxtv)
+int io_service::do_evpoll(fd_set *fds_array)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1292,15 +1290,15 @@ but it's ok.
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
-      maxtv.tv_sec  = static_cast<long>(wait_duration / 1000000);
-      maxtv.tv_usec = static_cast<long>(wait_duration % 1000000);
+      timeval timeout = {static_cast<long>(wait_duration / 1000000),
+                         static_cast<long>(wait_duration % 1000000)};
 #if _YASIO_VERBOS_LOG
       YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-                maxtv.tv_sec * 1000 + maxtv.tv_usec / 1000);
+                timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
 
       nfds =
-          ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &maxtv);
+          ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &timeout);
 
 #if _YASIO_VERBOS_LOG
       YASIO_LOG("socket.select waked up, retval=%d", nfds);

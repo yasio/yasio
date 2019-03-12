@@ -545,9 +545,9 @@ private:
   resolv_fn_t resolv_;
 
   // The ip stack version supported by local host
-  int ipsv_;
+  int ipsv_ = 0;
 }; // io_service
 }; // namespace inet
 }; /* namespace purelib */
 
-#define myasio purelib::gc::singleton<purelib::inet::io_service>::instance()
+#define myasio yasio::gc::singleton<yasio::inet::io_service>::instance()

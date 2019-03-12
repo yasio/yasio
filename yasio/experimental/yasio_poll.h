@@ -467,7 +467,7 @@ private:
 
 private:
   state state_;
-  std::thread worker_thread_;
+  std::thread worker_;
   std::thread::id worker_id_;
 
   std::recursive_mutex event_queue_mtx_;

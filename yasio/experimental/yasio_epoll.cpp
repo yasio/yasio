@@ -274,8 +274,8 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
     {
-      this->worker_thread_ = std::thread(&io_service::run, this);
-      this->worker_id_     = worker_thread_.get_id();
+      this->worker_ = std::thread(&io_service::run, this);
+      this->worker_id_     = worker_.get_id();
     }
     else
     {
@@ -314,11 +314,11 @@ void io_service::stop_service()
 
 void io_service::wait_service()
 {
-  if (this->worker_thread_.joinable())
+  if (this->worker_.joinable())
   {
     if (std::this_thread::get_id() != this->worker_id_)
     {
-      this->worker_thread_.join();
+      this->worker_.join();
       this->state_ = io_service::state::STOPPED;
       cleanup();
     }

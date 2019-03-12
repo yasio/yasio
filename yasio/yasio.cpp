@@ -80,9 +80,6 @@ namespace purelib
 {
 namespace inet
 {
-
-static const int TRANSPORT_SZ = sizeof(io_transport);
-
 namespace
 {
 // channel state
@@ -1491,7 +1488,7 @@ const char *io_service::strerror(int error)
     case YERR_NO_AVAIL_ADDR:
       return "No available address!";
     case YERR_LOCAL_SHUTDOWN:
-      return "An existing connection was forcibly closed by the local host!";
+      return "An existing connection was shutdown by local host!";
     default:
       return xxsocket::strerror(error);
   }

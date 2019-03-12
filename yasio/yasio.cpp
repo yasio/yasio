@@ -114,8 +114,7 @@ enum
 {
   YOPM_OPEN_CHANNEL    = 1,
   YOPM_CLOSE_CHANNEL   = 1 << 1,
-  YOPM_CLOSE_TRANSPORT = 1 << 2,
-  YOPM_REOPEN_CHANNEL  = 1 << 3,
+  YOPM_CLOSE_TRANSPORT = 1 << 2
 };
 
 // dns queries state

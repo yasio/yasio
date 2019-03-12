@@ -489,11 +489,12 @@ private:
   int maxfdp_;
   enum
   {
+    read_op,
+    write_op,
     except_op,
-    read_op,  // for async read and write(trigger by interrupt)
-    write_op, // for async connect
+    max_ops,
   };
-  fd_set fds_array_[3];
+  fd_set fds_array_[max_ops];
 
   // optimize record incomplete works
   int outstanding_work_;

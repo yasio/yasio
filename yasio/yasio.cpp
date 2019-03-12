@@ -452,7 +452,7 @@ void io_service::run()
   this->ipsv_ = xxsocket::getipsv();
 
   // event loop
-  fd_set fds_array[3];
+  fd_set fds_array[max_ops];
   for (; this->state_ == io_service::state::RUNNING;)
   {
     int nfds = do_evpoll(fds_array);

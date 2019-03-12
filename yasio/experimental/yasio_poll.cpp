@@ -104,9 +104,9 @@ enum
 // event mask
 enum
 {
-  YEM_POLLIN  = 1,
-  YEM_POLLOUT = 2,
-  YEM_POLLERR = 4,
+  YEM_POLLIN  = POLLIN | POLLPRI,
+  YEM_POLLOUT = POLLOUT,
+  YEM_POLLERR = POLLERR | POLLHUP,
 };
 
 // op mask

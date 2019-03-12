@@ -34,44 +34,47 @@ SOFTWARE.
 #include <limits>
 #include <stdarg.h>
 #include <string>
-
-#if !defined(MICROSECONDS_PER_SECOND)
-#  define MICROSECONDS_PER_SECOND 1000000LL
+#if defined(_WIN32)
+#  include <io.h>
+#  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR | O_BINARY, S_IWRITE | S_IREAD
+#  define ftruncate _chsize
+#else
+#  include <unistd.h>
+#  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU
 #endif
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define _YASIO_VERBOS_LOG 0
-
-#if defined(_WIN32)
-#  define INET_LOG(format, ...)                                                                    \
-    do                                                                                             \
-    {                                                                                              \
-      auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);       \
-      OutputDebugStringA(content.c_str());                                                         \
-      if (options_.outf_)                                                                          \
-        fprintf(options_.outf_, "%s", content.c_str());                                            \
-    } while (false)
-#elif defined(ANDROID) || defined(__ANDROID__)
-#  include <android/log.h>
-#  include <jni.h>
-#  define INET_LOG(format, ...)                                                                    \
-    __android_log_print(ANDROID_LOG_INFO, "yasio", ("[%lld]" format), _highp_clock(),              \
-                        ##__VA_ARGS__);                                                            \
-    if (options_.outf_)                                                                            \
-    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
-#else
-#  define INET_LOG(format, ...)                                                                    \
-    fprintf(stdout, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__);                \
-    if (options_.outf_)                                                                            \
-    fprintf(options_.outf_, ("[yasio][%lld] " format "\n"), _highp_clock(), ##__VA_ARGS__)
-#endif
-
 #define YASIO_SOMAXCONN 19
-
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
-
 /* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
  * field. */
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
+
+#if defined(_WIN32)
+#  define YASIO_DEBUG_PRINT(msg) OutputDebugStringA(msg)
+#elif defined(ANDROID) || defined(__ANDROID__)
+#  include <android/log.h>
+#  include <jni.h>
+#  define YASIO_DEBUG_PRINT(msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
+#else
+#  define YASIO_DEBUG_PRINT(msg) printf("%s", msg)
+#endif
+
+#define YASIO_LOG(format, ...)                                                                     \
+  do                                                                                               \
+  {                                                                                                \
+    auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);         \
+    YASIO_DEBUG_PRINT(content.c_str());                                                            \
+    if (options_.outf_ != -1)                                                                      \
+    {                                                                                              \
+      if (::lseek(options_.outf_, 0, SEEK_CUR) > options_.outf_max_size_)                          \
+        ::ftruncate(options_.outf_, 0), ::lseek(options_.outf_, 0, SEEK_SET);                      \
+      ::write(options_.outf_, content.c_str(), content.size());                                    \
+    }                                                                                              \
+  } while (false)
 
 namespace purelib
 {
@@ -79,20 +82,54 @@ namespace inet
 {
 namespace
 {
+// channel state
+enum : u_short
+{
+  YCS_CLOSED,
+  YCS_OPENING,
+  YCS_OPENED,
+};
+
+// error code
 enum
 {
-  // Timeout to use with GetQueuedCompletionStatus on older versions of
-  // Windows. Some versions of windows have a "bug" where a call to
-  // GetQueuedCompletionStatus can appear stuck even though there are events
-  // waiting on the queue. Using a timeout helps to work around the issue.
-  default_gqcs_timeout = 500,
-
-  // Maximum waitable timer timeout, in milliseconds.
-  max_timeout_msec = 5 * 60 * 1000,
-
-  // Maximum waitable timer timeout, in microseconds.
-  max_timeout_usec = max_timeout_msec * 1000,
+  YERR_OK,                  // NO ERROR.
+  YERR_SEND_TIMEOUT = -500, // Send timeout.
+  YERR_DPL_ILLEGAL_PDU,     // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED,  // Resolve host failed.
+  YERR_NO_AVAIL_ADDR,       // No available address to connect.
+  YERR_LOCAL_SHUTDOWN,      // Local shutdown the connection.
 };
+
+// event mask
+enum
+{
+  YEM_POLLIN  = 1,
+  YEM_POLLOUT = 2,
+  YEM_POLLERR = 4,
+};
+
+// op mask
+enum
+{
+  YOPM_OPEN_CHANNEL    = 1,
+  YOPM_CLOSE_CHANNEL   = 1 << 1,
+  YOPM_CLOSE_TRANSPORT = 1 << 2
+};
+
+// dns queries state
+enum : u_short
+{
+  YDQS_READY = 1,
+  YDQS_DIRTY,
+  YDQS_INPRROGRESS,
+  YDQS_FAILED,
+  YDQSF_QUERIES_NEEDED = 1 << 8
+};
+
+#define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
+#define YDQS_SET_STATE(what, value) (what = (what & 0xff00) | value)
+#define YDQS_GET_STATE(what) (what & 0x00ff)
 
 // The high precision micro seconds timestamp
 static long long _highp_clock()
@@ -194,6 +231,20 @@ static void _set_thread_name(const char *threadName)
 #  define _set_thread_name(name)
 #endif
 
+enum
+{
+  // Timeout to use with GetQueuedCompletionStatus on older versions of
+  // Windows. Some versions of windows have a "bug" where a call to
+  // GetQueuedCompletionStatus can appear stuck even though there are events
+  // waiting on the queue. Using a timeout helps to work around the issue.
+  default_gqcs_timeout = 500,
+
+  // Maximum waitable timer timeout, in milliseconds.
+  max_timeout_msec = 5 * 60 * 1000,
+
+  // Maximum waitable timer timeout, in microseconds.
+  max_timeout_usec = max_timeout_msec * 1000,
+};
 static DWORD get_gqcs_timeout()
 {
   OSVERSIONINFOEX osvi;
@@ -230,55 +281,38 @@ public:
 };
 
 /// deadline_timer
-void deadline_timer::async_wait(const std::function<void(bool cancelled)> &callback)
-{
-  this->callback_ = callback;
-  this->service_.schedule_timer(this);
-}
+void deadline_timer::async_wait(timer_cb_t cb) { this->service_.schedule_timer(this, cb); }
 
 void deadline_timer::cancel()
 {
   if (!expired())
   {
-    this->service_.cancel_timer(this);
-    this->expire();
+    this->expire_time_ = highp_clock_t::now() - duration_;
+    this->cancelled_   = true;
+    this->service_.interrupt();
   }
 }
+
+void deadline_timer::unschedule() { this->service_.remove_timer(this); }
 
 /// io_channel
 io_channel::io_channel(io_service &service) : deadline_timer_(service)
 {
   class_id_ = IO_CLASS_CHANNEL;
   socket_.reset(new xxsocket());
-}
-
-void io_channel::reset()
-{
-  state_ = channel_state::CLOSED;
-
-  resolve_state_         = resolve_state::FAILED;
-  dns_queries_timestamp_ = 0;
-  dns_queries_needed_    = false;
-  endpoints_.clear();
-  deadline_timer_.cancel();
+  state_             = YCS_CLOSED;
+  dns_queries_state_ = YDQS_FAILED;
 }
 
 io_service::io_service() : state_(io_service::state::IDLE)
 {
-  options_.connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
-  options_.send_timeout_      = (std::numeric_limits<int>::max)();
-  options_.reconnect_timeout_ = -1;
-  // Default: 10 minutes.
-  options_.dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
-
   iocp_.handle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, DWORD(~0));
 
   gqcs_timeout_ = get_gqcs_timeout();
 
-  ipsv_state_ = 0;
-
-  this->xdec_len_ = [](io_service *service, void *ptr, int len) {
-    return service->builtin_decode_frame_length(ptr, len);
+  this->decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+  this->resolv_     = [=](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
+    return this->__builtin_resolv(eps, host, port);
   };
 }
 
@@ -289,8 +323,7 @@ io_service::~io_service()
     cleanup();
 }
 
-void io_service::start_service(const io_hostent *channel_eps, int channel_count,
-                               io_event_callback_t cb)
+void io_service::start_service(const io_hostent *channel_eps, int channel_count, io_event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
@@ -299,8 +332,8 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
     {
-      this->worker_ = std::thread(&io_service::run, this);
-      this->worker_id_     = worker_.get_id();
+      this->worker_    = std::thread(&io_service::run, this);
+      this->worker_id_ = worker_.get_id();
     }
     else
     {
@@ -352,7 +385,7 @@ void io_service::wait_service()
   }
 }
 
-void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_callback_t cb)
+void io_service::init(const io_hostent *channel_eps, int channel_count, io_event_cb_t &cb)
 {
   if (this->state_ != io_service::state::IDLE)
     return;
@@ -386,112 +419,20 @@ void io_service::cleanup()
   }
 }
 
-void io_service::set_option(int option, ...)
-{
-  va_list ap;
-  va_start(ap, option);
-
-  switch (option)
-  {
-    case YASIO_OPT_CONNECT_TIMEOUT:
-      options_.connect_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YASIO_OPT_SEND_TIMEOUT:
-      options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YASIO_OPT_RECONNECT_TIMEOUT:
-    {
-      int value = va_arg(ap, int);
-      if (value > 0)
-        options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
-      else
-        options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
-    }
-    break;
-    case YASIO_OPT_DNS_CACHE_TIMEOUT:
-      options_.dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YASIO_OPT_DEFER_EVENT:
-      options_.deferred_event_ = !!va_arg(ap, int);
-      break;
-    case YASIO_OPT_TCP_KEEPALIVE:
-      options_.tcp_keepalive_.onoff    = 1;
-      options_.tcp_keepalive_.idle     = va_arg(ap, int);
-      options_.tcp_keepalive_.interval = va_arg(ap, int);
-      options_.tcp_keepalive_.probs    = va_arg(ap, int);
-      break;
-    case YASIO_OPT_RESOLV_FUNCTION:
-      this->xresolv_ = std::move(*va_arg(ap, resolv_fn_t *));
-      break;
-    case YASIO_OPT_LOG_FILE:
-      if (options_.outf_)
-        fclose(options_.outf_);
-      options_.outf_ = fopen(va_arg(ap, const char *), "wb");
-      break;
-    case YASIO_OPT_LFBFD_PARAMS:
-      options_.lfb_.max_frame_length    = va_arg(ap, int);
-      options_.lfb_.length_field_offset = va_arg(ap, int);
-      options_.lfb_.length_field_length = va_arg(ap, int);
-      options_.lfb_.length_adjustment   = va_arg(ap, int);
-      break;
-    case YASIO_OPT_IO_EVENT_CALLBACK:
-      this->on_event_ = std::move(*va_arg(ap, io_event_callback_t *));
-      break;
-    case YASIO_OPT_DECODE_FRAME_LENGTH_FUNCTION:
-      this->xdec_len_ = std::move(*va_arg(ap, decode_frame_length_fn_t *));
-      break;
-    case YASIO_OPT_CHANNEL_LOCAL_PORT:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
-      }
-    }
-    break;
-    case YASIO_OPT_CHANNEL_REMOTE_HOST:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->host_ = va_arg(ap, const char *);
-      }
-    }
-    break;
-    case YASIO_OPT_CHANNEL_REMOTE_PORT:
-    {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->port_ = (u_short)va_arg(ap, int);
-      }
-    }
-    break;
-    case YASIO_OPT_NO_NEW_THREAD:
-      this->options_.no_new_thread_ = !!va_arg(ap, int);
-      break;
-  }
-
-  va_end(ap);
-}
-
 io_channel *io_service::new_channel(const io_hostent &ep)
 {
   auto ctx = new io_channel(*this);
-  ctx->reset();
   ctx->host_  = ep.host_;
   ctx->port_  = ep.port_;
   ctx->index_ = static_cast<int>(this->channels_.size());
-  update_resolve_state(ctx);
+  update_dns_queries_state(ctx, true);
   this->channels_.push_back(ctx);
   return ctx;
 }
 
 void io_service::clear_channels()
 {
-  this->active_channels_.clear();
+  this->channel_ops_.clear();
   for (auto iter = channels_.begin(); iter != channels_.end();)
   {
     (*iter)->socket_->close();
@@ -499,8 +440,6 @@ void io_service::clear_channels()
     iter = channels_.erase(iter);
   }
 }
-
-size_t io_service::get_event_count(void) const { return this->event_queue_.size(); }
 
 void io_service::dispatch_events(int count)
 {
@@ -524,7 +463,7 @@ void io_service::run()
   _set_thread_name("yasio-evloop");
 
   // Call once at startup
-  this->ipsv_state_ = xxsocket::getipsv();
+  this->ipsv_ = xxsocket::getipsv();
 
   // event loop
   for (; this->state_ == io_service::state::RUNNING;)
@@ -560,17 +499,17 @@ void io_service::run()
     }
 
     // update active channels
-    if (!active_channels_.empty())
+    if (!channel_ops_.empty())
     {
-      std::lock_guard<std::recursive_mutex> lck(active_channels_mtx_);
-      for (auto iter = active_channels_.begin(); iter != active_channels_.end();)
+      std::lock_guard<std::recursive_mutex> lck(channel_ops_mtx_);
+      for (auto iter = channel_ops_.begin(); iter != channel_ops_.end();)
       {
         auto ctx = *iter;
-        if (ctx->state_ == channel_state::OPENING)
+        if (ctx->state_ == YCS_OPENING)
           do_channel(ctx);
 
-        if (ctx->resolve_state_ != resolve_state::INPRROGRESS)
-          iter = active_channels_.erase(iter);
+        if (ctx->dns_queries_state_ != YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
+          iter = channel_ops_.erase(iter);
         else
           ++iter;
       }
@@ -583,12 +522,23 @@ void io_service::run()
 
 void io_service::do_channel(io_channel *ctx)
 {
-  assert(ctx->state_ == channel_state::OPENING);
-  if (ctx->type_ & CHANNEL_CLIENT)
+  assert(ctx->state_ == YCS_OPENING);
+  if (ctx->mask_ & YCM_CLIENT)
   {
-    do_nonblocking_connect(ctx);
+    switch (this->update_dns_queries_state(ctx, false))
+    {
+      case YDQS_READY:
+        do_nonblocking_connect(ctx);
+        break;
+      case YDQS_FAILED:
+        YASIO_LOG("[index: %d] getaddrinfo failed, ec:%d, detail:%s", ctx->index_, ctx->error_,
+                  xxsocket::gai_strerror(ctx->error_));
+        handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
+        break;
+      default:; // YDQS_INPRROGRESS
+    }
   }
-  else if (ctx->type_ & CHANNEL_SERVER)
+  else if (ctx->mask_ & YCM_SERVER)
   {
     do_nonblocking_accept(ctx);
   }
@@ -596,11 +546,11 @@ void io_service::do_channel(io_channel *ctx)
 
 void io_service::do_channel_completion(io_channel *ctx)
 { // client: OPENING, server: OPENED
-  if (ctx->type_ & CHANNEL_CLIENT)
+  if (ctx->mask_ & YCM_CLIENT)
   {
     do_nonblocking_connect_completion(ctx);
   }
-  else if (ctx->type_ & CHANNEL_SERVER)
+  else if (ctx->mask_ & YCM_SERVER)
   {
     if (ctx->error_ == 0)
     {
@@ -608,9 +558,10 @@ void io_service::do_channel_completion(io_channel *ctx)
     }
     else if (ctx->error_ == ERROR_OPERATION_ABORTED)
     {
-      INET_LOG("The tcp server channel: %d has been closed, reason:%s, it will be never accept new "
-               "client connection!",
-               ctx->index_, this->strerror(ctx->error_));
+      YASIO_LOG(
+          "The tcp server channel: %d has been closed, reason:%s, it will be never accept new "
+          "client connection!",
+          ctx->index_, this->strerror(ctx->error_));
     }
   }
 }
@@ -622,7 +573,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
   if (transport->offset_ > 0 || bytes_transferred > 0 || completion_key == 0)
   {
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
+    YASIO_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
 #endif
     n = do_read(transport, static_cast<int>(bytes_transferred));
     if (n < 0)
@@ -645,7 +596,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
   {
     transport->send_queue_mtx_.lock();
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
+    YASIO_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
 #endif
 
     if (do_write(transport) < 0)
@@ -692,12 +643,12 @@ void io_service::close(size_t channel_index)
     return;
   auto ctx = channels_[channel_index];
 
-  assert(ctx->type_ == CHANNEL_TCP_SERVER);
-  if (ctx->type_ != CHANNEL_TCP_SERVER)
+  assert(ctx->mask_ == YCM_TCP_SERVER);
+  if (ctx->mask_ != YCM_TCP_SERVER)
     return;
-  if (ctx->state_ != channel_state::CLOSED)
+  if (ctx->state_ != YCS_CLOSED)
   {
-    ctx->state_ = channel_state::CLOSED;
+    ctx->state_ = YCS_CLOSED;
     ctx->socket_->close();
     // interrupt(ctx);
   }
@@ -707,11 +658,7 @@ void io_service::close(transport_ptr transport)
 {
   if (transport->is_open())
   {
-    INET_LOG("close the transport: %s --> %s",
-             transport->socket_->local_endpoint().to_string().c_str(),
-             transport->socket_->peer_endpoint().to_string().c_str());
-    transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
-    transport->socket_->shutdown();
+    transport->socket_->close();
   }
 }
 
@@ -721,21 +668,19 @@ bool io_service::is_open(size_t channel_index) const
   if (channel_index >= channels_.size())
     return false;
   auto ctx = channels_[channel_index];
-  return ctx->state_ == channel_state::OPENED;
+  return ctx->state_ == YCS_OPENED;
 }
 
 void io_service::reopen(transport_ptr transport)
 {
-  if (transport->is_open())
-  {
-    transport->offset_ = 1; // !IMPORTANT, trigger the close immidlately.
-  }
-  open_internal(transport->ctx_);
+  auto ctx = transport->ctx_;
+  if (ctx->mask_ & YCM_CLIENT) // Only client channel support reopen by transport
+    open_internal(ctx);
 }
 
 void io_service::open(size_t channel_index, int channel_type)
 {
-  if (channel_type == CHANNEL_UDP_SERVER)
+  if (channel_type == YCM_UDP_SERVER)
   {
     /*
     Because Bind() the client socket to the socket address of the listening socket.  On Linux this
@@ -745,10 +690,9 @@ void io_service::open(size_t channel_index, int channel_type)
     see:
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
   */
-    INET_LOG(
-        "[index: %d], CHANNEL_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
-        "CHANNEL_UDP_CLIENT to communicate with peer!",
-        channel_index);
+    YASIO_LOG("[index: %d], YCM_UDP_SERVER does'n support  Microsoft Winsock provider, you can use "
+              "CHANNEL_UDP_CLIENT to communicate with peer!",
+              channel_index);
     return;
   }
 
@@ -757,30 +701,30 @@ void io_service::open(size_t channel_index, int channel_type)
     return;
   auto ctx = channels_[channel_index];
 
-  ctx->type_ = channel_type;
+  ctx->mask_ = channel_type;
 
   open_internal(ctx);
 }
 
 void io_service::handle_close(transport_ptr transport)
 {
-  INET_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
-           transport->local_endpoint().to_string().c_str(),
-           transport->peer_endpoint().to_string().c_str(), transport->error_,
-           io_service::strerror(transport->error_));
+  YASIO_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
+            transport->local_endpoint().to_string().c_str(),
+            transport->peer_endpoint().to_string().c_str(), transport->error_,
+            io_service::strerror(transport->error_));
 
-  close_internal(transport.get());
+  do_close(transport.get());
 
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
   this->handle_event(event_ptr(
-      new io_event(ctx->index_, YASIO_EVENT_CONNECTION_LOST, transport->error_, transport)));
+      new io_event(ctx->index_, YEK_CONNECTION_LOST, transport->error_, transport)));
 
-  if (ctx->type_ == CHANNEL_TCP_CLIENT)
+  if (ctx->mask_ == YCM_TCP_CLIENT)
   {
-    if (ctx->state_ != channel_state::OPENING)
-      ctx->state_ = channel_state::CLOSED;
+    if (ctx->state_ != YCS_OPENING)
+      ctx->state_ = YCS_CLOSED;
     if (options_.reconnect_timeout_ > 0)
     {
       std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
@@ -817,7 +761,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
   }
   else
   {
-    INET_LOG("[transport: %p] send failed, the connection not ok!", transport);
+    YASIO_LOG("[transport: %p] send failed, the connection not ok!", transport);
   }
 }
 void io_service::handle_event(event_ptr event)
@@ -836,109 +780,75 @@ void io_service::handle_event(event_ptr event)
 
 void io_service::do_nonblocking_connect(io_channel *ctx)
 {
-  assert(ctx->state_ == channel_state::OPENING);
-  if (ctx->state_ != channel_state::OPENING)
+  assert(ctx->state_ == YCS_OPENING);
+  if (ctx->state_ != YCS_OPENING)
     return;
+  assert(ctx->dns_queries_state_ == YDQS_READY);
 
-  if (this->ipsv_state_ == 0)
-    this->ipsv_state_ = xxsocket::getipsv();
+  ctx->state_ = YCS_OPENING;
 
-  auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
-  if (ctx->dns_queries_needed_ && ctx->resolve_state_ == resolve_state::READY &&
-      diff >= options_.dns_cache_timeout_)
-    ctx->resolve_state_ = resolve_state::DIRTY;
-
-  if (ctx->resolve_state_ == resolve_state::READY)
+  auto &ep = ctx->endpoints_[0];
+  if (ctx->mask_ & YCM_TCP)
   {
-    if (!ctx->socket_->is_open())
-    { // cleanup descriptor if possible
-      INET_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
-               ctx->port_);
-    }
-    else
+    BOOL ret = false;
+    if (ctx->socket_->open_ex(ep.af()))
     {
-      close_internal(ctx);
-      INET_LOG("[index: %d] reconnecting server %s:%u...", ctx->index_, ctx->host_.c_str(),
-               ctx->port_);
-    }
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-    ctx->state_ = channel_state::OPENING;
+      ctx->socket_->set_nonblocking(true);
+      ctx->socket_->bind("0.0.0.0", ctx->local_port_);
 
-    auto &ep = ctx->endpoints_[0];
-    if (ctx->type_ & CHANNEL_TCP)
-    {
-      BOOL ret = false;
-      if (ctx->socket_->open_ex(ep.af()))
+      // must register register_descriptor before call connect_ex
+      register_descriptor(ctx->socket_->native_handle());
+
+      bool result = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_),
+                                         nullptr, 0, nullptr, ctx);
+
+      auto last_error = ctx->update_error();
+      if (!result && last_error != WSA_IO_PENDING)
       {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-
-        ctx->socket_->set_nonblocking(true);
-        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-
-        // must register register_descriptor before call connect_ex
-        register_descriptor(ctx->socket_->native_handle());
-
-        bool result = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_),
-                                           nullptr, 0, nullptr, ctx);
-
-        auto last_error = ctx->update_error();
-        if (!result && last_error != WSA_IO_PENDING)
-        {
-          handle_connect_succeed(ctx, ctx->socket_);
-        }
-        else
-        {
-          ctx->deadline_timer_.expires_from_now(
-              std::chrono::microseconds(options_.connect_timeout_));
-          ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
-            if (!cancelled && ctx->state_ != channel_state::OPENED)
-            {
-              ctx->update_error(ETIMEDOUT);
-              handle_connect_failed(ctx);
-            }
-          });
-        }
+        handle_connect_succeed(ctx, ctx->socket_);
       }
-    }
-    else // CHANNEL_UDP
-    {
-      int ret = -1;
-      if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+      else
       {
-        ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
-
-        ctx->socket_->set_nonblocking(true);
-        ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-
-        register_descriptor(ctx->socket_->native_handle());
-        ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
-        if (ret == 0)
-        {
-          handle_connect_succeed(ctx, ctx->socket_);
-        }
-        else
-        {
-          ctx->update_error();
-          this->handle_connect_failed(ctx);
-        }
+        ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
+        ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
+          if (!cancelled && ctx->state_ != YCS_OPENED)
+          {
+            handle_connect_failed(ctx, ETIMEDOUT);
+          }
+        });
       }
     }
   }
-  else if (ctx->resolve_state_ == resolve_state::FAILED)
+  else // CHANNEL_UDP
   {
-    ctx->update_error(ERR_RESOLVE_HOST_FAILED);
-    handle_connect_failed(ctx);
-  } // DIRTY,Try resolve address nonblocking
-  else if (ctx->resolve_state_ == resolve_state::DIRTY)
-  {
-    start_resolve(ctx);
+    int ret = -1;
+    if (ctx->socket_->open_ex(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+    {
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+
+      ctx->socket_->set_nonblocking(true);
+      ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+
+      register_descriptor(ctx->socket_->native_handle());
+      ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
+      if (ret == 0)
+      {
+        handle_connect_succeed(ctx, ctx->socket_);
+      }
+      else
+      {
+        this->handle_connect_failed(ctx, xxsocket::get_last_errno());
+      }
+    }
   }
 }
 
 void io_service::do_nonblocking_connect_completion(io_channel *ctx)
 { // only tcp client will call this function
-  assert(ctx->type_ == CHANNEL_TCP_CLIENT);
-  assert(ctx->state_ == channel_state::OPENING);
+  assert(ctx->mask_ == YCM_TCP_CLIENT);
+  assert(ctx->state_ == YCS_OPENING);
 
   if (ctx->error_ == 0)
   {
@@ -946,8 +856,7 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx)
   }
   else
   {
-    ctx->update_error(ERR_CONNECT_FAILED);
-    handle_connect_failed(ctx);
+    handle_connect_failed(ctx, ctx->error_);
   }
 
   ctx->deadline_timer_.cancel();
@@ -955,53 +864,53 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx)
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
-  close_internal(ctx);
-  assert(ctx->type_ == CHANNEL_TCP_SERVER);
+  do_close(ctx);
+  assert(ctx->mask_ == YCM_TCP_SERVER);
 
-  if (ctx->socket_->open_ex(ipsv_state_ & ipsv_ipv4 ? AF_INET : AF_INET6))
+  if (ctx->socket_->open_ex(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6))
   {
-    ctx->state_ = channel_state::OPENING;
+    ctx->state_ = YCS_OPENING;
 
-    ip::endpoint ep(ipsv_state_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+    ip::endpoint ep(ipsv_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
     int error = 0;
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
-      INET_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-               io_service::strerror(error));
+      YASIO_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+                io_service::strerror(error));
       ctx->socket_->close();
-      ctx->state_ = channel_state::CLOSED;
+      ctx->state_ = YCS_CLOSED;
       return;
     }
 
     if (ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
     {
-      ctx->state_ = channel_state::OPENED;
+      ctx->state_ = YCS_OPENED;
       ctx->socket_->set_nonblocking(true);
 
       register_descriptor(ctx->socket_->native_handle());
 
       do_nonblocking_accept_internal(ctx);
 
-      INET_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
+      YASIO_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
     else
     {
       error = xxsocket::get_last_errno();
-      INET_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-               io_service::strerror(error));
+      YASIO_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
+                io_service::strerror(error));
       ctx->socket_->close();
-      ctx->state_ = channel_state::CLOSED;
+      ctx->state_ = YCS_CLOSED;
     }
   }
   else
-    ctx->state_ = channel_state::CLOSED;
+    ctx->state_ = YCS_CLOSED;
 }
 
 void io_service::do_nonblocking_accept_internal(io_channel *ctx)
 {
-  assert(ctx->type_ == CHANNEL_TCP_SERVER);
+  assert(ctx->mask_ == YCM_TCP_SERVER);
 
   std::shared_ptr<xxsocket> prepared_sock(new xxsocket());
   if (prepared_sock->open_ex(AF_INET))
@@ -1023,8 +932,8 @@ void io_service::do_nonblocking_accept_internal(io_channel *ctx)
 
 void io_service::do_nonblocking_accept_completion(io_channel *ctx)
 {
-  assert(ctx->type_ & CHANNEL_TCP);
-  if (ctx->state_ == channel_state::OPENED)
+  assert(ctx->mask_ & YCM_TCP);
+  if (ctx->state_ == YCS_OPENED)
   {
     if (ctx->error_ == 0)
     {
@@ -1035,8 +944,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx)
     }
     else if (ctx->error_ != ERROR_IO_PENDING)
     {
-      INET_LOG("The channel:%d has error, will be closed!", ctx->index_);
-      close_internal(ctx);
+      YASIO_LOG("The channel:%d has error, will be closed!", ctx->index_);
+      do_close(ctx);
     }
   }
 }
@@ -1046,16 +955,16 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   auto ctx = transport->ctx_;
 
   auto &connection = transport->socket_;
-  if (ctx->type_ & CHANNEL_CLIENT)
-    ctx->state_ = channel_state::OPENED;
+  if (ctx->mask_ & YCM_CLIENT)
+    ctx->state_ = YCS_OPENED;
   else
   { // tcp server, accept a new client session
     connection->set_nonblocking(true);
     register_descriptor(connection->native_handle());
   }
-  if (ctx->type_ & CHANNEL_TCP)
+  if (ctx->mask_ & YCM_TCP)
   {
-    if (ctx->type_ & CHANNEL_CLIENT)
+    if (ctx->mask_ & YCM_CLIENT)
       connection->set_optval(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, ctx->socket_->native_handle());
     else
       connection->set_optval(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, ctx->socket_->native_handle());
@@ -1066,15 +975,15 @@ void io_service::handle_connect_succeed(transport_ptr transport)
                                 options_.tcp_keepalive_.probs);
   }
 
-  INET_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
-           connection->local_endpoint().to_string().c_str(),
-           connection->peer_endpoint().to_string().c_str());
+  YASIO_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
+            connection->local_endpoint().to_string().c_str(),
+            connection->peer_endpoint().to_string().c_str());
   this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, 0, transport)));
+      event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 
   start_receive_op(transport);
 
-  if (ctx->type_ == CHANNEL_TCP_SERVER)
+  if (ctx->mask_ == YCM_TCP_SERVER)
     do_nonblocking_accept_internal(ctx);
 }
 
@@ -1087,7 +996,8 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
     transport       = transports_[index];
     transport->ctx_ = ctx; // !important, update context.
     transport_free_list_.pop_back();
-    INET_LOG("allocate a transport from free list, index=%d, channel_index=%d", index, ctx->index_);
+    YASIO_LOG("allocate a transport from free list, index=%d, channel_index=%d", index,
+              ctx->index_);
   }
   else
   {
@@ -1101,17 +1011,30 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   return transport;
 }
 
-void io_service::handle_connect_failed(io_channel *ctx)
+void io_service::handle_connect_failed(io_channel *ctx, int error)
 {
-  close_internal(ctx);
-  ctx->state_ = channel_state::CLOSED;
+  do_close(ctx);
+  ctx->state_ = YCS_CLOSED;
 
-  int error = ctx->error_;
+  // int error = ctx->error_;
   this->handle_event(
-      event_ptr(new io_event(ctx->index_, YASIO_EVENT_CONNECT_RESPONSE, error, nullptr)));
+      event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 
-  INET_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
-           ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
+  YASIO_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
+            ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
+}
+
+bool io_service::do_close(io_base *ctx)
+{
+  /*ctx->opmask_ = 0;
+  ctx->state_  = YCS_CLOSED;*/
+  ctx->error_  = 0;
+  if (ctx->socket_->is_open())
+  {
+    ctx->socket_->close();
+    return true;
+  }
+  return false;
 }
 
 int io_service::do_write(transport_ptr transport)
@@ -1131,12 +1054,12 @@ int io_service::do_write(transport_ptr transport)
       transport->send_queue_.pop_front();
 #if _YASIO_VERBOS_LOG
       auto packet_size = static_cast<int>(v->data_.size());
-      INET_LOG("[index: %d] do_write ok, A packet sent "
-               "success, packet size:%d",
-               ctx->index_, packet_size, transport->socket_->local_endpoint().to_string().c_str(),
-               transport->socket_->peer_endpoint().to_string().c_str());
+      YASIO_LOG("[index: %d] do_write ok, A packet sent "
+                "success, packet size:%d",
+                ctx->index_, packet_size, transport->socket_->local_endpoint().to_string().c_str(),
+                transport->socket_->peer_endpoint().to_string().c_str());
 #endif
-      handle_send_finished(v, error_number::ERR_OK);
+      handle_send_finished(v, YERR_OK);
     }
     else if (n > 0)
     { // TODO: add time
@@ -1147,20 +1070,20 @@ int io_service::do_write(transport_ptr transport)
         // n);
         v->offset_ += n;
         outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-        INET_LOG("[index: %d] do_write pending, %dbytes still "
-                 "outstanding, "
-                 "%dbytes was sent!",
-                 ctx->index_, outstanding_bytes, n);
+        YASIO_LOG("[index: %d] do_write pending, %dbytes still "
+                  "outstanding, "
+                  "%dbytes was sent!",
+                  ctx->index_, outstanding_bytes, n);
       }
       else
       { // send timeout
         transport->send_queue_.pop_front();
 
         auto packet_size = static_cast<int>(v->data_.size());
-        INET_LOG("[index: %d] do_write packet timeout, packet "
-                 "size:%d",
-                 ctx->index_, packet_size);
-        handle_send_finished(v, error_number::ERR_SEND_TIMEOUT);
+        YASIO_LOG("[index: %d] do_write packet timeout, packet "
+                  "size:%d",
+                  ctx->index_, packet_size);
+        handle_send_finished(v, YERR_SEND_TIMEOUT);
       }
     }
     else
@@ -1168,10 +1091,10 @@ int io_service::do_write(transport_ptr transport)
       int error = transport->update_error();
       if (SHOULD_CLOSE_1(n, error))
       {
-        INET_LOG("[index: %d] do_write error, the connection "
-                 "should be "
-                 "closed, retval=%d, ec:%d, detail:%s",
-                 ctx->index_, n, error, io_service::strerror(error));
+        YASIO_LOG("[index: %d] do_write error, the connection "
+                  "should be "
+                  "closed, retval=%d, ec:%d, detail:%s",
+                  ctx->index_, n, error, io_service::strerror(error));
         return -1;
       }
     }
@@ -1180,7 +1103,7 @@ int io_service::do_write(transport_ptr transport)
   return n;
 }
 
-void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, error_number /*error*/) {}
+void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
 
 int io_service::do_read(transport_ptr transport, int bytes_transferred)
 { // return: whether the transport buffer still have data, -1: error, connection should be close.
@@ -1195,8 +1118,8 @@ int io_service::do_read(transport_ptr transport, int bytes_transferred)
   if (n > 0 || !SHOULD_CLOSE_0(n, ec))
   {
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
-             transport->error_, io_service::strerror(transport->error_));
+    YASIO_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
+              transport->error_, io_service::strerror(transport->error_));
 #endif
     // iocp may no need this check.
     if (n == -1)
@@ -1204,15 +1127,15 @@ int io_service::do_read(transport_ptr transport, int bytes_transferred)
 #if _YASIO_VERBOS_LOG
     if (n > 0)
     {
-      INET_LOG("[index: %d] do_read ok, received data len: %d, "
-               "buffer data "
-               "len: %d",
-               transport->channel_index(), n, n + transport->offset_);
+      YASIO_LOG("[index: %d] do_read ok, received data len: %d, "
+                "buffer data "
+                "len: %d",
+                transport->channel_index(), n, n + transport->offset_);
     }
 #endif
     if (transport->expected_packet_size_ == -1)
     { // decode length
-      int length = this->xdec_len_(this, transport->buffer_, transport->offset_ + n);
+      int length = this->decode_len_(transport->buffer_, transport->offset_ + n);
       if (length > 0)
       {
         transport->expected_packet_size_ = length;
@@ -1230,11 +1153,11 @@ int io_service::do_read(transport_ptr transport, int bytes_transferred)
       }
       else
       {
-        // set_errorno(ctx, error_number::ERR_DPL_ILLEGAL_PDU);
-        INET_LOG("[index: %d] do_read error, decode length of "
-                 "pdu failed, "
-                 "the connection should be closed!",
-                 ctx->index_);
+        // set_errorno(ctx, YERR_DPL_ILLEGAL_PDU);
+        YASIO_LOG("[index: %d] do_read error, decode length of "
+                  "pdu failed, "
+                  "the connection should be closed!",
+                  ctx->index_);
         return -1;
       }
     }
@@ -1252,15 +1175,15 @@ int io_service::do_read(transport_ptr transport, int bytes_transferred)
     const char *errormsg = io_service::strerror(error);
     if (n == 0)
     {
-      INET_LOG("[index: %d] do_read error, the remote host close the "
-               "connection, retval=%d, ec:%d, detail:%s",
-               ctx->index_, n, error, errormsg);
+      YASIO_LOG("[index: %d] do_read error, the remote host close the "
+                "connection, retval=%d, ec:%d, detail:%s",
+                ctx->index_, n, error, errormsg);
     }
     else
     {
-      INET_LOG("[index: %d] do_read error, the connection should be "
-               "closed, retval=%d, ec:%d, detail:%s",
-               ctx->index_, n, error, errormsg);
+      YASIO_LOG("[index: %d] do_read error, the connection should be "
+                "closed, retval=%d, ec:%d, detail:%s",
+                ctx->index_, n, error, errormsg);
     }
 
     return -1;
@@ -1286,11 +1209,11 @@ int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
 #if _YASIO_VERBOS_LOG
-    INET_LOG("[index: %d] received a properly packet from peer, "
-             "packet size:%d",
-             transport->channel_index(), transport->expected_packet_size_);
+    YASIO_LOG("[index: %d] received a properly packet from peer, "
+              "packet size:%d",
+              transport->channel_index(), transport->expected_packet_size_);
 #endif
-    this->handle_event(event_ptr(new io_event(transport->channel_index(), YASIO_EVENT_RECV_PACKET,
+    this->handle_event(event_ptr(new io_event(transport->channel_index(), YEK_PACKET,
                                               transport->take_packet(), transport)));
   }
   else
@@ -1302,65 +1225,64 @@ int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes
   return offset;
 }
 
-void io_service::schedule_timer(deadline_timer *timer)
+std::shared_ptr<deadline_timer> io_service::schedule(highp_time_t duration, timer_cb_t cb,
+                                                     bool repeated)
+{
+  std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
+  timer->expires_from_now(std::chrono::microseconds(duration), repeated);
+  timer->async_wait([this, timer /*!important, hold on by lambda expression */,
+                     cb](bool cancelled) { cb(cancelled); });
+  return timer;
+}
+
+void io_service::schedule_timer(deadline_timer *timer_ctl, timer_cb_t &timer_cb)
 {
   // pitfall: this service only hold the weak pointer of the timer
   // object, so before dispose the timer object need call
   // cancel_timer to cancel it.
-  if (timer == nullptr)
+  if (timer_ctl == nullptr)
     return;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  if (std::find(timer_queue_.begin(), timer_queue_.end(), timer) != timer_queue_.end())
+  if (this->find_timer(timer_ctl) != timer_queue_.end())
     return;
 
-  this->timer_queue_.push_back(timer);
-
-  std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-            [](deadline_timer *lhs, deadline_timer *rhs) {
-              return lhs->wait_duration() > rhs->wait_duration();
-            });
-
-  if (timer == *this->timer_queue_.begin())
-    interrupt();
+  this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
+  this->sort_timers_unlocked();
+  if (timer_ctl == this->timer_queue_.begin()->first)
+    this->interrupt();
 }
 
-void io_service::cancel_timer(deadline_timer *timer)
+void io_service::remove_timer(deadline_timer *timer)
 {
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
-  auto iter = std::find(timer_queue_.begin(), timer_queue_.end(), timer);
+  auto iter = this->find_timer(timer);
   if (iter != timer_queue_.end())
-  {
-    auto callback = timer->callback_;
-    callback(true);
     timer_queue_.erase(iter);
-  }
 }
 
-void io_service::open_internal(io_channel *ctx)
+void io_service::open_internal(io_channel *ctx, bool ignore_state)
 {
-  if (ctx->state_ == channel_state::OPENING)
+  if (ctx->state_ == YCS_OPENING && !ignore_state)
   { // in-opening, do nothing
-    INET_LOG("[index: %d] the channel is in opening!", ctx->index_);
+    YASIO_LOG("[index: %d] the channel is in opening!", ctx->index_);
     return;
   }
 
-  if (ctx->resolve_state_ != resolve_state::READY)
-    update_resolve_state(ctx);
-
-  ctx->state_ = channel_state::OPENING;
+  ctx->state_ = YCS_OPENING;
   if (ctx->socket_->is_open())
   {
     ctx->socket_->shutdown();
   }
 
-  active_channels_mtx_.lock();
-  this->active_channels_.push_back(ctx);
-  active_channels_mtx_.unlock();
+  channel_ops_mtx_.lock();
+  this->channel_ops_.push_back(ctx);
+  channel_ops_mtx_.unlock();
 
   this->interrupt();
 }
+
 
 void io_service::perform_timers()
 {
@@ -1369,46 +1291,41 @@ void io_service::perform_timers()
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
-  std::vector<deadline_timer *> loop_timers;
+  std::vector<timer_impl_t> loop_timers;
   while (!this->timer_queue_.empty())
   {
-    auto earliest = timer_queue_.back();
-    if (earliest->expired())
+    if (timer_queue_.back().first->expired())
     {
-      timer_queue_.pop_back();
-      auto callback = earliest->callback_;
-      callback(false);
-      if (earliest->repeated_)
+      auto earliest  = std::move(timer_queue_.back());
+      auto timer_ctl = earliest.first;
+      auto &timer_cb = earliest.second;
+      timer_queue_.pop_back(); // pop the expired timer from timer queue
+
+      timer_cb(timer_ctl->cancelled_);
+      if (timer_ctl->repeated_)
       {
-        earliest->expires_from_now();
+        timer_ctl->expires_from_now();
         loop_timers.push_back(earliest);
       }
     }
     else
-    {
       break;
-    }
   }
 
   if (!loop_timers.empty())
   {
     this->timer_queue_.insert(this->timer_queue_.end(), loop_timers.begin(), loop_timers.end());
-    std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-              [](deadline_timer *lhs, deadline_timer *rhs) {
-                return lhs->wait_duration() > rhs->wait_duration();
-              });
+    this->sort_timers_unlocked();
   }
 }
 
 long long io_service::get_wait_duration(long long usec)
 {
   if (this->timer_queue_.empty())
-  {
     return usec;
-  }
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  deadline_timer *earliest = timer_queue_.back();
+  auto earliest = timer_queue_.back().first;
 
   // microseconds
   auto duration = earliest->wait_duration();
@@ -1418,86 +1335,108 @@ long long io_service::get_wait_duration(long long usec)
     return usec;
 }
 
-bool io_service::close_internal(io_base *ctx)
-{
-  if (ctx->socket_->is_open())
-  {
-    ctx->socket_->close();
-    return true;
-  }
-  return false;
-}
+//bool io_service::close_internal(io_base *ctx)
+//{
+//  if (ctx->socket_->is_open())
+//  {
+//    ctx->socket_->close();
+//    return true;
+//  }
+//  return false;
+//}
 
-void io_service::update_resolve_state(io_channel *ctx)
+u_short io_service::update_dns_queries_state(io_channel *ctx, bool update_name)
 {
-  if (ctx->port_ > 0)
+  if (!update_name)
   {
-    ip::endpoint ep;
-    ctx->endpoints_.clear();
-    ctx->dns_queries_needed_ = !ep.assign(ctx->host_.c_str(), ctx->port_);
-    if (!ctx->dns_queries_needed_)
+    if ((ctx->dns_queries_state_ & YDQSF_QUERIES_NEEDED) &&
+        !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
     {
-      ctx->endpoints_.push_back(ep);
-      ctx->resolve_state_ = resolve_state::READY;
+      auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
+      if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY) &&
+          diff >= options_.dns_cache_timeout_)
+        YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_DIRTY);
+
+      if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY))
+        start_resolve(ctx);
     }
-    else
-      ctx->resolve_state_ = resolve_state::DIRTY;
   }
   else
-    ctx->resolve_state_ = resolve_state::FAILED;
+  {
+    ctx->endpoints_.clear();
+    if (ctx->port_ > 0)
+    {
+      ip::endpoint ep;
+      if (ep.assign(ctx->host_.c_str(), ctx->port_))
+      {
+        ctx->endpoints_.push_back(ep);
+        ctx->dns_queries_state_ = YDQS_READY;
+      }
+      else
+        ctx->dns_queries_state_ = YDQSF_QUERIES_NEEDED | YDQS_DIRTY;
+    }
+    else
+      ctx->dns_queries_state_ = YDQS_FAILED;
+  }
+
+  return YDQS_GET_STATE(ctx->dns_queries_state_);
 }
 
 void io_service::start_resolve(io_channel *ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
-  if (ctx->resolve_state_ != resolve_state::DIRTY)
-    return;
-  ctx->resolve_state_ = resolve_state::INPRROGRESS;
-  ctx->endpoints_.clear();
+  assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY));
+  ctx->error_ = EINPROGRESS;
+  YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  INET_LOG("[index: %d] start async resolving for %s", ctx->index_, ctx->host_.c_str());
-  // 6.563ms
-  std::thread resolve_thread([=] {
+  YASIO_LOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());
+
+  ctx->endpoints_.clear();
+  std::thread resolv_thread([=] { // 6.563ms
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
-    bool succeed = xresolv_ ? xresolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_)
-                            : resolve(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
-
-    if (succeed && !ctx->endpoints_.empty())
+    int error = this->resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
+    if (error == 0)
     {
-      ctx->resolve_state_         = resolve_state::READY;
+      ctx->dns_queries_state_     = YDQS_READY;
       ctx->dns_queries_timestamp_ = _highp_clock();
-      auto &ep                    = ctx->endpoints_[0];
-      INET_LOG("[index: %d] getaddrinfo: resolve %s succeed, ip:%s", ctx->index_,
-               ctx->host_.c_str(), ep.to_string().c_str());
     }
     else
     {
-      ctx->resolve_state_ = resolve_state::FAILED;
+      ctx->error_ = error;
+      YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     }
+    /*
+    The getaddrinfo behavior at win32 is strange:
+    If the channel 0 is in non-blocking connect, and waiting at select, than
+    channel 1 request connect(need dns queries), it's wake up the select call,
+    do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET
+    without select call, FD_ISSET will always return true, even through the
+    TCP connection handshake is not complete.
 
+    Try write data to a incomplete TCP will trigger error: 10057
+    Another result at this situation is: Try get local endpoint by getsockname
+    will return 0.0.0.0
+    */
     this->interrupt();
   });
-  resolve_thread.detach();
+  resolv_thread.detach();
 }
 
-bool io_service::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                         unsigned short port)
+int io_service::__builtin_resolv(std::vector<ip::endpoint> &endpoints, const char *hostname,
+                                 unsigned short port)
 {
-  if (this->ipsv_state_ & ipsv_ipv4)
-  {
+  if (this->ipsv_ & ipsv_ipv4)
     return xxsocket::resolve_v4(endpoints, hostname, port);
-  }
-  else if (this->ipsv_state_ & ipsv_ipv6)
-  { // localhost is IPV6 ONLY network
-    return xxsocket::resolve_v6(endpoints, hostname, port) ||
-           xxsocket::resolve_v4to6(endpoints, hostname, port);
-  }
-  return false;
+  else if (this->ipsv_ & ipsv_ipv6) // localhost is IPV6 ONLY network
+    return xxsocket::resolve_v6(endpoints, hostname, port) != 0
+               ? xxsocket::resolve_v4to6(endpoints, hostname, port)
+               : 0;
+  return -1;
 }
 
-int io_service::builtin_decode_frame_length(void *ud, int n)
+int io_service::__builtin_decode_len(void *ud, int n)
 {
   if (options_.lfb_.length_field_offset >= 0)
   {
@@ -1544,32 +1483,128 @@ const char *io_service::strerror(int error)
 {
   switch (error)
   {
-    case ERR_CONNECT_FAILED:
-      return "connect failed!";
-    case ERR_CONNECT_TIMEOUT:
-      return "connect timeout!";
-    case ERR_SEND_FAILED:
-      return "send failed!";
-    case ERR_SEND_TIMEOUT:
-      return "send timeout!";
-    case ERR_RECV_FAILED:
-      return "recv failed!";
-    case ERR_NETWORK_UNREACHABLE:
-      return "the network unreachable!";
-    case ERR_CONNECTION_LOST:
-      return "the connection lost!";
-    case ERR_DPL_ILLEGAL_PDU:
-      return "decode frame length failed!";
-    case ERR_RESOLVE_HOST_FAILED:
-      return "resolve host failed!";
-    case ERR_RESOLVE_HOST_TIMEOUT:
-      return "resolve host timeout!";
-    case ERR_RESOLVE_HOST_IPV6_REQUIRED:
-      return "resolve host ipv6 required!";
+    case -1:
+      return "Unknown error!";
+    case YERR_SEND_TIMEOUT:
+      return "Send timeout!";
+    case YERR_DPL_ILLEGAL_PDU:
+      return "Decode frame length failed!";
+    case YERR_RESOLV_HOST_FAILED:
+      return "Resolve host failed!";
+    case YERR_NO_AVAIL_ADDR:
+      return "No available address!";
+    case YERR_LOCAL_SHUTDOWN:
+      return "An existing connection was shutdown by local host!";
     default:
       return xxsocket::strerror(error);
   }
 }
 
+void io_service::set_option(int option, ...)
+{
+  va_list ap;
+  va_start(ap, option);
+
+  switch (option)
+  {
+    case YOPT_CONNECT_TIMEOUT:
+      options_.connect_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_SEND_TIMEOUT:
+      options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_RECONNECT_TIMEOUT:
+    {
+      int value = va_arg(ap, int);
+      if (value > 0)
+        options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
+      else
+        options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
+    }
+    break;
+    case YOPT_DNS_CACHE_TIMEOUT:
+      options_.dns_cache_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_DEFER_EVENT:
+      options_.deferred_event_ = !!va_arg(ap, int);
+      break;
+    case YOPT_TCP_KEEPALIVE:
+      options_.tcp_keepalive_.onoff    = 1;
+      options_.tcp_keepalive_.idle     = va_arg(ap, int);
+      options_.tcp_keepalive_.interval = va_arg(ap, int);
+      options_.tcp_keepalive_.probs    = va_arg(ap, int);
+      break;
+    case YOPT_RESOLV_FUNCTION:
+      this->resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
+      break;
+    case YOPT_LOG_FILE:
+      if (options_.outf_ != -1)
+        ::close(options_.outf_);
+      options_.outf_ = ::open(va_arg(ap, const char *), YASIO_O_OPEN_FLAGS);
+      if (options_.outf_ != -1)
+        ::lseek(options_.outf_, 0, SEEK_END);
+      break;
+    case YOPT_LFBFD_PARAMS:
+      options_.lfb_.max_frame_length    = va_arg(ap, int);
+      options_.lfb_.length_field_offset = va_arg(ap, int);
+      options_.lfb_.length_field_length = va_arg(ap, int);
+      options_.lfb_.length_adjustment   = va_arg(ap, int);
+      break;
+    case YOPT_IO_EVENT_CALLBACK:
+      this->on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
+      break;
+    case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
+      this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
+      break;
+    case YOPT_CHANNEL_LOCAL_PORT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
+      }
+    }
+    break;
+    case YOPT_CHANNEL_REMOTE_HOST:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->host_ = va_arg(ap, const char *);
+        update_dns_queries_state(this->channels_[index], true);
+      }
+    }
+    break;
+    case YOPT_CHANNEL_REMOTE_PORT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        this->channels_[index]->port_ = (u_short)va_arg(ap, int);
+        update_dns_queries_state(this->channels_[index], true);
+      }
+    }
+    break;
+    case YOPT_CHANNEL_REMOTE_ENDPOINT:
+    {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        auto channel   = this->channels_[index];
+        channel->host_ = va_arg(ap, const char *);
+        channel->port_ = (u_short)va_arg(ap, int);
+        update_dns_queries_state(this->channels_[index], true);
+      }
+    }
+    break;
+    case YOPT_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
+  }
+
+  va_end(ap);
+}
 } // namespace inet
 } // namespace purelib

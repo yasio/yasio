@@ -508,7 +508,7 @@ void io_service::run()
         if (ctx->state_ == YCS_OPENING)
           do_channel(ctx);
 
-        if (ctx->dns_queries_state_ != YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
+        if (!YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
           iter = channel_ops_.erase(iter);
         else
           ++iter;

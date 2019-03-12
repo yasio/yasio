@@ -75,9 +75,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
   yasio.new_usertype<io_service>(
       "io_service", "start_service",
       sol::overload(
-          static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_callback_t)>(
+          static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_cb_t)>(
               &io_service::start_service),
-          static_cast<void (io_service::*)(const io_hostent *channel_eps, io_event_callback_t cb)>(
+          static_cast<void (io_service::*)(const io_hostent *channel_eps, io_event_cb_t cb)>(
               &io_service::start_service)),
       "stop_service", &io_service::stop_service, "set_option",
       [](io_service *service, int opt, sol::variadic_args va) {
@@ -108,8 +108,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
           case YOPT_IO_EVENT_CALLBACK:
             (void)0;
             {
-              sol::function fn           = va[0];
-              io_event_callback_t fnwrap = [=](event_ptr e) mutable -> void { fn(std::move(e)); };
+              sol::function fn     = va[0];
+              io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void { fn(std::move(e)); };
               service->set_option(opt, std::addressof(fnwrap));
             }
             break;
@@ -279,10 +279,10 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .setConstructors<io_service()>()
           .addOverloadedFunctions(
               "start_service",
-              static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_callback_t)>(
+              static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_cb_t)>(
                   &io_service::start_service),
-              static_cast<void (io_service::*)(const io_hostent *channel_eps,
-                                               io_event_callback_t cb)>(&io_service::start_service))
+              static_cast<void (io_service::*)(const io_hostent *channel_eps, io_event_cb_t cb)>(
+                  &io_service::start_service))
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch_events", &io_service::dispatch_events)
           .addFunction("open", &io_service::open)
@@ -323,8 +323,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
               case YOPT_IO_EVENT_CALLBACK:
                 (void)0;
                 {
-                  kaguya::LuaFunction fn     = args[0];
-                  io_event_callback_t fnwrap = [=](event_ptr e) mutable -> void { fn(e.get()); };
+                  kaguya::LuaFunction fn = args[0];
+                  io_event_cb_t fnwrap   = [=](event_ptr e) mutable -> void { fn(e.get()); };
                   service->set_option(opt, std::addressof(fnwrap));
                 }
                 break;

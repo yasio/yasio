@@ -39,7 +39,7 @@ server:start_service(hostents, function(event)
                 local obs = proto.e101(msg)
                 local data = obs:to_string()
                 local data_partial1 = data:sub(1, #data - 10)
-                server:write(transport, data_partial1)
+                server:write(transport, data .. data)
                 
                 print('The remain data will be sent after 6 seconds...')
                 transport1 = transport
@@ -57,7 +57,7 @@ server:open(1, yasio.YCM_TCP_SERVER)
 local client = io_service.new()
 hostent.host = "127.0.0.1"
 --tcp unpack params, TCP拆包参数设置接口:
-client:set_option(yasio.YOPT_LFIB_PARAMS, 
+client:set_option(yasio.YOPT_LFBFD_PARAMS, 
     65535, -- maxFrameLength, 最大包长度
     0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
     4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
@@ -113,7 +113,7 @@ httpclient:start_service(hostent, function(event)
         end
     end)
 httpclient:set_option(yasio.YOPT_LFBFD_PARAMS, 65535, -1, 0, 0)
-httpclient:set_option(yasio.YOPT_YCM_LOCAL_PORT, 0, 36253)
+httpclient:set_option(yasio.YOPT_CHANNEL_LOCAL_PORT, 0, 36253)
 httpclient:open(0, yasio.YCM_TCP_CLIENT)    
 
 local elapsedTime = 0
@@ -124,7 +124,7 @@ local function yasio_update(dt)
     client:dispatch_events(128)
     httpclient:dispatch_events(128)
     elapsedTime = elapsedTime + dt
-    if elapsedTime > 6 and not partial2Sent then
+    if elapsedTime > 10000 and not partial2Sent then
         partial2Sent = true
         server:write(transport1, data_partial2)
     end

@@ -55,7 +55,10 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
-namespace yasio = ::purelib;
+namespace yasio
+{
+using namespace purelib;
+}
 
 namespace purelib
 {

@@ -27,8 +27,8 @@ SOFTWARE.
 */
 #include "yasio/yasio_jsb.h"
 #include "yasio/yasio.h"
-#include "yasio/ibinarystream.h"
-#include "yasio/obinarystream.h"
+#include "yasio/ibstream.h"
+#include "yasio/obstream.h"
 #include "yasio/detail/ref_ptr.h"
 
 #include "cocos2d.h"
@@ -117,22 +117,6 @@ void kill(TIMER_ID timerId)
   std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
   Director::getInstance()->getScheduler()->unschedule(key, timerId);
 }
-
-class ibstream : public ibinarystream
-{
-public:
-  ibstream(std::vector<char> blob) : ibinarystream(), blob_(std::move(blob))
-  {
-    this->assign(blob_.data(), blob_.size());
-  }
-  ibstream(const obinarystream *obs) : ibinarystream(), blob_(obs->buffer())
-  {
-    this->assign(blob_.data(), blob_.size());
-  }
-
-private:
-  std::vector<char> blob_;
-};
 } // namespace yasio_jsb
 
 bool jsval_to_hostent(JSContext *ctx, JS::HandleValue vp, inet::io_hostent *ret)
@@ -266,12 +250,12 @@ static transport_ptr jsb_yasio_jsval_to_transport_ptr(JSContext *ctx, const JS::
   return nullptr;
 }
 
-static obinarystream *jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue &vp)
+static yasio::obstream *jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue &vp)
 {
   JS::RootedObject jsobj(ctx);
   jsobj.set(vp.toObjectOrNull());
   auto proxy = jsb_get_js_proxy(jsobj);
-  return (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  return (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
 }
 
 /////////////// javascript like setTimeout, clearTimeout setInterval, clearInterval ///////////
@@ -378,14 +362,14 @@ JSObject *jsb_ibstream_prototype;
 
 static bool js_yasio_ibstream_read_bool(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_bool : Invalid Native Object");
 
   args.rval().set(BOOLEAN_TO_JSVAL(cobj->read_ix<bool>()));
@@ -396,14 +380,14 @@ static bool js_yasio_ibstream_read_bool(JSContext *ctx, uint32_t argc, jsval *vp
 template <typename T>
 static bool js_yasio_ibstream_read_ix(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_ix : Invalid Native Object");
 
   args.rval().set(INT_TO_JSVAL(cobj->read_ix<T>()));
@@ -414,14 +398,14 @@ static bool js_yasio_ibstream_read_ix(JSContext *ctx, uint32_t argc, jsval *vp)
 template <typename T>
 static bool js_yasio_ibstream_read_ux(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_ux : Invalid Native Object");
 
   args.rval().set(UINT_TO_JSVAL(cobj->read_ix<T>()));
@@ -433,14 +417,14 @@ static bool js_yasio_ibstream_read_ux(JSContext *ctx, uint32_t argc, jsval *vp)
 template <typename T>
 static bool js_yasio_ibstream_read_dx(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_dx : Invalid Native Object");
 
   args.rval().set(DOUBLE_TO_JSVAL(cobj->read_ix<T>()));
@@ -450,14 +434,14 @@ static bool js_yasio_ibstream_read_dx(JSContext *ctx, uint32_t argc, jsval *vp)
 
 static bool js_yasio_ibstream_read_i24(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_i24 : Invalid Native Object");
 
   args.rval().set(INT_TO_JSVAL(cobj->read_i24()));
@@ -467,14 +451,14 @@ static bool js_yasio_ibstream_read_i24(JSContext *ctx, uint32_t argc, jsval *vp)
 
 static bool js_yasio_ibstream_read_u24(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_u24 : Invalid Native Object");
 
   args.rval().set(UINT_TO_JSVAL(cobj->read_u24()));
@@ -484,14 +468,14 @@ static bool js_yasio_ibstream_read_u24(JSContext *ctx, uint32_t argc, jsval *vp)
 
 static bool js_yasio_ibstream_read_string(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok                   = true;
-  yasio_jsb::ibstream *cobj = nullptr;
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio_jsb::ibstream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_string : Invalid Native Object");
 
   auto sv = cobj->read_v();
@@ -512,7 +496,7 @@ void js_register_yasio_ibstream(JSContext *ctx, JS::HandleObject global)
   jsb_ibstream_class->enumerate   = JS_EnumerateStub;
   jsb_ibstream_class->resolve     = JS_ResolveStub;
   jsb_ibstream_class->convert     = JS_ConvertStub;
-  jsb_ibstream_class->finalize    = jsb_yasio_finalize<yasio_jsb::ibstream>;
+  jsb_ibstream_class->finalize    = jsb_yasio_finalize<yasio::ibstream>;
   jsb_ibstream_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
@@ -548,7 +532,7 @@ void js_register_yasio_ibstream(JSContext *ctx, JS::HandleObject global)
   JS_SetProperty(ctx, proto, "__nativeObj", JS::TrueHandleValue);
   JS_SetProperty(ctx, proto, "__is_ref", JS::FalseHandleValue);
 
-  jsb_register_class<yasio_jsb::ibstream>(ctx, jsb_ibstream_class, proto, JS::NullPtr());
+  jsb_register_class<yasio::ibstream>(ctx, jsb_ibstream_class, proto, JS::NullPtr());
 }
 
 ///////////////////////// obstream /////////////////////////////////
@@ -557,26 +541,26 @@ JSObject *jsb_obstream_prototype;
 
 static bool jsb_yasio_obstream_constructor(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  JS::CallArgs args   = JS::CallArgsFromVp(argc, vp);
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  JS::CallArgs args     = JS::CallArgsFromVp(argc, vp);
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
   if (argc == 0)
   {
-    cobj = new (std::nothrow) obinarystream();
+    cobj = new (std::nothrow) yasio::obstream();
   }
   else
   {
     auto arg0 = args.get(0);
     if (arg0.isInt32())
-      cobj = new (std::nothrow) obinarystream(arg0.toInt32());
+      cobj = new (std::nothrow) yasio::obstream(arg0.toInt32());
     else
-      cobj = new (std::nothrow) obinarystream();
+      cobj = new (std::nothrow) yasio::obstream();
   }
-  js_type_class_t *typeClass = js_get_type_from_native<obinarystream>(cobj);
+  js_type_class_t *typeClass = js_get_type_from_native<yasio::obstream>(cobj);
 
   // link the native object with the javascript object
   JS::RootedObject jsobj(
-      ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<obinarystream>::s_name()));
+      ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<yasio::obstream>::s_name()));
   args.rval().set(OBJECT_TO_JSVAL(jsobj));
   if (JS_HasProperty(ctx, jsobj, "_ctor", &ok) && ok)
     ScriptingCore::getInstance()->executeFunctionWithOwner(OBJECT_TO_JSVAL(jsobj), "_ctor", args);
@@ -585,14 +569,14 @@ static bool jsb_yasio_obstream_constructor(JSContext *ctx, uint32_t argc, jsval 
 
 bool js_yasio_obstream_push32(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_push32 : Invalid Native Object");
 
   cobj->push32();
@@ -603,14 +587,14 @@ bool js_yasio_obstream_push32(JSContext *ctx, uint32_t argc, jsval *vp)
 }
 bool js_yasio_obstream_pop32(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_pop32 : Invalid Native Object");
 
   if (argc == 0)
@@ -629,14 +613,14 @@ bool js_yasio_obstream_pop32(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_push24(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_push24 : Invalid Native Object");
 
   cobj->push24();
@@ -647,14 +631,14 @@ bool js_yasio_obstream_push24(JSContext *ctx, uint32_t argc, jsval *vp)
 }
 bool js_yasio_obstream_pop24(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_pop24 : Invalid Native Object");
 
   if (argc == 0)
@@ -673,14 +657,14 @@ bool js_yasio_obstream_pop24(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_push16(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_push16 : Invalid Native Object");
 
   cobj->push16();
@@ -691,14 +675,14 @@ bool js_yasio_obstream_push16(JSContext *ctx, uint32_t argc, jsval *vp)
 }
 bool js_yasio_obstream_pop16(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_pop16 : Invalid Native Object");
 
   if (argc == 0)
@@ -717,14 +701,14 @@ bool js_yasio_obstream_pop16(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_push8(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_push8 : Invalid Native Object");
 
   cobj->push8();
@@ -735,14 +719,14 @@ bool js_yasio_obstream_push8(JSContext *ctx, uint32_t argc, jsval *vp)
 }
 bool js_yasio_obstream_pop8(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_pop8 : Invalid Native Object");
 
   if (argc == 0)
@@ -761,14 +745,14 @@ bool js_yasio_obstream_pop8(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_bool(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_bool : Invalid Native Object");
 
   cobj->write_i<bool>(args.get(0).toBoolean());
@@ -780,14 +764,14 @@ bool js_yasio_obstream_write_bool(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_i8(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_i8 : Invalid Native Object");
 
   cobj->write_i<uint8_t>(args.get(0).toInt32());
@@ -799,14 +783,14 @@ bool js_yasio_obstream_write_i8(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_i16(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_i16 : Invalid Native Object");
 
   cobj->write_i<uint16_t>(args.get(0).toInt32());
@@ -818,14 +802,14 @@ bool js_yasio_obstream_write_i16(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_i24(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_i24 : Invalid Native Object");
 
   cobj->write_i24(args.get(0).toInt32());
@@ -837,14 +821,14 @@ bool js_yasio_obstream_write_i24(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_i32(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_i32 : Invalid Native Object");
 
   cobj->write_i<uint32_t>(args.get(0).toInt32());
@@ -856,14 +840,14 @@ bool js_yasio_obstream_write_i32(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_i64(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  bool ok             = true;
-  obinarystream *cobj = nullptr;
+  bool ok               = true;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_i64 : Invalid Native Object");
 
   double argval = 0;
@@ -877,13 +861,13 @@ bool js_yasio_obstream_write_i64(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_f(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  obinarystream *cobj = nullptr;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_f : Invalid Native Object");
 
   double argval = 0;
@@ -897,13 +881,13 @@ bool js_yasio_obstream_write_f(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_lf(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  obinarystream *cobj = nullptr;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_lf : Invalid Native Object");
 
   double argval = 0;
@@ -917,13 +901,13 @@ bool js_yasio_obstream_write_lf(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_write_string(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  obinarystream *cobj = nullptr;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_string : Invalid Native Object");
 
   auto arg0 = args.get(0);
@@ -942,13 +926,13 @@ bool js_yasio_obstream_write_string(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_length(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  obinarystream *cobj = nullptr;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_length : Invalid Native Object");
 
   auto length = cobj->length();
@@ -959,13 +943,13 @@ bool js_yasio_obstream_length(JSContext *ctx, uint32_t argc, jsval *vp)
 
 bool js_yasio_obstream_sub(JSContext *ctx, uint32_t argc, jsval *vp)
 {
-  obinarystream *cobj = nullptr;
+  yasio::obstream *cobj = nullptr;
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (obinarystream *)(proxy ? proxy->ptr : nullptr);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_sub : Invalid Native Object");
 
   do
@@ -983,12 +967,12 @@ bool js_yasio_obstream_sub(JSContext *ctx, uint32_t argc, jsval *vp)
       count = args.get(1).toInt32();
     }
 
-    auto subobj                = new obinarystream(cobj->sub(offset, count));
-    js_type_class_t *typeClass = js_get_type_from_native<obinarystream>(subobj);
+    auto subobj                = new yasio::obstream(cobj->sub(offset, count));
+    js_type_class_t *typeClass = js_get_type_from_native<yasio::obstream>(subobj);
 
     // link the native object with the javascript object
     JS::RootedObject jsobj(
-        ctx, jsb_create_weak_jsobject(ctx, subobj, typeClass, TypeTest<obinarystream>::s_name()));
+        ctx, jsb_create_weak_jsobject(ctx, subobj, typeClass, TypeTest<yasio::obstream>::s_name()));
     args.rval().set(OBJECT_TO_JSVAL(jsobj));
 
     return true;
@@ -1009,7 +993,7 @@ void js_register_yasio_obstream(JSContext *ctx, JS::HandleObject global)
   jsb_obstream_class->enumerate   = JS_EnumerateStub;
   jsb_obstream_class->resolve     = JS_ResolveStub;
   jsb_obstream_class->convert     = JS_ConvertStub;
-  jsb_obstream_class->finalize    = jsb_yasio_finalize<obinarystream>;
+  jsb_obstream_class->finalize    = jsb_yasio_finalize<yasio::obstream>;
   jsb_obstream_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
@@ -1050,7 +1034,7 @@ void js_register_yasio_obstream(JSContext *ctx, JS::HandleObject global)
   JS_SetProperty(ctx, proto, "__nativeObj", JS::TrueHandleValue);
   JS_SetProperty(ctx, proto, "__is_ref", JS::FalseHandleValue);
 
-  jsb_register_class<obinarystream>(ctx, jsb_obstream_class, proto, JS::NullPtr());
+  jsb_register_class<yasio::obstream>(ctx, jsb_obstream_class, proto, JS::NullPtr());
 }
 
 ///////////////////////// transport_ptr ///////////////////////////////
@@ -1176,8 +1160,8 @@ bool js_yasio_io_event_take_packet(JSContext *ctx, uint32_t argc, jsval *vp)
 
   if (!packet.empty())
   {
-    std::unique_ptr<yasio_jsb::ibstream> ibs(new yasio_jsb::ibstream(std::move(packet)));
-    args.rval().set(jsb_yasio_to_jsval<yasio_jsb::ibstream>(ctx, std::move(ibs)));
+    std::unique_ptr<yasio::ibstream> ibs(new yasio::ibstream(std::move(packet)));
+    args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, std::move(ibs)));
   }
   else
   {
@@ -1436,7 +1420,7 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
                               args[4].toInt32());
           break;
         case YOPT_RESOLV_FUNCTION: // jsb does not support set custom
-                                        // resolv function
+                                   // resolv function
           break;
         case YOPT_IO_EVENT_CALLBACK:
           (void)0;

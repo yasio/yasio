@@ -14,8 +14,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../ $(LOCAL_PATH)/../../../lua/luajit/in
 
 LOCAL_SRC_FILES := ../../xxsocket.cpp \
     ../../yasio.cpp \
-    ../../ibinarystream.cpp \
-    ../../obinarystream.cpp \
+    ../../ibstream.cpp \
+    ../../obstream.cpp \
     ../../impl/lyasio.cpp \
     ../../impl/yasio_cclua.cpp
 

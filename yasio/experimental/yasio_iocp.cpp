@@ -244,6 +244,15 @@ enum
 
   // Maximum waitable timer timeout, in microseconds.
   max_timeout_usec = max_timeout_msec * 1000,
+
+  // Wake for dispatch timer or unpack
+  wake_for_dispatch = 1001,
+
+  // Wake for open channel
+  wake_for_open,
+
+  // Wake for connect
+  wake_for_connect,
 };
 static DWORD get_gqcs_timeout()
 {
@@ -289,7 +298,7 @@ void deadline_timer::cancel()
   {
     this->expire_time_ = highp_clock_t::now() - duration_;
     this->cancelled_   = true;
-    this->service_.interrupt();
+    this->service_.interrupt(wake_for_dispatch);
   }
 }
 
@@ -361,7 +370,7 @@ void io_service::stop_service()
       }
     }
 
-    this->interrupt();
+    this->interrupt(wake_for_dispatch);
     this->wait_service();
   }
   else if (this->state_ == io_service::state::STOPPING)
@@ -408,7 +417,7 @@ void io_service::cleanup()
 {
   if (this->state_ == io_service::state::STOPPED)
   {
-    this->transport_free_list_.clear();
+    this->transports_pool_.clear();
     this->transports_.clear();
 
     clear_channels();
@@ -421,7 +430,7 @@ void io_service::cleanup()
 
 io_channel *io_service::new_channel(const io_hostent &ep)
 {
-  auto ctx = new io_channel(*this);
+  auto ctx    = new io_channel(*this);
   ctx->host_  = ep.host_;
   ctx->port_  = ep.port_;
   ctx->index_ = static_cast<int>(this->channels_.size());
@@ -432,7 +441,6 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 
 void io_service::clear_channels()
 {
-  this->channel_ops_.clear();
   for (auto iter = channels_.begin(); iter != channels_.end();)
   {
     (*iter)->socket_->close();
@@ -483,9 +491,23 @@ void io_service::run()
 
     if (lpOverlapped)
     { // process completeion events.
-      auto objIO = (io_base *)lpOverlapped;
-      objIO->update_error();
-      if (objIO->class_id_ == IO_CLASS_CHANNEL)
+      auto ctx = (io_base *)lpOverlapped;
+      ctx->update_error();
+
+      if (completion_key == 0)
+      {
+        YASIO_LOG("%s", "some message!");
+        if (ctx->state_ == YCS_OPENED)
+        { // process
+        }
+        else if (ctx->state_ == YCS_OPENING)
+        {}
+      }
+      else if (completion_key == wake_for_open)
+      {
+        do_open(ctx);
+      }
+      /*if (objIO->class_id_ == IO_CLASS_CHANNEL)
       {
         do_channel_completion(static_cast<io_channel *>(objIO));
       }
@@ -495,11 +517,11 @@ void io_service::run()
         transport->OffsetHigh = bytes_transferred;
         do_io_completion(transport, completion_key);
         transport->OffsetHigh = 0;
-      }
+      }*/
     }
 
     // update active channels
-    if (!channel_ops_.empty())
+    /*if (!channel_ops_.empty())
     {
       std::lock_guard<std::recursive_mutex> lck(channel_ops_mtx_);
       for (auto iter = channel_ops_.begin(); iter != channel_ops_.end();)
@@ -513,15 +535,16 @@ void io_service::run()
         else
           ++iter;
       }
-    }
+    }*/
 
     // perform timeout timers
     perform_timers();
   }
 }
 
-void io_service::do_channel(io_channel *ctx)
+void io_service::do_open(io_base *ptr)
 {
+  auto ctx = (io_channel *)ptr;
   assert(ctx->state_ == YCS_OPENING);
   if (ctx->mask_ & YCM_CLIENT)
   {
@@ -583,7 +606,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
     }
     else if (n > 0)
     { // still have data to perform at next frame
-      this->interrupt(transport.get());
+      this->interrupt(wake_for_dispatch, transport.get());
     }
     else // == 0, all buffer consumed, continue recv
     {
@@ -609,7 +632,7 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
 
     if (!transport->send_queue_.empty())
     {
-      this->interrupt(transport.get());
+      this->interrupt(wake_for_dispatch, transport.get());
     }
 
     transport->send_queue_mtx_.unlock();
@@ -632,7 +655,7 @@ void io_service::start_receive_op(transport_ptr transport)
     last_error = WSAECONNREFUSED;
   if (result != 0 && last_error != WSA_IO_PENDING)
   {
-    this->interrupt(transport.get(), 0, bytes_transferred);
+    this->interrupt(0, transport.get(), bytes_transferred);
   }
 }
 
@@ -643,9 +666,6 @@ void io_service::close(size_t channel_index)
     return;
   auto ctx = channels_[channel_index];
 
-  assert(ctx->mask_ == YCM_TCP_SERVER);
-  if (ctx->mask_ != YCM_TCP_SERVER)
-    return;
   if (ctx->state_ != YCS_CLOSED)
   {
     ctx->state_ = YCS_CLOSED;
@@ -718,8 +738,8 @@ void io_service::handle_close(transport_ptr transport)
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
-  this->handle_event(event_ptr(
-      new io_event(ctx->index_, YEK_CONNECTION_LOST, transport->error_, transport)));
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, transport->error_, transport)));
 
   if (ctx->mask_ == YCM_TCP_CLIENT)
   {
@@ -739,7 +759,7 @@ void io_service::handle_close(transport_ptr transport)
 
   // @we don't real delete it, just push to free list, make sure all objects' index in transports_
   // never change.
-  this->transport_free_list_.push_back(transport.get());
+  this->transports_pool_.push_back(transport.get());
 }
 
 void io_service::write(transport_ptr transport, std::vector<char> data)
@@ -757,7 +777,7 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_.push_back(pdu);
     transport->send_queue_mtx_.unlock();
 
-    this->interrupt(transport);
+    this->interrupt(wake_for_dispatch, transport);
   }
   else
   {
@@ -801,8 +821,9 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
       // must register register_descriptor before call connect_ex
       register_descriptor(ctx->socket_->native_handle());
 
+      auto overlap = allocate_transport(ctx, ctx->socket_);
       bool result = xxsocket::connect_ex(ctx->socket_->native_handle(), &ep.sa_, sizeof(ep.in4_),
-                                         nullptr, 0, nullptr, ctx);
+                                         nullptr, 0, nullptr, overlap.get());
 
       auto last_error = ctx->update_error();
       if (!result && last_error != WSA_IO_PENDING)
@@ -811,13 +832,13 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
       }
       else
       {
-        ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
+        /*ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
         ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
           if (!cancelled && ctx->state_ != YCS_OPENED)
           {
             handle_connect_failed(ctx, ETIMEDOUT);
           }
-        });
+        });*/
       }
     }
   }
@@ -891,7 +912,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
 
       register_descriptor(ctx->socket_->native_handle());
 
-      do_nonblocking_accept_internal(ctx);
+      start_accept_op(ctx);
 
       YASIO_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
@@ -908,7 +929,7 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
     ctx->state_ = YCS_CLOSED;
 }
 
-void io_service::do_nonblocking_accept_internal(io_channel *ctx)
+void io_service::start_accept_op(io_channel *ctx)
 {
   assert(ctx->mask_ == YCM_TCP_SERVER);
 
@@ -917,12 +938,12 @@ void io_service::do_nonblocking_accept_internal(io_channel *ctx)
   {
     auto transport        = allocate_transport(ctx, prepared_sock);
     DWORD dwBytesReceived = 0;
-    ctx->Pointer          = transport.get();
+    auto overlap          = transport.get();
     bool result           = xxsocket::accept_ex(
-        ctx->socket_->native_handle(), prepared_sock->native_handle(), ctx->buffer_,
+        ctx->socket_->native_handle(), prepared_sock->native_handle(), overlap->buffer_,
         0 /* Set to 0, we do not wait read any data during handshake */, sizeof(SOCKADDR_IN) + 16,
-        sizeof(SOCKADDR_IN) + 16, &dwBytesReceived, ctx);
-    DWORD last_error = ctx->update_error();
+        sizeof(SOCKADDR_IN) + 16, &dwBytesReceived, overlap);
+    DWORD last_error = overlap->update_error();
     if (!result && last_error != WSA_IO_PENDING)
     {
       handle_connect_succeed(transport);
@@ -978,24 +999,23 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   YASIO_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
             connection->local_endpoint().to_string().c_str(),
             connection->peer_endpoint().to_string().c_str());
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 
   start_receive_op(transport);
 
   if (ctx->mask_ == YCM_TCP_SERVER)
-    do_nonblocking_accept_internal(ctx);
+    start_accept_op(ctx);
 }
 
 transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport;
-  if (!transport_free_list_.empty())
+  if (!transports_pool_.empty())
   { // allocate from free list, and do not need push to transports_ again.
-    auto index      = transport_free_list_.back()->index_;
+    auto index      = transports_pool_.back()->index_;
     transport       = transports_[index];
     transport->ctx_ = ctx; // !important, update context.
-    transport_free_list_.pop_back();
+    transports_pool_.pop_back();
     YASIO_LOG("allocate a transport from free list, index=%d, channel_index=%d", index,
               ctx->index_);
   }
@@ -1017,8 +1037,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
   ctx->state_ = YCS_CLOSED;
 
   // int error = ctx->error_;
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 
   YASIO_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
@@ -1026,9 +1045,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 
 bool io_service::do_close(io_base *ctx)
 {
-  /*ctx->opmask_ = 0;
-  ctx->state_  = YCS_CLOSED;*/
-  ctx->error_  = 0;
+  ctx->error_ = 0;
   if (ctx->socket_->is_open())
   {
     ctx->socket_->close();
@@ -1213,8 +1230,8 @@ int io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes
               "packet size:%d",
               transport->channel_index(), transport->expected_packet_size_);
 #endif
-    this->handle_event(event_ptr(new io_event(transport->channel_index(), YEK_PACKET,
-                                              transport->take_packet(), transport)));
+    this->handle_event(event_ptr(
+        new io_event(transport->channel_index(), YEK_PACKET, transport->take_packet(), transport)));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu
@@ -1250,7 +1267,7 @@ void io_service::schedule_timer(deadline_timer *timer_ctl, timer_cb_t &timer_cb)
   this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
   this->sort_timers_unlocked();
   if (timer_ctl == this->timer_queue_.begin()->first)
-    this->interrupt();
+    this->interrupt(wake_for_dispatch);
 }
 
 void io_service::remove_timer(deadline_timer *timer)
@@ -1276,13 +1293,8 @@ void io_service::open_internal(io_channel *ctx, bool ignore_state)
     ctx->socket_->shutdown();
   }
 
-  channel_ops_mtx_.lock();
-  this->channel_ops_.push_back(ctx);
-  channel_ops_mtx_.unlock();
-
-  this->interrupt();
+  this->interrupt(wake_for_open, ctx);
 }
-
 
 void io_service::perform_timers()
 {
@@ -1335,7 +1347,7 @@ long long io_service::get_wait_duration(long long usec)
     return usec;
 }
 
-//bool io_service::close_internal(io_base *ctx)
+// bool io_service::close_internal(io_base *ctx)
 //{
 //  if (ctx->socket_->is_open())
 //  {
@@ -1419,7 +1431,7 @@ void io_service::start_resolve(io_channel *ctx)
     Another result at this situation is: Try get local endpoint by getsockname
     will return 0.0.0.0
     */
-    this->interrupt();
+    this->interrupt(wake_for_open, ctx);
   });
   resolv_thread.detach();
 }
@@ -1474,7 +1486,7 @@ int io_service::__builtin_decode_len(void *ud, int n)
   return n;
 }
 
-void io_service::interrupt(LPOVERLAPPED lpOverlapped, DWORD completion_key, DWORD bytes_transferred)
+void io_service::interrupt(DWORD completion_key, LPOVERLAPPED lpOverlapped, DWORD bytes_transferred)
 {
   ::PostQueuedCompletionStatus(iocp_.handle, bytes_transferred, completion_key, lpOverlapped);
 }

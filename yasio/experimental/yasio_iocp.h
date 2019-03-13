@@ -199,13 +199,14 @@ struct io_base : public OVERLAPPED
   int update_error() { return (error_ = xxsocket::get_last_errno()); }
   void update_error(int error) { error_ = error; }
   std::shared_ptr<xxsocket> socket_;
+
+  u_short state_; // 0: CLOSED, 1: OPENING, 2: OPENED
 };
 
 struct io_channel : public io_base
 {
   io_channel(io_service &service);
 
-  u_short state_; // 0: CLOSED, 1: OPENING, 2: OPENED
   u_short mask_ = 0;
 
   // specific local port, if not zero, tcp/udp client will use it as fixed port
@@ -217,14 +218,11 @@ struct io_channel : public io_base
   highp_time_t dns_queries_timestamp_ = 0;
 
   std::vector<ip::endpoint> endpoints_;
+
   std::atomic<u_short> dns_queries_state_;
 
   // The deadline timer for resolve & connect
   deadline_timer deadline_timer_;
-
-  char buffer_[(sizeof(SOCKADDR_IN) + 16) * 2]; // small buffer for AcceptEx
-
-  void reset();
 };
 
 struct io_transport : public io_base
@@ -416,11 +414,11 @@ private:
   void open_internal(io_channel *, bool ignore_state = false);
 
   void do_io_completion(transport_ptr, DWORD completion_key);
-  void do_channel(io_channel *ctx);
+  void do_open(io_base *ctx);
   void do_channel_completion(io_channel *ctx);
   void perform_timers();
 
-  void interrupt(LPOVERLAPPED lpOverlapped = nullptr, DWORD comple_key = YASIO_WAKEUP_FOR_DISPATCH,
+  void interrupt(DWORD completion_key, LPOVERLAPPED lpOverlapped = nullptr,
                  DWORD bytes_transferred = 0);
 
   long long get_wait_duration(long long usec);
@@ -461,8 +459,6 @@ private:
 
   // Clear all channels after service exit.
   void clear_channels(); // destroy all channels
-  // Update resolve state for new endpoint set
-  u_short update_dns_queries_state(io_channel *ctx, bool update_name);
 
   void handle_send_finished(a_pdu_ptr, int);
 
@@ -470,11 +466,13 @@ private:
   void do_nonblocking_accept(io_channel *);
   void do_nonblocking_accept_completion(io_channel *);
 
-  static const char *strerror(int error);
-
-  void do_nonblocking_accept_internal(io_channel *);
-
+  void start_accept_op(io_channel *);
   void start_receive_op(transport_ptr);
+
+  // Update resolve state for new endpoint set
+  u_short update_dns_queries_state(io_channel *ctx, bool update_name);
+
+  static const char *strerror(int error);
 
 private:
   state state_;
@@ -486,11 +484,8 @@ private:
 
   std::vector<io_channel *> channels_;
 
-  std::recursive_mutex channel_ops_mtx_;
-  std::vector<io_channel *> channel_ops_;
-
   std::vector<transport_ptr> transports_;
-  std::vector<io_transport *> transport_free_list_; // weak pointer, it's ok
+  std::vector<io_transport *> transports_pool_; // weak pointer, it's ok
 
   // timer support timer_pair
   std::vector<timer_impl_t> timer_queue_;

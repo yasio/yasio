@@ -11,8 +11,8 @@
 #else
 #include "yasio/yasio.h"
 #endif
-#include "yasio/ibinarystream.h"
-#include "yasio/obinarystream.h"
+#include "yasio/ibstream.h"
+#include "yasio/obstream.h"
 
 #if defined(_WIN32)
 #  include <Shlwapi.h>
@@ -20,7 +20,7 @@
 #  define strcasestr StrStrIA
 #endif
 
-using namespace purelib::inet;
+using namespace yasio::inet;
 
 template <size_t _Size> void append_string(std::vector<char> &packet, const char (&message)[_Size])
 {
@@ -33,7 +33,7 @@ void yasioTest()
                                            {"127.0.0.1", 30001}, // tcp server
                                            {"127.0.0.1", 59281}}; // udp client
 
-  obinarystream obs;
+  yasio::obstream obs;
   obs.push24();
   obs.write_i24(16777215);
   obs.write_i24(16777213);
@@ -41,7 +41,7 @@ void yasioTest()
   obs.write_i24(16777217); // uint24 value overflow test
   obs.pop24();
 
-  ibinarystream ibs(obs.data(), obs.length());
+  yasio::ibstream_view ibs(obs.data(), obs.length());
   auto n  = ibs.read_i24();
   auto v1 = ibs.read_i24();
   auto v2 = ibs.read_i24();
@@ -126,8 +126,8 @@ void yasioTest()
   std::this_thread::sleep_for(std::chrono::seconds(1));
   service.open(0); // open http client
 
-  //service.set_option(YOPT_RECONNECT_TIMEOUT, 3);
-  service.open(1, YCM_TCP_CLIENT); // open tcp server
+  // service.set_option(YOPT_RECONNECT_TIMEOUT, 3);
+  // service.open(1, YCM_TCP_CLIENT); // open tcp server
   // service.open(2, CHANNEL_UDP_SERVER);
 #if 0
   udpconn_delay.expires_from_now(std::chrono::seconds(3));

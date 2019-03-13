@@ -136,7 +136,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   // ##-- yasio::ibstream
   lyasio.new_usertype<yasio::ibstream>(
-      "yasio::ibstream",
+      "ibstream",
       sol::constructors<yasio::ibstream(std::vector<char>),
                         yasio::ibstream(const yasio::obstream *)>(),
       "read_bool", &yasio::ibstream::read_ix<bool>, "read_i8", &yasio::ibstream::read_ix<int8_t>,

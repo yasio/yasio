@@ -54,8 +54,10 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
-namespace yasio = ::purelib;
-
+namespace yasio
+{
+using namespace purelib;
+}
 namespace purelib
 {
 namespace inet
@@ -102,18 +104,12 @@ enum
   YEK_PACKET,
 };
 
-enum
-{
-  IO_CLASS_CHANNEL,
-  IO_CLASS_TRANSPORT,
-};
-
 // class fwds
 class a_pdu; // application layer protocol data unit.
 class deadline_timer;
 class io_event;
-class io_channel;
-class io_transport;
+struct io_channel;
+struct io_transport;
 class io_service;
 
 // typedefs
@@ -191,8 +187,7 @@ struct io_base : public OVERLAPPED
 {
   io_base() { memset(this, 0, sizeof(OVERLAPPED)); }
 
-  int class_id_ = -1;
-  int index_    = -1; // channel: index in channels, transport: index in transports
+  int index_ = -1; // channel: index in channels, transport: index in transports
 
   int error_ = 0; // socket error(>= -1), application error(< -1)
 
@@ -200,7 +195,7 @@ struct io_base : public OVERLAPPED
   void update_error(int error) { error_ = error; }
   std::shared_ptr<xxsocket> socket_;
 
-  u_short state_; // 0: CLOSED, 1: OPENING, 2: OPENED
+  u_short state_ = 0; // 0: CLOSED, 1: OPENING, 2: OPENED
 };
 
 struct io_channel : public io_base
@@ -242,7 +237,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx) : ctx_(ctx) { class_id_ = IO_CLASS_TRANSPORT; }
+  io_transport(io_channel *ctx) : ctx_(ctx) {}
   io_channel *ctx_;
 
   char buffer_[65536]; // recv buffer
@@ -413,9 +408,21 @@ private:
 
   void open_internal(io_channel *, bool ignore_state = false);
 
-  void do_io_completion(transport_ptr, DWORD completion_key);
   void do_open(io_base *ctx);
-  void do_channel_completion(io_channel *ctx);
+  void do_open_complete(io_base *ctx);
+
+  void do_connect(io_base *);
+  void do_connect_complete(io_base *);
+
+  // server supporting
+  void do_accept(io_channel *);
+  void do_accept_complete(io_transport *);
+
+  void do_recv_complete(io_transport *);
+
+  void handle_connect_succeed(io_transport *);
+  void handle_connect_failed(io_channel *, int ec);
+
   void perform_timers();
 
   void interrupt(DWORD completion_key, LPOVERLAPPED lpOverlapped = nullptr,
@@ -423,17 +430,7 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  void do_nonblocking_connect(io_channel *);
-  void do_nonblocking_connect_completion(io_channel *);
-
-  inline void handle_connect_succeed(io_channel *ctx, std::shared_ptr<xxsocket> socket)
-  {
-    handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
-  }
-  void handle_connect_succeed(transport_ptr);
-  void handle_connect_failed(io_channel *, int ec);
-
-  transport_ptr allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
+  io_transport *allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
   template <typename _T> void register_descriptor(_T handle)
   {
@@ -442,13 +439,14 @@ private:
   // The major non-blocking event-loop
   void run(void);
 
-  int do_write(transport_ptr);
-  int do_read(transport_ptr, int bytes_transferred);
-  int do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
+  int do_write(io_transport*);
+  
+  int do_unpack(io_transport *);
+  int do_unpack(io_transport *, int bytes_expected, int bytes_transferred);
 
   // The op mask will be cleared, the state will be set CLOSED
   bool do_close(io_base *ctx);
-  void handle_close(transport_ptr);
+  void handle_close(io_transport*);
 
   void handle_event(event_ptr event);
 
@@ -462,12 +460,8 @@ private:
 
   void handle_send_finished(a_pdu_ptr, int);
 
-  // supporting server
-  void do_nonblocking_accept(io_channel *);
-  void do_nonblocking_accept_completion(io_channel *);
-
   void start_accept_op(io_channel *);
-  void start_receive_op(transport_ptr);
+  void start_receive_op(io_transport *);
 
   // Update resolve state for new endpoint set
   u_short update_dns_queries_state(io_channel *ctx, bool update_name);

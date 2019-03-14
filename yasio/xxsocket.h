@@ -490,7 +490,7 @@ public:
 }; // namespace ip
 
 // supported internet protocol flags
-enum
+enum : u_short
 {
   ipsv_unavailable = 0,
   ipsv_ipv4        = 1,

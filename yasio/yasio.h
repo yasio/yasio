@@ -548,7 +548,7 @@ private:
   resolv_fn_t resolv_;
 
   // The ip stack version supported by local host
-  int ipsv_ = 0;
+  u_short ipsv_ = 0;
 }; // io_service
 }; // namespace inet
 }; /* namespace purelib */

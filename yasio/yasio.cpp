@@ -1287,8 +1287,8 @@ but it's ok.
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
     if (wait_duration > 0)
     {
-      timeval timeout = {static_cast<long>(wait_duration / 1000000),
-                         static_cast<long>(wait_duration % 1000000)};
+      timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
+                         (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if _YASIO_VERBOS_LOG
       YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 timeout.tv_sec * 1000 + timeout.tv_usec / 1000);

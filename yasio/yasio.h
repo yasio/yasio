@@ -505,15 +505,10 @@ private:
   // the event callback
   io_event_cb_t on_event_;
 
-  /*
-  options_.tcp.keepalive.
-  options_.length_field_offset: -1: direct, >= 0: store as 4bytes integer, default value=0
-  options_.max_pdu_size: default value=10M
-  options_.log_file:
-  */
+  // options
   struct __unnamed_options
   {
-    highp_time_t connect_timeout_   = 5LL * MICROSECONDS_PER_SECOND;
+    highp_time_t connect_timeout_   = 10LL * MICROSECONDS_PER_SECOND;
     highp_time_t send_timeout_      = (std::numeric_limits<int>::max)();
     highp_time_t reconnect_timeout_ = -1;
     // Default dns cache time: 10 minutes
@@ -531,7 +526,7 @@ private:
 
     struct __unnamed02
     {
-      int length_field_offset = 0;
+      int length_field_offset = 0; // -1: directly, >= 0: store as 1~4bytes integer, default value=0
       int length_field_length = 4; // 1,2,3,4
       int length_adjustment   = 0;
       int max_frame_length    = SZ(10, M);

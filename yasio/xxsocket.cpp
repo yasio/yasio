@@ -71,8 +71,8 @@ SOFTWARE.
 #  pragma warning(disable : 4996)
 #endif
 
-using namespace purelib;
-using namespace purelib::inet;
+using namespace yasio;
+using namespace yasio::inet;
 
 #if defined(_WIN32) && !defined(_WINSTORE)
 extern LPFN_ACCEPTEX __accept_ex;
@@ -80,7 +80,7 @@ extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
 extern LPFN_CONNECTEX __connect_ex;
 #endif
 
-namespace purelib
+namespace yasio
 {
 namespace inet
 {

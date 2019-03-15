@@ -58,7 +58,7 @@ namespace yasio
 {
 using namespace purelib;
 }
-namespace purelib
+namespace yasio
 {
 namespace inet
 {
@@ -439,14 +439,14 @@ private:
   // The major non-blocking event-loop
   void run(void);
 
-  int do_write(io_transport*);
-  
+  int do_write(io_transport *);
+
   int do_unpack(io_transport *);
   int do_unpack(io_transport *, int bytes_expected, int bytes_transferred);
 
   // The op mask will be cleared, the state will be set CLOSED
   bool do_close(io_base *ctx);
-  void handle_close(io_transport*);
+  void handle_close(io_transport *);
 
   void handle_event(event_ptr event);
 
@@ -549,6 +549,6 @@ private:
   int ipsv_ = 0;
 }; // io_service
 }; // namespace inet
-}; /* namespace purelib */
+}; // namespace yasio
 
 #define myasio purelib::gc::singleton<purelib::inet::io_service>::instance()

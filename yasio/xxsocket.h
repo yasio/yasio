@@ -197,7 +197,7 @@ typedef int socket_native_type;
   (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK &&                    \
                   (errcode) != EINTR && (errcode) != ENOBUFS))
 
-namespace purelib
+namespace yasio
 {
 
 namespace inet
@@ -1012,7 +1012,7 @@ template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd
 }; // namespace inet
 
 namespace net = inet;
-}; // namespace purelib
+}; // namespace yasio
 
 #if defined(_MSC_VER)
 #  pragma warning(pop)

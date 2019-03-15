@@ -60,7 +60,7 @@ namespace yasio
 using namespace purelib;
 }
 
-namespace purelib
+namespace yasio
 {
 namespace inet
 {
@@ -546,6 +546,6 @@ private:
   u_short ipsv_ = 0;
 }; // io_service
 }; // namespace inet
-}; /* namespace purelib */
+}; /* namespace yasio */
 
 #define myasio yasio::gc::singleton<yasio::inet::io_service>::instance()

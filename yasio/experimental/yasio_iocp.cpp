@@ -76,7 +76,7 @@ SOFTWARE.
     }                                                                                              \
   } while (false)
 
-namespace purelib
+namespace yasio
 {
 namespace inet
 {
@@ -511,7 +511,7 @@ void io_service::run()
       }
       else if (completion_key == wake_for_write)
       {
-        do_write(static_cast<io_transport*>(ctx));
+        do_write(static_cast<io_transport *>(ctx));
       }
     }
 
@@ -552,7 +552,7 @@ void io_service::do_open_complete(io_base *overlap)
   auto ctx  = impl->ctx_;
   if (ctx->mask_ & YCM_CLIENT)
   {
-    do_connect_complete(static_cast<io_transport*>(overlap));
+    do_connect_complete(static_cast<io_transport *>(overlap));
   }
   else if (ctx->mask_ & YCM_SERVER)
   {
@@ -595,9 +595,9 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
   auto bytes_transferred = transport->OffsetHigh;
   if (transport->offset_ > 0 || bytes_transferred > 0 || completion_key == 0)
   {
-#if _YASIO_VERBOS_LOG
+#  if _YASIO_VERBOS_LOG
     YASIO_LOG("[index: %d] perform non-blocking read operation...", transport->channel_index());
-#endif
+#  endif
     n = do_read(transport, static_cast<int>(bytes_transferred));
     if (n < 0)
     {
@@ -618,9 +618,9 @@ void io_service::do_io_completion(transport_ptr transport, DWORD completion_key)
   if (!transport->send_queue_.empty())
   {
     transport->send_queue_mtx_.lock();
-#if _YASIO_VERBOS_LOG
+#  if _YASIO_VERBOS_LOG
     YASIO_LOG("[index: %d] perform non-blocking write operation...", transport->channel_index());
-#endif
+#  endif
 
     if (do_write(transport) < 0)
     { // TODO: check would block? for client, may
@@ -729,7 +729,7 @@ void io_service::open(size_t channel_index, int channel_type)
   open_internal(ctx);
 }
 
-void io_service::handle_close(io_transport* transport)
+void io_service::handle_close(io_transport *transport)
 {
   YASIO_LOG("the connection %s --> %s is lost, error:%d, detail:%s",
             transport->local_endpoint().to_string().c_str(),
@@ -741,8 +741,8 @@ void io_service::handle_close(io_transport* transport)
   auto ctx = transport->ctx_;
 
   // @Notify connection lost
-  this->handle_event(
-      event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, transport->error_, transports_[transport->index_])));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, transport->error_,
+                                            transports_[transport->index_])));
 
   if (ctx->mask_ == YCM_TCP_CLIENT)
   {
@@ -859,7 +859,7 @@ void io_service::do_connect(io_base *channel)
       register_descriptor(ctx->socket_->native_handle());
 
       auto overlap = allocate_transport(ctx, ctx->socket_);
-      ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
+      ret          = xxsocket::connect(ctx->socket_->native_handle(), ep);
       if (ret == 0)
       {
         handle_connect_succeed(overlap);
@@ -941,7 +941,7 @@ void io_service::start_accept_op(io_channel *ctx)
   std::shared_ptr<xxsocket> prepared_sock(new xxsocket());
   if (prepared_sock->open_ex(AF_INET))
   {
-    auto overlap        = allocate_transport(ctx, prepared_sock);
+    auto overlap          = allocate_transport(ctx, prepared_sock);
     DWORD dwBytesReceived = 0;
     bool result           = xxsocket::accept_ex(
         ctx->socket_->native_handle(), prepared_sock->native_handle(), overlap->buffer_,
@@ -957,7 +957,7 @@ void io_service::start_accept_op(io_channel *ctx)
 
 void io_service::do_accept_complete(io_transport *overlap)
 {
-  auto impl = (io_transport*)overlap;
+  auto impl = (io_transport *)overlap;
   auto ctx  = impl->ctx_;
   if (ctx->state_ == YCS_OPENED)
   {
@@ -973,7 +973,7 @@ void io_service::do_accept_complete(io_transport *overlap)
   }
 }
 
-void io_service::handle_connect_succeed(io_transport* overlap)
+void io_service::handle_connect_succeed(io_transport *overlap)
 {
   auto ctx = overlap->ctx_;
 
@@ -1003,7 +1003,8 @@ void io_service::handle_connect_succeed(io_transport* overlap)
   YASIO_LOG("[index: %d] the connection [%s] ---> %s is established.", ctx->index_,
             connection->local_endpoint().to_string().c_str(),
             connection->peer_endpoint().to_string().c_str());
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transports_[overlap->index_])));
+  this->handle_event(
+      event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transports_[overlap->index_])));
 
   start_receive_op(overlap);
 
@@ -1221,8 +1222,9 @@ int io_service::do_unpack(io_transport *transport, int bytes_expected, int bytes
               "packet size:%d",
               transport->channel_index(), transport->expected_packet_size_);
 #endif
-    this->handle_event(event_ptr(
-        new io_event(transport->channel_index(), YEK_PACKET, transport->take_packet(), transports_[transport->index_])));
+    this->handle_event(
+        event_ptr(new io_event(transport->channel_index(), YEK_PACKET, transport->take_packet(),
+                               transports_[transport->index_])));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu
@@ -1610,4 +1612,4 @@ void io_service::set_option(int option, ...)
   va_end(ap);
 }
 } // namespace inet
-} // namespace purelib
+} // namespace yasio

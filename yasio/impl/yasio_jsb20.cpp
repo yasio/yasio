@@ -38,8 +38,8 @@ SOFTWARE.
 #include "cocos/platform/CCApplication.h"
 #include "cocos/base/CCScheduler.h"
 
-using namespace purelib;
-using namespace purelib::inet;
+using namespace yasio;
+using namespace yasio::inet;
 using namespace cocos2d;
 
 namespace yasio_jsb

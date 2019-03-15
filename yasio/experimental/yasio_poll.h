@@ -55,9 +55,7 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
-namespace yasio = ::purelib;
-
-namespace purelib
+namespace yasio
 {
 namespace inet
 {
@@ -541,6 +539,6 @@ private:
   int ipsv_ = 0;
 }; // io_service
 }; // namespace inet
-}; /* namespace purelib */
+}; /* namespace yasio */
 
 #define myasio yasio::gc::singleton<yasio::inet::io_service>::instance()

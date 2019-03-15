@@ -33,8 +33,8 @@ SOFTWARE.
 
 #include "cocos2d.h"
 #include "scripting/js-bindings/manual/cocos2d_specifics.hpp"
-using namespace purelib;
-using namespace purelib::inet;
+using namespace yasio;
+using namespace yasio::inet;
 using namespace cocos2d;
 
 namespace yasio_jsb

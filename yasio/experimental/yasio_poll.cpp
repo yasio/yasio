@@ -76,7 +76,7 @@ SOFTWARE.
     }                                                                                              \
   } while (false)
 
-namespace purelib
+namespace yasio
 {
 namespace inet
 {
@@ -1590,4 +1590,4 @@ void io_service::set_option(int option, ...)
   va_end(ap);
 }
 } // namespace inet
-} // namespace purelib
+} // namespace yasio

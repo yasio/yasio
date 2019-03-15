@@ -74,7 +74,7 @@ SOFTWARE.
  * field. */
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
-namespace purelib
+namespace yasio
 {
 namespace inet
 {
@@ -274,8 +274,8 @@ void io_service::start_service(const io_hostent *channel_eps, int channel_count,
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
     {
-      this->worker_ = std::thread(&io_service::run, this);
-      this->worker_id_     = worker_.get_id();
+      this->worker_    = std::thread(&io_service::run, this);
+      this->worker_id_ = worker_.get_id();
     }
     else
     {
@@ -1669,4 +1669,4 @@ const char *io_service::strerror(int error)
 }
 
 } // namespace inet
-} // namespace purelib
+} // namespace yasio

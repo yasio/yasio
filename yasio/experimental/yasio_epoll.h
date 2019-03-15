@@ -52,9 +52,8 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
-namespace purelib
+namespace yasio
 {
-
 namespace inet
 {
 enum channel_type
@@ -563,6 +562,6 @@ private:
   int ipsv_state_; // local network state
 };                 // io_service
 };                 // namespace inet
-};                 /* namespace purelib */
+};                 /* namespace yasio */
 
-#define myasio purelib::gc::singleton<purelib::inet::io_service>::instance()
+#define myasio yasio::gc::singleton<purelib::inet::io_service>::instance()

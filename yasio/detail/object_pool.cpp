@@ -1,15 +1,15 @@
 // object_pool.cpp: a simple & high-performance object pool implementation v1.3
 
-#if !defined(_OBJECT_POOL_CPP_)
-#define _OBJECT_POOL_CPP_
+#if !defined(YASIO__OBJECT_POOL_CPP)
+#define YASIO__OBJECT_POOL_CPP
 
-#if !defined(OBJECT_POOL_HEADER_ONLY)
+#if !defined(YASIO_OBJECT_POOL_HEADER_ONLY)
 #include "object_pool.h"
 #endif
 
 #define OBJECT_POOL_PREALLOCATE 1
 
-namespace purelib {
+namespace yasio {
 namespace gc {
 
 namespace detail {
@@ -142,14 +142,14 @@ object_pool::free_link_node* object_pool::tidy_chunk(chunk_link chunk)
     return reinterpret_cast <free_link_node*>(rbegin);
 }
 
-} // purelib::gc::detail
+} // yasio::gc::detail
 
-} // namespace purelib::gc
-}; // namespace purelib
+} // namespace yasio::gc
+}; // namespace yasio
 
-#endif // _OBJECT_POOL_CPP_
+#endif // YASIO__OBJECT_POOL_CPP
 /*
 * Copyright (c) 2012-2019 by HALX99,  ALL RIGHTS RESERVED.
 * Consult your license regarding permissions and restrictions.
-* V1.3:2018
+* V1.3:2019
 **/

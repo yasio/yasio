@@ -476,7 +476,7 @@ static int inet_pton6(const char *src, u_char *dst)
 } // namespace compat
 } // namespace ip
 } // namespace inet
-}; // namespace purelib
+}; // namespace yasio
 
 static int getipsv_internal(void)
 {

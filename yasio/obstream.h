@@ -25,8 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef _YASIO_OBSTREAM_H_
-#define _YASIO_OBSTREAM_H_
+#ifndef YASIO__OBSTREAM_H
+#define YASIO__OBSTREAM_H
 #include <string>
 #include "yasio/detail/string_view.hpp"
 #include <sstream>
@@ -69,17 +69,17 @@ public:
   size_t write_i24(uint32_t value); // highest byte ignored
 
   /* 32 bits length field */
-  size_t write_v(stdport::string_view);
+  size_t write_v(yasio::string_view);
   /* 16 bits length field */
-  size_t write_v16(stdport::string_view);
+  size_t write_v16(yasio::string_view);
   /* 8 bits length field */
-  size_t write_v8(stdport::string_view);
+  size_t write_v8(yasio::string_view);
 
   size_t write_v(const void *v, int size);
   size_t write_v16(const void *v, int size);
   size_t write_v8(const void *v, int size);
 
-  size_t write_bytes(stdport::string_view);
+  size_t write_bytes(yasio::string_view);
   size_t write_bytes(const void *v, int vl);
 
   size_t length() const { return buffer_.size(); }
@@ -94,7 +94,7 @@ public:
 
   template <typename _LenT> size_t write_vx(const void *v, int size)
   {
-    auto l = purelib::endian::htonv(static_cast<_LenT>(size));
+    auto l = yasio::endian::htonv(static_cast<_LenT>(size));
 
     auto append_size = sizeof(l) + size;
     auto offset      = buffer_.size();
@@ -119,7 +119,7 @@ protected:
 template <typename _Nty> inline size_t obstream::write_i(_Nty value)
 {
   size_t offset = buffer_.size();
-  auto nv       = purelib::endian::htonv(value);
+  auto nv       = yasio::endian::htonv(value);
   buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
   return offset;
 }
@@ -143,7 +143,7 @@ template <> inline size_t obstream::write_i<double>(double value)
 template <typename _Nty> inline void obstream::set_i(std::streamoff offset, const _Nty value)
 {
   auto pvalue = (_Nty *)(buffer_.data() + offset);
-  *pvalue     = purelib::endian::htonv(value);
+  *pvalue     = yasio::endian::htonv(value);
 }
-} // namespace purelib
+} // namespace yasio
 #endif

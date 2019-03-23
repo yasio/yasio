@@ -73,7 +73,7 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 {
   if (n > 0 && interval >= 0)
   {
-    purelib::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
+    yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
@@ -95,7 +95,7 @@ TIMER_ID delay(float delay, vcallback_t callback)
 {
   if (delay > 0)
   {
-    purelib::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
+    yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
     std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);

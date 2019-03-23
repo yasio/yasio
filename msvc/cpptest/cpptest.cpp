@@ -29,7 +29,7 @@ template <size_t _Size> void append_string(std::vector<char> &packet, const char
 
 void yasioTest()
 {
-  purelib::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}, // http client
+  yasio::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}, // http client
                                            {"127.0.0.1", 30001}, // tcp server
                                            {"127.0.0.1", 59281}}; // udp client
 

@@ -1,5 +1,5 @@
-#if !defined(_ENDIAN_PORTABLE_H_)
-#define _ENDIAN_PORTABLE_H_
+#ifndef YASIO__ENDIAN_PORTABLE_H
+#define YASIO__ENDIAN_PORTABLE_H
 
 #include "politedef.h"
 #include <assert.h>
@@ -96,7 +96,7 @@ inline double ntohd(uint64_t Value)
 #  endif /* ntohd */
 #endif   /* NO_EXTRA_HTON_FUNCTIONS */
 
-namespace purelib
+namespace yasio
 {
 namespace endian
 {
@@ -162,7 +162,7 @@ inline unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, u
 }
 }; // namespace bits
 
-}; // namespace purelib
+}; // namespace yasio
 
 /*
  * Copyright (c) 2012-2019 by HALX99  ALL RIGHTS RESERVED.

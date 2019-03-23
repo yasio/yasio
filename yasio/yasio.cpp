@@ -55,6 +55,8 @@ SOFTWARE.
 
 #if defined(_WIN32)
 #  define YASIO_DEBUG_PRINT(msg) OutputDebugStringA(msg)
+#  pragma warning(push) 
+#  pragma warning(disable : 6320 6322 4996)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>
@@ -211,8 +213,6 @@ static void _set_thread_name(const char *threadName)
   info.szName     = threadName;
   info.dwThreadID = GetCurrentThreadId(); // dwThreadID;
   info.dwFlags    = 0;
-#  pragma warning(push)
-#  pragma warning(disable : 6320 6322)
 #  if !defined(__MINGW64__) && !defined(__MINGW32__)
   __try
   {
@@ -221,7 +221,6 @@ static void _set_thread_name(const char *threadName)
   __except (EXCEPTION_EXECUTE_HANDLER)
   {}
 #  endif
-#  pragma warning(pop)
 }
 #elif defined(ANDROID)
 #  define _set_thread_name(name) pthread_setname_np(pthread_self(), name)
@@ -1597,3 +1596,7 @@ void io_service::set_option(int option, ...)
 }
 } // namespace inet
 } // namespace yasio
+
+#if defined(_WIN32)
+#  pragma warning(pop)
+#endif

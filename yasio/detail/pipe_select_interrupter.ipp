@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/impl/pipe_select_interrupter.ipp
@@ -12,11 +12,11 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef YASIO_PIPE_SELECT_INTERRUPTER_IPP
-#define YASIO_PIPE_SELECT_INTERRUPTER_IPP
+#ifndef YASIO__PIPE_SELECT_INTERRUPTER_IPP
+#define YASIO__PIPE_SELECT_INTERRUPTER_IPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
-# pragma once
+#  pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <fcntl.h>
@@ -24,12 +24,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-namespace purelib {
-namespace inet {
-pipe_select_interrupter::pipe_select_interrupter()
+namespace yasio
 {
-  open_descriptors();
-}
+namespace inet
+{
+pipe_select_interrupter::pipe_select_interrupter() { open_descriptors(); }
 
 void pipe_select_interrupter::open_descriptors()
 {
@@ -54,10 +53,7 @@ void pipe_select_interrupter::open_descriptors()
   }
 }
 
-pipe_select_interrupter::~pipe_select_interrupter()
-{
-  close_descriptors();
-}
+pipe_select_interrupter::~pipe_select_interrupter() { close_descriptors(); }
 
 void pipe_select_interrupter::close_descriptors()
 {
@@ -72,14 +68,14 @@ void pipe_select_interrupter::recreate()
   close_descriptors();
 
   write_descriptor_ = -1;
-  read_descriptor_ = -1;
+  read_descriptor_  = -1;
 
   open_descriptors();
 }
 
 void pipe_select_interrupter::interrupt()
 {
-  char byte = 0;
+  char byte   = 0;
   auto result = ::write(write_descriptor_, &byte, 1);
   (void)result;
 }
@@ -100,8 +96,6 @@ bool pipe_select_interrupter::reset()
 }
 
 } // namespace inet
-} // namespace purelib
+} // namespace yasio
 
-
-
-#endif // YASIO_PIPE_SELECT_INTERRUPTER_IPP
+#endif // YASIO__PIPE_SELECT_INTERRUPTER_IPP

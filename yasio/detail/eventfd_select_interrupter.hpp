@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/eventfd_select_interrupter.hpp
@@ -13,46 +13,45 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef YASIO_EVENTFD_SELECT_INTERRUPTER_HPP
-#define YASIO_EVENTFD_SELECT_INTERRUPTER_HPP
+#ifndef YASIO__EVENTFD_SELECT_INTERRUPTER_HPP
+#define YASIO__EVENTFD_SELECT_INTERRUPTER_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
-# pragma once
+#  pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-namespace purelib {
-namespace inet {
+namespace yasio
+{
+namespace inet
+{
 
 class eventfd_select_interrupter
 {
 public:
   // Constructor.
-  _YASIO_INLINE eventfd_select_interrupter();
+  YASIO_INLINE eventfd_select_interrupter();
 
   // Destructor.
-  _YASIO_INLINE ~eventfd_select_interrupter();
+  YASIO_INLINE ~eventfd_select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  _YASIO_INLINE void recreate();
+  YASIO_INLINE void recreate();
 
   // Interrupt the select call.
-  _YASIO_INLINE void interrupt();
+  YASIO_INLINE void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  _YASIO_INLINE bool reset();
+  YASIO_INLINE bool reset();
 
   // Get the read descriptor to be passed to select.
-  int read_descriptor() const
-  {
-    return read_descriptor_;
-  }
+  int read_descriptor() const { return read_descriptor_; }
 
 private:
   // Open the descriptors. Throws on error.
-  _YASIO_INLINE void open_descriptors();
+  YASIO_INLINE void open_descriptors();
 
   // Close the descriptors.
-  _YASIO_INLINE void close_descriptors();
+  YASIO_INLINE void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single
@@ -68,8 +67,8 @@ private:
 };
 
 } // namespace inet
-} // namespace purelib
+} // namespace yasio
 
-# include "eventfd_select_interrupter.ipp"
+#include "eventfd_select_interrupter.ipp"
 
-#endif // YASIO_EVENTFD_SELECT_INTERRUPTER_HPP
+#endif // YASIO__EVENTFD_SELECT_INTERRUPTER_HPP

@@ -1,6 +1,6 @@
 // object_pool.h: a simple & high-performance object pool implementation v1.3
-#if !defined(_OBJECT_POOL_H_)
-#  define _OBJECT_POOL_H_
+#if !defined(YASIO__OBJECT_POOL_H)
+#  define YASIO__OBJECT_POOL_H
 
 #  include "politedef.h"
 #  include <assert.h>
@@ -8,9 +8,9 @@
 #  include <memory>
 #  include <mutex>
 
-#  define OBJECT_POOL_HEADER_ONLY
+#  define YASIO_OBJECT_POOL_HEADER_ONLY
 
-#  if defined(OBJECT_POOL_HEADER_ONLY)
+#  if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
 #    define OBJECT_POOL_DECL inline
 #  else
 #    define OBJECT_POOL_DECL
@@ -21,7 +21,7 @@
 #    pragma warning(disable : 4200)
 #  endif
 
-namespace purelib
+namespace yasio
 {
 namespace gc
 {
@@ -83,10 +83,10 @@ private:
                                                                                                    \
     static void operator delete(void *p) { get_pool().release(p); }                                \
                                                                                                    \
-    static purelib::gc::detail::object_pool &get_pool()                                            \
+    static yasio::gc::detail::object_pool &get_pool()                                              \
     {                                                                                              \
-      static purelib::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE),             \
-                                                     ELEMENT_COUNT);                               \
+      static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE),               \
+                                                   ELEMENT_COUNT);                                 \
       return s_pool;                                                                               \
     }
 
@@ -99,9 +99,9 @@ private:
                                                                                                    \
     static void operator delete(void *p) { get_pool().deallocate(p); }                             \
                                                                                                    \
-    static purelib::gc::object_pool<ELEMENT_TYPE, std::mutex> &get_pool()                          \
+    static yasio::gc::object_pool<ELEMENT_TYPE, std::mutex> &get_pool()                            \
     {                                                                                              \
-      static purelib::gc::object_pool<ELEMENT_TYPE, std::mutex> s_pool(ELEMENT_COUNT);             \
+      static yasio::gc::object_pool<ELEMENT_TYPE, std::mutex> s_pool(ELEMENT_COUNT);               \
       return s_pool;                                                                               \
     }
 
@@ -110,7 +110,7 @@ private:
     static void *operator new(size_t /*size*/);                                                    \
     static void *operator new(size_t /*size*/, std::nothrow_t);                                    \
     static void operator delete(void *p);                                                          \
-    static purelib::gc::detail::object_pool &get_pool();
+    static yasio::gc::detail::object_pool &get_pool();
 
 #  define IMPLEMENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                            \
     void *ELEMENT_TYPE::operator new(size_t /*size*/) { return get_pool().get(); }                 \
@@ -119,10 +119,10 @@ private:
                                                                                                    \
     void ELEMENT_TYPE::operator delete(void *p) { get_pool().release(p); }                         \
                                                                                                    \
-    purelib::gc::detail::object_pool &ELEMENT_TYPE::get_pool()                                     \
+    yasio::gc::detail::object_pool &ELEMENT_TYPE::get_pool()                                       \
     {                                                                                              \
-      static purelib::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE),             \
-                                                     ELEMENT_COUNT);                               \
+      static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE),               \
+                                                   ELEMENT_COUNT);                                 \
       return s_pool;                                                                               \
     }
 }; // namespace detail
@@ -183,9 +183,9 @@ public:
 };
 
 }; // namespace gc
-}; // namespace purelib
+}; // namespace yasio
 
-#  if defined(OBJECT_POOL_HEADER_ONLY)
+#  if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
 #    include "object_pool.cpp"
 #  endif
 

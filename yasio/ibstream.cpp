@@ -96,9 +96,9 @@ void ibstream_view::read_v8(std::string &oav)
   oav.assign(sv.data(), sv.length());
 }
 
-stdport::string_view ibstream_view::read_v() { return read_vx<uint32_t>(); }
-stdport::string_view ibstream_view::read_v16() { return read_vx<uint16_t>(); }
-stdport::string_view ibstream_view::read_v8() { return read_vx<uint8_t>(); }
+yasio::string_view ibstream_view::read_v() { return read_vx<uint32_t>(); }
+yasio::string_view ibstream_view::read_v16() { return read_vx<uint16_t>(); }
+yasio::string_view ibstream_view::read_v8() { return read_vx<uint8_t>(); }
 
 void ibstream_view::read_v(void *oav, int len) { read_vx<uint32_t>().copy((char *)oav, len); }
 void ibstream_view::read_v16(void *oav, int len) { read_vx<uint16_t>().copy((char *)oav, len); }
@@ -121,12 +121,12 @@ void ibstream_view::read_bytes(void *oav, int len)
   }
 }
 
-stdport::string_view ibstream_view::read_bytes(int len)
+yasio::string_view ibstream_view::read_bytes(int len)
 {
-  stdport::string_view sv;
+  yasio::string_view sv;
   if (len > 0)
   {
-    sv = stdport::string_view(consume(len), len);
+    sv = yasio::string_view(consume(len), len);
   }
   return sv;
 }
@@ -153,4 +153,4 @@ ibstream::ibstream(const obstream *obs) : ibstream_view(), blob_(obs->buffer())
   this->assign(blob_.data(), blob_.size());
 }
 
-} // namespace purelib
+} // namespace yasio

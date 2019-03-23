@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/impl/eventfd_select_interrupter.ipp
@@ -17,16 +17,16 @@
 #define YASIO_EVENTFD_SELECT_INTERRUPTER_IPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
-# pragma once
+#  pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
-# include <asm/unistd.h>
+#  include <asm/unistd.h>
 #else // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
-# include <sys/eventfd.h>
+#  include <sys/eventfd.h>
 #endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
 
 #include <unistd.h>
@@ -38,13 +38,12 @@
 //
 //#include <boost/asio/detail/push_options.hpp>
 
-namespace purelib {
-namespace inet {
-
-eventfd_select_interrupter::eventfd_select_interrupter()
+namespace yasio
 {
-  open_descriptors();
-}
+namespace inet
+{
+
+eventfd_select_interrupter::eventfd_select_interrupter() { open_descriptors(); }
 
 void eventfd_select_interrupter::open_descriptors()
 {
@@ -56,13 +55,12 @@ void eventfd_select_interrupter::open_descriptors()
     ::fcntl(read_descriptor_, F_SETFD, FD_CLOEXEC);
   }
 #else // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
-# if defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
-  write_descriptor_ = read_descriptor_ =
-    ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-# else // defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
-  errno = EINVAL;
+#  if defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
+  write_descriptor_ = read_descriptor_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+#  else  // defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
+  errno             = EINVAL;
   write_descriptor_ = read_descriptor_ = -1;
-# endif // defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
+#  endif // defined(EFD_CLOEXEC) && defined(EFD_NONBLOCK)
   if (read_descriptor_ == -1 && errno == EINVAL)
   {
     write_descriptor_ = read_descriptor_ = ::eventfd(0, 0);
@@ -72,7 +70,7 @@ void eventfd_select_interrupter::open_descriptors()
       ::fcntl(read_descriptor_, F_SETFD, FD_CLOEXEC);
     }
   }
-#endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
+#endif   // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
 
   if (read_descriptor_ == -1)
   {
@@ -95,10 +93,7 @@ void eventfd_select_interrupter::open_descriptors()
   }
 }
 
-eventfd_select_interrupter::~eventfd_select_interrupter()
-{
-  close_descriptors();
-}
+eventfd_select_interrupter::~eventfd_select_interrupter() { close_descriptors(); }
 
 void eventfd_select_interrupter::close_descriptors()
 {
@@ -113,7 +108,7 @@ void eventfd_select_interrupter::recreate()
   close_descriptors();
 
   write_descriptor_ = -1;
-  read_descriptor_ = -1;
+  read_descriptor_  = -1;
 
   open_descriptors();
 }
@@ -133,7 +128,7 @@ bool eventfd_select_interrupter::reset()
     {
       // Only perform one read. The kernel maintains an atomic counter.
       uint64_t counter(0);
-      errno = 0;
+      errno          = 0;
       int bytes_read = ::read(read_descriptor_, &counter, sizeof(uint64_t));
       if (bytes_read < 0 && errno == EINTR)
         continue;
@@ -159,6 +154,6 @@ bool eventfd_select_interrupter::reset()
 }
 
 } // namespace inet
-} // namespace purelib
+} // namespace yasio
 
-#endif // YASIO_EVENTFD_SELECT_INTERRUPTER_IPP
+#endif // YASIO__EVENTFD_SELECT_INTERRUPTER_IPP

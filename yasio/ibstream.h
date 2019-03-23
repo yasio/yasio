@@ -25,8 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef _YASIO_IBSTREAM_H_
-#define _YASIO_IBSTREAM_H_
+#ifndef YASIO__IBSTREAM_H
+#define YASIO__IBSTREAM_H
 #include <string>
 #include <sstream>
 #include <exception>
@@ -75,18 +75,18 @@ public:
   void read_bytes(std::string &oav, int len);
   void read_bytes(void *oav, int len);
 
-  stdport::string_view read_v();
-  stdport::string_view read_v16();
-  stdport::string_view read_v8();
+  yasio::string_view read_v();
+  yasio::string_view read_v16();
+  yasio::string_view read_v8();
 
-  stdport::string_view read_bytes(int len);
+  yasio::string_view read_bytes(int len);
 
   inline const char *data() { return ptr_; }
   inline int size(void) { return size_; }
 
-  template <typename _LenT> stdport::string_view read_vx()
+  template <typename _LenT> yasio::string_view read_vx()
   {
-    _LenT n = purelib::endian::ntohv(*(_LenT *)consume(sizeof(n)));
+    _LenT n = yasio::endian::ntohv(*(_LenT *)consume(sizeof(n)));
 
     if (n > 0)
     {
@@ -107,7 +107,7 @@ protected:
 
 template <typename _Nty> inline void ibstream_view::read_i(_Nty &ov)
 {
-  ov = purelib::endian::ntohv(*((_Nty *)consume(sizeof(_Nty))));
+  ov = yasio::endian::ntohv(*((_Nty *)consume(sizeof(_Nty))));
 }
 
 template <> inline void ibstream_view::read_i<float>(float &ov)
@@ -131,6 +131,6 @@ private:
   std::vector<char> blob_;
 };
 
-}
+} // namespace yasio
 
 #endif

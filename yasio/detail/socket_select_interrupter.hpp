@@ -1,11 +1,17 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
 
 Copyright (c) 2012-2019 halx99
+
+Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+Copyright (c) 2008 Roelof Naude (roelof.naude at gmail dot com)
+
+Distributed under the Boost Software License, Version 1.0. (See accompanying
+file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,47 +31,44 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef _YASIO_SELECT_INTERRUPTER_HPP_
-#define _YASIO_SELECT_INTERRUPTER_HPP_
+#ifndef YASIO__SOCKET_SELECT_INTERRUPTER_HPP
+#define YASIO__SOCKET_SELECT_INTERRUPTER_HPP
 #include "yasio/xxsocket.h"
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
-# pragma once
+#  pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-
-namespace purelib {
-namespace inet {
-
-    class socket_select_interrupter
+namespace yasio
+{
+namespace inet
+{
+class socket_select_interrupter
 {
 public:
   // Constructor.
-  _YASIO_INLINE socket_select_interrupter();
+  YASIO_INLINE socket_select_interrupter();
 
   // Destructor.
-  _YASIO_INLINE ~socket_select_interrupter();
+  YASIO_INLINE ~socket_select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  _YASIO_INLINE void recreate();
+  YASIO_INLINE void recreate();
 
   // Interrupt the select call.
-  _YASIO_INLINE void interrupt();
+  YASIO_INLINE void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  _YASIO_INLINE bool reset();
+  YASIO_INLINE bool reset();
 
   // Get the read descriptor to be passed to select.
-  socket_native_type read_descriptor() const
-  {
-    return read_descriptor_;
-  }
+  socket_native_type read_descriptor() const { return read_descriptor_; }
 
 private:
   // Open the descriptors. Throws on error.
-  _YASIO_INLINE void open_descriptors();
+  YASIO_INLINE void open_descriptors();
 
   // Close the descriptors.
-  _YASIO_INLINE void close_descriptors();
+  YASIO_INLINE void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single
@@ -80,8 +83,8 @@ private:
 };
 
 } // namespace inet
-} // namespace purelib
+} // namespace yasio
 
 #include "socket_select_interrupter.ipp"
 
-#endif // YASIO_SOCKET_SELECT_INTERRUPTER_HPP
+#endif // YASIO__SOCKET_SELECT_INTERRUPTER_HPP

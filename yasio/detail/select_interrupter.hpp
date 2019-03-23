@@ -12,16 +12,16 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef YASIO_SELECT_INTERRUPTER_HPP
-#define YASIO_SELECT_INTERRUPTER_HPP
+#ifndef YASIO__SELECT_INTERRUPTER_HPP
+#define YASIO__SELECT_INTERRUPTER_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 
-#if !defined(_YASIO_INLINE)
-#define _YASIO_INLINE inline
+#if !defined(YASIO_INLINE)
+#define YASIO_INLINE inline
 #endif
 
 #if defined(_WIN32) 
@@ -32,7 +32,7 @@
 # include "pipe_select_interrupter.hpp"
 #endif
 
-namespace purelib {
+namespace yasio {
 namespace inet {
 
 #if defined(_WIN32) 
@@ -46,4 +46,4 @@ typedef pipe_select_interrupter select_interrupter;
 } // namespace inet
 } // namespace purelib
 
-#endif // YASIO_SELECT_INTERRUPTER_HPP
+#endif // YASIO__SELECT_INTERRUPTER_HPP

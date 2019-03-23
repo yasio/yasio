@@ -17,7 +17,7 @@ The core design is reference from https://github.com/chriskohlhoff/asio but very
 2. demo code:
 ```
 #include "xxsocket.h"
-using namespace purelib::inet;
+using namespace yasio::inet;
 void test_connect() 
 {
    xxsocket clientsock;

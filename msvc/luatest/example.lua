@@ -39,7 +39,7 @@ server:start_service(hostents, function(event)
                 local obs = proto.e101(msg)
                 local data = obs:to_string()
                 local data_partial1 = data:sub(1, #data - 10)
-                server:write(transport, data .. data)
+                server:write(transport, data_partial1)
                 
                 print('The remain data will be sent after 6 seconds...')
                 transport1 = transport
@@ -124,7 +124,7 @@ local function yasio_update(dt)
     client:dispatch_events(128)
     httpclient:dispatch_events(128)
     elapsedTime = elapsedTime + dt
-    if elapsedTime > 10000 and not partial2Sent then
+    if elapsedTime > 6 and not partial2Sent then
         partial2Sent = true
         server:write(transport1, data_partial2)
     end

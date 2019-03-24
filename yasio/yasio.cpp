@@ -74,7 +74,7 @@ SOFTWARE.
     {                                                                                              \
       if (::lseek(options_.outf_, 0, SEEK_CUR) > options_.outf_max_size_)                          \
         ::ftruncate(options_.outf_, 0), ::lseek(options_.outf_, 0, SEEK_SET);                      \
-      ::write(options_.outf_, content.c_str(), content.size());                                    \
+      ::write(options_.outf_, content.c_str(), static_cast<int>(content.size()));                  \
     }                                                                                              \
   } while (false)
 

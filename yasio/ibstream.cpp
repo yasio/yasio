@@ -146,11 +146,11 @@ const char *ibstream_view::consume(size_t size)
 /// --------------------- CLASS ibstream ---------------------
 ibstream::ibstream(std::vector<char> blob) : ibstream_view(), blob_(std::move(blob))
 {
-  this->assign(blob_.data(), blob_.size());
+  this->assign(blob_.data(), static_cast<int>(blob_.size()));
 }
 ibstream::ibstream(const obstream *obs) : ibstream_view(), blob_(obs->buffer())
 {
-  this->assign(blob_.data(), blob_.size());
+  this->assign(blob_.data(), static_cast<int>(blob_.size()));
 }
 
 } // namespace yasio

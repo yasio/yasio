@@ -1123,7 +1123,7 @@ bool js_yasio_io_event_kind(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (io_event *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_kind : Invalid Native Object");
 
-  args.rval().set(int32_to_jsval(ctx, cobj->type()));
+  args.rval().set(int32_to_jsval(ctx, cobj->kind()));
 
   return true;
 }
@@ -1240,7 +1240,7 @@ bool js_yasio_io_service_start_service(JSContext *ctx, uint32_t argc, jsval *vp)
       JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
       std::shared_ptr<JSFunctionWrapper> func(
           new JSFunctionWrapper(ctx, jstarget, arg1, args.thisv()));
-      io_event_callback_t callback = [=](inet::event_ptr event) {
+      io_event_cb_t callback = [=](inet::event_ptr event) {
         JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
         jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
         JS::RootedValue rval(ctx);
@@ -1428,7 +1428,7 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
             JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
             std::shared_ptr<JSFunctionWrapper> func(
                 new JSFunctionWrapper(ctx, jstarget, args[1], args.thisv()));
-            io_event_callback_t callback = [=](inet::event_ptr event) {
+            io_event_cb_t callback = [=](inet::event_ptr event) {
               JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
               jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
               JS::RootedValue rval(ctx);

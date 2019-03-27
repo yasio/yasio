@@ -302,7 +302,7 @@ SE_BIND_FINALIZE_FUNC(js_yasio_ibstream_finalize)
 static bool js_yasio_ibstream_read_bool(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -316,7 +316,7 @@ SE_BIND_FUNC(js_yasio_ibstream_read_bool)
 template <typename T> static bool js_yasio_ibstream_read_ix(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -335,7 +335,7 @@ SE_BIND_FUNC(js_yasio_ibstream_read_i32)
 template <typename T> static bool js_yasio_ibstream_read_ux(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -354,7 +354,7 @@ SE_BIND_FUNC(js_yasio_ibstream_read_u32)
 template <typename T> static bool js_yasio_ibstream_read_dx(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -372,7 +372,7 @@ SE_BIND_FUNC(js_yasio_ibstream_read_lf)
 static bool js_yasio_ibstream_read_i24(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -385,7 +385,7 @@ SE_BIND_FUNC(js_yasio_ibstream_read_i24)
 static bool js_yasio_ibstream_read_u24(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -398,7 +398,7 @@ SE_BIND_FUNC(js_yasio_ibstream_read_u24)
 static bool js_yasio_ibstream_read_string(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -472,7 +472,7 @@ SE_BIND_CTOR(jsb_yasio_obstream_constructor, __jsb_yasio_obstream_class, js_yasi
 static bool js_yasio_obstream_push32(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -487,7 +487,7 @@ SE_BIND_FUNC(js_yasio_obstream_push32)
 static bool js_yasio_obstream_pop32(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -509,7 +509,7 @@ SE_BIND_FUNC(js_yasio_obstream_pop32)
 static bool js_yasio_obstream_push24(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -524,7 +524,7 @@ SE_BIND_FUNC(js_yasio_obstream_push24)
 static bool js_yasio_obstream_pop24(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -546,7 +546,7 @@ SE_BIND_FUNC(js_yasio_obstream_pop24)
 static bool js_yasio_obstream_push16(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -561,7 +561,7 @@ SE_BIND_FUNC(js_yasio_obstream_push16)
 static bool js_yasio_obstream_pop16(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -583,7 +583,7 @@ SE_BIND_FUNC(js_yasio_obstream_pop16)
 static bool js_yasio_obstream_push8(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -598,7 +598,7 @@ SE_BIND_FUNC(js_yasio_obstream_push8)
 static bool js_yasio_obstream_pop8(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -620,7 +620,7 @@ SE_BIND_FUNC(js_yasio_obstream_pop8)
 static bool js_yasio_obstream_write_bool(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -635,7 +635,7 @@ SE_BIND_FUNC(js_yasio_obstream_write_bool)
 template <typename T> static bool js_yasio_obstream_write_ix(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -655,7 +655,7 @@ SE_BIND_FUNC(js_yasio_obstream_write_i32)
 static bool js_yasio_obstream_write_i24(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -670,7 +670,7 @@ SE_BIND_FUNC(js_yasio_obstream_write_i24)
 template <typename T> static bool js_yasio_obstream_write_dx(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -692,7 +692,7 @@ SE_BIND_FUNC(js_yasio_obstream_write_lf)
 bool js_yasio_obstream_write_string(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -708,7 +708,7 @@ SE_BIND_FUNC(js_yasio_obstream_write_string)
 bool js_yasio_obstream_length(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -722,7 +722,7 @@ SE_BIND_FUNC(js_yasio_obstream_length)
 bool js_yasio_obstream_sub(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -809,7 +809,7 @@ SE_BIND_FINALIZE_FUNC(jsb_yasio_io_event_finalize)
 bool js_yasio_io_event_channel_index(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -822,7 +822,7 @@ SE_BIND_FUNC(js_yasio_io_event_channel_index)
 bool js_yasio_io_event_status(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -835,11 +835,11 @@ SE_BIND_FUNC(js_yasio_io_event_status)
 bool js_yasio_io_event_kind(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setInt32(cobj->type());
+  s.rval().setInt32(cobj->kind());
 
   return true;
 }
@@ -848,7 +848,7 @@ SE_BIND_FUNC(js_yasio_io_event_kind)
 bool js_yasio_io_event_transport(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -860,7 +860,7 @@ SE_BIND_FUNC(js_yasio_io_event_transport)
 bool js_yasio_io_event_take_packet(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -913,7 +913,7 @@ SE_BIND_CTOR(jsb_yasio_io_service_constructor, __jsb_yasio_io_service_class,
 bool js_yasio_io_service_start_service(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -928,7 +928,7 @@ bool js_yasio_io_service_start_service(se::State &s)
       se::Value jsThis(s.thisObject());
       se::Value jsFunc(args[1]);
       jsThis.toObject()->attachObject(jsFunc.toObject());
-      io_event_callback_t callback = [=](inet::event_ptr event) {
+      io_event_cb_t callback = [=](inet::event_ptr event) {
         se::ValueArray invokeArgs;
         invokeArgs.resize(1);
         native_ptr_to_seval<io_event>(event.release(), &invokeArgs[0]);
@@ -967,7 +967,7 @@ SE_BIND_FUNC(js_yasio_io_service_start_service)
 bool js_yasio_io_service_stop_service(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
 
   cobj->stop_service();
   return true;
@@ -977,7 +977,7 @@ SE_BIND_FUNC(js_yasio_io_service_stop_service)
 bool js_yasio_io_service_open(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -998,7 +998,7 @@ SE_BIND_FUNC(js_yasio_io_service_open)
 bool js_yasio_io_service_close(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -1030,7 +1030,7 @@ SE_BIND_FUNC(js_yasio_io_service_close)
 bool js_yasio_io_service_dispatch_events(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -1051,7 +1051,7 @@ SE_BIND_FUNC(js_yasio_io_service_dispatch_events)
 bool js_yasio_io_service_set_option(se::State &s)
 {
   auto service = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(service, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(service, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
@@ -1090,7 +1090,7 @@ bool js_yasio_io_service_set_option(se::State &s)
             se::Value jsThis(s.thisObject());
             se::Value jsFunc(args[1]);
             jsThis.toObject()->attachObject(jsFunc.toObject());
-            io_event_callback_t callback = [=](inet::event_ptr event) {
+            io_event_cb_t callback = [=](inet::event_ptr event) {
               se::ValueArray invokeArgs;
               invokeArgs.resize(1);
               native_ptr_to_seval<io_event>(event.release(), &invokeArgs[0]);
@@ -1121,7 +1121,7 @@ SE_BIND_FUNC(js_yasio_io_service_set_option)
 bool js_yasio_io_service_write(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, __FUNCTION__ ": Invalid Native Object");
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 

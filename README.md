@@ -83,7 +83,7 @@ Add follow 5 lines to cocos/Android.mk file:
 ../external/sources/yasio/obstream.cpp \
 ../external/sources/yasio/impl/yasio_jsb20.cpp \
 ```
-Just like: 
+Just like:  
 ![image](https://github.com/halx99/yasio/raw/master/jsb20_android.png)  
 
 #### JS demo:

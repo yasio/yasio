@@ -55,7 +55,7 @@ SOFTWARE.
 
 #if defined(_WIN32)
 #  define YASIO_DEBUG_PRINT(msg) OutputDebugStringA(msg)
-#  pragma warning(push) 
+#  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
@@ -968,8 +968,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 
 bool io_service::do_write(transport_ptr transport)
 {
-  bool bRet = false;
-  auto ctx  = transport->ctx_;
+  bool ret = false;
   do
   {
     if (!transport->socket_->is_open())
@@ -989,7 +988,7 @@ bool io_service::do_write(transport_ptr transport)
         auto packet_size = static_cast<int>(v->data_.size());
         YASIO_LOG("[index: %d] do_write ok, A packet sent "
                   "success, packet size:%d",
-                  ctx->index_, packet_size,
+                  transport->channel_index(), packet_size,
                   transport->socket_->local_endpoint().to_string().c_str(),
                   transport->socket_->peer_endpoint().to_string().c_str());
 #endif
@@ -1007,7 +1006,7 @@ bool io_service::do_write(transport_ptr transport)
           YASIO_LOG("[index: %d] do_write pending, %dbytes still "
                     "outstanding, "
                     "%dbytes was sent!",
-                    ctx->index_, outstanding_bytes, n);
+                    transport->channel_index(), outstanding_bytes, n);
 
           ++this->outstanding_work_;
         }
@@ -1018,7 +1017,7 @@ bool io_service::do_write(transport_ptr transport)
           auto packet_size = static_cast<int>(v->data_.size());
           YASIO_LOG("[index: %d] do_write packet timeout, packet "
                     "size:%d",
-                    ctx->index_, packet_size);
+                    transport->channel_index(), packet_size);
           handle_send_finished(v, YERR_SEND_TIMEOUT);
           if (!transport->send_queue_.empty())
             ++this->outstanding_work_;
@@ -1035,18 +1034,17 @@ bool io_service::do_write(transport_ptr transport)
       }
     }
 
-    bRet = true;
+    ret = true;
   } while (false);
 
-  return bRet;
+  return ret;
 }
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
 
 bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
 {
-  bool bRet = false;
-  auto ctx  = transport->ctx_;
+  bool ret = false;
   do
   {
     if (!transport->socket_->is_open())
@@ -1092,7 +1090,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
           transport->expected_packet_size_ = length;
           transport->expected_packet_.reserve(
               (std::min)(transport->expected_packet_size_,
-                         MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid // memory reallocte.
+                         MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
           do_unpack(transport, transport->expected_packet_size_, n);
         }
         else if (length == 0)
@@ -1103,7 +1101,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         }
         else
         {
-          ctx->update_error(YERR_DPL_ILLEGAL_PDU);
+          transport->update_error(YERR_DPL_ILLEGAL_PDU);
           break;
         }
       }
@@ -1121,11 +1119,11 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
       break;
     }
 
-    bRet = true;
+    ret = true;
 
   } while (false);
 
-  return bRet;
+  return ret;
 }
 
 void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)

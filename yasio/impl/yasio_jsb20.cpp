@@ -879,6 +879,29 @@ bool js_yasio_io_event_take_packet(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_io_event_take_packet)
 
+bool js_yasio_io_event_take_arraybuffer(se::State &s)
+{
+  auto cobj = (io_event *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  auto packet = cobj->take_packet();
+
+  if (!packet.empty())
+  {
+    se::HandleObject dataObj(se::Object::createArrayBufferObject(packet.data(), packet.size()));
+    s.rval().setObject(dataObj);
+  }
+  else
+  {
+    s.rval().setNull();
+  }
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_io_event_take_arraybuffer)
+
 void js_register_yasio_io_event(se::Object *obj)
 {
 #define DEFINE_IO_EVENT_FUNC(funcName)                                                             \
@@ -891,6 +914,7 @@ void js_register_yasio_io_event(se::Object *obj)
   DEFINE_IO_EVENT_FUNC(status);
   DEFINE_IO_EVENT_FUNC(transport);
   DEFINE_IO_EVENT_FUNC(take_packet);
+  DEFINE_IO_EVENT_FUNC(take_arraybuffer);
 
   cls->defineFinalizeFunction(_SE(jsb_yasio_transport_ptr_finalize));
   cls->install();
@@ -1146,10 +1170,26 @@ bool js_yasio_io_service_write(se::State &s)
         }
         else if (arg1.isObject())
         {
-          yasio::obstream *obs = nullptr;
-          seval_to_native_ptr(arg1, &obs);
-          if (obs)
-            cobj->write(*transport, obs->buffer());
+          auto obj      = arg1.toObject();
+          uint8_t *data = nullptr;
+          size_t size   = 0;
+          if (obj->isArrayBuffer())
+            obj->getArrayBufferData(&data, &size);
+          else if (obj->isTypedArray())
+            obj->getTypedArrayData(&data, &size);
+          else
+          {
+            yasio::obstream *obs = nullptr;
+            seval_to_native_ptr(arg1, &obs);
+            if (obs)
+            {
+              data = (uint8_t *)obs->data();
+              size = obs->length();
+            }
+          }
+
+          if (data != nullptr && size > 0)
+            cobj->write(*transport, std::vector<char>(data, data + size));
         }
       }
 

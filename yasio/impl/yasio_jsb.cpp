@@ -1171,6 +1171,35 @@ bool js_yasio_io_event_take_packet(JSContext *ctx, uint32_t argc, jsval *vp)
   return true;
 }
 
+bool js_yasio_io_event_take_arraybuffer(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  bool ok        = true;
+  io_event *cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t *proxy = jsb_get_js_proxy(obj);
+  cobj              = (io_event *)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_take_arraybuffer : Invalid Native Object");
+
+  auto packet = cobj->take_packet();
+
+  if (!packet.empty())
+  {
+    JS::RootedObject buffer(ctx, JS_NewArrayBuffer(ctx, static_cast<uint32_t>(packet.size())));
+    uint8_t *bufdata = JS_GetArrayBufferData(buffer);
+    memcpy((void *)bufdata, (void *)packet.data(), packet.size());
+    args.rval().set(OBJECT_TO_JSVAL(buffer));
+  }
+  else
+  {
+    args.rval().setNull();
+  }
+
+  return true;
+}
+
 void js_register_yasio_io_event(JSContext *ctx, JS::HandleObject global)
 {
   jsb_io_event_class              = (JSClass *)calloc(1, sizeof(JSClass));
@@ -1194,6 +1223,7 @@ void js_register_yasio_io_event(JSContext *ctx, JS::HandleObject global)
       JS_FN("status", js_yasio_io_event_status, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("transport", js_yasio_io_event_transport, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("take_packet", js_yasio_io_event_take_packet, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("take_arraybuffer", js_yasio_io_event_take_arraybuffer, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
@@ -1483,8 +1513,35 @@ bool js_yasio_io_service_write(JSContext *ctx, uint32_t argc, jsval *vp)
       }
       else if (arg1.isObject())
       {
-        auto obs = jsb_yasio_jsval_to_obstram(ctx, arg1);
-        cobj->write(transport, obs->buffer());
+        uint8_t *data = nullptr;
+        uint32_t len  = 0;
+
+        JS::RootedObject jsobj(ctx, arg1.toObjectOrNull());
+        if (JS_IsArrayBufferObject(jsobj))
+        {
+          data = JS_GetArrayBufferData(jsobj);
+          len  = JS_GetArrayBufferByteLength(jsobj);
+        }
+        else if (JS_IsArrayBufferViewObject(jsobj))
+        {
+          data = (uint8_t *)JS_GetArrayBufferViewData(jsobj);
+          len  = JS_GetArrayBufferViewByteLength(jsobj);
+        }
+        else
+        {
+          auto obs = jsb_yasio_jsval_to_obstram(ctx, arg1);
+          if (obs != nullptr)
+          {
+            auto &buffer = obs->buffer();
+            if (!buffer.empty())
+            {
+              data = (uint8_t *)buffer.data();
+              len  = static_cast<uint32_t>(buffer.size());
+            }
+          }
+        }
+        if (data != nullptr && len > 0)
+          cobj->write(transport, std::vector<char>(data, data + len));
       }
 
       return true;

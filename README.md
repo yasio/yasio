@@ -12,25 +12,7 @@ The core design is reference from https://github.com/chriskohlhoff/asio but very
 * support CocosCreator jsb2.0  
 * support Unity3D tolua
   
-## simple usage:  
-1. Only compile yasio\xxsocket.cpp with your project; For gcc, you must add --std=c++11 compile flag<br />
-2. demo code:
-```
-#include "xxsocket.h"
-using namespace yasio::inet;
-void test_connect() 
-{
-   xxsocket clientsock;
-   // The interface xpconnect_n will detect whether localhost is IPV6 only network automatically
-   // and connect the ipv4 server by V4MAPPED address.
-   if(0 == clientsock.xpconnect_n("www.baidu.com", 443, std::chrono::seconds(5)/* connect timeout 5 seconds */))
-   {
-       printf("connect succeed\n");
-   }
-}
-```
-
-## asio usage:  
+## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
 cpptest: https://github.com/halx99/yasio/blob/master/msvc/cpptest/cpptest.cpp  

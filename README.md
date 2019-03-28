@@ -44,7 +44,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
 ### JSB integration  
 #### cocos2d-x jsb integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external``` 
-2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb.cpp with your native project  
+2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb.cpp to your native project  
 3. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio_jsb.h``` firstly.
 ##### For Android:
 Add yasio to your application Android.mk files, such as:  
@@ -54,7 +54,7 @@ $(call import-module, external/yasio/build/android-jsb)
 ```
 #### CocosCreator jsb2.0 integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external/sources```, ```yasio``` as sub directory of ```external/sources```  
-2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb20.cpp with your native project  
+2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb20.cpp to your native project  
 3. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio_jsb20.h``` firstly.  
 ##### For Andorid:
 Add follow 5 lines to cocos/Android.mk file:

@@ -1103,7 +1103,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         }
         else
         {
-          ctx->update_error(YERR_DPL_ILLEGAL_PDU);
+          transport->update_error(YERR_DPL_ILLEGAL_PDU);
           break;
         }
       }

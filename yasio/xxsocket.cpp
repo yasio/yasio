@@ -998,17 +998,15 @@ int xxsocket::connect(socket_native_type s, const ip::endpoint &ep)
 
 int xxsocket::connect_n(const char *addr, u_short port, const std::chrono::microseconds &wtimeout)
 {
-  timeval timeout;
-  timeout.tv_sec  = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
-  timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
+  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
+                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
   return connect_n(addr, port, &timeout);
 }
 
 int xxsocket::connect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout)
 {
-  timeval timeout;
-  timeout.tv_sec  = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
-  timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
+  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
+                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
   return connect_n(ep, &timeout);
 }
 
@@ -1108,16 +1106,15 @@ int xxsocket::send(const void *buf, int len, int flags) const
   do
   {
     bytes_transferred +=
-        (n = ::send(this->fd, (char *)buf + bytes_transferred, len - bytes_transferred, flags));
+        (n = ::send(this->fd, (const char *)buf + bytes_transferred, len - bytes_transferred, flags));
   } while (bytes_transferred < len && n > 0);
   return bytes_transferred;
 }
 
 int xxsocket::send_n(const void *buf, int len, const std::chrono::microseconds &wtimeout, int flags)
 {
-  timeval timeout;
-  timeout.tv_sec  = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
-  timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
+  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
+                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
   return send_n(this->fd, buf, len, &timeout, flags);
 }
 
@@ -1189,9 +1186,8 @@ int xxsocket::recv(void *buf, int len, int flags) const
 
 int xxsocket::recv_n(void *buf, int len, const std::chrono::microseconds &wtimeout, int flags) const
 {
-  timeval timeout;
-  timeout.tv_sec  = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
-  timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
+  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
+                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
   return recv_n(this->fd, buf, len, &timeout, flags);
 }
 
@@ -1372,9 +1368,8 @@ int xxsocket::handle_read_ready(timeval *timeo) const { return handle_read_ready
 
 int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microseconds &wtimeout)
 {
-  timeval timeout;
-  timeout.tv_sec  = static_cast<long>(wtimeout.count() / TIME_GRANULARITY);
-  timeout.tv_usec = static_cast<long>(wtimeout.count() % TIME_GRANULARITY);
+  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
+                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
   return handle_read_ready(s, &timeout);
 }
 

@@ -182,6 +182,7 @@ protected:
     JS::RootedString jsstr(ctx, str);
     _data = JS_EncodeStringToUTF8(ctx, jsstr);
     _size = JS_GetStringEncodingLength(ctx, jsstr);
+    _need_free = true;
   }
 
 protected:

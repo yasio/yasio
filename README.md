@@ -34,7 +34,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
 ```yasio\impl\yasio_cclua.cpp``` to **libluacocos2d** project of your Visual Studio or xcode solution.  
     + For Android:
 Add yasio to your application Android.mk files, such as:  
-    ```
+```
 LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/build/android-lua)
 ```

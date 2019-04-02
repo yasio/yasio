@@ -117,6 +117,85 @@ void kill(TIMER_ID timerId)
   std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
   Director::getInstance()->getScheduler()->unschedule(key, timerId);
 }
+
+class string_view_adapter
+{
+public:
+  string_view_adapter() : _data(nullptr), _size(0), _need_free(false) {}
+  ~string_view_adapter()
+  {
+    if (_need_free)
+      JS_free(ScriptingCore::getInstance()->getGlobalContext(), (void *)_data);
+  }
+
+  void set(JS::HandleValue val, JSContext *ctx, bool *unrecognized_object = nullptr)
+  {
+    clear();
+    if (val.isString())
+    {
+      this->set(val.toString(), ctx);
+    }
+    else if (val.isObject())
+    {
+      JS::RootedObject jsobj(ctx, val.toObjectOrNull());
+      if (JS_IsArrayBufferObject(jsobj))
+      {
+        _data = (char *)JS_GetArrayBufferData(jsobj);
+        _size = JS_GetArrayBufferByteLength(jsobj);
+      }
+      else if (JS_IsArrayBufferViewObject(jsobj))
+      {
+        _data = (char *)JS_GetArrayBufferViewData(jsobj);
+        _size = JS_GetArrayBufferViewByteLength(jsobj);
+      }
+      else if (unrecognized_object)
+        *unrecognized_object = true;
+    }
+  }
+
+  const char *data() { return _data; }
+  size_t size() { return _size; }
+
+  bool empty() const { return _data != nullptr && _size > 0; }
+
+  operator yasio::string_view() const
+  {
+    return yasio::string_view(_data != nullptr ? _data : "", _size);
+  }
+
+  void clear()
+  {
+    if (_data && _need_free)
+      JS_free(ScriptingCore::getInstance()->getGlobalContext(), (void *)_data);
+    _data      = nullptr;
+    _size      = 0;
+    _need_free = false;
+  }
+
+protected:
+  void set(JSString *str, JSContext *ctx)
+  {
+    if (!ctx)
+    {
+      ctx = ScriptingCore::getInstance()->getGlobalContext();
+    }
+    JS::RootedString jsstr(ctx, str);
+    _data = JS_EncodeStringToUTF8(ctx, jsstr);
+    _size = JS_GetStringEncodingLength(ctx, jsstr);
+  }
+
+protected:
+  char *_data;
+  size_t _size;
+  bool _need_free;
+};
+jsval createJSArrayBuffer(JSContext *ctx, const void *data, size_t size)
+{
+  JS::RootedObject buffer(ctx, JS_NewArrayBuffer(ctx, static_cast<uint32_t>(size)));
+  uint8_t *bufdata = JS_GetArrayBufferData(buffer);
+  memcpy((void *)bufdata, (void *)data, size);
+  return OBJECT_TO_JSVAL(buffer);
+}
 } // namespace yasio_jsb
 
 bool jsval_to_hostent(JSContext *ctx, JS::HandleValue vp, inet::io_hostent *ret)
@@ -471,6 +550,8 @@ static bool js_yasio_ibstream_read_string(JSContext *ctx, uint32_t argc, jsval *
   bool ok               = true;
   yasio::ibstream *cobj = nullptr;
 
+  cocos2d::log("%s", "ibstream: read_string is deprecated, use read_v instead!");
+
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
@@ -481,6 +562,72 @@ static bool js_yasio_ibstream_read_string(JSContext *ctx, uint32_t argc, jsval *
   auto sv = cobj->read_v();
 
   args.rval().set(c_string_to_jsval(ctx, sv.data(), sv.size()));
+
+  return true;
+}
+
+static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t *proxy = jsb_get_js_proxy(obj);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_v : Invalid Native Object");
+
+  int length_field_length = 32; // default is 32bits
+  bool raw                = false;
+  if (argc >= 2)
+    length_field_length = args[1].toInt32();
+  if (argc >= 3)
+    raw = args[2].toBoolean();
+
+  yasio::string_view sv;
+  switch (length_field_length)
+  {
+    case 8: // 8bits
+      sv = cobj->read_v8();
+      break;
+    case 16: // 16bits
+      sv = cobj->read_v16();
+      break;
+    default: // 32bits
+      sv = cobj->read_v();
+  }
+
+  if (!raw)
+    args.rval().set(c_string_to_jsval(ctx, sv.data(), sv.size()));
+  else
+    args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, sv.data(), sv.size()));
+
+  return true;
+}
+
+static bool js_yasio_ibstream_read_bytes(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  bool ok               = true;
+  yasio::ibstream *cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t *proxy = jsb_get_js_proxy(obj);
+  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_bytes : Invalid Native Object");
+
+  int n = 0;
+  if (argc >= 2)
+    n = args[1].toInt32();
+  if (n > 0)
+  {
+    auto sv = cobj->read_bytes(n);
+    args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, sv.data(), sv.size()));
+  }
+  else
+    args.rval().setNull();
 
   return true;
 }
@@ -517,6 +664,8 @@ void js_register_yasio_ibstream(JSContext *ctx, JS::HandleObject global)
       JS_FN("read_f", js_yasio_ibstream_read_dx<float>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("read_lf", js_yasio_ibstream_read_dx<double>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("read_string", js_yasio_ibstream_read_string, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("read_v", js_yasio_ibstream_read_v, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("read_bytes", js_yasio_ibstream_read_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
@@ -903,6 +1052,8 @@ bool js_yasio_obstream_write_string(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   yasio::obstream *cobj = nullptr;
 
+  cocos2d::log("%s", "obstream: write_string is deprecated, use read_v instead!");
+
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
   obj.set(args.thisv().toObjectOrNull());
@@ -919,6 +1070,68 @@ bool js_yasio_obstream_write_string(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj->write_v(p, n);
 
   JS_free(ctx, p);
+  args.rval().setUndefined();
+
+  return true;
+}
+
+bool js_yasio_obstream_write_v(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  yasio::obstream *cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t *proxy = jsb_get_js_proxy(obj);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_string : Invalid Native Object");
+
+  auto arg0 = args.get(0);
+
+  yasio_jsb::string_view_adapter sva;
+  bool unrecognized_object = false;
+  sva.set(arg0, ctx, &unrecognized_object);
+
+  int length_field_length = 32; // default is 32bits
+  if (argc >= 2)
+    length_field_length = args[1].toInt32();
+  switch (length_field_length)
+  {
+    case 8: // 8bits
+      cobj->write_v8(sva);
+      break;
+    case 16: // 16bits
+      cobj->write_v16(sva);
+      break;
+    default: // 32bits
+      cobj->write_v(sva);
+  }
+
+  args.rval().setUndefined();
+
+  return true;
+}
+
+bool js_yasio_obstream_write_bytes(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  yasio::obstream *cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t *proxy = jsb_get_js_proxy(obj);
+  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_string : Invalid Native Object");
+
+  auto arg0 = args.get(0);
+
+  yasio_jsb::string_view_adapter sva;
+  bool unrecognized_object = false;
+  sva.set(arg0, ctx, &unrecognized_object);
+
+  if (!sva.empty())
+    cobj->write_bytes(sva);
+
   args.rval().setUndefined();
 
   return true;
@@ -1016,6 +1229,8 @@ void js_register_yasio_obstream(JSContext *ctx, JS::HandleObject global)
       JS_FN("write_f", js_yasio_obstream_write_f, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write_lf", js_yasio_obstream_write_lf, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write_string", js_yasio_obstream_write_string, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("write_v", js_yasio_obstream_write_v, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("write_bytes", js_yasio_obstream_write_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("length", js_yasio_obstream_length, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("sub", js_yasio_obstream_sub, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
@@ -1160,8 +1375,16 @@ bool js_yasio_io_event_take_packet(JSContext *ctx, uint32_t argc, jsval *vp)
 
   if (!packet.empty())
   {
-    std::unique_ptr<yasio::ibstream> ibs(new yasio::ibstream(std::move(packet)));
-    args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, std::move(ibs)));
+    bool raw = false;
+    if (argc >= 1)
+      raw = args[0].toBoolean();
+    if (!raw)
+    {
+      std::unique_ptr<yasio::ibstream> ibs(new yasio::ibstream(std::move(packet)));
+      args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, std::move(ibs)));
+    }
+    else
+      args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, packet.data(), packet.size()));
   }
   else
   {
@@ -1175,6 +1398,8 @@ bool js_yasio_io_event_take_arraybuffer(JSContext *ctx, uint32_t argc, jsval *vp
 {
   bool ok        = true;
   io_event *cobj = nullptr;
+
+  cocos2d::log("%s", "io_event::take_arraybuffer is deprecated, use take_packet(true) instead!");
 
   JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   JS::RootedObject obj(ctx);
@@ -1223,7 +1448,8 @@ void js_register_yasio_io_event(JSContext *ctx, JS::HandleObject global)
       JS_FN("status", js_yasio_io_event_status, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("transport", js_yasio_io_event_transport, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("take_packet", js_yasio_io_event_take_packet, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("take_arraybuffer", js_yasio_io_event_take_arraybuffer, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("take_arraybuffer", js_yasio_io_event_take_arraybuffer, 0,
+            JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
@@ -1503,45 +1729,22 @@ bool js_yasio_io_service_write(JSContext *ctx, uint32_t argc, jsval *vp)
 
       auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
 
+      yasio_jsb::string_view_adapter sva;
+      bool unrecognized_object = false;
+      sva.set(arg1, ctx, &unrecognized_object);
       if (arg1.isString())
       {
-        JS::RootedString jsstr(ctx, arg1.toString());
-        auto p = JS_EncodeStringToUTF8(ctx, jsstr);
-        auto n = JS_GetStringEncodingLength(ctx, jsstr);
-        cobj->write(transport, std::vector<char>(p, p + n));
-        JS_free(ctx, p);
+        cobj->write(transport, std::vector<char>(sva.data(), sva.data() + sva.size()));
       }
-      else if (arg1.isObject())
+      else if (unrecognized_object)
       {
-        uint8_t *data = nullptr;
-        uint32_t len  = 0;
-
-        JS::RootedObject jsobj(ctx, arg1.toObjectOrNull());
-        if (JS_IsArrayBufferObject(jsobj))
+        auto obs = jsb_yasio_jsval_to_obstram(ctx, arg1);
+        if (obs != nullptr)
         {
-          data = JS_GetArrayBufferData(jsobj);
-          len  = JS_GetArrayBufferByteLength(jsobj);
+          auto &buffer = obs->buffer();
+          if (!buffer.empty())
+            cobj->write(transport, obs->buffer());
         }
-        else if (JS_IsArrayBufferViewObject(jsobj))
-        {
-          data = (uint8_t *)JS_GetArrayBufferViewData(jsobj);
-          len  = JS_GetArrayBufferViewByteLength(jsobj);
-        }
-        else
-        {
-          auto obs = jsb_yasio_jsval_to_obstram(ctx, arg1);
-          if (obs != nullptr)
-          {
-            auto &buffer = obs->buffer();
-            if (!buffer.empty())
-            {
-              data = (uint8_t *)buffer.data();
-              len  = static_cast<uint32_t>(buffer.size());
-            }
-          }
-        }
-        if (data != nullptr && len > 0)
-          cobj->write(transport, std::vector<char>(data, data + len));
       }
 
       return true;

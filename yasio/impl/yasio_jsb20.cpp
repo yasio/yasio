@@ -271,7 +271,7 @@ static bool seval_to_std_vector_hostent(const se::Value &v, std::vector<inet::io
   return false;
 }
 
-yasio::string_view seval_to_string_view(const se::Value &v)
+yasio::string_view seval_to_string_view(const se::Value &v, bool *unrecognized_object = nullptr)
 {
   if (v.isString())
   {
@@ -286,6 +286,8 @@ yasio::string_view seval_to_string_view(const se::Value &v)
       obj->getArrayBufferData(&data, &size);
     else if (obj->isTypedArray())
       obj->getTypedArrayData(&data, &size);
+    else if (unrecognized_object)
+      *unrecognized_object = true;
     if (data != nullptr)
       return yasio::string_view((const char *)data, size);
   }
@@ -418,6 +420,8 @@ SE_BIND_FUNC(js_yasio_ibstream_read_u24)
 
 static bool js_yasio_ibstream_read_string(se::State &s)
 {
+  cocos2d::log("%s", "ibstream: read_string is deprecated, use read_v instead!");
+
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
@@ -775,6 +779,8 @@ SE_BIND_FUNC(js_yasio_obstream_write_lf)
 
 bool js_yasio_obstream_write_string(se::State &s)
 {
+  cocos2d::log("%s", "obstream: write_string is deprecated, use read_v instead!");
+
   auto cobj = (yasio::obstream *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
@@ -1002,8 +1008,8 @@ bool js_yasio_io_event_take_packet(se::State &s)
   if (!packet.empty())
   {
     bool raw = false;
-    if (argc >= 2)
-      raw = args[1].toBoolean();
+    if (argc >= 1)
+      raw = args[0].toBoolean();
     if (!raw)
       native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(std::move(packet)), &s.rval());
     else
@@ -1023,6 +1029,8 @@ SE_BIND_FUNC(js_yasio_io_event_take_packet)
 
 bool js_yasio_io_event_take_arraybuffer(se::State &s)
 {
+  cocos2d::log("%s", "io_event::take_arraybuffer is deprecated, use take_packet(true) instead!");
+
   auto cobj = (io_event *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
@@ -1303,10 +1311,11 @@ bool js_yasio_io_service_write(se::State &s)
 
       if (transport != nullptr)
       {
-        auto data = seval_to_string_view(arg1);
+        bool unrecognized_object = false;
+        auto data                = seval_to_string_view(arg1, &unrecognized_object);
         if (!data.empty())
           cobj->write(*transport, std::vector<char>(data.c_str(), data.c_str() + data.size()));
-        else
+        else if (unrecognized_object)
         {
           yasio::obstream *obs = nullptr;
           seval_to_native_ptr(arg1, &obs);

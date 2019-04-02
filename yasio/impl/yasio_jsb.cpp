@@ -1732,7 +1732,7 @@ bool js_yasio_io_service_write(JSContext *ctx, uint32_t argc, jsval *vp)
       yasio_jsb::string_view_adapter sva;
       bool unrecognized_object = false;
       sva.set(arg1, ctx, &unrecognized_object);
-      if (arg1.isString())
+      if (!sva.empty())
       {
         cobj->write(transport, std::vector<char>(sva.data(), sva.data() + sva.size()));
       }

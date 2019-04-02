@@ -45,10 +45,10 @@ $(call import-module, external/yasio/build/android-lua)
 #### cocos2d-x jsb integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external``` 
 2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb.cpp to your compile system.
-##### For Win32 & Apple platform:
+  + For Win32 & Apple platform:
 Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
 ```yasio\impl\yasio_jsb.cpp``` to **libjscocos2d** project of your Visual Studio or xcode solution. 
-##### For Android:
+  + For Android:
 Add yasio to your application Android.mk files, such as:  
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static

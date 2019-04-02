@@ -29,12 +29,12 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
 
 2. Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
 ```yasio\impl\yasio_cclua.cpp``` to your compile system.
-  + For Win32 & Apple platform:
+    + For Win32 & Apple platform:
 Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
 ```yasio\impl\yasio_cclua.cpp``` to **libluacocos2d** project of your Visual Studio or xcode solution.  
-  + For Android:
+    + For Android:
 Add yasio to your application Android.mk files, such as:  
-```
+    ```
 LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/build/android-lua)
 ```
@@ -57,11 +57,9 @@ $(call import-module, external/yasio/build/android-jsb)
 #### CocosCreator jsb2.0 integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external/sources```, ```yasio``` as sub directory of ```external/sources```  
 2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb20.cpp to your compile system.
-##### For Win32 & Apple platform:
-Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
+    + For Win32 & Apple platform: Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
 ```yasio\impl\yasio_jsb.cpp``` to **libcocos2d** project of your Visual Studio or xcode solution.  
-##### For Andorid:
-Add follow 5 lines to cocos/Android.mk file:
+    + For Andorid: Add follow 5 lines to cocos/Android.mk file:
 ```
 ../external/sources/yasio/xxsocket.cpp \
 ../external/sources/yasio/yasio.cpp \

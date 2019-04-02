@@ -44,7 +44,8 @@ static auto obstream_write_v = [](yasio::obstream *obs, yasio::string_view val,
       return obs->write_v(val);
   }
 };
-static auto obstream_read_v = [](yasio::ibstream *ibs, int length_field_length) {
+static auto obstream_read_v = [](yasio::ibstream *ibs, int length_field_length,
+                                 bool /*raw*/ = false) {
   switch (length_field_length)
   {
     case 2:
@@ -76,7 +77,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   lyasio.new_usertype<io_event>(
       "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::kind, "status",
-      &io_event::status, "transport", &io_event::transport, "take_packet", [](io_event *ev) {
+      &io_event::status, "transport", &io_event::transport, "take_packet",
+      [](io_event *ev, sol::variadic_args) {
         return std::unique_ptr<yasio::ibstream>(new yasio::ibstream(ev->take_packet()));
       });
 
@@ -176,7 +178,10 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "read_f", &yasio::ibstream::read_ix<float>, "read_lf", &yasio::ibstream::read_ix<double>,
       "read_string",
       static_cast<yasio::string_view (yasio::ibstream::*)()>(&yasio::ibstream::read_v), "read_v",
-      lyasio::obstream_read_v, "read_bytes",
+      [](yasio::ibstream *ibs, int length_field_length, sol::variadic_args) {
+        lyasio::obstream_read_v(ibs, length_field_length);
+      },
+      "read_bytes",
       static_cast<yasio::string_view (yasio::ibstream::*)(int)>(&yasio::ibstream::read_bytes),
       "to_string",
       [](yasio::ibstream *ibs) { return yasio::string_view(ibs->data(), ibs->size()); });
@@ -280,7 +285,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                   .addFunction("kind", &io_event::kind)
                                   .addFunction("status", &io_event::status)
                                   .addFunction("transport", &io_event::transport)
-                                  .addStaticFunction("take_packet", [](io_event *ev) {
+                                  .addStaticFunction("take_packet", [](io_event *ev, bool) {
                                     return std::unique_ptr<yasio::ibstream>(
                                         new yasio::ibstream(ev->take_packet()));
                                   }));

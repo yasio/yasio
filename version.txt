@@ -1,4 +1,4 @@
-yasio-3.9.13
-  1. Fix connection lost error report when decode frame length failed.
-  2. Add ArrayBuffer support for jsb & jsb20.
-
+yasio-3.20.0
+  1. Add write_v/read_v for jsb & luabindings.
+  2. Add write_bytes/read_bytes for jsb & luabindings.
+  3. Unify vs project files.

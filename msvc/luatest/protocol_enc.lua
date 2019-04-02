@@ -19,8 +19,8 @@ proto.e101 = function(msg)
     obs:write_bool(msg.value3);
     obs:write_f(msg.value4);
     obs:write_lf(msg.value6);
-    obs:write_string(msg.uname);
-    obs:write_string(msg.passwd);
+    obs:write_v(msg.uname);
+    obs:write_v(msg.passwd);
 
     -- finish message encode.
     obs:pop32(); -- finish encode

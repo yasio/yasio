@@ -17,8 +17,8 @@ proto.d101 = function(ibs)
     msg.value3 = ibs:read_bool(); 
     msg.value4 = ibs:read_f(); 
     msg.value6 = ibs:read_lf(); 
-    msg.uname = ibs:read_string();
-    msg.passwd = ibs:read_string();
+    msg.uname = ibs:read_v();
+    msg.passwd = ibs:read_v();
 
     return msg;
 end

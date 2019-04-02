@@ -128,9 +128,22 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "write_u16", &yasio::obstream::write_i<uint16_t>, "write_u32",
       &yasio::obstream::write_i<uint32_t>, "write_u64", &yasio::obstream::write_i<uint64_t>,
       "write_f", &yasio::obstream::write_i<float>, "write_lf", &yasio::obstream::write_i<double>,
-
       "write_string",
       static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_v),
+      "write_v",
+      [](yasio::obstream *obs, yasio::string_view val, int length_field_length) {
+        switch (length_field_length)
+        {
+          case 2:
+            return obs->write_v16(val);
+          case 1:
+            return obs->write_v8(val);
+          default: // default is: 4bytes length field
+            return obs->write_v(val);
+        }
+      },
+      "write_bytes",
+      static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_bytes),
       "length", &yasio::obstream::length, "to_string",
       [](yasio::obstream *obs) { return yasio::string_view(obs->data(), obs->length()); });
 
@@ -147,7 +160,21 @@ YASIO_API int luaopen_yasio(lua_State *L)
       &yasio::ibstream::read_ix<uint32_t>, "read_u64", &yasio::ibstream::read_ix<uint64_t>,
       "read_f", &yasio::ibstream::read_ix<float>, "read_lf", &yasio::ibstream::read_ix<double>,
       "read_string",
-      static_cast<yasio::string_view (yasio::ibstream::*)()>(&yasio::ibstream::read_v), "to_string",
+      static_cast<yasio::string_view (yasio::ibstream::*)()>(&yasio::ibstream::read_v), "read_v",
+      [](yasio::ibstream *ibs, int length_field_length, bool /*raw*/) {
+        switch (length_field_length)
+        {
+          case 2:
+            return ibs->read_v16();
+          case 1:
+            return ibs->read_v8();
+          default: // default is: 4bytes length field
+            return ibs->read_v();
+        }
+      },
+      "read_bytes",
+      static_cast<yasio::string_view (yasio::ibstream::*)(int)>(&yasio::ibstream::read_bytes),
+      "to_string",
       [](yasio::ibstream *ibs) { return yasio::string_view(ibs->data(), ibs->size()); });
 
   // ##-- yasio enums
@@ -347,6 +374,21 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("write_lf", &yasio::obstream::write_i<double>)
           .addFunction("write_string", static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(
                                            &yasio::obstream::write_v))
+          .addStaticFunction("write_v",
+                             [](yasio::obstream *obs, yasio::string_view val,
+                                int length_field_length) {
+                               switch (length_field_length)
+                               {
+                                 case 2:
+                                   return obs->write_v16(val);
+                                 case 1:
+                                   return obs->write_v8(val);
+                                 default: // default is: 4bytes length field
+                                   return obs->write_v(val);
+                               }
+                             })
+          .addFunction("write_bytes", static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(
+                                          &yasio::obstream::write_bytes))
           .addFunction("length", &yasio::obstream::length)
           .addStaticFunction("to_string", [](yasio::obstream *obs) {
             return yasio::string_view(obs->data(), obs->length());
@@ -372,6 +414,20 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("read_lf", &yasio::ibstream_view::read_ix<double>)
           .addFunction("read_string", static_cast<yasio::string_view (yasio::ibstream_view::*)()>(
                                           &yasio::ibstream_view::read_v))
+          .addStaticFunction("read_v",
+                             [](yasio::ibstream *ibs, int length_field_length, bool /*raw*/) {
+                               switch (length_field_length)
+                               {
+                                 case 2:
+                                   return ibs->read_v16();
+                                 case 1:
+                                   return ibs->read_v8();
+                                 default: // default is: 4bytes length field
+                                   return ibs->read_v();
+                               }
+                             })
+          .addFunction("read_bytes", static_cast<yasio::string_view (yasio::ibstream_view::*)(int)>(
+                                         &yasio::ibstream_view::read_bytes))
           .addStaticFunction("to_string", [](yasio::ibstream_view *ibs) {
             return yasio::string_view(ibs->data(), ibs->size());
           }));

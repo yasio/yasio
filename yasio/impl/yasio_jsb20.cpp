@@ -271,6 +271,27 @@ static bool seval_to_std_vector_hostent(const se::Value &v, std::vector<inet::io
   return false;
 }
 
+yasio::string_view seval_to_string_view(const se::Value &v)
+{
+  if (v.isString())
+  {
+    return yasio::string_view(v.toString());
+  }
+  else if (v.isObject())
+  {
+    uint8_t *data = nullptr;
+    size_t size   = 0;
+    auto obj      = v.toObject();
+    if (obj->isArrayBuffer())
+      obj->getArrayBufferData(&data, &size);
+    else if (obj->isTypedArray())
+      obj->getTypedArrayData(&data, &size);
+    if (data != nullptr)
+      return yasio::string_view((const char *)data, size);
+  }
+  return {};
+}
+
 //////////////////// common template functions //////////////
 
 template <typename T> static bool jsb_yasio_constructor(se::State &s)
@@ -410,6 +431,67 @@ static bool js_yasio_ibstream_read_string(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_ibstream_read_string)
 
+static bool js_yasio_ibstream_read_v(se::State &s)
+{
+  yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  int length_field_length = 32; // default is 32bits
+  bool raw                = false;
+  if (argc >= 2)
+    length_field_length = args[1].toInt32();
+  if (argc >= 3)
+    raw = args[2].toBoolean();
+
+  yasio::string_view sv;
+  switch (length_field_length)
+  {
+    case 8: // 8bits
+      sv = cobj->read_v8();
+      break;
+    case 16: // 16bits
+      sv = cobj->read_v16();
+      break;
+    default: // 32bits
+      sv = cobj->read_v();
+  }
+
+  if (!raw)
+    s.rval().setString(std::string(sv.data(), sv.length()));
+  else
+  {
+    se::HandleObject dataObj(se::Object::createArrayBufferObject((void *)sv.data(), sv.size()));
+    s.rval().setObject(dataObj);
+  }
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_ibstream_read_v)
+
+static bool js_yasio_ibstream_read_bytes(se::State &s)
+{
+  yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+  int n            = 0;
+  if (argc >= 2)
+    n = args[1].toInt32();
+  if (n > 0)
+  {
+    auto sv = cobj->read_bytes(n);
+
+    se::HandleObject dataObj(se::Object::createArrayBufferObject((void *)sv.data(), sv.size()));
+    s.rval().setObject(dataObj);
+  }
+  else
+    s.rval().setNull();
+  return true;
+}
+SE_BIND_FUNC(js_yasio_ibstream_read_bytes)
+
 void js_register_yasio_ibstream(se::Object *obj)
 {
   auto cls = se::Class::create("ibstream", obj, nullptr, nullptr);
@@ -430,6 +512,8 @@ void js_register_yasio_ibstream(se::Object *obj)
   DEFINE_IBSTREAM_FUNC(read_f);
   DEFINE_IBSTREAM_FUNC(read_lf);
   DEFINE_IBSTREAM_FUNC(read_string);
+  DEFINE_IBSTREAM_FUNC(read_v);
+  DEFINE_IBSTREAM_FUNC(read_bytes);
   cls->defineFinalizeFunction(_SE(js_yasio_ibstream_finalize));
   cls->install();
   JSBClassType::registerClass<yasio::ibstream>(cls);
@@ -705,6 +789,53 @@ bool js_yasio_obstream_write_string(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_obstream_write_string)
 
+bool js_yasio_obstream_write_v(se::State &s)
+{
+  auto cobj = (yasio::obstream *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  auto sv = seval_to_string_view(args[0]);
+
+  int length_field_length = 32; // default is 32bits
+  if (argc >= 2)
+    length_field_length = args[1].toInt32();
+  switch (length_field_length)
+  {
+    case 8: // 8bits
+      cobj->write_v8(sv);
+      break;
+    case 16: // 16bits
+      cobj->write_v16(sv);
+      break;
+    default: // 32bits
+      cobj->write_v(sv);
+  }
+
+  s.rval().setUndefined();
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_obstream_write_v)
+
+bool js_yasio_obstream_write_bytes(se::State &s)
+{
+  auto cobj = (yasio::obstream *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  auto sv = seval_to_string_view(args[0]);
+
+  cobj->write_bytes(sv);
+
+  s.rval().setUndefined();
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_obstream_write_bytes)
+
 bool js_yasio_obstream_length(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
@@ -775,6 +906,8 @@ void js_register_yasio_obstream(se::Object *obj)
   DEFINE_OBSTREAM_FUNC(write_f);
   DEFINE_OBSTREAM_FUNC(write_lf);
   DEFINE_OBSTREAM_FUNC(write_string);
+  DEFINE_OBSTREAM_FUNC(write_v);
+  DEFINE_OBSTREAM_FUNC(write_bytes);
   DEFINE_OBSTREAM_FUNC(length);
   DEFINE_OBSTREAM_FUNC(sub);
 
@@ -868,7 +1001,16 @@ bool js_yasio_io_event_take_packet(se::State &s)
 
   if (!packet.empty())
   {
-    native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(std::move(packet)), &s.rval());
+    bool raw = false;
+    if (argc >= 2)
+      raw = args[1].toBoolean();
+    if (!raw)
+      native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(std::move(packet)), &s.rval());
+    else
+    {
+      se::HandleObject dataObj(se::Object::createArrayBufferObject(packet.data(), packet.size()));
+      s.rval().setObject(dataObj);
+    }
   }
   else
   {
@@ -1161,35 +1303,15 @@ bool js_yasio_io_service_write(se::State &s)
 
       if (transport != nullptr)
       {
-        if (arg1.isString())
+        auto data = seval_to_string_view(arg1);
+        if (!data.empty())
+          cobj->write(*transport, std::vector<char>(data.c_str(), data.c_str() + data.size()));
+        else
         {
-          auto &strVal = arg1.toString();
-          if (!strVal.empty())
-            cobj->write(*transport,
-                        std::vector<char>(strVal.c_str(), strVal.c_str() + strVal.length()));
-        }
-        else if (arg1.isObject())
-        {
-          auto obj      = arg1.toObject();
-          uint8_t *data = nullptr;
-          size_t size   = 0;
-          if (obj->isArrayBuffer())
-            obj->getArrayBufferData(&data, &size);
-          else if (obj->isTypedArray())
-            obj->getTypedArrayData(&data, &size);
-          else
-          {
-            yasio::obstream *obs = nullptr;
-            seval_to_native_ptr(arg1, &obs);
-            if (obs)
-            {
-              data = (uint8_t *)obs->data();
-              size = obs->length();
-            }
-          }
-
-          if (data != nullptr && size > 0)
-            cobj->write(*transport, std::vector<char>(data, data + size));
+          yasio::obstream *obs = nullptr;
+          seval_to_native_ptr(arg1, &obs);
+          if (obs)
+            cobj->write(*transport, obs->buffer());
         }
       }
 

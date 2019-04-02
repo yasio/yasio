@@ -36,11 +36,11 @@ static auto obstream_write_v = [](yasio::obstream *obs, yasio::string_view val,
                                   int length_field_length) {
   switch (length_field_length)
   {
-    case 2:
+    case 16:
       return obs->write_v16(val);
-    case 1:
+    case 8:
       return obs->write_v8(val);
-    default: // default is: 4bytes length field
+    default: // default is: 32bits length field
       return obs->write_v(val);
   }
 };
@@ -48,11 +48,11 @@ static auto obstream_read_v = [](yasio::ibstream *ibs, int length_field_length,
                                  bool /*raw*/ = false) {
   switch (length_field_length)
   {
-    case 2:
+    case 16:
       return ibs->read_v16();
-    case 1:
+    case 8:
       return ibs->read_v8();
-    default: // default is: 4bytes length field
+    default: // default is: 32bits length field
       return ibs->read_v();
   }
 };

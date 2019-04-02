@@ -29,11 +29,11 @@ luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/lua
 
 2. Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
 ```yasio\impl\yasio_cclua.cpp``` to your compile system.
-  ===> For Win32 & Apple platform:
-       Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
+##### For Win32 & Apple platform:
+Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
 ```yasio\impl\yasio_cclua.cpp``` to **libluacocos2d** project of your Visual Studio or xcode solution.  
-  ===> For Android:
-       Add yasio to your application Android.mk files, such as:  
+##### For Android:
+Add yasio to your application Android.mk files, such as:  
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/build/android-lua)

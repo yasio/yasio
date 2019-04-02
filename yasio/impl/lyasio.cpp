@@ -30,6 +30,33 @@ SOFTWARE.
 #include "yasio/yasio.h"
 #include "yasio/lyasio.h"
 
+namespace lyasio
+{
+static auto obstream_write_v = [](yasio::obstream *obs, yasio::string_view val,
+                                  int length_field_length) {
+  switch (length_field_length)
+  {
+    case 2:
+      return obs->write_v16(val);
+    case 1:
+      return obs->write_v8(val);
+    default: // default is: 4bytes length field
+      return obs->write_v(val);
+  }
+};
+static auto obstream_read_v = [](yasio::ibstream *ibs, int length_field_length) {
+  switch (length_field_length)
+  {
+    case 2:
+      return ibs->read_v16();
+    case 1:
+      return ibs->read_v8();
+    default: // default is: 4bytes length field
+      return ibs->read_v();
+  }
+};
+} // namespace lyasio
+
 #if _HAS_CXX17_FULL_FEATURES
 
 #  include "yasio/detail/sol.hpp"
@@ -49,8 +76,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   lyasio.new_usertype<io_event>(
       "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::kind, "status",
-      &io_event::status, "transport", &io_event::transport, "take_packet", [](io_event *event) {
-        return std::unique_ptr<yasio::ibstream>(new yasio::ibstream(event->take_packet()));
+      &io_event::status, "transport", &io_event::transport, "take_packet", [](io_event *ev) {
+        return std::unique_ptr<yasio::ibstream>(new yasio::ibstream(ev->take_packet()));
       });
 
   lyasio.new_usertype<io_service>(
@@ -130,19 +157,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "write_f", &yasio::obstream::write_i<float>, "write_lf", &yasio::obstream::write_i<double>,
       "write_string",
       static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_v),
-      "write_v",
-      [](yasio::obstream *obs, yasio::string_view val, int length_field_length) {
-        switch (length_field_length)
-        {
-          case 2:
-            return obs->write_v16(val);
-          case 1:
-            return obs->write_v8(val);
-          default: // default is: 4bytes length field
-            return obs->write_v(val);
-        }
-      },
-      "write_bytes",
+      "write_v", lyasio::obstream_write_v, "write_bytes",
       static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_bytes),
       "length", &yasio::obstream::length, "to_string",
       [](yasio::obstream *obs) { return yasio::string_view(obs->data(), obs->length()); });
@@ -161,18 +176,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "read_f", &yasio::ibstream::read_ix<float>, "read_lf", &yasio::ibstream::read_ix<double>,
       "read_string",
       static_cast<yasio::string_view (yasio::ibstream::*)()>(&yasio::ibstream::read_v), "read_v",
-      [](yasio::ibstream *ibs, int length_field_length, bool /*raw*/) {
-        switch (length_field_length)
-        {
-          case 2:
-            return ibs->read_v16();
-          case 1:
-            return ibs->read_v8();
-          default: // default is: 4bytes length field
-            return ibs->read_v();
-        }
-      },
-      "read_bytes",
+      lyasio::obstream_read_v, "read_bytes",
       static_cast<yasio::string_view (yasio::ibstream::*)(int)>(&yasio::ibstream::read_bytes),
       "to_string",
       [](yasio::ibstream *ibs) { return yasio::string_view(ibs->data(), ibs->size()); });
@@ -277,7 +281,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                   .addFunction("status", &io_event::status)
                                   .addFunction("transport", &io_event::transport)
                                   .addStaticFunction("take_packet", [](io_event *ev) {
-                                    return std::shared_ptr<yasio::ibstream>(
+                                    return std::unique_ptr<yasio::ibstream>(
                                         new yasio::ibstream(ev->take_packet()));
                                   }));
 
@@ -374,19 +378,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("write_lf", &yasio::obstream::write_i<double>)
           .addFunction("write_string", static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(
                                            &yasio::obstream::write_v))
-          .addStaticFunction("write_v",
-                             [](yasio::obstream *obs, yasio::string_view val,
-                                int length_field_length) {
-                               switch (length_field_length)
-                               {
-                                 case 2:
-                                   return obs->write_v16(val);
-                                 case 1:
-                                   return obs->write_v8(val);
-                                 default: // default is: 4bytes length field
-                                   return obs->write_v(val);
-                               }
-                             })
+          .addStaticFunction("write_v", lyasio::obstream_write_v)
           .addFunction("write_bytes", static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(
                                           &yasio::obstream::write_bytes))
           .addFunction("length", &yasio::obstream::length)
@@ -414,18 +406,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("read_lf", &yasio::ibstream_view::read_ix<double>)
           .addFunction("read_string", static_cast<yasio::string_view (yasio::ibstream_view::*)()>(
                                           &yasio::ibstream_view::read_v))
-          .addStaticFunction("read_v",
-                             [](yasio::ibstream *ibs, int length_field_length, bool /*raw*/) {
-                               switch (length_field_length)
-                               {
-                                 case 2:
-                                   return ibs->read_v16();
-                                 case 1:
-                                   return ibs->read_v8();
-                                 default: // default is: 4bytes length field
-                                   return ibs->read_v();
-                               }
-                             })
+          .addStaticFunction("read_v", lyasio::obstream_read_v)
           .addFunction("read_bytes", static_cast<yasio::string_view (yasio::ibstream_view::*)(int)>(
                                          &yasio::ibstream_view::read_bytes))
           .addStaticFunction("to_string", [](yasio::ibstream_view *ibs) {

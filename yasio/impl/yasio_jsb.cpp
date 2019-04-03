@@ -180,8 +180,8 @@ protected:
       ctx = ScriptingCore::getInstance()->getGlobalContext();
     }
     JS::RootedString jsstr(ctx, str);
-    _data = JS_EncodeStringToUTF8(ctx, jsstr);
-    _size = JS_GetStringEncodingLength(ctx, jsstr);
+    _data      = JS_EncodeStringToUTF8(ctx, jsstr);
+    _size      = JS_GetStringEncodingLength(ctx, jsstr);
     _need_free = true;
   }
 
@@ -581,10 +581,10 @@ static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
 
   int length_field_length = 32; // default is 32bits
   bool raw                = false;
+  if (argc >= 1)
+    length_field_length = args[0].toInt32();
   if (argc >= 2)
-    length_field_length = args[1].toInt32();
-  if (argc >= 3)
-    raw = args[2].toBoolean();
+    raw = args[1].toBoolean();
 
   yasio::string_view sv;
   switch (length_field_length)
@@ -620,8 +620,8 @@ static bool js_yasio_ibstream_read_bytes(JSContext *ctx, uint32_t argc, jsval *v
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_bytes : Invalid Native Object");
 
   int n = 0;
-  if (argc >= 2)
-    n = args[1].toInt32();
+  if (argc >= 1)
+    n = args[0].toInt32();
   if (n > 0)
   {
     auto sv = cobj->read_bytes(n);

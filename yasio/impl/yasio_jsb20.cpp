@@ -444,10 +444,10 @@ static bool js_yasio_ibstream_read_v(se::State &s)
 
   int length_field_length = 32; // default is 32bits
   bool raw                = false;
+  if (argc >= 1)
+    length_field_length = args[0].toInt32();
   if (argc >= 2)
-    length_field_length = args[1].toInt32();
-  if (argc >= 3)
-    raw = args[2].toBoolean();
+    raw = args[1].toBoolean();
 
   yasio::string_view sv;
   switch (length_field_length)
@@ -481,8 +481,8 @@ static bool js_yasio_ibstream_read_bytes(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
   int n            = 0;
-  if (argc >= 2)
-    n = args[1].toInt32();
+  if (argc >= 1)
+    n = args[0].toInt32();
   if (n > 0)
   {
     auto sv = cobj->read_bytes(n);

@@ -10,7 +10,8 @@ The core design is reference from https://github.com/chriskohlhoff/asio but very
 * support lua bindings  
 * support cocos2d-x jsb  
 * support CocosCreator jsb2.0  
-* support Unity3D tolua
+* support Unity3D tolua  
+* per io_service, per thread to process socket read,write,connect operations.  
   
 ## Intergation guides:  
 ### cpp intergation: 

@@ -91,5 +91,5 @@ see: https://github.com/halx99/LuaFramework_UGUI
 showcase:  
 ![image](https://github.com/halx99/yasio/raw/master/showcaseunity.png)  
 
-## For more detail usage: see example or wiki.
+## For more detail usage: see example or wiki: https://github.com/halx99/yasio/wiki
 

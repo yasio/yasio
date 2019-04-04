@@ -945,18 +945,18 @@ void js_register_yasio_transport_ptr(se::Object *obj)
 
 static auto jsb_yasio_io_event_finalize = jsb_yasio_finalize<io_event>;
 SE_BIND_FINALIZE_FUNC(jsb_yasio_io_event_finalize)
-bool js_yasio_io_event_channel_index(se::State &s)
+bool js_yasio_io_event_cindex(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setInt32(cobj->channel_index());
+  s.rval().setInt32(cobj->cindex());
 
   return true;
 }
-SE_BIND_FUNC(js_yasio_io_event_channel_index)
+SE_BIND_FUNC(js_yasio_io_event_cindex)
 
 bool js_yasio_io_event_status(se::State &s)
 {
@@ -996,26 +996,35 @@ bool js_yasio_io_event_transport(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_io_event_transport)
 
-bool js_yasio_io_event_take_packet(se::State &s)
+bool js_yasio_io_event_packet(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  auto packet = cobj->take_packet();
+  auto &packet = cobj->packet();
 
   if (!packet.empty())
   {
-    bool raw = false;
+    bool raw  = false;
+    bool copy = false;
     if (argc >= 1)
       raw = args[0].toBoolean();
+    if (argc >= 2)
+      copy = args[1].toBoolean();
     if (!raw)
-      native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(std::move(packet)), &s.rval());
+      native_ptr_to_seval<yasio::ibstream>(
+          !copy ? new yasio::ibstream(std::move(packet)) : new yasio::ibstream(packet), &s.rval());
     else
     {
       se::HandleObject dataObj(se::Object::createArrayBufferObject(packet.data(), packet.size()));
       s.rval().setObject(dataObj);
+      if (!copy)
+      {
+        packet.clear();
+        packet.shrink_to_fit();
+      }
     }
   }
   else
@@ -1025,32 +1034,7 @@ bool js_yasio_io_event_take_packet(se::State &s)
 
   return true;
 }
-SE_BIND_FUNC(js_yasio_io_event_take_packet)
-
-bool js_yasio_io_event_take_arraybuffer(se::State &s)
-{
-  cocos2d::log("%s", "io_event::take_arraybuffer is deprecated, use take_packet(true) instead!");
-
-  auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
-  const auto &args = s.args();
-  size_t argc      = args.size();
-
-  auto packet = cobj->take_packet();
-
-  if (!packet.empty())
-  {
-    se::HandleObject dataObj(se::Object::createArrayBufferObject(packet.data(), packet.size()));
-    s.rval().setObject(dataObj);
-  }
-  else
-  {
-    s.rval().setNull();
-  }
-
-  return true;
-}
-SE_BIND_FUNC(js_yasio_io_event_take_arraybuffer)
+SE_BIND_FUNC(js_yasio_io_event_packet)
 
 void js_register_yasio_io_event(se::Object *obj)
 {
@@ -1059,12 +1043,11 @@ void js_register_yasio_io_event(se::Object *obj)
 
   auto cls = se::Class::create("io_event", obj, nullptr, nullptr);
 
-  DEFINE_IO_EVENT_FUNC(channel_index);
+  DEFINE_IO_EVENT_FUNC(cindex);
   DEFINE_IO_EVENT_FUNC(kind);
   DEFINE_IO_EVENT_FUNC(status);
   DEFINE_IO_EVENT_FUNC(transport);
-  DEFINE_IO_EVENT_FUNC(take_packet);
-  DEFINE_IO_EVENT_FUNC(take_arraybuffer);
+  DEFINE_IO_EVENT_FUNC(packet);
 
   cls->defineFinalizeFunction(_SE(jsb_yasio_transport_ptr_finalize));
   cls->install();

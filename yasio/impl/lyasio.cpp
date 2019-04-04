@@ -72,10 +72,13 @@ YASIO_API int luaopen_yasio(lua_State *L)
   auto lyasio = sol2.create_named_table("yasio");
 
   lyasio.new_usertype<io_event>(
-      "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::kind, "status",
-      &io_event::status, "transport", &io_event::transport, "take_packet",
-      [](io_event *ev, sol::variadic_args) {
-        return std::unique_ptr<yasio::ibstream>(new yasio::ibstream(ev->take_packet()));
+      "io_event", "cindex", &io_event::cindex, "kind", &io_event::kind, "status", &io_event::status,
+      "transport", &io_event::transport, "packet", [](io_event *ev, sol::variadic_args args) {
+        bool copy = false;
+        if (args.size() >= 2)
+          copy = args[1];
+        return std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(ev->packet()))
+                                                      : new yasio::ibstream(ev->packet()));
       });
 
   lyasio.new_usertype<io_service>(
@@ -133,7 +136,10 @@ YASIO_API int luaopen_yasio(lua_State *L)
             service->set_option(opt, static_cast<int>(va[0]));
         }
       },
-      "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "write",
+      "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "close",
+      sol::overload(static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
+                    static_cast<void (io_service::*)(size_t)>(&io_service::close)),
+      "write",
       sol::overload(
           [](io_service *service, transport_ptr transport, yasio::string_view s) {
             service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
@@ -290,15 +296,17 @@ YASIO_API int luaopen_yasio(lua_State *L)
   // No any interface need export, only for holder
   lyasio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
 
-  lyasio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
-                                  .addFunction("channel_index", &io_event::channel_index)
-                                  .addFunction("kind", &io_event::kind)
-                                  .addFunction("status", &io_event::status)
-                                  .addFunction("transport", &io_event::transport)
-                                  .addStaticFunction("take_packet", [](io_event *ev, bool) {
-                                    return std::unique_ptr<yasio::ibstream>(
-                                        new yasio::ibstream(ev->take_packet()));
-                                  }));
+  lyasio["io_event"].setClass(
+      kaguya::UserdataMetatable<io_event>()
+          .addFunction("cindex", &io_event::cindex)
+          .addFunction("kind", &io_event::kind)
+          .addFunction("status", &io_event::status)
+          .addFunction("transport", &io_event::transport)
+          .addStaticFunction("packet", [](io_event *ev, bool /*raw*/, bool copy) {
+            return std::unique_ptr<yasio::ibstream>(
+                !copy ? new yasio::ibstream(std::move(ev->packet()))
+                      : new yasio::ibstream(ev->packet()));
+          }));
 
   lyasio["io_service"].setClass(
       kaguya::UserdataMetatable<io_service>()
@@ -321,6 +329,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch_events", &io_service::dispatch_events)
           .addFunction("open", &io_service::open)
+          .addOverloadedFunctions(
+              "close", static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
+              static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
               "write",
               static_cast<void (io_service::*)(transport_ptr transport, std::vector<char> data)>(

@@ -261,35 +261,34 @@ class io_event final
 {
 public:
   io_event(int channel_index, int kind, int error, transport_ptr transport)
-      : channel_index_(channel_index), kind_(kind), status_(error), transport_(std::move(transport))
+      : cindex_(channel_index), kind_(kind), status_(error), transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet, transport_ptr transport)
-      : channel_index_(channel_index), kind_(type), status_(0), transport_(std::move(transport)),
+      : cindex_(channel_index), kind_(type), status_(0), transport_(std::move(transport)),
         packet_(std::move(packet))
   {}
   io_event(io_event &&rhs)
-      : channel_index_(rhs.channel_index_), kind_(rhs.kind_), status_(rhs.status_),
+      : cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
         transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_))
   {}
 
   ~io_event() {}
 
-  int channel_index() const { return channel_index_; }
+  int cindex() const { return cindex_; }
 
   int kind() const { return kind_; }
   int status() const { return status_; }
 
   transport_ptr transport() { return transport_; }
 
-  const std::vector<char> &packet() const { return packet_; }
-  std::vector<char> take_packet() { return std::move(packet_); }
+  std::vector<char> &packet() { return packet_; }
 
 #if _USING_OBJECT_POOL
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 
 private:
-  int channel_index_;
+  int cindex_;
   int kind_;
   int status_;
   transport_ptr transport_;

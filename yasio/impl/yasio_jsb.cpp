@@ -1295,7 +1295,7 @@ void js_register_yasio_transport_ptr(JSContext *ctx, JS::HandleObject global)
 JSClass *jsb_io_event_class;
 JSObject *jsb_io_event_prototype;
 
-bool js_yasio_io_event_channel_index(JSContext *ctx, uint32_t argc, jsval *vp)
+bool js_yasio_io_event_cindex(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   bool ok        = true;
   io_event *cobj = nullptr;
@@ -1305,9 +1305,9 @@ bool js_yasio_io_event_channel_index(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (io_event *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_channel_index : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_cindex : Invalid Native Object");
 
-  args.rval().set(int32_to_jsval(ctx, cobj->channel_index()));
+  args.rval().set(int32_to_jsval(ctx, cobj->cindex()));
 
   return true;
 }
@@ -1360,7 +1360,7 @@ bool js_yasio_io_event_transport(JSContext *ctx, uint32_t argc, jsval *vp)
   return true;
 }
 
-bool js_yasio_io_event_take_packet(JSContext *ctx, uint32_t argc, jsval *vp)
+bool js_yasio_io_event_packet(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   bool ok        = true;
   io_event *cobj = nullptr;
@@ -1370,53 +1370,33 @@ bool js_yasio_io_event_take_packet(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (io_event *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_take_packet : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_packet : Invalid Native Object");
 
-  auto packet = cobj->take_packet();
+  auto &packet = cobj->packet();
 
   if (!packet.empty())
   {
-    bool raw = false;
+    bool raw  = false;
+    bool copy = false;
     if (argc >= 1)
       raw = args[0].toBoolean();
+    if (argc >= 1)
+      copy = args[1].toBoolean();
     if (!raw)
     {
-      std::unique_ptr<yasio::ibstream> ibs(new yasio::ibstream(std::move(packet)));
+      std::unique_ptr<yasio::ibstream> ibs(!copy ? new yasio::ibstream(std::move(packet))
+                                                 : new yasio::ibstream(packet));
       args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, std::move(ibs)));
     }
     else
+    {
       args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, packet.data(), packet.size()));
-  }
-  else
-  {
-    args.rval().setNull();
-  }
-
-  return true;
-}
-
-bool js_yasio_io_event_take_arraybuffer(JSContext *ctx, uint32_t argc, jsval *vp)
-{
-  bool ok        = true;
-  io_event *cobj = nullptr;
-
-  cocos2d::log("%s", "io_event::take_arraybuffer is deprecated, use take_packet(true) instead!");
-
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  JS::RootedObject obj(ctx);
-  obj.set(args.thisv().toObjectOrNull());
-  js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (io_event *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_take_arraybuffer : Invalid Native Object");
-
-  auto packet = cobj->take_packet();
-
-  if (!packet.empty())
-  {
-    JS::RootedObject buffer(ctx, JS_NewArrayBuffer(ctx, static_cast<uint32_t>(packet.size())));
-    uint8_t *bufdata = JS_GetArrayBufferData(buffer);
-    memcpy((void *)bufdata, (void *)packet.data(), packet.size());
-    args.rval().set(OBJECT_TO_JSVAL(buffer));
+      if (!copy)
+      {
+        packet.clear();
+        packet.shrink_to_fit();
+      }
+    }
   }
   else
   {
@@ -1443,14 +1423,12 @@ void js_register_yasio_io_event(JSContext *ctx, JS::HandleObject global)
   static JSPropertySpec properties[] = {JS_PS_END};
 
   static JSFunctionSpec funcs[] = {
-      JS_FN("channel_index", js_yasio_io_event_channel_index, 2,
+      JS_FN("cindex", js_yasio_io_event_cindex, 2,
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("kind", js_yasio_io_event_kind, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("status", js_yasio_io_event_status, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("transport", js_yasio_io_event_transport, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("take_packet", js_yasio_io_event_take_packet, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("take_arraybuffer", js_yasio_io_event_take_arraybuffer, 0,
-            JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("packet", js_yasio_io_event_take_packet, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};

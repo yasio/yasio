@@ -71,10 +71,6 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   auto lyasio = sol2.create_named_table("yasio");
 
-  lyasio.new_usertype<io_hostent>(
-      "io_hostent", sol::constructors<io_hostent(), io_hostent(const std::string &, u_short)>(),
-      "host", &io_hostent::host_, "port", &io_hostent::port_);
-
   lyasio.new_usertype<io_event>(
       "io_event", "channel_index", &io_event::channel_index, "kind", &io_event::kind, "status",
       &io_event::status, "transport", &io_event::transport, "take_packet",
@@ -84,11 +80,21 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   lyasio.new_usertype<io_service>(
       "io_service", "start_service",
-      sol::overload(
-          static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_cb_t)>(
-              &io_service::start_service),
-          static_cast<void (io_service::*)(const io_hostent *channel_eps, io_event_cb_t cb)>(
-              &io_service::start_service)),
+      [](io_service *service, sol::table channel_eps, io_event_cb_t cb) {
+        std::vector<io_hostent> hosts;
+        auto host = channel_eps["host"];
+        if (host != sol::nil)
+          hosts.push_back(io_hostent(host, channel_eps["port"]));
+        else
+        {
+          for (auto item : channel_eps)
+          {
+            auto ep = item.second.as<sol::table>();
+            hosts.push_back(io_hostent(ep["host"], ep["port"]));
+          }
+        }
+        service->start_service(hosts, std::move(cb));
+      },
       "stop_service", &io_service::stop_service, "set_option",
       [](io_service *service, int opt, sol::variadic_args va) {
         switch (opt)
@@ -284,12 +290,6 @@ YASIO_API int luaopen_yasio(lua_State *L)
   // No any interface need export, only for holder
   lyasio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
 
-  lyasio["io_hostent"].setClass(
-      kaguya::UserdataMetatable<io_hostent>()
-          .setConstructors<io_hostent(), io_hostent(const std::string &, u_short)>()
-          .addProperty("host", &io_hostent::get_ip, &io_hostent::set_ip)
-          .addProperty("port", &io_hostent::get_port, &io_hostent::set_port));
-
   lyasio["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
                                   .addFunction("channel_index", &io_event::channel_index)
                                   .addFunction("kind", &io_event::kind)
@@ -305,10 +305,19 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .setConstructors<io_service()>()
           .addOverloadedFunctions(
               "start_service",
-              static_cast<void (io_service::*)(std::vector<io_hostent>, io_event_cb_t)>(
-                  &io_service::start_service),
-              static_cast<void (io_service::*)(const io_hostent *channel_eps, io_event_cb_t cb)>(
-                  &io_service::start_service))
+              [](io_service *service, kaguya::LuaTable channel_eps, io_event_cb_t cb) {
+                std::vector<io_hostent> hosts;
+                auto host = channel_eps["host"];
+                if (host)
+                  hosts.push_back(io_hostent(host, channel_eps["port"]));
+                else
+                {
+                  channel_eps.foreach_table<int, kaguya::LuaTable>([&](int, kaguya::LuaTable ep) {
+                    hosts.push_back(io_hostent(ep["host"], ep["port"]));
+                  });
+                }
+                service->start_service(hosts, std::move(cb));
+              })
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch_events", &io_service::dispatch_events)
           .addFunction("open", &io_service::open)

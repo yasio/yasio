@@ -8,3 +8,4 @@ yasio-3.20.0
   7. Add io_event.packet for script bindings.
   8. Remove io_event.take_packet for script bindings.
   9. Improve script binary encode/decode capability.
+  10. Remove io_hostent userdata for luabindings, use simple lua table instead.

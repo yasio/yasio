@@ -3,3 +3,8 @@ yasio-3.20.0
   2. Add write_bytes/read_bytes for jsb & luabindings.
   3. Unify vs project files.
   4. Use pure lua table instead userdata io_hostent.
+  5. Rename io_event.channel_index to cindex.
+  6. Add io_service.close for script bindings.
+  7. Add io_event.packet for script bindings.
+  8. Remove io_event.take_packet for script bindings.
+  9. Improve script binary encode/decode capability.

@@ -23,7 +23,7 @@ function yasioTest() {
       obs.write_i32(20191011);
       obs.write_f(28.9);
       obs.write_lf(209.79);
-      obs.write_string("hello client!");
+      obs.write_v("hello client!");
       obs.pop32();
 
       cc.log("yasio server: will send partial1 of data after 3 seconds...");
@@ -78,7 +78,7 @@ function yasioTest() {
       msg.i32val = ibs.read_i32();
       msg.fval = ibs.read_f();
       msg.lfval = ibs.read_lf();
-      msg.strval = ibs.read_string();
+      msg.strval = ibs.read_v();
       cc.log("receive msg from server -->\n msg.bval1=%s\n msg.bval2=%s\n msg.i8val=%d\n msg.i16val=%d\n msg.i24val=%d\n msg.u24val=%d\n msg.i32val=%d\n msg.fval=%s\n msg.lfval=%s\n msg.strval=%s\n",
         msg.bval1.toString(),
         msg.bval2.toString(),

@@ -65,7 +65,7 @@ client:set_option(yasio.YOPT_LFBFD_PARAMS,
 client:start_service(hostent, function(event)
         local t = event:kind()
         if t == yasio.YEK_PACKET then
-            local ibs = event:take_packet()
+            local ibs = event:packet(false, true)
             local msg = proto.d101(ibs)
             print(string.format('receve data from server: %s', msg.passwd))
             stopFlag = stopFlag + 1
@@ -94,7 +94,7 @@ hostent.port = 80
 httpclient:start_service(hostent, function(event)
         local t = event:kind()
         if t == yasio.YEK_PACKET then
-            local ibs = event:take_packet()
+            local ibs = event:packet()
             print(string.format('receve data from server: %s', ibs:to_string()))
 
         elseif(t == yasio.YEK_CONNECT_RESPONSE) then -- connect responseType

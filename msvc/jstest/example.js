@@ -65,7 +65,7 @@ function yasioTest() {
     }
     else if (kind == yasio.YEK_PACKET) {
       cc.log("yasio client --> receive a packet from server, kind=%d, close connect after 3 seconds", event.kind());
-      var ibs = event.take_packet();
+      var ibs = event.packet();
 
       var msg = {};
       ibs.read_i32(); // skip length field

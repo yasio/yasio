@@ -286,14 +286,14 @@ public:
   transport_ptr transport() { return transport_; }
 
   std::vector<char> &packet() { return packet_; }
-  time_t timestamp() const { return timestamp_; }
+  long long timestamp() const { return timestamp_; }
 
 #if _USING_OBJECT_POOL
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 
 private:
-  time_t timestamp_;
+  long long timestamp_;
   int cindex_;
   int kind_;
   int status_;

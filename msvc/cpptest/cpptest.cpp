@@ -69,10 +69,10 @@ void yasioTest()
     {
       case YEK_PACKET:
       {
-        auto packet = event->take_packet();
+        auto packet = std::move(event->packet());
         packet.push_back('\0');
         printf("index:%d, receive data:%s\n", event->transport()->channel_index(), packet.data());
-        if (event->channel_index() == 1)
+        if (event->cindex() == 1)
         { // response udp client
           std::vector<char> packet;
           append_string(packet, "hello udp client!\n");
@@ -84,7 +84,7 @@ void yasioTest()
         if (event->status() == 0)
         {
           auto transport = event->transport();
-          if (event->channel_index() == 0)
+          if (event->cindex() == 0)
           {
             std::vector<char> packet;
             append_string(packet, "GET /index.htm HTTP/1.1\r\n");
@@ -99,7 +99,7 @@ void yasioTest()
 
             service.write(transport, std::move(packet));
           }
-          else if (event->channel_index() == 1)
+          else if (event->cindex() == 1)
           { // Sends message to server every per 3 seconds.
 #if 0
             udp_heartbeat.expires_from_now(std::chrono::seconds(3));

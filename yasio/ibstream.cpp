@@ -49,8 +49,8 @@ ibstream_view::~ibstream_view() {}
 
 void ibstream_view::assign(const void *data, int size)
 {
-  ptr_  = static_cast<const char *>(data);
-  size_ = size;
+  first_ = ptr_ = static_cast<const char *>(data);
+  last_         = first_ + size;
 }
 
 int32_t ibstream_view::read_i24()
@@ -133,14 +133,35 @@ yasio::string_view ibstream_view::read_bytes(int len)
 
 const char *ibstream_view::consume(size_t size)
 {
-  if (size_ <= 0)
+  if (ptr_ >= last_)
     throw std::logic_error("packet error, data insufficiently!");
 
   auto ptr = ptr_;
   ptr_ += size;
-  size_ -= static_cast<int>(size);
 
   return ptr;
+}
+
+ptrdiff_t ibstream_view::seek(ptrdiff_t offset, int whence)
+{
+  switch (whence)
+  {
+    case SEEK_CUR:
+      ptr_ += offset;
+      if (ptr_ < first_)
+        ptr_ = first_;
+      else if (ptr_ > last_)
+        ptr_ = last_;
+      break;
+    case SEEK_END:
+      ptr_ = first_;
+      break;
+    case SEEK_SET:
+      ptr_ = last_;
+      break;
+    default:;
+  }
+  return ptr_ - first_;
 }
 
 /// --------------------- CLASS ibstream ---------------------

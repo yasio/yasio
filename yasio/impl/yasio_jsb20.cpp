@@ -230,6 +230,13 @@ bool jsb_yasio_killTimer(se::State &s)
 }
 SE_BIND_FUNC(jsb_yasio_killTimer)
 
+bool jsb_yasio_highp_clock(se::State &s)
+{
+  s.rval().setNumber(yasio::inet::_highp_clock());
+  return true;
+}
+SE_BIND_FUNC(jsb_yasio_highp_clock)
+
 static bool seval_to_hostent(const se::Value &v, inet::io_hostent *ret)
 {
   assert(v.isObject() && ret != nullptr);
@@ -496,6 +503,32 @@ static bool js_yasio_ibstream_read_bytes(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_ibstream_read_bytes)
 
+static bool js_yasio_ibstream_length(se::State &s)
+{
+  yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+
+  s.rval().setInt32(cobj->length());
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_ibstream_length)
+
+static bool js_yasio_ibstream_seek(se::State &s)
+{
+  yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+  if (argc >= 2)
+    s.rval().setInt32(cobj->seek(args[0].toInt32(), args[1].toInt32()));
+  else
+    s.rval().setInt32(-1);
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_ibstream_seek)
+
 void js_register_yasio_ibstream(se::Object *obj)
 {
   auto cls = se::Class::create("ibstream", obj, nullptr, nullptr);
@@ -518,6 +551,8 @@ void js_register_yasio_ibstream(se::Object *obj)
   DEFINE_IBSTREAM_FUNC(read_string);
   DEFINE_IBSTREAM_FUNC(read_v);
   DEFINE_IBSTREAM_FUNC(read_bytes);
+  DEFINE_IBSTREAM_FUNC(length);
+  DEFINE_IBSTREAM_FUNC(seek);
   cls->defineFinalizeFunction(_SE(js_yasio_ibstream_finalize));
   cls->install();
   JSBClassType::registerClass<yasio::ibstream>(cls);
@@ -945,31 +980,6 @@ void js_register_yasio_transport_ptr(se::Object *obj)
 
 static auto jsb_yasio_io_event_finalize = jsb_yasio_finalize<io_event>;
 SE_BIND_FINALIZE_FUNC(jsb_yasio_io_event_finalize)
-bool js_yasio_io_event_cindex(se::State &s)
-{
-  auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
-  const auto &args = s.args();
-  size_t argc      = args.size();
-
-  s.rval().setInt32(cobj->cindex());
-
-  return true;
-}
-SE_BIND_FUNC(js_yasio_io_event_cindex)
-
-bool js_yasio_io_event_status(se::State &s)
-{
-  auto cobj = (io_event *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
-  const auto &args = s.args();
-  size_t argc      = args.size();
-
-  s.rval().setInt32(cobj->status());
-
-  return true;
-}
-SE_BIND_FUNC(js_yasio_io_event_status)
 
 bool js_yasio_io_event_kind(se::State &s)
 {
@@ -984,17 +994,18 @@ bool js_yasio_io_event_kind(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_io_event_kind)
 
-bool js_yasio_io_event_transport(se::State &s)
+bool js_yasio_io_event_status(se::State &s)
 {
   auto cobj = (io_event *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  native_ptr_to_seval<transport_ptr>(new transport_ptr(cobj->transport()), &s.rval());
+  s.rval().setInt32(cobj->status());
+
   return true;
 }
-SE_BIND_FUNC(js_yasio_io_event_transport)
+SE_BIND_FUNC(js_yasio_io_event_status)
 
 bool js_yasio_io_event_packet(se::State &s)
 {
@@ -1036,6 +1047,40 @@ bool js_yasio_io_event_packet(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_io_event_packet)
 
+bool js_yasio_io_event_transport(se::State &s)
+{
+  auto cobj = (io_event *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  native_ptr_to_seval<transport_ptr>(new transport_ptr(cobj->transport()), &s.rval());
+  return true;
+}
+SE_BIND_FUNC(js_yasio_io_event_transport)
+
+bool js_yasio_io_event_cindex(se::State &s)
+{
+  auto cobj = (io_event *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  s.rval().setInt32(cobj->cindex());
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_io_event_cindex)
+
+bool js_yasio_io_event_timestamp(se::State &s)
+{
+  auto cobj = (io_event *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  s.rval().setNumber(cobj->timestamp());
+  return true;
+}
+SE_BIND_FUNC(js_yasio_io_event_timestamp)
+
 void js_register_yasio_io_event(se::Object *obj)
 {
 #define DEFINE_IO_EVENT_FUNC(funcName)                                                             \
@@ -1043,11 +1088,12 @@ void js_register_yasio_io_event(se::Object *obj)
 
   auto cls = se::Class::create("io_event", obj, nullptr, nullptr);
 
-  DEFINE_IO_EVENT_FUNC(cindex);
   DEFINE_IO_EVENT_FUNC(kind);
   DEFINE_IO_EVENT_FUNC(status);
-  DEFINE_IO_EVENT_FUNC(transport);
   DEFINE_IO_EVENT_FUNC(packet);
+  DEFINE_IO_EVENT_FUNC(cindex);
+  DEFINE_IO_EVENT_FUNC(transport);
+  DEFINE_IO_EVENT_FUNC(timestamp);
 
   cls->defineFinalizeFunction(_SE(jsb_yasio_transport_ptr_finalize));
   cls->install();
@@ -1356,6 +1402,7 @@ bool jsb_register_yasio(se::Object *obj)
   yasio->defineFunction("setInterval", _SE(jsb_yasio_setInterval));
   yasio->defineFunction("clearTimeout", _SE(jsb_yasio_killTimer));
   yasio->defineFunction("clearInterval", _SE(jsb_yasio_killTimer));
+  yasio->defineFunction("highp_clock", _SE(jsb_yasio_highp_clock));
 
   js_register_yasio_ibstream(yasio);
   js_register_yasio_obstream(yasio);
@@ -1390,6 +1437,8 @@ bool jsb_register_yasio(se::Object *obj)
   YASIO_SET_INT_PROP("YEK_CONNECT_RESPONSE", YEK_CONNECT_RESPONSE);
   YASIO_SET_INT_PROP("YEK_CONNECTION_LOST", YEK_CONNECTION_LOST);
   YASIO_SET_INT_PROP("YEK_PACKET", YEK_PACKET);
-
+  YASIO_SET_INT_PROP("SEEK_CUR", SEEK_CUR);
+  YASIO_SET_INT_PROP("SEEK_SET", SEEK_SET);
+  YASIO_SET_INT_PROP("SEEK_END", SEEK_END);
   return true;
 }

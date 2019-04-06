@@ -72,14 +72,16 @@ YASIO_API int luaopen_yasio(lua_State *L)
   auto lyasio = sol2.create_named_table("yasio");
 
   lyasio.new_usertype<io_event>(
-      "io_event", "cindex", &io_event::cindex, "kind", &io_event::kind, "status", &io_event::status,
-      "transport", &io_event::transport, "packet", [](io_event *ev, sol::variadic_args args) {
+      "io_event", "kind", &io_event::kind, "status", &io_event::status, "packet",
+      [](io_event *ev, sol::variadic_args args) {
         bool copy = false;
         if (args.size() >= 2)
           copy = args[1];
         return std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(ev->packet()))
                                                       : new yasio::ibstream(ev->packet()));
-      });
+      },
+      "cindex", &io_event::cindex, "transport", &io_event::transport, "timestamp",
+      &io_event::timestamp);
 
   lyasio.new_usertype<io_service>(
       "io_service", "start_service",
@@ -205,8 +207,10 @@ YASIO_API int luaopen_yasio(lua_State *L)
       },
       "read_bytes",
       static_cast<yasio::string_view (yasio::ibstream::*)(int)>(&yasio::ibstream::read_bytes),
-      "to_string",
-      [](yasio::ibstream *ibs) { return yasio::string_view(ibs->data(), ibs->size()); });
+      "seek", &yasio::ibstream_view::seek, "length", &yasio::ibstream_view::length, "to_string",
+      [](yasio::ibstream *ibs) { return yasio::string_view(ibs->data(), ibs->length()); });
+
+  lyasio["highp_clock"] = &_highp_clock;
 
   // ##-- yasio enums
   lyasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
@@ -230,6 +234,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
   lyasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
   lyasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
+  lyasio["SEEK_CUR"]                     = SEEK_CUR;
+  lyasio["SEEK_SET"]                     = SEEK_SET;
+  lyasio["SEEK_END"]                     = SEEK_END;
 
   return lyasio.push(); /* return 'yasio' table */
 }
@@ -298,15 +305,18 @@ YASIO_API int luaopen_yasio(lua_State *L)
 
   lyasio["io_event"].setClass(
       kaguya::UserdataMetatable<io_event>()
-          .addFunction("cindex", &io_event::cindex)
+
           .addFunction("kind", &io_event::kind)
           .addFunction("status", &io_event::status)
+          .addStaticFunction("packet",
+                             [](io_event *ev, bool /*raw*/, bool copy) {
+                               return std::unique_ptr<yasio::ibstream>(
+                                   !copy ? new yasio::ibstream(std::move(ev->packet()))
+                                         : new yasio::ibstream(ev->packet()));
+                             })
+          .addFunction("cindex", &io_event::cindex)
           .addFunction("transport", &io_event::transport)
-          .addStaticFunction("packet", [](io_event *ev, bool /*raw*/, bool copy) {
-            return std::unique_ptr<yasio::ibstream>(
-                !copy ? new yasio::ibstream(std::move(ev->packet()))
-                      : new yasio::ibstream(ev->packet()));
-          }));
+          .addFunction("timestamp", &io_event::timestamp));
 
   lyasio["io_service"].setClass(
       kaguya::UserdataMetatable<io_service>()
@@ -457,14 +467,18 @@ YASIO_API int luaopen_yasio(lua_State *L)
                              })
           .addFunction("read_bytes", static_cast<yasio::string_view (yasio::ibstream_view::*)(int)>(
                                          &yasio::ibstream_view::read_bytes))
+          .addFunction("seek", &yasio::ibstream_view::seek)
+          .addFunction("length", &yasio::ibstream_view::length)
           .addStaticFunction("to_string", [](yasio::ibstream_view *ibs) {
-            return yasio::string_view(ibs->data(), ibs->size());
+            return yasio::string_view(ibs->data(), ibs->length());
           }));
 
   // ##-- ibstream
   lyasio["ibstream"].setClass(kaguya::UserdataMetatable<yasio::ibstream, yasio::ibstream_view>()
                                   .setConstructors<yasio::ibstream(std::vector<char>),
                                                    yasio::ibstream(const yasio::obstream *)>());
+
+  lyasio["highp_clock"] = &_highp_clock;
 
   // ##-- yasio enums
   lyasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
@@ -488,6 +502,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
   lyasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
   lyasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
+  lyasio["SEEK_CUR"]                     = SEEK_CUR;
+  lyasio["SEEK_SET"]                     = SEEK_SET;
+  lyasio["SEEK_END"]                     = SEEK_END;
 
   return lyasio.push(); /* return 'yasio' table */
 }

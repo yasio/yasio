@@ -128,6 +128,9 @@ typedef std::function<void(event_ptr)> io_event_cb_t;
 typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
 
+// The high precision micro seconds timestamp
+long long _highp_clock();
+
 struct io_hostent
 {
   io_hostent() {}
@@ -261,14 +264,15 @@ class io_event final
 {
 public:
   io_event(int channel_index, int kind, int error, transport_ptr transport)
-      : cindex_(channel_index), kind_(kind), status_(error), transport_(std::move(transport))
+      : timestamp_(_highp_clock()), cindex_(channel_index), kind_(kind), status_(error),
+        transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet, transport_ptr transport)
-      : cindex_(channel_index), kind_(type), status_(0), transport_(std::move(transport)),
-        packet_(std::move(packet))
+      : timestamp_(_highp_clock()), cindex_(channel_index), kind_(type), status_(0),
+        transport_(std::move(transport)), packet_(std::move(packet))
   {}
   io_event(io_event &&rhs)
-      : cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
+      : timestamp_(rhs.timestamp_), cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
         transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_))
   {}
 
@@ -282,12 +286,14 @@ public:
   transport_ptr transport() { return transport_; }
 
   std::vector<char> &packet() { return packet_; }
+  time_t timestamp() const { return timestamp_; }
 
 #if _USING_OBJECT_POOL
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 
 private:
+  time_t timestamp_;
   int cindex_;
   int kind_;
   int status_;

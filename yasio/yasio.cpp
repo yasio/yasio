@@ -82,6 +82,12 @@ namespace yasio
 {
 namespace inet
 {
+// The high precision micro seconds timestamp
+long long _highp_clock()
+{
+  auto duration = highp_clock_t::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+}
 namespace
 {
 // channel state
@@ -132,13 +138,6 @@ enum : u_short
 #define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
 #define YDQS_SET_STATE(what, value) (what = (what & 0xff00) | value)
 #define YDQS_GET_STATE(what) (what & 0x00ff)
-
-// The high precision micro seconds timestamp
-static long long _highp_clock()
-{
-  auto duration = highp_clock_t::now().time_since_epoch();
-  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-}
 
 /*--- This is a C++ universal sprintf in the future.
  **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is

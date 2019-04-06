@@ -81,9 +81,11 @@ public:
 
   yasio::string_view read_bytes(int len);
 
-  inline const char *data() { return ptr_; }
-  inline int size(void) { return size_; }
-
+  inline const char *data() { return first_; }
+  inline size_t length(void) { return last_ - first_; }
+  
+  ptrdiff_t seek(ptrdiff_t offset, int whence);
+  
   template <typename _LenT> yasio::string_view read_vx()
   {
     _LenT n = yasio::endian::ntohv(*(_LenT *)consume(sizeof(n)));
@@ -101,8 +103,9 @@ protected:
   const char *consume(size_t size);
 
 protected:
+  const char *first_;
+  const char *last_;
   const char *ptr_;
-  int size_;
 };
 
 template <typename _Nty> inline void ibstream_view::read_i(_Nty &ov)

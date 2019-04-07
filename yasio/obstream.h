@@ -142,8 +142,8 @@ template <> inline size_t obstream::write_i<double>(double value)
 
 template <typename _Nty> inline void obstream::set_i(std::streamoff offset, const _Nty value)
 {
-  auto pvalue = (_Nty *)(buffer_.data() + offset);
-  *pvalue     = yasio::endian::htonv(value);
+  auto nv     = yasio::endian::htonv(value);
+  memcpy(buffer_.data() + offset, &nv, sizeof(nv));
 }
 } // namespace yasio
 #endif

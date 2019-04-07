@@ -440,7 +440,15 @@ bool jsb_yasio_highp_clock(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   auto args = JS::CallArgsFromVp(argc, vp);
 
-  args.rval().setDouble(yasio::inet::_highp_clock());
+  args.rval().setDouble(yasio::inet::highp_clock());
+  return true;
+}
+
+bool jsb_yasio_highp_time(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  auto args = JS::CallArgsFromVp(argc, vp);
+
+  args.rval().setDouble(yasio::inet::highp_clock<yasio::inet::system_clock_t>());
   return true;
 }
 
@@ -587,15 +595,15 @@ static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_v : Invalid Native Object");
 
-  int length_field_length = 32; // default is 32bits
+  int length_field_bits = 32; // default is 32bits
   bool raw                = false;
   if (argc >= 1)
-    length_field_length = args[0].toInt32();
+    length_field_bits = args[0].toInt32();
   if (argc >= 2)
     raw = args[1].toBoolean();
 
   yasio::string_view sv;
-  switch (length_field_length)
+  switch (length_field_bits)
   {
     case 8: // 8bits
       sv = cobj->read_v8();
@@ -1141,10 +1149,10 @@ bool js_yasio_obstream_write_v(JSContext *ctx, uint32_t argc, jsval *vp)
   bool unrecognized_object = false;
   sva.set(arg0, ctx, &unrecognized_object);
 
-  int length_field_length = 32; // default is 32bits
+  int length_field_bits = 32; // default is 32bits
   if (argc >= 2)
-    length_field_length = args[1].toInt32();
-  switch (length_field_length)
+    length_field_bits = args[1].toInt32();
+  switch (length_field_bits)
   {
     case 8: // 8bits
       cobj->write_v8(sva);
@@ -1467,7 +1475,7 @@ bool js_yasio_io_event_timestamp(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (io_event *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_kind : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_event_timestamp : Invalid Native Object");
 
   args.rval().set(long_long_to_jsval(ctx, cobj->timestamp()));
 
@@ -1857,6 +1865,7 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
   JS_DefineFunction(ctx, yasio, "clearTimeout", jsb_yasio_killTimer, 1, 0);
   JS_DefineFunction(ctx, yasio, "clearInterval", jsb_yasio_killTimer, 1, 0);
   JS_DefineFunction(ctx, yasio, "highp_clock", jsb_yasio_highp_clock, 0, 0);
+  JS_DefineFunction(ctx, yasio, "highp_time", jsb_yasio_highp_time, 0, 0);
 
   js_register_yasio_ibstream(ctx, yasio);
   js_register_yasio_obstream(ctx, yasio);

@@ -33,8 +33,8 @@ SOFTWARE.
 namespace lyasio
 {
 static auto obstream_write_v = [](yasio::obstream *obs, yasio::string_view val,
-                                  int length_field_length) {
-  switch (length_field_length)
+                                  int length_field_bits) {
+  switch (length_field_bits)
   {
     case 16:
       return obs->write_v16(val);
@@ -44,9 +44,9 @@ static auto obstream_write_v = [](yasio::obstream *obs, yasio::string_view val,
       return obs->write_v(val);
   }
 };
-static auto ibstream_read_v = [](yasio::ibstream *ibs, int length_field_length,
+static auto ibstream_read_v = [](yasio::ibstream *ibs, int length_field_bits,
                                  bool /*raw*/ = false) {
-  switch (length_field_length)
+  switch (length_field_bits)
   {
     case 16:
       return ibs->read_v16();
@@ -210,7 +210,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
       "seek", &yasio::ibstream_view::seek, "length", &yasio::ibstream_view::length, "to_string",
       [](yasio::ibstream *ibs) { return yasio::string_view(ibs->data(), ibs->length()); });
 
-  lyasio["highp_clock"] = &_highp_clock;
+  lyasio["highp_clock"] = &highp_clock<highp_clock_t>;
+  lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums
   lyasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
@@ -460,10 +461,10 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                           &yasio::ibstream_view::read_v))
           .addStaticFunction("read_v",
                              [](yasio::ibstream *ibs, kaguya::VariadicArgType args) {
-                               int lfl = 32;
+                               int length_field_bits = 32;
                                if (args.size() > 0)
-                                 lfl = static_cast<int>(args[0]);
-                               return lyasio::ibstream_read_v(ibs, lfl);
+                                 length_field_bits = static_cast<int>(args[0]);
+                               return lyasio::ibstream_read_v(ibs, length_field_bits);
                              })
           .addFunction("read_bytes", static_cast<yasio::string_view (yasio::ibstream_view::*)(int)>(
                                          &yasio::ibstream_view::read_bytes))
@@ -478,7 +479,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
                                   .setConstructors<yasio::ibstream(std::vector<char>),
                                                    yasio::ibstream(const yasio::obstream *)>());
 
-  lyasio["highp_clock"] = &_highp_clock;
+  lyasio["highp_clock"] = &highp_clock<highp_clock_t>;
+  lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums
   lyasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;

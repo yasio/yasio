@@ -117,6 +117,7 @@ class io_service;
 // typedefs
 typedef long long highp_time_t;
 typedef std::chrono::high_resolution_clock highp_clock_t;
+typedef std::chrono::system_clock system_clock_t;
 
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef std::shared_ptr<io_transport> transport_ptr;
@@ -129,7 +130,11 @@ typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
 
 // The high precision micro seconds timestamp
-long long _highp_clock();
+template <typename _T = highp_clock_t> inline long long highp_clock()
+{
+  auto duration = _T::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
+}
 
 struct io_hostent
 {
@@ -264,11 +269,11 @@ class io_event final
 {
 public:
   io_event(int channel_index, int kind, int error, transport_ptr transport)
-      : timestamp_(_highp_clock()), cindex_(channel_index), kind_(kind), status_(error),
+      : timestamp_(highp_clock()), cindex_(channel_index), kind_(kind), status_(error),
         transport_(std::move(transport))
   {}
   io_event(int channel_index, int type, std::vector<char> packet, transport_ptr transport)
-      : timestamp_(_highp_clock()), cindex_(channel_index), kind_(type), status_(0),
+      : timestamp_(highp_clock()), cindex_(channel_index), kind_(type), status_(0),
         transport_(std::move(transport)), packet_(std::move(packet))
   {}
   io_event(io_event &&rhs)

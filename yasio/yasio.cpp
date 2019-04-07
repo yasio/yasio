@@ -68,7 +68,8 @@ SOFTWARE.
 #define YASIO_LOG(format, ...)                                                                     \
   do                                                                                               \
   {                                                                                                \
-    auto content = _sfmt(("[yasio][%lld] " format "\r\n"), _highp_clock(), ##__VA_ARGS__);         \
+    auto content =                                                                                 \
+        _sfmt(("[yasio][%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);     \
     YASIO_DEBUG_PRINT(content.c_str());                                                            \
     if (options_.outf_ != -1)                                                                      \
     {                                                                                              \
@@ -82,12 +83,6 @@ namespace yasio
 {
 namespace inet
 {
-// The high precision micro seconds timestamp
-long long _highp_clock()
-{
-  auto duration = highp_clock_t::now().time_since_epoch();
-  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-}
 namespace
 {
 // channel state
@@ -1341,7 +1336,7 @@ u_short io_service::update_dns_queries_state(io_channel *ctx, bool update_name)
     if ((ctx->dns_queries_state_ & YDQSF_QUERIES_NEEDED) &&
         !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
     {
-      auto diff = (_highp_clock() - ctx->dns_queries_timestamp_);
+      auto diff = (highp_clock() - ctx->dns_queries_timestamp_);
       if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY) &&
           diff >= options_.dns_cache_timeout_)
         YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_DIRTY);
@@ -1389,7 +1384,7 @@ void io_service::start_resolve(io_channel *ctx)
     if (error == 0)
     {
       ctx->dns_queries_state_     = YDQS_READY;
-      ctx->dns_queries_timestamp_ = _highp_clock();
+      ctx->dns_queries_timestamp_ = highp_clock();
     }
     else
     {

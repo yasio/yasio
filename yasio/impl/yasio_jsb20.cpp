@@ -232,10 +232,17 @@ SE_BIND_FUNC(jsb_yasio_killTimer)
 
 bool jsb_yasio_highp_clock(se::State &s)
 {
-  s.rval().setNumber(yasio::inet::_highp_clock());
+  s.rval().setNumber(yasio::inet::highp_clock());
   return true;
 }
 SE_BIND_FUNC(jsb_yasio_highp_clock)
+
+bool jsb_yasio_highp_time(se::State &s)
+{
+  s.rval().setNumber(yasio::inet::highp_clock<yasio::inet::system_clock_t>());
+  return true;
+}
+SE_BIND_FUNC(jsb_yasio_highp_time)
 
 static bool seval_to_hostent(const se::Value &v, inet::io_hostent *ret)
 {
@@ -449,15 +456,15 @@ static bool js_yasio_ibstream_read_v(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  int length_field_length = 32; // default is 32bits
+  int length_field_bits = 32; // default is 32bits
   bool raw                = false;
   if (argc >= 1)
-    length_field_length = args[0].toInt32();
+    length_field_bits = args[0].toInt32();
   if (argc >= 2)
     raw = args[1].toBoolean();
 
   yasio::string_view sv;
-  switch (length_field_length)
+  switch (length_field_bits)
   {
     case 8: // 8bits
       sv = cobj->read_v8();
@@ -839,10 +846,10 @@ bool js_yasio_obstream_write_v(se::State &s)
 
   auto sv = seval_to_string_view(args[0]);
 
-  int length_field_length = 32; // default is 32bits
+  int length_field_bits = 32; // default is 32bits
   if (argc >= 2)
-    length_field_length = args[1].toInt32();
-  switch (length_field_length)
+    length_field_bits = args[1].toInt32();
+  switch (length_field_bits)
   {
     case 8: // 8bits
       cobj->write_v8(sv);
@@ -1403,6 +1410,7 @@ bool jsb_register_yasio(se::Object *obj)
   yasio->defineFunction("clearTimeout", _SE(jsb_yasio_killTimer));
   yasio->defineFunction("clearInterval", _SE(jsb_yasio_killTimer));
   yasio->defineFunction("highp_clock", _SE(jsb_yasio_highp_clock));
+  yasio->defineFunction("highp_time", _SE(jsb_yasio_highp_time));
 
   js_register_yasio_ibstream(yasio);
   js_register_yasio_obstream(yasio);

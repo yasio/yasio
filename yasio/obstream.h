@@ -114,7 +114,7 @@ public:
 protected:
   std::vector<char> buffer_;
   std::stack<size_t> offset_stack_;
-}; // namespace purelibclassobstream
+}; // class obstream
 
 template <typename _Nty> inline size_t obstream::write_i(_Nty value)
 {

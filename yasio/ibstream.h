@@ -88,7 +88,7 @@ public:
   
   template <typename _LenT> yasio::string_view read_vx()
   {
-    _LenT n = yasio::endian::ntohv(*(_LenT *)consume(sizeof(n)));
+    _LenT n = read_ix<_LenT>();
 
     if (n > 0)
     {
@@ -110,7 +110,8 @@ protected:
 
 template <typename _Nty> inline void ibstream_view::read_i(_Nty &ov)
 {
-  ov = yasio::endian::ntohv(*((_Nty *)consume(sizeof(_Nty))));
+  memcpy(&ov, consume(sizeof(ov)));
+  ov = yasio::endian::ntohv(ov);
 }
 
 template <> inline void ibstream_view::read_i<float>(float &ov)

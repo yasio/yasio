@@ -17,7 +17,7 @@ proto.begin_encode = function (id)
 end
 
 proto.begin_decode = function(ibs)
-    local len = ibs:read_i32() -- skip length
+    ibs:seek(4, yasio.SEEK_CUR) -- skip length
     local msg = {
         header = {
             command_id = ibs:read_u16(),

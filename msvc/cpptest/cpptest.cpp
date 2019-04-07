@@ -35,6 +35,8 @@ void yasioTest()
 
   yasio::obstream obs;
   obs.push24();
+  obs.write_i(3.141592654);
+  obs.write_i(1.17723f);
   obs.write_i24(16777215);
   obs.write_i24(16777213);
   obs.write_i24(259);
@@ -42,7 +44,9 @@ void yasioTest()
   obs.pop24();
 
   yasio::ibstream_view ibs(obs.data(), obs.length());
-  auto n  = ibs.read_i24();
+  ibs.seek(3, SEEK_CUR);
+  auto r1 = ibs.read_ix<double>();
+  auto f1 = ibs.read_ix<float>();
   auto v1 = ibs.read_i24();
   auto v2 = ibs.read_i24();
   auto v3 = ibs.read_i24();

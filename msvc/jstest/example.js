@@ -68,7 +68,7 @@ function yasioTest() {
       var ibs = event.packet();
 
       var msg = {};
-      ibs.read_i32(); // skip length field
+      ibs.seek(4, yasio.SEEK_CUR); // skip length field
       msg.bval1 = ibs.read_bool();
       msg.bval2 = ibs.read_bool();
       msg.u8val = ibs.read_i8();

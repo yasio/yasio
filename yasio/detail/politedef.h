@@ -10,7 +10,7 @@
 #  define _POLITEDEF_H_
 
 #  ifndef _POLITE_VERSION
-#    define _POLITE_VERSION "1.0.18"
+#    define _POLITE_VERSION "1.0.19"
 #  endif
 
 #  if defined(_MSC_VER)
@@ -132,36 +132,6 @@ static const uint64_t __MAX_UINT64 = SZ(15, EB) + (SZ(1, EB) - 1);
 #    define _towcb(quote) __towcb(quote)
 #  endif /* _towcb */
 
-#  ifndef _POL_RDTSC
-#    define _POL_RDTSC
-#    if defined(__GNUC__)
-#      define _naked_mark
-static __inline int64_t rdtsc(void)
-{
-  int64_t ts;
-  uint32_t ts1, ts2;
-  //__asm__ __volatile__("rdtsc\n\t":"=a"(ts1), "=d"(ts2));
-  ts = ((uint64_t)ts2 << 32) | ((uint64_t)ts1);
-  return ts;
-}
-#    elif !defined(_WIN64) /* win32 */
-#      define _naked_mark __declspec(naked)
-#      if 0
-_naked_mark
-static inline int64_t rdtsc(void)
-{
-    __asm
-    {
-        rdtsc;
-        ret;
-    }
-}
-#      endif
-#    else
-#      define _naked_mark
-#    endif
-#  endif /* _POL_RDTSC_ */
-
 #  ifndef _ISNULLPTR
 #    define _ISNULLPTR
 #    define _IsNull(ptr) (nullptr == (ptr))
@@ -190,19 +160,6 @@ typedef std::string string;
 #    define _GTR(a, b) ((a) > (b))
 #    define _GEQ(a, b) ((a) >= (b))
 #  endif /* _POLITE_STRING */
-
-#  ifndef _POLITE_ALIAS
-#    define _POLITE_ALIAS
-#    define NS_PURELIB_BEGIN                                                                       \
-      namespace purelib                                                                            \
-      {
-#    define NS_PURELIB_END }
-#    define USING_NS_PURELIB using namespace purelib
-
-namespace nx     = ::purelib;
-namespace thelib = ::purelib;
-namespace polite = ::purelib;
-#  endif /* _POLITE_ALIAS */
 
 #  ifndef _POLITE_LOG
 #    define _POLITE_LOG
@@ -246,10 +203,6 @@ namespace polite = ::purelib;
     ~className(void);                                                                              \
                                                                                                    \
   public:
-
-#  if _MSC_VER >= 1700
-#    define _HAS_STD_THREAD 1
-#  endif
 
 #  if !defined(__WORDSIZE)
 #    if defined(_M_X64) || defined(_WIN64) || defined(__LP64__) || defined(_LP64) ||               \

@@ -138,8 +138,8 @@ YASIO_API int luaopen_yasio(lua_State *L)
             service->set_option(opt, static_cast<int>(va[0]));
         }
       },
-      "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "is_open",
-      static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open), "close",
+      "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "get_state",
+      &io_service::get_state, "close",
       sol::overload(static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
                     static_cast<void (io_service::*)(size_t)>(&io_service::close)),
       "write",
@@ -341,8 +341,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch_events", &io_service::dispatch_events)
           .addFunction("open", &io_service::open)
-          .addFunction("is_open",
-                       static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open))
+          .addFunction("get_state", &io_service::get_state)
           .addOverloadedFunctions(
               "close", static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
               static_cast<void (io_service::*)(size_t)>(&io_service::close))

@@ -148,7 +148,7 @@ typedef std::wstring string;
 #    else
 typedef std::string string;
 #    endif
-};       // namespace purelib
+} // namespace purelib
 #  endif /* _POLITE_STRING */
 
 #  ifndef _POLITE_COMPARE

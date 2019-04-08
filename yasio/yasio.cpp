@@ -85,14 +85,6 @@ namespace inet
 {
 namespace
 {
-// channel state
-enum : u_short
-{
-  YCS_CLOSED,
-  YCS_OPENING,
-  YCS_OPENED,
-};
-
 // error code
 enum
 {
@@ -587,13 +579,13 @@ void io_service::close(transport_ptr transport)
   }
 }
 
-bool io_service::is_open(size_t channel_index) const
+int io_service::get_state(size_t channel_index) const
 {
   // Gets channel
   if (channel_index >= channels_.size())
     return false;
   auto ctx = channels_[channel_index];
-  return ctx->state_ == YCS_OPENED;
+  return ctx->state_;
 }
 
 void io_service::reopen(transport_ptr transport)
@@ -1158,8 +1150,8 @@ std::shared_ptr<deadline_timer> io_service::schedule(highp_time_t duration, time
 {
   std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
   timer->expires_from_now(std::chrono::microseconds(duration), repeated);
-  timer->async_wait([this, timer /*!important, hold on by lambda expression */,
-                     cb](bool cancelled) { cb(cancelled); });
+  timer->async_wait(
+      [timer /*!important, hold on by lambda expression */, cb](bool cancelled) { cb(cancelled); });
   return timer;
 }
 
@@ -1459,6 +1451,7 @@ int io_service::__builtin_decode_len(void *ud, int n)
 }
 
 void io_service::interrupt() { interrupter_.interrupt(); }
+
 const char *io_service::strerror(int error)
 {
   switch (error)
@@ -1542,9 +1535,7 @@ void io_service::set_option(int option, ...)
     {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
-      {
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
-      }
     }
     break;
     case YOPT_CHANNEL_REMOTE_HOST:

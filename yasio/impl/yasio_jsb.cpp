@@ -596,7 +596,7 @@ static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_v : Invalid Native Object");
 
   int length_field_bits = 32; // default is 32bits
-  bool raw                = false;
+  bool raw              = false;
   if (argc >= 1)
     length_field_bits = args[0].toInt32();
   if (argc >= 2)
@@ -1625,6 +1625,31 @@ bool js_yasio_io_service_open(JSContext *ctx, uint32_t argc, jsval *vp)
   return false;
 }
 
+bool js_yasio_io_service_get_state(JSContext *ctx, uint32_t argc, jsval *vp)
+{
+  bool ok          = true;
+  io_service *cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t *proxy = jsb_get_js_proxy(obj);
+  cobj              = (io_service *)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_open : Invalid Native Object");
+
+  do
+  {
+    if (argc == 1)
+    {
+      args.rval().set(INT_TO_JSVAL(cobj->get_state(args.get(0).toInt32())));
+      return true;
+    }
+  } while (false);
+
+  JS_ReportError(ctx, "js_yasio_io_service_open : wrong number of arguments");
+  return false;
+}
+
 bool js_yasio_io_service_close(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   bool ok          = true;
@@ -1833,6 +1858,7 @@ void js_register_yasio_io_service(JSContext *ctx, JS::HandleObject global)
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("get_state", js_yasio_io_service_get_state, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("dispatch_events", js_yasio_io_service_dispatch_events, 1,
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),

@@ -139,9 +139,9 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size)
   switch (af)
   {
     case AF_INET:
-      return (inet_ntop4((u_char *)src, dst, size));
+      return (inet_ntop4((const u_char *)src, dst, size));
     case AF_INET6:
-      return (inet_ntop6((u_char *)src, dst, size));
+      return (inet_ntop6((const u_char *)src, dst, size));
     default:
       // __set_errno(EAFNOSUPPORT);
       errno = EAFNOSUPPORT;
@@ -1135,7 +1135,7 @@ int xxsocket::send_n(socket_native_type s, const void *buf, int len, timeval *ti
     // Try to transfer as much of the remaining data as possible.
     // Since the socket is in non-blocking mode, this call will not
     // block.
-    n = xxsocket::send_i(s, (char *)buf + bytes_transferred, len - bytes_transferred, flags);
+    n = xxsocket::send_i(s, (const char *)buf + bytes_transferred, len - bytes_transferred, flags);
     //++send_times;
     // Check for errors.
     if (n <= 0)
@@ -1508,7 +1508,7 @@ struct ws2_32_gc
 };
 
 ws2_32_gc __ws32_lib_gc;
-}; // namespace
+} // namespace
 #endif
 
 #if defined(_MSC_VER)

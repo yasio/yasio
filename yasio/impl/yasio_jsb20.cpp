@@ -457,7 +457,7 @@ static bool js_yasio_ibstream_read_v(se::State &s)
   size_t argc      = args.size();
 
   int length_field_bits = 32; // default is 32bits
-  bool raw                = false;
+  bool raw              = false;
   if (argc >= 1)
     length_field_bits = args[0].toInt32();
   if (argc >= 2)
@@ -1205,6 +1205,27 @@ bool js_yasio_io_service_open(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_io_service_open)
 
+bool js_yasio_io_service_get_state(se::State &s)
+{
+  auto cobj = (io_service *)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto &args = s.args();
+  size_t argc      = args.size();
+
+  do
+  {
+    if (argc == 1)
+    {
+      s.rval().setInt32(cobj->get_state(args[0].toInt32()));
+      return true;
+    }
+  } while (false);
+
+  SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 1);
+  return false;
+}
+SE_BIND_FUNC(js_yasio_io_service_get_state)
+
 bool js_yasio_io_service_close(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
@@ -1380,6 +1401,7 @@ void js_register_yasio_io_service(se::Object *obj)
   DEFINE_IO_SERVICE_FUNC(stop_service);
   DEFINE_IO_SERVICE_FUNC(open);
   DEFINE_IO_SERVICE_FUNC(close);
+  DEFINE_IO_SERVICE_FUNC(get_state);
   DEFINE_IO_SERVICE_FUNC(dispatch_events);
   DEFINE_IO_SERVICE_FUNC(write);
 

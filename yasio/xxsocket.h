@@ -487,7 +487,7 @@ public:
   sockaddr_in6 in6_;
 };
 
-}; // namespace ip
+} // namespace ip
 
 // supported internet protocol flags
 enum : u_short
@@ -988,7 +988,7 @@ inline int xxsocket::get_optval(int level, int optname, T &optval, socklen_t opt
 template <typename T>
 inline int xxsocket::set_optval(socket_native_type s, int level, int optname, const T &optval)
 {
-  return ::setsockopt(s, level, optname, (char *)&optval, sizeof(T));
+  return ::setsockopt(s, level, optname, (const char *)&optval, sizeof(T));
 }
 
 template <typename T>
@@ -1009,7 +1009,7 @@ template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd
   return ::ioctlsocket(s, cmd, &argp);
 }
 
-}; // namespace inet
+} // namespace inet
 
 namespace net = inet;
 }; // namespace yasio

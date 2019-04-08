@@ -122,7 +122,7 @@ template <> inline int32_t ntohv(int32_t value) { return htonl(value); }
 
 template <> inline int64_t ntohv(int64_t value) { return htonll(value); }
 
-}; // namespace endian
+} // namespace endian
 
 namespace bits
 {
@@ -160,9 +160,9 @@ inline unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, u
 
   return ((byteValue & bits_rmask_table[pos]) >> (pos + 1 - bits));
 }
-}; // namespace bits
+} // namespace bits
 
-}; // namespace yasio
+} // namespace yasio
 
 /*
  * Copyright (c) 2012-2019 by HALX99  ALL RIGHTS RESERVED.

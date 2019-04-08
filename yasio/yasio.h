@@ -106,6 +106,14 @@ enum
   YEK_PACKET,
 };
 
+// channel state
+enum : short
+{
+  YCS_CLOSED,
+  YCS_OPENING,
+  YCS_OPENED,
+};
+
 // class fwds
 class a_pdu; // application layer protocol data unit.
 class deadline_timer;
@@ -187,8 +195,8 @@ public:
 
   io_service &service_;
 
-  bool cancelled_;
   bool repeated_;
+  bool cancelled_;
   std::chrono::microseconds duration_;
   std::chrono::time_point<highp_clock_t> expire_time_;
 };
@@ -202,7 +210,7 @@ struct io_base
   int error_ = 0; // socket error(>= -1), application error(< -1)
 
   u_short opmask_ = 0;
-  u_short state_  = 0;
+  short state_  = 0;
 };
 
 class io_channel : public io_base
@@ -379,7 +387,7 @@ public:
   void close(size_t channel_index = 0);
 
   // check whether the channel is open
-  bool is_open(size_t cahnnel_index = 0) const;
+  int get_state(size_t cahnnel_index = 0) const;
 
   void write(transport_ptr transport, std::vector<char> data);
   void write(io_transport *transport, std::vector<char> data);
@@ -477,7 +485,7 @@ private:
   static const char *strerror(int error);
 
 private:
-  state state_;
+  state state_; // The service state
   std::thread worker_;
   std::thread::id worker_id_;
 
@@ -555,7 +563,7 @@ private:
   // The ip stack version supported by local host
   u_short ipsv_ = 0;
 }; // io_service
-}; // namespace inet
-}; /* namespace yasio */
+} // namespace inet
+} /* namespace yasio */
 
 #define myasio yasio::gc::singleton<yasio::inet::io_service>::instance()

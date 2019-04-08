@@ -118,7 +118,7 @@ obstream::obstream(obstream &&right) : buffer_(std::move(right.buffer_)) {}
 
 obstream::~obstream() {}
 
-std::vector<char> obstream::take_buffer() { return std::move(buffer_); };
+std::vector<char> obstream::take_buffer() { return std::move(buffer_); }
 
 obstream &obstream::operator=(const obstream &right)
 {

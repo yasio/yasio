@@ -182,8 +182,133 @@ public:
   std::mutex mutex_;
 };
 
-}; // namespace gc
-}; // namespace yasio
+//////////////////////// allocator /////////////////
+// TEMPLATE CLASS object_pool_allocator, can't used by std::vector, DO NOT use at non-msvc compiler.
+template <class _Ty, size_t _ElemCount = SZ(8, k) / sizeof(_Ty)> class object_pool_allocator
+{ // generic allocator for objects of class _Ty
+public:
+  typedef _Ty value_type;
+
+  typedef value_type *pointer;
+  typedef value_type &reference;
+  typedef const value_type *const_pointer;
+  typedef const value_type &const_reference;
+
+  typedef size_t size_type;
+#  ifdef _WIN32
+  typedef ptrdiff_t difference_type;
+#  else
+  typedef long difference_type;
+#  endif
+
+  template <class _Other> struct rebind
+  { // convert this type to _ALLOCATOR<_Other>
+    typedef object_pool_allocator<_Other> other;
+  };
+
+  pointer address(reference _Val) const
+  { // return address of mutable _Val
+    return ((pointer) & (char &)_Val);
+  }
+
+  const_pointer address(const_reference _Val) const
+  { // return address of nonmutable _Val
+    return ((const_pointer) & (char &)_Val);
+  }
+
+  object_pool_allocator() throw()
+  { // construct default allocator (do nothing)
+  }
+
+  object_pool_allocator(const object_pool_allocator<_Ty> &) throw()
+  { // construct by copying (do nothing)
+  }
+
+  template <class _Other> object_pool_allocator(const object_pool_allocator<_Other> &) throw()
+  { // construct from a related allocator (do nothing)
+  }
+
+  template <class _Other>
+  object_pool_allocator<_Ty> &operator=(const object_pool_allocator<_Other> &)
+  { // assign from a related allocator (do nothing)
+    return (*this);
+  }
+
+  void deallocate(pointer _Ptr, size_type)
+  { // deallocate object at _Ptr, ignore size
+    _Mempool.release(_Ptr);
+  }
+
+  pointer allocate(size_type count)
+  { // allocate array of _Count elements
+    assert(count == 1);
+    return static_cast<pointer>(_Mempool.get());
+  }
+
+  pointer allocate(size_type count, const void *)
+  { // allocate array of _Count elements, not support, such as std::vector
+    return allocate(count);
+  }
+
+  void construct(_Ty *_Ptr)
+  { // default construct object at _Ptr
+    ::new ((void *)_Ptr) _Ty();
+  }
+
+  void construct(pointer _Ptr, const _Ty &_Val)
+  { // construct object at _Ptr with value _Val
+    new (_Ptr) _Ty(_Val);
+  }
+
+  void construct(pointer _Ptr, _Ty &&_Val)
+  { // construct object at _Ptr with value _Val
+    new ((void *)_Ptr) _Ty(std::forward<_Ty>(_Val));
+  }
+
+  template <class _Other> void construct(pointer _Ptr, _Other &&_Val)
+  { // construct object at _Ptr with value _Val
+    new ((void *)_Ptr) _Ty(std::forward<_Other>(_Val));
+  }
+
+  template <class _Objty, class... _Types> void construct(_Objty *_Ptr, _Types &&... _Args)
+  { // construct _Objty(_Types...) at _Ptr
+    ::new ((void *)_Ptr) _Objty(std::forward<_Types>(_Args)...);
+  }
+
+  template <class _Uty> void destroy(_Uty *_Ptr)
+  { // destroy object at _Ptr, do nothing
+    _Ptr->~_Uty();
+  }
+
+  size_type max_size() const throw()
+  { // estimate maximum array size
+    size_type _Count = (size_type)(-1) / sizeof(_Ty);
+    return (0 < _Count ? _Count : 1);
+  }
+
+  // private:
+  static object_pool<_Ty, void> _Mempool;
+};
+
+template <class _Ty, class _Other>
+inline bool operator==(const object_pool_allocator<_Ty> &,
+                       const object_pool_allocator<_Other> &) throw()
+{ // test for allocator equality
+  return (true);
+}
+
+template <class _Ty, class _Other>
+inline bool operator!=(const object_pool_allocator<_Ty> &_Left,
+                       const object_pool_allocator<_Other> &_Right) throw()
+{ // test for allocator inequality
+  return (!(_Left == _Right));
+}
+
+template <class _Ty, size_t _ElemCount>
+object_pool<_Ty, void> object_pool_allocator<_Ty, _ElemCount>::_Mempool(_ElemCount);
+
+} // namespace gc
+} // namespace yasio
 
 #  if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
 #    include "object_pool.cpp"
@@ -197,5 +322,5 @@ public:
 /*
  * Copyright (c) 2012-2019 by HALX99,  ALL RIGHTS RESERVED.
  * Consult your license regarding permissions and restrictions.
- * V1.3:2018
+ * V1.3:2019
  **/

@@ -1,0 +1,15 @@
+language: cpp
+os:
+  - linux
+  - osx
+compiler:
+  - clang
+  - gcc
+
+matrix:
+  exclude:
+    - os: osx
+      compiler: gcc
+
+script:
+  - make cxxstd=c++11 config=release -j2

@@ -2,7 +2,7 @@ config=release
 LIB_NAME?=yasio
 SHARE_NAME?=lib$(LIB_NAME).so
 #-Werror
-CXXFLAGS=-g -Wall -Wextra -pedantic -Wundef -Wshadow -Wcast-align -Wcast-qual -Wold-style-cast -Wdouble-promotion -std=c++11 -I.
+CXXFLAGS=-g -Wall -Wextra -pedantic -Wundef -Wshadow -Wcast-align -Wcast-qual -W-old-style-cast -Wdouble-promotion -std=c++11 -I.
 
 ifeq ($(config),release)
 	CXXFLAGS+=-O3 -DNDEBUG

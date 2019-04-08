@@ -27,6 +27,7 @@ SOFTWARE.
 */
 #ifndef YASIO__IBSTREAM_H
 #define YASIO__IBSTREAM_H
+#include <stddef.h>
 #include <string>
 #include <sstream>
 #include <exception>

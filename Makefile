@@ -1,7 +1,6 @@
 config=release
-LIB_NAME?= yasio
-STATIC_NAME ?= lib$(LIB_NAME).a
-SHARE_NAME  ?= lib$(LIB_NAME).so
+LIB_NAME?=yasio
+SHARE_NAME?=lib$(LIB_NAME).so
 #-Werror
 CXXFLAGS=-g -Wall -Wextra -pedantic -Wundef -Wshadow -Wcast-align -Wcast-qual -Wold-style-cast -Wdouble-promotion -std=c++11 -I.
 
@@ -18,7 +17,7 @@ SOURCE := yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.c
 OBJS   := $(patsubst %.cpp,%.o,$(SOURCE))
 
 $(STATIC_NAME):$(OBJS)
-	$(AR) -cr  $(STATIC_NAME)
+	$(AR) -r $(STATIC_NAME)
 
 $(SHARE_NAME):$(OBJS)
 	$(CXX) $(CXXFLAGS) -shared -fpic -o $(SHARE_NAME) $(SOURCE)

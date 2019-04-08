@@ -213,7 +213,7 @@ public:
 
   const_pointer address(const_reference _Val) const
   { // return address of nonmutable _Val
-    return ((const_pointer) & (char &)_Val);
+    return ((const_pointer) & (const char &)_Val);
   }
 
   object_pool_allocator() throw()
@@ -242,6 +242,7 @@ public:
   pointer allocate(size_type count)
   { // allocate array of _Count elements
     assert(count == 1);
+    (void)count;
     return static_cast<pointer>(_Mempool.get());
   }
 

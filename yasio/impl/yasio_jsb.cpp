@@ -1625,7 +1625,7 @@ bool js_yasio_io_service_open(JSContext *ctx, uint32_t argc, jsval *vp)
   return false;
 }
 
-bool js_yasio_io_service_get_state(JSContext *ctx, uint32_t argc, jsval *vp)
+bool js_yasio_io_service_is_open(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   bool ok          = true;
   io_service *cobj = nullptr;
@@ -1635,18 +1635,29 @@ bool js_yasio_io_service_get_state(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (io_service *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_open : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_is_open : Invalid Native Object");
 
   do
   {
     if (argc == 1)
     {
-      args.rval().set(INT_TO_JSVAL(cobj->get_state(args.get(0).toInt32())));
+      bool opened = false;
+      auto arg0   = args.get(0);
+      if (arg0.isInt32())
+      {
+        opened = cobj->is_open(arg0.toInt32());
+      }
+      else if (arg0.isObject())
+      {
+        auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
+        opened         = cobj->is_open(transport);
+      }
+      args.rval().set(BOOLEAN_TO_JSVAL(opened));
       return true;
     }
   } while (false);
 
-  JS_ReportError(ctx, "js_yasio_io_service_open : wrong number of arguments");
+  JS_ReportError(ctx, "js_yasio_io_service_is_open : wrong number of arguments");
   return false;
 }
 
@@ -1858,7 +1869,7 @@ void js_register_yasio_io_service(JSContext *ctx, JS::HandleObject global)
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("get_state", js_yasio_io_service_get_state, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("dispatch_events", js_yasio_io_service_dispatch_events, 1,
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
@@ -1905,29 +1916,29 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
 #define YASIO_SET_INT_PROP(name, value)                                                            \
   __jsvalIntVal = INT_TO_JSVAL(value);                                                             \
   JS_SetProperty(ctx, yasio, name, __jsvalIntVal)
-
-  YASIO_SET_INT_PROP("YCM_TCP_CLIENT", YCM_TCP_CLIENT);
-  YASIO_SET_INT_PROP("YCM_TCP_SERVER", YCM_TCP_SERVER);
-  YASIO_SET_INT_PROP("YCM_UDP_CLIENT", YCM_UDP_CLIENT);
-  YASIO_SET_INT_PROP("YCM_UDP_SERVER", YCM_UDP_SERVER);
-  YASIO_SET_INT_PROP("YOPT_CONNECT_TIMEOUT", YOPT_CONNECT_TIMEOUT);
-  YASIO_SET_INT_PROP("YOPT_SEND_TIMEOUT", YOPT_CONNECT_TIMEOUT);
-  YASIO_SET_INT_PROP("YOPT_RECONNECT_TIMEOUT", YOPT_RECONNECT_TIMEOUT);
-  YASIO_SET_INT_PROP("YOPT_DNS_CACHE_TIMEOUT", YOPT_DNS_CACHE_TIMEOUT);
-  YASIO_SET_INT_PROP("YOPT_DEFER_EVENT", YOPT_DEFER_EVENT);
-  YASIO_SET_INT_PROP("YOPT_TCP_KEEPALIVE", YOPT_TCP_KEEPALIVE);
-  YASIO_SET_INT_PROP("YOPT_RESOLV_FUNCTION", YOPT_RESOLV_FUNCTION);
-  YASIO_SET_INT_PROP("YOPT_LOG_FILE", YOPT_LOG_FILE);
-  YASIO_SET_INT_PROP("YOPT_LFBFD_PARAMS", YOPT_LFBFD_PARAMS);
-  YASIO_SET_INT_PROP("YOPT_IO_EVENT_CALLBACK", YOPT_IO_EVENT_CALLBACK);
-  YASIO_SET_INT_PROP("YOPT_CHANNEL_LOCAL_PORT", YOPT_CHANNEL_LOCAL_PORT);
-  YASIO_SET_INT_PROP("YOPT_CHANNEL_REMOTE_HOST", YOPT_CHANNEL_REMOTE_HOST);
-  YASIO_SET_INT_PROP("YOPT_CHANNEL_REMOTE_PORT", YOPT_CHANNEL_REMOTE_PORT);
-  YASIO_SET_INT_PROP("YOPT_CHANNEL_REMOTE_ENDPOINT", YOPT_CHANNEL_REMOTE_ENDPOINT);
-  YASIO_SET_INT_PROP("YEK_CONNECT_RESPONSE", YEK_CONNECT_RESPONSE);
-  YASIO_SET_INT_PROP("YEK_CONNECTION_LOST", YEK_CONNECTION_LOST);
-  YASIO_SET_INT_PROP("YEK_PACKET", YEK_PACKET);
-  YASIO_SET_INT_PROP("SEEK_CUR", SEEK_CUR);
-  YASIO_SET_INT_PROP("SEEK_SET", SEEK_SET);
-  YASIO_SET_INT_PROP("SEEK_END", SEEK_END);
+#define YASIO_EXPORT_ENUM(v) YASIO_SET_INT_PROP(#v, v)
+  YASIO_EXPORT_ENUM(YCM_TCP_CLIENT);
+  YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
+  YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
+  YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
+  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_RECONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
+  YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
+  YASIO_EXPORT_ENUM(YOPT_RESOLV_FUNCTION);
+  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
+  YASIO_EXPORT_ENUM(YOPT_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CALLBACK);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
+  YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
+  YASIO_EXPORT_ENUM(YEK_PACKET);
+  YASIO_EXPORT_ENUM(SEEK_CUR);
+  YASIO_EXPORT_ENUM(SEEK_SET);
+  YASIO_EXPORT_ENUM(SEEK_END);
 }

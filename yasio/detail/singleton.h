@@ -141,8 +141,8 @@ template <typename _Ty> std::mutex singleton<_Ty, true>::__mutex__;
 
 // TEMPLATE alias
 template <typename _Ty> using delayed = singleton<_Ty, true>;
-}; // namespace gc
-}; // namespace yasio
+} // namespace gc
+} // namespace yasio
 
 #endif
 

@@ -31,8 +31,8 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  define YASIO__STRING_VIEW_HPP
 #  include <string>
 
-#  define _to_literal(s) #  s
-#  define to_literal(s) _to_literal(s)
+#  define __YASIO_SYM2LITERAL(s) #  s
+#  define YASIO_SYM2LITERAL(s) __YASIO_SYM2LITERAL(s)
 
 #  if (defined(__cplusplus) && __cplusplus == 201703L) ||                                          \
       (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                     \

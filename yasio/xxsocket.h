@@ -1012,7 +1012,7 @@ template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd
 } // namespace inet
 
 namespace net = inet;
-}; // namespace yasio
+} // namespace yasio
 
 #if defined(_MSC_VER)
 #  pragma warning(pop)

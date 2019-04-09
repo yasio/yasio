@@ -106,14 +106,6 @@ enum
   YEK_PACKET,
 };
 
-// channel state
-enum : short
-{
-  YCS_CLOSED,
-  YCS_OPENING,
-  YCS_OPENED,
-};
-
 // class fwds
 class a_pdu; // application layer protocol data unit.
 class deadline_timer;
@@ -210,7 +202,7 @@ struct io_base
   int error_ = 0; // socket error(>= -1), application error(< -1)
 
   u_short opmask_ = 0;
-  short state_  = 0;
+  short state_    = 0;
 };
 
 class io_channel : public io_base
@@ -383,14 +375,16 @@ public:
   // close transport
   void close(transport_ptr);
 
-  // close server
+  // close channel
   void close(size_t channel_index = 0);
 
   // check whether the channel is open
-  int get_state(size_t cahnnel_index = 0) const;
+  bool is_open(size_t cahnnel_index = 0) const;
 
-  void write(transport_ptr transport, std::vector<char> data);
-  void write(io_transport *transport, std::vector<char> data);
+  // check whether the transport is open
+  bool is_open(transport_ptr) const;
+
+  int write(transport_ptr transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
   std::shared_ptr<deadline_timer> schedule(highp_time_t duration, timer_cb_t,

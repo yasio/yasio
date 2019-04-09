@@ -125,7 +125,7 @@ private:
                                                    ELEMENT_COUNT);                                 \
       return s_pool;                                                                               \
     }
-}; // namespace detail
+} // namespace detail
 
 template <typename _Ty, typename _Mutex = void> class object_pool : public detail::object_pool
 {

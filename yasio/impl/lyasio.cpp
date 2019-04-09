@@ -211,7 +211,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums
-#  define YASIO_EXPORT_ENUM(v) lyasio[YASIO_SYM2LITERAL(v)] = v
+#  define YASIO_EXPORT_ENUM(v) lyasio[#  v] = v
   YASIO_EXPORT_ENUM(YCM_TCP_CLIENT);
   YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
@@ -485,7 +485,7 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums
-#  define YASIO_EXPORT_ENUM(v) lyasio[YASIO_SYM2LITERAL(v)] = v
+#  define YASIO_EXPORT_ENUM(v) lyasio[#  v] = v
   YASIO_EXPORT_ENUM(YCM_TCP_CLIENT);
   YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);

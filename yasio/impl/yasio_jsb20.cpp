@@ -1205,7 +1205,7 @@ bool js_yasio_io_service_open(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_io_service_open)
 
-bool js_yasio_io_service_get_state(se::State &s)
+bool js_yasio_io_service_is_open(se::State &s)
 {
   auto cobj = (io_service *)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -1216,7 +1216,20 @@ bool js_yasio_io_service_get_state(se::State &s)
   {
     if (argc == 1)
     {
-      s.rval().setInt32(cobj->get_state(args[0].toInt32()));
+      bool opened = false;
+      auto &arg0  = args[0];
+      if (arg0.isNumber())
+      {
+        opened = cobj->is_open(arg0.toInt32());
+      }
+      else if (arg0.isObject())
+      {
+        transport_ptr *transport = nullptr;
+        seval_to_native_ptr<transport_ptr *>(arg0, &transport);
+        if (transport != nullptr)
+          opened = cobj->is_open(*transport);
+      }
+      s.rval().setBoolean(opened);
       return true;
     }
   } while (false);
@@ -1224,7 +1237,7 @@ bool js_yasio_io_service_get_state(se::State &s)
   SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 1);
   return false;
 }
-SE_BIND_FUNC(js_yasio_io_service_get_state)
+SE_BIND_FUNC(js_yasio_io_service_is_open)
 
 bool js_yasio_io_service_close(se::State &s)
 {
@@ -1401,7 +1414,7 @@ void js_register_yasio_io_service(se::Object *obj)
   DEFINE_IO_SERVICE_FUNC(stop_service);
   DEFINE_IO_SERVICE_FUNC(open);
   DEFINE_IO_SERVICE_FUNC(close);
-  DEFINE_IO_SERVICE_FUNC(get_state);
+  DEFINE_IO_SERVICE_FUNC(is_open);
   DEFINE_IO_SERVICE_FUNC(dispatch_events);
   DEFINE_IO_SERVICE_FUNC(write);
 
@@ -1467,9 +1480,6 @@ bool jsb_register_yasio(se::Object *obj)
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);
-  YASIO_EXPORT_ENUM(YCS_CLOSED);
-  YASIO_EXPORT_ENUM(YCS_OPENING);
-  YASIO_EXPORT_ENUM(YCS_OPENED);
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);

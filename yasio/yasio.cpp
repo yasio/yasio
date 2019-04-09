@@ -122,6 +122,14 @@ enum : u_short
   YDQSF_QUERIES_NEEDED = 1 << 8
 };
 
+// channel state
+enum : short
+{
+  YCS_CLOSED,
+  YCS_OPENING,
+  YCS_OPENED,
+};
+
 #define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
 #define YDQS_SET_STATE(what, value) (what = (what & 0xff00) | value)
 #define YDQS_GET_STATE(what) (what & 0x00ff)
@@ -579,14 +587,16 @@ void io_service::close(transport_ptr transport)
   }
 }
 
-int io_service::get_state(size_t channel_index) const
+bool io_service::is_open(size_t channel_index) const
 {
   // Gets channel
   if (channel_index >= channels_.size())
     return false;
   auto ctx = channels_[channel_index];
-  return ctx->state_;
+  return ctx->state_ == YCS_OPENED;
 }
+
+bool io_service::is_open(transport_ptr transport) const { return transport->state_ == YCS_OPENED; }
 
 void io_service::reopen(transport_ptr transport)
 {
@@ -693,11 +703,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 
-void io_service::write(transport_ptr transport, std::vector<char> data)
-{
-  this->write(transport.get(), std::move(data));
-}
-void io_service::write(io_transport *transport, std::vector<char> data)
+int io_service::write(transport_ptr transport, std::vector<char> data)
 {
   if (transport && transport->socket_->is_open())
   {
@@ -708,9 +714,14 @@ void io_service::write(io_transport *transport, std::vector<char> data)
     transport->send_queue_mtx_.unlock();
 
     this->interrupt();
+
+    return data.size();
   }
   else
-    YASIO_LOG("[transport: %p] send failed, the connection not ok!", transport);
+  {
+    YASIO_LOG("[transport: %p] send failed, the connection not ok!", transport.get());
+    return -1;
+  }
 }
 void io_service::handle_event(event_ptr event)
 {

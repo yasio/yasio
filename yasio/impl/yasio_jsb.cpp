@@ -1625,7 +1625,7 @@ bool js_yasio_io_service_open(JSContext *ctx, uint32_t argc, jsval *vp)
   return false;
 }
 
-bool js_yasio_io_service_get_state(JSContext *ctx, uint32_t argc, jsval *vp)
+bool js_yasio_io_service_is_open(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   bool ok          = true;
   io_service *cobj = nullptr;
@@ -1635,18 +1635,29 @@ bool js_yasio_io_service_get_state(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (io_service *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_open : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_is_open : Invalid Native Object");
 
   do
   {
     if (argc == 1)
     {
-      args.rval().set(INT_TO_JSVAL(cobj->get_state(args.get(0).toInt32())));
+      bool opened = false;
+      auto arg0   = args.get(0);
+      if (arg0.isInt32())
+      {
+        opened = cobj->is_open(arg0.toInt32());
+      }
+      else if (arg0.isObject())
+      {
+        auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
+        opened         = cobj->is_open(transport);
+      }
+      args.rval().set(BOOLEAN_TO_JSVAL(opened));
       return true;
     }
   } while (false);
 
-  JS_ReportError(ctx, "js_yasio_io_service_open : wrong number of arguments");
+  JS_ReportError(ctx, "js_yasio_io_service_is_open : wrong number of arguments");
   return false;
 }
 
@@ -1858,7 +1869,7 @@ void js_register_yasio_io_service(JSContext *ctx, JS::HandleObject global)
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("get_state", js_yasio_io_service_get_state, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("dispatch_events", js_yasio_io_service_dispatch_events, 1,
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
@@ -1927,9 +1938,6 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);
-  YASIO_EXPORT_ENUM(YCS_CLOSED);
-  YASIO_EXPORT_ENUM(YCS_OPENING);
-  YASIO_EXPORT_ENUM(YCS_OPENED);
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);

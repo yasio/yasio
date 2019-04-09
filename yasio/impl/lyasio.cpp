@@ -134,17 +134,19 @@ YASIO_API int luaopen_yasio(lua_State *L)
             service->set_option(opt, static_cast<int>(va[0]));
         }
       },
-      "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "get_state",
-      &io_service::get_state, "close",
+      "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "is_open",
+      sol::overload(static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
+                    static_cast<bool (io_service::*)(transport_ptr) const>(&io_service::is_open)),
+      "close",
       sol::overload(static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
                     static_cast<void (io_service::*)(size_t)>(&io_service::close)),
       "write",
       sol::overload(
           [](io_service *service, transport_ptr transport, yasio::string_view s) {
-            service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
+            return service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
           },
           [](io_service *service, transport_ptr transport, yasio::obstream *obs) {
-            service->write(transport, obs->take_buffer());
+            return service->write(transport, obs->take_buffer());
           }));
 
   // ##-- obstream
@@ -233,9 +235,6 @@ YASIO_API int luaopen_yasio(lua_State *L)
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);
-  YASIO_EXPORT_ENUM(YCS_CLOSED);
-  YASIO_EXPORT_ENUM(YCS_OPENING);
-  YASIO_EXPORT_ENUM(YCS_OPENED);
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);
@@ -341,16 +340,18 @@ YASIO_API int luaopen_yasio(lua_State *L)
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch_events", &io_service::dispatch_events)
           .addFunction("open", &io_service::open)
-          .addFunction("get_state", &io_service::get_state)
+          .addOverloadedFunctions(
+              "is_open", static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
+              static_cast<bool (io_service::*)(transport_ptr) const>(&io_service::is_open))
           .addOverloadedFunctions(
               "close", static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
               "write",
-              static_cast<void (io_service::*)(transport_ptr transport, std::vector<char> data)>(
+              static_cast<int (io_service::*)(transport_ptr transport, std::vector<char> data)>(
                   &io_service::write),
               [](io_service *service, transport_ptr transport, yasio::obstream *obs) {
-                service->write(transport, obs->take_buffer());
+                return service->write(transport, obs->take_buffer());
               })
           .addStaticFunction("set_option", [](io_service *service, int opt,
                                               kaguya::VariadicArgType args) {
@@ -507,9 +508,6 @@ YASIO_API int luaopen_yasio(lua_State *L)
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);
-  YASIO_EXPORT_ENUM(YCS_CLOSED);
-  YASIO_EXPORT_ENUM(YCS_OPENING);
-  YASIO_EXPORT_ENUM(YCS_OPENED);
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);

@@ -2,10 +2,16 @@ config=release
 LIB_NAME?=yasio
 SHARE_NAME?=lib$(LIB_NAME).so
 #-Werror
-CXXFLAGS=-g -Wall -Wno-gnu-zero-variadic-macro-arguments -Wno-zero-length-array -Wextra -pedantic -Wundef -Wshadow -Wcast-align -Wcast-qual -Wno-old-style-cast -Wdouble-promotion -std=c++11 -I.
+CXXFLAGS=-g -Wall -Wno-unused-result -Wextra -pedantic -Wundef -Wshadow -Wcast-align -Wcast-qual -Wno-old-style-cast -Wdouble-promotion -std=c++11 -I.
+
+ifneq ($(CXX),gcc)
+	CXXFLAGS+=-Wno-gnu-zero-variadic-macro-arguments -Wno-zero-length-array
+endif
 
 ifeq ($(config),release)
 	CXXFLAGS+=-O3 -DNDEBUG
+else
+	CXXFLAGS+=-g
 endif
 
 all:$(STATIC_NAME) $(SHARE_NAME)

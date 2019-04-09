@@ -476,7 +476,7 @@ static int inet_pton6(const char *src, u_char *dst)
 } // namespace compat
 } // namespace ip
 } // namespace inet
-}; // namespace yasio
+} // namespace yasio
 
 static int getipsv_internal(void)
 {
@@ -1105,8 +1105,8 @@ int xxsocket::send(const void *buf, int len, int flags) const
   int n                 = 0;
   do
   {
-    bytes_transferred +=
-        (n = ::send(this->fd, (const char *)buf + bytes_transferred, len - bytes_transferred, flags));
+    bytes_transferred += (n = ::send(this->fd, (const char *)buf + bytes_transferred,
+                                     len - bytes_transferred, flags));
   } while (bytes_transferred < len && n > 0);
   return bytes_transferred;
 }

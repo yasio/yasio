@@ -236,6 +236,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
   lyasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
   lyasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
+  lyasio["YCS_CLOSED"]                   = YCS_CLOSED;
+  lyasio["YCS_OPENING"]                  = YCS_OPENING;
+  lyasio["YCS_OPENED"]                   = YCS_OPENED;
   lyasio["SEEK_CUR"]                     = SEEK_CUR;
   lyasio["SEEK_SET"]                     = SEEK_SET;
   lyasio["SEEK_END"]                     = SEEK_END;
@@ -506,6 +509,9 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
   lyasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
   lyasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
+  lyasio["YCS_CLOSED"]                   = YCS_CLOSED;
+  lyasio["YCS_OPENING"]                  = YCS_OPENING;
+  lyasio["YCS_OPENED"]                   = YCS_OPENED;
   lyasio["SEEK_CUR"]                     = SEEK_CUR;
   lyasio["SEEK_SET"]                     = SEEK_SET;
   lyasio["SEEK_END"]                     = SEEK_END;

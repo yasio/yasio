@@ -4,19 +4,15 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
-
 Copyright (c) 2012-2019 halx99
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -215,33 +211,34 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums
-  lyasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
-  lyasio["YCM_TCP_SERVER"]               = YCM_TCP_SERVER;
-  lyasio["YCM_UDP_CLIENT"]               = YCM_UDP_CLIENT;
-  lyasio["YCM_UDP_SERVER"]               = YCM_UDP_SERVER;
-  lyasio["YEK_CONNECT_RESPONSE"]         = YEK_CONNECT_RESPONSE;
-  lyasio["YEK_CONNECTION_LOST"]          = YEK_CONNECTION_LOST;
-  lyasio["YEK_PACKET"]                   = YEK_PACKET;
-  lyasio["YOPT_CONNECT_TIMEOUT"]         = YOPT_CONNECT_TIMEOUT;
-  lyasio["YOPT_SEND_TIMEOUT"]            = YOPT_CONNECT_TIMEOUT;
-  lyasio["YOPT_RECONNECT_TIMEOUT"]       = YOPT_RECONNECT_TIMEOUT;
-  lyasio["YOPT_DNS_CACHE_TIMEOUT"]       = YOPT_DNS_CACHE_TIMEOUT;
-  lyasio["YOPT_DEFER_EVENT"]             = YOPT_DEFER_EVENT;
-  lyasio["YOPT_TCP_KEEPALIVE"]           = YOPT_TCP_KEEPALIVE;
-  lyasio["YOPT_RESOLV_FUNCTION"]         = YOPT_RESOLV_FUNCTION;
-  lyasio["YOPT_LOG_FILE"]                = YOPT_LOG_FILE;
-  lyasio["YOPT_LFBFD_PARAMS"]            = YOPT_LFBFD_PARAMS;
-  lyasio["YOPT_IO_EVENT_CALLBACK"]       = YOPT_IO_EVENT_CALLBACK;
-  lyasio["YOPT_CHANNEL_LOCAL_PORT"]      = YOPT_CHANNEL_LOCAL_PORT;
-  lyasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
-  lyasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
-  lyasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
-  lyasio["YCS_CLOSED"]                   = YCS_CLOSED;
-  lyasio["YCS_OPENING"]                  = YCS_OPENING;
-  lyasio["YCS_OPENED"]                   = YCS_OPENED;
-  lyasio["SEEK_CUR"]                     = SEEK_CUR;
-  lyasio["SEEK_SET"]                     = SEEK_SET;
-  lyasio["SEEK_END"]                     = SEEK_END;
+#  define YASIO_EXPORT_ENUM(v) lyasio[YASIO_SYM2LITERAL(v)] = v
+  YASIO_EXPORT_ENUM(YCM_TCP_CLIENT);
+  YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
+  YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
+  YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
+  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_RECONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
+  YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
+  YASIO_EXPORT_ENUM(YOPT_RESOLV_FUNCTION);
+  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
+  YASIO_EXPORT_ENUM(YOPT_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CALLBACK);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
+  YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
+  YASIO_EXPORT_ENUM(YEK_PACKET);
+  YASIO_EXPORT_ENUM(YCS_CLOSED);
+  YASIO_EXPORT_ENUM(YCS_OPENING);
+  YASIO_EXPORT_ENUM(YCS_OPENED);
+  YASIO_EXPORT_ENUM(SEEK_CUR);
+  YASIO_EXPORT_ENUM(SEEK_SET);
+  YASIO_EXPORT_ENUM(SEEK_END);
 
   return lyasio.push(); /* return 'yasio' table */
 }
@@ -488,33 +485,34 @@ YASIO_API int luaopen_yasio(lua_State *L)
   lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums
-  lyasio["YCM_TCP_CLIENT"]               = YCM_TCP_CLIENT;
-  lyasio["YCM_TCP_SERVER"]               = YCM_TCP_SERVER;
-  lyasio["YCM_UDP_CLIENT"]               = YCM_UDP_CLIENT;
-  lyasio["YCM_UDP_SERVER"]               = YCM_UDP_SERVER;
-  lyasio["YEK_CONNECT_RESPONSE"]         = YEK_CONNECT_RESPONSE;
-  lyasio["YEK_CONNECTION_LOST"]          = YEK_CONNECTION_LOST;
-  lyasio["YEK_PACKET"]                   = YEK_PACKET;
-  lyasio["YOPT_CONNECT_TIMEOUT"]         = YOPT_CONNECT_TIMEOUT;
-  lyasio["YOPT_SEND_TIMEOUT"]            = YOPT_CONNECT_TIMEOUT;
-  lyasio["YOPT_RECONNECT_TIMEOUT"]       = YOPT_RECONNECT_TIMEOUT;
-  lyasio["YOPT_DNS_CACHE_TIMEOUT"]       = YOPT_DNS_CACHE_TIMEOUT;
-  lyasio["YOPT_DEFER_EVENT"]             = YOPT_DEFER_EVENT;
-  lyasio["YOPT_TCP_KEEPALIVE"]           = YOPT_TCP_KEEPALIVE;
-  lyasio["YOPT_RESOLV_FUNCTION"]         = YOPT_RESOLV_FUNCTION;
-  lyasio["YOPT_LOG_FILE"]                = YOPT_LOG_FILE;
-  lyasio["YOPT_LFBFD_PARAMS"]            = YOPT_LFBFD_PARAMS;
-  lyasio["YOPT_IO_EVENT_CALLBACK"]       = YOPT_IO_EVENT_CALLBACK;
-  lyasio["YOPT_CHANNEL_LOCAL_PORT"]      = YOPT_CHANNEL_LOCAL_PORT;
-  lyasio["YOPT_CHANNEL_REMOTE_HOST"]     = YOPT_CHANNEL_REMOTE_HOST;
-  lyasio["YOPT_CHANNEL_REMOTE_PORT"]     = YOPT_CHANNEL_REMOTE_PORT;
-  lyasio["YOPT_CHANNEL_REMOTE_ENDPOINT"] = YOPT_CHANNEL_REMOTE_ENDPOINT;
-  lyasio["YCS_CLOSED"]                   = YCS_CLOSED;
-  lyasio["YCS_OPENING"]                  = YCS_OPENING;
-  lyasio["YCS_OPENED"]                   = YCS_OPENED;
-  lyasio["SEEK_CUR"]                     = SEEK_CUR;
-  lyasio["SEEK_SET"]                     = SEEK_SET;
-  lyasio["SEEK_END"]                     = SEEK_END;
+#  define YASIO_EXPORT_ENUM(v) lyasio[YASIO_SYM2LITERAL(v)] = v
+  YASIO_EXPORT_ENUM(YCM_TCP_CLIENT);
+  YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
+  YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
+  YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
+  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_RECONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
+  YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
+  YASIO_EXPORT_ENUM(YOPT_RESOLV_FUNCTION);
+  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
+  YASIO_EXPORT_ENUM(YOPT_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CALLBACK);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
+  YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
+  YASIO_EXPORT_ENUM(YEK_PACKET);
+  YASIO_EXPORT_ENUM(YCS_CLOSED);
+  YASIO_EXPORT_ENUM(YCS_OPENING);
+  YASIO_EXPORT_ENUM(YCS_OPENED);
+  YASIO_EXPORT_ENUM(SEEK_CUR);
+  YASIO_EXPORT_ENUM(SEEK_SET);
+  YASIO_EXPORT_ENUM(SEEK_END);
 
   return lyasio.push(); /* return 'yasio' table */
 }

@@ -87,32 +87,15 @@ client:start_service(hostent, function(event)
     end)
 client:open(0, yasio.YCM_TCP_CLIENT)
 
--- httpclient
-local httpclient = io_service.new()
-hostent.host = "ip138.com"
-hostent.port = 80
-httpclient:start_service(hostent, function(event)
-        local t = event:kind()
-        if t == yasio.YEK_PACKET then
-            local ibs = event:packet()
-            print(string.format('receve data from server: %s', ibs:to_string()))
+-- httpclient 
+local http_client = require 'yasio_ext.http_client'
+http_client:sendHttpGetRequest('http://ip138.com/index.htm', function(respData)
+    print(respData)
+end)
 
-        elseif(t == yasio.YEK_CONNECT_RESPONSE) then -- connect responseType
-            if(event:status() == 0) then
-                local transport = event:transport()
-                local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
-                httpclient:write(transport, requestData)
-            else
-                print("connect server failed!")
-            end
-        elseif(t == yasio.YEK_CONNECTION_LOST) then -- connection lost event
-            print("The http connection is lost!")
-            stopFlag = stopFlag + 1
-        end
-    end)
-httpclient:set_option(yasio.YOPT_LFBFD_PARAMS, 65535, -1, 0, 0)
-httpclient:set_option(yasio.YOPT_CHANNEL_LOCAL_PORT, 0, 36253)
-httpclient:open(0, yasio.YCM_TCP_CLIENT)    
+http_client:sendHttpGetRequest('http://ip138.com/index.htm', function(respData)
+    print(respData)
+end)
 
 local elapsedTime = 0
 local partial2Sent = false
@@ -120,7 +103,7 @@ local partial2Sent = false
 local function yasio_update(dt)
     server:dispatch_events(128)
     client:dispatch_events(128)
-    httpclient:dispatch_events(128)
+    http_client:update()
     elapsedTime = elapsedTime + dt
     if elapsedTime > 6 and not partial2Sent then
         partial2Sent = true

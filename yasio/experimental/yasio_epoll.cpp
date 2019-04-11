@@ -30,7 +30,7 @@ SOFTWARE.
 */
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
-// EPOLLET, EPOLLLT, yasio use EPOLLET mode
+// EPOLLET, EPOLLLT, yasio use EPOLLET mode 
 #include "yasio_epoll.h"
 #include <limits>
 #include <stdarg.h>

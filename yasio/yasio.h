@@ -454,7 +454,7 @@ private:
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   // The op mask will be cleared, the state will be set CLOSED
-  bool do_close(io_base *ctx);
+  bool cleanup_io(io_base *ctx);
 
   void handle_close(transport_ptr);
   void handle_event(event_ptr event);
@@ -465,6 +465,7 @@ private:
   io_channel *new_channel(const io_hostent &ep);
   // Clear all channels after service exit.
   void clear_channels(); // destroy all channels
+  void clear_transports();
   bool close_internal(io_channel *);
 
   // Update resolve state for new endpoint set

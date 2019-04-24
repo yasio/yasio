@@ -331,13 +331,6 @@ void io_service::stop_service()
   {
     this->state_ = io_service::state::STOPPING;
 
-    for (auto ctx : channels_)
-    {
-      ctx->deadline_timer_.cancel();
-      if (ctx->socket_->is_open())
-        ctx->socket_->shutdown();
-    }
-
     this->interrupt();
     this->wait_service();
   }
@@ -385,8 +378,9 @@ void io_service::cleanup()
 {
   if (this->state_ == io_service::state::STOPPED)
   {
-    this->transports_.clear();
+    clear_transports();
     clear_channels();
+    this->event_queue_.clear();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -410,19 +404,27 @@ io_channel *io_service::new_channel(const io_hostent &ep)
 void io_service::clear_channels()
 {
   this->channel_ops_.clear();
-  for (auto iter = channels_.begin(); iter != channels_.end();)
+  for (auto channel : channels_)
   {
-    (*iter)->socket_->close();
-    delete *(iter);
-    iter = channels_.erase(iter);
+    channel->deadline_timer_.cancel();
+    cleanup_io(channel);
+    delete channel;
   }
+  channels_.clear();
+}
+
+void io_service::clear_transports()
+{
+  for (auto transport : transports_)
+  {
+    cleanup_io(transport.get());
+  }
+  transports_.clear();
 }
 
 void io_service::dispatch_events(int count)
 {
-  assert(this->on_event_ != nullptr);
-
-  if (this->event_queue_.empty())
+  if (!this->on_event_ || this->event_queue_.empty())
     return;
 
   std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
@@ -544,7 +546,7 @@ void io_service::perform_channels(fd_set *fds_array)
       else if (ctx->mask_ & YCM_SERVER)
       {
         if (ctx->opmask_ & YOPM_CLOSE_CHANNEL)
-          do_close(ctx);
+          cleanup_io(ctx);
 
         if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
           do_nonblocking_accept(ctx);
@@ -649,7 +651,7 @@ void io_service::handle_close(transport_ptr transport)
   YASIO_LOG("[index: %d] the connection #%u is lost, offset:%d, ec:%d, detail:%s", ctx->index_,
             ptr->id_, ptr->offset_, ec, io_service::strerror(ec));
 
-  do_close(ptr);
+  cleanup_io(ptr);
 
   // @Update state
   if (ctx->mask_ & YCM_CLIENT)
@@ -741,7 +743,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
   if (this->ipsv_ == 0)
     this->ipsv_ = xxsocket::getipsv();
   if (ctx->socket_->is_open())
-    do_close(ctx);
+    cleanup_io(ctx);
 
   ctx->opmask_ &= ~YOPM_OPEN_CHANNEL;
 
@@ -818,7 +820,7 @@ void io_service::do_nonblocking_connect_completion(io_channel *ctx, fd_set *fds_
 
 void io_service::do_nonblocking_accept(io_channel *ctx)
 { // channel is server
-  do_close(ctx);
+  cleanup_io(ctx);
 
   ip::endpoint ep(ipsv_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
 
@@ -911,7 +913,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       else
       {
         YASIO_LOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
-        do_close(ctx);
+        cleanup_io(ctx);
       }
     }
   }
@@ -955,7 +957,7 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
 
 void io_service::handle_connect_failed(io_channel *ctx, int error)
 {
-  do_close(ctx);
+  cleanup_io(ctx);
 
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 
@@ -1318,7 +1320,7 @@ long long io_service::get_wait_duration(long long usec)
     return usec;
 }
 
-bool io_service::do_close(io_base *ctx)
+bool io_service::cleanup_io(io_base *ctx)
 {
   ctx->opmask_ = 0;
   ctx->state_  = YCS_CLOSED;

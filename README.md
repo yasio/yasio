@@ -1,8 +1,11 @@
 # yasio - *Y*et *A*nother *S*ocket *IO* service
 [![Build Status](https://travis-ci.org/halx99/yasio.svg?branch=master)](https://travis-ci.org/halx99/yasio)
+[![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://github.com/halx99/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/halx99/yasio.svg?label=Stars)](https://github.com/halx99/yasio)
 [![GitHub forks](https://img.shields.io/github/forks/halx99/yasio.svg?label=Fork)](https://github.com/halx99/yasio)
+[![Total Downloads](https://poser.pugx.org/ofcold/identity-card/downloads?format=flat-square)](https://packagist.org/packages/halx99/yasio)
 
 A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
 The core design is reference from https://github.com/chriskohlhoff/asio but very small.  

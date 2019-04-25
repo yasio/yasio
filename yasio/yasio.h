@@ -385,6 +385,7 @@ public:
   bool is_open(transport_ptr) const;
 
   int write(transport_ptr transport, std::vector<char> data);
+  int write_unsafe(io_transport *transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
   std::shared_ptr<deadline_timer> schedule(highp_time_t duration, timer_cb_t,
@@ -464,8 +465,8 @@ private:
   // dynmaically: because this API is not thread safe.
   io_channel *new_channel(const io_hostent &ep);
   // Clear all channels after service exit.
-  void clear_channels(); // destroy all channels
-  void clear_transports();
+  void clear_channels();   // destroy all channels
+  void clear_transports(); // destroy all transports
   bool close_internal(io_channel *);
 
   // Update resolve state for new endpoint set

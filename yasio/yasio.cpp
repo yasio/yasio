@@ -381,6 +381,8 @@ void io_service::cleanup()
     clear_transports();
     clear_channels();
     this->event_queue_.clear();
+    this->timer_queue_.clear();
+    this->outstanding_work_ = 0;
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -704,8 +706,11 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
   if ((flags & YEM_POLLERR) != 0)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
-
 int io_service::write(transport_ptr transport, std::vector<char> data)
+{
+  return write_unsafe(transport.get(), std::move(data));
+}
+int io_service::write_unsafe(io_transport *transport, std::vector<char> data)
 {
   if (transport && transport->socket_->is_open())
   {
@@ -721,7 +726,7 @@ int io_service::write(transport_ptr transport, std::vector<char> data)
   }
   else
   {
-    YASIO_LOG("[transport: %p] send failed, the connection not ok!", transport.get());
+    YASIO_LOG("[transport: %p] send failed, the connection not ok!", transport);
     return -1;
   }
 }

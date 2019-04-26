@@ -580,7 +580,8 @@ void io_service::close(size_t channel_index)
   }
 }
 
-void io_service::close(transport_ptr transport)
+void io_service::close(transport_ptr transport) { close_unsafe(transport.get()); }
+void io_service::close_unsafe(io_transport *transport)
 {
   if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE_TRANSPORT))
   {

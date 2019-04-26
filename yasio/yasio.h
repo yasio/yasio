@@ -374,6 +374,7 @@ public:
 
   // close transport
   void close(transport_ptr);
+  void close_unsafe(io_transport *transport);
 
   // close channel
   void close(size_t channel_index = 0);

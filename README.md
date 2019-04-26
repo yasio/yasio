@@ -16,7 +16,7 @@ The core design is reference from https://github.com/chriskohlhoff/asio but very
 * support lua bindings  
 * support cocos2d-x jsb  
 * support CocosCreator jsb2.0  
-* support Unity3D tolua  
+* support Unity3D
 * per io_service, per thread to process socket read,write,connect operations.  
   
 ## Intergation guides:  
@@ -92,10 +92,8 @@ showcase:
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  
 2. For Microsoft Visual Studio 2019 MSVC C++17, you must set compile option: ```C/C++ --> Language --> Conformance mode``` to **No**, otherwise, you will got compiling error: ```sol.hpp(8060): error C3779: 'sol::stack::get': a function that returns 'decltype(auto)' cannot be used before it is defined```
   
-## Unity tolua integration:  
-see: https://github.com/halx99/LuaFramework_UGUI  
-showcase:  
-![image](https://github.com/halx99/yasio/raw/master/showcaseunity.png)  
+## Unity3D integration guide
+TODO
 
 ## For more detail usage: see example or wiki: https://github.com/halx99/yasio/wiki
 

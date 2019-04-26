@@ -748,6 +748,8 @@ inline int lua_rawget_rtype(lua_State *L, int idx) {
 #endif
 #if LUA_VERSION_NUM < 501
 void lua_createtable(lua_State *L, int narr, int nrec) { lua_newtable(L); }
+#else
+using ::lua_tonumberx;
 #endif
 }
 

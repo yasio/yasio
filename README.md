@@ -93,7 +93,7 @@ showcase:
 2. For Microsoft Visual Studio 2019 MSVC C++17, you must set compile option: ```C/C++ --> Language --> Conformance mode``` to **No**, otherwise, you will got compiling error: ```sol.hpp(8060): error C3779: 'sol::stack::get': a function that returns 'decltype(auto)' cannot be used before it is defined```
   
 ## Unity3D integration guide
-TODO
+Tencent xLua integration, see: https://github.com/halx99/xLua
 
 ## For more detail usage: see example or wiki: https://github.com/halx99/yasio/wiki
 

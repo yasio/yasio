@@ -28,8 +28,8 @@ SOFTWARE.
 
 #pragma once
 
-#if defined(YASIO_BUILD_AS_DLL)
-#  if defined(YASIO_LIB) && defined(_MSC_VER)
+#if defined(YASIO_BUILD_AS_DLL) && defined(_WIN32)
+#  if defined(YASIO_LIB)
 #    define YASIO_API __declspec(dllexport)
 #  else
 #    define YASIO_API __declspec(dllimport)

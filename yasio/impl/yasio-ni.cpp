@@ -67,7 +67,7 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
 extern "C" {
 #endif
 
-YASIO_API int yasio_start(const char *params,
+YASIO_NI_API int yasio_start(const char *params,
                           void (*callback)(uint32_t emask, int cidx, intptr_t vfd, intptr_t bytes,
                                            int len))
 {

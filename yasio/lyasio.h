@@ -29,7 +29,7 @@ SOFTWARE.
 #pragma once
 
 #if defined(YASIO_BUILD_AS_DLL)
-#  if defined(YASIO_LIB)
+#  if defined(YASIO_LIB) && defined(_MSC_VER)
 #    define YASIO_API __declspec(dllexport)
 #  else
 #    define YASIO_API __declspec(dllimport)

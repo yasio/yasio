@@ -33,9 +33,9 @@ SOFTWARE.
 #include "yasio/yasio.h"
 
 #if defined(_WIN32)
-#  define YASIO_API __declspec(dllexport)
+#  define YASIO_NI_API __declspec(dllexport)
 #else
-#  define YASIO_API
+#  define YASIO_NI_API
 #endif
 
 using namespace yasio::inet;
@@ -105,7 +105,7 @@ YASIO_API int yasio_start(const char *params,
 
   return static_cast<int>(hosts.size());
 }
-YASIO_API void yasio_set_option(int opt, const char *params)
+YASIO_NI_API void yasio_set_option(int opt, const char *params)
 {
   std::string strParams = params;
   switch (opt)
@@ -149,21 +149,21 @@ YASIO_API void yasio_set_option(int opt, const char *params)
       break;
   }
 }
-YASIO_API void yasio_open(int cindex, int kind) { myasio->open(cindex, kind); }
-YASIO_API void yasio_close(int cindex) { myasio->close(cindex); }
-YASIO_API void yasio_close_vfd(intptr_t vfd)
+YASIO_NI_API void yasio_open(int cindex, int kind) { myasio->open(cindex, kind); }
+YASIO_NI_API void yasio_close(int cindex) { myasio->close(cindex); }
+YASIO_NI_API void yasio_close_vfd(intptr_t vfd)
 {
   auto p = reinterpret_cast<io_transport *>(vfd);
   myasio->close_unsafe(p);
 }
-YASIO_API int yasio_write(intptr_t vfd, const unsigned char *bytes, int len)
+YASIO_NI_API int yasio_write(intptr_t vfd, const unsigned char *bytes, int len)
 {
   std::vector<char> buf(bytes, bytes + len);
   auto p = reinterpret_cast<io_transport *>(vfd);
   return myasio->write_unsafe(p, std::move(buf));
 }
-YASIO_API void yasio_dispatch_events(int maxEvents) { myasio->dispatch_events(maxEvents); }
-YASIO_API void yasio_stop() { myasio->stop_service(); }
+YASIO_NI_API void yasio_dispatch_events(int maxEvents) { myasio->dispatch_events(maxEvents); }
+YASIO_NI_API void yasio_stop() { myasio->stop_service(); }
 
 #if defined(__cplusplus)
 }

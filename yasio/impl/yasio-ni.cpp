@@ -97,7 +97,7 @@ YASIO_NI_API int yasio_start(const char *params,
   });
 
   myasio->start_service(hosts, [=](event_ptr e) {
-    uint32_t emask = (e->kind() << 16) & 0xffff0000 | (e->status() & 0xffff);
+    uint32_t emask = ((e->kind() << 16) & 0xffff0000) | (e->status() & 0xffff);
     callback(emask, e->cindex(), reinterpret_cast<intptr_t>(e->transport().get()),
              reinterpret_cast<intptr_t>(!e->packet().empty() ? e->packet().data() : nullptr),
              static_cast<int>(e->packet().size()));

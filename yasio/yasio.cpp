@@ -297,7 +297,7 @@ io_service::~io_service()
     cleanup();
 
   for (auto t : transports_dypool_)
-    delete t;
+    ::operator delete (t);
   transports_dypool_.clear();
 
   if (options_.outf_ != -1)
@@ -668,10 +668,11 @@ void io_service::handle_close(transport_ptr transport)
     ctx->error_ = 0;
   } // server channel, do nothing.
 
-  transports_dypool_.push_back(transport);
+  ptr->~io_transport();
+  transports_dypool_.push_back(ptr);
 
   // @Notify connection lost
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, transport)));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, ptr)));
 
   // @Process tcp client reconnect
   if (ctx->mask_ == YCM_TCP_CLIENT)
@@ -960,8 +961,7 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   { // allocate from free list, and do not need push to transports_ again.
     auto reuse_ptr = transports_dypool_.back();
 
-    // reconstruct it since we don't delete transport object
-    reuse_ptr->~io_transport();
+    // construct it since we don't delete transport object
     transport = new ((void *)reuse_ptr) io_transport(ctx);
     transports_dypool_.pop_back();
   }

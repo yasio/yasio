@@ -717,7 +717,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 }
 int io_service::write(transport_ptr transport, std::vector<char> data)
 {
-  if (transport && transport->socket_->is_open())
+  if (transport && transport->is_open())
   {
     a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options_.send_timeout_)));
 

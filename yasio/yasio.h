@@ -120,7 +120,7 @@ typedef std::chrono::high_resolution_clock highp_clock_t;
 typedef std::chrono::system_clock system_clock_t;
 
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
-typedef std::shared_ptr<io_transport> transport_ptr;
+typedef io_transport *transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 
 typedef std::function<void(bool cancelled)> timer_cb_t;
@@ -374,7 +374,6 @@ public:
 
   // close transport
   void close(transport_ptr);
-  void close_unsafe(io_transport *transport);
 
   // close channel
   void close(size_t channel_index = 0);
@@ -386,7 +385,6 @@ public:
   bool is_open(transport_ptr) const;
 
   int write(transport_ptr transport, std::vector<char> data);
-  int write_unsafe(io_transport *transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
   std::shared_ptr<deadline_timer> schedule(highp_time_t duration, timer_cb_t,
@@ -495,6 +493,7 @@ private:
   std::vector<io_channel *> channel_ops_;
 
   std::vector<transport_ptr> transports_;
+  std::vector<transport_ptr> transports_dypool_;
 
   // select interrupter
   select_interrupter interrupter_;

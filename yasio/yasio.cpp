@@ -296,6 +296,10 @@ io_service::~io_service()
   if (this->state_ == io_service::state::STOPPED)
     cleanup();
 
+  for (auto t : transports_dypool_)
+    delete t;
+  transports_dypool_.clear();
+
   if (options_.outf_ != -1)
     ::close(options_.outf_);
   this->decode_len_ = nullptr;
@@ -419,7 +423,8 @@ void io_service::clear_transports()
 {
   for (auto transport : transports_)
   {
-    cleanup_io(transport.get());
+    cleanup_io(transport);
+    this->transports_dypool_.push_back(transport);
   }
   transports_.clear();
 }
@@ -501,7 +506,7 @@ void io_service::perform_transports(fd_set *fds_array)
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
-    auto &transport = *iter;
+    auto transport = *iter;
     if (do_read(transport, fds_array) && do_write(transport))
       ++iter;
     else
@@ -580,8 +585,7 @@ void io_service::close(size_t channel_index)
   }
 }
 
-void io_service::close(transport_ptr transport) { close_unsafe(transport.get()); }
-void io_service::close_unsafe(io_transport *transport)
+void io_service::close(transport_ptr transport)
 {
   if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE_TRANSPORT))
   {
@@ -647,7 +651,7 @@ void io_service::open(size_t channel_index, int channel_mask)
 
 void io_service::handle_close(transport_ptr transport)
 {
-  auto ptr = transport.get();
+  auto ptr = transport;
   auto ctx = ptr->ctx_;
   auto ec  = ptr->error_;
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
@@ -663,6 +667,8 @@ void io_service::handle_close(transport_ptr transport)
     ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
     ctx->error_ = 0;
   } // server channel, do nothing.
+
+  transports_dypool_.push_back(transport);
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, transport)));
@@ -708,10 +714,6 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 int io_service::write(transport_ptr transport, std::vector<char> data)
-{
-  return write_unsafe(transport.get(), std::move(data));
-}
-int io_service::write_unsafe(io_transport *transport, std::vector<char> data)
 {
   if (transport && transport->socket_->is_open())
   {
@@ -953,9 +955,22 @@ void io_service::handle_connect_succeed(transport_ptr transport)
 
 transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
-  transport_ptr transport(new io_transport(ctx));
-  this->transports_.push_back(transport);
+  transport_ptr transport;
+  if (!transports_dypool_.empty())
+  { // allocate from free list, and do not need push to transports_ again.
+    auto reuse_ptr = transports_dypool_.back();
 
+    // reconstruct it since we don't delete transport object
+    reuse_ptr->~io_transport();
+    transport = new ((void *)reuse_ptr) io_transport(ctx);
+    transports_dypool_.pop_back();
+  }
+  else
+  {
+    transport = new io_transport(ctx);
+  }
+
+  this->transports_.push_back(transport);
   transport->socket_ = socket;
 
   return transport;

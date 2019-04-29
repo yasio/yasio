@@ -424,6 +424,7 @@ void io_service::clear_transports()
   for (auto transport : transports_)
   {
     cleanup_io(transport);
+    transport->~io_transport();
     this->transports_dypool_.push_back(transport);
   }
   transports_.clear();

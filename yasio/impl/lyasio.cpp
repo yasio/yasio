@@ -21,6 +21,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#if !defined(LUA_LIB)
+#  define LUA_LIB
+#endif
 #include "yasio/ibstream.h"
 #include "yasio/obstream.h"
 #include "yasio/yasio.h"

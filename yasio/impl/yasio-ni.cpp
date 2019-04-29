@@ -153,14 +153,14 @@ YASIO_NI_API void yasio_open(int cindex, int kind) { myasio->open(cindex, kind);
 YASIO_NI_API void yasio_close(int cindex) { myasio->close(cindex); }
 YASIO_NI_API void yasio_close_vfd(intptr_t vfd)
 {
-  auto p = reinterpret_cast<io_transport *>(vfd);
-  myasio->close_unsafe(p);
+  auto p = reinterpret_cast<transport_ptr>(vfd);
+  myasio->close(p);
 }
 YASIO_NI_API int yasio_write(intptr_t vfd, const unsigned char *bytes, int len)
 {
   std::vector<char> buf(bytes, bytes + len);
-  auto p = reinterpret_cast<io_transport *>(vfd);
-  return myasio->write_unsafe(p, std::move(buf));
+  auto p = reinterpret_cast<transport_ptr>(vfd);
+  return myasio->write(p, std::move(buf));
 }
 YASIO_NI_API void yasio_dispatch_events(int maxEvents) { myasio->dispatch_events(maxEvents); }
 YASIO_NI_API void yasio_stop() { myasio->stop_service(); }

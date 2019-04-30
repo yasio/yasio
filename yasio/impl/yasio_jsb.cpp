@@ -307,12 +307,11 @@ template <typename T> static jsval jsb_yasio_to_jsval(JSContext *ctx, std::uniqu
 
 static jsval jsb_yasio_to_jsval(JSContext *ctx, transport_ptr value)
 {
-  auto cobj                  = new transport_ptr(value);
-  js_type_class_t *typeClass = js_get_type_from_native<transport_ptr>(cobj);
+  js_type_class_t *typeClass = js_get_type_from_native<io_transport>(value);
 
   // link the native object with the javascript object
   JS::RootedObject jsobj(
-      ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<transport_ptr>::s_name()));
+      ctx, jsb_create_weak_jsobject(ctx, value, typeClass, TypeTest<io_transport>::s_name()));
 
   return OBJECT_TO_JSVAL(jsobj);
 }
@@ -322,12 +321,7 @@ static transport_ptr jsb_yasio_jsval_to_transport_ptr(JSContext *ctx, const JS::
   JS::RootedObject jsobj(ctx);
   jsobj.set(vp.toObjectOrNull());
   auto proxy = jsb_get_js_proxy(jsobj);
-  auto pptr  = (transport_ptr *)(proxy ? proxy->ptr : nullptr);
-  if (pptr)
-  {
-    return *pptr;
-  }
-  return nullptr;
+  return  (transport_ptr)(proxy ? proxy->ptr : nullptr);
 }
 
 static yasio::obstream *jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue &vp)
@@ -1309,23 +1303,22 @@ void js_register_yasio_obstream(JSContext *ctx, JS::HandleObject global)
   jsb_register_class<yasio::obstream>(ctx, jsb_obstream_class, proto, JS::NullPtr());
 }
 
-///////////////////////// transport_ptr ///////////////////////////////
-JSClass *jsb_transport_ptr_class;
-JSObject *jsb_transport_ptr_prototype;
+///////////////////////// transport ///////////////////////////////
+JSClass *jsb_transport_class;
+JSObject *jsb_transport_prototype;
 
-void js_register_yasio_transport_ptr(JSContext *ctx, JS::HandleObject global)
+void js_register_yasio_transport(JSContext *ctx, JS::HandleObject global)
 {
-  jsb_transport_ptr_class              = (JSClass *)calloc(1, sizeof(JSClass));
-  jsb_transport_ptr_class->name        = "transport_ptr";
-  jsb_transport_ptr_class->addProperty = JS_PropertyStub;
-  jsb_transport_ptr_class->delProperty = JS_DeletePropertyStub;
-  jsb_transport_ptr_class->getProperty = JS_PropertyStub;
-  jsb_transport_ptr_class->setProperty = JS_StrictPropertyStub;
-  jsb_transport_ptr_class->enumerate   = JS_EnumerateStub;
-  jsb_transport_ptr_class->resolve     = JS_ResolveStub;
-  jsb_transport_ptr_class->convert     = JS_ConvertStub;
-  jsb_transport_ptr_class->finalize    = jsb_yasio_finalize<transport_ptr>;
-  jsb_transport_ptr_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
+  jsb_transport_class              = (JSClass *)calloc(1, sizeof(JSClass));
+  jsb_transport_class->name        = "transport";
+  jsb_transport_class->addProperty = JS_PropertyStub;
+  jsb_transport_class->delProperty = JS_DeletePropertyStub;
+  jsb_transport_class->getProperty = JS_PropertyStub;
+  jsb_transport_class->setProperty = JS_StrictPropertyStub;
+  jsb_transport_class->enumerate   = JS_EnumerateStub;
+  jsb_transport_class->resolve     = JS_ResolveStub;
+  jsb_transport_class->convert     = JS_ConvertStub;
+  jsb_transport_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
 
@@ -1333,18 +1326,18 @@ void js_register_yasio_transport_ptr(JSContext *ctx, JS::HandleObject global)
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_transport_ptr_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_ptr_class,
+  jsb_transport_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_class,
                                              nullptr, 0, properties, funcs,
                                              NULL, // no static properties
                                              st_funcs);
 
   // add the proto and JSClass to the type->js info hash table
-  JS::RootedObject proto(ctx, jsb_transport_ptr_prototype);
+  JS::RootedObject proto(ctx, jsb_transport_prototype);
   // JS_SetProperty(ctx, proto, "_className", className);
   JS_SetProperty(ctx, proto, "__nativeObj", JS::TrueHandleValue);
   JS_SetProperty(ctx, proto, "__is_ref", JS::FalseHandleValue);
 
-  jsb_register_class<transport_ptr>(ctx, jsb_transport_ptr_class, proto, JS::NullPtr());
+  jsb_register_class<io_transport>(ctx, jsb_transport_class, proto, JS::NullPtr());
 }
 
 ///////////////////////// io_event /////////////////////////////////
@@ -1906,7 +1899,7 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
 
   js_register_yasio_ibstream(ctx, yasio);
   js_register_yasio_obstream(ctx, yasio);
-  js_register_yasio_transport_ptr(ctx, yasio);
+  js_register_yasio_transport(ctx, yasio);
   js_register_yasio_io_event(ctx, yasio);
   js_register_yasio_io_service(ctx, yasio);
 

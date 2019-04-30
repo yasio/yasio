@@ -959,17 +959,15 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
 {
   transport_ptr transport;
   if (!transports_dypool_.empty())
-  { // allocate from free list, and do not need push to transports_ again.
+  { // allocate from pool
     auto reuse_ptr = transports_dypool_.back();
 
-    // construct it since we don't delete transport object
+    // construct it since we don't delete transport memory
     transport = new ((void *)reuse_ptr) io_transport(ctx);
     transports_dypool_.pop_back();
   }
   else
-  {
     transport = new io_transport(ctx);
-  }
 
   this->transports_.push_back(transport);
   transport->socket_ = socket;

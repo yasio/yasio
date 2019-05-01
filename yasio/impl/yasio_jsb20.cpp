@@ -353,7 +353,7 @@ static bool js_yasio_ibstream_read_bool(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setBoolean(cobj->read_ix<bool>());
+  s.rval().setBoolean(cobj->read_i<bool>());
 
   return true;
 }
@@ -367,7 +367,7 @@ template <typename T> static bool js_yasio_ibstream_read_ix(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setInt32(cobj->read_ix<T>());
+  s.rval().setInt32(cobj->read_i<T>());
 
   return true;
 }
@@ -386,7 +386,7 @@ template <typename T> static bool js_yasio_ibstream_read_ux(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setUint32(cobj->read_ix<T>());
+  s.rval().setUint32(cobj->read_i<T>());
 
   return true;
 }
@@ -405,7 +405,7 @@ template <typename T> static bool js_yasio_ibstream_read_dx(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setNumber(double(cobj->read_ix<T>()));
+  s.rval().setNumber(double(cobj->read_i<T>()));
 
   return true;
 }

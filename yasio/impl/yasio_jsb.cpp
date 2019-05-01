@@ -462,7 +462,7 @@ static bool js_yasio_ibstream_read_bool(JSContext *ctx, uint32_t argc, jsval *vp
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_bool : Invalid Native Object");
 
-  args.rval().set(BOOLEAN_TO_JSVAL(cobj->read_ix<bool>()));
+  args.rval().set(BOOLEAN_TO_JSVAL(cobj->read_i<bool>()));
 
   return true;
 }
@@ -480,7 +480,7 @@ static bool js_yasio_ibstream_read_ix(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_ix : Invalid Native Object");
 
-  args.rval().set(INT_TO_JSVAL(cobj->read_ix<T>()));
+  args.rval().set(INT_TO_JSVAL(cobj->read_i<T>()));
 
   return true;
 }
@@ -498,7 +498,7 @@ static bool js_yasio_ibstream_read_ux(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_ux : Invalid Native Object");
 
-  args.rval().set(UINT_TO_JSVAL(cobj->read_ix<T>()));
+  args.rval().set(UINT_TO_JSVAL(cobj->read_i<T>()));
 
   return true;
 }
@@ -517,7 +517,7 @@ static bool js_yasio_ibstream_read_dx(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_dx : Invalid Native Object");
 
-  args.rval().set(DOUBLE_TO_JSVAL(cobj->read_ix<T>()));
+  args.rval().set(DOUBLE_TO_JSVAL(cobj->read_i<T>()));
 
   return true;
 }

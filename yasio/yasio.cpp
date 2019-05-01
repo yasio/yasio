@@ -297,7 +297,7 @@ io_service::~io_service()
     cleanup();
 
   for (auto t : transports_dypool_)
-    ::operator delete (t);
+    ::operator delete(t);
   transports_dypool_.clear();
 
   if (options_.outf_ != -1)

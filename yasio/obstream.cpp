@@ -145,10 +145,10 @@ void obstream::write_i7(int value)
   uint32_t v = (uint32_t)value; // support negative numbers
   while (v >= 0x80)
   {
-    write_i<uint8_t>((byte)(v | 0x80));
+    write_i<uint8_t>((uint8_t)(v | 0x80));
     v >>= 7;
   }
-  write_i<uint8_t>(v);
+  write_i<uint8_t>((uint8_t)v);
 }
 
 void obstream::write_v(yasio::string_view value)

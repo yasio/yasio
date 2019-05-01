@@ -100,7 +100,7 @@ uint32_t ibstream_view::read_u24()
   return ntohl(value) >> 8;
 }
 
-yasio::string_view ibstream_view::read_string()
+yasio::string_view ibstream_view::read_s()
 {
   int count = read_i7();
   return read_bytes(count);

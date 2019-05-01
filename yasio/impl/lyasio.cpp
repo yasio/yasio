@@ -173,8 +173,8 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
       "write_u16", &yasio::obstream::write_i<uint16_t>, "write_u32",
       &yasio::obstream::write_i<uint32_t>, "write_u64", &yasio::obstream::write_i<uint64_t>,
       "write_f", &yasio::obstream::write_i<float>, "write_lf", &yasio::obstream::write_i<double>,
-      "write_string",
-      static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_v),
+      "write_s", &yasio::obstream::write_s, "write_string",
+      static_cast<void (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_v),
       "write_v",
       [](yasio::obstream *obs, yasio::string_view sv, sol::variadic_args args) {
         int lfl = 32;
@@ -183,7 +183,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
         return lyasio::obstream_write_v(obs, sv, lfl);
       },
       "write_bytes",
-      static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_bytes),
+      static_cast<void (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_bytes),
       "length", &yasio::obstream::length, "to_string",
       [](yasio::obstream *obs) { return yasio::string_view(obs->data(), obs->length()); });
 
@@ -192,13 +192,13 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
       "ibstream",
       sol::constructors<yasio::ibstream(std::vector<char>),
                         yasio::ibstream(const yasio::obstream *)>(),
-      "read_bool", &yasio::ibstream::read_ix<bool>, "read_i8", &yasio::ibstream::read_ix<int8_t>,
-      "read_i16", &yasio::ibstream::read_ix<int16_t>, "read_i24", &yasio::ibstream::read_i24,
-      "read_i32", &yasio::ibstream::read_ix<int32_t>, "read_i64",
-      &yasio::ibstream::read_ix<int64_t>, "read_u8", &yasio::ibstream::read_ix<uint8_t>, "read_u16",
-      &yasio::ibstream::read_ix<uint16_t>, "read_u24", &yasio::ibstream::read_u24, "read_u32",
-      &yasio::ibstream::read_ix<uint32_t>, "read_u64", &yasio::ibstream::read_ix<uint64_t>,
-      "read_f", &yasio::ibstream::read_ix<float>, "read_lf", &yasio::ibstream::read_ix<double>,
+      "read_bool", &yasio::ibstream::read_i<bool>, "read_i8", &yasio::ibstream::read_i<int8_t>,
+      "read_i16", &yasio::ibstream::read_i<int16_t>, "read_i24", &yasio::ibstream::read_i24,
+      "read_i32", &yasio::ibstream::read_i<int32_t>, "read_i64", &yasio::ibstream::read_i<int64_t>,
+      "read_u8", &yasio::ibstream::read_i<uint8_t>, "read_u16", &yasio::ibstream::read_i<uint16_t>,
+      "read_u24", &yasio::ibstream::read_u24, "read_u32", &yasio::ibstream::read_i<uint32_t>,
+      "read_u64", &yasio::ibstream::read_i<uint64_t>, "read_f", &yasio::ibstream::read_i<float>,
+      "read_lf", &yasio::ibstream::read_i<double>, "read_s", &yasio::ibstream::read_s,
       "read_string",
       static_cast<yasio::string_view (yasio::ibstream::*)()>(&yasio::ibstream::read_v), "read_v",
       [](yasio::ibstream *ibs, sol::variadic_args args) {
@@ -428,7 +428,8 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
           .addFunction("write_u64", &yasio::obstream::write_i<uint64_t>)
           .addFunction("write_f", &yasio::obstream::write_i<float>)
           .addFunction("write_lf", &yasio::obstream::write_i<double>)
-          .addFunction("write_string", static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(
+          .addFunction("write_s", &yasio::obstream::write_s)
+          .addFunction("write_string", static_cast<void (yasio::obstream::*)(yasio::string_view)>(
                                            &yasio::obstream::write_v))
           .addStaticFunction(
               "write_v",
@@ -438,7 +439,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
                   lfl = static_cast<int>(args[0]);
                 return lyasio::obstream_write_v(obs, sv, lfl);
               })
-          .addFunction("write_bytes", static_cast<size_t (yasio::obstream::*)(yasio::string_view)>(
+          .addFunction("write_bytes", static_cast<void (yasio::obstream::*)(yasio::string_view)>(
                                           &yasio::obstream::write_bytes))
           .addFunction("length", &yasio::obstream::length)
           .addStaticFunction("to_string", [](yasio::obstream *obs) {
@@ -450,19 +451,20 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
       kaguya::UserdataMetatable<yasio::ibstream_view>()
           .setConstructors<yasio::ibstream_view(), yasio::ibstream_view(const void *, int),
                            yasio::ibstream_view(const yasio::obstream *)>()
-          .addFunction("read_bool", &yasio::ibstream_view::read_ix<bool>)
-          .addFunction("read_i8", &yasio::ibstream_view::read_ix<int8_t>)
-          .addFunction("read_i16", &yasio::ibstream_view::read_ix<int16_t>)
+          .addFunction("read_bool", &yasio::ibstream_view::read_i<bool>)
+          .addFunction("read_i8", &yasio::ibstream_view::read_i<int8_t>)
+          .addFunction("read_i16", &yasio::ibstream_view::read_i<int16_t>)
           .addFunction("read_i24", &yasio::ibstream_view::read_i24)
-          .addFunction("read_i32", &yasio::ibstream_view::read_ix<int32_t>)
-          .addFunction("read_i64", &yasio::ibstream_view::read_ix<int64_t>)
-          .addFunction("read_u8", &yasio::ibstream_view::read_ix<uint8_t>)
-          .addFunction("read_u16", &yasio::ibstream_view::read_ix<uint16_t>)
+          .addFunction("read_i32", &yasio::ibstream_view::read_i<int32_t>)
+          .addFunction("read_i64", &yasio::ibstream_view::read_i<int64_t>)
+          .addFunction("read_u8", &yasio::ibstream_view::read_i<uint8_t>)
+          .addFunction("read_u16", &yasio::ibstream_view::read_i<uint16_t>)
           .addFunction("read_u24", &yasio::ibstream_view::read_u24)
-          .addFunction("read_u32", &yasio::ibstream_view::read_ix<uint32_t>)
-          .addFunction("read_u64", &yasio::ibstream_view::read_ix<uint64_t>)
-          .addFunction("read_f", &yasio::ibstream_view::read_ix<float>)
-          .addFunction("read_lf", &yasio::ibstream_view::read_ix<double>)
+          .addFunction("read_u32", &yasio::ibstream_view::read_i<uint32_t>)
+          .addFunction("read_u64", &yasio::ibstream_view::read_i<uint64_t>)
+          .addFunction("read_f", &yasio::ibstream_view::read_i<float>)
+          .addFunction("read_lf", &yasio::ibstream_view::read_i<double>)
+          .addFunction("read_s", &yasio::ibstream_view::read_s)
           .addFunction("read_string", static_cast<yasio::string_view (yasio::ibstream_view::*)()>(
                                           &yasio::ibstream_view::read_v))
           .addStaticFunction("read_v",

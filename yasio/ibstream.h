@@ -67,7 +67,7 @@ public:
   int32_t read_i24();
   uint32_t read_u24();
 
-  yasio::string_view read_string();
+  yasio::string_view read_s();
 
   void read_v(std::string &);   // 32 bits length field
   void read_v16(std::string &); // 16 bits length field

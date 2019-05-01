@@ -70,7 +70,7 @@ public:
 
   void write_i7(int value);
 
-  void write_string(yasio::string_view sv)
+  void write_s(yasio::string_view sv)
   {
     write_i7(static_cast<int>(sv.size()));
     write_bytes(sv.data(), sv.length());

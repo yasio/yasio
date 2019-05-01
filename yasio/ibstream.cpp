@@ -59,7 +59,7 @@ int ibstream_view::read_i7()
   // of the byte when on means to continue reading more bytes.
   int count = 0;
   int shift = 0;
-  byte b;
+  uint8_t b;
   do
   {
     // Check for a corrupted stream.  Read a max of 5 bytes.

@@ -132,36 +132,48 @@ obstream &obstream::operator=(obstream &&right)
   return *this;
 }
 
-size_t obstream::write_i24(uint32_t value)
+void obstream::write_i24(uint32_t value)
 {
   value = htonl(value) >> 8;
   write_bytes(&value, 3);
-  return buffer_.size();
 }
 
-size_t obstream::write_v(yasio::string_view value)
+void obstream::write_i7(int value)
 {
-  return write_v(value.data(), static_cast<int>(value.size()));
-}
-size_t obstream::write_v16(yasio::string_view value)
-{
-  return write_v16(value.data(), static_cast<int>(value.size()));
-}
-size_t obstream::write_v8(yasio::string_view value)
-{
-  return write_v8(value.data(), static_cast<int>(value.size()));
+  // Write out an int 7 bits at a time.  The high bit of the byte,
+  // when on, tells reader to continue reading more bytes.
+  uint32_t v = (uint32_t)value; // support negative numbers
+  while (v >= 0x80)
+  {
+    write_i<uint8_t>((byte)(v | 0x80));
+    v >>= 7;
+  }
+  write_i<uint8_t>(v);
 }
 
-size_t obstream::write_v(const void *v, int size) { return write_vx<uint32_t>(v, size); }
-size_t obstream::write_v16(const void *v, int size) { return write_vx<uint16_t>(v, size); }
-size_t obstream::write_v8(const void *v, int size) { return write_vx<uint8_t>(v, size); }
+void obstream::write_v(yasio::string_view value)
+{
+  write_v(value.data(), static_cast<int>(value.size()));
+}
+void obstream::write_v16(yasio::string_view value)
+{
+  write_v16(value.data(), static_cast<int>(value.size()));
+}
+void obstream::write_v8(yasio::string_view value)
+{
+  write_v8(value.data(), static_cast<int>(value.size()));
+}
 
-size_t obstream::write_bytes(yasio::string_view v)
+void obstream::write_v(const void *v, int size) { write_vx<uint32_t>(v, size); }
+void obstream::write_v16(const void *v, int size) { write_vx<uint16_t>(v, size); }
+void obstream::write_v8(const void *v, int size) { write_vx<uint8_t>(v, size); }
+
+void obstream::write_bytes(yasio::string_view v)
 {
   return write_bytes(v.data(), static_cast<int>(v.size()));
 }
 
-size_t obstream::write_bytes(const void *v, int vl)
+void obstream::write_bytes(const void *v, int vl)
 {
   if (vl > 0)
   {
@@ -169,7 +181,6 @@ size_t obstream::write_bytes(const void *v, int vl)
     buffer_.resize(buffer_.size() + vl);
     ::memcpy(buffer_.data() + offset, v, vl);
   }
-  return buffer_.size();
 }
 
 void obstream::save(const char *filename)

@@ -53,6 +53,28 @@ void ibstream_view::assign(const void *data, int size)
   last_         = first_ + size;
 }
 
+int ibstream_view::read_i7()
+{
+  // Read out an Int32 7 bits at a time.  The high bit
+  // of the byte when on means to continue reading more bytes.
+  int count = 0;
+  int shift = 0;
+  byte b;
+  do
+  {
+    // Check for a corrupted stream.  Read a max of 5 bytes.
+    // In a future version, add a DataFormatException.
+    if (shift == 5 * 7) // 5 bytes max per Int32, shift += 7
+      throw std::logic_error("Format_Bad7BitInt32");
+
+    // ReadByte handles end of stream cases for us.
+    b = read_i<uint8_t>();
+    count |= (b & 0x7F) << shift;
+    shift += 7;
+  } while ((b & 0x80) != 0);
+  return count;
+}
+
 int32_t ibstream_view::read_i24()
 {
   int32_t value = 0;
@@ -76,6 +98,12 @@ uint32_t ibstream_view::read_u24()
   auto ptr       = consume(3);
   memcpy(&value, ptr, 3);
   return ntohl(value) >> 8;
+}
+
+yasio::string_view ibstream_view::read_string()
+{
+  int count = read_i7();
+  return read_bytes(count);
 }
 
 void ibstream_view::read_v(std::string &oav)

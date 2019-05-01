@@ -320,13 +320,23 @@ template <typename T> static bool jsb_yasio_constructor(se::State &s)
 
 template <typename T> static bool jsb_yasio_finalize(se::State &s)
 {
-  CCLOG("jsbindings: finalizing JS object %p(%s)", s.nativeThisObject(), typeid(T).name());
   auto iter = se::NonRefNativePtrCreatedByCtorMap::find(s.nativeThisObject());
   if (iter != se::NonRefNativePtrCreatedByCtorMap::end())
   {
+    CCLOG("jsbindings: finalizing JS object(created by ctor) %p(%s)", s.nativeThisObject(), typeid(T).name());
     se::NonRefNativePtrCreatedByCtorMap::erase(iter);
-    T *cobj = (T *)s.nativeThisObject();
+    T *cobj = reinterpret_cast<T *>(s.nativeThisObject());
     delete cobj;
+  }
+  else
+  { // finalize not created by ctor
+    auto iter2 = se::NativePtrToObjectMap::find(s.nativeThisObject());
+    if (iter2 != se::NativePtrToObjectMap::end())
+    {
+      CCLOG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(), typeid(T).name());
+      T *cobj = reinterpret_cast<T *>(s.nativeThisObject());
+      delete cobj;
+    }
   }
   return true;
 }
@@ -968,17 +978,13 @@ void js_register_yasio_obstream(se::Object *obj)
   se::ScriptEngine::getInstance()->clearException();
 }
 
-///////////////////////// transport_ptr ///////////////////////////////
-static auto jsb_yasio_transport_ptr_finalize = jsb_yasio_finalize<transport_ptr>;
-SE_BIND_FINALIZE_FUNC(jsb_yasio_transport_ptr_finalize)
-
-void js_register_yasio_transport_ptr(se::Object *obj)
-{
-  auto cls = se::Class::create("transport_ptr", obj, nullptr, nullptr);
-
-  cls->defineFinalizeFunction(_SE(jsb_yasio_transport_ptr_finalize));
+///////////////////////// transport ///////////////////////////////
+void js_register_yasio_transport(se::Object *obj)
+{ // since the transport is managed by native, don't need gc, we just register a dummy for pointer passing
+  auto cls = se::Class::create("transport", obj, nullptr, nullptr);
+  
   cls->install();
-  JSBClassType::registerClass<transport_ptr>(cls);
+  JSBClassType::registerClass<io_transport>(cls);
 
   se::ScriptEngine::getInstance()->clearException();
 }
@@ -1060,8 +1066,8 @@ bool js_yasio_io_event_transport(se::State &s)
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
-
-  native_ptr_to_seval<transport_ptr>(new transport_ptr(cobj->transport()), &s.rval());
+  
+  native_ptr_to_seval<io_transport>(cobj->transport(), &s.rval());
   return true;
 }
 SE_BIND_FUNC(js_yasio_io_event_transport)
@@ -1102,7 +1108,7 @@ void js_register_yasio_io_event(se::Object *obj)
   DEFINE_IO_EVENT_FUNC(transport);
   DEFINE_IO_EVENT_FUNC(timestamp);
 
-  cls->defineFinalizeFunction(_SE(jsb_yasio_transport_ptr_finalize));
+  cls->defineFinalizeFunction(_SE(jsb_yasio_io_event_finalize));
   cls->install();
   JSBClassType::registerClass<io_event>(cls);
 
@@ -1224,10 +1230,10 @@ bool js_yasio_io_service_is_open(se::State &s)
       }
       else if (arg0.isObject())
       {
-        transport_ptr *transport = nullptr;
-        seval_to_native_ptr<transport_ptr *>(arg0, &transport);
+        transport_ptr transport = nullptr;
+        seval_to_native_ptr<transport_ptr >(arg0, &transport);
         if (transport != nullptr)
-          opened = cobj->is_open(*transport);
+          opened = cobj->is_open(transport);
       }
       s.rval().setBoolean(opened);
       return true;
@@ -1257,10 +1263,10 @@ bool js_yasio_io_service_close(se::State &s)
       }
       else if (arg0.isObject())
       {
-        transport_ptr *transport = nullptr;
-        seval_to_native_ptr<transport_ptr *>(arg0, &transport);
+        transport_ptr transport = nullptr;
+        seval_to_native_ptr<transport_ptr >(arg0, &transport);
         if (transport != nullptr)
-          cobj->close(*transport);
+          cobj->close(transport);
       }
       return true;
     }
@@ -1376,21 +1382,21 @@ bool js_yasio_io_service_write(se::State &s)
       auto &arg0 = args[0];
       auto &arg1 = args[1];
 
-      transport_ptr *transport = nullptr;
-      seval_to_native_ptr<transport_ptr *>(arg0, &transport);
+      transport_ptr transport = nullptr;
+      seval_to_native_ptr<transport_ptr>(arg0, &transport);
 
       if (transport != nullptr)
       {
         bool unrecognized_object = false;
         auto data                = seval_to_string_view(arg1, &unrecognized_object);
         if (!data.empty())
-          cobj->write(*transport, std::vector<char>(data.c_str(), data.c_str() + data.size()));
+          cobj->write(transport, std::vector<char>(data.c_str(), data.c_str() + data.size()));
         else if (unrecognized_object)
         {
           yasio::obstream *obs = nullptr;
           seval_to_native_ptr(arg1, &obs);
           if (obs)
-            cobj->write(*transport, obs->buffer());
+            cobj->write(transport, obs->buffer());
         }
       }
 
@@ -1449,7 +1455,7 @@ bool jsb_register_yasio(se::Object *obj)
 
   js_register_yasio_ibstream(yasio);
   js_register_yasio_obstream(yasio);
-  js_register_yasio_transport_ptr(yasio);
+  js_register_yasio_transport(yasio);
   js_register_yasio_io_event(yasio);
   js_register_yasio_io_service(yasio);
 

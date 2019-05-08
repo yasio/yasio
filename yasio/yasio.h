@@ -381,9 +381,6 @@ public:
   // check whether the channel is open
   bool is_open(size_t cahnnel_index = 0) const;
 
-  // check whether the transport is open
-  bool is_open(transport_ptr) const;
-
   int write(transport_ptr transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service

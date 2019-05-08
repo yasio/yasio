@@ -1640,11 +1640,7 @@ bool js_yasio_io_service_is_open(JSContext *ctx, uint32_t argc, jsval *vp)
       {
         opened = cobj->is_open(arg0.toInt32());
       }
-      else if (arg0.isObject())
-      {
-        auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
-        opened         = cobj->is_open(transport);
-      }
+
       args.rval().set(BOOLEAN_TO_JSVAL(opened));
       return true;
     }

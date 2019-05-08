@@ -606,8 +606,6 @@ bool io_service::is_open(size_t channel_index) const
   return ctx->state_ == YCS_OPENED;
 }
 
-bool io_service::is_open(transport_ptr transport) const { return transport->state_ == YCS_OPENED; }
-
 void io_service::reopen(transport_ptr transport)
 {
   auto ctx = transport->ctx_;
@@ -719,15 +717,19 @@ int io_service::write(transport_ptr transport, std::vector<char> data)
 {
   if (transport && transport->is_open())
   {
-    a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options_.send_timeout_)));
+    if (!data.empty())
+    {
+      a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options_.send_timeout_)));
 
-    transport->send_queue_mtx_.lock();
-    transport->send_queue_.push_back(pdu);
-    transport->send_queue_mtx_.unlock();
+      transport->send_queue_mtx_.lock();
+      transport->send_queue_.push_back(pdu);
+      transport->send_queue_mtx_.unlock();
 
-    this->interrupt();
+      this->interrupt();
 
-    return data.size();
+      return static_cast<int>(data.size());
+    }
+    return 0;
   }
   else
   {

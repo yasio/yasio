@@ -1228,13 +1228,7 @@ bool js_yasio_io_service_is_open(se::State &s)
       {
         opened = cobj->is_open(arg0.toInt32());
       }
-      else if (arg0.isObject())
-      {
-        transport_ptr transport = nullptr;
-        seval_to_native_ptr<transport_ptr >(arg0, &transport);
-        if (transport != nullptr)
-          opened = cobj->is_open(transport);
-      }
+      
       s.rval().setBoolean(opened);
       return true;
     }

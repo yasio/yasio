@@ -267,11 +267,12 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 }
 
-io_transport::io_transport(io_channel *ctx) : ctx_(ctx)
+io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
 {
   static unsigned int s_object_id = 0;
   this->state_                    = YCS_OPENED;
   this->id_                       = ++s_object_id;
+  this->socket_                   = sock;
 }
 
 io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
@@ -965,14 +966,13 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
     auto reuse_ptr = transports_dypool_.back();
 
     // construct it since we don't delete transport memory
-    transport = new ((void *)reuse_ptr) io_transport(ctx);
+    transport = new ((void *)reuse_ptr) io_transport(ctx, socket);
     transports_dypool_.pop_back();
   }
   else
-    transport = new io_transport(ctx);
+    transport = new io_transport(ctx, socket);
 
   this->transports_.push_back(transport);
-  transport->socket_ = socket;
 
   return transport;
 }

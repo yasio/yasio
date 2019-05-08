@@ -246,7 +246,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx);
+  io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock);
 
   unsigned int id_;
 

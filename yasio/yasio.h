@@ -356,9 +356,9 @@ public:
              YOPT_DEFER_EVENT       defer:int
              YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              YOPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             YOPT_LFBFD_PARAMS max_frame_length:int, length_field_offst:int,
-     length_field_length:int, length_adjustment:int YOPT_IO_EVENT_CALLBACK
-     func:io_event_callback_t*
+             YOPT_LFBFD_PARAMS      max_frame_length:int, length_field_offst:int,
+                                    length_field_length:int, length_adjustment:int
+             YOPT_IO_EVENT_CALLBACK func:io_event_callback_t*
              YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
              YOPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
              YOPT_CHANNEL_REMOTE_PORT index:int, port:int

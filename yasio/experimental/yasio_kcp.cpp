@@ -30,7 +30,7 @@ SOFTWARE.
 */
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
-#include "yasio-kcp.h"
+#include "yasio_kcp.h"
 #include <limits>
 #include <stdarg.h>
 #include <string>
@@ -282,6 +282,7 @@ io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ct
   this->id_                       = ++s_object_id;
   this->socket_                   = sock;
   this->kcp_                      = ikcp_create(0, this);
+  ikcp_nodelay(this->kcp_, 1, MAX_WAIT_DURATION / 1000, 2, 1);
   ikcp_setoutput(this->kcp_, udp_output);
 }
 

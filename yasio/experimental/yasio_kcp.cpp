@@ -267,9 +267,9 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 }
 
-// KCPµÄÏÂ²ãĞ­ÒéÊä³öº¯Êı£¬KCPĞèÒª·¢ËÍÊı¾İÊ±»áµ÷ÓÃËü
-// buf/len ±íÊ¾»º´æºÍ³¤¶È
-// userÖ¸ÕëÎª kcp¶ÔÏó´´½¨Ê±´«ÈëµÄÖµ£¬ÓÃÓÚÇø±ğ¶à¸ö KCP¶ÔÏó
+// KCPçš„ä¸‹å±‚åè®®è¾“å‡ºå‡½æ•°ï¼ŒKCPéœ€è¦å‘é€æ•°æ®æ—¶ä¼šè°ƒç”¨å®ƒ
+// buf/len è¡¨ç¤ºç¼“å­˜å’Œé•¿åº¦
+// useræŒ‡é’ˆä¸º kcpå¯¹è±¡åˆ›å»ºæ—¶ä¼ å…¥çš„å€¼ï¼Œç”¨äºåŒºåˆ«å¤šä¸ª KCPå¯¹è±¡
 static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 {
   io_transport *t = (io_transport *)user;
@@ -502,9 +502,6 @@ void io_service::run()
 #endif
       --nfds;
     }
-
-    // update kcp
-    // ikcp_update()
 
     // perform active transports
     max_wait_duration = perform_transports(fds_array);

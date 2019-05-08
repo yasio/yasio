@@ -267,10 +267,7 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 }
 
-// KCP的下层协议输出函数，KCP需要发送数据时会调用它
-// buf/len 表示缓存和长度
-// user指针为 kcp对象创建时传入的值，用于区别多个 KCP对象
-static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
+static int ikcp_udp_output_cb(const char *buf, int len, ikcpcb *kcp, void *user)
 {
   io_transport *t = (io_transport *)user;
   return t->socket_->send_i(buf, len);
@@ -283,7 +280,7 @@ io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ct
   this->socket_                   = sock;
   this->kcp_                      = ikcp_create(0, this);
   ikcp_nodelay(this->kcp_, 1, MAX_WAIT_DURATION / 1000, 2, 1);
-  ikcp_setoutput(this->kcp_, udp_output);
+  ikcp_setoutput(this->kcp_, ikcp_udp_output_cb);
 }
 
 io_transport::~io_transport() { ikcp_release(this->kcp_); }

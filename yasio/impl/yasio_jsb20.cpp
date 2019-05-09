@@ -323,7 +323,8 @@ template <typename T> static bool jsb_yasio_finalize(se::State &s)
   auto iter = se::NonRefNativePtrCreatedByCtorMap::find(s.nativeThisObject());
   if (iter != se::NonRefNativePtrCreatedByCtorMap::end())
   {
-    CCLOG("jsbindings: finalizing JS object(created by ctor) %p(%s)", s.nativeThisObject(), typeid(T).name());
+    CCLOG("jsbindings: finalizing JS object(created by ctor) %p(%s)", s.nativeThisObject(),
+          typeid(T).name());
     se::NonRefNativePtrCreatedByCtorMap::erase(iter);
     T *cobj = reinterpret_cast<T *>(s.nativeThisObject());
     delete cobj;
@@ -333,7 +334,8 @@ template <typename T> static bool jsb_yasio_finalize(se::State &s)
     auto iter2 = se::NativePtrToObjectMap::find(s.nativeThisObject());
     if (iter2 != se::NativePtrToObjectMap::end())
     {
-      CCLOG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(), typeid(T).name());
+      CCLOG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(),
+            typeid(T).name());
       T *cobj = reinterpret_cast<T *>(s.nativeThisObject());
       delete cobj;
     }
@@ -980,9 +982,10 @@ void js_register_yasio_obstream(se::Object *obj)
 
 ///////////////////////// transport ///////////////////////////////
 void js_register_yasio_transport(se::Object *obj)
-{ // since the transport is managed by native, don't need gc, we just register a dummy for pointer passing
+{ // since the transport is managed by native, don't need gc, we just register a dummy for pointer
+  // passing
   auto cls = se::Class::create("transport", obj, nullptr, nullptr);
-  
+
   cls->install();
   JSBClassType::registerClass<io_transport>(cls);
 
@@ -1066,7 +1069,7 @@ bool js_yasio_io_event_transport(se::State &s)
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
   const auto &args = s.args();
   size_t argc      = args.size();
-  
+
   native_ptr_to_seval<io_transport>(cobj->transport(), &s.rval());
   return true;
 }
@@ -1228,7 +1231,13 @@ bool js_yasio_io_service_is_open(se::State &s)
       {
         opened = cobj->is_open(arg0.toInt32());
       }
-      
+      else if (arg0.isObject())
+      {
+        transport_ptr transport = nullptr;
+        seval_to_native_ptr<transport_ptr>(arg0, &transport);
+        if (transport != nullptr)
+          opened = cobj->is_open(transport);
+      }
       s.rval().setBoolean(opened);
       return true;
     }
@@ -1258,7 +1267,7 @@ bool js_yasio_io_service_close(se::State &s)
       else if (arg0.isObject())
       {
         transport_ptr transport = nullptr;
-        seval_to_native_ptr<transport_ptr >(arg0, &transport);
+        seval_to_native_ptr<transport_ptr>(arg0, &transport);
         if (transport != nullptr)
           cobj->close(transport);
       }

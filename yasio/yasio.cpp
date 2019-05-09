@@ -598,6 +598,8 @@ void io_service::close(transport_ptr transport)
   }
 }
 
+bool io_service::is_open(transport_ptr transport) const { return transport->state_ == YCS_OPENED; }
+
 bool io_service::is_open(size_t channel_index) const
 {
   // Gets channel
@@ -1180,11 +1182,11 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
   }
 }
 
-std::shared_ptr<deadline_timer> io_service::schedule(highp_time_t duration, timer_cb_t cb,
-                                                     bool repeated)
+deadline_timer_ptr io_service::schedule(const std::chrono::microseconds &duration, timer_cb_t cb,
+                                        bool repeated)
 {
-  std::shared_ptr<deadline_timer> timer(new deadline_timer(*this));
-  timer->expires_from_now(std::chrono::microseconds(duration), repeated);
+  deadline_timer_ptr timer(new deadline_timer(*this));
+  timer->expires_from_now(duration, repeated);
   timer->async_wait(
       [timer /*!important, hold on by lambda expression */, cb](bool cancelled) { cb(cancelled); });
   return timer;
@@ -1522,8 +1524,7 @@ void io_service::set_option(int option, ...)
     case YOPT_SEND_TIMEOUT:
       options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case YOPT_RECONNECT_TIMEOUT:
-    {
+    case YOPT_RECONNECT_TIMEOUT: {
       int value = va_arg(ap, int);
       if (value > 0)
         options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
@@ -1566,15 +1567,13 @@ void io_service::set_option(int option, ...)
     case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
       break;
-    case YOPT_CHANNEL_LOCAL_PORT:
-    {
+    case YOPT_CHANNEL_LOCAL_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
     }
     break;
-    case YOPT_CHANNEL_REMOTE_HOST:
-    {
+    case YOPT_CHANNEL_REMOTE_HOST: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1583,8 +1582,7 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_PORT:
-    {
+    case YOPT_CHANNEL_REMOTE_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1593,8 +1591,7 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_ENDPOINT:
-    {
+    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {

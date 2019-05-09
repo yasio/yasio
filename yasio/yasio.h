@@ -122,6 +122,7 @@ typedef std::chrono::system_clock system_clock_t;
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef io_transport *transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
+typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
 
 typedef std::function<void(bool cancelled)> timer_cb_t;
 typedef std::pair<deadline_timer *, timer_cb_t> timer_impl_t;
@@ -378,14 +379,21 @@ public:
   // close channel
   void close(size_t channel_index = 0);
 
+  // check whether the transport is open
+  bool is_open(transport_ptr) const;
+
   // check whether the channel is open
   bool is_open(size_t cahnnel_index = 0) const;
 
   int write(transport_ptr transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
-  std::shared_ptr<deadline_timer> schedule(highp_time_t duration, timer_cb_t,
-                                           bool repeated = false);
+  deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb, bool repeated = false)
+  {
+    return schedule(std::chrono::microseconds(duration), std::move(cb), repeated);
+  }
+  deadline_timer_ptr schedule(const std::chrono::microseconds &duration, timer_cb_t,
+                              bool repeated = false);
 
   void cleanup();
 

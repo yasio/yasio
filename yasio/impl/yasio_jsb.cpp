@@ -321,7 +321,7 @@ static transport_ptr jsb_yasio_jsval_to_transport_ptr(JSContext *ctx, const JS::
   JS::RootedObject jsobj(ctx);
   jsobj.set(vp.toObjectOrNull());
   auto proxy = jsb_get_js_proxy(jsobj);
-  return  (transport_ptr)(proxy ? proxy->ptr : nullptr);
+  return (transport_ptr)(proxy ? proxy->ptr : nullptr);
 }
 
 static yasio::obstream *jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue &vp)
@@ -1326,10 +1326,10 @@ void js_register_yasio_transport(JSContext *ctx, JS::HandleObject global)
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_transport_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_class,
-                                             nullptr, 0, properties, funcs,
-                                             NULL, // no static properties
-                                             st_funcs);
+  jsb_transport_prototype =
+      JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_class, nullptr, 0, properties, funcs,
+                   NULL, // no static properties
+                   st_funcs);
 
   // add the proto and JSClass to the type->js info hash table
   JS::RootedObject proto(ctx, jsb_transport_prototype);
@@ -1640,7 +1640,11 @@ bool js_yasio_io_service_is_open(JSContext *ctx, uint32_t argc, jsval *vp)
       {
         opened = cobj->is_open(arg0.toInt32());
       }
-
+      else if (arg0.isObject())
+      {
+        auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
+        opened         = cobj->is_open(transport);
+      }
       args.rval().set(BOOLEAN_TO_JSVAL(opened));
       return true;
     }

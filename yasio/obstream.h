@@ -72,8 +72,9 @@ public:
 
   void write_s(yasio::string_view sv)
   {
-    write_i7(static_cast<int>(sv.size()));
-    write_bytes(sv.data(), sv.length());
+    int len = static_cast<int>(sv.length());
+    write_i7(len);
+    write_bytes(sv.data(), len);
   }
 
   /* 32 bits length field */

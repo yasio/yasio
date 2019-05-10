@@ -82,8 +82,6 @@ Just like:
 
 #### JS demo:
 see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js  
-showcase:  
-![image](https://github.com/halx99/yasio/raw/master/showcasejsb.jpg)  
   
   
 ## Quick test at linux platform with gcc compiler:  

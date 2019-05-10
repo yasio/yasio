@@ -42,13 +42,13 @@ void obstream::push8()
 void obstream::pop8()
 {
   auto offset = offset_stack_.top();
-  set_i(offset, static_cast<uint8_t>(buffer_.size()));
+  set(offset, static_cast<uint8_t>(buffer_.size()));
   offset_stack_.pop();
 }
 void obstream::pop8(uint8_t value)
 {
   auto offset = offset_stack_.top();
-  set_i(offset, value);
+  set(offset, value);
   offset_stack_.pop();
 }
 
@@ -60,13 +60,13 @@ void obstream::push16()
 void obstream::pop16()
 {
   auto offset = offset_stack_.top();
-  set_i(offset, static_cast<uint16_t>(buffer_.size()));
+  set(offset, static_cast<uint16_t>(buffer_.size()));
   offset_stack_.pop();
 }
 void obstream::pop16(uint16_t value)
 {
   auto offset = offset_stack_.top();
-  set_i(offset, value);
+  set(offset, value);
   offset_stack_.pop();
 }
 
@@ -101,14 +101,14 @@ void obstream::push32()
 void obstream::pop32()
 {
   auto offset = offset_stack_.top();
-  set_i(offset, static_cast<uint32_t>(buffer_.size()));
+  set(offset, static_cast<uint32_t>(buffer_.size()));
   offset_stack_.pop();
 }
 
 void obstream::pop32(uint32_t value)
 {
   auto offset = offset_stack_.top();
-  set_i(offset, value);
+  set(offset, value);
   offset_stack_.pop();
 }
 
@@ -117,8 +117,6 @@ obstream::obstream(const obstream &right) : buffer_(right.buffer_) {}
 obstream::obstream(obstream &&right) : buffer_(std::move(right.buffer_)) {}
 
 obstream::~obstream() {}
-
-std::vector<char> obstream::take_buffer() { return std::move(buffer_); }
 
 obstream &obstream::operator=(const obstream &right)
 {
@@ -149,6 +147,13 @@ void obstream::write_i7(int value)
     v >>= 7;
   }
   write_i<uint8_t>((uint8_t)v);
+}
+
+void obstream::write_va(yasio::string_view sv)
+{
+  int len = static_cast<int>(sv.length());
+  write_i7(len);
+  write_bytes(sv.data(), len);
 }
 
 void obstream::write_v(yasio::string_view value)

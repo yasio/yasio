@@ -62,20 +62,14 @@ public:
   obstream &operator=(const obstream &right);
   obstream &operator=(obstream &&right);
 
-  std::vector<char> take_buffer();
-
   template <typename _Nty> void write_i(_Nty value);
 
   void write_i24(uint32_t value); // highest byte ignored
 
   void write_i7(int value);
 
-  void write_s(yasio::string_view sv)
-  {
-    int len = static_cast<int>(sv.length());
-    write_i7(len);
-    write_bytes(sv.data(), len);
-  }
+  /* write blob data with variant length of length field. */
+  void write_va(yasio::string_view sv);
 
   /* 32 bits length field */
   void write_v(yasio::string_view);
@@ -99,7 +93,7 @@ public:
 
   char *wdata(size_t offset = 0) { return &buffer_.front() + offset; }
 
-  template <typename _Nty> void set_i(std::streamoff offset, const _Nty value);
+  template <typename _Nty> void set(std::streamoff offset, const _Nty value);
 
   template <typename _LenT> void write_vx(const void *v, int size)
   {
@@ -143,7 +137,7 @@ template <> inline void obstream::write_i<double>(double value)
   buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
 }
 
-template <typename _Nty> inline void obstream::set_i(std::streamoff offset, const _Nty value)
+template <typename _Nty> inline void obstream::set(std::streamoff offset, const _Nty value)
 {
   auto nv = yasio::endian::htonv(value);
   memcpy(buffer_.data() + offset, &nv, sizeof(nv));

@@ -33,26 +33,36 @@ namespace lyasio
 {
 static auto obstream_write_v = [](yasio::obstream *obs, yasio::string_view val,
                                   int length_field_bits) {
+  // default: Use variant length of length field, just like .net BinaryWriter.Write(String),
+  // see:
+  // https://github.com/mono/mono/blob/master/mcs/class/referencesource/mscorlib/system/io/binarywriter.cs
   switch (length_field_bits)
   {
+    case -1:
+      return obs->write_va(val);
+    case 32:
+      return obs->write_v(val);
     case 16:
       return obs->write_v16(val);
-    case 8:
+    default:
       return obs->write_v8(val);
-    default: // default is: 32bits length field
-      return obs->write_v(val);
   }
 };
 static auto ibstream_read_v = [](yasio::ibstream *ibs, int length_field_bits,
                                  bool /*raw*/ = false) {
+  // default: Use variant length of length field, just like .net BinaryReader.ReadString,
+  // see:
+  // https://github.com/mono/mono/blob/master/mcs/class/referencesource/mscorlib/system/io/binaryreader.cs
   switch (length_field_bits)
   {
+    case -1:
+      return ibs->read_va();
+    case 32:
+      return ibs->read_v();
     case 16:
       return ibs->read_v16();
-    case 8:
+    default:
       return ibs->read_v8();
-    default: // default is: 32bits length field
-      return ibs->read_v();
   }
 };
 } // namespace lyasio
@@ -149,7 +159,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
             return service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
           },
           [](io_service *service, transport_ptr transport, yasio::obstream *obs) {
-            return service->write(transport, obs->take_buffer());
+            return service->write(transport, std::move(obs->buffer()));
           }));
 
   // ##-- obstream
@@ -173,11 +183,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
       "write_u16", &yasio::obstream::write_i<uint16_t>, "write_u32",
       &yasio::obstream::write_i<uint32_t>, "write_u64", &yasio::obstream::write_i<uint64_t>,
       "write_f", &yasio::obstream::write_i<float>, "write_lf", &yasio::obstream::write_i<double>,
-      "write_s", &yasio::obstream::write_s, "write_string",
-      static_cast<void (yasio::obstream::*)(yasio::string_view)>(&yasio::obstream::write_v),
       "write_v",
       [](yasio::obstream *obs, yasio::string_view sv, sol::variadic_args args) {
-        int lfl = 32;
+        int lfl = -1;
         if (args.size() > 0)
           lfl = static_cast<int>(args[0]);
         return lyasio::obstream_write_v(obs, sv, lfl);
@@ -198,11 +206,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
       "read_u8", &yasio::ibstream::read_i<uint8_t>, "read_u16", &yasio::ibstream::read_i<uint16_t>,
       "read_u24", &yasio::ibstream::read_u24, "read_u32", &yasio::ibstream::read_i<uint32_t>,
       "read_u64", &yasio::ibstream::read_i<uint64_t>, "read_f", &yasio::ibstream::read_i<float>,
-      "read_lf", &yasio::ibstream::read_i<double>, "read_s", &yasio::ibstream::read_s,
-      "read_string",
-      static_cast<yasio::string_view (yasio::ibstream::*)()>(&yasio::ibstream::read_v), "read_v",
+      "read_lf", &yasio::ibstream::read_i<double>, "read_v",
       [](yasio::ibstream *ibs, sol::variadic_args args) {
-        int lfl = 32;
+        int lfl = -1;
         if (args.size() > 0)
           lfl = static_cast<int>(args[0]);
         return lyasio::ibstream_read_v(ibs, lfl);
@@ -354,7 +360,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
               static_cast<int (io_service::*)(transport_ptr transport, std::vector<char> data)>(
                   &io_service::write),
               [](io_service *service, transport_ptr transport, yasio::obstream *obs) {
-                return service->write(transport, obs->take_buffer());
+                return service->write(transport, std::move(obs->buffer()));
               })
           .addStaticFunction("set_option", [](io_service *service, int opt,
                                               kaguya::VariadicArgType args) {
@@ -428,13 +434,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
           .addFunction("write_u64", &yasio::obstream::write_i<uint64_t>)
           .addFunction("write_f", &yasio::obstream::write_i<float>)
           .addFunction("write_lf", &yasio::obstream::write_i<double>)
-          .addFunction("write_s", &yasio::obstream::write_s)
-          .addFunction("write_string", static_cast<void (yasio::obstream::*)(yasio::string_view)>(
-                                           &yasio::obstream::write_v))
           .addStaticFunction(
               "write_v",
               [](yasio::obstream *obs, yasio::string_view sv, kaguya::VariadicArgType args) {
-                int lfl = 32;
+                int lfl = -1;
                 if (args.size() > 0)
                   lfl = static_cast<int>(args[0]);
                 return lyasio::obstream_write_v(obs, sv, lfl);
@@ -464,12 +467,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
           .addFunction("read_u64", &yasio::ibstream_view::read_i<uint64_t>)
           .addFunction("read_f", &yasio::ibstream_view::read_i<float>)
           .addFunction("read_lf", &yasio::ibstream_view::read_i<double>)
-          .addFunction("read_s", &yasio::ibstream_view::read_s)
-          .addFunction("read_string", static_cast<yasio::string_view (yasio::ibstream_view::*)()>(
-                                          &yasio::ibstream_view::read_v))
           .addStaticFunction("read_v",
                              [](yasio::ibstream *ibs, kaguya::VariadicArgType args) {
-                               int length_field_bits = 32;
+                               int length_field_bits = -1;
                                if (args.size() > 0)
                                  length_field_bits = static_cast<int>(args[0]);
                                return lyasio::ibstream_read_v(ibs, length_field_bits);

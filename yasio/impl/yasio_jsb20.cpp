@@ -444,23 +444,6 @@ static bool js_yasio_ibstream_read_u24(se::State &s)
 }
 SE_BIND_FUNC(js_yasio_ibstream_read_u24)
 
-static bool js_yasio_ibstream_read_string(se::State &s)
-{
-  cocos2d::log("%s", "ibstream: read_string is deprecated, use read_v instead!");
-
-  yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
-  const auto &args = s.args();
-  size_t argc      = args.size();
-
-  auto sv = cobj->read_v();
-
-  s.rval().setString(std::string(sv.data(), sv.length()));
-
-  return true;
-}
-SE_BIND_FUNC(js_yasio_ibstream_read_string)
-
 static bool js_yasio_ibstream_read_v(se::State &s)
 {
   yasio::ibstream *cobj = (yasio::ibstream *)s.nativeThisObject();
@@ -468,7 +451,7 @@ static bool js_yasio_ibstream_read_v(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  int length_field_bits = 32; // default is 32bits
+  int length_field_bits = -1; // default: use variant length of length field
   bool raw              = false;
   if (argc >= 1)
     length_field_bits = args[0].toInt32();
@@ -478,14 +461,17 @@ static bool js_yasio_ibstream_read_v(se::State &s)
   yasio::string_view sv;
   switch (length_field_bits)
   {
-    case 8: // 8bits
-      sv = cobj->read_v8();
+    case -1: // variant bits
+      sv = cobj->read_va();
+      break;
+    case 32: // 32bits
+      sv = cobj->read_v();
       break;
     case 16: // 16bits
       sv = cobj->read_v16();
       break;
-    default: // 32bits
-      sv = cobj->read_v();
+    default: // 8bits
+      sv = cobj->read_v8();
   }
 
   if (!raw)
@@ -567,7 +553,6 @@ void js_register_yasio_ibstream(se::Object *obj)
   DEFINE_IBSTREAM_FUNC(read_u32);
   DEFINE_IBSTREAM_FUNC(read_f);
   DEFINE_IBSTREAM_FUNC(read_lf);
-  DEFINE_IBSTREAM_FUNC(read_string);
   DEFINE_IBSTREAM_FUNC(read_v);
   DEFINE_IBSTREAM_FUNC(read_bytes);
   DEFINE_IBSTREAM_FUNC(length);
@@ -831,24 +816,6 @@ SE_BIND_FUNC(js_yasio_obstream_write_i64)
 SE_BIND_FUNC(js_yasio_obstream_write_f)
 SE_BIND_FUNC(js_yasio_obstream_write_lf)
 
-bool js_yasio_obstream_write_string(se::State &s)
-{
-  cocos2d::log("%s", "obstream: write_string is deprecated, use read_v instead!");
-
-  auto cobj = (yasio::obstream *)s.nativeThisObject();
-  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
-  const auto &args = s.args();
-  size_t argc      = args.size();
-
-  auto &str = args[0].toString();
-  cobj->write_v(str.c_str(), str.length());
-
-  s.rval().setUndefined();
-
-  return true;
-}
-SE_BIND_FUNC(js_yasio_obstream_write_string)
-
 bool js_yasio_obstream_write_v(se::State &s)
 {
   auto cobj = (yasio::obstream *)s.nativeThisObject();
@@ -858,19 +825,22 @@ bool js_yasio_obstream_write_v(se::State &s)
 
   auto sv = seval_to_string_view(args[0]);
 
-  int length_field_bits = 32; // default is 32bits
+  int length_field_bits = -1; // default: use variant length of length field
   if (argc >= 2)
     length_field_bits = args[1].toInt32();
   switch (length_field_bits)
   {
-    case 8: // 8bits
-      cobj->write_v8(sv);
+    case -1: // variant bits
+      cobj->write_va(sv);
+      break;
+    case 32: // 32bits
+      cobj->write_v(sv);
       break;
     case 16: // 16bits
       cobj->write_v16(sv);
       break;
-    default: // 32bits
-      cobj->write_v(sv);
+    default: // 8bits
+      cobj->write_v8(sv);
   }
 
   s.rval().setUndefined();
@@ -965,7 +935,6 @@ void js_register_yasio_obstream(se::Object *obj)
   DEFINE_OBSTREAM_FUNC(write_i64);
   DEFINE_OBSTREAM_FUNC(write_f);
   DEFINE_OBSTREAM_FUNC(write_lf);
-  DEFINE_OBSTREAM_FUNC(write_string);
   DEFINE_OBSTREAM_FUNC(write_v);
   DEFINE_OBSTREAM_FUNC(write_bytes);
   DEFINE_OBSTREAM_FUNC(length);

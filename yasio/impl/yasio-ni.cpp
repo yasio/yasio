@@ -105,6 +105,19 @@ YASIO_NI_API int yasio_start(const char *params,
 
   return static_cast<int>(hosts.size());
 }
+YASIO_NI_API void yasio_set_resolv_fn(int opt, int (*resolv)(const char *host, intptr_t result))
+{
+  resolv_fn_t fn = [resolv](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
+    char buffer[256] = {0};
+    int ret          = resolv(host, (intptr_t)&buffer[0]);
+    if (0 == ret)
+    {
+      eps.push_back(ip::endpoint(buffer, port));
+    }
+    return ret;
+  };
+  myasio->set_option(YOPT_RESOLV_FUNCTION, &fn);
+}
 YASIO_NI_API void yasio_set_option(int opt, const char *params)
 {
   std::string strParams = params;
@@ -146,6 +159,9 @@ YASIO_NI_API void yasio_set_option(int opt, const char *params)
     break;
     case YOPT_LOG_FILE:
       myasio->set_option(opt, params);
+      break;
+    case YOPT_DNS_CACHE_TIMEOUT:
+      myasio->set_option(opt, atoi(params));
       break;
   }
 }

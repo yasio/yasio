@@ -2,7 +2,7 @@
 
 pcode_autog.exe
 
-move protocol_*.lua ..\test\test\
+move protocol_*.lua ..\msvc\luatest\
 del /f /s /q *.h
 del /f /s /q *.cpp
 del /f /s /q *.lua

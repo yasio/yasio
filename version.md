@@ -5,4 +5,5 @@ yasio-3.21.0
 4. Make transport pointer more safe for Native Interface.
 5. Change script API: ibstream.read_v, obstream.write_v default behavior to use 7bit encoded int as length field.
 6. Remove script API: ibstream.read_string, obstream.write_string
+7. Add YASIO_NI API: yasio_set_resolv_fn to set custom dns resolver, such as httpdns
 

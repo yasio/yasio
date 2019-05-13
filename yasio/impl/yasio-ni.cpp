@@ -180,7 +180,8 @@ YASIO_NI_API int yasio_write(intptr_t vfd, const unsigned char *bytes, int len)
 }
 YASIO_NI_API void yasio_dispatch_events(int maxEvents) { myasio->dispatch_events(maxEvents); }
 YASIO_NI_API void yasio_stop() { myasio->stop_service(); }
-
+YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
+YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
 #if defined(__cplusplus)
 }
 #endif

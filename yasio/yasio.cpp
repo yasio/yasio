@@ -53,8 +53,14 @@ SOFTWARE.
  * field. */
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
+void (*yasio_console_print_fn)(const char *msg);
+
 #if defined(_WIN32)
-#  define YASIO_DEBUG_PRINT(msg) OutputDebugStringA(msg)
+#  define YASIO_DEBUG_PRINT(msg)                                                                   \
+    if (yasio_console_print_fn)                                                                    \
+      yasio_console_print_fn(msg);                                                                 \
+    else                                                                                           \
+      OutputDebugStringA(msg)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
 #elif defined(ANDROID) || defined(__ANDROID__)
@@ -62,7 +68,11 @@ SOFTWARE.
 #  include <jni.h>
 #  define YASIO_DEBUG_PRINT(msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
 #else
-#  define YASIO_DEBUG_PRINT(msg) printf("%s", msg)
+#  define YASIO_DEBUG_PRINT(msg)                                                                   \
+    if (yasio_console_print_fn)                                                                    \
+      yasio_console_print_fn(msg);                                                                 \
+    else                                                                                           \
+      printf("%s", msg)
 #endif
 
 #define YASIO_LOG(format, ...)                                                                     \
@@ -1524,7 +1534,8 @@ void io_service::set_option(int option, ...)
     case YOPT_SEND_TIMEOUT:
       options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case YOPT_RECONNECT_TIMEOUT: {
+    case YOPT_RECONNECT_TIMEOUT:
+    {
       int value = va_arg(ap, int);
       if (value > 0)
         options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
@@ -1567,13 +1578,15 @@ void io_service::set_option(int option, ...)
     case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
       break;
-    case YOPT_CHANNEL_LOCAL_PORT: {
+    case YOPT_CHANNEL_LOCAL_PORT:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
     }
     break;
-    case YOPT_CHANNEL_REMOTE_HOST: {
+    case YOPT_CHANNEL_REMOTE_HOST:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1582,7 +1595,8 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_PORT: {
+    case YOPT_CHANNEL_REMOTE_PORT:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1591,7 +1605,8 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
+    case YOPT_CHANNEL_REMOTE_ENDPOINT:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {

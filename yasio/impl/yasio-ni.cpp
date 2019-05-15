@@ -184,9 +184,9 @@ YASIO_NI_API void yasio_dispatch_events(int maxEvents) { myasio->dispatch_events
 YASIO_NI_API void yasio_stop() { myasio->stop_service(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
-YASIO_NI_API void yasio_set_console_print(void (*custom_print)(const char *))
+YASIO_NI_API void yasio_set_console_print(void (*console_print_cb)(const char *))
 {
-  yasio_console_print_fn = custom_print;
+  yasio_console_print_fn = console_print_cb;
 }
 #if defined(__cplusplus)
 }

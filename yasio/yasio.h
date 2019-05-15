@@ -196,8 +196,7 @@ public:
 
 struct io_base
 {
-  int update_error() { return (error_ = xxsocket::get_last_errno()); }
-  void update_error(int error) { error_ = error; }
+  void set_last_errno(int error) { error_ = error; }
 
   std::shared_ptr<xxsocket> socket_;
   int error_ = 0; // socket error(>= -1), application error(< -1)

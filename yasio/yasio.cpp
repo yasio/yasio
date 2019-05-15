@@ -677,7 +677,7 @@ void io_service::handle_close(transport_ptr transport)
   {
     ctx->state_ = YCS_CLOSED;
     ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
-    ctx->error_ = 0;
+    ctx->set_last_errno(0);
   } // server channel, do nothing.
 
   ptr->~io_transport();
@@ -797,7 +797,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
       }
       else
       {
-        ctx->update_error(EINPROGRESS);
+        ctx->set_last_errno(EINPROGRESS);
         register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
         ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
         ctx->deadline_timer_.async_wait([this, ctx](bool cancelled) {
@@ -946,8 +946,8 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
 
 void io_service::handle_connect_succeed(transport_ptr transport)
 {
-  auto ctx         = transport->ctx_;
-  ctx->error_      = 0;
+  auto ctx = transport->ctx_;
+  ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
   auto &connection = transport->socket_;
   if (ctx->mask_ & YCM_CLIENT)
     ctx->state_ = YCS_OPENED;
@@ -1058,9 +1058,10 @@ bool io_service::do_write(transport_ptr transport)
       }
       else
       { // n <= 0, TODO: add time
-        int error = transport->update_error();
+        int error = xxsocket::get_last_errno();
         if (SHOULD_CLOSE_1(n, error))
         {
+          transport->set_last_errno(error);
           transport->offset_ = n;
           break;
         }
@@ -1084,25 +1085,19 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
       break;
     if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
-      transport->update_error(YERR_LOCAL_SHUTDOWN);
+      transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
       break;
     }
 
-    int n = -1;
-    if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
-    {
-      n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
-                                     sizeof(transport->buffer_) - transport->offset_);
-      transport->update_error();
-    }
-    else
-      transport->update_error(EWOULDBLOCK);
+    int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
+                                       sizeof(transport->buffer_) - transport->offset_);
 
-    if (n > 0 || !SHOULD_CLOSE_0(n, transport->error_))
+    int error = xxsocket::get_last_errno();
+    if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
 #if _YASIO_VERBOS_LOG
       YASIO_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
-                transport->error_, io_service::strerror(transport->error_));
+                error, io_service::strerror(error));
 #endif
       if (n == -1)
         n = 0;
@@ -1134,7 +1129,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         }
         else
         {
-          transport->update_error(YERR_DPL_ILLEGAL_PDU);
+          transport->set_last_errno(YERR_DPL_ILLEGAL_PDU);
           break;
         }
       }
@@ -1148,6 +1143,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
     }
     else
     { // n == 0: The return value will be 0 when the peer has performed an orderly shutdown.
+      transport->set_last_errno(error);
       transport->offset_ = n;
       break;
     }
@@ -1409,7 +1405,7 @@ void io_service::start_resolve(io_channel *ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
   assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY));
-  ctx->error_ = EINPROGRESS;
+  ctx->set_last_errno(EINPROGRESS);
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
   YASIO_LOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());
@@ -1427,7 +1423,7 @@ void io_service::start_resolve(io_channel *ctx)
     }
     else
     {
-      ctx->error_ = error;
+      ctx->set_last_errno(error);
       YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     }
     /*
@@ -1503,8 +1499,8 @@ const char *io_service::strerror(int error)
 {
   switch (error)
   {
-    case -1:
-      return "Unknown error!";
+    case 0:
+      return "End of file.";
     case YERR_SEND_TIMEOUT:
       return "Send timeout!";
     case YERR_DPL_ILLEGAL_PDU:
@@ -1515,6 +1511,8 @@ const char *io_service::strerror(int error)
       return "No available address!";
     case YERR_LOCAL_SHUTDOWN:
       return "An existing connection was shutdown by local host!";
+    case -1:
+      return "Unknown error!";
     default:
       return xxsocket::strerror(error);
   }

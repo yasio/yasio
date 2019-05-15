@@ -1500,7 +1500,7 @@ const char *io_service::strerror(int error)
   switch (error)
   {
     case 0:
-      return "End of file.";
+      return "No error.";
     case YERR_SEND_TIMEOUT:
       return "Send timeout!";
     case YERR_DPL_ILLEGAL_PDU:

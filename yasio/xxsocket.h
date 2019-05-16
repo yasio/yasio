@@ -594,8 +594,6 @@ public:
   int set_nonblocking(bool nonblocking) const;
   static int set_nonblocking(socket_native_type s, bool nonblocking);
 
-  bool is_nonblocking() const;
-
   /* @brief: Set this socket io mode to blocking
   ** @params:
   **
@@ -672,18 +670,25 @@ public:
   **        timeout: connection timeout, millseconds
   **
   ** @returns: [0].succeed, [-1].failed
+  ** @remark: Because on win32, there is no way to test whether the socket is non-blocking,
+  ** so, after this function called, the socket will be always set to blocking mode.
   */
-
   int connect_n(const char *addr, u_short port, const std::chrono::microseconds &wtimeout);
   int connect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout);
-
   int connect_n(const char *addr, u_short port, timeval *timeout);
   int connect_n(const ip::endpoint &ep, timeval *timeout);
-
   static int connect_n(socket_native_type s, const char *addr, u_short port, timeval *timeout);
   static int connect_n(socket_native_type s, const ip::endpoint &ep, timeval *timeout);
-  static int connect_n(socket_native_type s, const ip::endpoint &ep);
 
+  /* @brief: Establishes a connection to a specified this socket with nonblocking
+  ** @params:
+  **
+  ** @returns: [0].succeed, [-1].failed
+  ** @remark: this function will return immediately, for tcp, you should detect whether the 
+  ** handshake complete by handle_write_ready.
+  */
+  static int connect_n(socket_native_type s, const ip::endpoint &ep);
+  
   /* @brief: Sends data on this connected socket
   ** @params: omit
   **

@@ -32,7 +32,7 @@ SOFTWARE.
 
 #include "yasio/yasio.h"
 
-#if defined(_WIN32)
+#if defined(_WINDLL)
 #  define YASIO_NI_API __declspec(dllexport)
 #else
 #  define YASIO_NI_API

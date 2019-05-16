@@ -934,16 +934,6 @@ int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
   return ::ioctlsocket(s, FIONBIO, &argp);
 }
 
-bool xxsocket::is_nonblocking() const
-{
-#if defined(_WIN32)
-  return true;
-#else
-  int flags = ::fcntl(this->fd, F_GETFL, 0);
-  return flags & O_NONBLOCK;
-#endif
-}
-
 int xxsocket::bind(const char *addr, unsigned short port) const
 {
   ip::endpoint local_ep(addr, port);
@@ -1080,6 +1070,8 @@ done:
 
   /* restore file status flags */
 #ifdef _WIN32
+  // pitfall: because on win32, there is no way to test whether the s is non-blocking
+  // so, can't restore properly
   set_nonblocking(s, false);
 #else
   ::fcntl(s, F_SETFL, flags);

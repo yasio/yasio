@@ -28,7 +28,7 @@ SOFTWARE.
 
 #pragma once
 
-#if defined(LUA_BUILD_AS_DLL) && defined(_WIN32)
+#if defined(_WINDLL)
 #  if defined(LUA_LIB)
 #    define YASIO_LUA_API __declspec(dllexport)
 #  else

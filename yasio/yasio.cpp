@@ -1089,10 +1089,13 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
       break;
     }
 
-    int n = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
-                                       sizeof(transport->buffer_) - transport->offset_);
-
-    int error = xxsocket::get_last_errno();
+    int n = -1, error = EWOULDBLOCK;
+    if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
+    {
+      n     = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
+                                     sizeof(transport->buffer_) - transport->offset_);
+      error = xxsocket::get_last_errno();
+    }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
 #if _YASIO_VERBOS_LOG

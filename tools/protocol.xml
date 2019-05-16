@@ -32,7 +32,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
 
 
 -->
-<protocol name="client" version="1.18" author="halx99" release_date="2018.12.2">
+<protocol name="client" version="1.19.5" author="halx99" release_date="2019.5.16">
 
   <header desc="16 bytes header, unused for generator, on for description protocol">
     <field name="length" type="uint16_t" />
@@ -72,7 +72,7 @@ obinarystream pcode_autog_begin_encode(uint16_t command_id)
       <field name="reserved2" type="uint64_t" /> <!-- May be timestamp -->
     </message>
  
-     <message name="MessageSimple1" command_id="CID_SIMPLE1 = 101" mode="lua.all">	<!-- 登陆请求 -->
+     <message name="MessageSimple1" command_id="CID_SIMPLE1 = 101" mode="lua.all">
       <field name="id" type="int8_t" />
       <field name="value1" type="uint16_t" />
       <field name="value2" type="int32_t" />

@@ -107,7 +107,7 @@ YASIO_NI_API int yasio_start(const char *params,
 
   return static_cast<int>(hosts.size());
 }
-YASIO_NI_API void yasio_set_resolv_fn(int opt, int (*resolv)(const char *host, intptr_t sbuf))
+YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char *host, intptr_t sbuf))
 {
   resolv_fn_t fn = [resolv](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
     char buffer[128] = {0};

@@ -70,7 +70,7 @@ extern "C" {
 #endif
 
 YASIO_NI_API int yasio_start(const char *params,
-                             void (*callback)(uint32_t emask, int cidx, intptr_t vfd,
+                             void (*callback)(uint32_t emask, int cidx, intptr_t sid,
                                               intptr_t bytes, int len))
 {
   std::vector<io_hostent> hosts;
@@ -107,10 +107,10 @@ YASIO_NI_API int yasio_start(const char *params,
 
   return static_cast<int>(hosts.size());
 }
-YASIO_NI_API void yasio_set_resolv_fn(int opt, int (*resolv)(const char *host, intptr_t result))
+YASIO_NI_API void yasio_set_resolv_fn(int opt, int (*resolv)(const char *host, intptr_t sbuf))
 {
   resolv_fn_t fn = [resolv](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
-    char buffer[256] = {0};
+    char buffer[128] = {0};
     int ret          = resolv(host, (intptr_t)&buffer[0]);
     if (0 == ret)
     {
@@ -169,15 +169,15 @@ YASIO_NI_API void yasio_set_option(int opt, const char *params)
 }
 YASIO_NI_API void yasio_open(int cindex, int kind) { myasio->open(cindex, kind); }
 YASIO_NI_API void yasio_close(int cindex) { myasio->close(cindex); }
-YASIO_NI_API void yasio_close_vfd(intptr_t vfd)
+YASIO_NI_API void yasio_close2(intptr_t sid)
 {
-  auto p = reinterpret_cast<transport_ptr>(vfd);
+  auto p = reinterpret_cast<transport_ptr>(sid);
   myasio->close(p);
 }
-YASIO_NI_API int yasio_write(intptr_t vfd, const unsigned char *bytes, int len)
+YASIO_NI_API int yasio_write(intptr_t sid, const unsigned char *bytes, int len)
 {
   std::vector<char> buf(bytes, bytes + len);
-  auto p = reinterpret_cast<transport_ptr>(vfd);
+  auto p = reinterpret_cast<transport_ptr>(sid);
   return myasio->write(p, std::move(buf));
 }
 YASIO_NI_API void yasio_dispatch_events(int maxEvents) { myasio->dispatch_events(maxEvents); }

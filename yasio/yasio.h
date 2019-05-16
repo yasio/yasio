@@ -210,12 +210,21 @@ class io_channel : public io_base
 public:
   io_channel(io_service &service);
 
+  inline void setup_hostent(std::string host, u_short port)
+  {
+    setup_host(host);
+    setup_port(port);
+  }
+
+  void setup_host(std::string host);
+  void setup_port(u_short port);
+
   u_short mask_ = 0;
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
 
   std::atomic<u_short> dns_queries_state_;
-  u_short port_;
+  u_short port_ = 0;
   std::string host_;
 
   std::vector<ip::endpoint> endpoints_;
@@ -472,8 +481,13 @@ private:
   void clear_transports(); // destroy all transports
   bool close_internal(io_channel *);
 
-  // Update resolve state for new endpoint set
-  u_short update_dns_queries_state(io_channel *ctx, bool update_name);
+  /*
+  ** Summay: Query async resolve state for new endpoint set
+  ** @returns:
+  **   YDQS_READY, YDQS_INPRROGRESS, YDQS_FAILED
+  ** @remark: will start a async resolv when the state is: YDQS_DIRTY
+  */
+  u_short query_ares_state(io_channel *ctx);
 
   void handle_send_finished(a_pdu_ptr, int);
 

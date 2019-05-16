@@ -277,6 +277,38 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 }
 
+void io_channel::setup_host(std::string host)
+{
+  if (this->host_ != host)
+  {
+    this->host_ = std::move(host);
+
+    this->endpoints_.clear();
+
+    ip::endpoint ep;
+    if (ep.assign(this->host_.c_str(), this->port_))
+    {
+      this->endpoints_.push_back(ep);
+      this->dns_queries_state_ = YDQS_READY;
+    }
+    else
+      this->dns_queries_state_ = YDQSF_QUERIES_NEEDED | YDQS_DIRTY;
+  }
+}
+
+void io_channel::setup_port(u_short port)
+{
+  if (port == 0)
+    return;
+  if (this->port_ != port)
+  {
+    this->port_ = port;
+    if (!this->endpoints_.empty())
+      for (auto &ep : this->endpoints_)
+        ep.port(port);
+  }
+}
+
 io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
 {
   static unsigned int s_object_id = 0;
@@ -409,11 +441,9 @@ void io_service::cleanup()
 
 io_channel *io_service::new_channel(const io_hostent &ep)
 {
-  auto ctx    = new io_channel(*this);
-  ctx->host_  = ep.host_;
-  ctx->port_  = ep.port_;
+  auto ctx = new io_channel(*this);
+  ctx->setup_hostent(ep.host_, ep.port_);
   ctx->index_ = static_cast<int>(this->channels_.size());
-  update_dns_queries_state(ctx, true);
   this->channels_.push_back(ctx);
   return ctx;
 }
@@ -543,7 +573,7 @@ void io_service::perform_channels(fd_set *fds_array)
       { // resolving, opening
         if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
         {
-          switch (this->update_dns_queries_state(ctx, false))
+          switch (this->query_ares_state(ctx))
           {
             case YDQS_READY:
               do_nonblocking_connect(ctx);
@@ -960,8 +990,8 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   {
     // apply tcp keepalive options
     if (options_.tcp_keepalive_.onoff)
-      connection->set_keepalive(options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval,
-                                options_.tcp_keepalive_.probs);
+      connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle,
+                                options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
   }
 
   YASIO_LOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
@@ -1367,38 +1397,18 @@ bool io_service::cleanup_io(io_base *ctx)
   return false;
 }
 
-u_short io_service::update_dns_queries_state(io_channel *ctx, bool update_name)
+u_short io_service::query_ares_state(io_channel *ctx)
 {
-  if (!update_name)
+  if ((ctx->dns_queries_state_ & YDQSF_QUERIES_NEEDED) &&
+      !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
   {
-    if ((ctx->dns_queries_state_ & YDQSF_QUERIES_NEEDED) &&
-        !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
-    {
-      auto diff = (highp_clock() - ctx->dns_queries_timestamp_);
-      if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY) &&
-          diff >= options_.dns_cache_timeout_)
-        YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_DIRTY);
+    auto diff = (highp_clock() - ctx->dns_queries_timestamp_);
+    if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY) &&
+        diff >= options_.dns_cache_timeout_)
+      YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_DIRTY);
 
-      if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY))
-        start_resolve(ctx);
-    }
-  }
-  else
-  {
-    ctx->endpoints_.clear();
-    if (ctx->port_ > 0)
-    {
-      ip::endpoint ep;
-      if (ep.assign(ctx->host_.c_str(), ctx->port_))
-      {
-        ctx->endpoints_.push_back(ep);
-        ctx->dns_queries_state_ = YDQS_READY;
-      }
-      else
-        ctx->dns_queries_state_ = YDQSF_QUERIES_NEEDED | YDQS_DIRTY;
-    }
-    else
-      ctx->dns_queries_state_ = YDQS_FAILED;
+    if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY))
+      start_resolve(ctx);
   }
 
   return YDQS_GET_STATE(ctx->dns_queries_state_);
@@ -1591,8 +1601,7 @@ void io_service::set_option(int option, ...)
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
-        this->channels_[index]->host_ = va_arg(ap, const char *);
-        update_dns_queries_state(this->channels_[index], true);
+        this->channels_[index]->setup_host(va_arg(ap, const char *));
       }
     }
     break;
@@ -1601,8 +1610,7 @@ void io_service::set_option(int option, ...)
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
-        this->channels_[index]->port_ = (u_short)va_arg(ap, int);
-        update_dns_queries_state(this->channels_[index], true);
+        this->channels_[index]->setup_port((u_short)va_arg(ap, int));
       }
     }
     break;
@@ -1611,10 +1619,9 @@ void io_service::set_option(int option, ...)
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
-        auto channel   = this->channels_[index];
-        channel->host_ = va_arg(ap, const char *);
-        channel->port_ = (u_short)va_arg(ap, int);
-        update_dns_queries_state(this->channels_[index], true);
+        auto channel = this->channels_[index];
+        channel->setup_host(va_arg(ap, const char *));
+        channel->setup_port((u_short)va_arg(ap, int));
       }
     }
     break;

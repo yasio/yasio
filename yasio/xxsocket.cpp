@@ -1404,8 +1404,8 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
 #if defined(_WIN32) && !defined(WP8) && !defined(_WINSTORE)
   tcp_keepalive buffer_in;
   buffer_in.onoff             = flag;
-  buffer_in.keepalivetime     = idle;
-  buffer_in.keepaliveinterval = interval;
+  buffer_in.keepalivetime     = idle * 1000;
+  buffer_in.keepaliveinterval = interval * 1000;
 
   return WSAIoctl(s, SIO_KEEPALIVE_VALS, &buffer_in, sizeof(buffer_in), nullptr, 0,
                   (DWORD *)&probes, nullptr, nullptr);

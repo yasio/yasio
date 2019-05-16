@@ -684,11 +684,11 @@ public:
   ** @params:
   **
   ** @returns: [0].succeed, [-1].failed
-  ** @remark: this function will return immediately, for tcp, you should detect whether the 
+  ** @remark: this function will return immediately, for tcp, you should detect whether the
   ** handshake complete by handle_write_ready.
   */
   static int connect_n(socket_native_type s, const ip::endpoint &ep);
-  
+
   /* @brief: Sends data on this connected socket
   ** @params: omit
   **
@@ -807,9 +807,9 @@ public:
 
   /* @brief: Configure TCP keepalive
   ** @params : flag:     1.on, 0.off
-  **           idle:     time to send keepalive when no data interaction
-  **           interval: keepalive send interval
-  **           probes:   times to try when no response
+  **           idle:     time(secs) to send keepalive when no data interaction
+  **           interval: keepalive send interval(secs)
+  **           probes:   count to try when no response
   **
   ** @returns: [0].successfully
   **          [<0].one or more errors occured

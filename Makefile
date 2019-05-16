@@ -19,7 +19,7 @@ all:$(STATIC_NAME) $(SHARE_NAME)
 %.o:%.c
 	$(CXX) $(CXXFLAGS) $< -o $@
 
-SOURCE := yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp
+SOURCE := yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp yasio/impl/yasio-ni.cpp
 OBJS   := $(patsubst %.cpp,%.o,$(SOURCE))
 
 $(STATIC_NAME):$(OBJS)

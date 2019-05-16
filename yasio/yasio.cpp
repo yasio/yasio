@@ -53,7 +53,7 @@ SOFTWARE.
  * field. */
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
-void (*yasio_console_print_fn)(const char *msg);
+void (*yasio_console_print_fn)(const char *) = nullptr;
 
 #if defined(_WIN32)
 #  define YASIO_DEBUG_PRINT(msg)                                                                   \

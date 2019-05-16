@@ -1,5 +1,2 @@
-yasio-3.21.1
-1. Fix connection handle_close detect problem.
-2. Add YASIO_NI API: yasio_set_console_print_fn.
-
-
+yasio-3.21.1p1
+1. Fix tcp keepalive option behavior is incorrect.

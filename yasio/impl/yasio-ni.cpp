@@ -29,7 +29,7 @@ SOFTWARE.
 /*
 ** yasio-ni.cpp: The yasio native interface for interop.
 */
-
+#include <string.h>
 #include "yasio/yasio.h"
 
 #if defined(_WINDLL)
@@ -188,6 +188,7 @@ YASIO_NI_API void yasio_set_console_print_fn(void (*console_print_fn)(const char
 {
   yasio_console_print_fn = console_print_fn;
 }
+YASIO_NI_API void yasio_memcpy(void *dst, const void *src, unsigned int len) { ::memcpy(dst, src, len); }
 #if defined(__cplusplus)
 }
 #endif

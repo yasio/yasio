@@ -12,11 +12,8 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 #include <string>
-extern "C" {
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
-}
+
+#include <lua.hpp>
 
 #ifndef KAGUYA_USE_CPP11
 #if defined(__cpp_decltype) || __cplusplus >= 201103L ||                       \
@@ -134,6 +131,26 @@ extern "C" {
 #endif
 
 #define KAGUYA_UNUSED(V) (void)(V)
+
+#if defined(KAGUYA_USING_CXX_LUA) && KAGUYA_USING_CXX_LUA
+#  include <lua.h>
+#  include <lualib.h>
+#  include <lauxlib.h>
+#  if defined(KAGUYA_USING_CXX_LUAJIT) && KAGUYA_USING_CXX_LUAJIT
+#    include <luajit.h>
+#  endif // C++ LuaJIT ... whatever that means
+#else
+#  include <lua.hpp>
+#endif // C++ Mangling for Lua
+
+#ifdef LUAJIT_VERSION
+#  ifndef KAGUYA_LUAJIT
+#    define KAGUYA_LUAJIT 1
+#    ifndef KAGUYA_LUAJIT_VERSION
+#      define KAGUYA_LUAJIT_VERSION KAGUYA_VERSION_NUM
+#    endif // KAGUYA_LUAJIT_VERSION definition, if not present
+#  endif   // kaguya luajit
+#endif     // luajit
 
 namespace kaguya {
 #if defined(_MSC_VER) && _MSC_VER <= 1500
@@ -712,12 +729,6 @@ inline void luaL_requiref(lua_State *L, const char *modname,
     lua_setglobal(L, modname);
   }
 }
-inline lua_Number lua_tonumberx(lua_State *L, int index, int *isnum) {
-  if (isnum) {
-    *isnum = lua_isnumber(L, index);
-  }
-  return lua_tonumber(L, index);
-}
 #endif
 #if LUA_VERSION_NUM < 503
 inline void lua_seti(lua_State *L, int index, lua_Integer n) {
@@ -748,6 +759,18 @@ inline int lua_rawget_rtype(lua_State *L, int idx) {
 #endif
 #if LUA_VERSION_NUM < 501
 void lua_createtable(lua_State *L, int narr, int nrec) { lua_newtable(L); }
+#endif
+#if LUA_VERSION_NUM < 502 && !defined(LUAJIT_VERSION)
+inline lua_Number lua_tonumberx(lua_State *L, int index, int *isnum)
+{
+  if (isnum)
+  {
+    *isnum = lua_isnumber(L, index);
+  }
+  return lua_tonumber(L, index);
+}
+#else
+using ::lua_tonumberx;
 #endif
 }
 

@@ -120,8 +120,9 @@ typedef std::chrono::high_resolution_clock highp_clock_t;
 typedef std::chrono::system_clock system_clock_t;
 
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
-typedef std::shared_ptr<io_transport> transport_ptr;
+typedef io_transport *transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
+typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
 
 typedef std::function<void(bool cancelled)> timer_cb_t;
 typedef std::pair<deadline_timer *, timer_cb_t> timer_impl_t;
@@ -195,8 +196,7 @@ public:
 
 struct io_base
 {
-  int update_error() { return (error_ = xxsocket::get_last_errno()); }
-  void update_error(int error) { error_ = error; }
+  void set_last_errno(int error) { error_ = error; }
 
   std::shared_ptr<xxsocket> socket_;
   int error_ = 0; // socket error(>= -1), application error(< -1)
@@ -210,12 +210,21 @@ class io_channel : public io_base
 public:
   io_channel(io_service &service);
 
+  inline void setup_hostent(std::string host, u_short port)
+  {
+    setup_host(host);
+    setup_port(port);
+  }
+
+  void setup_host(std::string host);
+  void setup_port(u_short port);
+
   u_short mask_ = 0;
   // specific local port, if not zero, tcp/udp client will use it as fixed port
   u_short local_port_ = 0;
 
   std::atomic<u_short> dns_queries_state_;
-  u_short port_;
+  u_short port_ = 0;
   std::string host_;
 
   std::vector<ip::endpoint> endpoints_;
@@ -246,7 +255,7 @@ public:
   }
 
 private:
-  io_transport(io_channel *ctx);
+  io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock);
 
   unsigned int id_;
 
@@ -356,9 +365,9 @@ public:
              YOPT_DEFER_EVENT       defer:int
              YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              YOPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             YOPT_LFBFD_PARAMS max_frame_length:int, length_field_offst:int,
-     length_field_length:int, length_adjustment:int YOPT_IO_EVENT_CALLBACK
-     func:io_event_callback_t*
+             YOPT_LFBFD_PARAMS      max_frame_length:int, length_field_offst:int,
+                                    length_field_length:int, length_adjustment:int
+             YOPT_IO_EVENT_CALLBACK func:io_event_callback_t*
              YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
              YOPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
              YOPT_CHANNEL_REMOTE_PORT index:int, port:int
@@ -378,17 +387,21 @@ public:
   // close channel
   void close(size_t channel_index = 0);
 
-  // check whether the channel is open
-  bool is_open(size_t cahnnel_index = 0) const;
-
   // check whether the transport is open
   bool is_open(transport_ptr) const;
+
+  // check whether the channel is open
+  bool is_open(size_t cahnnel_index = 0) const;
 
   int write(transport_ptr transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
-  std::shared_ptr<deadline_timer> schedule(highp_time_t duration, timer_cb_t,
-                                           bool repeated = false);
+  deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb, bool repeated = false)
+  {
+    return schedule(std::chrono::microseconds(duration), std::move(cb), repeated);
+  }
+  deadline_timer_ptr schedule(const std::chrono::microseconds &duration, timer_cb_t,
+                              bool repeated = false);
 
   void cleanup();
 
@@ -454,7 +467,7 @@ private:
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   // The op mask will be cleared, the state will be set CLOSED
-  bool do_close(io_base *ctx);
+  bool cleanup_io(io_base *ctx);
 
   void handle_close(transport_ptr);
   void handle_event(event_ptr event);
@@ -464,11 +477,17 @@ private:
   // dynmaically: because this API is not thread safe.
   io_channel *new_channel(const io_hostent &ep);
   // Clear all channels after service exit.
-  void clear_channels(); // destroy all channels
+  void clear_channels();   // destroy all channels
+  void clear_transports(); // destroy all transports
   bool close_internal(io_channel *);
 
-  // Update resolve state for new endpoint set
-  u_short update_dns_queries_state(io_channel *ctx, bool update_name);
+  /*
+  ** Summay: Query async resolve state for new endpoint set
+  ** @returns:
+  **   YDQS_READY, YDQS_INPRROGRESS, YDQS_FAILED
+  ** @remark: will start a async resolv when the state is: YDQS_DIRTY
+  */
+  u_short query_ares_state(io_channel *ctx);
 
   void handle_send_finished(a_pdu_ptr, int);
 
@@ -492,6 +511,7 @@ private:
   std::vector<io_channel *> channel_ops_;
 
   std::vector<transport_ptr> transports_;
+  std::vector<transport_ptr> transports_dypool_;
 
   // select interrupter
   select_interrupter interrupter_;

@@ -307,12 +307,11 @@ template <typename T> static jsval jsb_yasio_to_jsval(JSContext *ctx, std::uniqu
 
 static jsval jsb_yasio_to_jsval(JSContext *ctx, transport_ptr value)
 {
-  auto cobj                  = new transport_ptr(value);
-  js_type_class_t *typeClass = js_get_type_from_native<transport_ptr>(cobj);
+  js_type_class_t *typeClass = js_get_type_from_native<io_transport>(value);
 
   // link the native object with the javascript object
   JS::RootedObject jsobj(
-      ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<transport_ptr>::s_name()));
+      ctx, jsb_create_weak_jsobject(ctx, value, typeClass, TypeTest<io_transport>::s_name()));
 
   return OBJECT_TO_JSVAL(jsobj);
 }
@@ -322,12 +321,7 @@ static transport_ptr jsb_yasio_jsval_to_transport_ptr(JSContext *ctx, const JS::
   JS::RootedObject jsobj(ctx);
   jsobj.set(vp.toObjectOrNull());
   auto proxy = jsb_get_js_proxy(jsobj);
-  auto pptr  = (transport_ptr *)(proxy ? proxy->ptr : nullptr);
-  if (pptr)
-  {
-    return *pptr;
-  }
-  return nullptr;
+  return (transport_ptr)(proxy ? proxy->ptr : nullptr);
 }
 
 static yasio::obstream *jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue &vp)
@@ -468,7 +462,7 @@ static bool js_yasio_ibstream_read_bool(JSContext *ctx, uint32_t argc, jsval *vp
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_bool : Invalid Native Object");
 
-  args.rval().set(BOOLEAN_TO_JSVAL(cobj->read_ix<bool>()));
+  args.rval().set(BOOLEAN_TO_JSVAL(cobj->read_i<bool>()));
 
   return true;
 }
@@ -486,7 +480,7 @@ static bool js_yasio_ibstream_read_ix(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_ix : Invalid Native Object");
 
-  args.rval().set(INT_TO_JSVAL(cobj->read_ix<T>()));
+  args.rval().set(INT_TO_JSVAL(cobj->read_i<T>()));
 
   return true;
 }
@@ -504,7 +498,7 @@ static bool js_yasio_ibstream_read_ux(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_ux : Invalid Native Object");
 
-  args.rval().set(UINT_TO_JSVAL(cobj->read_ix<T>()));
+  args.rval().set(UINT_TO_JSVAL(cobj->read_i<T>()));
 
   return true;
 }
@@ -523,7 +517,7 @@ static bool js_yasio_ibstream_read_dx(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_dx : Invalid Native Object");
 
-  args.rval().set(DOUBLE_TO_JSVAL(cobj->read_ix<T>()));
+  args.rval().set(DOUBLE_TO_JSVAL(cobj->read_i<T>()));
 
   return true;
 }
@@ -562,27 +556,6 @@ static bool js_yasio_ibstream_read_u24(JSContext *ctx, uint32_t argc, jsval *vp)
   return true;
 }
 
-static bool js_yasio_ibstream_read_string(JSContext *ctx, uint32_t argc, jsval *vp)
-{
-  bool ok               = true;
-  yasio::ibstream *cobj = nullptr;
-
-  cocos2d::log("%s", "ibstream: read_string is deprecated, use read_v instead!");
-
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  JS::RootedObject obj(ctx);
-  obj.set(args.thisv().toObjectOrNull());
-  js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_string : Invalid Native Object");
-
-  auto sv = cobj->read_v();
-
-  args.rval().set(c_string_to_jsval(ctx, sv.data(), sv.size()));
-
-  return true;
-}
-
 static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   bool ok               = true;
@@ -595,7 +568,7 @@ static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
   cobj              = (yasio::ibstream *)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_ibstream_read_v : Invalid Native Object");
 
-  int length_field_bits = 32; // default is 32bits
+  int length_field_bits = -1; // default: use variant length of length field
   bool raw              = false;
   if (argc >= 1)
     length_field_bits = args[0].toInt32();
@@ -605,14 +578,17 @@ static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
   yasio::string_view sv;
   switch (length_field_bits)
   {
-    case 8: // 8bits
-      sv = cobj->read_v8();
+    case -1: // variant bits
+      sv = cobj->read_va();
+      break;
+    case 32: // 32bits
+      sv = cobj->read_v();
       break;
     case 16: // 16bits
       sv = cobj->read_v16();
       break;
-    default: // 32bits
-      sv = cobj->read_v();
+    default: // 8bits
+      sv = cobj->read_v8();
   }
 
   if (!raw)
@@ -718,7 +694,6 @@ void js_register_yasio_ibstream(JSContext *ctx, JS::HandleObject global)
       JS_FN("read_i64", js_yasio_ibstream_read_dx<int64_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("read_f", js_yasio_ibstream_read_dx<float>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("read_lf", js_yasio_ibstream_read_dx<double>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_string", js_yasio_ibstream_read_string, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("read_v", js_yasio_ibstream_read_v, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("read_bytes", js_yasio_ibstream_read_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("seek", js_yasio_ibstream_seek, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
@@ -1105,33 +1080,6 @@ bool js_yasio_obstream_write_lf(JSContext *ctx, uint32_t argc, jsval *vp)
   return true;
 }
 
-bool js_yasio_obstream_write_string(JSContext *ctx, uint32_t argc, jsval *vp)
-{
-  yasio::obstream *cobj = nullptr;
-
-  cocos2d::log("%s", "obstream: write_string is deprecated, use read_v instead!");
-
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  JS::RootedObject obj(ctx);
-  obj.set(args.thisv().toObjectOrNull());
-  js_proxy_t *proxy = jsb_get_js_proxy(obj);
-  cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_string : Invalid Native Object");
-
-  auto arg0 = args.get(0);
-
-  JS::RootedString jsstr(ctx, arg0.toString());
-  auto p = JS_EncodeStringToUTF8(ctx, jsstr);
-  auto n = JS_GetStringEncodingLength(ctx, jsstr);
-
-  cobj->write_v(p, n);
-
-  JS_free(ctx, p);
-  args.rval().setUndefined();
-
-  return true;
-}
-
 bool js_yasio_obstream_write_v(JSContext *ctx, uint32_t argc, jsval *vp)
 {
   yasio::obstream *cobj = nullptr;
@@ -1141,7 +1089,7 @@ bool js_yasio_obstream_write_v(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_string : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_v : Invalid Native Object");
 
   auto arg0 = args.get(0);
 
@@ -1149,19 +1097,22 @@ bool js_yasio_obstream_write_v(JSContext *ctx, uint32_t argc, jsval *vp)
   bool unrecognized_object = false;
   sva.set(arg0, ctx, &unrecognized_object);
 
-  int length_field_bits = 32; // default is 32bits
+  int length_field_bits = -1; // default: use variant length of length field
   if (argc >= 2)
     length_field_bits = args[1].toInt32();
   switch (length_field_bits)
   {
-    case 8: // 8bits
-      cobj->write_v8(sva);
+    case -1: // variant bits
+      cobj->write_va(sva);
+      break;
+    case 32: // 32bits
+      cobj->write_v(sva);
       break;
     case 16: // 16bits
       cobj->write_v16(sva);
       break;
-    default: // 32bits
-      cobj->write_v(sva);
+    default: // 8bits
+      cobj->write_v8(sva);
   }
 
   args.rval().setUndefined();
@@ -1178,7 +1129,7 @@ bool js_yasio_obstream_write_bytes(JSContext *ctx, uint32_t argc, jsval *vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t *proxy = jsb_get_js_proxy(obj);
   cobj              = (yasio::obstream *)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_string : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_obstream_write_bytes : Invalid Native Object");
 
   auto arg0 = args.get(0);
 
@@ -1285,7 +1236,6 @@ void js_register_yasio_obstream(JSContext *ctx, JS::HandleObject global)
       JS_FN("write_i64", js_yasio_obstream_write_i64, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write_f", js_yasio_obstream_write_f, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write_lf", js_yasio_obstream_write_lf, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_string", js_yasio_obstream_write_string, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write_v", js_yasio_obstream_write_v, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write_bytes", js_yasio_obstream_write_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("length", js_yasio_obstream_length, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
@@ -1309,23 +1259,22 @@ void js_register_yasio_obstream(JSContext *ctx, JS::HandleObject global)
   jsb_register_class<yasio::obstream>(ctx, jsb_obstream_class, proto, JS::NullPtr());
 }
 
-///////////////////////// transport_ptr ///////////////////////////////
-JSClass *jsb_transport_ptr_class;
-JSObject *jsb_transport_ptr_prototype;
+///////////////////////// transport ///////////////////////////////
+JSClass *jsb_transport_class;
+JSObject *jsb_transport_prototype;
 
-void js_register_yasio_transport_ptr(JSContext *ctx, JS::HandleObject global)
+void js_register_yasio_transport(JSContext *ctx, JS::HandleObject global)
 {
-  jsb_transport_ptr_class              = (JSClass *)calloc(1, sizeof(JSClass));
-  jsb_transport_ptr_class->name        = "transport_ptr";
-  jsb_transport_ptr_class->addProperty = JS_PropertyStub;
-  jsb_transport_ptr_class->delProperty = JS_DeletePropertyStub;
-  jsb_transport_ptr_class->getProperty = JS_PropertyStub;
-  jsb_transport_ptr_class->setProperty = JS_StrictPropertyStub;
-  jsb_transport_ptr_class->enumerate   = JS_EnumerateStub;
-  jsb_transport_ptr_class->resolve     = JS_ResolveStub;
-  jsb_transport_ptr_class->convert     = JS_ConvertStub;
-  jsb_transport_ptr_class->finalize    = jsb_yasio_finalize<transport_ptr>;
-  jsb_transport_ptr_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
+  jsb_transport_class              = (JSClass *)calloc(1, sizeof(JSClass));
+  jsb_transport_class->name        = "transport";
+  jsb_transport_class->addProperty = JS_PropertyStub;
+  jsb_transport_class->delProperty = JS_DeletePropertyStub;
+  jsb_transport_class->getProperty = JS_PropertyStub;
+  jsb_transport_class->setProperty = JS_StrictPropertyStub;
+  jsb_transport_class->enumerate   = JS_EnumerateStub;
+  jsb_transport_class->resolve     = JS_ResolveStub;
+  jsb_transport_class->convert     = JS_ConvertStub;
+  jsb_transport_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
 
@@ -1333,18 +1282,18 @@ void js_register_yasio_transport_ptr(JSContext *ctx, JS::HandleObject global)
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_transport_ptr_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_ptr_class,
-                                             nullptr, 0, properties, funcs,
-                                             NULL, // no static properties
-                                             st_funcs);
+  jsb_transport_prototype =
+      JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_class, nullptr, 0, properties, funcs,
+                   NULL, // no static properties
+                   st_funcs);
 
   // add the proto and JSClass to the type->js info hash table
-  JS::RootedObject proto(ctx, jsb_transport_ptr_prototype);
+  JS::RootedObject proto(ctx, jsb_transport_prototype);
   // JS_SetProperty(ctx, proto, "_className", className);
   JS_SetProperty(ctx, proto, "__nativeObj", JS::TrueHandleValue);
   JS_SetProperty(ctx, proto, "__is_ref", JS::FalseHandleValue);
 
-  jsb_register_class<transport_ptr>(ctx, jsb_transport_ptr_class, proto, JS::NullPtr());
+  jsb_register_class<io_transport>(ctx, jsb_transport_class, proto, JS::NullPtr());
 }
 
 ///////////////////////// io_event /////////////////////////////////
@@ -1906,7 +1855,7 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
 
   js_register_yasio_ibstream(ctx, yasio);
   js_register_yasio_obstream(ctx, yasio);
-  js_register_yasio_transport_ptr(ctx, yasio);
+  js_register_yasio_transport(ctx, yasio);
   js_register_yasio_io_event(ctx, yasio);
   js_register_yasio_io_service(ctx, yasio);
 

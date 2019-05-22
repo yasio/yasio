@@ -62,25 +62,28 @@ public:
   obstream &operator=(const obstream &right);
   obstream &operator=(obstream &&right);
 
-  std::vector<char> take_buffer();
+  template <typename _Nty> void write_i(_Nty value);
 
-  template <typename _Nty> size_t write_i(_Nty value);
+  void write_i24(uint32_t value); // highest byte ignored
 
-  size_t write_i24(uint32_t value); // highest byte ignored
+  void write_i7(int value);
+
+  /* write blob data with variant length of length field. */
+  void write_va(yasio::string_view sv);
 
   /* 32 bits length field */
-  size_t write_v(yasio::string_view);
+  void write_v(yasio::string_view);
   /* 16 bits length field */
-  size_t write_v16(yasio::string_view);
+  void write_v16(yasio::string_view);
   /* 8 bits length field */
-  size_t write_v8(yasio::string_view);
+  void write_v8(yasio::string_view);
 
-  size_t write_v(const void *v, int size);
-  size_t write_v16(const void *v, int size);
-  size_t write_v8(const void *v, int size);
+  void write_v(const void *v, int size);
+  void write_v16(const void *v, int size);
+  void write_v8(const void *v, int size);
 
-  size_t write_bytes(yasio::string_view);
-  size_t write_bytes(const void *v, int vl);
+  void write_bytes(yasio::string_view);
+  void write_bytes(const void *v, int vl);
 
   size_t length() const { return buffer_.size(); }
   const char *data() const { return buffer_.data(); }
@@ -90,9 +93,9 @@ public:
 
   char *wdata(size_t offset = 0) { return &buffer_.front() + offset; }
 
-  template <typename _Nty> void set_i(std::streamoff offset, const _Nty value);
+  template <typename _Nty> void set(std::streamoff offset, const _Nty value);
 
-  template <typename _LenT> size_t write_vx(const void *v, int size)
+  template <typename _LenT> void write_vx(const void *v, int size)
   {
     auto l = yasio::endian::htonv(static_cast<_LenT>(size));
 
@@ -103,8 +106,6 @@ public:
     ::memcpy(buffer_.data() + offset, &l, sizeof(l));
     if (size > 0)
       ::memcpy(buffer_.data() + offset + sizeof l, v, size);
-
-    return buffer_.size();
   }
   obstream sub(size_t offset, size_t count = -1);
 
@@ -116,31 +117,27 @@ protected:
   std::stack<size_t> offset_stack_;
 }; // class obstream
 
-template <typename _Nty> inline size_t obstream::write_i(_Nty value)
+template <typename _Nty> inline void obstream::write_i(_Nty value)
 {
-  size_t offset = buffer_.size();
-  auto nv       = yasio::endian::htonv(value);
+  auto nv = yasio::endian::htonv(value);
   buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
-  return offset;
 }
 
-template <> inline size_t obstream::write_i<float>(float value)
+template <> inline void obstream::write_i<uint8_t>(uint8_t value) { buffer_.push_back(value); }
+
+template <> inline void obstream::write_i<float>(float value)
 {
-  size_t offset = buffer_.size();
-  auto nv       = htonf(value);
+  auto nv = htonf(value);
   buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
-  return offset;
 }
 
-template <> inline size_t obstream::write_i<double>(double value)
+template <> inline void obstream::write_i<double>(double value)
 {
-  size_t offset = buffer_.size();
-  auto nv       = htond(value);
+  auto nv = htond(value);
   buffer_.insert(buffer_.end(), (const char *)&nv, (const char *)&nv + sizeof(nv));
-  return offset;
 }
 
-template <typename _Nty> inline void obstream::set_i(std::streamoff offset, const _Nty value)
+template <typename _Nty> inline void obstream::set(std::streamoff offset, const _Nty value)
 {
   auto nv = yasio::endian::htonv(value);
   memcpy(buffer_.data() + offset, &nv, sizeof(nv));

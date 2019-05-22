@@ -28,21 +28,21 @@ SOFTWARE.
 
 #pragma once
 
-#if defined(YASIO_BUILD_AS_DLL)
-#  if defined(YASIO_LIB)
-#    define YASIO_API __declspec(dllexport)
+#if defined(_WINDLL)
+#  if defined(LUA_LIB)
+#    define YASIO_LUA_API __declspec(dllexport)
 #  else
-#    define YASIO_API __declspec(dllimport)
+#    define YASIO_LUA_API __declspec(dllimport)
 #  endif
 #else
-#  define YASIO_API
+#  define YASIO_LUA_API
 #endif
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 struct lua_State;
-YASIO_API int luaopen_yasio(lua_State *L);
+YASIO_LUA_API int luaopen_yasio(lua_State *L);
 #if defined(__cplusplus)
 }
 #endif

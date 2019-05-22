@@ -53,17 +53,21 @@ public:
   ibstream_view &operator=(const ibstream_view &right) = delete;
   ibstream_view &operator=(ibstream_view &&right) = delete;
 
-  template <typename _Nty> void read_i(_Nty &ov);
+  template <typename _Nty> void read_ix(_Nty &ov);
 
-  template <typename _Nty> _Nty read_ix()
+  template <typename _Nty> _Nty read_i()
   {
     _Nty value;
-    read_i(value);
+    read_ix(value);
     return value;
   }
 
+  int read_i7();
+
   int32_t read_i24();
   uint32_t read_u24();
+
+  yasio::string_view read_va();
 
   void read_v(std::string &);   // 32 bits length field
   void read_v16(std::string &); // 16 bits length field
@@ -84,12 +88,12 @@ public:
 
   inline const char *data() { return first_; }
   inline size_t length(void) { return last_ - first_; }
-  
+
   ptrdiff_t seek(ptrdiff_t offset, int whence);
-  
+
   template <typename _LenT> yasio::string_view read_vx()
   {
-    _LenT n = read_ix<_LenT>();
+    _LenT n = read_i<_LenT>();
 
     if (n > 0)
     {
@@ -109,20 +113,25 @@ protected:
   const char *ptr_;
 };
 
-template <typename _Nty> inline void ibstream_view::read_i(_Nty &ov)
+template <typename _Nty> inline void ibstream_view::read_ix(_Nty &ov)
 {
   memcpy(&ov, consume(sizeof(ov)), sizeof(ov));
   ov = yasio::endian::ntohv(ov);
 }
 
-template <> inline void ibstream_view::read_i<float>(float &ov)
+template <> inline void ibstream_view::read_ix<uint8_t>(uint8_t &ov)
+{
+  memcpy(&ov, consume(sizeof(ov)), sizeof(ov));
+}
+
+template <> inline void ibstream_view::read_ix<float>(float &ov)
 {
   uint32_t nv;
   memcpy(&nv, consume(sizeof(nv)), sizeof(nv));
   ov = ntohf(nv);
 }
 
-template <> inline void ibstream_view::read_i<double>(double &ov)
+template <> inline void ibstream_view::read_ix<double>(double &ov)
 {
   uint64_t nv;
   memcpy(&nv, consume(sizeof(nv)), sizeof(nv));

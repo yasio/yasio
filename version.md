@@ -1,2 +1,2 @@
-yasio-3.21.2
-1. Fix tcp keepalive option behavior is incorrect.
+yasio-3.21.3
+1. Add yasio_memcpy for YASIO_NI, because C# no such function Yet.

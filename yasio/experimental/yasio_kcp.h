@@ -438,7 +438,7 @@ private:
 
   void open_internal(io_channel *, bool ignore_state = false);
 
-  long long perform_transports(fd_set *fds_array);
+  long long perform_transports(fd_set *fds_array, long long max_duration);
   void perform_channels(fd_set *fds_array);
   void perform_timers();
 

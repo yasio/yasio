@@ -542,7 +542,7 @@ void io_service::run()
     }
 
     // perform active transports
-    max_wait_duration = perform_transports(fds_array);
+    max_wait_duration = perform_transports(fds_array, max_wait_duration);
 
     // perform active channels
     perform_channels(fds_array);
@@ -555,7 +555,7 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-long long io_service::perform_transports(fd_set *fds_array)
+long long io_service::perform_transports(fd_set *fds_array, long long /*max_duration*/)
 {
   long long wait_duration = MAX_WAIT_DURATION / 1000;
   // preform transports
@@ -1158,8 +1158,8 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         n = ikcp_recv(transport->kcp_, transport->buffer_ + transport->offset_,
                       sizeof(transport->buffer_) - transport->offset_);
       }
-      
-	  error = xxsocket::get_last_errno();
+      else if (n < 0)
+        error = xxsocket::get_last_errno();
     }
 
     if (n > 0 || !SHOULD_CLOSE_0(n, error))

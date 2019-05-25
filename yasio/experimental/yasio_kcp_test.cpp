@@ -9,7 +9,7 @@
 #elif defined(YASIO_EPOLL)
 #  include "yasio/experimental/yasio_epoll.h"
 #else
-#  include "yasio/yasio-kcp.h"
+#  include "yasio/experimental/yasio_kcp.h"
 #endif
 #include "yasio/ibstream.h"
 #include "yasio/obstream.h"
@@ -67,12 +67,12 @@ void yasioTest()
         packet.push_back('\0');
         printf("index:%d, receive data:%s\n", event->transport()->channel_index(), packet.data());
 
-
         if (event->cindex() == 1)
         { // response udp client
 
           std::vector<char> packet_resp;
           append_string(packet_resp, "hello udp client 0\n");
+          printf("---- response a packet to udp client 0\n");
           service.write(event->transport(), packet_resp);
         }
         else
@@ -81,6 +81,7 @@ void yasioTest()
           service.schedule(std::chrono::seconds(3), [&service, transport](bool) {
             std::vector<char> packet_resp;
             append_string(packet_resp, "hello udp client 1\n");
+            printf("---- send a packet to udp client 1\n");
             service.write(transport, packet_resp);
           });
         }

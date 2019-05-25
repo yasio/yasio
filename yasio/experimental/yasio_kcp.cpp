@@ -542,7 +542,7 @@ void io_service::run()
     }
 
     // perform active transports
-    max_wait_duration = perform_transports(fds_array, max_wait_duration);
+    max_wait_duration = perform_transports(fds_array);
 
     // perform active channels
     perform_channels(fds_array);
@@ -555,7 +555,7 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-long long io_service::perform_transports(fd_set *fds_array, long long /*max_duration*/)
+long long io_service::perform_transports(fd_set *fds_array)
 {
   long long wait_duration = MAX_WAIT_DURATION / 1000;
   // preform transports
@@ -565,21 +565,9 @@ long long io_service::perform_transports(fd_set *fds_array, long long /*max_dura
     if (do_read(transport, fds_array))
     {
       ++iter;
-      auto current = static_cast<IUINT32>(highp_clock() / 1000);
-      ikcp_update(transport->kcp_, current);
-
-      if (ikcp_waitsnd(transport->kcp_) > 0)
-      {
-        ikcp_flush(transport->kcp_);
-      }
-      else
-      {
-        auto expire_time = ikcp_check(transport->kcp_, current);
-        auto duration    = expire_time - current;
-        YASIO_LOG("ikcp_check=%d", duration);
-        if (wait_duration > duration)
-          wait_duration = duration;
-      }
+      auto duration = do_write(transport);
+      if (wait_duration > duration)
+        wait_duration = duration;
     }
     else
     {
@@ -1061,79 +1049,24 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-bool io_service::do_write(transport_ptr transport)
+long long io_service::do_write(transport_ptr transport)
 {
-  bool ret = false;
-  do
+  auto current = static_cast<IUINT32>(highp_clock() / 1000);
+  ikcp_update(transport->kcp_, current);
+
+  if (ikcp_waitsnd(transport->kcp_) > 0)
   {
-    if (!transport->socket_->is_open())
-      break;
-
-    if (!transport->send_queue_.empty())
-    {
-      std::lock_guard<std::recursive_mutex> lck(transport->send_queue_mtx_);
-
-      auto v                 = transport->send_queue_.front();
-      auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-      int n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
-      if (n == outstanding_bytes)
-      { // All pdu bytes sent.
-        transport->send_queue_.pop_front();
-#if _YASIO_VERBOS_LOG
-        auto packet_size = static_cast<int>(v->data_.size());
-        YASIO_LOG("[index: %d] do_write ok, A packet sent "
-                  "success, packet size:%d",
-                  transport->channel_index(), packet_size,
-                  transport->socket_->local_endpoint().to_string().c_str(),
-                  transport->socket_->peer_endpoint().to_string().c_str());
-#endif
-        handle_send_finished(v, YERR_OK);
-
-        if (!transport->send_queue_.empty())
-          ++this->outstanding_work_;
-      }
-      else if (n > 0)
-      { // TODO: add time
-        if (!v->expired())
-        { // #performance: change offset only, remain data will be send next time.
-          v->offset_ += n;
-          outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-          YASIO_LOG("[index: %d] do_write pending, %dbytes still "
-                    "outstanding, "
-                    "%dbytes was sent!",
-                    transport->channel_index(), outstanding_bytes, n);
-
-          ++this->outstanding_work_;
-        }
-        else
-        { // send timeout
-          transport->send_queue_.pop_front();
-
-          auto packet_size = static_cast<int>(v->data_.size());
-          YASIO_LOG("[index: %d] do_write packet timeout, packet "
-                    "size:%d",
-                    transport->channel_index(), packet_size);
-          handle_send_finished(v, YERR_SEND_TIMEOUT);
-          if (!transport->send_queue_.empty())
-            ++this->outstanding_work_;
-        }
-      }
-      else
-      { // n <= 0, TODO: add time
-        int error = xxsocket::get_last_errno();
-        if (SHOULD_CLOSE_1(n, error))
-        {
-          transport->set_last_errno(error);
-          transport->offset_ = n;
-          break;
-        }
-      }
-    }
-
-    ret = true;
-  } while (false);
-
-  return ret;
+    ikcp_flush(transport->kcp_);
+    if (ikcp_waitsnd(transport->kcp_) > 0)
+      return 0;
+    return MAX_WAIT_DURATION / 1000;
+  }
+  else
+  {
+    auto expire_time = ikcp_check(transport->kcp_, current);
+    auto duration    = expire_time - current;
+    return duration;
+  }
 }
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
@@ -1164,7 +1097,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         n = ikcp_recv(transport->kcp_, transport->buffer_ + transport->offset_,
                       sizeof(transport->buffer_) - transport->offset_);
       }
-      else if (n < 0)
+      else
         error = xxsocket::get_last_errno();
     }
 

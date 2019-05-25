@@ -438,7 +438,7 @@ private:
 
   void open_internal(io_channel *, bool ignore_state = false);
 
-  long long perform_transports(fd_set *fds_array, long long max_duration);
+  long long perform_transports(fd_set *fds_array);
   void perform_channels(fd_set *fds_array);
   void perform_timers();
 
@@ -466,7 +466,7 @@ private:
   // The major non-blocking event-loop
   void run(void);
 
-  bool do_write(transport_ptr);
+  long long do_write(transport_ptr);
   bool do_read(transport_ptr, fd_set *fds_array);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 

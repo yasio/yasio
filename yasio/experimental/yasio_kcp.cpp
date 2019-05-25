@@ -565,15 +565,21 @@ long long io_service::perform_transports(fd_set *fds_array, long long /*max_dura
     if (do_read(transport, fds_array))
     {
       ++iter;
-
       auto current = static_cast<IUINT32>(highp_clock() / 1000);
       ikcp_update(transport->kcp_, current);
 
-      auto expire_time = ikcp_check(transport->kcp_, current);
-      auto duration    = expire_time - current;
-      YASIO_LOG("ikcp_check=%d", duration);
-      if (wait_duration > duration)
-        wait_duration = duration;
+      if (ikcp_waitsnd(transport->kcp_) > 0)
+      {
+        ikcp_flush(transport->kcp_);
+      }
+      else
+      {
+        auto expire_time = ikcp_check(transport->kcp_, current);
+        auto duration    = expire_time - current;
+        YASIO_LOG("ikcp_check=%d", duration);
+        if (wait_duration > duration)
+          wait_duration = duration;
+      }
     }
     else
     {

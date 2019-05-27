@@ -316,7 +316,7 @@ io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ct
   this->id_                       = ++s_object_id;
   this->socket_                   = sock;
   this->kcp_                      = ikcp_create(0, this);
-  ikcp_nodelay(this->kcp_, 1, MAX_WAIT_DURATION / 1000, 2, 1);
+  ikcp_nodelay(this->kcp_, 1, 16/*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ikcp_setoutput(this->kcp_, [](const char *buf, int len, ikcpcb *kcp, void *user) {
     io_transport *t = (io_transport *)user;
     return t->socket_->send_i(buf, len);
@@ -1048,22 +1048,13 @@ bool io_service::do_write(transport_ptr transport)
 {
   std::lock_guard<std::recursive_mutex> lck(transport->kcp_mtx_);
 
-  long long wait_duration = MAX_WAIT_DURATION;
   auto current = static_cast<IUINT32>(highp_clock() / 1000);
   ikcp_update(transport->kcp_, current);
   
-  if (ikcp_waitsnd(transport->kcp_) > 0)
-  {
-    ikcp_flush(transport->kcp_);
-    if (ikcp_waitsnd(transport->kcp_) > 0)
-      wait_duration = 0;
-  }
-  else
-  {
-    auto expire_time = ikcp_check(transport->kcp_, current);
-    wait_duration    = (long long)(expire_time - current) * 1000;
-  }
-
+  auto expire_time = ikcp_check(transport->kcp_, current);
+  long long wait_duration    = (long long)(expire_time - current) * 1000;
+  if (wait_duration < 0)
+    wait_duration = 0;
   if (this->kcp_wait_duration_ > wait_duration)
       this->kcp_wait_duration_ = wait_duration;
 

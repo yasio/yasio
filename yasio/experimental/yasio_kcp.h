@@ -262,15 +262,13 @@ private:
   unsigned int id_;
 
   ikcpcb *kcp_;
+  std::recursive_mutex kcp_mtx_;
 
   char buffer_[65536]; // recv buffer, 64K
   int offset_ = 0;     // recv buffer offset
 
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
-
-  std::recursive_mutex send_queue_mtx_;
-  std::deque<a_pdu_ptr> send_queue_;
 
   io_channel *ctx_;
 
@@ -438,7 +436,7 @@ private:
 
   void open_internal(io_channel *, bool ignore_state = false);
 
-  long long perform_transports(fd_set *fds_array);
+  void perform_transports(fd_set *fds_array);
   void perform_channels(fd_set *fds_array);
   void perform_timers();
 
@@ -446,7 +444,7 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  int do_evpoll(fd_set *fds_array, long long max_duration);
+  int do_evpoll(fd_set *fds_array);
 
   void do_nonblocking_connect(io_channel *);
   void do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
@@ -466,7 +464,7 @@ private:
   // The major non-blocking event-loop
   void run(void);
 
-  long long do_write(transport_ptr);
+  bool do_write(transport_ptr);
   bool do_read(transport_ptr, fd_set *fds_array);
   void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
@@ -537,6 +535,9 @@ private:
 
   // optimize record incomplete works
   int outstanding_work_;
+
+  // The min wait duration to perform kcp pending works.
+  long long kcp_wait_duration_;
 
   // the event callback
   io_event_cb_t on_event_;

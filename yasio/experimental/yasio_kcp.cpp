@@ -277,12 +277,6 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 }
 
-static int ikcp_udp_output_cb(const char *buf, int len, ikcpcb *kcp, void *user)
-{
-  io_transport *t = (io_transport *)user;
-  return t->socket_->send_i(buf, len);
-}
-
 void io_channel::setup_host(std::string host)
 {
   if (this->host_ != host)
@@ -323,7 +317,10 @@ io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ct
   this->socket_                   = sock;
   this->kcp_                      = ikcp_create(0, this);
   ikcp_nodelay(this->kcp_, 1, MAX_WAIT_DURATION / 1000, 2, 1);
-  ikcp_setoutput(this->kcp_, ikcp_udp_output_cb);
+  ikcp_setoutput(this->kcp_, [](const char *buf, int len, ikcpcb *kcp, void *user) {
+    io_transport *t = (io_transport *)user;
+    return t->socket_->send_i(buf, len);
+  });
 }
 
 io_transport::~io_transport() { ikcp_release(this->kcp_); }
@@ -429,6 +426,8 @@ void io_service::init(const io_hostent *channel_eps, int channel_count, io_event
     (void)new_channel(channel_ep);
   }
 
+  this->kcp_wait_duration_ = MAX_WAIT_DURATION;
+
   this->state_ = io_service::state::INITIALIZED;
 }
 
@@ -505,12 +504,13 @@ void io_service::run()
 
   // event loop
   fd_set fds_array[max_ops];
-  long long max_wait_duration = MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int nfds = do_evpoll(fds_array, max_wait_duration);
+    int nfds           = do_evpoll(fds_array);
     if (this->state_ != io_service::state::RUNNING)
       break;
+
+    kcp_wait_duration_ = MAX_WAIT_DURATION;
 
     if (nfds == -1)
     {
@@ -542,7 +542,7 @@ void io_service::run()
     }
 
     // perform active transports
-    max_wait_duration = perform_transports(fds_array);
+    perform_transports(fds_array);
 
     // perform active channels
     perform_channels(fds_array);
@@ -555,19 +555,15 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-long long io_service::perform_transports(fd_set *fds_array)
+void io_service::perform_transports(fd_set *fds_array)
 {
-  long long wait_duration = MAX_WAIT_DURATION / 1000;
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    if (do_read(transport, fds_array))
+    if (do_read(transport, fds_array) && do_write(transport))
     {
       ++iter;
-      auto duration = do_write(transport);
-      if (wait_duration > duration)
-        wait_duration = duration;
     }
     else
     {
@@ -575,7 +571,6 @@ long long io_service::perform_transports(fd_set *fds_array)
       iter = transports_.erase(iter);
     }
   }
-  return wait_duration * 1000;
 }
 
 void io_service::perform_channels(fd_set *fds_array)
@@ -784,9 +779,9 @@ int io_service::write(transport_ptr transport, std::vector<char> data)
       // a_pdu_ptr pdu(new a_pdu(std::move(data),
       // std::chrono::microseconds(options_.send_timeout_)));
 
-      transport->send_queue_mtx_.lock();
-      ikcp_send(transport->kcp_, data.data(), data.size());
-      transport->send_queue_mtx_.unlock();
+      transport->kcp_mtx_.lock();
+      ikcp_send(transport->kcp_, data.data(), static_cast<int>(data.size()));
+      transport->kcp_mtx_.unlock();
 
       this->interrupt();
 
@@ -1049,24 +1044,30 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-long long io_service::do_write(transport_ptr transport)
+bool io_service::do_write(transport_ptr transport)
 {
+  std::lock_guard<std::recursive_mutex> lck(transport->kcp_mtx_);
+
+  long long wait_duration = MAX_WAIT_DURATION;
   auto current = static_cast<IUINT32>(highp_clock() / 1000);
   ikcp_update(transport->kcp_, current);
-
+  
   if (ikcp_waitsnd(transport->kcp_) > 0)
   {
     ikcp_flush(transport->kcp_);
     if (ikcp_waitsnd(transport->kcp_) > 0)
-      return 0;
-    return MAX_WAIT_DURATION / 1000;
+      wait_duration = 0;
   }
   else
   {
     auto expire_time = ikcp_check(transport->kcp_, current);
-    auto duration    = expire_time - current;
-    return duration;
+    wait_duration    = (long long)(expire_time - current) * 1000;
   }
+
+  if (this->kcp_wait_duration_ > wait_duration)
+      this->kcp_wait_duration_ = wait_duration;
+
+  return true;
 }
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
@@ -1091,7 +1092,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
     {
       n = transport->socket_->recv_i(buffer, sizeof(buffer));
       if (n > 0)
-      {
+      { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
         ikcp_input(transport->kcp_, buffer, n);
 
         n = ikcp_recv(transport->kcp_, transport->buffer_ + transport->offset_,
@@ -1304,7 +1305,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set *fds_array, long long max_duration)
+int io_service::do_evpoll(fd_set *fds_array)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1318,7 +1319,7 @@ but it's ok.
   ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
   if (nfds <= 0)
   {
-    auto wait_duration = get_wait_duration(max_duration);
+    auto wait_duration = get_wait_duration(this->kcp_wait_duration_);
     if (wait_duration > 0)
     {
       timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),

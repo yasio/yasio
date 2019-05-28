@@ -45,4 +45,14 @@ struct lua_State;
 YASIO_API int luaopen_yasio_cclua(lua_State *L);
 #if defined(__cplusplus)
 }
+
+namespace lyasio
+{
+namespace stimer
+{
+// !IMPORTANT: You should call this when you want restart script Virtual Machine for some purpose.
+YASIO_API void killAll();
+} // namespace stimer
+} // namespace lyasio
+
 #endif

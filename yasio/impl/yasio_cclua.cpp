@@ -37,7 +37,7 @@ using namespace cocos2d;
 
 namespace lyasio
 {
-#define DEFINE_REFERENCE_CLASS                                                                     \
+#define YASIO_DEFINE_REFERENCE_CLASS                                                               \
 private:                                                                                           \
   unsigned int referenceCount_;                                                                    \
                                                                                                    \
@@ -52,10 +52,15 @@ public:                                                                         
                                                                                                    \
 private:
 
-namespace simple_timer
+namespace stimer
 {
+// The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
+// so it's always works well.
+#define STIMER_TARGET_VALUE reinterpret_cast<void *>(~static_cast<uintptr_t>(0) - 1)
+
 typedef void *TIMER_ID;
-typedef std::function<void(void)> vcallback_t;
+typedef std::function<void()> vcallback_t;
+
 struct TimerObject
 {
   TimerObject(vcallback_t &&callback) : callback_(std::move(callback)), referenceCount_(1) {}
@@ -64,12 +69,11 @@ struct TimerObject
   static uintptr_t s_timerId;
 
   DEFINE_OBJECT_POOL_ALLOCATION(TimerObject, 128)
-  DEFINE_REFERENCE_CLASS
+  YASIO_DEFINE_REFERENCE_CLASS
 };
-
 uintptr_t TimerObject::s_timerId = 0;
 
-TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
+static TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 {
   if (n > 0 && interval >= 0)
   {
@@ -77,14 +81,14 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
+    std::string key = StringUtils::format("STMR#%p", timerId);
 
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
-        timerId, interval, n - 1, 0, false, key);
+        STIMER_TARGET_VALUE, interval, n - 1, 0, false, key);
 
     return timerId;
   }
@@ -98,25 +102,29 @@ TIMER_ID delay(float delay, vcallback_t callback)
     yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
+    std::string key = StringUtils::format("STMR#%p", timerId);
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
-        timerId, 0, 0, delay, false, key);
+        STIMER_TARGET_VALUE, 0, 0, delay, false, key);
 
     return timerId;
   }
   return nullptr;
 }
 
-void kill(TIMER_ID timerId)
+static void kill(TIMER_ID timerId)
 {
-  std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
-  Director::getInstance()->getScheduler()->unschedule(key, timerId);
+  std::string key = StringUtils::format("STMR#%p", timerId);
+  Director::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
-} // namespace simple_timer
+YASIO_API void killAll()
+{
+  Director::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
+}
+} // namespace stimer
 } // namespace lyasio
 
 #if _HAS_CXX17_FULL_FEATURES
@@ -129,9 +137,9 @@ YASIO_API int luaopen_yasio_cclua(lua_State *L)
 {
   int n = luaopen_yasio(L);
   sol::stack_table yasio(L, n);
-  yasio.set_function("delay", lyasio::simple_timer::delay);
-  yasio.set_function("loop", lyasio::simple_timer::loop);
-  yasio.set_function("kill", lyasio::simple_timer::kill);
+  yasio.set_function("delay", lyasio::stimer::delay);
+  yasio.set_function("loop", lyasio::stimer::loop);
+  yasio.set_function("kill", lyasio::stimer::kill);
   yasio.pop();
   return 0;
 }
@@ -149,9 +157,9 @@ YASIO_API int luaopen_yasio_cclua(lua_State *L)
 
   kaguya::State state(L);
   auto yasio = state.popFromStack();
-  yasio.setField("delay", lyasio::simple_timer::delay);
-  yasio.setField("loop", lyasio::simple_timer::loop);
-  yasio.setField("kill", lyasio::simple_timer::kill);
+  yasio.setField("delay", lyasio::stimer::delay);
+  yasio.setField("loop", lyasio::stimer::loop);
+  yasio.setField("kill", lyasio::stimer::kill);
 
   return 0;
 }

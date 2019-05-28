@@ -33,4 +33,11 @@ namespace se {
 
 bool jsb_register_yasio(se::Object* obj);
 
-
+namespace yasio_jsb
+{
+namespace stimer
+{
+// !IMPORTANT: You should call this when you want restart script Virtual Machine for some purpose.
+void killAll();
+} // namespace stimer
+} // namespace yasio_jsb

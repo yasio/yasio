@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -31,3 +31,11 @@ SOFTWARE.
 
 void jsb_register_yasio(JSContext *cx, JS::HandleObject global);
 
+namespace yasio_jsb
+{
+namespace stimer
+{
+// !IMPORTANT: You should call this when you want restart script Virtual Machine for some purpose.
+void killAll();
+}
+} // namespace yasio_jsb

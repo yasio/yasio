@@ -60,8 +60,15 @@ public:                                                                         
                                                                                                    \
 private:
 
+namespace stimer
+{
+// The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
+// so it's always works well.
+#define STIMER_TARGET_VALUE reinterpret_cast<void *>(~static_cast<uintptr_t>(0) - 1)
+
 typedef void *TIMER_ID;
 typedef std::function<void(void)> vcallback_t;
+
 struct TimerObject
 {
   TimerObject(vcallback_t &&callback) : callback_(std::move(callback)), referenceCount_(1) {}
@@ -72,7 +79,6 @@ struct TimerObject
   DEFINE_OBJECT_POOL_ALLOCATION(TimerObject, 128)
   YASIO_DEFINE_REFERENCE_CLASS
 };
-
 uintptr_t TimerObject::s_timerId = 0;
 
 TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
@@ -83,14 +89,14 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
+    std::string key = StringUtils::format("STMR#%p", timerId);
 
     Application::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
-        timerId, interval, n - 1, 0, false, key);
+        STIMER_TARGET_VALUE, interval, n - 1, 0, false, key);
 
     return timerId;
   }
@@ -104,13 +110,13 @@ TIMER_ID delay(float delay, vcallback_t callback)
     yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
+    std::string key = StringUtils::format("STMR#%p", timerId);
     Application::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
-        timerId, 0, 0, delay, false, key);
+        STIMER_TARGET_VALUE, 0, 0, delay, false, key);
 
     return timerId;
   }
@@ -119,9 +125,14 @@ TIMER_ID delay(float delay, vcallback_t callback)
 
 void kill(TIMER_ID timerId)
 {
-  std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
-  Application::getInstance()->getScheduler()->unschedule(key, timerId);
+  std::string key = StringUtils::format("STMR#%p", timerId);
+  Application::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
+void killAll()
+{
+  Application::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
+}
+} // namespace stimer
 } // namespace yasio_jsb
 
 /////////////// javascript like setTimeout, clearTimeout setInterval, clearInterval ///////////
@@ -138,7 +149,7 @@ bool jsb_yasio_setTimeout(se::State &s)
       auto arg1 = args[1];
       CC_BREAK_IF(!arg0.toObject()->isFunction());
 
-      yasio_jsb::vcallback_t callback = [=]() {
+      yasio_jsb::stimer::vcallback_t callback = [=]() {
         se::ScriptEngine::getInstance()->clearException();
         se::AutoHandleScope hs;
 
@@ -153,7 +164,7 @@ bool jsb_yasio_setTimeout(se::State &s)
 
       float timeout = 0;
       seval_to_float(arg1, &timeout);
-      auto timerId = yasio_jsb::delay(timeout, std::move(callback));
+      auto timerId = yasio_jsb::stimer::delay(timeout, std::move(callback));
 
       s.rval().setNumber((double)(int64_t)timerId);
       return true;
@@ -178,7 +189,7 @@ bool jsb_yasio_setInterval(se::State &s)
       auto arg1 = args[1];
       CC_BREAK_IF(!arg0.toObject()->isFunction());
 
-      yasio_jsb::vcallback_t callback = [=]() {
+      yasio_jsb::stimer::vcallback_t callback = [=]() {
         se::ScriptEngine::getInstance()->clearException();
         se::AutoHandleScope hs;
 
@@ -193,8 +204,8 @@ bool jsb_yasio_setInterval(se::State &s)
 
       float interval = 0;
       seval_to_float(arg1, &interval);
-      auto timerId = yasio_jsb::loop((std::numeric_limits<unsigned int>::max)(), interval,
-                                     std::move(callback));
+      auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval,
+                                             std::move(callback));
 
       s.rval().setNumber((double)(int64_t)timerId);
       return true;
@@ -218,7 +229,7 @@ bool jsb_yasio_killTimer(se::State &s)
       auto arg0 = args[0];
       void *id  = (void *)(int64_t)arg0.toNumber();
 
-      yasio_jsb::kill(id);
+      yasio_jsb::stimer::kill(id);
 
       s.rval().setUndefined();
       return true;

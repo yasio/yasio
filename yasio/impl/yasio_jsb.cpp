@@ -55,8 +55,15 @@ public:                                                                         
                                                                                                    \
 private:
 
+namespace stimer
+{
+// The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
+// so it's always works well.
+#define STIMER_TARGET_VALUE reinterpret_cast<void *>(~static_cast<uintptr_t>(0) - 1)
+
 typedef void *TIMER_ID;
-typedef std::function<void(void)> vcallback_t;
+typedef std::function<void()> vcallback_t;
+
 struct TimerObject
 {
   TimerObject(vcallback_t &&callback) : callback_(std::move(callback)), referenceCount_(1) {}
@@ -67,10 +74,9 @@ struct TimerObject
   DEFINE_OBJECT_POOL_ALLOCATION(TimerObject, 128)
   YASIO_DEFINE_REFERENCE_CLASS
 };
-
 uintptr_t TimerObject::s_timerId = 0;
 
-TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
+static TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 {
   if (n > 0 && interval >= 0)
   {
@@ -78,14 +84,14 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
+    std::string key = StringUtils::format("STMR#%p", timerId);
 
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
-        timerId, interval, n - 1, 0, false, key);
+        STIMER_TARGET_VALUE, interval, n - 1, 0, false, key);
 
     return timerId;
   }
@@ -99,24 +105,29 @@ TIMER_ID delay(float delay, vcallback_t callback)
     yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
+    std::string key = StringUtils::format("STMR#%p", timerId);
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
-        timerId, 0, 0, delay, false, key);
+        STIMER_TARGET_VALUE, 0, 0, delay, false, key);
 
     return timerId;
   }
   return nullptr;
 }
 
-void kill(TIMER_ID timerId)
+static void kill(TIMER_ID timerId)
 {
-  std::string key = StringUtils::format("SIMPLE_TIMER_%p", timerId);
-  Director::getInstance()->getScheduler()->unschedule(key, timerId);
+  std::string key = StringUtils::format("STMR#%p", timerId);
+  Director::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
+void killAll()
+{
+  Director::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
+}
+} // namespace stimer
 
 class string_view_adapter
 {
@@ -347,7 +358,7 @@ bool jsb_yasio_setTimeout(JSContext *ctx, uint32_t argc, jsval *vp)
       JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
       std::shared_ptr<JSFunctionWrapper> func(
           new JSFunctionWrapper(ctx, jstarget, arg0, args.thisv()));
-      yasio_jsb::vcallback_t callback = [=]() {
+      yasio_jsb::stimer::vcallback_t callback = [=]() {
         JS::RootedValue rval(ctx);
         bool succeed = func->invoke(0, nullptr, &rval);
         if (!succeed && JS_IsExceptionPending(ctx))
@@ -358,7 +369,7 @@ bool jsb_yasio_setTimeout(JSContext *ctx, uint32_t argc, jsval *vp)
 
       double timeout = 0;
       JS::ToNumber(ctx, arg1, &timeout);
-      auto timerId = yasio_jsb::delay(timeout, std::move(callback));
+      auto timerId = yasio_jsb::stimer::delay(timeout, std::move(callback));
 
       args.rval().set(PRIVATE_TO_JSVAL(timerId));
       return true;
@@ -384,7 +395,7 @@ bool jsb_yasio_setInterval(JSContext *ctx, uint32_t argc, jsval *vp)
       JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
       std::shared_ptr<JSFunctionWrapper> func(
           new JSFunctionWrapper(ctx, jstarget, arg0, args.thisv()));
-      yasio_jsb::vcallback_t callback = [=]() {
+      yasio_jsb::stimer::vcallback_t callback = [=]() {
         JS::RootedValue rval(ctx);
         bool succeed = func->invoke(0, nullptr, &rval);
         if (!succeed && JS_IsExceptionPending(ctx))
@@ -395,8 +406,8 @@ bool jsb_yasio_setInterval(JSContext *ctx, uint32_t argc, jsval *vp)
 
       double interval = 0;
       JS::ToNumber(ctx, arg1, &interval);
-      auto timerId = yasio_jsb::loop((std::numeric_limits<unsigned int>::max)(), interval,
-                                     std::move(callback));
+      auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval,
+                                             std::move(callback));
 
       args.rval().set(PRIVATE_TO_JSVAL(timerId));
       return true;
@@ -418,7 +429,7 @@ bool jsb_yasio_killTimer(JSContext *ctx, uint32_t argc, jsval *vp)
       auto arg0 = args.get(0);
       void *id  = arg0.get().toPrivate();
 
-      yasio_jsb::kill(id);
+      yasio_jsb::stimer::kill(id);
 
       args.rval().setUndefined();
       return true;

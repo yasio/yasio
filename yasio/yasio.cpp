@@ -1329,7 +1329,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set *fds_array)
+int io_service::do_evpoll(fd_set *fdsa)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1339,8 +1339,7 @@ but it's ok.
 */
   int nfds = 0;
   std::swap(nfds, this->outstanding_work_);
-
-  ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
+  ::memcpy(fdsa, this->fds_array_, sizeof(this->fds_array_));
   if (nfds <= 0)
   {
     auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
@@ -1352,9 +1351,7 @@ but it's ok.
       YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
-
-      nfds =
-          ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &timeout);
+      nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
 
 #if _YASIO_VERBOS_LOG
       YASIO_LOG("socket.select waked up, retval=%d", nfds);

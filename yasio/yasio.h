@@ -434,7 +434,7 @@ private:
 
   void open_internal(io_channel *, bool ignore_state = false);
 
-  long long perform_transports(fd_set *fds_array);
+  void perform_transports(fd_set *fds_array);
   void perform_channels(fd_set *fds_array);
   void perform_timers();
 
@@ -442,7 +442,7 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  int do_evpoll(fd_set *fds_array, long long max_wait_duration);
+  int do_evpoll(fd_set *fds_array);
 
   void do_nonblocking_connect(io_channel *);
   void do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
@@ -462,9 +462,9 @@ private:
   // The major non-blocking event-loop
   void run(void);
 
-  bool do_write(transport_ptr, int &outstanding_work);
-  bool do_read(transport_ptr, fd_set *fds_array, int &outstanding_work);
-  void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred, int &outstanding_work);
+  bool do_write(transport_ptr);
+  bool do_read(transport_ptr, fd_set *fds_array);
+  void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
 
   // The op mask will be cleared, the state will be set CLOSED
   bool cleanup_io(io_base *ctx);
@@ -530,6 +530,9 @@ private:
     max_ops,
   };
   fd_set fds_array_[max_ops];
+
+  // optimize record incomplete works
+  int outstanding_work_;
 
   // the event callback
   io_event_cb_t on_event_;

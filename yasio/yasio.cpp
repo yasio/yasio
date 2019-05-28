@@ -323,7 +323,8 @@ io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
 
-  maxfdp_ = 0;
+  maxfdp_           = 0;
+  outstanding_work_ = 0;
 
   this->decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 
@@ -428,6 +429,7 @@ void io_service::cleanup()
     clear_channels();
     this->event_queue_.clear();
     this->timer_queue_.clear();
+    this->outstanding_work_ = 0;
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -492,10 +494,9 @@ void io_service::run()
 
   // event loop
   fd_set fds_array[max_ops];
-  long long max_wait_duration = MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int nfds = do_evpoll(fds_array, max_wait_duration);
+    int nfds = do_evpoll(fds_array);
     if (this->state_ != io_service::state::RUNNING)
       break;
 
@@ -529,7 +530,7 @@ void io_service::run()
     }
 
     // perform active transports
-    max_wait_duration = perform_transports(fds_array);
+    perform_transports(fds_array);
 
     // perform active channels
     perform_channels(fds_array);
@@ -542,15 +543,13 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-long long io_service::perform_transports(fd_set *fds_array)
+void io_service::perform_transports(fd_set *fds_array)
 {
-  int outstanding_work = 0;
-
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    if (do_read(transport, fds_array, outstanding_work) && do_write(transport, outstanding_work))
+    if (do_read(transport, fds_array) && do_write(transport))
       ++iter;
     else
     {
@@ -558,8 +557,6 @@ long long io_service::perform_transports(fd_set *fds_array)
       iter = transports_.erase(iter);
     }
   }
-
-  return outstanding_work == 0 ? MAX_WAIT_DURATION : 0;
 }
 
 void io_service::perform_channels(fd_set *fds_array)
@@ -1032,7 +1029,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-bool io_service::do_write(transport_ptr transport, int &outstanding_work)
+bool io_service::do_write(transport_ptr transport)
 {
   bool ret = false;
   do
@@ -1061,7 +1058,7 @@ bool io_service::do_write(transport_ptr transport, int &outstanding_work)
         handle_send_finished(v, YERR_OK);
 
         if (!transport->send_queue_.empty())
-          ++outstanding_work;
+          ++this->outstanding_work_;
       }
       else if (n > 0)
       { // TODO: add time
@@ -1074,7 +1071,7 @@ bool io_service::do_write(transport_ptr transport, int &outstanding_work)
                     "%dbytes was sent!",
                     transport->channel_index(), outstanding_bytes, n);
 
-          ++outstanding_work;
+          ++this->outstanding_work_;
         }
         else
         { // send timeout
@@ -1086,7 +1083,7 @@ bool io_service::do_write(transport_ptr transport, int &outstanding_work)
                     transport->channel_index(), packet_size);
           handle_send_finished(v, YERR_SEND_TIMEOUT);
           if (!transport->send_queue_.empty())
-            ++outstanding_work;
+            ++this->outstanding_work_;
         }
       }
       else
@@ -1109,7 +1106,7 @@ bool io_service::do_write(transport_ptr transport, int &outstanding_work)
 
 void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
 
-bool io_service::do_read(transport_ptr transport, fd_set *fds_array, int &outstanding_work)
+bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
 {
   bool ret = false;
   do
@@ -1155,7 +1152,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, int &outsta
           transport->expected_packet_.reserve(
               (std::min)(transport->expected_packet_size_,
                          MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-          do_unpack(transport, transport->expected_packet_size_, n, outstanding_work);
+          do_unpack(transport, transport->expected_packet_size_, n);
         }
         else if (length == 0)
         {
@@ -1174,7 +1171,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, int &outsta
         do_unpack(transport,
                   transport->expected_packet_size_ -
                       static_cast<int>(transport->expected_packet_.size()),
-                  n, outstanding_work);
+                  n);
       }
     }
     else
@@ -1191,8 +1188,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, int &outsta
   return ret;
 }
 
-void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred,
-                           int &outstanding_work)
+void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
 {
   auto bytes_available = bytes_transferred + transport->offset_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
@@ -1206,7 +1202,7 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     {
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
       // not all data consumed, so add events for this context
-      ++outstanding_work;
+      ++this->outstanding_work_;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
@@ -1333,7 +1329,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set *fds_array, long long max_wait_duration)
+int io_service::do_evpoll(fd_set *fds_array)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1341,26 +1337,31 @@ be perform when no need to call socket.select However, the
 connection exception will detected through do_read or do_write,
 but it's ok.
 */
-  int nfds = 1;
+  int nfds = 0;
+  std::swap(nfds, this->outstanding_work_);
 
-  auto wait_duration = get_wait_duration(max_wait_duration);
-  if (wait_duration > 0)
+  ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
+  if (nfds <= 0)
   {
-    timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
-                       (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
+    if (wait_duration > 0)
+    {
+      timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
+                         (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if _YASIO_VERBOS_LOG
-    YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-              timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+      YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
+                timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
 
-    ::memcpy(fds_array, this->fds_array_, sizeof(this->fds_array_));
-
-    nfds =
-        ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &timeout);
+      nfds =
+          ::select(this->maxfdp_, &(fds_array[read_op]), &(fds_array[write_op]), nullptr, &timeout);
 
 #if _YASIO_VERBOS_LOG
-    YASIO_LOG("socket.select waked up, retval=%d", nfds);
+      YASIO_LOG("socket.select waked up, retval=%d", nfds);
 #endif
+    }
+    else
+      nfds = static_cast<int>(channels_.size()) << 1;
   }
 
   return nfds;

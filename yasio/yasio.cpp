@@ -31,6 +31,7 @@ SOFTWARE.
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
 #include "yasio.h"
+#include "ikcp.h"
 #include <limits>
 #include <stdarg.h>
 #include <string>
@@ -75,19 +76,21 @@ void (*yasio_console_print_fn)(const char *) = nullptr;
       printf("%s", msg)
 #endif
 
-#define YASIO_LOG(format, ...)                                                                     \
+#define YASIO_LOG_IMPL(options, format, ...)                                                       \
   do                                                                                               \
   {                                                                                                \
     auto content =                                                                                 \
         _sfmt(("[yasio][%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);     \
     YASIO_DEBUG_PRINT(content.c_str());                                                            \
-    if (options_.outf_ != -1)                                                                      \
+    if (options.outf_ != -1)                                                                       \
     {                                                                                              \
-      if (::lseek(options_.outf_, 0, SEEK_CUR) > options_.outf_max_size_)                          \
-        ::ftruncate(options_.outf_, 0), ::lseek(options_.outf_, 0, SEEK_SET);                      \
-      ::write(options_.outf_, content.c_str(), static_cast<int>(content.size()));                  \
+      if (::lseek(options.outf_, 0, SEEK_CUR) > options.outf_max_size_)                            \
+        ::ftruncate(options.outf_, 0), ::lseek(options.outf_, 0, SEEK_SET);                        \
+      ::write(options.outf_, content.c_str(), static_cast<int>(content.size()));                   \
     }                                                                                              \
   } while (false)
+
+#define YASIO_LOG(format, ...) YASIO_LOG_IMPL(options_, format, ##__VA_ARGS__)
 
 namespace yasio
 {
@@ -309,7 +312,8 @@ void io_channel::setup_port(u_short port)
   }
 }
 
-io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
+// -------------------- io_transport_base ---------------------
+io_transport_base::io_transport_base(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
 {
   static unsigned int s_object_id = 0;
   this->state_                    = YCS_OPENED;
@@ -317,14 +321,144 @@ io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ct
   this->socket_                   = sock;
 }
 
+// -------------------- io_transport_posix ---------------------
+void io_transport_posix::send(std::vector<char> data)
+{
+  auto &options = get_service().options_;
+  a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options.send_timeout_)));
+  send_queue_.push_back(pdu);
+}
+int io_transport_posix::recv(int &error)
+{
+  int n = socket_->recv_i(buffer_ + offset_, sizeof(buffer_) - offset_);
+  error = xxsocket::get_last_errno();
+  return n;
+}
+bool io_transport_posix::update(long long &max_wait_duration)
+{
+  bool ret      = false;
+  do
+  {
+    if (!socket_->is_open())
+      break;
+
+    if (!send_queue_.empty())
+    {
+      std::lock_guard<std::recursive_mutex> lck(send_mtx_);
+
+      auto v                 = send_queue_.front();
+      auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
+      int n                  = socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
+      if (n == outstanding_bytes)
+      { // All pdu bytes sent.
+        send_queue_.pop_front();
+#if _YASIO_VERBOS_LOG
+        auto packet_size = static_cast<int>(v->data_.size());
+        YASIO_LOG_IMPL(get_service().options_,
+                       "[index: %d] do_write ok, A packet sent "
+                       "success, packet size:%d",
+                       channel_index(), packet_size, socket_->local_endpoint().to_string().c_str(),
+                       socket_->peer_endpoint().to_string().c_str());
+#endif
+      }
+      else if (n > 0)
+      { // TODO: add time
+        if (!v->expired())
+        { // #performance: change offset only, remain data will be send next time.
+          v->offset_ += n;
+          outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
+        }
+        else
+        { // send timeout
+          send_queue_.pop_front();
+
+          auto packet_size = static_cast<int>(v->data_.size());
+          YASIO_LOG_IMPL(get_service().options_,
+                         "[index: %d] do_write packet timeout, packet "
+                         "size:%d",
+                         channel_index(), packet_size);
+          // handle_send_finished(v, YERR_SEND_TIMEOUT);
+        }
+      }
+      else
+      { // n <= 0, TODO: add time
+        int error = xxsocket::get_last_errno();
+        if (SHOULD_CLOSE_1(n, error))
+        {
+          set_last_errno(error);
+          offset_ = n;
+          break;
+        }
+      }
+    }
+
+    // If still have work to do.
+    if (!send_queue_.empty())
+      max_wait_duration = 0;
+
+    ret = true;
+  } while (false);
+
+  return ret;
+}
+
+// ----------------------- io_transport_kcp ------------------
+io_transport_kcp::io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock)
+    : io_transport_base(ctx, sock), kcp_(nullptr)
+{
+  this->kcp_ = ::ikcp_create(0, this);
+  ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
+  ::ikcp_setoutput(this->kcp_, [](const char *buf, int len, ikcpcb */*kcp*/, void *user) {
+    io_transport_base *t = (io_transport_base *)user;
+    return t->socket_->send_i(buf, len);
+  });
+}
+io_transport_kcp::~io_transport_kcp() { ikcp_release(this->kcp_); }
+
+void io_transport_kcp::send(std::vector<char> data)
+{
+  ikcp_send(kcp_, data.data(), static_cast<int>(data.size()));
+}
+int io_transport_kcp::recv(int &error)
+{
+  char sbuf[2048];
+  int n = socket_->recv_i(sbuf, sizeof(sbuf));
+  if (n > 0)
+  { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
+    ::ikcp_input(kcp_, sbuf, n);
+    n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+  }
+  else
+    error = xxsocket::get_last_errno();
+  return n;
+}
+bool io_transport_kcp::update(long long &max_wait_duration)
+{
+  std::lock_guard<std::recursive_mutex> lck(send_mtx_);
+
+  auto current = static_cast<IUINT32>(highp_clock() / 1000);
+  ::ikcp_update(kcp_, current);
+
+  auto expire_time        = ::ikcp_check(kcp_, current);
+  long long wait_duration = (long long)(expire_time - current) * 1000;
+  if (wait_duration < 0)
+    wait_duration = 0;
+
+  if (max_wait_duration > wait_duration)
+    max_wait_duration = wait_duration;
+
+  return true;
+}
+
+// ------------------------ io_service ------------------------
+
 io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
 
-  maxfdp_           = 0;
-  outstanding_work_ = 0;
+  maxfdp_ = 0;
 
   this->decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 
@@ -429,7 +563,6 @@ void io_service::cleanup()
     clear_channels();
     this->event_queue_.clear();
     this->timer_queue_.clear();
-    this->outstanding_work_ = 0;
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -465,7 +598,7 @@ void io_service::clear_transports()
   for (auto transport : transports_)
   {
     cleanup_io(transport);
-    transport->~io_transport();
+    transport->~io_transport_base();
     this->transports_dypool_.push_back(transport);
   }
   transports_.clear();
@@ -494,11 +627,14 @@ void io_service::run()
 
   // event loop
   fd_set fds_array[max_ops];
+  long long max_wait_duration = MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int nfds = do_evpoll(fds_array);
+    int nfds = do_evpoll(fds_array, max_wait_duration);
     if (this->state_ != io_service::state::RUNNING)
       break;
+
+    max_wait_duration = MAX_WAIT_DURATION;
 
     if (nfds == -1)
     {
@@ -530,7 +666,7 @@ void io_service::run()
     }
 
     // perform active transports
-    perform_transports(fds_array);
+    perform_transports(fds_array, max_wait_duration);
 
     // perform active channels
     perform_channels(fds_array);
@@ -543,13 +679,13 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-void io_service::perform_transports(fd_set *fds_array)
+void io_service::perform_transports(fd_set *fds_array, long long &max_wait_duration)
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    if (do_read(transport, fds_array) && do_write(transport))
+    if (do_read(transport, fds_array, max_wait_duration) && transport->update(max_wait_duration))
       ++iter;
     else
     {
@@ -659,7 +795,7 @@ void io_service::reopen(transport_ptr transport)
 void io_service::open(size_t channel_index, int channel_mask)
 {
 #if defined(_WIN32)
-  if (channel_mask == YCM_UDP_SERVER)
+  if ((channel_mask & YCM_UDP) && (channel_mask & YCM_SERVER))
   {
     /*
     Because Bind() the client socket to the socket address of the listening socket.  On Linux this
@@ -710,7 +846,7 @@ void io_service::handle_close(transport_ptr transport)
     ctx->set_last_errno(0);
   } // server channel, do nothing.
 
-  ptr->~io_transport();
+  ptr->~io_transport_base();
   transports_dypool_.push_back(ptr);
 
   // @Notify connection lost
@@ -762,11 +898,9 @@ int io_service::write(transport_ptr transport, std::vector<char> data)
   {
     if (!data.empty())
     {
-      a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options_.send_timeout_)));
-
-      transport->send_queue_mtx_.lock();
-      transport->send_queue_.push_back(pdu);
-      transport->send_queue_mtx_.unlock();
+      transport->send_mtx_.lock();
+      transport->send(data);
+      transport->send_mtx_.unlock();
 
       this->interrupt();
 
@@ -1003,16 +1137,19 @@ void io_service::handle_connect_succeed(transport_ptr transport)
 transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
   transport_ptr transport;
+  void *vp;
   if (!transports_dypool_.empty())
   { // allocate from pool
-    auto reuse_ptr = transports_dypool_.back();
-
-    // construct it since we don't delete transport memory
-    transport = new ((void *)reuse_ptr) io_transport(ctx, socket);
+    vp = transports_dypool_.back();
     transports_dypool_.pop_back();
   }
   else
-    transport = new io_transport(ctx, socket);
+    vp = operator new(sizeof(io_transport_posix));
+
+  if (!(ctx->mask_ & YCM_KCP))
+    transport = new (vp) io_transport_posix(ctx, socket);
+  else
+    transport = new (vp) io_transport_kcp(ctx, socket);
 
   this->transports_.push_back(transport);
 
@@ -1029,84 +1166,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-bool io_service::do_write(transport_ptr transport)
-{
-  bool ret = false;
-  do
-  {
-    if (!transport->socket_->is_open())
-      break;
-
-    if (!transport->send_queue_.empty())
-    {
-      std::lock_guard<std::recursive_mutex> lck(transport->send_queue_mtx_);
-
-      auto v                 = transport->send_queue_.front();
-      auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-      int n = transport->socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
-      if (n == outstanding_bytes)
-      { // All pdu bytes sent.
-        transport->send_queue_.pop_front();
-#if _YASIO_VERBOS_LOG
-        auto packet_size = static_cast<int>(v->data_.size());
-        YASIO_LOG("[index: %d] do_write ok, A packet sent "
-                  "success, packet size:%d",
-                  transport->channel_index(), packet_size,
-                  transport->socket_->local_endpoint().to_string().c_str(),
-                  transport->socket_->peer_endpoint().to_string().c_str());
-#endif
-        handle_send_finished(v, YERR_OK);
-
-        if (!transport->send_queue_.empty())
-          ++this->outstanding_work_;
-      }
-      else if (n > 0)
-      { // TODO: add time
-        if (!v->expired())
-        { // #performance: change offset only, remain data will be send next time.
-          v->offset_ += n;
-          outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-          YASIO_LOG("[index: %d] do_write pending, %dbytes still "
-                    "outstanding, "
-                    "%dbytes was sent!",
-                    transport->channel_index(), outstanding_bytes, n);
-
-          ++this->outstanding_work_;
-        }
-        else
-        { // send timeout
-          transport->send_queue_.pop_front();
-
-          auto packet_size = static_cast<int>(v->data_.size());
-          YASIO_LOG("[index: %d] do_write packet timeout, packet "
-                    "size:%d",
-                    transport->channel_index(), packet_size);
-          handle_send_finished(v, YERR_SEND_TIMEOUT);
-          if (!transport->send_queue_.empty())
-            ++this->outstanding_work_;
-        }
-      }
-      else
-      { // n <= 0, TODO: add time
-        int error = xxsocket::get_last_errno();
-        if (SHOULD_CLOSE_1(n, error))
-        {
-          transport->set_last_errno(error);
-          transport->offset_ = n;
-          break;
-        }
-      }
-    }
-
-    ret = true;
-  } while (false);
-
-  return ret;
-}
-
-void io_service::handle_send_finished(a_pdu_ptr /*pdu*/, int /*error*/) {}
-
-bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
+bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &max_wait_duration)
 {
   bool ret = false;
   do
@@ -1122,9 +1182,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
     int n = -1, error = EWOULDBLOCK;
     if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
     {
-      n     = transport->socket_->recv_i(transport->buffer_ + transport->offset_,
-                                     sizeof(transport->buffer_) - transport->offset_);
-      error = xxsocket::get_last_errno();
+      n = transport->recv(error);
     }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
@@ -1152,7 +1210,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
           transport->expected_packet_.reserve(
               (std::min)(transport->expected_packet_size_,
                          MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-          do_unpack(transport, transport->expected_packet_size_, n);
+          do_unpack(transport, transport->expected_packet_size_, n, max_wait_duration);
         }
         else if (length == 0)
         {
@@ -1171,7 +1229,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
         do_unpack(transport,
                   transport->expected_packet_size_ -
                       static_cast<int>(transport->expected_packet_.size()),
-                  n);
+                  n, max_wait_duration);
       }
     }
     else
@@ -1188,7 +1246,8 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array)
   return ret;
 }
 
-void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred)
+void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred,
+                           long long &max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->offset_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
@@ -1202,7 +1261,7 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     {
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
       // not all data consumed, so add events for this context
-      ++this->outstanding_work_;
+      max_wait_duration = 0;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
@@ -1329,7 +1388,7 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set *fdsa)
+int io_service::do_evpoll(fd_set *fdsa, long long max_wait_duration)
 {
   /*
 @Optimize, swap nfds, make sure do_read & do_write event chould
@@ -1337,29 +1396,27 @@ be perform when no need to call socket.select However, the
 connection exception will detected through do_read or do_write,
 but it's ok.
 */
-  int nfds = 0;
-  std::swap(nfds, this->outstanding_work_);
+  int nfds = 1;
+
   ::memcpy(fdsa, this->fds_array_, sizeof(this->fds_array_));
-  if (nfds <= 0)
+
+  auto wait_duration = get_wait_duration(max_wait_duration);
+  if (wait_duration > 0)
   {
-    auto wait_duration = get_wait_duration(MAX_WAIT_DURATION);
-    if (wait_duration > 0)
-    {
-      timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
-                         (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
+                       (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if _YASIO_VERBOS_LOG
-      YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-                timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+    YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
+              timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
-      nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
+    nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
 
 #if _YASIO_VERBOS_LOG
-      YASIO_LOG("socket.select waked up, retval=%d", nfds);
+    YASIO_LOG("socket.select waked up, retval=%d", nfds);
 #endif
-    }
-    else
-      nfds = static_cast<int>(channels_.size()) << 1;
   }
+  else
+    nfds = static_cast<int>(channels_.size()) << 1;
 
   return nfds;
 }

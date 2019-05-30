@@ -1,2 +1,2 @@
-yasio-3.21.3
-1. Add yasio_memcpy for YASIO_NI, because C# no such function Yet.
+yasio-3.22.0
+1. Add kcp support.

@@ -55,6 +55,8 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
+typedef struct IKCPCB ikcpcb;
+
 namespace yasio
 {
 using namespace purelib;
@@ -92,10 +94,13 @@ enum
   YCM_SERVER     = 1 << 1,
   YCM_TCP        = 1 << 2,
   YCM_UDP        = 1 << 3,
+  YCM_KCP        = 1 << 4,
   YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
   YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
   YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
   YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
+  YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
+  YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
 };
 
 // event kinds
@@ -111,7 +116,8 @@ class a_pdu; // application layer protocol data unit.
 class deadline_timer;
 class io_event;
 class io_channel;
-class io_transport;
+class io_transport_base;
+class io_transport_posix;
 class io_service;
 
 // typedefs
@@ -120,7 +126,7 @@ typedef std::chrono::high_resolution_clock highp_clock_t;
 typedef std::chrono::system_clock system_clock_t;
 
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
-typedef io_transport *transport_ptr;
+typedef io_transport_base *transport_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
 
@@ -216,6 +222,8 @@ public:
     setup_port(port);
   }
 
+  io_service &get_service() { return deadline_timer_.service_; }
+
   void setup_host(std::string host);
   void setup_port(u_short port);
 
@@ -238,7 +246,7 @@ public:
   deadline_timer deadline_timer_;
 };
 
-class io_transport : public io_base
+class io_transport_base : public io_base
 {
   friend class io_service;
 
@@ -254,9 +262,15 @@ public:
     return std::move(expected_packet_);
   }
 
-private:
-  io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock);
+  io_service &get_service() { return ctx_->get_service(); }
 
+  virtual void send(std::vector<char> data)         = 0;
+  virtual int recv(int &error)                      = 0;
+  virtual bool update(long long &max_wait_duration) = 0;
+
+protected:
+  io_transport_base(io_channel *ctx, std::shared_ptr<xxsocket> sock);
+  virtual ~io_transport_base() {}
   unsigned int id_;
 
   char buffer_[65536]; // recv buffer, 64K
@@ -265,13 +279,35 @@ private:
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
 
-  std::recursive_mutex send_queue_mtx_;
-  std::deque<a_pdu_ptr> send_queue_;
+  // the mutex for write data to queue
+  std::recursive_mutex send_mtx_;
 
   io_channel *ctx_;
 
 public:
   void *ud_ = nullptr;
+};
+
+class io_transport_posix : public io_transport_base
+{
+public:
+  io_transport_posix(io_channel *ctx, std::shared_ptr<xxsocket> sock) : io_transport_base(ctx, sock)
+  {}
+  void send(std::vector<char> data) override;
+  int recv(int &error) override;
+  bool update(long long &max_wait_duration) override;
+  std::deque<a_pdu_ptr> send_queue_;
+};
+
+class io_transport_kcp : public io_transport_base
+{
+public:
+  io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock);
+  ~io_transport_kcp();
+  void send(std::vector<char> data) override;
+  int recv(int &error) override;
+  bool update(long long &max_wait_duration) override;
+  ikcpcb *kcp_;
 };
 
 class io_event final
@@ -318,6 +354,8 @@ private:
 class io_service
 {
   friend class deadline_timer;
+  friend class io_transport_posix;
+  friend class io_transport_kcp;
 
 public:
   enum class state
@@ -434,7 +472,7 @@ private:
 
   void open_internal(io_channel *, bool ignore_state = false);
 
-  void perform_transports(fd_set *fds_array);
+  void perform_transports(fd_set *fds_array, long long &max_wait_duration);
   void perform_channels(fd_set *fds_array);
   void perform_timers();
 
@@ -442,7 +480,7 @@ private:
 
   long long get_wait_duration(long long usec);
 
-  int do_evpoll(fd_set *fds_array);
+  int do_evpoll(fd_set *fds_array, long long max_wait_duration);
 
   void do_nonblocking_connect(io_channel *);
   void do_nonblocking_connect_completion(io_channel *, fd_set *fds_array);
@@ -462,9 +500,9 @@ private:
   // The major non-blocking event-loop
   void run(void);
 
-  bool do_write(transport_ptr);
-  bool do_read(transport_ptr, fd_set *fds_array);
-  void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred);
+  bool do_read(transport_ptr, fd_set *fds_array, long long &max_wait_duration);
+  void do_unpack(transport_ptr, int bytes_expected, int bytes_transferred,
+                 long long &max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED
   bool cleanup_io(io_base *ctx);
@@ -488,8 +526,6 @@ private:
   ** @remark: will start a async resolv when the state is: YDQS_DIRTY
   */
   u_short query_ares_state(io_channel *ctx);
-
-  void handle_send_finished(a_pdu_ptr, int);
 
   // supporting server
   void do_nonblocking_accept(io_channel *);
@@ -530,9 +566,6 @@ private:
     max_ops,
   };
   fd_set fds_array_[max_ops];
-
-  // optimize record incomplete works
-  int outstanding_work_;
 
   // the event callback
   io_event_cb_t on_event_;

@@ -1,8 +1,8 @@
 config=release
-LIB_NAME?=yasio
-SHARE_NAME?=lib$(LIB_NAME).so
-#-Werror
-CXXFLAGS=-g -Wall -Wno-unused-result -Wextra -Wundef -Wcast-align -Wcast-qual -Wno-old-style-cast -Wdouble-promotion -std=$(cxxstd) -I.
+TARGET=libyasio.so
+
+CXXFLAGS = -c -fPIC -Wall -Wno-unused-result -Wextra -Wundef -Wcast-align -Wcast-qual -Wno-old-style-cast -Wdouble-promotion -std=$(cxxstd)
+CFLAGS = -c -fPIC
 
 ifeq ($(CXX),clang++)
 	CXXFLAGS+=-Wno-gnu-zero-variadic-macro-arguments -Wno-zero-length-array -pedantic -Wshadow
@@ -14,19 +14,25 @@ else
 	CXXFLAGS+=-g
 endif
 
-all:$(STATIC_NAME) $(SHARE_NAME)
+LIBS = -lpthread
 
+INCLUDES = -I.
+ 
+CXXFILES = yasio/ibstream.cpp yasio/obstream.cpp yasio/xxsocket.cpp yasio/yasio.cpp yasio/impl/yasio_ni.cpp
+CFILES = yasio/ikcp.c
+ 
+OBJFILE = $(CFILES:.c=.o) $(CXXFILES:.cpp=.o)
+ 
+all:$(TARGET)
+ 
+$(TARGET): $(OBJFILE)
+	$(CXX) $^ $(LIBS) -fPIC -shared -o $@
+ 
 %.o:%.c
-	$(CXX) $(CXXFLAGS) $< -o $@
-
-SOURCE := yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp yasio/impl/yasio-ni.cpp
-OBJS   := $(patsubst %.cpp,%.o,$(SOURCE))
-
-$(STATIC_NAME):$(OBJS)
-	$(AR) -r $(STATIC_NAME)
-
-$(SHARE_NAME):$(OBJS)
-	$(CXX) $(CXXFLAGS) -shared -fpic -o $(SHARE_NAME) $(SOURCE)
+	$(CC) -o $@ $(CFLAGS) $< $(INCLUDES)
+ 
+%.o:%.cpp
+	$(CXX) -o $@ $(CXXFLAGS) $< $(INCLUDES)
 
 clean:
-	rm -rf $(OBJS) $(STATIC_NAME) $(SHARE_NAME)
+	rm -rf $(TARGET) $(OBJFILE)

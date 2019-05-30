@@ -27,7 +27,7 @@ SOFTWARE.
 */
 
 /*
-** yasio-ni.cpp: The yasio native interface for interop.
+** yasio_ni.cpp: The yasio native interface for interop.
 */
 #include <string.h>
 #include "yasio/yasio.h"

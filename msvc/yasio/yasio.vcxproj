@@ -164,6 +164,7 @@
     <ClCompile Include="..\..\yasio\obstream.cpp" />
     <ClCompile Include="..\..\yasio\xxsocket.cpp" />
     <ClCompile Include="..\..\yasio\yasio.cpp" />
+	<ClCompile Include="..\..\yasio\ikcp.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\yasio\ibstream.h" />

@@ -31,7 +31,7 @@ SOFTWARE.
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
 #include "yasio.h"
-#include "ikcp.h"
+#include "kcp/ikcp.h"
 #include <limits>
 #include <stdarg.h>
 #include <string>
@@ -425,6 +425,7 @@ int io_transport_kcp::recv(int &error)
   int n = socket_->recv_i(sbuf, sizeof(sbuf));
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
+      // 0: ok, -1: again, -3: error
     ::ikcp_input(kcp_, sbuf, n);
     n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
   }

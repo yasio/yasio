@@ -1,6 +1,3 @@
-[submodule "tlse"]
-	path = tlse
-	url = https://github.com/halx99/tlse.git
 [submodule "kcp"]
 	path = kcp
 	url = https://github.com/halx99/kcp

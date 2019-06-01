@@ -19,7 +19,7 @@ LIBS = -lpthread
 INCLUDES = -I.
  
 CXXFILES = yasio/ibstream.cpp yasio/obstream.cpp yasio/xxsocket.cpp yasio/yasio.cpp yasio/impl/yasio_ni.cpp
-CFILES = yasio/ikcp.c
+CFILES = kcp/ikcp.c
  
 OBJFILE = $(CFILES:.c=.o) $(CXXFILES:.cpp=.o)
  

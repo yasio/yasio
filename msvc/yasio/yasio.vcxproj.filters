@@ -27,6 +27,9 @@
     <ClCompile Include="..\..\yasio\obstream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\kcp\ikcp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\yasio\xxsocket.h">

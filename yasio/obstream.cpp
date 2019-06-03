@@ -42,7 +42,7 @@ void obstream::push8()
 void obstream::pop8()
 {
   auto offset = offset_stack_.top();
-  set(offset, static_cast<uint8_t>(buffer_.size()));
+  set(offset, static_cast<uint8_t>(buffer_.size() - offset - sizeof(uint8_t)));
   offset_stack_.pop();
 }
 void obstream::pop8(uint8_t value)
@@ -60,7 +60,7 @@ void obstream::push16()
 void obstream::pop16()
 {
   auto offset = offset_stack_.top();
-  set(offset, static_cast<uint16_t>(buffer_.size()));
+  set(offset, static_cast<uint16_t>(buffer_.size() - offset - sizeof(uint16_t)));
   offset_stack_.pop();
 }
 void obstream::pop16(uint16_t value)
@@ -80,7 +80,7 @@ void obstream::push24()
 void obstream::pop24()
 {
   auto offset = offset_stack_.top();
-  auto value  = htonl(static_cast<uint32_t>(buffer_.size())) >> 8;
+  auto value  = htonl(static_cast<uint32_t>(buffer_.size() - offset - 3)) >> 8;
   memcpy(wdata(offset), &value, 3);
   offset_stack_.pop();
 }
@@ -101,7 +101,7 @@ void obstream::push32()
 void obstream::pop32()
 {
   auto offset = offset_stack_.top();
-  set(offset, static_cast<uint32_t>(buffer_.size()));
+  set(offset, static_cast<uint32_t>(buffer_.size() - offset - sizeof(uint32_t)));
   offset_stack_.pop();
 }
 

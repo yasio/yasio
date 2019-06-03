@@ -45,6 +45,12 @@ SOFTWARE.
 #include "yasio/detail/string_view.hpp"
 #include "yasio/xxsocket.h"
 
+/*
+** If you want use kcp, please uncomment and add kcp/ikcp.c to our compile system.
+** pitfall: yasio kcp support is experimental currently.
+*/
+// #define YASIO_HAVE_KCP
+
 #define _USING_OBJECT_POOL 1
 
 #if !defined(MICROSECONDS_PER_SECOND)
@@ -94,13 +100,15 @@ enum
   YCM_SERVER     = 1 << 1,
   YCM_TCP        = 1 << 2,
   YCM_UDP        = 1 << 3,
-  YCM_KCP        = 1 << 4,
   YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
   YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
   YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
   YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
+#if defined(YASIO_HAVE_KCP)
+  YCM_KCP        = 1 << 4,
   YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
   YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
+#endif
 };
 
 // event kinds
@@ -299,6 +307,7 @@ public:
   std::deque<a_pdu_ptr> send_queue_;
 };
 
+#if defined(YASIO_HAVE_KCP)
 class io_transport_kcp : public io_transport_base
 {
 public:
@@ -309,6 +318,7 @@ public:
   bool update(long long &max_wait_duration) override;
   ikcpcb *kcp_;
 };
+#endif
 
 class io_event final
 {

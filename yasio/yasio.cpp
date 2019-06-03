@@ -31,7 +31,9 @@ SOFTWARE.
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
 #include "yasio.h"
-#include "kcp/ikcp.h"
+#if defined(YASIO_HAVE_KCP)
+#  include "kcp/ikcp.h"
+#endif
 #include <limits>
 #include <stdarg.h>
 #include <string>
@@ -336,7 +338,7 @@ int io_transport_posix::recv(int &error)
 }
 bool io_transport_posix::update(long long &max_wait_duration)
 {
-  bool ret      = false;
+  bool ret = false;
   do
   {
     if (!socket_->is_open())
@@ -402,13 +404,14 @@ bool io_transport_posix::update(long long &max_wait_duration)
   return ret;
 }
 
+#if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock)
     : io_transport_base(ctx, sock), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
   ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
-  ::ikcp_setoutput(this->kcp_, [](const char *buf, int len, ikcpcb */*kcp*/, void *user) {
+  ::ikcp_setoutput(this->kcp_, [](const char *buf, int len, ikcpcb * /*kcp*/, void *user) {
     io_transport_base *t = (io_transport_base *)user;
     return t->socket_->send_i(buf, len);
   });
@@ -425,7 +428,7 @@ int io_transport_kcp::recv(int &error)
   int n = socket_->recv_i(sbuf, sizeof(sbuf));
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
-      // 0: ok, -1: again, -3: error
+    // 0: ok, -1: again, -3: error
     ::ikcp_input(kcp_, sbuf, n);
     n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
   }
@@ -450,6 +453,7 @@ bool io_transport_kcp::update(long long &max_wait_duration)
 
   return true;
 }
+#endif
 
 // ------------------------ io_service ------------------------
 
@@ -1146,12 +1150,14 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
   }
   else
     vp = operator new(sizeof(io_transport_posix));
-
+#if defined(YASIO_HAVE_KCP)
   if (!(ctx->mask_ & YCM_KCP))
     transport = new (vp) io_transport_posix(ctx, socket);
   else
     transport = new (vp) io_transport_kcp(ctx, socket);
-
+#else
+  transport = new (vp) io_transport_posix(ctx, socket);
+#endif
   this->transports_.push_back(transport);
 
   return transport;

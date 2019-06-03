@@ -46,7 +46,8 @@ SOFTWARE.
 #include "yasio/xxsocket.h"
 
 /*
-** If you want use kcp, please uncomment and add kcp/ikcp.c to our compile system.
+** If you want use kcp, please uncomment and add kcp/ikcp.c to your compile system.
+** Remember, before thus, please ensure execute: `git submodule update --init --recursive` to clone kcp sources.
 ** pitfall: yasio kcp support is experimental currently.
 */
 // #define YASIO_HAVE_KCP

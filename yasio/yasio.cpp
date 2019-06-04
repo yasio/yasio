@@ -104,7 +104,7 @@ namespace
 enum
 {
   YERR_OK,                  // NO ERROR.
-  YERR_SEND_TIMEOUT = -500, // Send timeout.
+  YERR_INVALID_PACKET = -500, // Invalid packet.
   YERR_DPL_ILLEGAL_PDU,     // Decode pdu length error.
   YERR_RESOLV_HOST_FAILED,  // Resolve host failed.
   YERR_NO_AVAIL_ADDR,       // No available address to connect.
@@ -332,7 +332,7 @@ int io_transport_posix::recv(int &error)
   error = xxsocket::get_last_errno();
   return n;
 }
-bool io_transport_posix::update(long long &max_wait_duration)
+bool io_transport_posix::flush(long long &max_wait_duration)
 {
   bool ret = false;
   do
@@ -412,14 +412,19 @@ int io_transport_kcp::recv(int &error)
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
     // 0: ok, -1: again, -3: error
-    ::ikcp_input(kcp_, sbuf, n);
-    n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+    if (0 == ::ikcp_input(kcp_, sbuf, n))
+      n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+    else
+    { // current, simply regards -1,-3 as error and trigger connection lost event.
+      n = 0;
+      error = YERR_INVALID_PACKET;
+    }
   }
   else
     error = xxsocket::get_last_errno();
   return n;
 }
-bool io_transport_kcp::update(long long &max_wait_duration)
+bool io_transport_kcp::flush(long long &max_wait_duration)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
@@ -673,7 +678,7 @@ void io_service::perform_transports(fd_set *fds_array, long long &max_wait_durat
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    if (do_read(transport, fds_array, max_wait_duration) && transport->update(max_wait_duration))
+    if (do_read(transport, fds_array, max_wait_duration) && transport->flush(max_wait_duration))
       ++iter;
     else
     {
@@ -1558,8 +1563,6 @@ const char *io_service::strerror(int error)
   {
     case 0:
       return "No error.";
-    case YERR_SEND_TIMEOUT:
-      return "Send timeout!";
     case YERR_DPL_ILLEGAL_PDU:
       return "Decode frame length failed!";
     case YERR_RESOLV_HOST_FAILED:
@@ -1568,6 +1571,8 @@ const char *io_service::strerror(int error)
       return "No available address!";
     case YERR_LOCAL_SHUTDOWN:
       return "An existing connection was shutdown by local host!";
+    case YERR_INVALID_PACKET:
+      return "Invalid packet!";
     case -1:
       return "Unknown error!";
     default:

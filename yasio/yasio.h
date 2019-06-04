@@ -273,9 +273,11 @@ public:
 
   io_service &get_service() { return ctx_->get_service(); }
 
-  virtual void send(std::vector<char> data)         = 0;
-  virtual int recv(int &error)                      = 0;
-  virtual bool update(long long &max_wait_duration) = 0;
+  virtual void send(std::vector<char> data) = 0;
+  virtual int recv(int &error)              = 0;
+
+  // Try flush pending packet
+  virtual bool flush(long long &max_wait_duration) = 0;
 
 protected:
   io_transport_base(io_channel *ctx, std::shared_ptr<xxsocket> sock);
@@ -304,7 +306,7 @@ public:
   {}
   void send(std::vector<char> data) override;
   int recv(int &error) override;
-  bool update(long long &max_wait_duration) override;
+  bool flush(long long &max_wait_duration) override;
   std::deque<a_pdu_ptr> send_queue_;
 };
 
@@ -316,7 +318,7 @@ public:
   ~io_transport_kcp();
   void send(std::vector<char> data) override;
   int recv(int &error) override;
-  bool update(long long &max_wait_duration) override;
+  bool flush(long long &max_wait_duration) override;
   ikcpcb *kcp_;
 };
 #endif

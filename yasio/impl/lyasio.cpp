@@ -314,7 +314,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
   auto lyasio    = state.newTable();
   state["yasio"] = lyasio;
   // No any interface need export, only for holder
-  lyasio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
+  lyasio["io_transport_base"].setClass(kaguya::UserdataMetatable<io_transport_base>());
 
   lyasio["io_event"].setClass(
       kaguya::UserdataMetatable<io_event>()

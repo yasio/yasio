@@ -318,11 +318,11 @@ template <typename T> static jsval jsb_yasio_to_jsval(JSContext *ctx, std::uniqu
 
 static jsval jsb_yasio_to_jsval(JSContext *ctx, transport_ptr value)
 {
-  js_type_class_t *typeClass = js_get_type_from_native<io_transport>(value);
+  js_type_class_t *typeClass = js_get_type_from_native<io_transport_base>(value);
 
   // link the native object with the javascript object
   JS::RootedObject jsobj(
-      ctx, jsb_create_weak_jsobject(ctx, value, typeClass, TypeTest<io_transport>::s_name()));
+      ctx, jsb_create_weak_jsobject(ctx, value, typeClass, TypeTest<io_transport_base>::s_name()));
 
   return OBJECT_TO_JSVAL(jsobj);
 }
@@ -1304,7 +1304,7 @@ void js_register_yasio_transport(JSContext *ctx, JS::HandleObject global)
   JS_SetProperty(ctx, proto, "__nativeObj", JS::TrueHandleValue);
   JS_SetProperty(ctx, proto, "__is_ref", JS::FalseHandleValue);
 
-  jsb_register_class<io_transport>(ctx, jsb_transport_class, proto, JS::NullPtr());
+  jsb_register_class<io_transport_base>(ctx, jsb_transport_class, proto, JS::NullPtr());
 }
 
 ///////////////////////// io_event /////////////////////////////////

@@ -243,16 +243,13 @@ static void _set_thread_name(const char *threadName)
 class a_pdu
 {
 public:
-  a_pdu(std::vector<char> &&right, const std::chrono::microseconds &duration)
+  a_pdu(std::vector<char> &&right)
   {
-    data_        = std::move(right);
-    offset_      = 0;
-    expire_time_ = highp_clock_t::now() + duration;
+    data_   = std::move(right);
+    offset_ = 0;
   }
-  bool expired() const { return (expire_time_ - highp_clock_t::now()).count() < 0; }
   std::vector<char> data_; // sending data
   size_t offset_;          // offset
-  std::chrono::time_point<highp_clock_t> expire_time_;
 
 #if _USING_OBJECT_POOL
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(a_pdu, 512)
@@ -326,8 +323,7 @@ io_transport_base::io_transport_base(io_channel *ctx, std::shared_ptr<xxsocket> 
 // -------------------- io_transport_posix ---------------------
 void io_transport_posix::send(std::vector<char> data)
 {
-  auto &options = get_service().options_;
-  a_pdu_ptr pdu(new a_pdu(std::move(data), std::chrono::microseconds(options.send_timeout_)));
+  a_pdu_ptr pdu(new a_pdu(std::move(data)));
   send_queue_.push_back(pdu);
 }
 int io_transport_posix::recv(int &error)
@@ -364,23 +360,10 @@ bool io_transport_posix::update(long long &max_wait_duration)
 #endif
       }
       else if (n > 0)
-      { // TODO: add time
-        if (!v->expired())
-        { // #performance: change offset only, remain data will be send next time.
-          v->offset_ += n;
-          outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
-        }
-        else
-        { // send timeout
-          send_queue_.pop_front();
-
-          auto packet_size = static_cast<int>(v->data_.size());
-          YASIO_LOG_IMPL(get_service().options_,
-                         "[index: %d] do_write packet timeout, packet "
-                         "size:%d",
-                         channel_index(), packet_size);
-          // handle_send_finished(v, YERR_SEND_TIMEOUT);
-        }
+      {
+        // #performance: change offset only, remain data will be send next loop.
+        v->offset_ += n;
+        outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
       }
       else
       { // n <= 0, TODO: add time
@@ -1602,9 +1585,6 @@ void io_service::set_option(int option, ...)
     case YOPT_CONNECT_TIMEOUT:
       options_.connect_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YOPT_SEND_TIMEOUT:
-      options_.send_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
     case YOPT_RECONNECT_TIMEOUT:
     {

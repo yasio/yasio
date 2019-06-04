@@ -47,7 +47,8 @@ SOFTWARE.
 
 /*
 ** If you want use kcp, please uncomment and add kcp/ikcp.c to your compile system.
-** Remember, before thus, please ensure execute: `git submodule update --init --recursive` to clone kcp sources.
+** Remember, before thus, please ensure execute: `git submodule update --init --recursive` to clone
+*kcp sources.
 ** pitfall: yasio kcp support is experimental currently.
 */
 // #define YASIO_HAVE_KCP
@@ -77,7 +78,6 @@ namespace inet
 enum
 {
   YOPT_CONNECT_TIMEOUT = 1,
-  YOPT_SEND_TIMEOUT,
   YOPT_RECONNECT_TIMEOUT,
   YOPT_DNS_CACHE_TIMEOUT,
   YOPT_DEFER_EVENT,
@@ -585,7 +585,6 @@ private:
   struct __unnamed_options
   {
     highp_time_t connect_timeout_   = 10LL * MICROSECONDS_PER_SECOND;
-    highp_time_t send_timeout_      = (std::numeric_limits<int>::max)();
     highp_time_t reconnect_timeout_ = -1;
     // Default dns cache time: 10 minutes
     highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;

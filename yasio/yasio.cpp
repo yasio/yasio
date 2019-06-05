@@ -103,12 +103,12 @@ namespace
 // error code
 enum
 {
-  YERR_OK,                  // NO ERROR.
+  YERR_OK,                    // NO ERROR.
   YERR_INVALID_PACKET = -500, // Invalid packet.
-  YERR_DPL_ILLEGAL_PDU,     // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED,  // Resolve host failed.
-  YERR_NO_AVAIL_ADDR,       // No available address to connect.
-  YERR_LOCAL_SHUTDOWN,      // Local shutdown the connection.
+  YERR_DPL_ILLEGAL_PDU,       // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED,    // Resolve host failed.
+  YERR_NO_AVAIL_ADDR,         // No available address to connect.
+  YERR_LOCAL_SHUTDOWN,        // Local shutdown the connection.
 };
 
 // event mask
@@ -324,12 +324,14 @@ io_transport_base::io_transport_base(io_channel *ctx, std::shared_ptr<xxsocket> 
 void io_transport_posix::send(std::vector<char> data)
 {
   a_pdu_ptr pdu(new a_pdu(std::move(data)));
+  send_mtx_.lock();
   send_queue_.push_back(pdu);
+  send_mtx_.unlock();
 }
 int io_transport_posix::recv(int &error)
 {
   int n = socket_->recv_i(buffer_ + offset_, sizeof(buffer_) - offset_);
-  error = xxsocket::get_last_errno();
+  error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
 bool io_transport_posix::flush(long long &max_wait_duration)
@@ -403,6 +405,7 @@ io_transport_kcp::~io_transport_kcp() { ikcp_release(this->kcp_); }
 
 void io_transport_kcp::send(std::vector<char> data)
 {
+  std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   ikcp_send(kcp_, data.data(), static_cast<int>(data.size()));
 }
 int io_transport_kcp::recv(int &error)
@@ -416,7 +419,7 @@ int io_transport_kcp::recv(int &error)
       n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
     else
     { // current, simply regards -1,-3 as error and trigger connection lost event.
-      n = 0;
+      n     = 0;
       error = YERR_INVALID_PACKET;
     }
   }
@@ -873,7 +876,6 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
   if (maxfdp_ < static_cast<int>(fd) + 1)
     maxfdp_ = static_cast<int>(fd) + 1;
 }
-
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 {
   if ((flags & YEM_POLLIN) != 0)
@@ -891,12 +893,8 @@ int io_service::write(transport_ptr transport, std::vector<char> data)
   {
     if (!data.empty())
     {
-      transport->send_mtx_.lock();
       transport->send(data);
-      transport->send_mtx_.unlock();
-
       this->interrupt();
-
       return static_cast<int>(data.size());
     }
     return 0;

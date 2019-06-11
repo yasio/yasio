@@ -76,9 +76,9 @@ extern "C" {
 YASIO_LUA_API int luaopen_yasio(lua_State *L)
 {
   using namespace yasio::inet;
-  sol::state_view sol2(L);
+  sol::state_view state_view(L);
 
-  auto lyasio = sol2.create_named_table("yasio");
+  auto lyasio = state_view.create_named_table("yasio");
 
   lyasio.new_usertype<io_event>(
       "io_event", "kind", &io_event::kind, "status", &io_event::status, "packet",
@@ -94,7 +94,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
 
   lyasio.new_usertype<io_service>(
       "io_service", "start_service",
-      [](io_service *service, sol::table channel_eps, io_event_cb_t cb) {
+      [](io_service *service, sol::table channel_eps, sol::function cb) {
         std::vector<io_hostent> hosts;
         auto host = channel_eps["host"];
         if (host != sol::nil)
@@ -107,7 +107,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
             hosts.push_back(io_hostent(ep["host"], ep["port"]));
           }
         }
-        service->start_service(hosts, std::move(cb));
+        service->start_service(hosts, [=](event_ptr ev) { cb(std::move(ev)); });
       },
       "stop_service", &io_service::stop_service, "set_option",
       [](io_service *service, int opt, sol::variadic_args va) {

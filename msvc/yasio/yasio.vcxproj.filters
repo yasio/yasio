@@ -32,16 +32,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\yasio\xxsocket.h">
+    <ClInclude Include="..\..\yasio\xxsocket.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\yasio\yasio.h">
+    <ClInclude Include="..\..\yasio\yasio.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\yasio\ibstream.h">
+    <ClInclude Include="..\..\yasio\ibstream.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\yasio\obstream.h">
+    <ClInclude Include="..\..\yasio\obstream.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\yasio\detail\config.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -30,7 +30,11 @@ SOFTWARE.
 */
 
 // UDP server: https://cloud.tencent.com/developer/article/1004555
-#include "yasio.h"
+
+#ifndef YASIO__CORE_CPP
+#define YASIO__CORE_CPP
+
+#include "yasio/yasio.hpp"
 #if defined(YASIO_HAVE_KCP)
 #  include "kcp/ikcp.h"
 #endif
@@ -1681,4 +1685,6 @@ void io_service::set_option(int option, ...)
 
 #if defined(_WIN32)
 #  pragma warning(pop)
+#endif
+
 #endif

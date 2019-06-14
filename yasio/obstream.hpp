@@ -25,65 +25,66 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__OBSTREAM_H
-#define YASIO__OBSTREAM_H
+#ifndef YASIO__OBSTREAM_HPP
+#define YASIO__OBSTREAM_HPP
 #include <string>
 #include "yasio/detail/string_view.hpp"
 #include <sstream>
 #include <vector>
 #include <stack>
 #include "yasio/detail/endian_portable.h"
+#include "yasio/detail/config.hpp"
 namespace yasio
 {
 class obstream
 {
 public:
-  obstream(size_t buffersize = 256);
-  obstream(const obstream &right);
-  obstream(obstream &&right);
-  ~obstream();
+  YASIO__DECL obstream(size_t buffersize = 256);
+  YASIO__DECL obstream(const obstream &right);
+  YASIO__DECL obstream(obstream &&right);
+  YASIO__DECL ~obstream();
 
-  void push8();
-  void pop8();
-  void pop8(uint8_t);
+  YASIO__DECL void push8();
+  YASIO__DECL void pop8();
+  YASIO__DECL void pop8(uint8_t);
 
-  void push16();
-  void pop16();
-  void pop16(uint16_t);
+  YASIO__DECL void push16();
+  YASIO__DECL void pop16();
+  YASIO__DECL void pop16(uint16_t);
 
-  void push24();
-  void pop24();
-  void pop24(uint32_t);
+  YASIO__DECL void push24();
+  YASIO__DECL void pop24();
+  YASIO__DECL void pop24(uint32_t);
 
-  void push32();
-  void pop32();
-  void pop32(uint32_t);
+  YASIO__DECL void push32();
+  YASIO__DECL void pop32();
+  YASIO__DECL void pop32(uint32_t);
 
-  obstream &operator=(const obstream &right);
-  obstream &operator=(obstream &&right);
+  YASIO__DECL obstream &operator=(const obstream &right);
+  YASIO__DECL obstream &operator=(obstream &&right);
 
-  template <typename _Nty> void write_i(_Nty value);
+  template <typename _Nty> inline void write_i(_Nty value);
 
-  void write_i24(uint32_t value); // highest byte ignored
+  YASIO__DECL void write_i24(uint32_t value); // highest byte ignored
 
-  void write_i7(int value);
+  YASIO__DECL void write_i7(int value);
 
   /* write blob data with variant length of length field. */
-  void write_va(yasio::string_view sv);
+  YASIO__DECL void write_va(yasio::string_view sv);
 
   /* 32 bits length field */
-  void write_v(yasio::string_view);
+  YASIO__DECL void write_v(yasio::string_view);
   /* 16 bits length field */
-  void write_v16(yasio::string_view);
+  YASIO__DECL void write_v16(yasio::string_view);
   /* 8 bits length field */
-  void write_v8(yasio::string_view);
+  YASIO__DECL void write_v8(yasio::string_view);
 
-  void write_v(const void *v, int size);
-  void write_v16(const void *v, int size);
-  void write_v8(const void *v, int size);
+  YASIO__DECL void write_v(const void *v, int size);
+  YASIO__DECL void write_v16(const void *v, int size);
+  YASIO__DECL void write_v8(const void *v, int size);
 
-  void write_bytes(yasio::string_view);
-  void write_bytes(const void *v, int vl);
+  YASIO__DECL void write_bytes(yasio::string_view);
+  YASIO__DECL void write_bytes(const void *v, int vl);
 
   size_t length() const { return buffer_.size(); }
   const char *data() const { return buffer_.data(); }
@@ -91,11 +92,11 @@ public:
   const std::vector<char> &buffer() const { return buffer_; }
   std::vector<char> &buffer() { return buffer_; }
 
-  char *wdata(size_t offset = 0) { return &buffer_.front() + offset; }
+  char *wptr(size_t offset = 0) { return &buffer_.front() + offset; }
 
-  template <typename _Nty> void set(std::streamoff offset, const _Nty value);
+  template <typename _Nty> inline void set(std::streamoff offset, const _Nty value);
 
-  template <typename _LenT> void write_vx(const void *v, int size)
+  template <typename _LenT> inline void write_vx(const void *v, int size)
   {
     auto l = yasio::endian::htonv(static_cast<_LenT>(size));
 
@@ -107,10 +108,10 @@ public:
     if (size > 0)
       ::memcpy(buffer_.data() + offset + sizeof l, v, size);
   }
-  obstream sub(size_t offset, size_t count = -1);
+  YASIO__DECL obstream sub(size_t offset, size_t count = -1);
 
 public:
-  void save(const char *filename);
+  YASIO__DECL void save(const char *filename);
 
 protected:
   std::vector<char> buffer_;
@@ -143,4 +144,9 @@ template <typename _Nty> inline void obstream::set(std::streamoff offset, const 
   memcpy(buffer_.data() + offset, &nv, sizeof(nv));
 }
 } // namespace yasio
+
+#if defined(YASIO__HEADER_ONLY)
+#  include "yasio/obstream.cpp"
+#endif
+
 #endif

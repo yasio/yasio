@@ -28,29 +28,29 @@ class pipe_select_interrupter
 {
 public:
   // Constructor.
-  YASIO_INLINE pipe_select_interrupter();
+  inline pipe_select_interrupter();
 
   // Destructor.
-  YASIO_INLINE ~pipe_select_interrupter();
+  inline ~pipe_select_interrupter();
 
   // Recreate the interrupter's descriptors. Used after a fork.
-  YASIO_INLINE void recreate();
+  inline void recreate();
 
   // Interrupt the select call.
-  YASIO_INLINE void interrupt();
+  inline void interrupt();
 
   // Reset the select interrupt. Returns true if the call was interrupted.
-  YASIO_INLINE bool reset();
+  inline bool reset();
 
   // Get the read descriptor to be passed to select.
   int read_descriptor() const { return read_descriptor_; }
 
 private:
   // Open the descriptors. Throws on error.
-  YASIO_INLINE void open_descriptors();
+  inline void open_descriptors();
 
   // Close the descriptors.
-  YASIO_INLINE void close_descriptors();
+  inline void close_descriptors();
 
   // The read end of a connection used to interrupt the select call. This file
   // descriptor is passed to select such that when it is time to stop, a single

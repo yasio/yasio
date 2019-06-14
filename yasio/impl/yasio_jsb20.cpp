@@ -26,9 +26,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include "yasio/yasio_jsb20.h"
-#include "yasio/yasio.h"
-#include "yasio/ibstream.h"
-#include "yasio/obstream.h"
+#include "yasio/yasio.hpp"
+#include "yasio/ibstream.hpp"
+#include "yasio/obstream.hpp"
 #include "yasio/detail/ref_ptr.h"
 
 #include "cocos2d.h"

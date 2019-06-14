@@ -30,7 +30,7 @@ SOFTWARE.
 ** yasio_ni.cpp: The yasio native interface for interop.
 */
 #include <string.h>
-#include "yasio/yasio.h"
+#include "yasio/yasio.hpp"
 
 #if defined(_WINDLL)
 #  define YASIO_NI_API __declspec(dllexport)

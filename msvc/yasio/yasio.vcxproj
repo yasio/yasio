@@ -120,7 +120,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
@@ -128,7 +128,6 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\</AdditionalIncludeDirectories>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -167,10 +166,11 @@
     <ClCompile Include="..\..\yasio\yasio.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\yasio\ibstream.h" />
-    <ClInclude Include="..\..\yasio\obstream.h" />
-    <ClInclude Include="..\..\yasio\xxsocket.h" />
-    <ClInclude Include="..\..\yasio\yasio.h" />
+    <ClInclude Include="..\..\yasio\detail\config.hpp" />
+    <ClInclude Include="..\..\yasio\ibstream.hpp" />
+    <ClInclude Include="..\..\yasio\obstream.hpp" />
+    <ClInclude Include="..\..\yasio\xxsocket.hpp" />
+    <ClInclude Include="..\..\yasio\yasio.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

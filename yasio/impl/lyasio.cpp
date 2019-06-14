@@ -24,9 +24,10 @@ SOFTWARE.
 #if !defined(LUA_LIB)
 #  define LUA_LIB
 #endif
-#include "yasio/ibstream.h"
-#include "yasio/obstream.h"
-#include "yasio/yasio.h"
+
+#include "yasio/ibstream.hpp"
+#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 #include "yasio/lyasio.h"
 
 namespace lyasio

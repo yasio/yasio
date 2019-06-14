@@ -19,11 +19,6 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-
-#if !defined(YASIO_INLINE)
-#define YASIO_INLINE inline
-#endif
-
 #if defined(_WIN32) 
 # include "socket_select_interrupter.hpp"
 #elif defined(__linux__)

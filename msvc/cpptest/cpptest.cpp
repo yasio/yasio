@@ -2,17 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(YASIO_IOCP)
-#  include "yasio/experimental/yasio_iocp.h"
-#elif defined(YASIO_POLL)
-#  include "yasio/experimental/yasio_poll.h"
-#elif defined(YASIO_EPOLL)
-#  include "yasio/experimental/yasio_epoll.h"
-#else
-#  include "yasio/yasio.h"
-#endif
-#include "yasio/ibstream.h"
-#include "yasio/obstream.h"
+#include "yasio/yasio.hpp"
+
+#include "yasio/ibstream.hpp"
+#include "yasio/obstream.hpp"
 
 #if defined(_WIN32)
 #  include <Shlwapi.h>
@@ -53,7 +46,6 @@ void yasioTest()
   auto v4 = ibs.read_i24();
 
   io_service service;
-
 
   resolv_fn_t resolv = [&](std::vector<ip::endpoint> &endpoints, const char *hostname,
                            unsigned short port) {
@@ -134,7 +126,7 @@ void yasioTest()
   });
 
   /*
-  ** If after 5 seconds no data interaction at application layer, 
+  ** If after 5 seconds no data interaction at application layer,
   ** send a heartbeat per 10 seconds when no response, try 2 times
   ** if no response, then he connection will shutdown by driver.
   ** At windows will close with error: 10054

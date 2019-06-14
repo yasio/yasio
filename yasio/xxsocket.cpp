@@ -25,11 +25,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#ifndef YASIO__XXSOCKET_CPP
+#define YASIO__XXSOCKET_CPP
 #include <assert.h>
 #ifdef _DEBUG
 #  include <stdio.h>
 #endif
-#include "xxsocket.h"
+
+#if !defined(YASIO__HEADER_ONLY)
+#  include "yasio/xxsocket.hpp"
+#endif
 
 // For apple bsd socket implemention
 #if !defined(TCP_KEEPIDLE)
@@ -1505,4 +1510,6 @@ ws2_32_gc __ws32_lib_gc;
 
 #if defined(_MSC_VER)
 #  pragma warning(pop)
+#endif
+
 #endif

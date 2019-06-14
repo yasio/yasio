@@ -25,8 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__IBSTREAM_H
-#define YASIO__IBSTREAM_H
+#ifndef YASIO__IBSTREAM_HPP
+#define YASIO__IBSTREAM_HPP
 #include <stddef.h>
 #include <string>
 #include <sstream>
@@ -34,64 +34,65 @@ SOFTWARE.
 #include <vector>
 #include "yasio/detail/string_view.hpp"
 #include "yasio/detail/endian_portable.h"
+#include "yasio/detail/config.hpp"
 namespace yasio
 {
 class obstream;
 class ibstream_view
 {
 public:
-  ibstream_view();
-  ibstream_view(const void *data, int size);
-  ibstream_view(const obstream *);
-  ibstream_view(const ibstream_view &right) = delete;
-  ibstream_view(ibstream_view &&right)      = delete;
+  YASIO__DECL ibstream_view();
+  YASIO__DECL ibstream_view(const void *data, int size);
+  YASIO__DECL ibstream_view(const obstream *);
+  YASIO__DECL ibstream_view(const ibstream_view &right) = delete;
+  YASIO__DECL ibstream_view(ibstream_view &&right)      = delete;
 
-  ~ibstream_view();
+  YASIO__DECL ~ibstream_view();
 
-  void assign(const void *data, int size);
+  YASIO__DECL void assign(const void *data, int size);
 
-  ibstream_view &operator=(const ibstream_view &right) = delete;
-  ibstream_view &operator=(ibstream_view &&right) = delete;
+  YASIO__DECL ibstream_view &operator=(const ibstream_view &right) = delete;
+  YASIO__DECL ibstream_view &operator=(ibstream_view &&right) = delete;
 
-  template <typename _Nty> void read_ix(_Nty &ov);
+  template <typename _Nty> inline void read_ix(_Nty &ov);
 
-  template <typename _Nty> _Nty read_i()
+  template <typename _Nty> inline _Nty read_i()
   {
     _Nty value;
     read_ix(value);
     return value;
   }
 
-  int read_i7();
+  YASIO__DECL int read_i7();
 
-  int32_t read_i24();
-  uint32_t read_u24();
+  YASIO__DECL int32_t read_i24();
+  YASIO__DECL uint32_t read_u24();
 
-  yasio::string_view read_va();
+  YASIO__DECL yasio::string_view read_va();
 
-  void read_v(std::string &);   // 32 bits length field
-  void read_v16(std::string &); // 16 bits length field
-  void read_v8(std::string &);  // 8 bits length field
+  YASIO__DECL void read_v(std::string &);   // 32 bits length field
+  YASIO__DECL void read_v16(std::string &); // 16 bits length field
+  YASIO__DECL void read_v8(std::string &);  // 8 bits length field
 
-  void read_v(void *, int);
-  void read_v16(void *, int);
-  void read_v8(void *, int);
+  YASIO__DECL void read_v(void *, int);
+  YASIO__DECL void read_v16(void *, int);
+  YASIO__DECL void read_v8(void *, int);
 
-  void read_bytes(std::string &oav, int len);
-  void read_bytes(void *oav, int len);
+  YASIO__DECL void read_bytes(std::string &oav, int len);
+  YASIO__DECL void read_bytes(void *oav, int len);
 
-  yasio::string_view read_v();
-  yasio::string_view read_v16();
-  yasio::string_view read_v8();
+  YASIO__DECL yasio::string_view read_v();
+  YASIO__DECL yasio::string_view read_v16();
+  YASIO__DECL yasio::string_view read_v8();
 
-  yasio::string_view read_bytes(int len);
+  YASIO__DECL yasio::string_view read_bytes(int len);
 
-  inline const char *data() { return first_; }
-  inline size_t length(void) { return last_ - first_; }
+  const char *data() { return first_; }
+  size_t length(void) { return last_ - first_; }
 
-  ptrdiff_t seek(ptrdiff_t offset, int whence);
+  YASIO__DECL ptrdiff_t seek(ptrdiff_t offset, int whence);
 
-  template <typename _LenT> yasio::string_view read_vx()
+  template <typename _LenT> inline yasio::string_view read_vx()
   {
     _LenT n = read_i<_LenT>();
 
@@ -105,7 +106,7 @@ public:
 
 protected:
   // will throw std::logic_error
-  const char *consume(size_t size);
+  YASIO__DECL const char *consume(size_t size);
 
 protected:
   const char *first_;
@@ -142,13 +143,17 @@ template <> inline void ibstream_view::read_ix<double>(double &ov)
 class ibstream : public ibstream_view
 {
 public:
-  ibstream(std::vector<char> blob);
-  ibstream(const obstream *obs);
+  YASIO__DECL ibstream(std::vector<char> blob);
+  YASIO__DECL ibstream(const obstream *obs);
 
 private:
   std::vector<char> blob_;
 };
 
 } // namespace yasio
+
+#if defined(YASIO__HEADER_ONLY)
+#  include "yasio/ibstream.cpp"
+#endif
 
 #endif

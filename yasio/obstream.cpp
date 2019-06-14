@@ -25,7 +25,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#include "obstream.h"
+#ifndef YASIO__OBSTREAM_CPP
+#define YASIO__OBSTREAM_CPP
+
+#include "yasio/obstream.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -81,14 +84,14 @@ void obstream::pop24()
 {
   auto offset = offset_stack_.top();
   auto value  = htonl(static_cast<uint32_t>(buffer_.size() - offset - 3)) >> 8;
-  memcpy(wdata(offset), &value, 3);
+  memcpy(wptr(offset), &value, 3);
   offset_stack_.pop();
 }
 void obstream::pop24(uint32_t value)
 {
   auto offset = offset_stack_.top();
   value       = htonl(value) >> 8;
-  memcpy(wdata(offset), &value, 3);
+  memcpy(wptr(offset), &value, 3);
   offset_stack_.pop();
 }
 
@@ -212,3 +215,5 @@ obstream obstream::sub(size_t offset, size_t count)
 }
 
 } // namespace yasio
+
+#endif

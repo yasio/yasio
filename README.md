@@ -85,7 +85,7 @@ see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js
   
   
 ## Quick test at linux platform with gcc compiler:  
-```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./ -o cpptest && ./cpptest```  
+```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp msvc/cpptest/cpptest.cpp --std=c++11 -lpthread -I./ -o cpptest && ./cpptest``` or ```g++ msvc/cpptest/cpptest.cpp --std=c++11 -DYASIO__HEADER_ONLY -lpthread -I./ -o cpptest && ./cpptest``` 
   
 ## pitfall: 
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  

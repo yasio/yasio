@@ -26,181 +26,175 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/** IPV6 ONLY support reference URLs
- * http://blog.csdn.net/baidu_25743639/article/details/51351638
- * http://www.cnblogs.com/SUPER-F/p/IPV6.html
- */
 #ifndef YASIO__XXSOCKET_HPP
-#  define YASIO__XXSOCKET_HPP
-#  pragma once
+#define YASIO__XXSOCKET_HPP
+#pragma once
 
-#  include "yasio/detail/config.hpp"
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+#include <sstream>
+#include <vector>
+#include <chrono>
+#include "yasio/detail/config.hpp"
 
-#  include <errno.h>
-#  include <string.h>
-#  include <stdio.h>
-#  include <sstream>
-#  include <vector>
-#  include <chrono>
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#endif
 
-#  if defined(_MSC_VER)
-#    pragma warning(push)
-#    pragma warning(disable : 4996)
+#ifdef _WIN32
+
+#  include <WinSock2.h>
+
+#  include <Windows.h>
+#  if defined(_WIN32) && !defined(_WINSTORE)
+#    include <Mswsock.h>
+#    include <Mstcpip.h>
 #  endif
-
-#  ifdef _WIN32
-
-#    include <WinSock2.h>
-
-#    include <Windows.h>
-#    if defined(_WIN32) && !defined(_WINSTORE)
-#      include <Mswsock.h>
-#      include <Mstcpip.h>
-#    endif
-#    include <Ws2tcpip.h>
-#    include <Wspiapi.h>
+#  include <Ws2tcpip.h>
+#  include <Wspiapi.h>
 typedef SOCKET socket_native_type;
 typedef int socklen_t;
 typedef WSAPOLLFD pollfd;
-#    define poll WSAPoll
-#    pragma comment(lib, "ws2_32.lib")
+#  define poll WSAPoll
+#  pragma comment(lib, "ws2_32.lib")
 
-#    undef gai_strerror
-#  else
-#    include <unistd.h>
-#    include <signal.h>
-#    include <sys/ioctl.h>
-#    include <netdb.h>
-#    include <sys/types.h>
-#    include <sys/poll.h>
-#    if defined(__linux__)
-#      include <sys/epoll.h>
-#    endif
-#    include <sys/select.h>
-#    include <sys/socket.h>
-#    include <netinet/in.h>
-#    include <netinet/tcp.h>
-#    include <net/if.h>
-#    include <arpa/inet.h>
-#    if !defined(SD_RECEIVE)
-#      define SD_RECEIVE SHUT_RD
-#    endif
-#    if !defined(SD_SEND)
-#      define SD_SEND SHUT_WR
-#    endif
-#    if !defined(SD_BOTH)
-#      define SD_BOTH SHUT_RDWR
-#    endif
-#    if !defined(closesocket)
-#      define closesocket close
-#    endif
-#    if !defined(ioctlsocket)
-#      define ioctlsocket ioctl
-#    endif
+#  undef gai_strerror
+#else
+#  include <unistd.h>
+#  include <signal.h>
+#  include <sys/ioctl.h>
+#  include <netdb.h>
+#  include <sys/types.h>
+#  include <sys/poll.h>
+#  if defined(__linux__)
+#    include <sys/epoll.h>
+#  endif
+#  include <sys/select.h>
+#  include <sys/socket.h>
+#  include <netinet/in.h>
+#  include <netinet/tcp.h>
+#  include <net/if.h>
+#  include <arpa/inet.h>
+#  if !defined(SD_RECEIVE)
+#    define SD_RECEIVE SHUT_RD
+#  endif
+#  if !defined(SD_SEND)
+#    define SD_SEND SHUT_WR
+#  endif
+#  if !defined(SD_BOTH)
+#    define SD_BOTH SHUT_RDWR
+#  endif
+#  if !defined(closesocket)
+#    define closesocket close
+#  endif
+#  if !defined(ioctlsocket)
+#    define ioctlsocket ioctl
+#  endif
 typedef int socket_native_type;
-#    undef socket
-#  endif
-#  include <fcntl.h> // common platform header
+#  undef socket
+#endif
+#include <fcntl.h> // common platform header
 
-#  ifndef SO_REUSEPORT
-#    define SO_REUSEPORT SO_REUSEADDR
-#  endif
+#ifndef SO_REUSEPORT
+#  define SO_REUSEPORT SO_REUSEADDR
+#endif
 
 // redefine socket error code for posix api
-#  ifdef _WIN32
+#ifdef _WIN32
 
-#    undef EWOULDBLOCK
-#    undef EINPROGRESS
-#    undef EALREADY
-#    undef ENOTSOCK
-#    undef EDESTADDRREQ
-#    undef EMSGSIZE
-#    undef EPROTOTYPE
-#    undef ENOPROTOOPT
-#    undef EPROTONOSUPPORT
-#    undef ESOCKTNOSUPPORT
-#    undef EOPNOTSUPP
-#    undef EPFNOSUPPORT
-#    undef EAFNOSUPPORT
-#    undef EADDRINUSE
-#    undef EADDRNOTAVAIL
-#    undef ENETDOWN
-#    undef ENETUNREACH
-#    undef ENETRESET
-#    undef ECONNABORTED
-#    undef ECONNRESET
-#    undef ENOBUFS
-#    undef EISCONN
-#    undef ENOTCONN
-#    undef ESHUTDOWN
-#    undef ETOOMANYREFS
-#    undef ETIMEDOUT
-#    undef ECONNREFUSED
-#    undef ELOOP
-#    undef ENAMETOOLONG
-#    undef EHOSTDOWN
-#    undef EHOSTUNREACH
-#    undef ENOTEMPTY
-#    undef EPROCLIM
-#    undef EUSERS
-#    undef EDQUOT
-#    undef ESTALE
-#    undef EREMOTE
-#    undef EBADF
-#    undef EFAULT
-#    undef EAGAIN
+#  undef EWOULDBLOCK
+#  undef EINPROGRESS
+#  undef EALREADY
+#  undef ENOTSOCK
+#  undef EDESTADDRREQ
+#  undef EMSGSIZE
+#  undef EPROTOTYPE
+#  undef ENOPROTOOPT
+#  undef EPROTONOSUPPORT
+#  undef ESOCKTNOSUPPORT
+#  undef EOPNOTSUPP
+#  undef EPFNOSUPPORT
+#  undef EAFNOSUPPORT
+#  undef EADDRINUSE
+#  undef EADDRNOTAVAIL
+#  undef ENETDOWN
+#  undef ENETUNREACH
+#  undef ENETRESET
+#  undef ECONNABORTED
+#  undef ECONNRESET
+#  undef ENOBUFS
+#  undef EISCONN
+#  undef ENOTCONN
+#  undef ESHUTDOWN
+#  undef ETOOMANYREFS
+#  undef ETIMEDOUT
+#  undef ECONNREFUSED
+#  undef ELOOP
+#  undef ENAMETOOLONG
+#  undef EHOSTDOWN
+#  undef EHOSTUNREACH
+#  undef ENOTEMPTY
+#  undef EPROCLIM
+#  undef EUSERS
+#  undef EDQUOT
+#  undef ESTALE
+#  undef EREMOTE
+#  undef EBADF
+#  undef EFAULT
+#  undef EAGAIN
 
-#    define EWOULDBLOCK WSAEWOULDBLOCK
-#    define EINPROGRESS WSAEINPROGRESS
-#    define EALREADY WSAEALREADY
-#    define ENOTSOCK WSAENOTSOCK
-#    define EDESTADDRREQ WSAEDESTADDRREQ
-#    define EMSGSIZE WSAEMSGSIZE
-#    define EPROTOTYPE WSAEPROTOTYPE
-#    define ENOPROTOOPT WSAENOPROTOOPT
-#    define EPROTONOSUPPORT WSAEPROTONOSUPPORT
-#    define ESOCKTNOSUPPORT WSAESOCKTNOSUPPORT
-#    define EOPNOTSUPP WSAEOPNOTSUPP
-#    define EPFNOSUPPORT WSAEPFNOSUPPORT
-#    define EAFNOSUPPORT WSAEAFNOSUPPORT
-#    define EADDRINUSE WSAEADDRINUSE
-#    define EADDRNOTAVAIL WSAEADDRNOTAVAIL
-#    define ENETDOWN WSAENETDOWN
-#    define ENETUNREACH WSAENETUNREACH
-#    define ENETRESET WSAENETRESET
-#    define ECONNABORTED WSAECONNABORTED
-#    define ECONNRESET WSAECONNRESET
-#    define ENOBUFS WSAENOBUFS
-#    define EISCONN WSAEISCONN
-#    define ENOTCONN WSAENOTCONN
-#    define ESHUTDOWN WSAESHUTDOWN
-#    define ETOOMANYREFS WSAETOOMANYREFS
-#    define ETIMEDOUT WSAETIMEDOUT
-#    define ECONNREFUSED WSAECONNREFUSED
-#    define ELOOP WSAELOOP
-#    define ENAMETOOLONG WSAENAMETOOLONG
-#    define EHOSTDOWN WSAEHOSTDOWN
-#    define EHOSTUNREACH WSAEHOSTUNREACH
-#    define ENOTEMPTY WSAENOTEMPTY
-#    define EPROCLIM WSAEPROCLIM
-#    define EUSERS WSAEUSERS
-#    define EDQUOT WSAEDQUOT
-#    define ESTALE WSAESTALE
-#    define EREMOTE WSAEREMOTE
-#    define EBADF WSAEBADF
-#    define EFAULT WSAEFAULT
-#    define EAGAIN WSATRY_AGAIN
-#  endif
+#  define EWOULDBLOCK WSAEWOULDBLOCK
+#  define EINPROGRESS WSAEINPROGRESS
+#  define EALREADY WSAEALREADY
+#  define ENOTSOCK WSAENOTSOCK
+#  define EDESTADDRREQ WSAEDESTADDRREQ
+#  define EMSGSIZE WSAEMSGSIZE
+#  define EPROTOTYPE WSAEPROTOTYPE
+#  define ENOPROTOOPT WSAENOPROTOOPT
+#  define EPROTONOSUPPORT WSAEPROTONOSUPPORT
+#  define ESOCKTNOSUPPORT WSAESOCKTNOSUPPORT
+#  define EOPNOTSUPP WSAEOPNOTSUPP
+#  define EPFNOSUPPORT WSAEPFNOSUPPORT
+#  define EAFNOSUPPORT WSAEAFNOSUPPORT
+#  define EADDRINUSE WSAEADDRINUSE
+#  define EADDRNOTAVAIL WSAEADDRNOTAVAIL
+#  define ENETDOWN WSAENETDOWN
+#  define ENETUNREACH WSAENETUNREACH
+#  define ENETRESET WSAENETRESET
+#  define ECONNABORTED WSAECONNABORTED
+#  define ECONNRESET WSAECONNRESET
+#  define ENOBUFS WSAENOBUFS
+#  define EISCONN WSAEISCONN
+#  define ENOTCONN WSAENOTCONN
+#  define ESHUTDOWN WSAESHUTDOWN
+#  define ETOOMANYREFS WSAETOOMANYREFS
+#  define ETIMEDOUT WSAETIMEDOUT
+#  define ECONNREFUSED WSAECONNREFUSED
+#  define ELOOP WSAELOOP
+#  define ENAMETOOLONG WSAENAMETOOLONG
+#  define EHOSTDOWN WSAEHOSTDOWN
+#  define EHOSTUNREACH WSAEHOSTUNREACH
+#  define ENOTEMPTY WSAENOTEMPTY
+#  define EPROCLIM WSAEPROCLIM
+#  define EUSERS WSAEUSERS
+#  define EDQUOT WSAEDQUOT
+#  define ESTALE WSAESTALE
+#  define EREMOTE WSAEREMOTE
+#  define EBADF WSAEBADF
+#  define EFAULT WSAEFAULT
+#  define EAGAIN WSATRY_AGAIN
+#endif
 
 // shoulde close connection condition when retval of recv <= 0
-#  define SHOULD_CLOSE_0(n, errcode)                                                               \
-    (((n) == 0) ||                                                                                 \
-     ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK && (errcode) != EINTR))
+#define SHOULD_CLOSE_0(n, errcode)                                                                 \
+  (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK && (errcode) != EINTR))
 
 // shoulde close connection condition when retval of send <= 0
-#  define SHOULD_CLOSE_1(n, errcode)                                                               \
-    (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK &&                  \
-                    (errcode) != EINTR && (errcode) != ENOBUFS))
+#define SHOULD_CLOSE_1(n, errcode)                                                                 \
+  (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK &&                    \
+                  (errcode) != EINTR && (errcode) != ENOBUFS))
 
 namespace yasio
 {
@@ -216,7 +210,7 @@ static const socket_native_type invalid_socket = (socket_native_type)-1;
 namespace ip
 {
 
-#  pragma pack(push, 1)
+#pragma pack(push, 1)
 // ip packet
 struct ip_header
 {
@@ -351,7 +345,7 @@ struct arp_packet
   eth_header ethhdr;
   arp_header arphdr;
 };
-#  pragma pack(pop)
+#pragma pack(pop)
 
 namespace compat
 {
@@ -565,7 +559,7 @@ public:
   */
   YASIO__DECL bool open(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
   YASIO__DECL bool reopen(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
-#  ifdef _WIN32
+#ifdef _WIN32
   YASIO__DECL bool open_ex(int af = AF_INET, int type = SOCK_STREAM, int protocol = 0);
 
   YASIO__DECL static bool accept_ex(SOCKET sockfd_listened, SOCKET sockfd_prepared,
@@ -582,7 +576,7 @@ public:
                                               DWORD dwRemoteAddressLength, sockaddr **LocalSockaddr,
                                               LPINT LocalSockaddrLength, sockaddr **RemoteSockaddr,
                                               LPINT RemoteSockaddrLength);
-#  endif
+#endif
 
   /** Is this socket opened **/
   YASIO__DECL bool is_open(void) const;
@@ -925,32 +919,31 @@ public:
   /// Resolve all as ipv4 or ipv6 endpoints
   /// </summary>
   YASIO__DECL static int resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                     unsigned short port = 0);
+                                 unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only.
   /// </summary>
   YASIO__DECL static int resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                        unsigned short port = 0);
+                                    unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv6 address only.
   /// </summary>
   YASIO__DECL static int resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                        unsigned short port = 0);
+                                    unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only and convert to V4MAPPED format.
   /// </summary>
   YASIO__DECL static int resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                           unsigned short port = 0);
+                                       unsigned short port = 0);
 
   /// <summary>
   /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
   /// </summary>
   YASIO__DECL static int force_resolve_v6(std::vector<ip::endpoint> &endpoints,
-                                          const char *hostname,
-                              unsigned short port = 0);
+                                          const char *hostname, unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 or ipv6 endpoints with callback
@@ -1034,17 +1027,12 @@ template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd
 namespace net = inet;
 } // namespace yasio
 
-#  if defined(_MSC_VER)
-#    pragma warning(pop)
-#  endif
-
-#  if defined(YASIO__HEADER_ONLY)
-#    include "yasio/xxsocket.cpp"
-#  endif
-
+#if defined(_MSC_VER)
+#  pragma warning(pop)
 #endif
 
-/*
- * Copyright (c) 2012-2019, HALX99, ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
- **/
+#if defined(YASIO__HEADER_ONLY)
+#  include "yasio/xxsocket.cpp"
+#endif
+
+#endif

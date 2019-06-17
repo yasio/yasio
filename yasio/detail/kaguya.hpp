@@ -13,8 +13,6 @@
 
 #include <string>
 
-#include <lua.hpp>
-
 #ifndef KAGUYA_USE_CPP11
 #if defined(__cpp_decltype) || __cplusplus >= 201103L ||                       \
     (defined(_MSC_VER) && _MSC_VER >= 1800)
@@ -147,7 +145,7 @@
 #  ifndef KAGUYA_LUAJIT
 #    define KAGUYA_LUAJIT 1
 #    ifndef KAGUYA_LUAJIT_VERSION
-#      define KAGUYA_LUAJIT_VERSION KAGUYA_VERSION_NUM
+#      define KAGUYA_LUAJIT_VERSION LUAJIT_VERSION_NUM
 #    endif // KAGUYA_LUAJIT_VERSION definition, if not present
 #  endif   // kaguya luajit
 #endif     // luajit

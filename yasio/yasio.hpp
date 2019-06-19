@@ -629,7 +629,7 @@ private:
 } // namespace inet
 } /* namespace yasio */
 
-#define myasio yasio::gc::singleton<yasio::inet::io_service>::instance()
+#define yasio_shared_service yasio::gc::singleton<yasio::inet::io_service>::instance()
 
 #if defined(YASIO__HEADER_ONLY)
 #  include "yasio/yasio.cpp"

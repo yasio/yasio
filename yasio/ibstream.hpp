@@ -152,7 +152,7 @@ private:
 
 } // namespace yasio
 
-#if defined(YASIO__HEADER_ONLY)
+#if defined(YASIO_HEADER_ONLY)
 #  include "yasio/ibstream.cpp"
 #endif
 

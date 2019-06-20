@@ -631,7 +631,7 @@ private:
 
 #define yasio_shared_service yasio::gc::singleton<yasio::inet::io_service>::instance()
 
-#if defined(YASIO__HEADER_ONLY)
+#if defined(YASIO_HEADER_ONLY)
 #  include "yasio/yasio.cpp"
 #endif
 

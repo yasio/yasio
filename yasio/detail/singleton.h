@@ -57,8 +57,8 @@ private:
   static std::mutex __mutex__;
 #endif
 private:
-  singleton(void) =
-      delete; // just disable construct, assign operation, copy construct also not allowed.
+  // static class: disable construct, assign operation, copy construct also not allowed.
+  singleton(void) = delete;
 };
 
 /// CLASS TEMPLATE singleton, support delay init with variadic args

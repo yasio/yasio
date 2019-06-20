@@ -1031,7 +1031,7 @@ namespace net = inet;
 #  pragma warning(pop)
 #endif
 
-#if defined(YASIO__HEADER_ONLY)
+#if defined(YASIO_HEADER_ONLY)
 #  include "yasio/xxsocket.cpp"
 #endif
 

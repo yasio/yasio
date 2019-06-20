@@ -320,7 +320,7 @@ class io_transport_kcp : public io_transport_base
 {
 public:
   YASIO__DECL io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock);
-  ~io_transport_kcp();
+  YASIO__DECL ~io_transport_kcp();
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int &error) override;
   YASIO__DECL bool flush(long long &max_wait_duration) override;

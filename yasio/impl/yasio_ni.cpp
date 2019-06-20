@@ -63,8 +63,6 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
 }
 } // namespace
 
-extern void (*yasio_console_print_fn)(const char *);
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -190,7 +188,8 @@ YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
 YASIO_NI_API void yasio_set_console_print_fn(void (*console_print_fn)(const char *))
 {
-  yasio_console_print_fn = console_print_fn;
+  yasio::inet::console_print_fn_t console_print = console_print_fn;
+  yasio_shared_service->set_option(YOPT_CONSOLE_PRINT_FUNCTION, &console_print);
 }
 YASIO_NI_API void yasio_memcpy(void *dst, const void *src, unsigned int len)
 {

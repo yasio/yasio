@@ -349,8 +349,8 @@ struct arp_packet
 
 namespace compat
 {
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
-int inet_pton(int af, const char *src, void *dst);
+YASIO__DECL const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+YASIO__DECL int inet_pton(int af, const char *src, void *dst);
 } // namespace compat
 
 union endpoint
@@ -504,7 +504,7 @@ class xxsocket
 {
 public:
   // return supported internet protocols versions
-  static int getipsv(void);
+  YASIO__DECL static int getipsv(void);
 
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect

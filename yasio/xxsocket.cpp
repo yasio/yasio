@@ -80,9 +80,9 @@ using namespace yasio;
 using namespace yasio::inet;
 
 #if defined(_WIN32) && !defined(_WINSTORE)
-extern LPFN_ACCEPTEX __accept_ex;
-extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
-extern LPFN_CONNECTEX __connect_ex;
+static LPFN_ACCEPTEX __accept_ex                           = nullptr;
+static LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
+static LPFN_CONNECTEX __connect_ex                         = nullptr;
 #endif
 
 namespace yasio
@@ -1484,16 +1484,9 @@ const char *xxsocket::gai_strerror(int error)
 }
 
 // initialize win32 socket library
-#if defined(_WIN32) && !defined(_WINSTORE)
-LPFN_ACCEPTEX __accept_ex                           = nullptr;
-LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
-LPFN_CONNECTEX __connect_ex                         = nullptr;
-#endif
-
 #ifdef _WIN32
 namespace
 {
-
 struct ws2_32_gc
 {
   ws2_32_gc(void)

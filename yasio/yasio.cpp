@@ -60,12 +60,10 @@ SOFTWARE.
  * field. */
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
-void (*yasio_console_print_fn)(const char *) = nullptr;
-
 #if defined(_WIN32)
-#  define YASIO_DEBUG_PRINT(msg)                                                                   \
-    if (yasio_console_print_fn)                                                                    \
-      yasio_console_print_fn(msg);                                                                 \
+#  define YASIO_DEBUG_PRINT(options, msg)                                                          \
+    if (options.console_print_)                                                                    \
+      options.console_print_(msg);                                                                 \
     else                                                                                           \
       OutputDebugStringA(msg)
 #  pragma warning(push)
@@ -73,11 +71,11 @@ void (*yasio_console_print_fn)(const char *) = nullptr;
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>
-#  define YASIO_DEBUG_PRINT(msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
+#  define YASIO_DEBUG_PRINT(options, msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
 #else
-#  define YASIO_DEBUG_PRINT(msg)                                                                   \
-    if (yasio_console_print_fn)                                                                    \
-      yasio_console_print_fn(msg);                                                                 \
+#  define YASIO_DEBUG_PRINT(options, msg)                                                          \
+    if (options.console_print_)                                                                    \
+      options.console_print_(msg);                                                                 \
     else                                                                                           \
       printf("%s", msg)
 #endif
@@ -87,7 +85,7 @@ void (*yasio_console_print_fn)(const char *) = nullptr;
   {                                                                                                \
     auto content =                                                                                 \
         _sfmt(("[yasio][%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);     \
-    YASIO_DEBUG_PRINT(content.c_str());                                                            \
+    YASIO_DEBUG_PRINT(options, content.c_str());                                                   \
     if (options.outf_ != -1)                                                                       \
     {                                                                                              \
       if (::lseek(options.outf_, 0, SEEK_CUR) > options.outf_max_size_)                            \
@@ -460,9 +458,9 @@ io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 
   maxfdp_ = 0;
 
-  this->decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+  options_.decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 
-  this->resolv_ = [=](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
+  options_.resolv_ = [=](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
     return this->__builtin_resolv(eps, host, port);
   };
 }
@@ -479,8 +477,9 @@ io_service::~io_service()
 
   if (options_.outf_ != -1)
     ::close(options_.outf_);
-  this->decode_len_ = nullptr;
-  this->resolv_     = nullptr;
+  options_.decode_len_    = nullptr;
+  options_.resolv_        = nullptr;
+  options_.console_print_ = nullptr;
 }
 
 void io_service::start_service(const io_hostent *channel_eps, int channel_count, io_event_cb_t cb)
@@ -541,7 +540,7 @@ void io_service::init(const io_hostent *channel_eps, int channel_count, io_event
   if (channel_count <= 0)
     return;
   if (cb)
-    this->on_event_ = std::move(cb);
+    options_.on_event_ = std::move(cb);
 
   register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -566,7 +565,7 @@ void io_service::cleanup()
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
-    this->on_event_ = nullptr;
+    options_.on_event_ = nullptr;
 
     this->state_ = io_service::state::IDLE;
   }
@@ -606,7 +605,7 @@ void io_service::clear_transports()
 
 void io_service::dispatch_events(int count)
 {
-  if (!this->on_event_ || this->event_queue_.empty())
+  if (!options_.on_event_ || this->event_queue_.empty())
     return;
 
   std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
@@ -614,7 +613,7 @@ void io_service::dispatch_events(int count)
   {
     auto event = std::move(this->event_queue_.front());
     this->event_queue_.pop_front();
-    this->on_event_(std::move(event));
+    options_.on_event_(std::move(event));
   } while (!this->event_queue_.empty() && --count > 0);
 }
 
@@ -918,7 +917,7 @@ void io_service::handle_event(event_ptr event)
     event_queue_mtx_.unlock();
   }
   else
-    this->on_event_(std::move(event));
+    options_.on_event_(std::move(event));
 }
 
 void io_service::do_nonblocking_connect(io_channel *ctx)
@@ -1200,7 +1199,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &
 #endif
       if (transport->expected_packet_size_ == -1)
       { // decode length
-        int length = this->decode_len_(transport->buffer_, transport->offset_ + n);
+        int length = options_.decode_len_(transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
           transport->expected_packet_size_ = length;
@@ -1479,7 +1478,7 @@ void io_service::start_resolve(io_channel *ctx)
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
-    int error = this->resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
+    int error = options_.resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
     if (error == 0)
     {
       ctx->dns_queries_state_     = YDQS_READY;
@@ -1615,7 +1614,7 @@ void io_service::set_option(int option, ...)
       options_.tcp_keepalive_.probs    = va_arg(ap, int);
       break;
     case YOPT_RESOLV_FUNCTION:
-      this->resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
+      options_.resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
     case YOPT_LOG_FILE:
       if (options_.outf_ != -1)
@@ -1631,10 +1630,10 @@ void io_service::set_option(int option, ...)
       options_.lfb_.length_adjustment   = va_arg(ap, int);
       break;
     case YOPT_IO_EVENT_CALLBACK:
-      this->on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
+      options_.on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
       break;
     case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
-      this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
+      options_.decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
       break;
     case YOPT_CHANNEL_LOCAL_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
@@ -1670,6 +1669,9 @@ void io_service::set_option(int option, ...)
     break;
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
+    case YOPT_CONSOLE_PRINT_FUNCTION:
+      this->options_.console_print_ = std::move(*va_arg(ap, console_print_fn_t *));
       break;
   }
 

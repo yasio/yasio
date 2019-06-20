@@ -95,6 +95,7 @@ enum
   YOPT_CHANNEL_REMOTE_PORT,
   YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
   YOPT_NO_NEW_THREAD,           // Don't start a new thread to run event loop
+  YOPT_CONSOLE_PRINT_FUNCTION,
 };
 
 // channel mask
@@ -147,6 +148,7 @@ typedef std::pair<deadline_timer *, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr)> io_event_cb_t;
 typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
+typedef std::function<void(const char *)> console_print_fn_t;
 
 // The high precision micro seconds timestamp
 template <typename _T = highp_clock_t> inline long long highp_clock()
@@ -307,9 +309,9 @@ class io_transport_posix : public io_transport_base
 public:
   io_transport_posix(io_channel *ctx, std::shared_ptr<xxsocket> sock) : io_transport_base(ctx, sock)
   {}
-  void send(std::vector<char> data) override;
-  int recv(int &error) override;
-  bool flush(long long &max_wait_duration) override;
+  YASIO__DECL void send(std::vector<char> data) override;
+  YASIO__DECL int recv(int &error) override;
+  YASIO__DECL bool flush(long long &max_wait_duration) override;
   std::deque<a_pdu_ptr> send_queue_;
 };
 
@@ -317,11 +319,11 @@ public:
 class io_transport_kcp : public io_transport_base
 {
 public:
-  io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock);
+  YASIO__DECL io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock);
   ~io_transport_kcp();
-  void send(std::vector<char> data) override;
-  int recv(int &error) override;
-  bool flush(long long &max_wait_duration) override;
+  YASIO__DECL void send(std::vector<char> data) override;
+  YASIO__DECL int recv(int &error) override;
+  YASIO__DECL bool flush(long long &max_wait_duration) override;
   ikcpcb *kcp_;
 };
 #endif
@@ -584,9 +586,6 @@ private:
   };
   fd_set fds_array_[max_ops];
 
-  // the event callback
-  io_event_cb_t on_event_;
-
   // options
   struct __unnamed_options
   {
@@ -615,13 +614,16 @@ private:
     int outf_           = -1;
     int outf_max_size_  = SZ(5, M);
     bool no_new_thread_ = false;
+
+    // The decode frame length function
+    decode_len_fn_t decode_len_;
+    // The resolve function
+    resolv_fn_t resolv_;
+    // the event callback
+    io_event_cb_t on_event_;
+    // The console print function
+    console_print_fn_t console_print_;
   } options_;
-
-  // The decode frame length function
-  decode_len_fn_t decode_len_;
-
-  // The resolve function
-  resolv_fn_t resolv_;
 
   // The ip stack version supported by local host
   u_short ipsv_ = 0;

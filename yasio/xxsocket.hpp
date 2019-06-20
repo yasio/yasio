@@ -207,284 +207,284 @@ namespace inet
 // & 0x000000ff ) )
 static const socket_native_type invalid_socket = (socket_native_type)-1;
 
-namespace ip
+YASIO__NS_INLINE namespace ip
 {
 
 #pragma pack(push, 1)
-// ip packet
-struct ip_header
-{
-  // header size; 5+
-  unsigned char header_length : 4;
-
-  // IP version: 0100/0x04(IPv4), 0110/0x05(IPv6)
-  unsigned char version : 4;
-
-  // type of service:
-  union
+  // ip packet
+  struct ip_header
   {
-    unsigned char value;
-    struct
+    // header size; 5+
+    unsigned char header_length : 4;
+
+    // IP version: 0100/0x04(IPv4), 0110/0x05(IPv6)
+    unsigned char version : 4;
+
+    // type of service:
+    union
     {
-      unsigned char priority : 3;
-      unsigned char D : 1;        // delay: 0(normal), 1(as little as possible)
-      unsigned char T : 1;        // throughput: 0(normal), 1(as big as possible)
-      unsigned char R : 1;        // reliability: 0(normal), 1(as big as possible)
-      unsigned char C : 1;        // transmission cost: 0(normal), 1(as little as possible)
-      unsigned char reserved : 1; // always be zero
-    } detail;
-  } TOS;
+      unsigned char value;
+      struct
+      {
+        unsigned char priority : 3;
+        unsigned char D : 1;        // delay: 0(normal), 1(as little as possible)
+        unsigned char T : 1;        // throughput: 0(normal), 1(as big as possible)
+        unsigned char R : 1;        // reliability: 0(normal), 1(as big as possible)
+        unsigned char C : 1;        // transmission cost: 0(normal), 1(as little as possible)
+        unsigned char reserved : 1; // always be zero
+      } detail;
+    } TOS;
 
-  // total size, header + data; MAX length is: 65535
-  unsigned short total_length;
+    // total size, header + data; MAX length is: 65535
+    unsigned short total_length;
 
-  // identifier: all split small packet set as the same value.
-  unsigned short identifier;
+    // identifier: all split small packet set as the same value.
+    unsigned short identifier;
 
-  // flags and frag
-  // unsigned short flags:3;
-  // unsigned short frag:13;
-  unsigned short flags_and_frag;
+    // flags and frag
+    // unsigned short flags:3;
+    // unsigned short frag:13;
+    unsigned short flags_and_frag;
 
-  // time of living, decreased by route, if zero, this packet will by dropped
-  // avoid foward looply.
-  unsigned char TTL;
+    // time of living, decreased by route, if zero, this packet will by dropped
+    // avoid foward looply.
+    unsigned char TTL;
 
-  // protocol
-  // 1: ICMP
-  // 2: IGMP
-  // 6: TCP
-  // 0x11/17: UDP
-  // 0x58/88: IGRP
-  // 0x59/89: OSPF
-  unsigned char protocol; // TCP / UDP / Other
+    // protocol
+    // 1: ICMP
+    // 2: IGMP
+    // 6: TCP
+    // 0x11/17: UDP
+    // 0x58/88: IGRP
+    // 0x59/89: OSPF
+    unsigned char protocol; // TCP / UDP / Other
 
-  // check header of IP-PACKET 's correctness.
-  unsigned short checksum;
+    // check header of IP-PACKET 's correctness.
+    unsigned short checksum;
 
-  typedef union
+    typedef union
+    {
+      unsigned int value;
+      struct
+      {
+        unsigned int B1 : 8, B2 : 8, B3 : 8, B4 : 8;
+      } detail;
+    } dotted_decimal_t;
+
+    // source ip address
+    dotted_decimal_t src_ip;
+
+    // destination ip address
+    dotted_decimal_t dst_ip;
+  };
+
+  struct psd_header
   {
-    unsigned int value;
-    struct
-    {
-      unsigned int B1 : 8, B2 : 8, B3 : 8, B4 : 8;
-    } detail;
-  } dotted_decimal_t;
+    unsigned long src_addr;
+    unsigned long dst_addr;
+    char mbz;
+    char protocol;
+    unsigned short tcp_length;
+  };
 
-  // source ip address
-  dotted_decimal_t src_ip;
+  struct tcp_header
+  {
+    unsigned short src_port;
+    unsigned short dst_port;
+    unsigned int seqno;
+    unsigned int ackno;
+    unsigned char header_length : 4;
+    unsigned char reserved : 4;
+    unsigned char flg_fin : 1, flg_syn : 1, flg_rst : 1, flg_psh : 1, flg_ack : 1, flg_urg : 1,
+        flg_reserved : 2;
+    unsigned short win_length;
+    unsigned short checksum;
+    unsigned short urp; // emergency
+  };
 
-  // destination ip address
-  dotted_decimal_t dst_ip;
-};
+  struct udp_header
+  {
+    unsigned short src_port;
+    unsigned short dst_port;
+    unsigned short length;
+    unsigned short checksum;
+  };
 
-struct psd_header
-{
-  unsigned long src_addr;
-  unsigned long dst_addr;
-  char mbz;
-  char protocol;
-  unsigned short tcp_length;
-};
+  struct icmp_header
+  {
+    unsigned char type;      // 8bit type
+    unsigned char code;      // 8bit code
+    unsigned short checksum; // 16bit check sum
+    unsigned short id;       // identifier: usually use process id
+    unsigned short seqno;    // message sequence NO.
+    unsigned int timestamp;  // timestamp
+  };
 
-struct tcp_header
-{
-  unsigned short src_port;
-  unsigned short dst_port;
-  unsigned int seqno;
-  unsigned int ackno;
-  unsigned char header_length : 4;
-  unsigned char reserved : 4;
-  unsigned char flg_fin : 1, flg_syn : 1, flg_rst : 1, flg_psh : 1, flg_ack : 1, flg_urg : 1,
-      flg_reserved : 2;
-  unsigned short win_length;
-  unsigned short checksum;
-  unsigned short urp; // emergency
-};
+  struct eth_header
+  {
+    unsigned dst_eth[6];
+    unsigned src_eth[6];
+    unsigned eth_type;
+  };
 
-struct udp_header
-{
-  unsigned short src_port;
-  unsigned short dst_port;
-  unsigned short length;
-  unsigned short checksum;
-};
+  struct arp_header
+  {
+    unsigned short arp_hw;    // format of hardware address
+    unsigned short arp_pro;   // format of protocol address
+    unsigned char arp_hlen;   // length of hardware address
+    unsigned char arp_plen;   // length of protocol address
+    unsigned short arp_op;    // arp operation
+    unsigned char arp_oha[6]; // sender hardware address
+    unsigned long arp_opa;    // sender protocol address
+    unsigned char arp_tha;    // target hardware address
+    unsigned long arp_tpa;    // target protocol address;
+  };
 
-struct icmp_header
-{
-  unsigned char type;      // 8bit type
-  unsigned char code;      // 8bit code
-  unsigned short checksum; // 16bit check sum
-  unsigned short id;       // identifier: usually use process id
-  unsigned short seqno;    // message sequence NO.
-  unsigned int timestamp;  // timestamp
-};
-
-struct eth_header
-{
-  unsigned dst_eth[6];
-  unsigned src_eth[6];
-  unsigned eth_type;
-};
-
-struct arp_header
-{
-  unsigned short arp_hw;    // format of hardware address
-  unsigned short arp_pro;   // format of protocol address
-  unsigned char arp_hlen;   // length of hardware address
-  unsigned char arp_plen;   // length of protocol address
-  unsigned short arp_op;    // arp operation
-  unsigned char arp_oha[6]; // sender hardware address
-  unsigned long arp_opa;    // sender protocol address
-  unsigned char arp_tha;    // target hardware address
-  unsigned long arp_tpa;    // target protocol address;
-};
-
-struct arp_packet
-{
-  eth_header ethhdr;
-  arp_header arphdr;
-};
+  struct arp_packet
+  {
+    eth_header ethhdr;
+    arp_header arphdr;
+  };
 #pragma pack(pop)
 
-namespace compat
-{
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
-int inet_pton(int af, const char *src, void *dst);
-} // namespace compat
-
-union endpoint
-{
-public:
-  endpoint(void) { this->zeroset(); }
-  explicit endpoint(const addrinfo *info) { assign(info); }
-  explicit endpoint(const sockaddr *info) { assign(info); }
-  endpoint(const char *addr, unsigned short port) { assign(addr, port); }
-
-  void assign(const addrinfo *info) { this->assign(info->ai_addr, info->ai_addrlen); }
-
-  void assign(const void *ai_addr, size_t ai_addrlen)
+  namespace compat
   {
-    this->zeroset();
-    ::memcpy(this, ai_addr, ai_addrlen);
-  }
+  YASIO__DECL const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+  YASIO__DECL int inet_pton(int af, const char *src, void *dst);
+  } // namespace compat
 
-  void assign(const sockaddr *addr)
+  union endpoint
   {
-    this->zeroset();
-    switch (addr->sa_family)
+  public:
+    endpoint(void) { this->zeroset(); }
+    explicit endpoint(const addrinfo *info) { assign(info); }
+    explicit endpoint(const sockaddr *info) { assign(info); }
+    endpoint(const char *addr, unsigned short port) { assign(addr, port); }
+
+    void assign(const addrinfo *info) { this->assign(info->ai_addr, info->ai_addrlen); }
+
+    void assign(const void *ai_addr, size_t ai_addrlen)
     {
-      case AF_INET:
-        ::memcpy(&in4_, addr, sizeof(sockaddr_in));
-        break;
-      case AF_INET6:
-        ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
-        break;
+      this->zeroset();
+      ::memcpy(this, ai_addr, ai_addrlen);
     }
-  }
 
-  bool assign(const char *addr, unsigned short port)
-  {
-    this->zeroset();
-
-    /*
-     * Windows XP no inet_pton or inet_ntop
-     */
-    if (strchr(addr, ':') == nullptr)
-    { // ipv4
-      if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
+    void assign(const sockaddr *addr)
+    {
+      this->zeroset();
+      switch (addr->sa_family)
       {
+        case AF_INET:
+          ::memcpy(&in4_, addr, sizeof(sockaddr_in));
+          break;
+        case AF_INET6:
+          ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
+          break;
+      }
+    }
+
+    bool assign(const char *addr, unsigned short port)
+    {
+      this->zeroset();
+
+      /*
+       * Windows XP no inet_pton or inet_ntop
+       */
+      if (strchr(addr, ':') == nullptr)
+      { // ipv4
+        if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
+        {
+          this->in4_.sin_family = AF_INET;
+          this->in4_.sin_port   = htons(port);
+          return true;
+        }
+      }
+      else
+      { // ipv6
+        if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1)
+        {
+          this->in6_.sin6_family = AF_INET6;
+          this->in6_.sin6_port   = htons(port);
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
+
+    void ip(const char *addr)
+    {
+      /*
+       * Windows XP no inet_pton or inet_ntop
+       */
+      if (strchr(addr, ':') == nullptr)
+      { // ipv4
         this->in4_.sin_family = AF_INET;
-        this->in4_.sin_port   = htons(port);
-        return true;
+        compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
       }
-    }
-    else
-    { // ipv6
-      if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1)
-      {
+      else
+      { // ipv6
         this->in6_.sin6_family = AF_INET6;
-        this->in6_.sin6_port   = htons(port);
-        return true;
+        compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
       }
     }
 
-    return false;
-  }
-
-  void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
-
-  void ip(const char *addr)
-  {
-    /*
-     * Windows XP no inet_pton or inet_ntop
-     */
-    if (strchr(addr, ':') == nullptr)
-    { // ipv4
-      this->in4_.sin_family = AF_INET;
-      compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
-    }
-    else
-    { // ipv6
-      this->in6_.sin6_family = AF_INET6;
-      compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
-    }
-  }
-
-  int af() const { return sa_.sa_family; }
-  std::string to_string(void) const
-  {
-    std::string addr(64, '[');
-
-    size_t n = 0;
-
-    switch (sa_.sa_family)
+    int af() const { return sa_.sa_family; }
+    std::string to_string(void) const
     {
-      case AF_INET:
-        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(),
-                                     static_cast<socklen_t>(addr.length())));
-        n += sprintf(&addr.front() + n, ":%u", this->port());
-        break;
-      case AF_INET6:
-        n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1,
-                                     static_cast<socklen_t>(addr.length() - 1)));
-        n += sprintf(&addr.front() + n, "]:%u", this->port());
-        break;
+      std::string addr(64, '[');
+
+      size_t n = 0;
+
+      switch (sa_.sa_family)
+      {
+        case AF_INET:
+          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(),
+                                       static_cast<socklen_t>(addr.length())));
+          n += sprintf(&addr.front() + n, ":%u", this->port());
+          break;
+        case AF_INET6:
+          n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1,
+                                       static_cast<socklen_t>(addr.length() - 1)));
+          n += sprintf(&addr.front() + n, "]:%u", this->port());
+          break;
+      }
+
+      addr.resize(n);
+
+      return addr;
     }
-
-    addr.resize(n);
-
-    return addr;
-  }
-  std::string ip() const
-  {
-    std::string ipstring(64, '\0');
-
-    size_t n = 0;
-
-    switch (sa_.sa_family)
+    std::string ip() const
     {
-      case AF_INET:
-        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &ipstring.front(), 64));
-        break;
-      case AF_INET6:
-        n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &ipstring.front(), 64));
-        break;
+      std::string ipstring(64, '\0');
+
+      size_t n = 0;
+
+      switch (sa_.sa_family)
+      {
+        case AF_INET:
+          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &ipstring.front(), 64));
+          break;
+        case AF_INET6:
+          n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &ipstring.front(), 64));
+          break;
+      }
+      ipstring.resize(n);
+
+      return ipstring;
     }
-    ipstring.resize(n);
+    unsigned short port(void) const { return ntohs(in4_.sin_port); }
+    void port(unsigned short value) { in4_.sin_port = htons(value); }
 
-    return ipstring;
-  }
-  unsigned short port(void) const { return ntohs(in4_.sin_port); }
-  void port(unsigned short value) { in4_.sin_port = htons(value); }
+    bool operator<(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
+    bool operator==(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
 
-  bool operator<(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
-  bool operator==(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
-
-  sockaddr sa_;
-  sockaddr_in in4_;
-  sockaddr_in6 in6_;
-};
+    sockaddr sa_;
+    sockaddr_in in4_;
+    sockaddr_in6 in6_;
+  };
 
 } // namespace ip
 
@@ -497,6 +497,10 @@ enum : u_short
   ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6
 };
 
+#if !YASIO__HAVE_NS_INLINE
+using namespace yasio::inet::ip;
+#endif
+
 /*
 ** CLASS xxsocket: a posix socket wrapper
 */
@@ -504,7 +508,7 @@ class xxsocket
 {
 public:
   // return supported internet protocols versions
-  static int getipsv(void);
+  YASIO__DECL static int getipsv(void);
 
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
@@ -520,10 +524,10 @@ public: /// portable connect APIs
   YASIO__DECL int pconnect_n(const char *hostname, u_short port, u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  YASIO__DECL int pconnect(const ip::endpoint &ep, u_short local_port = 0);
-  YASIO__DECL int pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout,
+  YASIO__DECL int pconnect(const endpoint &ep, u_short local_port = 0);
+  YASIO__DECL int pconnect_n(const endpoint &ep, const std::chrono::microseconds &wtimeout,
                              u_short local_port = 0);
-  YASIO__DECL int pconnect_n(const ip::endpoint &ep, u_short local_port = 0);
+  YASIO__DECL int pconnect_n(const endpoint &ep, u_short local_port = 0);
 
   // easy to create a tcp ipv4 or ipv6 server socket.
   YASIO__DECL int pserv(const char *addr, u_short port);
@@ -619,7 +623,7 @@ public:
   **         If no error occurs, bind returns [0]. Otherwise, it returns SOCKET_ERROR
   */
   YASIO__DECL int bind(const char *addr, unsigned short port) const;
-  YASIO__DECL int bind(const ip::endpoint &) const;
+  YASIO__DECL int bind(const endpoint &) const;
 
   /* @brief: Places this socket in a state in which it is listening for an incoming connection
   ** @params:
@@ -662,9 +666,9 @@ public:
   **         Otherwise, it returns SOCKET_ERROR
   */
   YASIO__DECL int connect(const char *addr, u_short port);
-  YASIO__DECL int connect(const ip::endpoint &ep);
+  YASIO__DECL int connect(const endpoint &ep);
   YASIO__DECL static int connect(socket_native_type s, const char *addr, u_short port);
-  YASIO__DECL static int connect(socket_native_type s, const ip::endpoint &ep);
+  YASIO__DECL static int connect(socket_native_type s, const endpoint &ep);
 
   /* @brief: Establishes a connection to a specified this socket with nonblocking
   ** @params:
@@ -676,12 +680,12 @@ public:
   */
   YASIO__DECL int connect_n(const char *addr, u_short port,
                             const std::chrono::microseconds &wtimeout);
-  YASIO__DECL int connect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout);
+  YASIO__DECL int connect_n(const endpoint &ep, const std::chrono::microseconds &wtimeout);
   YASIO__DECL int connect_n(const char *addr, u_short port, timeval *timeout);
-  YASIO__DECL int connect_n(const ip::endpoint &ep, timeval *timeout);
+  YASIO__DECL int connect_n(const endpoint &ep, timeval *timeout);
   YASIO__DECL static int connect_n(socket_native_type s, const char *addr, u_short port,
                                    timeval *timeout);
-  YASIO__DECL static int connect_n(socket_native_type s, const ip::endpoint &ep, timeval *timeout);
+  YASIO__DECL static int connect_n(socket_native_type s, const endpoint &ep, timeval *timeout);
 
   /* @brief: Establishes a connection to a specified this socket with nonblocking
   ** @params:
@@ -690,7 +694,7 @@ public:
   ** @remark: this function will return immediately, for tcp, you should detect whether the
   ** handshake complete by handle_write_ready.
   */
-  YASIO__DECL static int connect_n(socket_native_type s, const ip::endpoint &ep);
+  YASIO__DECL static int connect_n(socket_native_type s, const endpoint &ep);
 
   /* @brief: Sends data on this connected socket
   ** @params: omit
@@ -772,7 +776,7 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  YASIO__DECL int sendto_i(const void *buf, int len, const ip::endpoint &to, int flags = 0) const;
+  YASIO__DECL int sendto_i(const void *buf, int len, const endpoint &to, int flags = 0) const;
 
   /* @brief: Receives a datagram and stores the source address
   ** @params: omit
@@ -782,7 +786,7 @@ public:
   **         the buffer pointed to by the buf parameter will contain this data received.
   **         If the connection has been gracefully closed, the return value is [0].
   */
-  YASIO__DECL int recvfrom_i(void *buf, int len, ip::endpoint &peer, int flags = 0) const;
+  YASIO__DECL int recvfrom_i(void *buf, int len, endpoint &peer, int flags = 0) const;
 
   YASIO__DECL int handle_write_ready(timeval *timeo) const;
   YASIO__DECL static int handle_write_ready(socket_native_type s, timeval *timeo);
@@ -800,8 +804,8 @@ public:
   **
   ** @returns:
   */
-  YASIO__DECL ip::endpoint local_endpoint(void) const;
-  YASIO__DECL static ip::endpoint local_endpoint(socket_native_type);
+  YASIO__DECL endpoint local_endpoint(void) const;
+  YASIO__DECL static endpoint local_endpoint(socket_native_type);
 
   /* @brief: Get peer address info
   ** @params : None
@@ -809,8 +813,8 @@ public:
   ** @returns:
   *  @remark: if this a listening socket fd, will return "0.0.0.0:0"
   */
-  YASIO__DECL ip::endpoint peer_endpoint(void) const;
-  YASIO__DECL static ip::endpoint peer_endpoint(socket_native_type);
+  YASIO__DECL endpoint peer_endpoint(void) const;
+  YASIO__DECL static endpoint peer_endpoint(socket_native_type);
 
   /* @brief: Configure TCP keepalive
   ** @params : flag:     1.on, 0.off
@@ -918,32 +922,32 @@ public:
   /// <summary>
   /// Resolve all as ipv4 or ipv6 endpoints
   /// </summary>
-  YASIO__DECL static int resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve(std::vector<endpoint> &endpoints, const char *hostname,
                                  unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only.
   /// </summary>
-  YASIO__DECL static int resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve_v4(std::vector<endpoint> &endpoints, const char *hostname,
                                     unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv6 address only.
   /// </summary>
-  YASIO__DECL static int resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve_v6(std::vector<endpoint> &endpoints, const char *hostname,
                                     unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only and convert to V4MAPPED format.
   /// </summary>
-  YASIO__DECL static int resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve_v4to6(std::vector<endpoint> &endpoints, const char *hostname,
                                        unsigned short port = 0);
 
   /// <summary>
   /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
   /// </summary>
-  YASIO__DECL static int force_resolve_v6(std::vector<ip::endpoint> &endpoints,
-                                          const char *hostname, unsigned short port = 0);
+  YASIO__DECL static int force_resolve_v6(std::vector<endpoint> &endpoints, const char *hostname,
+                                          unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 or ipv6 endpoints with callback
@@ -973,7 +977,7 @@ public:
     {
       if (answer->ai_family == AF_INET6 || answer->ai_family == AF_INET)
       {
-        if (callback(ip::endpoint(answer)))
+        if (callback(endpoint(answer)))
           break;
       }
     }
@@ -1031,7 +1035,7 @@ namespace net = inet;
 #  pragma warning(pop)
 #endif
 
-#if defined(YASIO__HEADER_ONLY)
+#if defined(YASIO_HEADER_ONLY)
 #  include "yasio/xxsocket.cpp"
 #endif
 

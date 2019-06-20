@@ -145,7 +145,7 @@ template <typename _Nty> inline void obstream::set(std::streamoff offset, const 
 }
 } // namespace yasio
 
-#if defined(YASIO__HEADER_ONLY)
+#if defined(YASIO_HEADER_ONLY)
 #  include "yasio/obstream.cpp"
 #endif
 

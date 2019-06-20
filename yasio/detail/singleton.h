@@ -1,15 +1,15 @@
 //
 // Copyright (c) 2014-2019 HALX99 - All Rights Reserved
 //
-#if !defined(YASIO__SINGLETON_H)
-#  define YASIO__SINGLETON_H
-#  include <new>
-#  include <memory>
-#  include <functional>
+#ifndef YASIO__SINGLETON_H
+#define YASIO__SINGLETON_H
+#include <new>
+#include <memory>
+#include <functional>
 
-#  if defined(_ENABLE_MULTITHREAD)
-#    include <mutex>
-#  endif
+#if defined(_ENABLE_MULTITHREAD)
+#  include <mutex>
+#endif
 
 namespace yasio
 {
@@ -29,25 +29,23 @@ template <typename _Ty> class singleton<_Ty, false>
 public:
   template <typename... _Args> static pointer instance(_Args &&... args)
   {
-    if (nullptr == _Myt::__single__.get())
-    {
-#  if defined(_ENABLE_MULTITHREAD)
-      _Myt::__mutex__.lock();
-#  endif
-      if (nullptr == _Myt::__single__.get())
-      {
-        _Myt::__single__.reset(new (std::nothrow) _Ty(args...));
-      }
-#  if defined(_ENABLE_MULTITHREAD)
-      _Myt::__mutex__.unlock();
-#  endif
-    }
+    if (_Myt::__single__)
+      return _Myt::__single__.get();
+
+#if defined(_ENABLE_MULTITHREAD)
+    _Myt::__mutex__.lock();
+#endif
+    _Myt::__single__.reset(new (std::nothrow) _Ty(args...));
+#if defined(_ENABLE_MULTITHREAD)
+    _Myt::__mutex__.unlock();
+#endif
+
     return _Myt::__single__.get();
   }
 
   static void destroy(void)
   {
-    if (_Myt::__single__.get() != nullptr)
+    if (_Myt::__single__)
     {
       _Myt::__single__.reset();
     }
@@ -55,12 +53,12 @@ public:
 
 private:
   static std::unique_ptr<_Ty> __single__;
-#  if defined(_ENABLE_MULTITHREAD)
+#if defined(_ENABLE_MULTITHREAD)
   static std::mutex __mutex__;
-#  endif
+#endif
 private:
-  singleton(void) =
-      delete; // just disable construct, assign operation, copy construct also not allowed.
+  // static class: disable construct, assign operation, copy construct also not allowed.
+  singleton(void) = delete;
 };
 
 /// CLASS TEMPLATE singleton, support delay init with variadic args
@@ -73,27 +71,25 @@ template <typename _Ty> class singleton<_Ty, true>
 public:
   template <typename... _Args> static pointer instance(_Args &&... args)
   {
-    if (nullptr == _Myt::__single__.get())
-    {
-#  if defined(_ENABLE_MULTITHREAD)
-      _Myt::__mutex__.lock();
-#  endif
-      if (nullptr == _Myt::__single__.get())
-      {
-        _Myt::__single__.reset(new (std::nothrow) _Ty());
-        if (_Myt::__single__ != nullptr)
-          _Myt::delay_init(args...);
-      }
-#  if defined(_ENABLE_MULTITHREAD)
-      _Myt::__mutex__.unlock();
-#  endif
-    }
+    if (_Myt::__single__)
+      return _Myt::__single__.get();
+
+#if defined(_ENABLE_MULTITHREAD)
+    _Myt::__mutex__.lock();
+#endif
+
+    _Myt::__single__.reset(new (std::nothrow) _Ty());
+    if (_Myt::__single__)
+      _Myt::delay_init(args...);
+#if defined(_ENABLE_MULTITHREAD)
+    _Myt::__mutex__.unlock();
+#endif
     return _Myt::__single__.get();
   }
 
   static void destroy(void)
   {
-    if (_Myt::__single__.get() != nullptr)
+    if (_Myt::__single__)
     {
       _Myt::__single__.reset();
     }
@@ -121,23 +117,23 @@ private:
 
 private:
   static std::unique_ptr<_Ty> __single__;
-#  if defined(_ENABLE_MULTITHREAD)
+#if defined(_ENABLE_MULTITHREAD)
   static std::mutex __mutex__;
-#  endif
+#endif
 private:
   singleton(void) =
       delete; // just disable construct, assign operation, copy construct also not allowed.
 };
 
 template <typename _Ty> std::unique_ptr<_Ty> singleton<_Ty, false>::__single__;
-#  if defined(_ENABLE_MULTITHREAD)
+#if defined(_ENABLE_MULTITHREAD)
 template <typename _Ty> std::mutex singleton<_Ty, false>::__mutex__;
-#  endif
+#endif
 
 template <typename _Ty> std::unique_ptr<_Ty> singleton<_Ty, true>::__single__;
-#  if defined(_ENABLE_MULTITHREAD)
+#if defined(_ENABLE_MULTITHREAD)
 template <typename _Ty> std::mutex singleton<_Ty, true>::__mutex__;
-#  endif
+#endif
 
 // TEMPLATE alias
 template <typename _Ty> using delayed = singleton<_Ty, true>;
@@ -145,8 +141,3 @@ template <typename _Ty> using delayed = singleton<_Ty, true>;
 } // namespace yasio
 
 #endif
-
-/*
-* Copyright (c) 2012-2019 by HALX99, ALL RIGHTS RESERVED.
-* Consult your license regarding permissions and restrictions.
-V3.1:2019 */

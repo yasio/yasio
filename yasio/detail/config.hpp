@@ -29,14 +29,21 @@ SOFTWARE.
 #ifndef YASIO__CONFIG_HPP
 #define YASIO__CONFIG_HPP
 
-// Uncomment or add -DYASIO__HEADER_ONLY to enable yasio core implementation header only
-// #define YASIO__HEADER_ONLY 1
+// Uncomment or add -DYASIO_HEADER_ONLY to enable yasio core implementation header only
+// #define YASIO_HEADER_ONLY 1
 
-#if defined(YASIO__HEADER_ONLY)
-#define YASIO__DECL inline
+#if defined(YASIO_HEADER_ONLY)
+#  define YASIO__DECL inline
 #else
-#define YASIO__DECL
+#  define YASIO__DECL
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+#  define YASIO__HAVE_NS_INLINE 0
+#  define YASIO__NS_INLINE
+#else
+#  define YASIO__HAVE_NS_INLINE 1
+#  define YASIO__NS_INLINE inline
 #endif
 
 #endif
-

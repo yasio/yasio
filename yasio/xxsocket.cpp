@@ -32,7 +32,7 @@ SOFTWARE.
 #  include <stdio.h>
 #endif
 
-#if !defined(YASIO__HEADER_ONLY)
+#if !defined(YASIO_HEADER_ONLY)
 #  include "yasio/xxsocket.hpp"
 #endif
 
@@ -80,9 +80,9 @@ using namespace yasio;
 using namespace yasio::inet;
 
 #if defined(_WIN32) && !defined(_WINSTORE)
-extern LPFN_ACCEPTEX __accept_ex;
-extern LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs;
-extern LPFN_CONNECTEX __connect_ex;
+static LPFN_ACCEPTEX __accept_ex                           = nullptr;
+static LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
+static LPFN_CONNECTEX __connect_ex                         = nullptr;
 #endif
 
 namespace yasio
@@ -495,7 +495,7 @@ static int getipsv_internal(void)
   addrinfo hint, *ailist = nullptr;
   memset(&hint, 0x0, sizeof(hint));
 
-  ip::endpoint ep;
+  endpoint ep;
   // nullptr same as "localhost": always return loopback address
   // so must specific hostname
   // @remark: only windows support, unix/linux should use getifaddrs
@@ -548,7 +548,7 @@ static int getipsv_internal(void)
     exit(EXIT_FAILURE);
   }
 
-  ip::endpoint ep;
+  endpoint ep;
   /* Walk through linked list*/
   for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
   {
@@ -594,7 +594,7 @@ int xxsocket::xpconnect(const char *hostname, u_short port, u_short local_port)
   int error = -1;
 
   xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         switch (ep.af())
         {
           case AF_INET:
@@ -605,7 +605,7 @@ int xxsocket::xpconnect(const char *hostname, u_short port, u_short local_port)
             else if (flags & ipsv_ipv6)
             {
               xxsocket::resolve_i(
-                  [&](const ip::endpoint &ep6) { return 0 == (error = pconnect(ep6, local_port)); },
+                  [&](const endpoint &ep6) { return 0 == (error = pconnect(ep6, local_port)); },
                   hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
@@ -632,7 +632,7 @@ int xxsocket::xpconnect_n(const char *hostname, u_short port,
   int error = -1;
 
   xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         switch (ep.af())
         {
           case AF_INET:
@@ -643,7 +643,7 @@ int xxsocket::xpconnect_n(const char *hostname, u_short port,
             else if (flags & ipsv_ipv6)
             {
               xxsocket::resolve_i(
-                  [&](const ip::endpoint &ep6) {
+                  [&](const endpoint &ep6) {
                     return 0 == (error = pconnect_n(ep6, wtimeout, local_port));
                   },
                   hostname, port, AF_INET6, AI_V4MAPPED);
@@ -667,9 +667,8 @@ int xxsocket::xpconnect_n(const char *hostname, u_short port,
 int xxsocket::pconnect(const char *hostname, u_short port, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) { return 0 == (error = pconnect(ep, local_port)); }, hostname,
-      port);
+  xxsocket::resolve_i([&](const endpoint &ep) { return 0 == (error = pconnect(ep, local_port)); },
+                      hostname, port);
   return error;
 }
 
@@ -678,7 +677,7 @@ int xxsocket::pconnect_n(const char *hostname, u_short port,
 {
   int error = -1;
   xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
+      [&](const endpoint &ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
       hostname, port);
   return error;
 }
@@ -687,7 +686,7 @@ int xxsocket::pconnect_n(const char *hostname, u_short port, u_short local_port)
 {
   int error = -1;
   xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         (error = pconnect_n(ep, local_port));
         return true;
       },
@@ -695,7 +694,7 @@ int xxsocket::pconnect_n(const char *hostname, u_short port, u_short local_port)
   return error;
 }
 
-int xxsocket::pconnect(const ip::endpoint &ep, u_short local_port)
+int xxsocket::pconnect(const endpoint &ep, u_short local_port)
 {
   if (this->reopen(ep.af()))
   {
@@ -706,7 +705,7 @@ int xxsocket::pconnect(const ip::endpoint &ep, u_short local_port)
   return -1;
 }
 
-int xxsocket::pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout,
+int xxsocket::pconnect_n(const endpoint &ep, const std::chrono::microseconds &wtimeout,
                          u_short local_port)
 {
   if (this->reopen(ep.af()))
@@ -718,7 +717,7 @@ int xxsocket::pconnect_n(const ip::endpoint &ep, const std::chrono::microseconds
   return -1;
 }
 
-int xxsocket::pconnect_n(const ip::endpoint &ep, u_short local_port)
+int xxsocket::pconnect_n(const endpoint &ep, u_short local_port)
 {
   if (this->reopen(ep.af()))
   {
@@ -731,7 +730,7 @@ int xxsocket::pconnect_n(const ip::endpoint &ep, u_short local_port)
 
 int xxsocket::pserv(const char *addr, u_short port)
 {
-  ip::endpoint local(addr, port);
+  endpoint local(addr, port);
 
   if (!this->reopen(local.af()))
   {
@@ -747,55 +746,54 @@ int xxsocket::pserv(const char *addr, u_short port)
   return this->listen();
 }
 
-int xxsocket::resolve(std::vector<ip::endpoint> &endpoints, const char *hostname,
-                      unsigned short port)
+int xxsocket::resolve(std::vector<endpoint> &endpoints, const char *hostname, unsigned short port)
 {
   return resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         endpoints.push_back(ep);
         return false;
       },
       hostname, port, AF_UNSPEC, AI_ALL);
 }
 
-int xxsocket::resolve_v4(std::vector<ip::endpoint> &endpoints, const char *hostname,
+int xxsocket::resolve_v4(std::vector<endpoint> &endpoints, const char *hostname,
                          unsigned short port)
 {
   return resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         endpoints.push_back(ep);
         return false;
       },
       hostname, port, AF_INET, 0);
 }
 
-int xxsocket::resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+int xxsocket::resolve_v6(std::vector<endpoint> &endpoints, const char *hostname,
                          unsigned short port)
 {
   return resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         endpoints.push_back(ep);
         return false;
       },
       hostname, port, AF_INET6, 0);
 }
 
-int xxsocket::resolve_v4to6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+int xxsocket::resolve_v4to6(std::vector<endpoint> &endpoints, const char *hostname,
                             unsigned short port)
 {
   return xxsocket::resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         endpoints.push_back(ep);
         return false;
       },
       hostname, port, AF_INET6, AI_V4MAPPED);
 }
 
-int xxsocket::force_resolve_v6(std::vector<ip::endpoint> &endpoints, const char *hostname,
+int xxsocket::force_resolve_v6(std::vector<endpoint> &endpoints, const char *hostname,
                                unsigned short port)
 {
   return resolve_i(
-      [&](const ip::endpoint &ep) {
+      [&](const endpoint &ep) {
         endpoints.push_back(ep);
         return false;
       },
@@ -941,12 +939,12 @@ int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
 
 int xxsocket::bind(const char *addr, unsigned short port) const
 {
-  ip::endpoint local_ep(addr, port);
+  endpoint local_ep(addr, port);
 
   return this->bind(local_ep);
 }
 
-int xxsocket::bind(const ip::endpoint &ep) const
+int xxsocket::bind(const endpoint &ep) const
 {
   return ::bind(this->fd, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
 }
@@ -975,18 +973,18 @@ xxsocket xxsocket::accept_n(timeval *timeout)
   return result;
 }
 
-int xxsocket::connect(const char *addr, u_short port) { return connect(ip::endpoint(addr, port)); }
+int xxsocket::connect(const char *addr, u_short port) { return connect(endpoint(addr, port)); }
 
-int xxsocket::connect(const ip::endpoint &ep) { return xxsocket::connect(fd, ep); }
+int xxsocket::connect(const endpoint &ep) { return xxsocket::connect(fd, ep); }
 
 int xxsocket::connect(socket_native_type s, const char *addr, u_short port)
 {
-  ip::endpoint peer(addr, port);
+  endpoint peer(addr, port);
 
   return xxsocket::connect(s, peer);
 }
 
-int xxsocket::connect(socket_native_type s, const ip::endpoint &ep)
+int xxsocket::connect(socket_native_type s, const endpoint &ep)
 {
   return ::connect(s, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
 }
@@ -998,7 +996,7 @@ int xxsocket::connect_n(const char *addr, u_short port, const std::chrono::micro
   return connect_n(addr, port, &timeout);
 }
 
-int xxsocket::connect_n(const ip::endpoint &ep, const std::chrono::microseconds &wtimeout)
+int xxsocket::connect_n(const endpoint &ep, const std::chrono::microseconds &wtimeout)
 {
   timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
                      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
@@ -1007,10 +1005,10 @@ int xxsocket::connect_n(const ip::endpoint &ep, const std::chrono::microseconds 
 
 int xxsocket::connect_n(const char *addr, u_short port, timeval *timeout)
 {
-  return connect_n(ip::endpoint(addr, port), timeout);
+  return connect_n(endpoint(addr, port), timeout);
 }
 
-int xxsocket::connect_n(const ip::endpoint &ep, timeval *timeout)
+int xxsocket::connect_n(const endpoint &ep, timeval *timeout)
 {
   if (xxsocket::connect_n(this->fd, ep, timeout) != 0)
   {
@@ -1022,10 +1020,10 @@ int xxsocket::connect_n(const ip::endpoint &ep, timeval *timeout)
 
 int xxsocket::connect_n(socket_native_type s, const char *addr, u_short port, timeval *timeout)
 {
-  return connect_n(s, ip::endpoint(addr, port), timeout);
+  return connect_n(s, endpoint(addr, port), timeout);
 }
 
-int xxsocket::connect_n(socket_native_type s, const ip::endpoint &ep, timeval *timeout)
+int xxsocket::connect_n(socket_native_type s, const endpoint &ep, timeval *timeout)
 {
   fd_set rset, wset;
   int n, error = 0;
@@ -1084,7 +1082,7 @@ done:
   return (0);
 }
 
-int xxsocket::connect_n(socket_native_type s, const ip::endpoint &ep)
+int xxsocket::connect_n(socket_native_type s, const endpoint &ep)
 {
 #ifdef _WIN32
   set_nonblocking(s, true);
@@ -1317,13 +1315,13 @@ int xxsocket::recv_i(socket_native_type s, void *buf, int len, int flags)
   return ::recv(s, (char *)buf, len, flags);
 }
 
-int xxsocket::recvfrom_i(void *buf, int len, ip::endpoint &from, int flags) const
+int xxsocket::recvfrom_i(void *buf, int len, endpoint &from, int flags) const
 {
   socklen_t addrlen = sizeof(from);
   return ::recvfrom(this->fd, (char *)buf, len, flags, &from.sa_, &addrlen);
 }
 
-int xxsocket::sendto_i(const void *buf, int len, const ip::endpoint &to, int flags) const
+int xxsocket::sendto_i(const void *buf, int len, const endpoint &to, int flags) const
 {
   return ::sendto(this->fd, (const char *)buf, len, flags, &to.sa_,
                   to.af() == AF_INET6 ? sizeof(to.in6_) : sizeof(to.in4_));
@@ -1379,21 +1377,21 @@ int xxsocket::handle_read_ready(socket_native_type s, timeval *timeo)
   return ret;
 }
 
-ip::endpoint xxsocket::local_endpoint(void) const { return local_endpoint(this->fd); }
+endpoint xxsocket::local_endpoint(void) const { return local_endpoint(this->fd); }
 
-ip::endpoint xxsocket::local_endpoint(socket_native_type fd)
+endpoint xxsocket::local_endpoint(socket_native_type fd)
 {
-  ip::endpoint ep;
+  endpoint ep;
   socklen_t socklen = sizeof(ep);
   getsockname(fd, &ep.sa_, &socklen);
   return ep;
 }
 
-ip::endpoint xxsocket::peer_endpoint(void) const { return peer_endpoint(this->fd); }
+endpoint xxsocket::peer_endpoint(void) const { return peer_endpoint(this->fd); }
 
-ip::endpoint xxsocket::peer_endpoint(socket_native_type fd)
+endpoint xxsocket::peer_endpoint(socket_native_type fd)
 {
-  ip::endpoint ep;
+  endpoint ep;
   socklen_t socklen = sizeof(ep);
   getpeername(fd, &ep.sa_, &socklen);
   return ep;
@@ -1484,16 +1482,9 @@ const char *xxsocket::gai_strerror(int error)
 }
 
 // initialize win32 socket library
-#if defined(_WIN32) && !defined(_WINSTORE)
-LPFN_ACCEPTEX __accept_ex                           = nullptr;
-LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
-LPFN_CONNECTEX __connect_ex                         = nullptr;
-#endif
-
 #ifdef _WIN32
 namespace
 {
-
 struct ws2_32_gc
 {
   ws2_32_gc(void)

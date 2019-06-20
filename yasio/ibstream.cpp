@@ -29,7 +29,9 @@ SOFTWARE.
 #define YASIO__IBSTREAM_CPP
 
 #include "yasio/obstream.hpp"
-#include "yasio/ibstream.hpp"
+#if !defined(YASIO_HEADER_ONLY)
+#  include "yasio/ibstream.hpp"
+#endif
 
 #ifdef _WIN32
 #  pragma comment(lib, "ws2_32.lib")

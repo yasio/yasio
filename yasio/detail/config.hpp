@@ -33,10 +33,9 @@ SOFTWARE.
 // #define YASIO_HEADER_ONLY 1
 
 #if defined(YASIO_HEADER_ONLY)
-#define YASIO__DECL inline
+#  define YASIO__DECL inline
 #else
-#define YASIO__DECL
+#  define YASIO__DECL
 #endif
 
 #endif
-

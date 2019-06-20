@@ -70,11 +70,6 @@ typedef struct IKCPCB ikcpcb;
 
 namespace yasio
 {
-using namespace purelib;
-}
-
-namespace yasio
-{
 namespace inet
 {
 // options

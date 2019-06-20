@@ -1,32 +1,59 @@
+//////////////////////////////////////////////////////////////////////////////////////////
+// A cross platform socket APIs, support ios & android & wp8 & window store
+// universal app
+//////////////////////////////////////////////////////////////////////////////////////////
+/*
+The MIT License (MIT)
+
+Copyright (c) 2012-2019 halx99
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 // object_pool.h: a simple & high-performance object pool implementation v1.3
-#if !defined(YASIO__OBJECT_POOL_H)
-#  define YASIO__OBJECT_POOL_H
+#ifndef YASIO__OBJECT_POOL_H
+#define YASIO__OBJECT_POOL_H
 
-#  include "politedef.h"
-#  include <assert.h>
-#  include <stdlib.h>
-#  include <memory>
-#  include <mutex>
+#include "politedef.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <memory>
+#include <mutex>
 
-#  define YASIO_OBJECT_POOL_HEADER_ONLY
+#define YASIO_OBJECT_POOL_HEADER_ONLY
 
-#  if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
-#    define OBJECT_POOL_DECL inline
-#  else
-#    define OBJECT_POOL_DECL
-#  endif
+#if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
+#  define OBJECT_POOL_DECL inline
+#else
+#  define OBJECT_POOL_DECL
+#endif
 
-#  if defined(_MSC_VER)
-#    pragma warning(push)
-#    pragma warning(disable : 4200)
-#  endif
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable : 4200)
+#endif
 
 namespace yasio
 {
 namespace gc
 {
 
-#  define POOL_ESTIMATE_SIZE(element_type) sz_align(sizeof(element_type), sizeof(void *))
+#define POOL_ESTIMATE_SIZE(element_type) sz_align(sizeof(element_type), sizeof(void *))
 
 namespace detail
 {
@@ -70,61 +97,59 @@ private:
   const size_t element_size_;
   const size_t element_count_;
 
-#  if defined(_DEBUG)
+#if defined(_DEBUG)
   size_t allocated_count_; // allocated count
-#  endif
+#endif
 };
 
-#  define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                               \
-  public:                                                                                          \
-    static void *operator new(size_t /*size*/) { return get_pool().get(); }                        \
+#define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                                 \
+public:                                                                                            \
+  static void *operator new(size_t /*size*/) { return get_pool().get(); }                          \
                                                                                                    \
-    static void *operator new(size_t /*size*/, std::nothrow_t) { return get_pool().get(); }        \
+  static void *operator new(size_t /*size*/, std::nothrow_t) { return get_pool().get(); }          \
                                                                                                    \
-    static void operator delete(void *p) { get_pool().release(p); }                                \
+  static void operator delete(void *p) { get_pool().release(p); }                                  \
                                                                                                    \
-    static yasio::gc::detail::object_pool &get_pool()                                              \
-    {                                                                                              \
-      static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE),               \
-                                                   ELEMENT_COUNT);                                 \
-      return s_pool;                                                                               \
-    }
+  static yasio::gc::detail::object_pool &get_pool()                                                \
+  {                                                                                                \
+    static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
+    return s_pool;                                                                                 \
+  }
 
 // The thread safe edition
-#  define DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                    \
-  public:                                                                                          \
-    static void *operator new(size_t /*size*/) { return get_pool().allocate(); }                   \
+#define DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                      \
+public:                                                                                            \
+  static void *operator new(size_t /*size*/) { return get_pool().allocate(); }                     \
                                                                                                    \
-    static void *operator new(size_t /*size*/, std::nothrow_t) { return get_pool().allocate(); }   \
+  static void *operator new(size_t /*size*/, std::nothrow_t) { return get_pool().allocate(); }     \
                                                                                                    \
-    static void operator delete(void *p) { get_pool().deallocate(p); }                             \
+  static void operator delete(void *p) { get_pool().deallocate(p); }                               \
                                                                                                    \
-    static yasio::gc::object_pool<ELEMENT_TYPE, std::mutex> &get_pool()                            \
-    {                                                                                              \
-      static yasio::gc::object_pool<ELEMENT_TYPE, std::mutex> s_pool(ELEMENT_COUNT);               \
-      return s_pool;                                                                               \
-    }
+  static yasio::gc::object_pool<ELEMENT_TYPE, std::mutex> &get_pool()                              \
+  {                                                                                                \
+    static yasio::gc::object_pool<ELEMENT_TYPE, std::mutex> s_pool(ELEMENT_COUNT);                 \
+    return s_pool;                                                                                 \
+  }
 
-#  define DECLARE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE)                                             \
-  public:                                                                                          \
-    static void *operator new(size_t /*size*/);                                                    \
-    static void *operator new(size_t /*size*/, std::nothrow_t);                                    \
-    static void operator delete(void *p);                                                          \
-    static yasio::gc::detail::object_pool &get_pool();
+#define DECLARE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE)                                               \
+public:                                                                                            \
+  static void *operator new(size_t /*size*/);                                                      \
+  static void *operator new(size_t /*size*/, std::nothrow_t);                                      \
+  static void operator delete(void *p);                                                            \
+  static yasio::gc::detail::object_pool &get_pool();
 
-#  define IMPLEMENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                            \
-    void *ELEMENT_TYPE::operator new(size_t /*size*/) { return get_pool().get(); }                 \
+#define IMPLEMENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                              \
+  void *ELEMENT_TYPE::operator new(size_t /*size*/) { return get_pool().get(); }                   \
                                                                                                    \
-    void *ELEMENT_TYPE::operator new(size_t /*size*/, std::nothrow_t) { return get_pool().get(); } \
+  void *ELEMENT_TYPE::operator new(size_t /*size*/, std::nothrow_t) { return get_pool().get(); }   \
                                                                                                    \
-    void ELEMENT_TYPE::operator delete(void *p) { get_pool().release(p); }                         \
+  void ELEMENT_TYPE::operator delete(void *p) { get_pool().release(p); }                           \
                                                                                                    \
-    yasio::gc::detail::object_pool &ELEMENT_TYPE::get_pool()                                       \
-    {                                                                                              \
-      static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE),               \
-                                                   ELEMENT_COUNT);                                 \
-      return s_pool;                                                                               \
-    }
+  yasio::gc::detail::object_pool &ELEMENT_TYPE::get_pool()                                         \
+  {                                                                                                \
+    static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
+    return s_pool;                                                                                 \
+  }
 } // namespace detail
 
 template <typename _Ty, typename _Mutex = void> class object_pool : public detail::object_pool
@@ -195,11 +220,11 @@ public:
   typedef const value_type &const_reference;
 
   typedef size_t size_type;
-#  ifdef _WIN32
+#ifdef _WIN32
   typedef ptrdiff_t difference_type;
-#  else
+#else
   typedef long difference_type;
-#  endif
+#endif
 
   template <class _Other> struct rebind
   { // convert this type to _ALLOCATOR<_Other>
@@ -311,17 +336,12 @@ object_pool<_Ty, void> object_pool_allocator<_Ty, _ElemCount>::_Mempool(_ElemCou
 } // namespace gc
 } // namespace yasio
 
-#  if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
-#    include "object_pool.cpp"
-#  endif
+#if defined(YASIO_OBJECT_POOL_HEADER_ONLY)
+#  include "object_pool.cpp"
+#endif
 
-#  if defined(_MSC_VER)
-#    pragma warning(pop)
-#  endif
+#if defined(_MSC_VER)
+#  pragma warning(pop)
+#endif
 
 #endif
-/*
- * Copyright (c) 2012-2019 by HALX99,  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
- * V1.3:2019
- **/

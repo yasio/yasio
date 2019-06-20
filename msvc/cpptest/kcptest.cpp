@@ -2,17 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(YASIO_IOCP)
-#  include "yasio/experimental/yasio_iocp.h"
-#elif defined(YASIO_POLL)
-#  include "yasio/experimental/yasio_poll.h"
-#elif defined(YASIO_EPOLL)
-#  include "yasio/experimental/yasio_epoll.h"
-#else
-#  include "yasio/yasio.h"
-#endif
-#include "yasio/ibstream.h"
-#include "yasio/obstream.h"
+#include "yasio/yasio.hpp"
+#include "yasio/ibstream.hpp"
+#include "yasio/obstream.hpp"
 
 #if defined(_WIN32)
 #  include <Shlwapi.h>

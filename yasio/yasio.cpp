@@ -33,8 +33,9 @@ SOFTWARE.
 
 #ifndef YASIO__CORE_CPP
 #define YASIO__CORE_CPP
-
-#include "yasio/yasio.hpp"
+#if !defined(YASIO_HEADER_ONLY)
+#  include "yasio/yasio.hpp"
+#endif
 #if defined(YASIO_HAVE_KCP)
 #  include "kcp/ikcp.h"
 #endif

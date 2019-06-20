@@ -27,8 +27,9 @@ SOFTWARE.
 */
 #ifndef YASIO__OBSTREAM_CPP
 #define YASIO__OBSTREAM_CPP
-
-#include "yasio/obstream.hpp"
+#if !defined(YASIO_HEADER_ONLY)
+#  include "yasio/obstream.hpp"
+#endif
 #include <iostream>
 #include <fstream>
 

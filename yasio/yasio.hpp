@@ -564,7 +564,7 @@ private:
   std::vector<io_channel *> channel_ops_;
 
   std::vector<transport_ptr> transports_;
-  std::vector<transport_ptr> transports_dypool_;
+  std::vector<transport_ptr> transports_pool_;
 
   // select interrupter
   select_interrupter interrupter_;

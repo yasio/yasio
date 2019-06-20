@@ -473,9 +473,9 @@ io_service::~io_service()
   if (this->state_ == io_service::state::STOPPED)
     cleanup();
 
-  for (auto t : transports_dypool_)
-    ::operator delete(t);
-  transports_dypool_.clear();
+  for (auto o : transports_pool_)
+    ::operator delete(o);
+  transports_pool_.clear();
 
   if (options_.outf_ != -1)
     ::close(options_.outf_);
@@ -599,7 +599,7 @@ void io_service::clear_transports()
   {
     cleanup_io(transport);
     transport->~io_transport_base();
-    this->transports_dypool_.push_back(transport);
+    this->transports_pool_.push_back(transport);
   }
   transports_.clear();
 }
@@ -847,7 +847,7 @@ void io_service::handle_close(transport_ptr transport)
   } // server channel, do nothing.
 
   ptr->~io_transport_base();
-  transports_dypool_.push_back(ptr);
+  transports_pool_.push_back(ptr);
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, ptr)));
@@ -1133,10 +1133,10 @@ transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xx
 {
   transport_ptr transport;
   void *vp;
-  if (!transports_dypool_.empty())
+  if (!transports_pool_.empty())
   { // allocate from pool
-    vp = transports_dypool_.back();
-    transports_dypool_.pop_back();
+    vp = transports_pool_.back();
+    transports_pool_.pop_back();
   }
   else
     vp = operator new(sizeof(io_transport_posix));
@@ -1593,8 +1593,7 @@ void io_service::set_option(int option, ...)
       options_.connect_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case YOPT_RECONNECT_TIMEOUT:
-    {
+    case YOPT_RECONNECT_TIMEOUT: {
       int value = va_arg(ap, int);
       if (value > 0)
         options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
@@ -1637,15 +1636,13 @@ void io_service::set_option(int option, ...)
     case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
       this->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
       break;
-    case YOPT_CHANNEL_LOCAL_PORT:
-    {
+    case YOPT_CHANNEL_LOCAL_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
     }
     break;
-    case YOPT_CHANNEL_REMOTE_HOST:
-    {
+    case YOPT_CHANNEL_REMOTE_HOST: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1653,8 +1650,7 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_PORT:
-    {
+    case YOPT_CHANNEL_REMOTE_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1662,8 +1658,7 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_ENDPOINT:
-    {
+    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {

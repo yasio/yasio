@@ -209,7 +209,6 @@ static const socket_native_type invalid_socket = (socket_native_type)-1;
 
 YASIO__NS_INLINE namespace ip
 {
-
 #pragma pack(push, 1)
   // ip packet
   struct ip_header
@@ -486,16 +485,15 @@ YASIO__NS_INLINE namespace ip
     sockaddr_in6 in6_;
   };
 
+  // supported internet protocol flags
+  enum : u_short
+  {
+    ipsv_unavailable = 0,
+    ipsv_ipv4        = 1,
+    ipsv_ipv6        = 2,
+    ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6
+  };
 } // namespace ip
-
-// supported internet protocol flags
-enum : u_short
-{
-  ipsv_unavailable = 0,
-  ipsv_ipv4        = 1,
-  ipsv_ipv6        = 2,
-  ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6
-};
 
 #if !YASIO__HAVE_NS_INLINE
 using namespace yasio::inet::ip;

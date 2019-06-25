@@ -68,7 +68,7 @@ public:
   YASIO__DECL int32_t read_i24();
   YASIO__DECL uint32_t read_u24();
 
-  YASIO__DECL yasio::string_view read_va();
+  YASIO__DECL cxx17::string_view read_va();
 
   YASIO__DECL void read_v(std::string &);   // 32 bits length field
   YASIO__DECL void read_v16(std::string &); // 16 bits length field
@@ -81,18 +81,18 @@ public:
   YASIO__DECL void read_bytes(std::string &oav, int len);
   YASIO__DECL void read_bytes(void *oav, int len);
 
-  YASIO__DECL yasio::string_view read_v();
-  YASIO__DECL yasio::string_view read_v16();
-  YASIO__DECL yasio::string_view read_v8();
+  YASIO__DECL cxx17::string_view read_v();
+  YASIO__DECL cxx17::string_view read_v16();
+  YASIO__DECL cxx17::string_view read_v8();
 
-  YASIO__DECL yasio::string_view read_bytes(int len);
+  YASIO__DECL cxx17::string_view read_bytes(int len);
 
   const char *data() { return first_; }
   size_t length(void) { return last_ - first_; }
 
   YASIO__DECL ptrdiff_t seek(ptrdiff_t offset, int whence);
 
-  template <typename _LenT> inline yasio::string_view read_vx()
+  template <typename _LenT> inline cxx17::string_view read_vx()
   {
     _LenT n = read_i<_LenT>();
 

@@ -153,22 +153,22 @@ void obstream::write_i7(int value)
   write_i<uint8_t>((uint8_t)v);
 }
 
-void obstream::write_va(yasio::string_view sv)
+void obstream::write_va(cxx17::string_view sv)
 {
   int len = static_cast<int>(sv.length());
   write_i7(len);
   write_bytes(sv.data(), len);
 }
 
-void obstream::write_v(yasio::string_view value)
+void obstream::write_v(cxx17::string_view value)
 {
   write_v(value.data(), static_cast<int>(value.size()));
 }
-void obstream::write_v16(yasio::string_view value)
+void obstream::write_v16(cxx17::string_view value)
 {
   write_v16(value.data(), static_cast<int>(value.size()));
 }
-void obstream::write_v8(yasio::string_view value)
+void obstream::write_v8(cxx17::string_view value)
 {
   write_v8(value.data(), static_cast<int>(value.size()));
 }
@@ -177,7 +177,7 @@ void obstream::write_v(const void *v, int size) { write_vx<uint32_t>(v, size); }
 void obstream::write_v16(const void *v, int size) { write_vx<uint16_t>(v, size); }
 void obstream::write_v8(const void *v, int size) { write_vx<uint8_t>(v, size); }
 
-void obstream::write_bytes(yasio::string_view v)
+void obstream::write_bytes(cxx17::string_view v)
 {
   return write_bytes(v.data(), static_cast<int>(v.size()));
 }

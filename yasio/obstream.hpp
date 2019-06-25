@@ -70,20 +70,20 @@ public:
   YASIO__DECL void write_i7(int value);
 
   /* write blob data with variant length of length field. */
-  YASIO__DECL void write_va(yasio::string_view sv);
+  YASIO__DECL void write_va(cxx17::string_view sv);
 
   /* 32 bits length field */
-  YASIO__DECL void write_v(yasio::string_view);
+  YASIO__DECL void write_v(cxx17::string_view);
   /* 16 bits length field */
-  YASIO__DECL void write_v16(yasio::string_view);
+  YASIO__DECL void write_v16(cxx17::string_view);
   /* 8 bits length field */
-  YASIO__DECL void write_v8(yasio::string_view);
+  YASIO__DECL void write_v8(cxx17::string_view);
 
   YASIO__DECL void write_v(const void *v, int size);
   YASIO__DECL void write_v16(const void *v, int size);
   YASIO__DECL void write_v8(const void *v, int size);
 
-  YASIO__DECL void write_bytes(yasio::string_view);
+  YASIO__DECL void write_bytes(cxx17::string_view);
   YASIO__DECL void write_bytes(const void *v, int vl);
 
   size_t length() const { return buffer_.size(); }

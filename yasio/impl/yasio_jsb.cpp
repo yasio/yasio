@@ -169,9 +169,9 @@ public:
 
   bool empty() const { return _data != nullptr && _size > 0; }
 
-  operator yasio::string_view() const
+  operator cxx17::string_view() const
   {
-    return yasio::string_view(_data != nullptr ? _data : "", _size);
+    return cxx17::string_view(_data != nullptr ? _data : "", _size);
   }
 
   void clear()
@@ -586,7 +586,7 @@ static bool js_yasio_ibstream_read_v(JSContext *ctx, uint32_t argc, jsval *vp)
   if (argc >= 2)
     raw = args[1].toBoolean();
 
-  yasio::string_view sv;
+  cxx17::string_view sv;
   switch (length_field_bits)
   {
     case -1: // variant bits

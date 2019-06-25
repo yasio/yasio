@@ -56,11 +56,11 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #    if __has_include(<string_view>)
 #      include <string_view>
 #    endif
-namespace yasio
+namespace cxx17
 {
 using std::string_view;
 using std::wstring_view;
-} // namespace yasio
+} // namespace cxx17
 #  else
 //#pragma message("_HAS_STD_STRING_VIEW = 0")
 
@@ -68,7 +68,7 @@ using std::wstring_view;
 #    include <exception>
 #    include <stdexcept>
 #    include <string.h>
-namespace yasio
+namespace cxx17
 {
 template <class _Traits>
 inline size_t __xxtraits_find(const typename _Traits::char_type *_Haystack, const size_t _Hay_size,
@@ -1352,7 +1352,7 @@ inline bool operator>=(const basic_string_view<CharT, Traits> &lhs,
 {
   return lhs >= basic_string_view<CharT, Traits>(rhs);
 }
-} // namespace yasio
+} // namespace cxx17
 
 #  endif
 

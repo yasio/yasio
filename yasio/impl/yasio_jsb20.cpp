@@ -296,11 +296,11 @@ static bool seval_to_std_vector_hostent(const se::Value &v, std::vector<inet::io
   return false;
 }
 
-yasio::string_view seval_to_string_view(const se::Value &v, bool *unrecognized_object = nullptr)
+cxx17::string_view seval_to_string_view(const se::Value &v, bool *unrecognized_object = nullptr)
 {
   if (v.isString())
   {
-    return yasio::string_view(v.toString());
+    return cxx17::string_view(v.toString());
   }
   else if (v.isObject())
   {
@@ -314,7 +314,7 @@ yasio::string_view seval_to_string_view(const se::Value &v, bool *unrecognized_o
     else if (unrecognized_object)
       *unrecognized_object = true;
     if (data != nullptr)
-      return yasio::string_view((const char *)data, size);
+      return cxx17::string_view((const char *)data, size);
   }
   return {};
 }
@@ -469,7 +469,7 @@ static bool js_yasio_ibstream_read_v(se::State &s)
   if (argc >= 2)
     raw = args[1].toBoolean();
 
-  yasio::string_view sv;
+  cxx17::string_view sv;
   switch (length_field_bits)
   {
     case -1: // variant bits

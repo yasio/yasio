@@ -7,8 +7,11 @@
 [![GitHub forks](https://img.shields.io/github/forks/halx99/yasio.svg?label=Fork)](https://github.com/halx99/yasio)
 
 A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
-The core design is reference from https://github.com/chriskohlhoff/asio but very small.  
-**This lib has been used by project http://hongjing.qq.com/ and run at millions of devices.**
+The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
+**This lib has been used by project [RedAlert OL](http://hongjing.qq.com/) and run at millions of devices.**
+
+## Clone at github: [yasio](https://github.com/halx99/yasio)
+
 ## Features: 
 * support IPv6-only network.  
 * support multi-connections at one thread.  
@@ -92,7 +95,7 @@ see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js
 2. For Microsoft Visual Studio 2019 MSVC C++17, you must set compile option: ```C/C++ --> Language --> Conformance mode``` to **No**, otherwise, you will got compiling error: ```sol.hpp(8060): error C3779: 'sol::stack::get': a function that returns 'decltype(auto)' cannot be used before it is defined```
   
 ## Unity3D integration guide
-Tencent xLua integration, see: https://github.com/halx99/xLua
+Tencent xLua integration, see: [https://github.com/halx99/xLua](https://github.com/halx99/xLua)
 
-## For more detail usage: see example or wiki: https://github.com/halx99/yasio/wiki
+## For more detail usage: see [wiki](https://github.com/halx99/yasio/wiki)
 

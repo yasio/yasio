@@ -26,14 +26,14 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 ## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
-cpptest: https://github.com/halx99/yasio/blob/master/msvc/cpptest/cpptest.cpp  
+[cpptest](https://github.com/halx99/yasio/blob/master/msvc/cpptest/cpptest.cpp)  
   
     
 ### Lua intergation: 
 #### common lua application integration:
 1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp``` with your project  
 2. call luaopen_yasio after LUA VM initialized.  
-luatest(windows user): open https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj by x-studio365 IDE  
+luatest(windows user): open [luatest.xsxproj](https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj) by x-studio365 IDE  
   
 #### cocos2d-x lua integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external```  
@@ -84,7 +84,7 @@ Just like:
 
 
 #### JS demo:
-see: https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js  
+see: [example.js](https://github.com/halx99/yasio/blob/master/msvc/jstest/example.js)  
   
   
 ## Quick test at linux platform with gcc compiler:  

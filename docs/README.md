@@ -1,4 +1,4 @@
-# yasio
+# yasio-docs
 
 * [Script API](#basic-usage)
 	* [timing](./timing.md)

@@ -1722,14 +1722,14 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
         case YOPT_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
-        case YOPT_LFBFD_PARAMS:
+        case YOPT_CHANNEL_LFBFD_PARAMS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
-                              args[4].toInt32());
+                              args[4].toInt32(), args[5].toInt32());
           break;
-        case YOPT_RESOLV_FUNCTION: // jsb does not support set custom
-                                   // resolv function
+        case YOPT_RESOLV_FN: // jsb does not support set custom
+                             // resolv function
           break;
-        case YOPT_IO_EVENT_CALLBACK:
+        case YOPT_IO_EVENT_CB:
           (void)0;
           {
             JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
@@ -1890,10 +1890,10 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FUNCTION);
+  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
   YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
-  YASIO_EXPORT_ENUM(YOPT_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CALLBACK);
+  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);

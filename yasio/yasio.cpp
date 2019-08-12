@@ -1636,7 +1636,7 @@ void io_service::set_option(int option, ...)
       break;
     }
 
-    case YOPT_IO_EVENT_CALLBACK:
+    case YOPT_IO_EVENT_CB:
       options_.on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
       break;
     case YOPT_CHANNEL_LFBFD_FN: {

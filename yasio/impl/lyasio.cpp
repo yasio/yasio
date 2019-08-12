@@ -129,14 +129,15 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]));
             break;
-          case YOPT_LFBFD_PARAMS:
+          case YOPT_CHANNEL_LFBFD_PARAMS:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
-                                static_cast<int>(va[2]), static_cast<int>(va[3]));
+                                static_cast<int>(va[2]), static_cast<int>(va[3]),
+                                static_cast<int>(va[4]));
             break;
-          case YOPT_RESOLV_FUNCTION: // lua does not support set custom
-                                     // resolv function
+            // lua does not support set custom resolv function
+          case YOPT_RESOLV_FN:
             break;
-          case YOPT_IO_EVENT_CALLBACK:
+          case YOPT_IO_EVENT_CB:
             (void)0;
             {
               sol::function fn     = va[0];
@@ -237,10 +238,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FUNCTION);
+  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
   YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
-  YASIO_EXPORT_ENUM(YOPT_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CALLBACK);
+  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);
@@ -386,14 +387,14 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
                                     static_cast<int>(args[2]));
                 break;
-              case YOPT_LFBFD_PARAMS:
+              case YOPT_CHANNEL_LFBFD_PARAMS:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
-                                    static_cast<int>(args[2]), static_cast<int>(args[3]));
+                                    static_cast<int>(args[2]), static_cast<int>(args[3]),
+                                    static_cast<int>(args[4]));
                 break;
-              case YOPT_RESOLV_FUNCTION: // lua does not support set custom
-                                         // resolv function
+              case YOPT_RESOLV_FN:
                 break;
-              case YOPT_IO_EVENT_CALLBACK:
+              case YOPT_IO_EVENT_CB:
                 (void)0;
                 {
                   kaguya::LuaFunction fn = args[0];
@@ -509,10 +510,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FUNCTION);
+  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
   YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
-  YASIO_EXPORT_ENUM(YOPT_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CALLBACK);
+  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
+  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);

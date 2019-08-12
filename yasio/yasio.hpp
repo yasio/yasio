@@ -82,7 +82,7 @@ enum
   YOPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   YOPT_RESOLV_FN,
   YOPT_LOG_FILE,
-  YOPT_IO_EVENT_CALLBACK,
+  YOPT_IO_EVENT_CB,
   YOPT_NO_NEW_THREAD, // Don't start a new thread to run event loop
   YOPT_CONSOLE_PRINT_FN,
   YOPT_CHANNEL_LFBFD_FN, // length field based frame decode function, Native C++ ONLY
@@ -440,7 +440,7 @@ public:
              YOPT_RESOLV_FN   func:resolv_fn_t*
              YOPT_CHANNEL_LFBFD_PARAMS    index:int, max_frame_length:int, length_field_offst:int,
                                     length_field_length:int, length_adjustment:int
-             YOPT_IO_EVENT_CALLBACK func:io_event_callback_t*
+             YOPT_IO_EVENT_CB func:io_event_callback_t*
              YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
              YOPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
              YOPT_CHANNEL_REMOTE_PORT index:int, port:int

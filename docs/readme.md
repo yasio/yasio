@@ -1,6 +1,6 @@
-# yasio - A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O
+# yasio
 
-* [脚本API-v3.22.1](#basic-usage)
+* [Script API](#basic-usage)
 	* [timing](./timing.md)
 		* [highp_clock](./timing.md#highp_clock)
 		* [highp_time](./timing.md#highp_time)

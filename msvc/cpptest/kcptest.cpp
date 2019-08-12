@@ -43,10 +43,10 @@ void yasioTest()
                            unsigned short port) {
     return service.__builtin_resolv(endpoints, hostname, port);
   };
-  service.set_option(YOPT_RESOLV_FUNCTION, &resolv);
+  service.set_option(YOPT_RESOLV_FN, &resolv);
 
   std::vector<transport_ptr> transports;
-  service.set_option(YOPT_LFBFD_PARAMS, 16384, -1, 0, 0);
+
   service.set_option(YOPT_LOG_FILE, "yasio.log");
 
   deadline_timer udp_msg_delay(service);
@@ -108,7 +108,6 @@ void yasioTest()
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  service.set_option(YOPT_LFBFD_PARAMS, 65536, -1, 0, 0);
   service.set_option(YOPT_CHANNEL_LOCAL_PORT, 0, 30002);
   service.set_option(YOPT_CHANNEL_LOCAL_PORT, 1, 30001);
 

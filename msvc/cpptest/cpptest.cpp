@@ -51,10 +51,10 @@ void yasioTest()
                            unsigned short port) {
     return service.__builtin_resolv(endpoints, hostname, port);
   };
-  service.set_option(YOPT_RESOLV_FUNCTION, &resolv);
+  service.set_option(YOPT_RESOLV_FN, &resolv);
 
   std::vector<transport_ptr> transports;
-  service.set_option(YOPT_LFBFD_PARAMS, 16384, -1, 0, 0);
+
   service.set_option(YOPT_LOG_FILE, "yasio.log");
 
   deadline_timer udpconn_delay(service);
@@ -132,6 +132,7 @@ void yasioTest()
   ** At windows will close with error: 10054
   */
   service.set_option(YOPT_TCP_KEEPALIVE, 5, 10, 2);
+  service.set_option(YOPT_CHANNEL_LFBFD_PARAMS, 0, 16384, -1, 0, 0);
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
   service.open(0); // open http client

@@ -45,17 +45,18 @@ function yasioTest() {
       cc.log("yasio server: The connection is lost!");
     }
   });
+  yserver.set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 
+    0, // channelIndex
+    65535, // maxFrameLength, 最大包长度
+    0,  // lenghtFieldOffset, 长度字段偏移，相对于包起始字节
+    4, // lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
+    0 // lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
+  );
   yserver.open(0, yasio.YCM_TCP_SERVER);
 
   var yclient = new yasio.io_service();
 
   var tsport_c = null;
-  yclient.set_option(yasio.YOPT_LFBFD_PARAMS, 
-    65535, // maxFrameLength, 最大包长度
-    0,  // lenghtFieldOffset, 长度字段偏移，相对于包起始字节
-    4, // lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
-    0 // lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
-);
 
   yclient.start_service({ host: "127.0.0.1", port: 8081 }, function (event) {
     var kind = event.kind();
@@ -98,6 +99,15 @@ function yasioTest() {
       }, 3);
     }
   });
+
+  yclient.set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 
+    0, // channelIndex
+    65535, // maxFrameLength, 最大包长度
+    0,  // lenghtFieldOffset, 长度字段偏移，相对于包起始字节
+    4, // lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
+    0 // lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
+  );
+
   yclient.open(0, yasio.YCM_TCP_CLIENT);
 
   // run the event-loop

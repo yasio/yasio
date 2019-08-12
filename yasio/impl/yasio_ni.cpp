@@ -116,7 +116,7 @@ YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char *host, intptr_t s
     }
     return ret;
   };
-  yasio_shared_service->set_option(YOPT_RESOLV_FUNCTION, &fn);
+  yasio_shared_service->set_option(YOPT_RESOLV_FN, &fn);
 }
 YASIO_NI_API void yasio_set_option(int opt, const char *params)
 {
@@ -124,8 +124,7 @@ YASIO_NI_API void yasio_set_option(int opt, const char *params)
   auto service          = yasio_shared_service;
   switch (opt)
   {
-    case YOPT_CHANNEL_REMOTE_ENDPOINT:
-    {
+    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
       int cidx = 0;
       std::string ip;
       int port = 0;
@@ -144,18 +143,17 @@ YASIO_NI_API void yasio_set_option(int opt, const char *params)
       service->set_option(opt, cidx, ip.c_str(), port);
     }
     break;
-    case YOPT_LFBFD_PARAMS:
-    {
-      int args[4];
+    case YOPT_CHANNEL_LFBFD_PARAMS: {
+      int args[5];
       int idx = 0;
       fast_split(&strParams.front(), strParams.length(), ';', [&](char *s, char *e) {
         auto ch = *e;
-        if (idx < 4)
+        if (idx < 5)
           args[idx] = atoi(s);
         ++idx;
         *e = ch;
       });
-      service->set_option(opt, args[0], args[1], args[2], args[3]);
+      service->set_option(opt, args[0], args[1], args[2], args[3], args[4]);
     }
     break;
     case YOPT_LOG_FILE:
@@ -189,7 +187,7 @@ YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_
 YASIO_NI_API void yasio_set_console_print_fn(void (*console_print_fn)(const char *))
 {
   yasio::inet::console_print_fn_t console_print = console_print_fn;
-  yasio_shared_service->set_option(YOPT_CONSOLE_PRINT_FUNCTION, &console_print);
+  yasio_shared_service->set_option(YOPT_CONSOLE_PRINT_FN, &console_print);
 }
 YASIO_NI_API void yasio_memcpy(void *dst, const void *src, unsigned int len)
 {

@@ -99,7 +99,6 @@ function _M:ctor(count)
             end
         end)
 
-    service:set_option(yasio.YOPT_LFBFD_PARAMS, 65535, -1, 0, 0)
     self.service = service
 end
 

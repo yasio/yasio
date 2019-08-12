@@ -51,15 +51,16 @@ opt: 选项枚举，取值有:
   + yasio.YOPT_DNS_CACHE_TIMEOUT: 设置域名解析缓存时间超时, 默认10分钟
   + yasio.YOPT_TCP_KEEPALIVE: 设置tcp协议keepalive参数，例如```tcpclient:set_option(yasio.YOPT_TCP_KEEPALIVE, 60, 10, 3)```, 60是发送底层协议心跳的空闲等待时间，10是发送心跳间隔, 3是未收到对方回应心跳重试次数
   + yasio.YOPT_LOG_FILE: 设置网络日志存储路径
-  + yasio.YOPT_IO_EVENT_CALLBACK: 设置网络事件回调
+  + yasio.YOPT_IO_EVENT_CB: 设置网络事件回调
   + yasio.YOPT_CHANNEL_LOCAL_PORT: 设置信道本地端口, 例如```tcpclient:set_option(yasio.YOPT_CHANNEL_LOCAL_PORT, 0, 20191)```, 0是信道索引, 20191是端口
   + yasio.YOPT_CHANNEL_REMOTE_HOST: 设置信道远程域名/ip, 参数顺序为: 信道索引, 远程域名/ip
   + yasio.YOPT_CHANNEL_REMOTE_PORT: 设置信道远程端口, 参数顺序为: 信道索引, 端口
   + yasio.YOPT_CHANNEL_REMOTE_ENDPOINT: 设置信道远程域名/ip和端口, 参数顺序为: 信道索引, 远程域名/ip, 端口
-  + yasio.YOPT_LFBFD_PARAMS: 设置Length Field Based Frame Decode参数, 例如:
+  + yasio.YOPT_CHANNEL_LFBFD_PARAMS: 设置Length Field Based Frame Decode参数, 例如:
 ```lua
 -- 对于有包长度字段的协议，对于tcp自定义二进制协议，强烈建议设计包长度字段，并设置此选项，业务无须关心粘包问题
 tcpclient:set_option(yasio.YOPT_LFBFD_PARAMS, 
+    0, -- channelIndex, 信道索引
     65535, -- maxFrameLength, 最大包长度
     0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
     4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节

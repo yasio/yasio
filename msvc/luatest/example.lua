@@ -55,7 +55,8 @@ server:open(1, yasio.YCM_TCP_SERVER)
 local client = io_service.new()
 hostent.host = "127.0.0.1"
 --tcp unpack params, TCP拆包参数设置接口:
-client:set_option(yasio.YOPT_LFBFD_PARAMS, 
+client:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS,
+    0, -- channelIndex, 信道索引    
     65535, -- maxFrameLength, 最大包长度
     0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
     4, -- lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节

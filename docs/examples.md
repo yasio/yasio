@@ -142,7 +142,6 @@ function _M:ctor(count)
             end
         end)
 
-    service:set_option(yasio.YOPT_LFBFD_PARAMS, 65535, -1, 0, 0)
     self.service = service
 end
 
@@ -295,7 +294,13 @@ else if (k == YEK_CONNECTION_LOST)
     printf("The connection with frontend is lost: %d, waiting new to income...", e->status());
 }
 });
-
+yasio_shared_service->set_option(YOPT_CHANNEL_LFBFD_PARAMS,
+    0, -- channelIndex  
+    65535, -- maxFrameLength
+    0,  -- lenghtFieldOffset
+    4, -- lengthFieldLength
+    0 -- lengthAdjustment
+);
 yasio_shared_service->set_option(YOPT_DEFER_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
 yasio_shared_service->open(0, YCM_TCP_SERVER);
 
@@ -331,7 +336,13 @@ yasio_shared_service->start_service(&ep, [=](event_ptr e) {
         printf("The connection with backend is lost: %d, waiting new to income...", e->status());
     }
     });
-
+yasio_shared_service->set_option(YOPT_CHANNEL_LFBFD_PARAMS,
+    0, -- channelIndex  
+    65535, -- maxFrameLength
+    0,  -- lenghtFieldOffset
+    4, -- lengthFieldLength
+    0 -- lengthAdjustment
+);
 yasio_shared_service->set_option(YOPT_DEFER_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
 yasio_shared_service->open(0, YCM_TCP_CLIENT);
 ```

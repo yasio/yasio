@@ -273,6 +273,7 @@ public:
 
   io_service &get_service() { return ctx_->get_service(); }
 
+protected:
   virtual void send(std::vector<char> data) = 0;
   virtual int recv(int &error)              = 0;
 
@@ -304,6 +305,8 @@ class io_transport_posix : public io_transport_base
 public:
   io_transport_posix(io_channel *ctx, std::shared_ptr<xxsocket> sock) : io_transport_base(ctx, sock)
   {}
+
+protected:
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int &error) override;
   YASIO__DECL bool flush(long long &max_wait_duration) override;
@@ -316,6 +319,8 @@ class io_transport_kcp : public io_transport_base
 public:
   YASIO__DECL io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock);
   YASIO__DECL ~io_transport_kcp();
+
+protected:
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int &error) override;
   YASIO__DECL bool flush(long long &max_wait_duration) override;

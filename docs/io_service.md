@@ -59,7 +59,7 @@ opt: 选项枚举，取值有:
   + yasio.YOPT_CHANNEL_LFBFD_PARAMS: 设置Length Field Based Frame Decode参数, 例如:
 ```lua
 -- 对于有包长度字段的协议，对于tcp自定义二进制协议，强烈建议设计包长度字段，并设置此选项，业务无须关心粘包问题
-tcpclient:set_option(yasio.YOPT_LFBFD_PARAMS, 
+tcpclient:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 
     0, -- channelIndex, 信道索引
     65535, -- maxFrameLength, 最大包长度
     0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节

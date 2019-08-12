@@ -1,0 +1,15 @@
+site_name: 'yasio docs'
+
+site_description: 'yasio docs'
+
+site_url: https://yasio-docs.rtfd.io/
+
+repo_url: https://github.com/halx99/yasio
+
+markdown_extensions:
+  - admonition
+  - smarty
+  - sane_lists
+  - mdx_math
+
+docs_dir: 'docs'

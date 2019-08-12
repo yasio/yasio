@@ -80,17 +80,17 @@ enum
   YOPT_DNS_CACHE_TIMEOUT,
   YOPT_DEFER_EVENT,
   YOPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
-  YOPT_RESOLV_FUNCTION,
+  YOPT_RESOLV_FN,
   YOPT_LOG_FILE,
-  YOPT_LFBFD_PARAMS, // length field based frame decode params
   YOPT_IO_EVENT_CALLBACK,
-  YOPT_DECODE_FRAME_LENGTH_FUNCTION, // Native C++ ONLY
-  YOPT_CHANNEL_LOCAL_PORT,           // Sets channel local port
+  YOPT_NO_NEW_THREAD, // Don't start a new thread to run event loop
+  YOPT_CONSOLE_PRINT_FN,
+  YOPT_CHANNEL_LFBFD_FN, // length field based frame decode function, Native C++ ONLY
+  YOPT_CHANNEL_LFBFD_PARAMS,
+  YOPT_CHANNEL_LOCAL_PORT, // Sets channel local port
   YOPT_CHANNEL_REMOTE_HOST,
   YOPT_CHANNEL_REMOTE_PORT,
   YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
-  YOPT_NO_NEW_THREAD,           // Don't start a new thread to run event loop
-  YOPT_CONSOLE_PRINT_FUNCTION,
 };
 
 // channel mask
@@ -222,7 +222,13 @@ struct io_base
 
 class io_channel : public io_base
 {
+  friend class io_service;
+
 public:
+  io_service &get_service() { return deadline_timer_.service_; }
+  inline int index() { return index_; }
+
+private:
   YASIO__DECL io_channel(io_service &service);
 
   inline void setup_hostent(std::string host, u_short port)
@@ -231,10 +237,11 @@ public:
     setup_port(port);
   }
 
-  io_service &get_service() { return deadline_timer_.service_; }
-
   YASIO__DECL void setup_host(std::string host);
   YASIO__DECL void setup_port(u_short port);
+
+  // -1 indicate failed, connection will be closed
+  YASIO__DECL int __builtin_decode_len(void *ptr, int len);
 
   u_short mask_ = 0;
   // specific local port, if not zero, tcp/udp client will use it as fixed port
@@ -253,6 +260,15 @@ public:
 
   // The deadline timer for resolve & connect
   deadline_timer deadline_timer_;
+
+  struct __unnamed02
+  {
+    int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=0
+    int length_field_length = 4;  // 1,2,3,4
+    int length_adjustment   = 0;
+    int max_frame_length    = SZ(10, M);
+  } lfb_;
+  decode_len_fn_t decode_len_;
 };
 
 class io_transport_base : public io_base
@@ -263,7 +279,7 @@ public:
   bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
-  int channel_index() const { return ctx_->index_; }
+  int channel_index() const { return ctx_->index(); }
   int status() const { return error_; }
   inline std::vector<char> take_packet()
   {
@@ -273,7 +289,7 @@ public:
 
   io_service &get_service() { return ctx_->get_service(); }
 
-protected:
+private:
   virtual void send(std::vector<char> data) = 0;
   virtual int recv(int &error)              = 0;
 
@@ -306,7 +322,7 @@ public:
   io_transport_posix(io_channel *ctx, std::shared_ptr<xxsocket> sock) : io_transport_base(ctx, sock)
   {}
 
-protected:
+private:
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int &error) override;
   YASIO__DECL bool flush(long long &max_wait_duration) override;
@@ -320,7 +336,7 @@ public:
   YASIO__DECL io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock);
   YASIO__DECL ~io_transport_kcp();
 
-protected:
+private:
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int &error) override;
   YASIO__DECL bool flush(long long &max_wait_duration) override;
@@ -421,8 +437,8 @@ public:
              YOPT_DNS_CACHE_TIMEOUT timeout:int
              YOPT_DEFER_EVENT       defer:int
              YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
-             YOPT_RESOLV_FUNCTION   func:resolv_fn_t*
-             YOPT_LFBFD_PARAMS      max_frame_length:int, length_field_offst:int,
+             YOPT_RESOLV_FN   func:resolv_fn_t*
+             YOPT_CHANNEL_LFBFD_PARAMS    index:int, max_frame_length:int, length_field_offst:int,
                                     length_field_length:int, length_adjustment:int
              YOPT_IO_EVENT_CALLBACK func:io_event_callback_t*
              YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
@@ -464,8 +480,6 @@ public:
 
   YASIO__DECL int __builtin_resolv(std::vector<ip::endpoint> &endpoints, const char *hostname,
                                    unsigned short port = 0);
-  // -1 indicate failed, connection will be closed
-  YASIO__DECL int __builtin_decode_len(void *ptr, int len);
 
 private:
   YASIO__DECL void schedule_timer(deadline_timer *, timer_cb_t &);
@@ -604,19 +618,10 @@ private:
       int probs    = 10;
     } tcp_keepalive_;
 
-    struct __unnamed02
-    {
-      int length_field_offset = 0; // -1: directly, >= 0: store as 1~4bytes integer, default value=0
-      int length_field_length = 4; // 1,2,3,4
-      int length_adjustment   = 0;
-      int max_frame_length    = SZ(10, M);
-    } lfb_;
     int outf_           = -1;
     int outf_max_size_  = SZ(5, M);
     bool no_new_thread_ = false;
 
-    // The decode frame length function
-    decode_len_fn_t decode_len_;
     // The resolve function
     resolv_fn_t resolv_;
     // the event callback

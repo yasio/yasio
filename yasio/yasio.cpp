@@ -280,6 +280,8 @@ io_channel::io_channel(io_service &service) : deadline_timer_(service)
   socket_.reset(new xxsocket());
   state_             = YCS_CLOSED;
   dns_queries_state_ = YDQS_FAILED;
+
+  decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
 void io_channel::setup_host(std::string host)
@@ -312,6 +314,43 @@ void io_channel::setup_port(u_short port)
       for (auto &ep : this->endpoints_)
         ep.port(port);
   }
+}
+
+int io_channel::__builtin_decode_len(void *ud, int n)
+{
+  if (lfb_.length_field_offset >= 0)
+  {
+    if (n >= (lfb_.length_field_offset + lfb_.length_field_length))
+    {
+      int32_t length = -1;
+      switch (lfb_.length_field_length)
+      {
+        case 4:
+          length =
+              ntohl(*reinterpret_cast<int32_t *>((unsigned char *)ud + lfb_.length_field_offset)) +
+              lfb_.length_adjustment;
+          break;
+        case 3:
+          length = 0;
+          memcpy(&length, (unsigned char *)ud + lfb_.length_field_offset, 3);
+          length = (ntohl(length) >> 8) + lfb_.length_adjustment;
+          break;
+        case 2:
+          length =
+              ntohs(*reinterpret_cast<uint16_t *>((unsigned char *)ud + lfb_.length_field_offset)) +
+              lfb_.length_adjustment;
+          break;
+        case 1:
+          length = *((unsigned char *)ud + lfb_.length_field_offset) + lfb_.length_adjustment;
+          break;
+      }
+      if (length > lfb_.max_frame_length)
+        length = -1;
+      return length;
+    }
+    return 0;
+  }
+  return n;
 }
 
 // -------------------- io_transport_base ---------------------
@@ -459,8 +498,6 @@ io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 
   maxfdp_ = 0;
 
-  options_.decode_len_ = [=](void *ptr, int len) { return this->__builtin_decode_len(ptr, len); };
-
   options_.resolv_ = [=](std::vector<ip::endpoint> &eps, const char *host, unsigned short port) {
     return this->__builtin_resolv(eps, host, port);
   };
@@ -478,7 +515,7 @@ io_service::~io_service()
 
   if (options_.outf_ != -1)
     ::close(options_.outf_);
-  options_.decode_len_    = nullptr;
+
   options_.resolv_        = nullptr;
   options_.console_print_ = nullptr;
 }
@@ -1200,7 +1237,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &
 #endif
       if (transport->expected_packet_size_ == -1)
       { // decode length
-        int length = options_.decode_len_(transport->buffer_, transport->offset_ + n);
+        int length = transport->ctx_->decode_len_(transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
           transport->expected_packet_size_ = length;
@@ -1519,44 +1556,6 @@ int io_service::__builtin_resolv(std::vector<ip::endpoint> &endpoints, const cha
   return -1;
 }
 
-int io_service::__builtin_decode_len(void *ud, int n)
-{
-  if (options_.lfb_.length_field_offset >= 0)
-  {
-    if (n >= (options_.lfb_.length_field_offset + options_.lfb_.length_field_length))
-    {
-      int32_t length = -1;
-      switch (options_.lfb_.length_field_length)
-      {
-        case 4:
-          length = ntohl(*reinterpret_cast<int32_t *>((unsigned char *)ud +
-                                                      options_.lfb_.length_field_offset)) +
-                   options_.lfb_.length_adjustment;
-          break;
-        case 3:
-          length = 0;
-          memcpy(&length, (unsigned char *)ud + options_.lfb_.length_field_offset, 3);
-          length = (ntohl(length) >> 8) + options_.lfb_.length_adjustment;
-          break;
-        case 2:
-          length = ntohs(*reinterpret_cast<uint16_t *>((unsigned char *)ud +
-                                                       options_.lfb_.length_field_offset)) +
-                   options_.lfb_.length_adjustment;
-          break;
-        case 1:
-          length = *((unsigned char *)ud + options_.lfb_.length_field_offset) +
-                   options_.lfb_.length_adjustment;
-          break;
-      }
-      if (length > options_.lfb_.max_frame_length)
-        length = -1;
-      return length;
-    }
-    return 0;
-  }
-  return n;
-}
-
 void io_service::interrupt() { interrupter_.interrupt(); }
 
 const char *io_service::strerror(int error)
@@ -1614,7 +1613,7 @@ void io_service::set_option(int option, ...)
       options_.tcp_keepalive_.interval = va_arg(ap, int);
       options_.tcp_keepalive_.probs    = va_arg(ap, int);
       break;
-    case YOPT_RESOLV_FUNCTION:
+    case YOPT_RESOLV_FN:
       options_.resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
     case YOPT_LOG_FILE:
@@ -1624,24 +1623,35 @@ void io_service::set_option(int option, ...)
       if (options_.outf_ != -1)
         ::lseek(options_.outf_, 0, SEEK_END);
       break;
-    case YOPT_LFBFD_PARAMS:
-      options_.lfb_.max_frame_length    = va_arg(ap, int);
-      options_.lfb_.length_field_offset = va_arg(ap, int);
-      options_.lfb_.length_field_length = va_arg(ap, int);
-      options_.lfb_.length_adjustment   = va_arg(ap, int);
+    case YOPT_CHANNEL_LFBFD_PARAMS: {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+      {
+        auto ctx                      = this->channels_[index];
+        ctx->lfb_.max_frame_length    = va_arg(ap, int);
+        ctx->lfb_.length_field_offset = va_arg(ap, int);
+        ctx->lfb_.length_field_length = va_arg(ap, int);
+        ctx->lfb_.length_adjustment   = va_arg(ap, int);
+      }
       break;
+    }
+
     case YOPT_IO_EVENT_CALLBACK:
       options_.on_event_ = std::move(*va_arg(ap, io_event_cb_t *));
       break;
-    case YOPT_DECODE_FRAME_LENGTH_FUNCTION:
-      options_.decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
-      break;
+    case YOPT_CHANNEL_LFBFD_FN: {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+        this->channels_[index]->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t *));
+    }
+    break;
     case YOPT_CHANNEL_LOCAL_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
+      break;
     }
-    break;
+
     case YOPT_CHANNEL_REMOTE_HOST: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
@@ -1671,7 +1681,7 @@ void io_service::set_option(int option, ...)
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_CONSOLE_PRINT_FUNCTION:
+    case YOPT_CONSOLE_PRINT_FN:
       this->options_.console_print_ = std::move(*va_arg(ap, console_print_fn_t *));
       break;
   }

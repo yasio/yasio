@@ -261,7 +261,7 @@ private:
   // The deadline timer for resolve & connect
   deadline_timer deadline_timer_;
 
-  struct __unnamed02
+  struct __unnamed01
   {
     int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=0
     int length_field_length = 4;  // 1,2,3,4

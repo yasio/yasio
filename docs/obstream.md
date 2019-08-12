@@ -1,4 +1,5 @@
-# 二进制写入流，写入数值类型时自动转换为网络字节序
+# obstream
+二进制写入流，写入数值类型时自动转换为网络字节序
 
 ## Encode Number
 write_i8,write_i16,write_i24,write_i32,write_i64位有符号整数编码，函数名中的数字代表整数长度位数(bits), write_i8相当于向stream写入一个字节数据；同样的无符号整数write_u8,write_u16等。

@@ -1,4 +1,6 @@
+# io_event
 网络事件回调返回此对象
+
 ##  kind
 int kind()  
 功能：获取事件类型  

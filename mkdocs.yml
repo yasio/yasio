@@ -1,6 +1,6 @@
-site_name: 'yasio docs'
+site_name: 'yasio-docs'
 
-site_description: 'yasio docs'
+site_description: 'The documentation of yasio'
 
 site_url: https://yasio-docs.rtfd.io/
 

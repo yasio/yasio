@@ -32,8 +32,8 @@ void yasio_echo_server(const char *ip, u_short port)
 
 int main(int argc, char **argv)
 {
-  if (argc >= 2)
-    yasio_echo_server(argv[0], atoi(argv[1]));
+  if (argc > 2)
+    yasio_echo_server(argv[1], atoi(argv[2]));
   return 0;
 }
 ```

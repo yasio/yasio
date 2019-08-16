@@ -14,8 +14,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../
 
 LOCAL_SRC_FILES := ../../xxsocket.cpp \
     ../../yasio.cpp \
-    ../../ibinarystream.cpp \
-    ../../obinarystream.cpp
+    ../../ibstream.cpp \
+    ../../obstream.cpp
 
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
 

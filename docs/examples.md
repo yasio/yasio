@@ -2,7 +2,7 @@
 
 ## udp echo server
 ```c++
-#include "yasio/yasio.h"
+#include "yasio/yasio.hpp"
 
 using namespace yasio::inet;
 
@@ -15,7 +15,7 @@ void yasio_echo_server(const char *ip, u_short port)
   deadline_timer starter(udp_server);
   starter.expires_from_now(std::chrono::seconds(1));
   starter.async_wait([&](bool) {
-    udp_server.set_option(YOPT_LFBFD_PARAMS, 65535, -1, 0, 0);
+    udp_server.set_option(YOPT_CHANNEL_LFBFD_PARAMS, 0, 65535, -1, 0, 0);
     udp_server.open(0, YCM_UDP_SERVER);
   });
 

@@ -223,7 +223,8 @@ struct io_base
 class io_channel : public io_base
 {
   friend class io_service;
-
+  friend class io_transport_posix;
+    
 public:
   io_service &get_service() { return deadline_timer_.service_; }
   inline int index() { return index_; }

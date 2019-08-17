@@ -410,13 +410,16 @@ bool io_transport_posix::flush(long long &max_wait_duration)
         outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
       }
       else
-      { // n <= 0, TODO: add time
+      { // n <= 0
         int error = xxsocket::get_last_errno();
         if (SHOULD_CLOSE_1(n, error))
         {
-          set_last_errno(error);
-          offset_ = n;
-          break;
+          if (((ctx_->mask_ & YCM_UDP) == 0) || error != EPERM)
+          { // Fix issue: #126, simply ignore EPERM for UDP
+            set_last_errno(error);
+            offset_ = n;
+            break;
+          }
         }
       }
     }

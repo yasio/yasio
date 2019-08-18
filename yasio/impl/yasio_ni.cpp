@@ -154,11 +154,8 @@ YASIO_NI_API void yasio_set_option(int opt, const char *params)
         *e = ch;
       });
       service->set_option(opt, args[0], args[1], args[2], args[3], args[4]);
-    }
-    break;
-    case YOPT_LOG_FILE:
-      service->set_option(opt, params);
       break;
+    }
     case YOPT_DNS_CACHE_TIMEOUT:
       service->set_option(opt, atoi(params));
       break;
@@ -184,10 +181,10 @@ YASIO_NI_API void yasio_dispatch_events(int maxEvents)
 YASIO_NI_API void yasio_stop() { yasio_shared_service->stop_service(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
-YASIO_NI_API void yasio_set_console_print_fn(void (*console_print_fn)(const char *))
+YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char *))
 {
-  yasio::inet::console_print_fn_t console_print = console_print_fn;
-  yasio_shared_service->set_option(YOPT_CONSOLE_PRINT_FN, &console_print);
+  yasio::inet::print_fn_t custom_print = print_fn;
+  yasio_shared_service->set_option(YOPT_PRINT_FN, &custom_print);
 }
 YASIO_NI_API void yasio_memcpy(void *dst, const void *src, unsigned int len)
 {

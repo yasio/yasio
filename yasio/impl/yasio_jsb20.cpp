@@ -1314,30 +1314,26 @@ bool js_yasio_io_service_set_option(se::State &s)
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
                               args[4].toInt32(), args[5].toInt32());
           break;
-        case YOPT_RESOLV_FN: // jsb does not support set custom
-                             // resolv function
+        case YOPT_IO_EVENT_CB: {
+          se::Value jsThis(s.thisObject());
+          se::Value jsFunc(args[1]);
+          jsThis.toObject()->attachObject(jsFunc.toObject());
+          io_event_cb_t callback = [=](inet::event_ptr event) {
+            se::ValueArray invokeArgs;
+            invokeArgs.resize(1);
+            native_ptr_to_seval<io_event>(event.release(), &invokeArgs[0]);
+            se::Object *thisObj = jsThis.isObject() ? jsThis.toObject() : nullptr;
+            se::Object *funcObj = jsFunc.toObject();
+            bool succeed        = funcObj->call(invokeArgs, thisObj);
+            if (!succeed)
+            {
+              se::ScriptEngine::getInstance()->clearException();
+            }
+          };
+          service->set_option(opt, std::addressof(callback));
           break;
-        case YOPT_IO_EVENT_CB:
-          (void)0;
-          {
-            se::Value jsThis(s.thisObject());
-            se::Value jsFunc(args[1]);
-            jsThis.toObject()->attachObject(jsFunc.toObject());
-            io_event_cb_t callback = [=](inet::event_ptr event) {
-              se::ValueArray invokeArgs;
-              invokeArgs.resize(1);
-              native_ptr_to_seval<io_event>(event.release(), &invokeArgs[0]);
-              se::Object *thisObj = jsThis.isObject() ? jsThis.toObject() : nullptr;
-              se::Object *funcObj = jsFunc.toObject();
-              bool succeed        = funcObj->call(invokeArgs, thisObj);
-              if (!succeed)
-              {
-                se::ScriptEngine::getInstance()->clearException();
-              }
-            };
-            service->set_option(opt, std::addressof(callback));
-          }
-          break;
+        }
+
         default:
           service->set_option(opt, args[1].toInt32());
       }
@@ -1461,8 +1457,6 @@ bool jsb_register_yasio(se::Object *obj)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
-  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
   YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);

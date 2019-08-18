@@ -50,7 +50,7 @@ opt: 选项枚举，取值有:
   + yasio.YOPT_RECONNECT_TIMEOUT: 设置重连超时时间, -1: 不自动重连 > 0: 当连接断开后指定超时时间后自动重连
   + yasio.YOPT_DNS_CACHE_TIMEOUT: 设置域名解析缓存时间超时, 默认10分钟
   + yasio.YOPT_TCP_KEEPALIVE: 设置tcp协议keepalive参数，例如```tcpclient:set_option(yasio.YOPT_TCP_KEEPALIVE, 60, 10, 3)```, 60是发送底层协议心跳的空闲等待时间，10是发送心跳间隔, 3是未收到对方回应心跳重试次数
-  + yasio.YOPT_LOG_FILE: 设置网络日志存储路径
+  + yasio.YOPT_PRINT_FN: 设置网络日志自定义打印函数，注意函数必须是线程安全的
   + yasio.YOPT_IO_EVENT_CB: 设置网络事件回调
   + yasio.YOPT_CHANNEL_LOCAL_PORT: 设置信道本地端口, 例如```tcpclient:set_option(yasio.YOPT_CHANNEL_LOCAL_PORT, 0, 20191)```, 0是信道索引, 20191是端口
   + yasio.YOPT_CHANNEL_REMOTE_HOST: 设置信道远程域名/ip, 参数顺序为: 信道索引, 远程域名/ip
@@ -67,7 +67,7 @@ tcpclient:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS,
     0 -- lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
 )
 -- 对于没有包长度字段设计的协议，例如http， 设置包长度字段为-1， 那么底层服务收到多少字节就会传回给上层多少字节
-httpclient:set_option(yasio.YOPT_LFBFD_PARAMS, 65535, -1, 0, 0)
+httpclient:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 0, 65535, -1, 0, 0)
 ```
 
 ## open

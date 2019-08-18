@@ -89,6 +89,7 @@ namespace yasio
 {
 namespace inet
 {
+YASIO__NS_INLINE
 namespace ip
 {
 namespace compat

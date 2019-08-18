@@ -236,11 +236,11 @@ public static extern void yasio_stop();
 public static extern long yasio_highp_time();
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern long yasio_set_console_print_fn(YNIPrintDelegate callback);
+public static extern long yasio_set_print_fn(YNIPrintDelegate callback);
 ```
 
 ## Remote Debug based on TCP
-典型的基于TCP的服务端客户端远程调试示例，使用yasio的io_servcie实现，调试后端和调试前端无需自己开线程，直接使用服务线程处理调试协议即可，默认yasio内部TCP拆包会以消息初始4字节作为长度域。协议头一般定义为如下方式即可：
+典型的基于TCP的服务端客户端远程调试示例，使用yasio的io_servcie实现，调试后端和调试前端无需自己开线程，直接使用服务线程处理调试协议即可。协议头一般定义为如下方式即可：
 ```C++
 // odbk_proto_header
 struct odbk_proto_header {

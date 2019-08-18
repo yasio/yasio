@@ -55,8 +55,6 @@ void yasioTest()
 
   std::vector<transport_ptr> transports;
 
-  service.set_option(YOPT_LOG_FILE, "yasio.log");
-
   deadline_timer udpconn_delay(service);
   deadline_timer udp_heartbeat(service);
   int total_bytes_transferred = 0;

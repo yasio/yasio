@@ -1726,28 +1726,23 @@ bool js_yasio_io_service_set_option(JSContext *ctx, uint32_t argc, jsval *vp)
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
                               args[4].toInt32(), args[5].toInt32());
           break;
-        case YOPT_RESOLV_FN: // jsb does not support set custom
-                             // resolv function
+        case YOPT_IO_EVENT_CB: {
+          JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
+          std::shared_ptr<JSFunctionWrapper> func(
+              new JSFunctionWrapper(ctx, jstarget, args[1], args.thisv()));
+          io_event_cb_t callback = [=](inet::event_ptr event) {
+            JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
+            jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
+            JS::RootedValue rval(ctx);
+            bool succeed = func->invoke(1, &jevent, &rval);
+            if (!succeed && JS_IsExceptionPending(ctx))
+            {
+              JS_ReportPendingException(ctx);
+            }
+          };
+          service->set_option(opt, std::addressof(callback));
           break;
-        case YOPT_IO_EVENT_CB:
-          (void)0;
-          {
-            JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
-            std::shared_ptr<JSFunctionWrapper> func(
-                new JSFunctionWrapper(ctx, jstarget, args[1], args.thisv()));
-            io_event_cb_t callback = [=](inet::event_ptr event) {
-              JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
-              jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
-              JS::RootedValue rval(ctx);
-              bool succeed = func->invoke(1, &jevent, &rval);
-              if (!succeed && JS_IsExceptionPending(ctx))
-              {
-                JS_ReportPendingException(ctx);
-              }
-            };
-            service->set_option(opt, std::addressof(callback));
-          }
-          break;
+        }
         default:
           service->set_option(opt, args[1].toInt32());
       }
@@ -1890,8 +1885,6 @@ void jsb_register_yasio(JSContext *ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
-  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
   YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);

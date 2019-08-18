@@ -81,10 +81,9 @@ enum
   YOPT_DEFER_EVENT,
   YOPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   YOPT_RESOLV_FN,
-  YOPT_LOG_FILE,
+  YOPT_PRINT_FN,
   YOPT_IO_EVENT_CB,
-  YOPT_NO_NEW_THREAD, // Don't start a new thread to run event loop
-  YOPT_CONSOLE_PRINT_FN,
+  YOPT_NO_NEW_THREAD,    // Don't start a new thread to run event loop
   YOPT_CHANNEL_LFBFD_FN, // length field based frame decode function, Native C++ ONLY
   YOPT_CHANNEL_LFBFD_PARAMS,
   YOPT_CHANNEL_LOCAL_PORT, // Sets channel local port
@@ -143,7 +142,7 @@ typedef std::pair<deadline_timer *, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr)> io_event_cb_t;
 typedef std::function<int(void *ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint> &, const char *, unsigned short)> resolv_fn_t;
-typedef std::function<void(const char *)> console_print_fn_t;
+typedef std::function<void(const char *)> print_fn_t;
 
 // The high precision micro seconds timestamp
 template <typename _T = highp_clock_t> inline long long highp_clock()
@@ -224,7 +223,7 @@ class io_channel : public io_base
 {
   friend class io_service;
   friend class io_transport_posix;
-    
+
 public:
   io_service &get_service() { return deadline_timer_.service_; }
   inline int index() { return index_; }
@@ -439,6 +438,7 @@ public:
              YOPT_DEFER_EVENT       defer:int
              YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              YOPT_RESOLV_FN   func:resolv_fn_t*
+             YOPT_PRINT_FN func:print_fn_t, native only, you must ensure thread safe of it.
              YOPT_CHANNEL_LFBFD_PARAMS    index:int, max_frame_length:int, length_field_offst:int,
                                     length_field_length:int, length_adjustment:int
              YOPT_IO_EVENT_CB func:io_event_callback_t*
@@ -619,16 +619,14 @@ private:
       int probs    = 10;
     } tcp_keepalive_;
 
-    int outf_           = -1;
-    int outf_max_size_  = SZ(5, M);
     bool no_new_thread_ = false;
 
     // The resolve function
     resolv_fn_t resolv_;
     // the event callback
     io_event_cb_t on_event_;
-    // The console print function
-    console_print_fn_t console_print_;
+    // The custom debug print function
+    print_fn_t print_;
   } options_;
 
   // The ip stack version supported by local host

@@ -134,9 +134,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
                                 static_cast<int>(va[2]), static_cast<int>(va[3]),
                                 static_cast<int>(va[4]));
             break;
-            // lua does not support set custom resolv function
-          case YOPT_RESOLV_FN:
-            break;
           case YOPT_IO_EVENT_CB:
             (void)0;
             {
@@ -238,8 +235,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
-  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
   YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
@@ -392,8 +387,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
                                     static_cast<int>(args[2]), static_cast<int>(args[3]),
                                     static_cast<int>(args[4]));
                 break;
-              case YOPT_RESOLV_FN:
-                break;
               case YOPT_IO_EVENT_CB:
                 (void)0;
                 {
@@ -510,8 +503,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
   YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
   YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_RESOLV_FN);
-  YASIO_EXPORT_ENUM(YOPT_LOG_FILE);
   YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
   YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);

@@ -62,23 +62,15 @@ SOFTWARE.
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
 #if defined(_WIN32)
-#  define YASIO_DEBUG_PRINT(options, msg)                                                          \
-    if (options.console_print_)                                                                    \
-      options.console_print_(msg);                                                                 \
-    else                                                                                           \
-      OutputDebugStringA(msg)
+#  define YASIO_DEBUG_PRINT(msg) OutputDebugStringA(msg)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>
-#  define YASIO_DEBUG_PRINT(options, msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
+#  define YASIO_DEBUG_PRINT(msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
 #else
-#  define YASIO_DEBUG_PRINT(options, msg)                                                          \
-    if (options.console_print_)                                                                    \
-      options.console_print_(msg);                                                                 \
-    else                                                                                           \
-      printf("%s", msg)
+#  define YASIO_DEBUG_PRINT(msg) printf("%s", msg)
 #endif
 
 #define YASIO_LOG_IMPL(options, format, ...)                                                       \
@@ -86,13 +78,10 @@ SOFTWARE.
   {                                                                                                \
     auto content =                                                                                 \
         _sfmt(("[yasio][%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);     \
-    YASIO_DEBUG_PRINT(options, content.c_str());                                                   \
-    if (options.outf_ != -1)                                                                       \
-    {                                                                                              \
-      if (::lseek(options.outf_, 0, SEEK_CUR) > options.outf_max_size_)                            \
-        ::ftruncate(options.outf_, 0), ::lseek(options.outf_, 0, SEEK_SET);                        \
-      ::write(options.outf_, content.c_str(), static_cast<int>(content.size()));                   \
-    }                                                                                              \
+    if (options.print_)                                                                            \
+      options.print_(content.c_str());                                                             \
+    else                                                                                           \
+      YASIO_DEBUG_PRINT(content.c_str());                                                          \
   } while (false)
 
 #define YASIO_LOG(format, ...) YASIO_LOG_IMPL(options_, format, ##__VA_ARGS__)
@@ -516,11 +505,8 @@ io_service::~io_service()
     ::operator delete(o);
   transports_pool_.clear();
 
-  if (options_.outf_ != -1)
-    ::close(options_.outf_);
-
-  options_.resolv_        = nullptr;
-  options_.console_print_ = nullptr;
+  options_.resolv_ = nullptr;
+  options_.print_  = nullptr;
 }
 
 void io_service::start_service(const io_hostent *channel_eps, int channel_count, io_event_cb_t cb)
@@ -1619,12 +1605,8 @@ void io_service::set_option(int option, ...)
     case YOPT_RESOLV_FN:
       options_.resolv_ = std::move(*va_arg(ap, resolv_fn_t *));
       break;
-    case YOPT_LOG_FILE:
-      if (options_.outf_ != -1)
-        ::close(options_.outf_);
-      options_.outf_ = ::open(va_arg(ap, const char *), YASIO_O_OPEN_FLAGS);
-      if (options_.outf_ != -1)
-        ::lseek(options_.outf_, 0, SEEK_END);
+    case YOPT_PRINT_FN:
+      this->options_.print_ = std::move(*va_arg(ap, print_fn_t *));
       break;
     case YOPT_CHANNEL_LFBFD_PARAMS: {
       auto index = static_cast<size_t>(va_arg(ap, int));
@@ -1683,9 +1665,6 @@ void io_service::set_option(int option, ...)
     break;
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
-      break;
-    case YOPT_CONSOLE_PRINT_FN:
-      this->options_.console_print_ = std::move(*va_arg(ap, console_print_fn_t *));
       break;
   }
 

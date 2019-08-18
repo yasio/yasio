@@ -1,6 +1,6 @@
 # yasio - *Y*et *A*nother *S*ocket *IO* service
 [![Build Status](https://travis-ci.org/halx99/yasio.svg?branch=master)](https://travis-ci.org/halx99/yasio)
-[![Release](https://img.shields.io/badge/release-v3.23.0-blue.svg)](https://github.com/halx99/yasio/releases)
+[![Release](https://img.shields.io/badge/release-v3.23.1-blue.svg)](https://github.com/halx99/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/halx99/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/halx99/yasio.svg?label=Stars)](https://github.com/halx99/yasio)
@@ -33,7 +33,7 @@ Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project
 #### common lua application integration:
 1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp``` with your project  
 2. call luaopen_yasio after LUA VM initialized.  
-luatest(windows user): open [luatest.xsxproj](https://github.com/halx99/yasio/blob/master/msvc/luatest/luatest.xsxproj) by x-studio365 IDE  
+luatest(windows user): please download [luatest.zip](https://github.com/halx99/yasio/releases), extract it then open ```luatest.xsxproj``` by x-studio365 IDE  
   
 #### cocos2d-x lua integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external```  

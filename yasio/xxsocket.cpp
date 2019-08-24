@@ -546,7 +546,7 @@ static int getipsv_internal(void)
   if (getifaddrs(&ifaddr) == -1)
   {
     perror("getifaddrs");
-    exit(EXIT_FAILURE);
+    return ipsv_ipv4;
   }
 
   endpoint ep;

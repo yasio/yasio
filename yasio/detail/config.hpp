@@ -32,6 +32,9 @@ SOFTWARE.
 // Uncomment or add -DYASIO_HEADER_ONLY to enable yasio core implementation header only
 // #define YASIO_HEADER_ONLY 1
 
+// Define YASIO_VERBOS_LOG to 1 enable verbos log
+#define YASIO_VERBOS_LOG 0
+
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
 #else
@@ -44,6 +47,27 @@ SOFTWARE.
 #else
 #  define YASIO__HAVE_NS_INLINE 1
 #  define YASIO__NS_INLINE inline
+#endif
+
+#if defined(_WIN32)
+#  include "strfmt.hpp"
+#  define YASIO_LOG(format, ...)                                                                   \
+    OutputDebugStringA(yasio::_sfmt(("%s" format), "[yasio]", ##__VA_ARGS__).c_str())
+#  pragma warning(push)
+#  pragma warning(disable : 6320 6322 4996)
+#elif defined(ANDROID) || defined(__ANDROID__)
+#  include <android/log.h>
+#  include <jni.h>
+#  define YASIO_LOG(format, ...)                                                                   \
+    __android_log_print(ANDROID_LOG_INFO, "yasio", ("%s" format), "[yasio]", ##__VA_ARGS__)
+#else
+#  define YASIO_LOG(format, ...) printf(("%s" format), "[yasio]", ##__VA_ARGS__)
+#endif
+
+#if !YASIO_VERBOS_LOG
+#  define YASIO_LOGV(fmt, ...) (void)0
+#else
+#  define YASIO_LOGV YASIO_LOG
 #endif
 
 #endif

@@ -40,8 +40,7 @@ SOFTWARE.
 #  include "kcp/ikcp.h"
 #endif
 #include <limits>
-#include <stdarg.h>
-#include <string>
+#include "yasio/detail/strfmt.hpp"
 #if defined(_WIN32)
 #  include <io.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR | O_BINARY, S_IWRITE | S_IREAD
@@ -54,37 +53,23 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define _YASIO_VERBOS_LOG 0
 #define YASIO_SOMAXCONN 19
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 /* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
  * field. */
 #define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
 
-#if defined(_WIN32)
-#  define YASIO_DEBUG_PRINT(msg) OutputDebugStringA(msg)
-#  pragma warning(push)
-#  pragma warning(disable : 6320 6322 4996)
-#elif defined(ANDROID) || defined(__ANDROID__)
-#  include <android/log.h>
-#  include <jni.h>
-#  define YASIO_DEBUG_PRINT(msg) __android_log_print(ANDROID_LOG_INFO, "yasio", "%s", msg)
-#else
-#  define YASIO_DEBUG_PRINT(msg) printf("%s", msg)
-#endif
-
-#define YASIO_LOG_IMPL(options, format, ...)                                                       \
+#define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
   {                                                                                                \
-    auto content =                                                                                 \
-        _sfmt(("[yasio][%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);     \
+    auto content = _sfmt(("[%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__); \
     if (options.print_)                                                                            \
       options.print_(content.c_str());                                                             \
     else                                                                                           \
-      YASIO_DEBUG_PRINT(content.c_str());                                                          \
+      YASIO_LOG("%s", content.c_str());                                                            \
   } while (false)
 
-#define YASIO_LOG(format, ...) YASIO_LOG_IMPL(options_, format, ##__VA_ARGS__)
+#define YASIO_SLOG(format, ...) YASIO_SLOG_IMPL(options_, format, ##__VA_ARGS__)
 
 namespace yasio
 {
@@ -140,61 +125,6 @@ enum : short
 #define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
 #define YDQS_SET_STATE(what, value) (what = (what & 0xff00) | value)
 #define YDQS_GET_STATE(what) (what & 0x00ff)
-
-/*--- This is a C++ universal sprintf in the future.
- **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
- *different
- **      VS2013 or Unix-Like System will return -1 when buffer not enough, but
- *VS2015/2017 will return the actural needed length for buffer at this station
- **      The _vsnprintf behavior is compatible API which always return -1 when
- *buffer isn't enough at VS2013/2015/2017
- **      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later,
- *AND it's also standard-compliant, see reference:
- *http://www.cplusplus.com/reference/cstdio/vsnprintf/
- */
-static std::string _sfmt(const char *format, ...)
-{
-#define YASIO_VSNPRINTF_BUFFER_LENGTH 256
-  va_list args;
-  std::string buffer(YASIO_VSNPRINTF_BUFFER_LENGTH, '\0');
-
-  va_start(args, format);
-  int nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
-  va_end(args);
-
-  if (nret >= 0)
-  {
-    if ((unsigned int)nret < buffer.length())
-    {
-      buffer.resize(nret);
-    }
-    else if ((unsigned int)nret > buffer.length())
-    { // VS2015/2017 or later Visual Studio Version
-      buffer.resize(nret);
-
-      va_start(args, format);
-      nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
-      va_end(args);
-    }
-    // else equals, do nothing.
-  }
-  else
-  { // less or equal VS2013 and Unix System glibc implement.
-    do
-    {
-      buffer.resize(buffer.length() * 3 / 2);
-
-      va_start(args, format);
-      nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
-      va_end(args);
-
-    } while (nret < 0);
-
-    buffer.resize(nret);
-  }
-
-  return buffer;
-}
 
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
@@ -383,13 +313,13 @@ bool io_transport_posix::flush(long long &max_wait_duration)
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop_front();
-#if _YASIO_VERBOS_LOG
+#if YASIO_VERBOS_LOG
         auto packet_size = static_cast<int>(v->data_.size());
-        YASIO_LOG_IMPL(get_service().options_,
-                       "[index: %d] do_write ok, A packet sent "
-                       "success, packet size:%d",
-                       channel_index(), packet_size, socket_->local_endpoint().to_string().c_str(),
-                       socket_->peer_endpoint().to_string().c_str());
+        YASIO_SLOG_IMPL(get_service().options_,
+                        "[index: %d] do_write ok, A packet sent "
+                        "success, packet size:%d",
+                        channel_index(), packet_size, socket_->local_endpoint().to_string().c_str(),
+                        socket_->peer_endpoint().to_string().c_str());
 #endif
       }
       else if (n > 0)
@@ -665,7 +595,7 @@ void io_service::run()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      YASIO_LOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
+      YASIO_SLOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
         goto _L_end;
       continue; // just continue.
@@ -673,18 +603,18 @@ void io_service::run()
 
     if (nfds == 0)
     {
-#if _YASIO_VERBOS_LOG
-      YASIO_LOG("%s", "do_evpoll is timeout, do perform_timeout_timers()");
+#if YASIO_VERBOS_LOG
+      YASIO_SLOG("%s", "do_evpoll is timeout, do perform_timeout_timers()");
 #endif
     }
     // Reset the interrupter.
     else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
-#if _YASIO_VERBOS_LOG
+#if YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
-      YASIO_LOG("do_evpoll waked up by interrupt, interrupter fd:%d, "
-                "was_interrupt:%s",
-                this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
+      YASIO_SLOG("do_evpoll waked up by interrupt, interrupter fd:%d, "
+                 "was_interrupt:%s",
+                 this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
 #else
       interrupter_.reset();
 #endif
@@ -741,8 +671,8 @@ void io_service::perform_channels(fd_set *fds_array)
               do_nonblocking_connect(ctx);
               break;
             case YDQS_FAILED:
-              YASIO_LOG("[index: %d] getaddrinfo failed, ec:%d, detail:%s", ctx->index_,
-                        ctx->error_, xxsocket::gai_strerror(ctx->error_));
+              YASIO_SLOG("[index: %d] getaddrinfo failed, ec:%d, detail:%s", ctx->index_,
+                         ctx->error_, xxsocket::gai_strerror(ctx->error_));
               handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
               break;
             default:; // YDQS_INPRROGRESS
@@ -831,7 +761,7 @@ void io_service::open(size_t channel_index, int channel_mask)
     see:
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
   */
-    YASIO_LOG(
+    YASIO_SLOG(
         "[index: %d], YCM_UDP_SERVER does'n supported by Microsoft Winsock provider, you can use "
         "YCM_UDP_CLIENT to communicate with peer!",
         channel_index);
@@ -859,8 +789,8 @@ void io_service::handle_close(transport_ptr transport)
   auto ctx = ptr->ctx_;
   auto ec  = ptr->error_;
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_LOG("[index: %d] the connection #%u is lost, offset:%d, ec:%d, detail:%s", ctx->index_,
-            ptr->id_, ptr->offset_, ec, io_service::strerror(ec));
+  YASIO_SLOG("[index: %d] the connection #%u is lost, offset:%d, ec:%d, detail:%s", ctx->index_,
+             ptr->id_, ptr->offset_, ec, io_service::strerror(ec));
 
   cleanup_io(ptr);
 
@@ -931,7 +861,7 @@ int io_service::write(transport_ptr transport, std::vector<char> data)
   }
   else
   {
-    YASIO_LOG("[transport: %p] send failed, the connection not ok!", transport);
+    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", transport);
     return -1;
   }
 }
@@ -965,7 +895,7 @@ void io_service::do_nonblocking_connect(io_channel *ctx)
 
   ctx->state_ = YCS_OPENING;
   auto &ep    = ctx->endpoints_[0];
-  YASIO_LOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(), ctx->port_);
+  YASIO_SLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(), ctx->port_);
   int ret = -1;
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
@@ -1041,8 +971,8 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
-      YASIO_LOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
-                io_service::strerror(error));
+      YASIO_SLOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+                 io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = YCS_CLOSED;
       return;
@@ -1053,13 +983,13 @@ void io_service::do_nonblocking_accept(io_channel *ctx)
       ctx->state_ = YCS_OPENED;
       ctx->socket_->set_nonblocking(true);
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-      YASIO_LOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
+      YASIO_SLOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
     else
     {
       error = xxsocket::get_last_errno();
-      YASIO_LOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-                io_service::strerror(error));
+      YASIO_SLOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
+                 io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = YCS_CLOSED;
     }
@@ -1086,7 +1016,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
             handle_connect_succeed(ctx, std::move(client_sock));
           }
           else
-            YASIO_LOG("%s", "tcp-server: accept client socket fd failed!");
+            YASIO_SLOG("%s", "tcp-server: accept client socket fd failed!");
         }
         else // YCM_UDP
         {
@@ -1096,7 +1026,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
           int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
           if (n > 0)
           {
-            YASIO_LOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
+            YASIO_SLOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
 
             // make a transport local --> peer udp session, just like tcp accept
             std::shared_ptr<xxsocket> client_sock(new xxsocket());
@@ -1115,14 +1045,14 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
                                            std::vector<char>(buffer, buffer + n), transport)));
               }
               else
-                YASIO_LOG("%s", "udp-server: open socket fd failed!");
+                YASIO_SLOG("%s", "udp-server: open socket fd failed!");
             }
           }
         }
       }
       else
       {
-        YASIO_LOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
+        YASIO_SLOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
         cleanup_io(ctx);
       }
     }
@@ -1149,9 +1079,9 @@ void io_service::handle_connect_succeed(transport_ptr transport)
                                 options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
   }
 
-  YASIO_LOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
-            transport->id_, connection->local_endpoint().to_string().c_str(),
-            connection->peer_endpoint().to_string().c_str());
+  YASIO_SLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
+             transport->id_, connection->local_endpoint().to_string().c_str(),
+             connection->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }
 
@@ -1185,8 +1115,8 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
 
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 
-  YASIO_LOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
-            ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
+  YASIO_SLOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
+             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
 bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &max_wait_duration)
@@ -1209,19 +1139,19 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &
     }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
-#if _YASIO_VERBOS_LOG
-      YASIO_LOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
-                error, io_service::strerror(error));
+#if YASIO_VERBOS_LOG
+      YASIO_SLOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
+                 error, io_service::strerror(error));
 #endif
       if (n == -1)
         n = 0;
-#if _YASIO_VERBOS_LOG
+#if YASIO_VERBOS_LOG
       if (n > 0)
       {
-        YASIO_LOG("[index: %d] do_read ok, received data len: %d, "
-                  "buffer data "
-                  "len: %d",
-                  transport->channel_index(), n, n + transport->offset_);
+        YASIO_SLOG("[index: %d] do_read ok, received data len: %d, "
+                   "buffer data "
+                   "len: %d",
+                   transport->channel_index(), n, n + transport->offset_);
       }
 #endif
       if (transport->expected_packet_size_ == -1)
@@ -1288,10 +1218,10 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
-#if _YASIO_VERBOS_LOG
-    YASIO_LOG("[index: %d] received a properly packet from peer, "
-              "packet size:%d",
-              transport->channel_index(), transport->expected_packet_size_);
+#if YASIO_VERBOS_LOG
+    YASIO_SLOG("[index: %d] received a properly packet from peer, "
+               "packet size:%d",
+               transport->channel_index(), transport->expected_packet_size_);
 #endif
     this->handle_event(event_ptr(
         new io_event(transport->channel_index(), YEK_PACKET, transport->take_packet(), transport)));
@@ -1344,7 +1274,7 @@ void io_service::open_internal(io_channel *ctx, bool ignore_state)
 {
   if (ctx->state_ == YCS_OPENING && !ignore_state)
   { // in-opening, do nothing
-    YASIO_LOG("[index: %d] the channel is in opening!", ctx->index_);
+    YASIO_SLOG("[index: %d] the channel is in opening!", ctx->index_);
     return;
   }
 
@@ -1428,14 +1358,14 @@ but it's ok.
   {
     timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
                        (decltype(timeval::tv_usec))(wait_duration % 1000000)};
-#if _YASIO_VERBOS_LOG
-    YASIO_LOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-              timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+#if YASIO_VERBOS_LOG
+    YASIO_SLOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
+               timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
 #endif
     nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
 
-#if _YASIO_VERBOS_LOG
-    YASIO_LOG("socket.select waked up, retval=%d", nfds);
+#if YASIO_VERBOS_LOG
+    YASIO_SLOG("socket.select waked up, retval=%d", nfds);
 #endif
   }
   else
@@ -1498,7 +1428,7 @@ void io_service::start_resolve(io_channel *ctx)
   ctx->set_last_errno(EINPROGRESS);
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  YASIO_LOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());
+  YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());
 
   ctx->endpoints_.clear();
   std::thread resolv_thread([=] { // 6.563ms

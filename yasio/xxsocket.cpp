@@ -36,16 +36,16 @@ SOFTWARE.
 #  include "yasio/xxsocket.hpp"
 #endif
 
+#if !defined(_WIN32)
+#  include "yasio/detail/ifaddrs.hpp"
+#endif
+
 // For apple bsd socket implemention
 #if !defined(TCP_KEEPIDLE)
 #  define TCP_KEEPIDLE TCP_KEEPALIVE
 #endif
 
 #define TIME_GRANULARITY 1000000
-
-#if !defined(_WIN32) && !defined(ANDROID)
-#  include <ifaddrs.h>
-#endif
 
 #ifndef IN_CLASSB_NET
 #  define IN_CLASSB_NET 0xffff0000
@@ -64,11 +64,25 @@ SOFTWARE.
 #endif
 
 #ifndef IN4_IS_ADDR_LOOPBACK
-#  define IN4_IS_ADDR_LOOPBACK(paddr) IN_LOOPBACK(ntohl((paddr)->s_addr))
+#  define IN4_IS_ADDR_LOOPBACK(a) IN_LOOPBACK(ntohl((a)->s_addr))
 #endif
 
 #ifndef IN4_IS_ADDR_LINKLOCAL
-#  define IN4_IS_ADDR_LINKLOCAL(paddr) IN_LINKLOCAL(ntohl((paddr)->s_addr))
+#  define IN4_IS_ADDR_LINKLOCAL(a) IN_LINKLOCAL(ntohl((a)->s_addr))
+#endif
+
+#if !defined(_WS2IPDEF_)
+inline bool IN6_IS_ADDR_GLOBAL(const in6_addr *a)
+{
+  //
+  // Check the format prefix and exclude addresses
+  // whose high 4 bits are all zero or all one.
+  // This is a cheap way of excluding v4-compatible,
+  // v4-mapped, loopback, multicast, link-local, site-local.
+  //
+  unsigned int High = (a->s6_addr[0] & 0xf0);
+  return ((High != 0) && (High != 0xf0));
+}
 #endif
 
 #if defined(_MSC_VER)
@@ -487,8 +501,12 @@ static int inet_pton6(const char *src, u_char *dst)
 static int getipsv_internal(void)
 {
   int flags = 0;
-#if defined(_WIN32) // I test so many times, currently only windows support use getaddrinfo to get
-                    // local ip address(not loopback or linklocal)
+  int count = 0;
+  /* Only windows support use getaddrinfo to get local ip address(not loopback or linklocal),
+    Because nullptr same as "localhost": always return loopback address and at unix/linux the
+    gethostname always return "localhost"
+    */
+#if defined(_WIN32)
   char hostname[256] = {0};
   gethostname(hostname, sizeof(hostname));
 
@@ -497,11 +515,8 @@ static int getipsv_internal(void)
   memset(&hint, 0x0, sizeof(hint));
 
   endpoint ep;
-  // nullptr same as "localhost": always return loopback address
-  // so must specific hostname
-  // @remark: only windows support, unix/linux should use getifaddrs
 #  if defined(_DEBUG)
-  printf("localhost name:%s\n", hostname);
+  YASIO_LOG("getipsv_internal: localhost=%s\n", hostname);
 #  endif
   int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
 
@@ -512,9 +527,9 @@ static int getipsv_internal(void)
     {
       memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
 
-#  if defined(_DEBUG)
-      printf("xxsocket::getipsv --- endpoint:%s\n", ep.to_string().c_str());
-#  endif
+      auto straddr = ep.to_string();
+      YASIO_LOG("getipsv_internal: endpoint=%s\n", straddr.c_str());
+      ++count;
       switch (ep.af())
       {
         case AF_INET:
@@ -522,8 +537,7 @@ static int getipsv_internal(void)
             flags |= ipsv_ipv4;
           break;
         case AF_INET6:
-          if (!IN6_IS_ADDR_LOOPBACK(&ep.in6_.sin6_addr) &&
-              !IN6_IS_ADDR_LINKLOCAL(&ep.in6_.sin6_addr))
+          if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
           {
             flags |= ipsv_ipv6;
           }
@@ -538,14 +552,14 @@ static int getipsv_internal(void)
   {
     errmsg = xxsocket::gai_strerror(iret);
   }
-#elif defined(ANDROID)
-  flags = ipsv_ipv4; // Could not found any methods to get ip currently, so fixed return ipsv_ipv4;
+// #elif defined(ANDROID)
+// flags = ipsv_ipv4; // Could not found any methods to get ip currently, so fixed return ipsv_ipv4;
 #else // __APPLE__ or complete linux support getifaddrs
   struct ifaddrs *ifaddr, *ifa;
 
   if (getifaddrs(&ifaddr) == -1)
   {
-    perror("getifaddrs");
+    YASIO_LOG("getipsv_internal: getifaddrs fail!\n");
     return ipsv_ipv4;
   }
 
@@ -558,10 +572,12 @@ static int getipsv_internal(void)
 
     ep.assign(ifa->ifa_addr);
 
-#  ifdef _DEBUG
-    auto localhost = ep.to_string();
-    printf("xxsocket::getipsv --- endpoint:%s\n", localhost.c_str());
-#  endif
+    auto straddr = ep.to_string();
+    if (!straddr.empty())
+    {
+      ++count;
+      YASIO_LOG("getipsv_internal: endpoint=%s\n", straddr.c_str());
+    }
 
     switch (ep.af())
     {
@@ -570,7 +586,7 @@ static int getipsv_internal(void)
           flags |= ipsv_ipv4;
         break;
       case AF_INET6:
-        if (!IN6_IS_ADDR_LOOPBACK(&ep.in6_.sin6_addr) && !IN6_IS_ADDR_LINKLOCAL(&ep.in6_.sin6_addr))
+        if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
         {
           flags |= ipsv_ipv6;
         }
@@ -582,6 +598,8 @@ static int getipsv_internal(void)
 
   freeifaddrs(ifaddr);
 #endif
+
+  YASIO_LOG("getipsv_internal: flags=%d, ifa_count=%d", flags, count);
 
   return flags;
 }

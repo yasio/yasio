@@ -40,13 +40,10 @@ SOFTWARE.
 #  include "kcp/ikcp.h"
 #endif
 #include <limits>
-#include "yasio/detail/strfmt.hpp"
 #if defined(_WIN32)
 #  include <io.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR | O_BINARY, S_IWRITE | S_IREAD
 #  define ftruncate _chsize
-#  pragma warning(push)
-#  pragma warning(disable : 6320 6322 4996)
 #else
 #  include <unistd.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU
@@ -72,6 +69,11 @@ SOFTWARE.
   } while (false)
 
 #define YASIO_SLOG(format, ...) YASIO_SLOG_IMPL(options_, format, ##__VA_ARGS__)
+
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable : 6320 6322 4996)
+#endif
 
 namespace yasio
 {
@@ -1605,7 +1607,7 @@ void io_service::set_option(int option, ...)
 } // namespace inet
 } // namespace yasio
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 #  pragma warning(pop)
 #endif
 

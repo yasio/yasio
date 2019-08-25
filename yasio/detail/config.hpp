@@ -50,7 +50,6 @@ SOFTWARE.
 #endif
 
 #if defined(_WIN32)
-#  include "strfmt.hpp"
 #  define YASIO_LOG(format, ...)                                                                   \
     OutputDebugStringA(yasio::_sfmt(("%s" format), "[yasio]", ##__VA_ARGS__).c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
@@ -67,5 +66,7 @@ SOFTWARE.
 #else
 #  define YASIO_LOGV YASIO_LOG
 #endif
+
+#include "strfmt.hpp"
 
 #endif

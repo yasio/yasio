@@ -504,7 +504,19 @@ using namespace yasio::inet::ip;
 class xxsocket
 {
 public:
-  // return supported internet protocols versions
+  /*
+  summary: Gets supported internet protocol versions of natvie device
+  return:
+    ipsv_unavailable: The network unavailable.
+    ipsv_ipv4: Support ipv4 only.
+    ipsv_ipv6: Support ipv6 only.
+    ipsv_dual_stack:
+      Support ipv4 or ipv6, but for multi network adapters device, you should always
+      use ipv4 preferred, such as smart phone with wifi & cellular network. The smart phone's os
+      will choose wifi when it is available to avoid consume user's cash, when the cellular support
+      ipv6/ipv4 but the wifi only support ipv4, then use ipv6 will cause network issue.
+      For more detail, see: https://github.com/halx99/yasio/issues/130
+  */
   YASIO__DECL static int getipsv(void);
 
 public: /// portable connect APIs

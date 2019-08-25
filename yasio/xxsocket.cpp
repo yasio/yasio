@@ -552,10 +552,17 @@ static int getipsv_internal(void)
   {
     errmsg = xxsocket::gai_strerror(iret);
   }
-// #elif defined(ANDROID)
-// flags = ipsv_ipv4; // Could not found any methods to get ip currently, so fixed return ipsv_ipv4;
-#else // __APPLE__ or complete linux support getifaddrs
+#else // __APPLE__ or linux with <ifaddrs.h>
   struct ifaddrs *ifaddr, *ifa;
+  /*
+  The value of ifa->ifa_name:
+   Android:
+    wifi: "w"
+    cellular: "r"
+   iOS:
+    wifi: "en0"
+    cellular: "pdp_ip0"
+  */
 
   if (getifaddrs(&ifaddr) == -1)
   {

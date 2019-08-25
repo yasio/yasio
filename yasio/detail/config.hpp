@@ -53,8 +53,6 @@ SOFTWARE.
 #  include "strfmt.hpp"
 #  define YASIO_LOG(format, ...)                                                                   \
     OutputDebugStringA(yasio::_sfmt(("%s" format), "[yasio]", ##__VA_ARGS__).c_str())
-#  pragma warning(push)
-#  pragma warning(disable : 6320 6322 4996)
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>

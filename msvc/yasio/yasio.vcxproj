@@ -159,7 +159,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\kcp\ikcp.c" />
     <ClCompile Include="..\..\yasio\ibstream.cpp" />
     <ClCompile Include="..\..\yasio\obstream.cpp" />
     <ClCompile Include="..\..\yasio\xxsocket.cpp" />

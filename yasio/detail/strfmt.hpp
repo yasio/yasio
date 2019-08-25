@@ -46,7 +46,7 @@ namespace yasio
  *AND it's also standard-compliant, see reference:
  *http://www.cplusplus.com/reference/cstdio/vsnprintf/
  */
-inline std::string _sfmt(const char *format, ...)
+inline std::string strfmt(const char *format, ...)
 {
 #define YASIO_VSNPRINTF_BUFFER_LENGTH 256
   va_list args;

@@ -45,6 +45,8 @@ SOFTWARE.
 #  include <io.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR | O_BINARY, S_IWRITE | S_IREAD
 #  define ftruncate _chsize
+#  pragma warning(push)
+#  pragma warning(disable : 6320 6322 4996)
 #else
 #  include <unistd.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU

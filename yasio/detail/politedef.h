@@ -168,8 +168,8 @@ static const uint64_t __MAX_UINT64 = SZ(15, EB) + (SZ(1, EB) - 1);
 #define _FORMAT_STRING_L(width, tip, value, len, delim)                                            \
   _FORMAT_CTL(width, delim) << std::string(tip) + " "                                              \
                             << " " << std::string(value, len) << "\n"
-#define strfmt(tip, value, delim) _FORMAT_STRING(23, tip, value, delim)
-#define strnfmt(tip, value, len, delim) _FORMAT_STRING_L(23, tip, value, len, delim)
+#define FMTSTR(tip, value, delim) _FORMAT_STRING(23, tip, value, delim)
+#define FMTSTRN(tip, value, len, delim) _FORMAT_STRING_L(23, tip, value, len, delim)
 
 #define enable_leak_check() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
 

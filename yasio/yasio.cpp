@@ -61,7 +61,7 @@ SOFTWARE.
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
   {                                                                                                \
-    auto content = _sfmt(("[%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__); \
+    auto content = ::yasio::strfmt(("[%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__); \
     if (options.print_)                                                                            \
       options.print_(content.c_str());                                                             \
     else                                                                                           \

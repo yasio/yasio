@@ -51,7 +51,7 @@ SOFTWARE.
 
 #if defined(_WIN32)
 #  define YASIO_LOG(format, ...)                                                                   \
-    OutputDebugStringA(yasio::strfmt(("%s" format), "[yasio]", ##__VA_ARGS__).c_str())
+    OutputDebugStringA(::yasio::strfmt(("%s" format), "[yasio]", ##__VA_ARGS__).c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>

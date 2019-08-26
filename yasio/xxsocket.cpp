@@ -47,31 +47,15 @@ SOFTWARE.
 
 #define TIME_GRANULARITY 1000000
 
-#ifndef IN_CLASSB_NET
-#  define IN_CLASSB_NET 0xffff0000
-#endif
-
-#ifndef IN_LOOPBACK
-#  define IN_LOOPBACK(i) (((uint32_t)(i)&0xff000000) == 0x7f000000)
-#endif
-
-#ifndef IN_LINKLOCALNETNUM
-#  define IN_LINKLOCALNETNUM (uint32_t)0xA9FE0000 /* 169.254.0.0 */
-#endif
-
-#ifndef IN_LINKLOCAL
-#  define IN_LINKLOCAL(i) (((uint32_t)(i)&IN_CLASSB_NET) == IN_LINKLOCALNETNUM)
-#endif
-
-#ifndef IN4_IS_ADDR_LOOPBACK
-#  define IN4_IS_ADDR_LOOPBACK(a) IN_LOOPBACK(ntohl((a)->s_addr))
-#endif
-
-#ifndef IN4_IS_ADDR_LINKLOCAL
-#  define IN4_IS_ADDR_LINKLOCAL(a) IN_LINKLOCAL(ntohl((a)->s_addr))
-#endif
-
 #if !defined(_WS2IPDEF_)
+inline bool IN4_IS_ADDR_LOOPBACK(const in_addr *a)
+{
+  return ((a->s_addr & 0xff) == 0x7f); // 127/8
+}
+inline bool IN4_IS_ADDR_LINKLOCAL(const in_addr *a)
+{
+  return ((a->s_addr & 0xffff) == 0xfea9); // 169.254/16
+}
 inline bool IN6_IS_ADDR_GLOBAL(const in6_addr *a)
 {
   //

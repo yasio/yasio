@@ -58,12 +58,12 @@ SOFTWARE.
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
   {                                                                                                \
-    auto content =                                                                                 \
-        ::yasio::strfmt(("[%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);  \
     if (options.print_)                                                                            \
-      options.print_(content.c_str());                                                             \
+      options.print_(::yasio::strfmt("[yasio][%lld]" format "\n", highp_clock<system_clock_t>(),   \
+                                     ##__VA_ARGS__)                                                \
+                         .c_str());                                                                \
     else                                                                                           \
-      YASIO_LOG("%s", content.c_str());                                                            \
+      YASIO_LOG("[%lld]" format, highp_clock<system_clock_t>(), ##__VA_ARGS__);                    \
   } while (false)
 
 #define YASIO_SLOG(format, ...) YASIO_SLOG_IMPL(options_, format, ##__VA_ARGS__)

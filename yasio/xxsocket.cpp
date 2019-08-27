@@ -500,7 +500,7 @@ static int getipsv_internal(void)
 
   endpoint ep;
 #  if defined(_DEBUG)
-  YASIO_LOG("getipsv_internal: localhost=%s\n", hostname);
+  YASIO_LOG("getipsv_internal: localhost=%s", hostname);
 #  endif
   int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
 
@@ -512,7 +512,7 @@ static int getipsv_internal(void)
       memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
 
       auto straddr = ep.to_string();
-      YASIO_LOG("getipsv_internal: endpoint=%s\n", straddr.c_str());
+      YASIO_LOG("getipsv_internal: endpoint=%s", straddr.c_str());
       ++count;
       switch (ep.af())
       {
@@ -550,7 +550,7 @@ static int getipsv_internal(void)
 
   if (getifaddrs(&ifaddr) == -1)
   {
-    YASIO_LOG("getipsv_internal: getifaddrs fail!\n");
+    YASIO_LOG("getipsv_internal: getifaddrs fail!");
     return ipsv_ipv4;
   }
 
@@ -567,7 +567,7 @@ static int getipsv_internal(void)
     if (!straddr.empty())
     {
       ++count;
-      YASIO_LOG("getipsv_internal: endpoint=%s\n", straddr.c_str());
+      YASIO_LOG("getipsv_internal: endpoint=%s", straddr.c_str());
     }
 
     switch (ep.af())

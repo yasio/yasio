@@ -51,14 +51,14 @@ SOFTWARE.
 
 #if defined(_WIN32)
 #  define YASIO_LOG(format, ...)                                                                   \
-    OutputDebugStringA(::yasio::strfmt(("%s" format), "[yasio]", ##__VA_ARGS__).c_str())
+    OutputDebugStringA(::yasio::strfmt(("%s" format "\n"), "[yasio]", ##__VA_ARGS__).c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>
 #  define YASIO_LOG(format, ...)                                                                   \
     __android_log_print(ANDROID_LOG_INFO, "yasio", ("%s" format), "[yasio]", ##__VA_ARGS__)
 #else
-#  define YASIO_LOG(format, ...) printf(("%s" format), "[yasio]", ##__VA_ARGS__)
+#  define YASIO_LOG(format, ...) printf(("%s" format "\n"), "[yasio]", ##__VA_ARGS__)
 #endif
 
 #if !defined(YASIO_VERBOS_LOG)

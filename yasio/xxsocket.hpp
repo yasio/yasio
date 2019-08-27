@@ -505,7 +505,7 @@ class xxsocket
 {
 public:
   /*
-  summary: Gets supported internet protocol versions of natvie device
+  summary: Gets supported internet protocol versions of localhost
   return:
     ipsv_unavailable: The network unavailable.
     ipsv_ipv4: Support ipv4 only.

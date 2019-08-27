@@ -629,7 +629,7 @@ private:
     print_fn_t print_;
   } options_;
 
-  // The ip stack version supported by local host
+  // The ip stack version supported by localhost
   u_short ipsv_ = 0;
 }; // io_service
 } // namespace inet

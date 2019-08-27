@@ -320,7 +320,7 @@ bool io_transport_posix::flush(long long &max_wait_duration)
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop_front();
-#if YASIO_VERBOS_LOG
+#if defined(YASIO_VERBOS_LOG)
         YASIO_SLOG_IMPL(get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
                         "success, packet size:%d",
@@ -614,10 +614,7 @@ void io_service::run()
     // Reset the interrupter.
     else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
-      bool was_interrupt = interrupter_.reset();
-      YASIO_SLOGV("do_evpoll waked up by interrupt, interrupter fd:%d, "
-                  "was_interrupt:%s",
-                  this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
+      interrupter_.reset();
       --nfds;
     }
 
@@ -1144,7 +1141,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &
                   error, io_service::strerror(error));
       if (n == -1)
         n = 0;
-#if YASIO_VERBOS_LOG
+#if defined(YASIO_VERBOS_LOG)
       if (n > 0)
       {
         YASIO_SLOG("[index: %d] do_read ok, received data len: %d, "

@@ -32,8 +32,8 @@ SOFTWARE.
 // Uncomment or add -DYASIO_HEADER_ONLY to enable yasio core implementation header only
 // #define YASIO_HEADER_ONLY 1
 
-// Define YASIO_VERBOS_LOG to 1 enable verbos log
-#define YASIO_VERBOS_LOG 0
+// Uncomment or add -DYASIO_VERBOS_LOG to enable verbos log
+// #define YASIO_VERBOS_LOG 1
 
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
@@ -61,7 +61,7 @@ SOFTWARE.
 #  define YASIO_LOG(format, ...) printf(("%s" format), "[yasio]", ##__VA_ARGS__)
 #endif
 
-#if !YASIO_VERBOS_LOG
+#if !defined(YASIO_VERBOS_LOG)
 #  define YASIO_LOGV(fmt, ...) (void)0
 #else
 #  define YASIO_LOGV YASIO_LOG

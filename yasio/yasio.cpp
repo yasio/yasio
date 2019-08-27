@@ -28,9 +28,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-// UDP server: https://cloud.tencent.com/developer/article/1004555
-
 #ifndef YASIO__CORE_CPP
 #define YASIO__CORE_CPP
 #if !defined(YASIO_HEADER_ONLY)
@@ -61,7 +58,8 @@ SOFTWARE.
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
   {                                                                                                \
-    auto content = ::yasio::strfmt(("[%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__); \
+    auto content =                                                                                 \
+        ::yasio::strfmt(("[%lld] " format "\r\n"), highp_clock<system_clock_t>(), ##__VA_ARGS__);  \
     if (options.print_)                                                                            \
       options.print_(content.c_str());                                                             \
     else                                                                                           \
@@ -69,6 +67,11 @@ SOFTWARE.
   } while (false)
 
 #define YASIO_SLOG(format, ...) YASIO_SLOG_IMPL(options_, format, ##__VA_ARGS__)
+#if !defined(YASIO_VERBOS_LOG)
+#  define YASIO_SLOGV(fmt, ...) (void)0
+#else
+#  define YASIO_SLOGV YASIO_SLOG
+#endif
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -318,11 +321,11 @@ bool io_transport_posix::flush(long long &max_wait_duration)
       { // All pdu bytes sent.
         send_queue_.pop_front();
 #if YASIO_VERBOS_LOG
-        auto packet_size = static_cast<int>(v->data_.size());
         YASIO_SLOG_IMPL(get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
                         "success, packet size:%d",
-                        channel_index(), packet_size, socket_->local_endpoint().to_string().c_str(),
+                        channel_index(), static_cast<int>(v->data_.size()),
+                        socket_->local_endpoint().to_string().c_str(),
                         socket_->peer_endpoint().to_string().c_str());
 #endif
       }
@@ -606,22 +609,15 @@ void io_service::run()
     }
 
     if (nfds == 0)
-    {
-#if YASIO_VERBOS_LOG
-      YASIO_SLOG("%s", "do_evpoll is timeout, do perform_timeout_timers()");
-#endif
-    }
+      YASIO_SLOGV("%s", "do_evpoll is timeout, do perform_timeout_timers()");
+
     // Reset the interrupter.
     else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
-#if YASIO_VERBOS_LOG
       bool was_interrupt = interrupter_.reset();
-      YASIO_SLOG("do_evpoll waked up by interrupt, interrupter fd:%d, "
-                 "was_interrupt:%s",
-                 this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
-#else
-      interrupter_.reset();
-#endif
+      YASIO_SLOGV("do_evpoll waked up by interrupt, interrupter fd:%d, "
+                  "was_interrupt:%s",
+                  this->interrupter_.read_descriptor(), was_interrupt ? "true" : "false");
       --nfds;
     }
 
@@ -764,6 +760,7 @@ void io_service::open(size_t channel_index, int channel_mask)
     that this behavior is not the same on other platforms, like Windows (unfortunately), detail
     see:
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+    https://cloud.tencent.com/developer/article/1004555
   */
     YASIO_SLOG(
         "[index: %d], YCM_UDP_SERVER does'n supported by Microsoft Winsock provider, you can use "
@@ -1143,10 +1140,8 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &
     }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
-#if YASIO_VERBOS_LOG
-      YASIO_SLOG("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
-                 error, io_service::strerror(error));
-#endif
+      YASIO_SLOGV("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
+                  error, io_service::strerror(error));
       if (n == -1)
         n = 0;
 #if YASIO_VERBOS_LOG
@@ -1222,11 +1217,9 @@ void io_service::do_unpack(transport_ptr transport, int bytes_expected, int byte
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve
     // it.
-#if YASIO_VERBOS_LOG
-    YASIO_SLOG("[index: %d] received a properly packet from peer, "
-               "packet size:%d",
-               transport->channel_index(), transport->expected_packet_size_);
-#endif
+    YASIO_SLOGV("[index: %d] received a properly packet from peer, "
+                "packet size:%d",
+                transport->channel_index(), transport->expected_packet_size_);
     this->handle_event(event_ptr(
         new io_event(transport->channel_index(), YEK_PACKET, transport->take_packet(), transport)));
   }
@@ -1362,15 +1355,10 @@ but it's ok.
   {
     timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
                        (decltype(timeval::tv_usec))(wait_duration % 1000000)};
-#if YASIO_VERBOS_LOG
-    YASIO_SLOG("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-               timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-#endif
+    YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
+                timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
     nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
-
-#if YASIO_VERBOS_LOG
-    YASIO_SLOG("socket.select waked up, retval=%d", nfds);
-#endif
+    YASIO_SLOGV("socket.select waked up, retval=%d", nfds);
   }
   else
     nfds = static_cast<int>(channels_.size()) << 1;

@@ -48,6 +48,7 @@ https://github.com/xamarin/xamarin-android/blob/master/src/monodroid/jni/xamarin
 #include <linux/if_arp.h>
 #include <netinet/in.h>
 #include <android/log.h>
+#include <mutex>
 
 #include "config.hpp"
 #include "ifaddrs.hpp"
@@ -396,11 +397,11 @@ static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs **ifap),
 
   if (!*getifaddrs_impl)
   {
-    YASIO_LOG("This libc does not have getifaddrs/freeifaddrs, using Xamarin's\n");
+    YASIO_LOG("This libc does not have getifaddrs/freeifaddrs, using Xamarin's");
   }
   else
   {
-    YASIO_LOG("This libc has getifaddrs/freeifaddrs\n");
+    YASIO_LOG("This libc has getifaddrs/freeifaddrs");
   }
 }
 
@@ -437,7 +438,7 @@ static int open_netlink_session(netlink_session *session)
   session->sock_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
   if (session->sock_fd == -1)
   {
-    YASIO_LOG("Failed to create a netlink socket. %s\n", strerror(errno));
+    YASIO_LOG("Failed to create a netlink socket. %s", strerror(errno));
     return -1;
   }
 
@@ -456,7 +457,7 @@ static int open_netlink_session(netlink_session *session)
 
   if (bind(session->sock_fd, (struct sockaddr *)&session->us, sizeof(session->us)) < 0)
   {
-    YASIO_LOG("Failed to bind to the netlink socket. %s\n", strerror(errno));
+    YASIO_LOG("Failed to bind to the netlink socket. %s", strerror(errno));
     return -1;
   }
 
@@ -494,7 +495,7 @@ static int send_netlink_dump_request(netlink_session *session, int type)
 
   if (sendmsg(session->sock_fd, (const struct msghdr *)&session->message_header, 0) < 0)
   {
-    YASIO_LOG("Failed to send netlink message. %s\n", strerror(errno));
+    YASIO_LOG("Failed to send netlink message. %s", strerror(errno));
     return -1;
   }
 
@@ -573,11 +574,11 @@ static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddr
     netlink_reply.msg_iov     = &reply_vector;
 
     length = recvmsg(session->sock_fd, &netlink_reply, 0);
-    YASIO_LOGV("  length == %d\n", (int)length);
+    YASIO_LOGV("  length == %d", (int)length);
 
     if (length < 0)
     {
-      YASIO_LOGV("Failed to receive reply from netlink. %s\n", strerror(errno));
+      YASIO_LOGV("Failed to receive reply from netlink. %s", strerror(errno));
       goto cleanup;
     }
 
@@ -588,23 +589,23 @@ static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddr
          current_message && NLMSG_OK(current_message, static_cast<size_t>(length));
          current_message = NLMSG_NEXT(current_message, length))
     {
-      YASIO_LOGV("next message... (type: %u)\n", current_message->nlmsg_type);
+      YASIO_LOGV("next message... (type: %u)", current_message->nlmsg_type);
       switch (current_message->nlmsg_type)
       {
         /* See rtnetlink.h */
         case RTM_NEWLINK:
-          YASIO_LOGV("  dumping link...\n");
+          YASIO_LOGV("  dumping link...");
           addr = get_link_info(current_message);
           if (!addr || append_ifaddr(addr, ifaddrs_head, last_ifaddr) < 0)
           {
             ret = -1;
             goto cleanup;
           }
-          YASIO_LOGV("  done\n");
+          YASIO_LOGV("  done");
           break;
 
         case RTM_NEWADDR:
-          YASIO_LOGV("  got an address\n");
+          YASIO_LOGV("  got an address");
           addr = get_link_address(current_message, ifaddrs_head);
           if (!addr || append_ifaddr(addr, ifaddrs_head, last_ifaddr) < 0)
           {
@@ -614,7 +615,7 @@ static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddr
           break;
 
         case NLMSG_DONE:
-          YASIO_LOGV("  message done\n");
+          YASIO_LOGV("  message done");
           ret = 0;
           goto cleanup;
           break;
@@ -701,7 +702,7 @@ static int fill_ll_address(struct sockaddr_ll_extended **sa, struct ifinfomsg *n
   /* The assert can only fail for Iniband links, which are quite unlikely to be found
    * in any mobile devices
    */
-  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X\n",
+  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X",
              rta_payload_length, sizeof((*sa)->sll_addr), net_interface->ifi_type);
   if (static_cast<size_t>(rta_payload_length) > sizeof((*sa)->sll_addr))
   {
@@ -825,7 +826,7 @@ static int calculate_address_netmask(struct ifaddrs *ifa, struct ifaddrmsg *net_
       if (postfix_bytes > 0)
         memset(netmask_data + prefix_bytes + 1, 0x00, postfix_bytes);
       YASIO_LOGV(
-          "   calculating netmask, prefix length is %u bits (%u bytes), data length is %u bytes\n",
+          "   calculating netmask, prefix length is %u bits (%u bytes), data length is %u bytes",
           prefix_length, prefix_bytes, data_length);
       if (prefix_bytes + 2 < data_length)
         /* Set the rest of the mask bits in the byte following the last 0xFF value */
@@ -871,7 +872,7 @@ static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
   while (RTA_OK(attribute, length))
   {
     payload_size = RTA_PAYLOAD(attribute);
-    YASIO_LOGV("     attribute payload_size == %u\n", payload_size);
+    YASIO_LOGV("     attribute payload_size == %u", payload_size);
     sa = NULL;
 
     switch (attribute->rta_type)
@@ -976,10 +977,10 @@ static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
   {
     char *name =
         get_interface_name_by_index(static_cast<int>(net_address->ifa_index), ifaddrs_head);
-    YASIO_LOGV("   address has no name/label, getting one from interface\n");
+    YASIO_LOGV("   address has no name/label, getting one from interface");
     ifa->ifa_name = name ? strdup(name) : NULL;
   }
-  YASIO_LOGV("   address label: %s\n", ifa->ifa_name);
+  YASIO_LOGV("   address label: %s", ifa->ifa_name);
 
   if (calculate_address_netmask(ifa, net_address) < 0)
   {
@@ -1038,7 +1039,7 @@ static struct ifaddrs *get_link_info(const struct nlmsghdr *message)
         break;
 
       case IFLA_BROADCAST:
-        YASIO_LOGV("   interface broadcast (%d bytes)\n", RTA_PAYLOAD(attribute));
+        YASIO_LOGV("   interface broadcast (%d bytes)", RTA_PAYLOAD(attribute));
         if (fill_ll_address(&sa, net_interface, RTA_DATA(attribute), RTA_PAYLOAD(attribute)) < 0)
         {
           goto error;
@@ -1047,7 +1048,7 @@ static struct ifaddrs *get_link_info(const struct nlmsghdr *message)
         break;
 
       case IFLA_ADDRESS:
-        YASIO_LOGV("   interface address (%d bytes)\n", RTA_PAYLOAD(attribute));
+        YASIO_LOGV("   interface address (%d bytes)", RTA_PAYLOAD(attribute));
         if (fill_ll_address(&sa, net_interface, RTA_DATA(attribute), RTA_PAYLOAD(attribute)) < 0)
         {
           goto error;

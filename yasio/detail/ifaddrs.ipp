@@ -50,9 +50,6 @@ https://github.com/xamarin/xamarin-android/blob/master/src/monodroid/jni/xamarin
 #include <android/log.h>
 #include <mutex>
 
-#include "config.hpp"
-#include "ifaddrs.hpp"
-
 /* Some of these aren't defined in android's rtnetlink.h (as of ndk 16). We define values for all of
  * them if they aren't found so that the debug code works properly. We could skip them but future
  * versions of the NDK might include definitions for them.
@@ -302,7 +299,7 @@ static std::mutex _getifaddrs_init_lock;
 
 static void getifaddrs_init() { get_ifaddrs_impl(&getifaddrs_impl, &freeifaddrs_impl); }
 
-int getifaddrs(struct ifaddrs **ifap)
+YASIO__DECL int getifaddrs(struct ifaddrs **ifap)
 {
   if (!_getifaddrs_initialized)
   {
@@ -357,7 +354,7 @@ cleanup:
   return ret;
 }
 
-void freeifaddrs(struct ifaddrs *ifa)
+YASIO__DECL void freeifaddrs(struct ifaddrs *ifa)
 {
   struct ifaddrs *cur, *next;
 
@@ -702,8 +699,8 @@ static int fill_ll_address(struct sockaddr_ll_extended **sa, struct ifinfomsg *n
   /* The assert can only fail for Iniband links, which are quite unlikely to be found
    * in any mobile devices
    */
-  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X",
-             rta_payload_length, sizeof((*sa)->sll_addr), net_interface->ifi_type);
+  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X", rta_payload_length,
+             sizeof((*sa)->sll_addr), net_interface->ifi_type);
   if (static_cast<size_t>(rta_payload_length) > sizeof((*sa)->sll_addr))
   {
     YASIO_LOG("Address is too long to place in sockaddr_ll (%d > %d)", rta_payload_length,

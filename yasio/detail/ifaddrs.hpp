@@ -31,6 +31,8 @@ https://github.com/xamarin/xamarin-android/blob/master/src/monodroid/jni/xamarin
 #ifndef YASIO__IFADDRS_HPP
 #define YASIO__IFADDRS_HPP
 
+#include "config.hpp"
+
 #if !(defined(ANDROID) || defined(__ANDROID__)) || __ANDROID_API__ >= 24
 #  include <ifaddrs.h>
 #else
@@ -67,8 +69,8 @@ struct ifaddrs
   void *ifa_data; /* Address-specific data (may be unused).  */
 };
 
-int getifaddrs(struct ifaddrs **ifap);
-void freeifaddrs(struct ifaddrs *ifa);
+YASIO__DECL int getifaddrs(struct ifaddrs **ifap);
+YASIO__DECL void freeifaddrs(struct ifaddrs *ifa);
 
 #  include "ifaddrs.ipp"
 

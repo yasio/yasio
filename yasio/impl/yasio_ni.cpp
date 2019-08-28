@@ -165,13 +165,13 @@ YASIO_NI_API void yasio_open(int cindex, int kind) { yasio_shared_service->open(
 YASIO_NI_API void yasio_close(int cindex) { yasio_shared_service->close(cindex); }
 YASIO_NI_API void yasio_close2(intptr_t sid)
 {
-  auto p = reinterpret_cast<transport_ptr>(sid);
+  auto p = reinterpret_cast<io_transport*>(sid);
   yasio_shared_service->close(p);
 }
 YASIO_NI_API int yasio_write(intptr_t sid, const unsigned char *bytes, int len)
 {
   std::vector<char> buf(bytes, bytes + len);
-  auto p = reinterpret_cast<transport_ptr>(sid);
+  auto p = reinterpret_cast<io_transport*>(sid);
   return yasio_shared_service->write(p, std::move(buf));
 }
 YASIO_NI_API void yasio_dispatch_events(int maxEvents)

@@ -1213,8 +1213,8 @@ bool js_yasio_io_service_is_open(se::State &s)
       }
       else if (arg0.isObject())
       {
-        transport_ptr transport = nullptr;
-        seval_to_native_ptr<transport_ptr>(arg0, &transport);
+        io_transport* transport = nullptr;
+        seval_to_native_ptr<io_transport*>(arg0, &transport);
         if (transport != nullptr)
           opened = cobj->is_open(transport);
       }
@@ -1246,8 +1246,8 @@ bool js_yasio_io_service_close(se::State &s)
       }
       else if (arg0.isObject())
       {
-        transport_ptr transport = nullptr;
-        seval_to_native_ptr<transport_ptr>(arg0, &transport);
+        io_transport* transport = nullptr;
+        seval_to_native_ptr<io_transport*>(arg0, &transport);
         if (transport != nullptr)
           cobj->close(transport);
       }
@@ -1361,8 +1361,8 @@ bool js_yasio_io_service_write(se::State &s)
       auto &arg0 = args[0];
       auto &arg1 = args[1];
 
-      transport_ptr transport = nullptr;
-      seval_to_native_ptr<transport_ptr>(arg0, &transport);
+      io_transport* transport = nullptr;
+      seval_to_native_ptr<io_transport*>(arg0, &transport);
 
       if (transport != nullptr)
       {

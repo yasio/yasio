@@ -148,16 +148,16 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
       },
       "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "is_open",
       sol::overload(static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
-                    static_cast<bool (io_service::*)(transport_ptr) const>(&io_service::is_open)),
+                    static_cast<bool (io_service::*)(io_transport*) const>(&io_service::is_open)),
       "close",
-      sol::overload(static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
+      sol::overload(static_cast<void (io_service::*)(io_transport*)>(&io_service::close),
                     static_cast<void (io_service::*)(size_t)>(&io_service::close)),
       "write",
       sol::overload(
-          [](io_service *service, transport_ptr transport, cxx17::string_view s) {
+          [](io_service *service, io_transport* transport, cxx17::string_view s) {
             return service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
           },
-          [](io_service *service, transport_ptr transport, yasio::obstream *obs) {
+          [](io_service *service, io_transport* transport, yasio::obstream *obs) {
             return service->write(transport, std::move(obs->buffer()));
           }));
 
@@ -351,15 +351,15 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
           .addFunction("open", &io_service::open)
           .addOverloadedFunctions(
               "is_open", static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
-              static_cast<bool (io_service::*)(transport_ptr) const>(&io_service::is_open))
+              static_cast<bool (io_service::*)(io_transport*) const>(&io_service::is_open))
           .addOverloadedFunctions(
-              "close", static_cast<void (io_service::*)(transport_ptr)>(&io_service::close),
+              "close", static_cast<void (io_service::*)(io_transport*)>(&io_service::close),
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
               "write",
-              static_cast<int (io_service::*)(transport_ptr transport, std::vector<char> data)>(
+              static_cast<int (io_service::*)(io_transport* transport, std::vector<char> data)>(
                   &io_service::write),
-              [](io_service *service, transport_ptr transport, yasio::obstream *obs) {
+              [](io_service *service, io_transport* transport, yasio::obstream *obs) {
                 return service->write(transport, std::move(obs->buffer()));
               })
           .addStaticFunction("set_option", [](io_service *service, int opt,

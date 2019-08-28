@@ -316,7 +316,7 @@ template <typename T> static jsval jsb_yasio_to_jsval(JSContext *ctx, std::uniqu
   return OBJECT_TO_JSVAL(jsobj);
 }
 
-static jsval jsb_yasio_to_jsval(JSContext *ctx, transport_ptr value)
+static jsval jsb_yasio_to_jsval(JSContext *ctx, io_transport* value)
 {
   js_type_class_t *typeClass = js_get_type_from_native<io_transport_base>(value);
 
@@ -327,12 +327,12 @@ static jsval jsb_yasio_to_jsval(JSContext *ctx, transport_ptr value)
   return OBJECT_TO_JSVAL(jsobj);
 }
 
-static transport_ptr jsb_yasio_jsval_to_transport_ptr(JSContext *ctx, const JS::HandleValue &vp)
+static io_transport* jsb_yasio_jsval_to_io_transport(JSContext *ctx, const JS::HandleValue &vp)
 {
   JS::RootedObject jsobj(ctx);
   jsobj.set(vp.toObjectOrNull());
   auto proxy = jsb_get_js_proxy(jsobj);
-  return (transport_ptr)(proxy ? proxy->ptr : nullptr);
+  return (io_transport*)(proxy ? proxy->ptr : nullptr);
 }
 
 static yasio::obstream *jsb_yasio_jsval_to_obstram(JSContext *ctx, const JS::HandleValue &vp)
@@ -1609,7 +1609,7 @@ bool js_yasio_io_service_is_open(JSContext *ctx, uint32_t argc, jsval *vp)
       }
       else if (arg0.isObject())
       {
-        auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
+        auto transport = jsb_yasio_jsval_to_io_transport(ctx, arg0);
         opened         = cobj->is_open(transport);
       }
       args.rval().set(BOOLEAN_TO_JSVAL(opened));
@@ -1644,7 +1644,7 @@ bool js_yasio_io_service_close(JSContext *ctx, uint32_t argc, jsval *vp)
       }
       else if (arg0.isObject())
       {
-        auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
+        auto transport = jsb_yasio_jsval_to_io_transport(ctx, arg0);
         cobj->close(transport);
       }
       return true;
@@ -1773,7 +1773,7 @@ bool js_yasio_io_service_write(JSContext *ctx, uint32_t argc, jsval *vp)
       auto arg0 = args.get(0);
       auto arg1 = args.get(1);
 
-      auto transport = jsb_yasio_jsval_to_transport_ptr(ctx, arg0);
+      auto transport = jsb_yasio_jsval_to_io_transport(ctx, arg0);
 
       yasio_jsb::string_view_adapter sva;
       bool unrecognized_object = false;

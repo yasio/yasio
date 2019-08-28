@@ -22,6 +22,18 @@ template <size_t _Size> void append_string(std::vector<char> &packet, const char
 
 void yasioTest()
 {
+
+    endpoint ep("2001:fc39:1:db8::2", 2088);
+
+    std::vector<endpoint> eps;
+    
+    xxsocket::resolve_v4to6(eps, "baidu.com");
+    
+    bool isglobal = IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr);
+
+    isglobal = IN6_IS_ADDR_GLOBAL(&eps[0].in6_.sin6_addr);
+    isglobal = IN6_IS_ADDR_GLOBAL(&eps[1].in6_.sin6_addr);
+
   yasio::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}, // http client
                                          {"127.0.0.1", 30001},  // tcp server
                                          {"127.0.0.1", 59281}}; // udp client
@@ -53,7 +65,7 @@ void yasioTest()
   };
   service.set_option(YOPT_RESOLV_FN, &resolv);
 
-  std::vector<transport_ptr> transports;
+  std::vector<io_transport*> transports;
 
   deadline_timer udpconn_delay(service);
   deadline_timer udp_heartbeat(service);

@@ -62,6 +62,7 @@ set ( YASIO_CORE
     yasio/yasio.cpp
     yasio/ibstream.cpp
     yasio/obstream.cpp
+    yasio/impl/yasio_ni.cpp
 )
 
 macro(source_group_by_dir proj_dir source_files)
@@ -106,7 +107,7 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
     )
     target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
 else ( )
-    add_library(yasio STATIC
+    add_library(yasio SHARED
         ${YASIO_CORE}
         ${THIRDPART_SRC}
     )

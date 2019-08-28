@@ -18,3 +18,4 @@ ignored/*.*
 *.suo
 /.vs
 /.xs
+/build

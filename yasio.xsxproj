@@ -1,0 +1,63 @@
+<Project fullMode="0">
+  <project-home>.</project-home>
+  <exclude-files/>
+  <assets>
+    <item path="CMakeLists.txt" dflag="131076"/>
+    <item path="msvc\cpptest\cpptest.cpp" dflag="131076"/>
+    <item path="msvc\cpptest\kcptest.cpp" dflag="131076"/>
+    <item path="msvc\jstest\example.js" dflag="131076"/>
+    <item path="msvc\luatest\example.lua" dflag="131076"/>
+    <item path="msvc\luatest\luatest.cpp" dflag="131076"/>
+    <item path="msvc\luatest\protocol_base.lua" dflag="131076"/>
+    <item path="msvc\luatest\protocol_dec.lua" dflag="131076"/>
+    <item path="msvc\luatest\protocol_enc.lua" dflag="131076"/>
+    <item path="msvc\luatest\protocol_enums.lua" dflag="131076"/>
+    <item path="msvc\luatest\yasio_ext\http_client.lua" dflag="131076"/>
+    <item path="yasio\build\android-cpp\Android.mk" dflag="131076"/>
+    <item path="yasio\build\android-jsb\Android.mk" dflag="131076"/>
+    <item path="yasio\build\android-lua\Android.mk" dflag="131076"/>
+    <item path="yasio\detail\config.hpp" dflag="131076"/>
+    <item path="yasio\detail\endian_portable.h" dflag="131076"/>
+    <item path="yasio\detail\eventfd_select_interrupter.hpp" dflag="131076"/>
+    <item path="yasio\detail\eventfd_select_interrupter.ipp" dflag="131076"/>
+    <item path="yasio\detail\ifaddrs.hpp" dflag="131076"/>
+    <item path="yasio\detail\ifaddrs.ipp" dflag="131076"/>
+    <item path="yasio\detail\kaguya.hpp" dflag="131076"/>
+    <item path="yasio\detail\object_pool.cpp" dflag="131076"/>
+    <item path="yasio\detail\object_pool.h" dflag="131076"/>
+    <item path="yasio\detail\pipe_select_interrupter.hpp" dflag="131076"/>
+    <item path="yasio\detail\pipe_select_interrupter.ipp" dflag="131076"/>
+    <item path="yasio\detail\politedef.h" dflag="131076"/>
+    <item path="yasio\detail\ref_ptr.h" dflag="131076"/>
+    <item path="yasio\detail\select_interrupter.hpp" dflag="131076"/>
+    <item path="yasio\detail\singleton.h" dflag="131076"/>
+    <item path="yasio\detail\socket_select_interrupter.hpp" dflag="131076"/>
+    <item path="yasio\detail\socket_select_interrupter.ipp" dflag="131076"/>
+    <item path="yasio\detail\sol.hpp" dflag="131076"/>
+    <item path="yasio\detail\sol_forward.hpp" dflag="131076"/>
+    <item path="yasio\detail\strfmt.hpp" dflag="131076"/>
+    <item path="yasio\detail\string_view.hpp" dflag="131076"/>
+    <item path="yasio\ibstream.cpp" dflag="131076"/>
+    <item path="yasio\ibstream.hpp" dflag="131076"/>
+    <item path="yasio\impl\lyasio.cpp" dflag="131076"/>
+    <item path="yasio\impl\tolua_link.cpp" dflag="131076"/>
+    <item path="yasio\impl\yasio_cclua.cpp" dflag="131076"/>
+    <item path="yasio\impl\yasio_jsb.cpp" dflag="131076"/>
+    <item path="yasio\impl\yasio_jsb20.cpp" dflag="131076"/>
+    <item path="yasio\impl\yasio_ni.cpp" dflag="131076"/>
+    <item path="yasio\lyasio.h" dflag="131076"/>
+    <item path="yasio\obstream.cpp" dflag="131076"/>
+    <item path="yasio\obstream.hpp" dflag="131076"/>
+    <item path="yasio\xxsocket.cpp" dflag="131076"/>
+    <item path="yasio\xxsocket.hpp" dflag="131076"/>
+    <item path="yasio\yasio.cpp" dflag="131076"/>
+    <item path="yasio\yasio.hpp" dflag="131076"/>
+    <item path="yasio\yasio_cclua.h" dflag="131076"/>
+    <item path="yasio\yasio_jsb.h" dflag="131076"/>
+    <item path="yasio\yasio_jsb20.h" dflag="131076"/>
+  </assets>
+  <inspect-dirs>
+    <item/>
+  </inspect-dirs>
+</Project>
+

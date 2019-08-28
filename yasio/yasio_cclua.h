@@ -50,8 +50,8 @@ namespace lyasio
 {
 namespace stimer
 {
-// !IMPORTANT: You should call this when you want restart script Virtual Machine for some purpose.
-YASIO_API void killAll();
+// !IMPORTANT: You should call function this when you want restart script Virtual Machine for some purpose.
+YASIO_API void clear();
 } // namespace stimer
 } // namespace lyasio
 

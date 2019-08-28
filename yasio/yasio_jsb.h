@@ -35,7 +35,7 @@ namespace yasio_jsb
 {
 namespace stimer
 {
-// !IMPORTANT: You should call this when you want restart script Virtual Machine for some purpose.
-void killAll();
+// !IMPORTANT: You should call this function when you want restart script Virtual Machine for some purpose.
+void clear();
 }
 } // namespace yasio_jsb

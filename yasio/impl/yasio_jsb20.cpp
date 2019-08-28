@@ -128,7 +128,7 @@ void kill(TIMER_ID timerId)
   std::string key = StringUtils::format("STMR#%p", timerId);
   Application::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
-void killAll()
+void clear()
 {
   Application::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
 }

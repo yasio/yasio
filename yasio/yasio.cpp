@@ -279,8 +279,8 @@ int io_channel::__builtin_decode_len(void *ud, int n)
   return n;
 }
 
-// -------------------- io_transport_base ---------------------
-io_transport_base::io_transport_base(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
+// -------------------- io_transport ---------------------
+io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
 {
   static unsigned int s_object_id = 0;
   this->state_                    = YCS_OPENED;
@@ -363,12 +363,12 @@ bool io_transport_posix::flush(long long &max_wait_duration)
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel *ctx, std::shared_ptr<xxsocket> sock)
-    : io_transport_base(ctx, sock), kcp_(nullptr)
+    : io_transport(ctx, sock), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
   ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char *buf, int len, ikcpcb * /*kcp*/, void *user) {
-    io_transport_base *t = (io_transport_base *)user;
+    auto t = (io_transport *)user;
     return t->socket_->send_i(buf, len);
   });
 }
@@ -561,7 +561,7 @@ void io_service::clear_transports()
   for (auto transport : transports_)
   {
     cleanup_io(transport);
-    transport->~io_transport_base();
+    transport->~io_transport();
     this->transports_pool_.push_back(transport);
   }
   transports_.clear();
@@ -716,7 +716,7 @@ void io_service::close(size_t channel_index)
   }
 }
 
-void io_service::close(transport_ptr transport)
+void io_service::close(io_transport *transport)
 {
   if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE_TRANSPORT))
   {
@@ -727,7 +727,7 @@ void io_service::close(transport_ptr transport)
   }
 }
 
-bool io_service::is_open(transport_ptr transport) const { return transport->state_ == YCS_OPENED; }
+bool io_service::is_open(io_transport *transport) const { return transport->state_ == YCS_OPENED; }
 
 bool io_service::is_open(size_t channel_index) const
 {
@@ -738,7 +738,7 @@ bool io_service::is_open(size_t channel_index) const
   return ctx->state_ == YCS_OPENED;
 }
 
-void io_service::reopen(transport_ptr transport)
+void io_service::reopen(io_transport *transport)
 {
   auto ctx = transport->ctx_;
   if (ctx->mask_ & YCM_CLIENT) // Only client channel support reopen by transport
@@ -781,7 +781,7 @@ void io_service::open(size_t channel_index, int channel_mask)
   open_internal(ctx);
 }
 
-void io_service::handle_close(transport_ptr transport)
+void io_service::handle_close(io_transport *transport)
 {
   auto ptr = transport;
   auto ctx = ptr->ctx_;
@@ -800,7 +800,7 @@ void io_service::handle_close(transport_ptr transport)
     ctx->set_last_errno(0);
   } // server channel, do nothing.
 
-  ptr->~io_transport_base();
+  ptr->~io_transport();
   transports_pool_.push_back(ptr);
 
   // @Notify connection lost
@@ -845,7 +845,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
   if ((flags & YEM_POLLERR) != 0)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
-int io_service::write(transport_ptr transport, std::vector<char> data)
+int io_service::write(io_transport *transport, std::vector<char> data)
 {
   if (transport && transport->is_open())
   {
@@ -1057,7 +1057,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
   }
 }
 
-void io_service::handle_connect_succeed(transport_ptr transport)
+void io_service::handle_connect_succeed(io_transport *transport)
 {
   auto ctx = transport->ctx_;
   ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
@@ -1083,9 +1083,9 @@ void io_service::handle_connect_succeed(transport_ptr transport)
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }
 
-transport_ptr io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
+io_transport *io_service::allocate_transport(io_channel *ctx, std::shared_ptr<xxsocket> socket)
 {
-  transport_ptr transport;
+  io_transport *transport;
   void *vp;
   if (!transports_pool_.empty())
   { // allocate from pool
@@ -1117,7 +1117,7 @@ void io_service::handle_connect_failed(io_channel *ctx, int error)
              ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
 }
 
-bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &max_wait_duration)
+bool io_service::do_read(io_transport *transport, fd_set *fds_array, long long &max_wait_duration)
 {
   bool ret = false;
   do
@@ -1195,7 +1195,7 @@ bool io_service::do_read(transport_ptr transport, fd_set *fds_array, long long &
   return ret;
 }
 
-void io_service::do_unpack(transport_ptr transport, int bytes_expected, int bytes_transferred,
+void io_service::do_unpack(io_transport *transport, int bytes_expected, int bytes_transferred,
                            long long &max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->offset_;

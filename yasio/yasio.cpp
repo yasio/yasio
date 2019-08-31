@@ -59,8 +59,8 @@ SOFTWARE.
   do                                                                                               \
   {                                                                                                \
     if (options.print_)                                                                            \
-      options.print_(::yasio::strfmt("[yasio][%lld]" format "\n", highp_clock<system_clock_t>(),   \
-                                     ##__VA_ARGS__)                                                \
+      options.print_(::yasio::strfmt(127, "[yasio][%lld]" format "\n",                             \
+                                     highp_clock<system_clock_t>(), ##__VA_ARGS__)                 \
                          .c_str());                                                                \
     else                                                                                           \
       YASIO_LOG("[%lld]" format, highp_clock<system_clock_t>(), ##__VA_ARGS__);                    \

@@ -46,11 +46,10 @@ namespace yasio
  *AND it's also standard-compliant, see reference:
  *http://www.cplusplus.com/reference/cstdio/vsnprintf/
  */
-inline std::string strfmt(const char *format, ...)
+inline std::string strfmt(size_t n, const char *format, ...)
 {
-#define YASIO_VSNPRINTF_BUFFER_LENGTH 256
   va_list args;
-  std::string buffer(YASIO_VSNPRINTF_BUFFER_LENGTH, '\0');
+  std::string buffer(n, '\0');
 
   va_start(args, format);
   int nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);

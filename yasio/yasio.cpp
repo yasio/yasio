@@ -291,7 +291,7 @@ io_transport::io_transport(io_channel *ctx, std::shared_ptr<xxsocket> sock) : ct
 // -------------------- io_transport_posix ---------------------
 void io_transport_posix::send(std::vector<char> data)
 {
-  a_pdu_ptr pdu(new a_pdu(std::move(data)));
+  auto pdu = std::make_shared<a_pdu>(std::move(data));
   send_mtx_.lock();
   send_queue_.push_back(pdu);
   send_mtx_.unlock();
@@ -1008,7 +1008,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
       {
         if (ctx->mask_ & YCM_TCP)
         {
-          std::shared_ptr<xxsocket> client_sock(new xxsocket(ctx->socket_->accept()));
+          auto client_sock = std::make_shared<xxsocket>(ctx->socket_->accept());
           if (client_sock->is_open())
           {
             handle_connect_succeed(ctx, std::move(client_sock));
@@ -1027,7 +1027,7 @@ void io_service::do_nonblocking_accept_completion(io_channel *ctx, fd_set *fds_a
             YASIO_SLOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
 
             // make a transport local --> peer udp session, just like tcp accept
-            std::shared_ptr<xxsocket> client_sock(new xxsocket());
+            auto client_sock = std::make_shared<xxsocket>();
             if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
             {
               client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);

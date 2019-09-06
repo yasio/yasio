@@ -147,17 +147,18 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
         }
       },
       "dispatch_events", &io_service::dispatch_events, "open", &io_service::open, "is_open",
-      sol::overload(static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
-                    static_cast<bool (io_service::*)(io_transport*) const>(&io_service::is_open)),
+      sol::overload(
+          static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
+          static_cast<bool (io_service::*)(transport_handle_t) const>(&io_service::is_open)),
       "close",
-      sol::overload(static_cast<void (io_service::*)(io_transport*)>(&io_service::close),
+      sol::overload(static_cast<void (io_service::*)(transport_handle_t)>(&io_service::close),
                     static_cast<void (io_service::*)(size_t)>(&io_service::close)),
       "write",
       sol::overload(
-          [](io_service *service, io_transport* transport, cxx17::string_view s) {
+          [](io_service *service, transport_handle_t transport, cxx17::string_view s) {
             return service->write(transport, std::vector<char>(s.data(), s.data() + s.length()));
           },
-          [](io_service *service, io_transport* transport, yasio::obstream *obs) {
+          [](io_service *service, transport_handle_t transport, yasio::obstream *obs) {
             return service->write(transport, std::move(obs->buffer()));
           }));
 
@@ -299,6 +300,27 @@ template <> struct lua_type_traits<std::vector<char>>
     return 1;
   }
 };
+// transport_handle_t
+template <> struct lua_type_traits<yasio::inet::transport_handle_t>
+{
+  typedef yasio::inet::transport_handle_t get_type;
+  typedef yasio::inet::transport_handle_t push_type;
+
+  static bool strictCheckType(lua_State *l, int index)
+  {
+    return lua_type(l, index) == LUA_TLIGHTUSERDATA;
+  }
+  static bool checkType(lua_State *l, int index) { return lua_isstring(l, index) != 0; }
+  static get_type get(lua_State *l, int index)
+  {
+    return reinterpret_cast<get_type>(lua_touserdata(l, index));
+  }
+  static int push(lua_State *l, push_type s)
+  {
+    lua_pushlightuserdata(l, s);
+    return 1;
+  }
+};
 }; // namespace kaguya
 
 extern "C" {
@@ -311,7 +333,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
   auto lyasio    = state.newTable();
   state["yasio"] = lyasio;
   // No any interface need export, only for holder
-  lyasio["io_transport_base"].setClass(kaguya::UserdataMetatable<io_transport_base>());
+  // lyasio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
 
   lyasio["io_event"].setClass(
       kaguya::UserdataMetatable<io_event>()
@@ -351,15 +373,15 @@ YASIO_LUA_API int luaopen_yasio(lua_State *L)
           .addFunction("open", &io_service::open)
           .addOverloadedFunctions(
               "is_open", static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
-              static_cast<bool (io_service::*)(io_transport*) const>(&io_service::is_open))
+              static_cast<bool (io_service::*)(transport_handle_t) const>(&io_service::is_open))
           .addOverloadedFunctions(
-              "close", static_cast<void (io_service::*)(io_transport*)>(&io_service::close),
+              "close", static_cast<void (io_service::*)(transport_handle_t)>(&io_service::close),
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
               "write",
-              static_cast<int (io_service::*)(io_transport* transport, std::vector<char> data)>(
-                  &io_service::write),
-              [](io_service *service, io_transport* transport, yasio::obstream *obs) {
+              static_cast<int (io_service::*)(transport_handle_t transport,
+                                              std::vector<char> data)>(&io_service::write),
+              [](io_service *service, transport_handle_t transport, yasio::obstream *obs) {
                 return service->write(transport, std::move(obs->buffer()));
               })
           .addStaticFunction("set_option", [](io_service *service, int opt,

@@ -127,6 +127,9 @@ class io_transport;
 class io_transport_posix;
 class io_service;
 
+// recommand user always use transport_handle_t, in the future, it's maybe void* or intptr_t
+typedef io_transport *transport_handle_t;
+
 // typedefs
 typedef long long highp_time_t;
 typedef std::chrono::high_resolution_clock highp_clock_t;
@@ -345,11 +348,11 @@ private:
 class io_event final
 {
 public:
-  io_event(int channel_index, int kind, int error, io_transport *transport)
+  io_event(int channel_index, int kind, int error, transport_handle_t transport)
       : timestamp_(highp_clock()), cindex_(channel_index), kind_(kind), status_(error),
         transport_(std::move(transport))
   {}
-  io_event(int channel_index, int type, std::vector<char> packet, io_transport *transport)
+  io_event(int channel_index, int type, std::vector<char> packet, transport_handle_t transport)
       : timestamp_(highp_clock()), cindex_(channel_index), kind_(type), status_(0),
         transport_(std::move(transport)), packet_(std::move(packet))
   {}
@@ -365,7 +368,7 @@ public:
   int kind() const { return kind_; }
   int status() const { return status_; }
 
-  io_transport *transport() { return transport_; }
+  transport_handle_t transport() { return transport_; }
 
   std::vector<char> &packet() { return packet_; }
   long long timestamp() const { return timestamp_; }
@@ -379,7 +382,7 @@ private:
   int cindex_;
   int kind_;
   int status_;
-  io_transport *transport_;
+  transport_handle_t transport_;
   std::vector<char> packet_;
 };
 
@@ -451,21 +454,21 @@ public:
   // open a channel, default: YCM_TCP_CLIENT
   YASIO__DECL void open(size_t channel_index, int channel_mask = YCM_TCP_CLIENT);
 
-  YASIO__DECL void reopen(io_transport *);
+  YASIO__DECL void reopen(transport_handle_t);
 
   // close transport
-  YASIO__DECL void close(io_transport *);
+  YASIO__DECL void close(transport_handle_t);
 
   // close channel
   YASIO__DECL void close(size_t channel_index = 0);
 
   // check whether the transport is open
-  YASIO__DECL bool is_open(io_transport *) const;
+  YASIO__DECL bool is_open(transport_handle_t) const;
 
   // check whether the channel is open
   YASIO__DECL bool is_open(size_t cahnnel_index = 0) const;
 
-  YASIO__DECL int write(io_transport *transport, std::vector<char> data);
+  YASIO__DECL int write(transport_handle_t transport, std::vector<char> data);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
   deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb, bool repeated = false)
@@ -521,10 +524,10 @@ private:
   {
     handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
   }
-  YASIO__DECL void handle_connect_succeed(io_transport *);
+  YASIO__DECL void handle_connect_succeed(transport_handle_t);
   YASIO__DECL void handle_connect_failed(io_channel *, int ec);
 
-  YASIO__DECL io_transport *allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
+  YASIO__DECL transport_handle_t allocate_transport(io_channel *, std::shared_ptr<xxsocket>);
 
   YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);
   YASIO__DECL void unregister_descriptor(const socket_native_type fd, int flags);
@@ -532,14 +535,14 @@ private:
   // The major non-blocking event-loop
   YASIO__DECL void run(void);
 
-  YASIO__DECL bool do_read(io_transport *, fd_set *fds_array, long long &max_wait_duration);
-  YASIO__DECL void do_unpack(io_transport *, int bytes_expected, int bytes_transferred,
+  YASIO__DECL bool do_read(transport_handle_t, fd_set *fds_array, long long &max_wait_duration);
+  YASIO__DECL void do_unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
                              long long &max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED
   YASIO__DECL bool cleanup_io(io_base *ctx);
 
-  YASIO__DECL void handle_close(io_transport *);
+  YASIO__DECL void handle_close(transport_handle_t);
   YASIO__DECL void handle_event(event_ptr event);
 
   // new/delete client socket connection channel
@@ -578,8 +581,8 @@ private:
   std::recursive_mutex channel_ops_mtx_;
   std::vector<io_channel *> channel_ops_;
 
-  std::vector<io_transport *> transports_;
-  std::vector<io_transport *> transports_pool_;
+  std::vector<transport_handle_t> transports_;
+  std::vector<transport_handle_t> transports_pool_;
 
   // select interrupter
   select_interrupter interrupter_;

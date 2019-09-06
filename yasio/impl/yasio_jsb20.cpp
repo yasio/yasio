@@ -967,7 +967,7 @@ void js_register_yasio_transport(se::Object *obj)
   auto cls = se::Class::create("transport", obj, nullptr, nullptr);
 
   cls->install();
-  JSBClassType::registerClass<io_transport_base>(cls);
+  JSBClassType::registerClass<io_transport>(cls);
 
   se::ScriptEngine::getInstance()->clearException();
 }
@@ -1050,7 +1050,7 @@ bool js_yasio_io_event_transport(se::State &s)
   const auto &args = s.args();
   size_t argc      = args.size();
 
-  native_ptr_to_seval<io_transport_base>(cobj->transport(), &s.rval());
+  native_ptr_to_seval<io_transport>(cobj->transport(), &s.rval());
   return true;
 }
 SE_BIND_FUNC(js_yasio_io_event_transport)

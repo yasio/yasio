@@ -282,7 +282,7 @@ else if (k == YEK_CONNECT_RESPONSE)
     if (e->status() == 0)
     {
     printf("Accept frontend succeed."); // debug session estiblished with socket.
-    // this->session = e->transport(); // 保存通讯session用于发送数据
+    // this->session = e->transport(); // 保存通讯session用于发送数据, m_session是transport_handle_t类型
     }
     else
     {
@@ -324,7 +324,7 @@ yasio_shared_service->start_service(&ep, [=](event_ptr e) {
         {
             printf("connect backend succeed."); // debug session estiblished with socket.
             // 保存通讯session用于发送数据
-            // m_session = e->transport();
+            // m_session = e->transport(); // m_session是transport_handle_t类型
         }
         else
         {

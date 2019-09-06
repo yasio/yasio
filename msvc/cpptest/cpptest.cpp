@@ -54,7 +54,7 @@ void yasioTest()
   };
   service.set_option(YOPT_RESOLV_FN, &resolv);
 
-  std::vector<io_transport *> transports;
+  std::vector<transport_handle_t> transports;
 
   deadline_timer udpconn_delay(service);
   deadline_timer udp_heartbeat(service);

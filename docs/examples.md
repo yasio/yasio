@@ -199,7 +199,7 @@ return _M
 ```c#
 const string LIBNAME = "yasio-ni";
 
-public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr sid, IntPtr bytes, int len);
+public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr thandle, IntPtr bytes, int len);
 public delegate void YNIPrintDelegate(string msg);
 /// <summary>
 /// Start a low level socket io service
@@ -219,10 +219,10 @@ public static extern void yasio_open(int cindex, int cmask);
 public static extern void yasio_close(int cindex);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_close2(IntPtr sid);
+public static extern void yasio_close_handle(IntPtr thandle);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_write(IntPtr fd, byte[] bytes, int len);
+public static extern void yasio_write(IntPtr thandle, byte[] bytes, int len);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_dispatch_events(int maxEvents);

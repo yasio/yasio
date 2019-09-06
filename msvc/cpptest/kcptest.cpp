@@ -45,7 +45,7 @@ void yasioTest()
   };
   service.set_option(YOPT_RESOLV_FN, &resolv);
 
-  std::vector<io_transport*> transports;
+  std::vector<transport_handle_t> transports;
 
   service.set_option(YOPT_LOG_FILE, "yasio.log");
 

@@ -33,7 +33,7 @@ BraceWrapping:
 IndentCaseLabels: true
 
 # Right-align pointers and references
-PointerAlignment: Right
+PointerAlignment: Left
 
 # ANGLE likes to align things as much as possible.
 AlignOperands: true

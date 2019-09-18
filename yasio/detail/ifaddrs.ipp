@@ -265,32 +265,32 @@ struct sockaddr_ll_extended
   unsigned char sll_addr[24];
 };
 
-static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddrs_head,
-                               struct ifaddrs **last_ifaddr);
-static struct ifaddrs *get_link_info(const struct nlmsghdr *message);
-static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
-                                        struct ifaddrs **ifaddrs_head);
-static int open_netlink_session(netlink_session *session);
-static int send_netlink_dump_request(netlink_session *session, int type);
-static int append_ifaddr(struct ifaddrs *addr, struct ifaddrs **ifaddrs_head,
-                         struct ifaddrs **last_ifaddr);
-static int fill_ll_address(struct sockaddr_ll_extended **sa, struct ifinfomsg *net_interface,
-                           void *rta_data, size_t rta_payload_length);
-static int fill_sa_address(struct sockaddr **sa, struct ifaddrmsg *net_address, void *rta_data,
+static int parse_netlink_reply(netlink_session* session, struct ifaddrs** ifaddrs_head,
+                               struct ifaddrs** last_ifaddr);
+static struct ifaddrs* get_link_info(const struct nlmsghdr* message);
+static struct ifaddrs* get_link_address(const struct nlmsghdr* message,
+                                        struct ifaddrs** ifaddrs_head);
+static int open_netlink_session(netlink_session* session);
+static int send_netlink_dump_request(netlink_session* session, int type);
+static int append_ifaddr(struct ifaddrs* addr, struct ifaddrs** ifaddrs_head,
+                         struct ifaddrs** last_ifaddr);
+static int fill_ll_address(struct sockaddr_ll_extended** sa, struct ifinfomsg* net_interface,
+                           void* rta_data, size_t rta_payload_length);
+static int fill_sa_address(struct sockaddr** sa, struct ifaddrmsg* net_address, void* rta_data,
                            size_t rta_payload_length);
-static void free_single_ifaddrs(struct ifaddrs **ifap);
-static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs **ifap),
-                             void (**freeifaddrs_impl)(struct ifaddrs *ifa));
-static struct ifaddrs *find_interface_by_index(int index, struct ifaddrs **ifaddrs_head);
-static char *get_interface_name_by_index(int index, struct ifaddrs **ifaddrs_head);
-static int get_interface_flags_by_index(int index, struct ifaddrs **ifaddrs_head);
-static int calculate_address_netmask(struct ifaddrs *ifa, struct ifaddrmsg *net_address);
+static void free_single_ifaddrs(struct ifaddrs** ifap);
+static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs** ifap),
+                             void (**freeifaddrs_impl)(struct ifaddrs* ifa));
+static struct ifaddrs* find_interface_by_index(int index, struct ifaddrs** ifaddrs_head);
+static char* get_interface_name_by_index(int index, struct ifaddrs** ifaddrs_head);
+static int get_interface_flags_by_index(int index, struct ifaddrs** ifaddrs_head);
+static int calculate_address_netmask(struct ifaddrs* ifa, struct ifaddrmsg* net_address);
 
 /* We don't use 'struct ifaddrs' since that doesn't exist in Android's bionic, but since our
  * version of the structure is 100% compatible we can just use it instead
  */
-typedef int (*getifaddrs_impl_fptr)(struct ifaddrs **);
-typedef void (*freeifaddrs_impl_fptr)(struct ifaddrs *ifa);
+typedef int (*getifaddrs_impl_fptr)(struct ifaddrs**);
+typedef void (*freeifaddrs_impl_fptr)(struct ifaddrs* ifa);
 
 static getifaddrs_impl_fptr getifaddrs_impl   = NULL;
 static freeifaddrs_impl_fptr freeifaddrs_impl = NULL;
@@ -299,7 +299,7 @@ static std::mutex _getifaddrs_init_lock;
 
 static void getifaddrs_init() { get_ifaddrs_impl(&getifaddrs_impl, &freeifaddrs_impl); }
 
-YASIO__DECL int getifaddrs(struct ifaddrs **ifap)
+YASIO__DECL int getifaddrs(struct ifaddrs** ifap)
 {
   if (!_getifaddrs_initialized)
   {
@@ -320,8 +320,8 @@ YASIO__DECL int getifaddrs(struct ifaddrs **ifap)
     return ret;
 
   *ifap                        = NULL;
-  struct ifaddrs *ifaddrs_head = 0;
-  struct ifaddrs *last_ifaddr  = 0;
+  struct ifaddrs* ifaddrs_head = 0;
+  struct ifaddrs* last_ifaddr  = 0;
   netlink_session session;
 
   if (open_netlink_session(&session) < 0)
@@ -354,7 +354,7 @@ cleanup:
   return ret;
 }
 
-YASIO__DECL void freeifaddrs(struct ifaddrs *ifa)
+YASIO__DECL void freeifaddrs(struct ifaddrs* ifa)
 {
   struct ifaddrs *cur, *next;
 
@@ -376,10 +376,10 @@ YASIO__DECL void freeifaddrs(struct ifaddrs *ifa)
   }
 }
 
-static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs **ifap),
-                             void (**freeifaddrs_impl)(struct ifaddrs *ifa))
+static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs** ifap),
+                             void (**freeifaddrs_impl)(struct ifaddrs* ifa))
 {
-  void *libc = nullptr;
+  void* libc = nullptr;
 
   assert(getifaddrs_impl);
   assert(freeifaddrs_impl);
@@ -387,9 +387,9 @@ static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs **ifap),
   libc = dlopen("libc.so", RTLD_NOW);
   if (libc)
   {
-    *getifaddrs_impl = reinterpret_cast<int (*)(struct ifaddrs **)>(dlsym(libc, "getifaddrs"));
+    *getifaddrs_impl = reinterpret_cast<int (*)(struct ifaddrs**)>(dlsym(libc, "getifaddrs"));
     if (*getifaddrs_impl)
-      *freeifaddrs_impl = reinterpret_cast<void (*)(struct ifaddrs *)>(dlsym(libc, "freeifaddrs"));
+      *freeifaddrs_impl = reinterpret_cast<void (*)(struct ifaddrs*)>(dlsym(libc, "freeifaddrs"));
   }
 
   if (!*getifaddrs_impl)
@@ -402,9 +402,9 @@ static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs **ifap),
   }
 }
 
-static void free_single_ifaddrs(struct ifaddrs **ifap)
+static void free_single_ifaddrs(struct ifaddrs** ifap)
 {
-  struct ifaddrs *ifa = ifap ? *ifap : NULL;
+  struct ifaddrs* ifa = ifap ? *ifap : NULL;
   if (!ifa)
     return;
 
@@ -427,7 +427,7 @@ static void free_single_ifaddrs(struct ifaddrs **ifap)
   *ifap = NULL;
 }
 
-static int open_netlink_session(netlink_session *session)
+static int open_netlink_session(netlink_session* session)
 {
   assert(session != 0);
 
@@ -452,7 +452,7 @@ static int open_netlink_session(netlink_session *session)
 
   session->them.nl_family = AF_NETLINK;
 
-  if (bind(session->sock_fd, (struct sockaddr *)&session->us, sizeof(session->us)) < 0)
+  if (bind(session->sock_fd, (struct sockaddr*)&session->us, sizeof(session->us)) < 0)
   {
     YASIO_LOG("Failed to bind to the netlink socket. %s", strerror(errno));
     return -1;
@@ -461,7 +461,7 @@ static int open_netlink_session(netlink_session *session)
   return 0;
 }
 
-static int send_netlink_dump_request(netlink_session *session, int type)
+static int send_netlink_dump_request(netlink_session* session, int type)
 {
   netlink_request request;
 
@@ -490,7 +490,7 @@ static int send_netlink_dump_request(netlink_session *session, int type)
   session->message_header.msg_iovlen  = 1;
   session->message_header.msg_iov     = &session->payload_vector;
 
-  if (sendmsg(session->sock_fd, (const struct msghdr *)&session->message_header, 0) < 0)
+  if (sendmsg(session->sock_fd, (const struct msghdr*)&session->message_header, 0) < 0)
   {
     YASIO_LOG("Failed to send netlink message. %s", strerror(errno));
     return -1;
@@ -499,8 +499,8 @@ static int send_netlink_dump_request(netlink_session *session, int type)
   return 0;
 }
 
-static int append_ifaddr(struct ifaddrs *addr, struct ifaddrs **ifaddrs_head,
-                         struct ifaddrs **last_ifaddr)
+static int append_ifaddr(struct ifaddrs* addr, struct ifaddrs** ifaddrs_head,
+                         struct ifaddrs** last_ifaddr)
 {
   assert(addr);
   assert(ifaddrs_head);
@@ -514,7 +514,7 @@ static int append_ifaddr(struct ifaddrs *addr, struct ifaddrs **ifaddrs_head,
   }
   else if (!*last_ifaddr)
   {
-    struct ifaddrs *last = *ifaddrs_head;
+    struct ifaddrs* last = *ifaddrs_head;
 
     while (last->ifa_next)
       last = last->ifa_next;
@@ -533,15 +533,15 @@ static int append_ifaddr(struct ifaddrs *addr, struct ifaddrs **ifaddrs_head,
   return 0;
 }
 
-static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddrs_head,
-                               struct ifaddrs **last_ifaddr)
+static int parse_netlink_reply(netlink_session* session, struct ifaddrs** ifaddrs_head,
+                               struct ifaddrs** last_ifaddr)
 {
   struct msghdr netlink_reply;
   struct iovec reply_vector;
-  struct nlmsghdr *current_message;
-  struct ifaddrs *addr;
+  struct nlmsghdr* current_message;
+  struct ifaddrs* addr;
   int ret                 = -1;
-  unsigned char *response = NULL;
+  unsigned char* response = NULL;
 
   assert(session);
   assert(ifaddrs_head);
@@ -550,7 +550,7 @@ static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddr
   size_t buf_size = static_cast<size_t>(getpagesize());
   YASIO_LOGV("receive buffer size == %d", buf_size);
 
-  response       = (unsigned char *)malloc(sizeof(*response) * buf_size);
+  response       = (unsigned char*)malloc(sizeof(*response) * buf_size);
   ssize_t length = 0;
   if (!response)
   {
@@ -582,7 +582,7 @@ static int parse_netlink_reply(netlink_session *session, struct ifaddrs **ifaddr
     if (length == 0)
       break;
 
-    for (current_message = (struct nlmsghdr *)response;
+    for (current_message = (struct nlmsghdr*)response;
          current_message && NLMSG_OK(current_message, static_cast<size_t>(length));
          current_message = NLMSG_NEXT(current_message, length))
     {
@@ -630,7 +630,7 @@ cleanup:
   return ret;
 }
 
-static int fill_sa_address(struct sockaddr **sa, struct ifaddrmsg *net_address, void *rta_data,
+static int fill_sa_address(struct sockaddr** sa, struct ifaddrmsg* net_address, void* rta_data,
                            size_t rta_payload_length)
 {
   assert(sa);
@@ -640,22 +640,22 @@ static int fill_sa_address(struct sockaddr **sa, struct ifaddrmsg *net_address, 
   switch (net_address->ifa_family)
   {
     case AF_INET: {
-      struct sockaddr_in *sa4;
+      struct sockaddr_in* sa4;
       assert(rta_payload_length == 4); /* IPv4 address length */
-      sa4 = (struct sockaddr_in *)calloc(1, sizeof(*sa4));
+      sa4 = (struct sockaddr_in*)calloc(1, sizeof(*sa4));
       if (!sa4)
         return -1;
 
       sa4->sin_family = AF_INET;
       memcpy(&sa4->sin_addr, rta_data, rta_payload_length);
-      *sa = (struct sockaddr *)sa4;
+      *sa = (struct sockaddr*)sa4;
       break;
     }
 
     case AF_INET6: {
-      struct sockaddr_in6 *sa6;
+      struct sockaddr_in6* sa6;
       assert(rta_payload_length == 16); /* IPv6 address length */
-      sa6 = (struct sockaddr_in6 *)calloc(1, sizeof(*sa6));
+      sa6 = (struct sockaddr_in6*)calloc(1, sizeof(*sa6));
       if (!sa6)
         return -1;
 
@@ -663,14 +663,14 @@ static int fill_sa_address(struct sockaddr **sa, struct ifaddrmsg *net_address, 
       memcpy(&sa6->sin6_addr, rta_data, rta_payload_length);
       if (IN6_IS_ADDR_LINKLOCAL(&sa6->sin6_addr) || IN6_IS_ADDR_MC_LINKLOCAL(&sa6->sin6_addr))
         sa6->sin6_scope_id = net_address->ifa_index;
-      *sa = (struct sockaddr *)sa6;
+      *sa = (struct sockaddr*)sa6;
       break;
     }
 
     default: {
-      struct sockaddr *sagen;
+      struct sockaddr* sagen;
       assert(rta_payload_length <= sizeof(sagen->sa_data));
-      *sa = sagen = (struct sockaddr *)calloc(1, sizeof(*sagen));
+      *sa = sagen = (struct sockaddr*)calloc(1, sizeof(*sagen));
       if (!sagen)
         return -1;
 
@@ -683,14 +683,14 @@ static int fill_sa_address(struct sockaddr **sa, struct ifaddrmsg *net_address, 
   return 0;
 }
 
-static int fill_ll_address(struct sockaddr_ll_extended **sa, struct ifinfomsg *net_interface,
-                           void *rta_data, size_t rta_payload_length)
+static int fill_ll_address(struct sockaddr_ll_extended** sa, struct ifinfomsg* net_interface,
+                           void* rta_data, size_t rta_payload_length)
 {
   assert(sa);
   assert(net_interface);
 
   /* Always allocate, do not free - caller may reuse the same variable */
-  *sa = reinterpret_cast<sockaddr_ll_extended *>(calloc(1, sizeof(**sa)));
+  *sa = reinterpret_cast<sockaddr_ll_extended*>(calloc(1, sizeof(**sa)));
   if (!*sa)
     return -1;
 
@@ -726,9 +726,9 @@ static int fill_ll_address(struct sockaddr_ll_extended **sa, struct ifinfomsg *n
   return 0;
 }
 
-static struct ifaddrs *find_interface_by_index(int index, struct ifaddrs **ifaddrs_head)
+static struct ifaddrs* find_interface_by_index(int index, struct ifaddrs** ifaddrs_head)
 {
-  struct ifaddrs *cur;
+  struct ifaddrs* cur;
   if (!ifaddrs_head || !*ifaddrs_head)
     return NULL;
 
@@ -739,7 +739,7 @@ static struct ifaddrs *find_interface_by_index(int index, struct ifaddrs **ifadd
   while (cur)
   {
     if (cur->ifa_addr && cur->ifa_addr->sa_family == AF_PACKET &&
-        ((struct sockaddr_ll_extended *)cur->ifa_addr)->sll_ifindex == index)
+        ((struct sockaddr_ll_extended*)cur->ifa_addr)->sll_ifindex == index)
       return cur;
     if (cur == cur->ifa_next)
       break;
@@ -749,60 +749,60 @@ static struct ifaddrs *find_interface_by_index(int index, struct ifaddrs **ifadd
   return NULL;
 }
 
-static char *get_interface_name_by_index(int index, struct ifaddrs **ifaddrs_head)
+static char* get_interface_name_by_index(int index, struct ifaddrs** ifaddrs_head)
 {
-  struct ifaddrs *iface = find_interface_by_index(index, ifaddrs_head);
+  struct ifaddrs* iface = find_interface_by_index(index, ifaddrs_head);
   if (!iface || !iface->ifa_name)
     return NULL;
 
   return iface->ifa_name;
 }
 
-static int get_interface_flags_by_index(int index, struct ifaddrs **ifaddrs_head)
+static int get_interface_flags_by_index(int index, struct ifaddrs** ifaddrs_head)
 {
-  struct ifaddrs *iface = find_interface_by_index(index, ifaddrs_head);
+  struct ifaddrs* iface = find_interface_by_index(index, ifaddrs_head);
   if (!iface)
     return 0;
 
   return static_cast<int>(iface->ifa_flags);
 }
 
-static int calculate_address_netmask(struct ifaddrs *ifa, struct ifaddrmsg *net_address)
+static int calculate_address_netmask(struct ifaddrs* ifa, struct ifaddrmsg* net_address)
 {
   if (ifa->ifa_addr && ifa->ifa_addr->sa_family != AF_UNSPEC &&
       ifa->ifa_addr->sa_family != AF_PACKET)
   {
     uint32_t prefix_length      = 0;
     uint32_t data_length        = 0;
-    unsigned char *netmask_data = NULL;
+    unsigned char* netmask_data = NULL;
 
     switch (ifa->ifa_addr->sa_family)
     {
       case AF_INET: {
-        struct sockaddr_in *sa = (struct sockaddr_in *)calloc(1, sizeof(struct sockaddr_in));
+        struct sockaddr_in* sa = (struct sockaddr_in*)calloc(1, sizeof(struct sockaddr_in));
         if (!sa)
           return -1;
 
-        ifa->ifa_netmask = (struct sockaddr *)sa;
+        ifa->ifa_netmask = (struct sockaddr*)sa;
         prefix_length    = net_address->ifa_prefixlen;
         if (prefix_length > 32)
           prefix_length = 32;
         data_length  = sizeof(sa->sin_addr);
-        netmask_data = (unsigned char *)&sa->sin_addr;
+        netmask_data = (unsigned char*)&sa->sin_addr;
         break;
       }
 
       case AF_INET6: {
-        struct sockaddr_in6 *sa = (struct sockaddr_in6 *)calloc(1, sizeof(struct sockaddr_in6));
+        struct sockaddr_in6* sa = (struct sockaddr_in6*)calloc(1, sizeof(struct sockaddr_in6));
         if (!sa)
           return -1;
 
-        ifa->ifa_netmask = (struct sockaddr *)sa;
+        ifa->ifa_netmask = (struct sockaddr*)sa;
         prefix_length    = net_address->ifa_prefixlen;
         if (prefix_length > 128)
           prefix_length = 128;
         data_length  = sizeof(sa->sin6_addr);
-        netmask_data = (unsigned char *)&sa->sin6_addr;
+        netmask_data = (unsigned char*)&sa->sin6_addr;
         break;
       }
     }
@@ -835,18 +835,18 @@ static int calculate_address_netmask(struct ifaddrs *ifa, struct ifaddrmsg *net_
   return 0;
 }
 
-static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
-                                        struct ifaddrs **ifaddrs_head)
+static struct ifaddrs* get_link_address(const struct nlmsghdr* message,
+                                        struct ifaddrs** ifaddrs_head)
 {
   ssize_t length = 0;
-  struct rtattr *attribute;
-  struct ifaddrmsg *net_address;
-  struct ifaddrs *ifa = NULL;
-  struct sockaddr **sa;
+  struct rtattr* attribute;
+  struct ifaddrmsg* net_address;
+  struct ifaddrs* ifa = NULL;
+  struct sockaddr** sa;
   size_t payload_size;
 
   assert(message);
-  net_address = reinterpret_cast<ifaddrmsg *>(NLMSG_DATA(message));
+  net_address = reinterpret_cast<ifaddrmsg*>(NLMSG_DATA(message));
   length      = static_cast<ssize_t>(IFA_PAYLOAD(message));
   YASIO_LOGV("   address data length: %u", length);
   if (length <= 0)
@@ -854,7 +854,7 @@ static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
     goto error;
   }
 
-  ifa = reinterpret_cast<ifaddrs *>(calloc(1, sizeof(*ifa)));
+  ifa = reinterpret_cast<ifaddrs*>(calloc(1, sizeof(*ifa)));
   if (!ifa)
   {
     goto error;
@@ -886,7 +886,7 @@ static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
 
         if (payload_size > 0)
         {
-          ifa->ifa_name = (char *)malloc(payload_size + room_for_trailing_null);
+          ifa->ifa_name = (char*)malloc(payload_size + room_for_trailing_null);
           if (!ifa->ifa_name)
           {
             goto error;
@@ -972,7 +972,7 @@ static struct ifaddrs *get_link_address(const struct nlmsghdr *message,
   /* glibc stores the associated interface name in the address if IFA_LABEL never occured */
   if (!ifa->ifa_name)
   {
-    char *name =
+    char* name =
         get_interface_name_by_index(static_cast<int>(net_address->ifa_index), ifaddrs_head);
     YASIO_LOGV("   address has no name/label, getting one from interface");
     ifa->ifa_name = name ? strdup(name) : NULL;
@@ -999,23 +999,23 @@ error : {
 }
 }
 
-static struct ifaddrs *get_link_info(const struct nlmsghdr *message)
+static struct ifaddrs* get_link_info(const struct nlmsghdr* message)
 {
   ssize_t length;
-  struct rtattr *attribute;
-  struct ifinfomsg *net_interface;
-  struct ifaddrs *ifa             = NULL;
-  struct sockaddr_ll_extended *sa = NULL;
+  struct rtattr* attribute;
+  struct ifinfomsg* net_interface;
+  struct ifaddrs* ifa             = NULL;
+  struct sockaddr_ll_extended* sa = NULL;
 
   assert(message);
-  net_interface = reinterpret_cast<ifinfomsg *>(NLMSG_DATA(message));
+  net_interface = reinterpret_cast<ifinfomsg*>(NLMSG_DATA(message));
   length        = static_cast<ssize_t>(message->nlmsg_len - NLMSG_LENGTH(sizeof(*net_interface)));
   if (length <= 0)
   {
     goto error;
   }
 
-  ifa = reinterpret_cast<ifaddrs *>(calloc(1, sizeof(*ifa)));
+  ifa = reinterpret_cast<ifaddrs*>(calloc(1, sizeof(*ifa)));
   if (!ifa)
   {
     goto error;
@@ -1028,7 +1028,7 @@ static struct ifaddrs *get_link_info(const struct nlmsghdr *message)
     switch (attribute->rta_type)
     {
       case IFLA_IFNAME:
-        ifa->ifa_name = strdup(reinterpret_cast<const char *>(RTA_DATA(attribute)));
+        ifa->ifa_name = strdup(reinterpret_cast<const char*>(RTA_DATA(attribute)));
         if (!ifa->ifa_name)
         {
           goto error;
@@ -1041,7 +1041,7 @@ static struct ifaddrs *get_link_info(const struct nlmsghdr *message)
         {
           goto error;
         }
-        ifa->ifa_broadaddr = (struct sockaddr *)sa;
+        ifa->ifa_broadaddr = (struct sockaddr*)sa;
         break;
 
       case IFLA_ADDRESS:
@@ -1050,7 +1050,7 @@ static struct ifaddrs *get_link_info(const struct nlmsghdr *message)
         {
           goto error;
         }
-        ifa->ifa_addr = (struct sockaddr *)sa;
+        ifa->ifa_addr = (struct sockaddr*)sa;
         break;
 
       default:;

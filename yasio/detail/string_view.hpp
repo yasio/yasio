@@ -27,52 +27,52 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 See: https://github.com/bitwizeshift/string_view-standalone
 */
-#if !defined(YASIO__STRING_VIEW_HPP)
-#  define YASIO__STRING_VIEW_HPP
-#  include <string>
+#ifndef YASIO__STRING_VIEW_HPP
+#define YASIO__STRING_VIEW_HPP
+#include <string>
 
-#  define __YASIO_SYM2LITERAL(s) #  s
-#  define YASIO_SYM2LITERAL(s) __YASIO_SYM2LITERAL(s)
+#define __YASIO_SYM2LITERAL(s) #s
+#define YASIO_SYM2LITERAL(s) __YASIO_SYM2LITERAL(s)
 
-#  if (defined(__cplusplus) && __cplusplus == 201703L) ||                                          \
-      (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                     \
-       ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                \
-        (defined(_MSVC_LANG) && (_MSVC_LANG > 201402L))))
-#    ifndef _HAS_STD_STRING_VIEW
-#      define _HAS_STD_STRING_VIEW 1
-#    endif // C++17 features macro
-#  endif   // C++17 features check
+#if (defined(__cplusplus) && __cplusplus == 201703L) ||                                            \
+    (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                       \
+     ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                  \
+      (defined(_MSVC_LANG) && (_MSVC_LANG > 201402L))))
+#  ifndef _HAS_STD_STRING_VIEW
+#    define _HAS_STD_STRING_VIEW 1
+#  endif // C++17 features macro
+#endif   // C++17 features check
 
-#  if !defined(_HAS_STD_STRING_VIEW)
-#    define _HAS_STD_STRING_VIEW 0
-#  endif
+#if !defined(_HAS_STD_STRING_VIEW)
+#  define _HAS_STD_STRING_VIEW 0
+#endif
 
-#  if !defined(_HAS_CXX17_FULL_FEATURES)
-#    define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
-#  endif
+#if !defined(_HAS_CXX17_FULL_FEATURES)
+#  define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
+#endif
 
-#  if _HAS_STD_STRING_VIEW
+#if _HAS_STD_STRING_VIEW
 //#pragma message("_HAS_STD_STRING_VIEW = 1")
-#    if __has_include(<string_view>)
-#      include <string_view>
-#    endif
+#  if __has_include(<string_view>)
+#    include <string_view>
+#  endif
 namespace cxx17
 {
 using std::string_view;
 using std::wstring_view;
 } // namespace cxx17
-#  else
+#else
 //#pragma message("_HAS_STD_STRING_VIEW = 0")
 
-#    include <algorithm>
-#    include <exception>
-#    include <stdexcept>
-#    include <string.h>
+#  include <algorithm>
+#  include <exception>
+#  include <stdexcept>
+#  include <string.h>
 namespace cxx17
 {
 template <class _Traits>
-inline size_t __xxtraits_find(const typename _Traits::char_type *_Haystack, const size_t _Hay_size,
-                              const size_t _Start_at, const typename _Traits::char_type *_Needle,
+inline size_t __xxtraits_find(const typename _Traits::char_type* _Haystack, const size_t _Hay_size,
+                              const size_t _Start_at, const typename _Traits::char_type* _Needle,
                               const size_t _Needle_size)
 { // search [_Haystack, _Haystack +
   // _Hay_size) for [_Needle, _Needle +
@@ -116,7 +116,7 @@ inline size_t __xxtraits_find(const typename _Traits::char_type *_Haystack, cons
 }
 
 template <class _Traits>
-inline size_t __xxtraits_find_ch(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_find_ch(const typename _Traits::char_type* _Haystack,
                                  const size_t _Hay_size, const size_t _Start_at,
                                  const typename _Traits::char_type _Ch)
 { // search [_Haystack, _Haystack + _Hay_size)
@@ -134,8 +134,8 @@ inline size_t __xxtraits_find_ch(const typename _Traits::char_type *_Haystack,
 }
 
 template <class _Traits>
-inline size_t __xxtraits_rfind(const typename _Traits::char_type *_Haystack, const size_t _Hay_size,
-                               const size_t _Start_at, const typename _Traits::char_type *_Needle,
+inline size_t __xxtraits_rfind(const typename _Traits::char_type* _Haystack, const size_t _Hay_size,
+                               const size_t _Start_at, const typename _Traits::char_type* _Needle,
                                const size_t _Needle_size)
 { // search [_Haystack, _Haystack + _Hay_size)
   // for [_Needle, _Needle + _Needle_size)
@@ -167,7 +167,7 @@ inline size_t __xxtraits_rfind(const typename _Traits::char_type *_Haystack, con
 }
 
 template <class _Traits>
-inline size_t __xxtraits_rfind_ch(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_rfind_ch(const typename _Traits::char_type* _Haystack,
                                   const size_t _Hay_size, const size_t _Start_at,
                                   const typename _Traits::char_type _Ch)
 { // search [_Haystack, _Haystack +
@@ -192,9 +192,9 @@ inline size_t __xxtraits_rfind_ch(const typename _Traits::char_type *_Haystack,
 }
 
 template <class _Traits>
-inline size_t __xxtraits_find_last_of(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_find_last_of(const typename _Traits::char_type* _Haystack,
                                       const size_t _Hay_size, const size_t _Start_at,
-                                      const typename _Traits::char_type *_Needle,
+                                      const typename _Traits::char_type* _Needle,
                                       const size_t _Needle_size)
 { // in [_Haystack, _Haystack + _Hay_size), look for
   // last of [_Needle, _Needle + _Needle_size), before
@@ -219,9 +219,9 @@ inline size_t __xxtraits_find_last_of(const typename _Traits::char_type *_Haysta
 }
 
 template <class _Traits>
-inline size_t _xxtraits_find_last_not_of(const typename _Traits::char_type *_Haystack,
+inline size_t _xxtraits_find_last_not_of(const typename _Traits::char_type* _Haystack,
                                          const size_t _Hay_size, const size_t _Start_at,
-                                         const typename _Traits::char_type *_Needle,
+                                         const typename _Traits::char_type* _Needle,
                                          const size_t _Needle_size)
 { // in [_Haystack, _Haystack + _Hay_size), look for
   // none of [_Needle, _Needle + _Needle_size), before
@@ -246,9 +246,9 @@ inline size_t _xxtraits_find_last_not_of(const typename _Traits::char_type *_Hay
 }
 
 template <class _Traits>
-inline size_t __xxtraits_find_first_of(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_find_first_of(const typename _Traits::char_type* _Haystack,
                                        const size_t _Hay_size, const size_t _Start_at,
-                                       const typename _Traits::char_type *_Needle,
+                                       const typename _Traits::char_type* _Needle,
                                        const size_t _Needle_size)
 { // in [_Haystack, _Haystack + _Hay_size), look for
   // one of [_Needle, _Needle + _Needle_size), at/after
@@ -269,9 +269,9 @@ inline size_t __xxtraits_find_first_of(const typename _Traits::char_type *_Hayst
 }
 
 template <class _Traits>
-inline size_t __xxtraits_find_first_not_of(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_find_first_not_of(const typename _Traits::char_type* _Haystack,
                                            const size_t _Hay_size, const size_t _Start_at,
-                                           const typename _Traits::char_type *_Needle,
+                                           const typename _Traits::char_type* _Needle,
                                            const size_t _Needle_size)
 { // in [_Haystack, _Haystack + _Hay_size), look for none
   // of [_Needle, _Needle + _Needle_size), at/after
@@ -292,7 +292,7 @@ inline size_t __xxtraits_find_first_not_of(const typename _Traits::char_type *_H
 }
 
 template <class _Traits>
-inline size_t __xxtraits_find_not_ch(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_find_not_ch(const typename _Traits::char_type* _Haystack,
                                      const size_t _Hay_size, const size_t _Start_at,
                                      const typename _Traits::char_type _Ch)
 { // search [_Haystack, _Haystack + _Hay_size) for any value other
@@ -313,7 +313,7 @@ inline size_t __xxtraits_find_not_ch(const typename _Traits::char_type *_Haystac
 }
 
 template <class _Traits>
-inline size_t __xxtraits_rfind_not_ch(const typename _Traits::char_type *_Haystack,
+inline size_t __xxtraits_rfind_not_ch(const typename _Traits::char_type* _Haystack,
                                       const size_t _Hay_size, const size_t _Start_at,
                                       const typename _Traits::char_type _Ch)
 { // search [_Haystack, _Haystack + _Hay_size) for any value other than _Ch before _Start_at
@@ -356,13 +356,13 @@ public:
   using size_type   = size_t;
 
   using value_type      = CharT;
-  using reference       = value_type &;
-  using const_reference = const value_type &;
-  using pointer         = value_type *;
-  using const_pointer   = const value_type *;
+  using reference       = value_type&;
+  using const_reference = const value_type&;
+  using pointer         = value_type*;
+  using const_pointer   = const value_type*;
 
-  using iterator       = const CharT *;
-  using const_iterator = const CharT *;
+  using iterator       = const CharT*;
+  using const_iterator = const CharT*;
 
   //------------------------------------------------------------------------
   // Public Members
@@ -381,18 +381,18 @@ public:
   ///
   /// \param str the string to view
   template <typename Allocator>
-  basic_string_view(const std::basic_string<CharT, Traits, Allocator> &str);
+  basic_string_view(const std::basic_string<CharT, Traits, Allocator>& str);
 
   /// \brief Constructs a basic_string_view from an ansi-string
   ///
   /// \param str the string to view
-  basic_string_view(const char_type *str);
+  basic_string_view(const char_type* str);
 
   /// \brief Constructs a basic_string_view from an ansi string of a given size
   ///
   /// \param str the string to view
   /// \param count the size of the string
-  basic_string_view(const char_type *str, size_type count);
+  basic_string_view(const char_type* str, size_type count);
 
   //------------------------------------------------------------------------
   // Assignment
@@ -428,14 +428,14 @@ public:
   /// \brief Gets the ansi-string of the current basic_string_view
   ///
   /// \return the ansi-string pointer
-  const char_type *c_str() const;
+  const char_type* c_str() const;
 
   /// \brief Gets the data of the current basic_string_view
   ///
   /// \note This is an alias of #c_str
   ///
   /// \return the data this basic_string_view contains
-  const char_type *data() const;
+  const char_type* data() const;
 
   /// \brief Accesses the element at index \p pos
   ///
@@ -484,7 +484,7 @@ public:
   /// \brief Exchanges the view with that of v.
   ///
   /// \param v view to swap with
-  void swap(basic_string_view &v);
+  void swap(basic_string_view& v);
 
   //------------------------------------------------------------------------
   // Conversions
@@ -499,7 +499,7 @@ public:
   /// \return A basic_string containing a copy of the characters of the current
   /// view.
   template <class Allocator = std::allocator<CharT>>
-  std::basic_string<CharT, Traits, Allocator> to_string(const Allocator &a = Allocator()) const;
+  std::basic_string<CharT, Traits, Allocator> to_string(const Allocator& a = Allocator()) const;
 
   /// \copydoc basic_string_view::to_string
   template <class Allocator> explicit operator std::basic_string<CharT, Traits, Allocator>() const;
@@ -515,7 +515,7 @@ public:
   /// \param dest pointer to the destination character string
   /// \param count requested substring length
   /// \param pos position of the first character
-  size_type copy(char_type *dest, size_type count = npos, size_type pos = 0) const;
+  size_type copy(char_type* dest, size_type count = npos, size_type pos = 0) const;
 
   /// \brief Returns a substring of this viewed string
   ///
@@ -563,7 +563,7 @@ public:
   /// \return negative value if this view is less than the other character
   ///         sequence, zero if the both character sequences are equal, positive
   ///         value if this view is greater than the other character sequence.
-  int compare(const char_type *s) const;
+  int compare(const char_type* s) const;
 
   /// \brief Compares two character sequences
   ///
@@ -573,7 +573,7 @@ public:
   /// \return negative value if this view is less than the other character
   ///         sequence, zero if the both character sequences are equal, positive
   ///         value if this view is greater than the other character sequence.
-  int compare(size_type pos, size_type count, const char_type *s) const;
+  int compare(size_type pos, size_type count, const char_type* s) const;
 
   /// \brief Compares two character sequences
   ///
@@ -584,7 +584,7 @@ public:
   /// \return negative value if this view is less than the other character
   ///         sequence, zero if the both character sequences are equal, positive
   ///         value if this view is greater than the other character sequence.
-  int compare(size_type pos, size_type count1, const char_type *s, size_type count2) const;
+  int compare(size_type pos, size_type count1, const char_type* s, size_type count2) const;
 
   //------------------------------------------------------------------------
 
@@ -592,9 +592,9 @@ public:
 
   size_type find(char_type c, size_type pos = 0) const;
 
-  size_type find(const char_type *s, size_type pos, size_type count) const;
+  size_type find(const char_type* s, size_type pos, size_type count) const;
 
-  size_type find(const char_type *s, size_type pos = 0) const;
+  size_type find(const char_type* s, size_type pos = 0) const;
 
   //------------------------------------------------------------------------
 
@@ -602,9 +602,9 @@ public:
 
   size_type rfind(char_type c, size_type pos = npos) const;
 
-  size_type rfind(const char_type *s, size_type pos, size_type count) const;
+  size_type rfind(const char_type* s, size_type pos, size_type count) const;
 
-  size_type rfind(const char_type *s, size_type pos = npos) const;
+  size_type rfind(const char_type* s, size_type pos = npos) const;
 
   //------------------------------------------------------------------------
 
@@ -612,9 +612,9 @@ public:
 
   size_type find_first_of(char_type c, size_type pos = 0) const;
 
-  size_type find_first_of(const char_type *s, size_type pos, size_type count) const;
+  size_type find_first_of(const char_type* s, size_type pos, size_type count) const;
 
-  size_type find_first_of(const char_type *s, size_type pos = 0) const;
+  size_type find_first_of(const char_type* s, size_type pos = 0) const;
 
   //------------------------------------------------------------------------
 
@@ -622,9 +622,9 @@ public:
 
   size_type find_last_of(char_type c, size_type pos = npos) const;
 
-  size_type find_last_of(const char_type *s, size_type pos, size_type count) const;
+  size_type find_last_of(const char_type* s, size_type pos, size_type count) const;
 
-  size_type find_last_of(const char_type *s, size_type pos = npos) const;
+  size_type find_last_of(const char_type* s, size_type pos = npos) const;
 
   //------------------------------------------------------------------------
 
@@ -632,9 +632,9 @@ public:
 
   size_type find_first_not_of(char_type c, size_type pos = 0) const;
 
-  size_type find_first_not_of(const char_type *s, size_type pos, size_type count) const;
+  size_type find_first_not_of(const char_type* s, size_type pos, size_type count) const;
 
-  size_type find_first_not_of(const char_type *s, size_type pos = 0) const;
+  size_type find_first_not_of(const char_type* s, size_type pos = 0) const;
 
   //------------------------------------------------------------------------
 
@@ -642,9 +642,9 @@ public:
 
   size_type find_last_not_of(char_type c, size_type pos = npos) const;
 
-  size_type find_last_not_of(const char_type *s, size_type pos, size_type count) const;
+  size_type find_last_not_of(const char_type* s, size_type pos, size_type count) const;
 
-  size_type find_last_not_of(const char_type *s, size_type pos = npos) const;
+  size_type find_last_not_of(const char_type* s, size_type pos = npos) const;
 
   //------------------------------------------------------------------------
   // Iterators
@@ -670,7 +670,7 @@ public:
   // Private Member
   //------------------------------------------------------------------------
 private:
-  const char_type *m_str; ///< The internal string type
+  const char_type* m_str; ///< The internal string type
   size_type m_size;       ///< The size of this string
 };
 
@@ -698,17 +698,17 @@ inline basic_string_view<CharT, Traits>::basic_string_view() : m_str(nullptr), m
 template <typename CharT, typename Traits>
 template <typename Allocator>
 inline basic_string_view<CharT, Traits>::basic_string_view(
-    const std::basic_string<CharT, Traits, Allocator> &str)
+    const std::basic_string<CharT, Traits, Allocator>& str)
     : m_str(str.c_str()), m_size(str.size())
 {}
 
 template <typename CharT, typename Traits>
-inline basic_string_view<CharT, Traits>::basic_string_view(const char_type *str)
+inline basic_string_view<CharT, Traits>::basic_string_view(const char_type* str)
     : m_str(str), m_size(traits_type::length(str))
 {}
 
 template <typename CharT, typename Traits>
-inline basic_string_view<CharT, Traits>::basic_string_view(const char_type *str, size_type count)
+inline basic_string_view<CharT, Traits>::basic_string_view(const char_type* str, size_type count)
     : m_str(str), m_size(count)
 {}
 
@@ -748,22 +748,22 @@ inline bool basic_string_view<CharT, Traits>::empty() const
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline const typename basic_string_view<CharT, Traits>::char_type *
+inline const typename basic_string_view<CharT, Traits>::char_type*
 basic_string_view<CharT, Traits>::c_str() const
 {
   return m_str;
 }
 
 template <typename CharT, typename Traits>
-inline const typename basic_string_view<CharT, Traits>::char_type *
+inline const typename basic_string_view<CharT, Traits>::char_type*
 basic_string_view<CharT, Traits>::data() const
 {
   return m_str;
 }
 
 template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_reference basic_string_view<CharT, Traits>::
-operator[](size_t pos) const
+inline typename basic_string_view<CharT, Traits>::const_reference
+    basic_string_view<CharT, Traits>::operator[](size_t pos) const
 {
   return m_str[pos];
 }
@@ -808,7 +808,7 @@ inline void basic_string_view<CharT, Traits>::remove_suffix(size_type n)
 }
 
 template <typename CharT, typename Traits>
-inline void basic_string_view<CharT, Traits>::swap(basic_string_view &v)
+inline void basic_string_view<CharT, Traits>::swap(basic_string_view& v)
 {
   using std::swap;
   swap(m_size, v.m_size);
@@ -822,15 +822,15 @@ inline void basic_string_view<CharT, Traits>::swap(basic_string_view &v)
 template <typename CharT, typename Traits>
 template <class Allocator>
 inline std::basic_string<CharT, Traits, Allocator>
-basic_string_view<CharT, Traits>::to_string(const Allocator &a) const
+basic_string_view<CharT, Traits>::to_string(const Allocator& a) const
 {
   return std::basic_string<CharT, Traits, Allocator>(m_str, m_size, a);
 }
 
 template <typename CharT, typename Traits>
 template <class Allocator>
-inline basic_string_view<CharT, Traits>::
-operator std::basic_string<CharT, Traits, Allocator>() const
+inline basic_string_view<CharT, Traits>::operator std::basic_string<CharT, Traits, Allocator>()
+    const
 {
   return std::basic_string<CharT, Traits, Allocator>(m_str, m_size);
 }
@@ -841,7 +841,7 @@ operator std::basic_string<CharT, Traits, Allocator>() const
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::copy(char_type *dest, size_type count, size_type pos) const
+basic_string_view<CharT, Traits>::copy(char_type* dest, size_type count, size_type pos) const
 {
   if (pos >= m_size)
     throw std::out_of_range("Index out of range in basic_string_view::copy");
@@ -889,21 +889,21 @@ inline int basic_string_view<CharT, Traits>::compare(size_type pos1, size_type c
 }
 
 template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(const char_type *s) const
+inline int basic_string_view<CharT, Traits>::compare(const char_type* s) const
 {
   return compare(basic_string_view<CharT, Traits>(s));
 }
 
 template <typename CharT, typename Traits>
 inline int basic_string_view<CharT, Traits>::compare(size_type pos, size_type count,
-                                                     const char_type *s) const
+                                                     const char_type* s) const
 {
   return substr(pos, count).compare(basic_string_view<CharT, Traits>(s));
 }
 
 template <typename CharT, typename Traits>
 inline int basic_string_view<CharT, Traits>::compare(size_type pos, size_type count1,
-                                                     const char_type *s, size_type count2) const
+                                                     const char_type* s, size_type count2) const
 {
   return substr(pos, count1).compare(basic_string_view<CharT, Traits>(s, count2));
 }
@@ -926,14 +926,14 @@ basic_string_view<CharT, Traits>::find(char_type c, size_type pos) const
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find(const char_type *s, size_type pos, size_type count) const
+basic_string_view<CharT, Traits>::find(const char_type* s, size_type pos, size_type count) const
 {
   return find(basic_string_view<CharT, Traits>(s, count), pos);
 }
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find(const char_type *s, size_type pos) const
+basic_string_view<CharT, Traits>::find(const char_type* s, size_type pos) const
 {
   return find(basic_string_view<CharT, Traits>(s), pos);
 }
@@ -956,14 +956,14 @@ basic_string_view<CharT, Traits>::rfind(char_type c, size_type pos) const
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::rfind(const char_type *s, size_type pos, size_type count) const
+basic_string_view<CharT, Traits>::rfind(const char_type* s, size_type pos, size_type count) const
 {
   return rfind(basic_string_view<CharT, Traits>(s, count), pos);
 }
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::rfind(const char_type *s, size_type pos) const
+basic_string_view<CharT, Traits>::rfind(const char_type* s, size_type pos) const
 {
   return rfind(basic_string_view<CharT, Traits>(s), pos);
 }
@@ -986,7 +986,7 @@ basic_string_view<CharT, Traits>::find_first_of(char_type c, size_type pos) cons
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_of(const char_type *s, size_type pos,
+basic_string_view<CharT, Traits>::find_first_of(const char_type* s, size_type pos,
                                                 size_type count) const
 {
   return find_first_of(basic_string_view<CharT, Traits>(s, count), pos);
@@ -994,7 +994,7 @@ basic_string_view<CharT, Traits>::find_first_of(const char_type *s, size_type po
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_of(const char_type *s, size_type pos) const
+basic_string_view<CharT, Traits>::find_first_of(const char_type* s, size_type pos) const
 {
   return find_first_of(basic_string_view<CharT, Traits>(s), pos);
 }
@@ -1017,7 +1017,7 @@ basic_string_view<CharT, Traits>::find_last_of(char_type c, size_type pos) const
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_of(const char_type *s, size_type pos,
+basic_string_view<CharT, Traits>::find_last_of(const char_type* s, size_type pos,
                                                size_type count) const
 {
   return find_last_of(basic_string_view<CharT, Traits>(s, count), pos);
@@ -1025,7 +1025,7 @@ basic_string_view<CharT, Traits>::find_last_of(const char_type *s, size_type pos
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_of(const char_type *s, size_type pos) const
+basic_string_view<CharT, Traits>::find_last_of(const char_type* s, size_type pos) const
 {
   return find_last_of(basic_string_view<CharT, Traits>(s), pos);
 }
@@ -1048,7 +1048,7 @@ basic_string_view<CharT, Traits>::find_first_not_of(char_type c, size_type pos) 
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_not_of(const char_type *s, size_type pos,
+basic_string_view<CharT, Traits>::find_first_not_of(const char_type* s, size_type pos,
                                                     size_type count) const
 {
   return find_first_not_of(basic_string_view<CharT, Traits>(s, count), pos);
@@ -1056,7 +1056,7 @@ basic_string_view<CharT, Traits>::find_first_not_of(const char_type *s, size_typ
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_not_of(const char_type *s, size_type pos) const
+basic_string_view<CharT, Traits>::find_first_not_of(const char_type* s, size_type pos) const
 {
   return find_first_not_of(basic_string_view<CharT, Traits>(s), pos);
 }
@@ -1079,7 +1079,7 @@ basic_string_view<CharT, Traits>::find_last_not_of(char_type c, size_type pos) c
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_not_of(const char_type *s, size_type pos,
+basic_string_view<CharT, Traits>::find_last_not_of(const char_type* s, size_type pos,
                                                    size_type count) const
 {
   return find_last_not_of(basic_string_view<CharT, Traits>(s, count), pos);
@@ -1087,7 +1087,7 @@ basic_string_view<CharT, Traits>::find_last_not_of(const char_type *s, size_type
 
 template <typename CharT, typename Traits>
 inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_not_of(const char_type *s, size_type pos) const
+basic_string_view<CharT, Traits>::find_last_not_of(const char_type* s, size_type pos) const
 {
   return find_last_not_of(basic_string_view<CharT, Traits>(s), pos);
 }
@@ -1129,15 +1129,15 @@ basic_string_view<CharT, Traits>::cend() const
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &o,
-                                              const basic_string_view<CharT, Traits> &str)
+std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o,
+                                              const basic_string_view<CharT, Traits>& str)
 {
   o.write(str.data(), str.size());
   return o;
 }
 
 template <typename CharT, typename Traits>
-inline void swap(basic_string_view<CharT, Traits> &lhs, basic_string_view<CharT, Traits> &rhs)
+inline void swap(basic_string_view<CharT, Traits>& lhs, basic_string_view<CharT, Traits>& rhs)
 {
   lhs.swap(rhs);
 }
@@ -1147,34 +1147,34 @@ inline void swap(basic_string_view<CharT, Traits> &lhs, basic_string_view<CharT,
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline bool operator==(const basic_string_view<CharT, Traits> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator==(const basic_string_view<CharT, Traits>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return lhs.compare(rhs) == 0;
 }
 
 template <typename CharT, typename Traits>
-inline bool operator==(basic_string_view<CharT, Traits> lhs, const CharT *rhs)
+inline bool operator==(basic_string_view<CharT, Traits> lhs, const CharT* rhs)
 {
   return lhs == basic_string_view<CharT, Traits>(rhs);
 }
 
 template <typename CharT, typename Traits>
-inline bool operator==(const CharT *lhs, const basic_string_view<CharT, Traits> &rhs)
+inline bool operator==(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) == rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator==(const std::basic_string<CharT, Traits, Allocator> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator==(const std::basic_string<CharT, Traits, Allocator>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) == rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator==(const basic_string_view<CharT, Traits> &lhs,
-                       const std::basic_string<CharT, Traits, Allocator> &rhs)
+inline bool operator==(const basic_string_view<CharT, Traits>& lhs,
+                       const std::basic_string<CharT, Traits, Allocator>& rhs)
 {
   return lhs == basic_string_view<CharT, Traits>(rhs);
 }
@@ -1182,68 +1182,68 @@ inline bool operator==(const basic_string_view<CharT, Traits> &lhs,
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline bool operator!=(const basic_string_view<CharT, Traits> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator!=(const basic_string_view<CharT, Traits>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return lhs.compare(rhs) != 0;
 }
 
 template <typename CharT, typename Traits>
-inline bool operator!=(const basic_string_view<CharT, Traits> &lhs, const CharT *rhs)
+inline bool operator!=(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
 {
   return lhs != basic_string_view<CharT, Traits>(rhs);
 }
 
 template <typename CharT, typename Traits>
-inline bool operator!=(const CharT *lhs, const basic_string_view<CharT, Traits> &rhs)
+inline bool operator!=(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) != rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator!=(const std::basic_string<CharT, Traits, Allocator> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator!=(const std::basic_string<CharT, Traits, Allocator>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) != rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator!=(const basic_string_view<CharT, Traits> &lhs,
-                       const std::basic_string<CharT, Traits, Allocator> &rhs)
+inline bool operator!=(const basic_string_view<CharT, Traits>& lhs,
+                       const std::basic_string<CharT, Traits, Allocator>& rhs)
 {
   return lhs != basic_string_view<CharT, Traits>(rhs);
 }
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline bool operator<(const basic_string_view<CharT, Traits> &lhs,
-                      const basic_string_view<CharT, Traits> &rhs)
+inline bool operator<(const basic_string_view<CharT, Traits>& lhs,
+                      const basic_string_view<CharT, Traits>& rhs)
 {
   return lhs.compare(rhs) < 0;
 }
 
 template <typename CharT, typename Traits>
-inline bool operator<(const basic_string_view<CharT, Traits> &lhs, const CharT *rhs)
+inline bool operator<(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
 {
   return lhs < basic_string_view<CharT, Traits>(rhs);
 }
 
 template <typename CharT, typename Traits>
-inline bool operator<(const CharT *lhs, const basic_string_view<CharT, Traits> &rhs)
+inline bool operator<(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) < rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<(const std::basic_string<CharT, Traits, Allocator> &lhs,
-                      const basic_string_view<CharT, Traits> &rhs)
+inline bool operator<(const std::basic_string<CharT, Traits, Allocator>& lhs,
+                      const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) < rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<(const basic_string_view<CharT, Traits> &lhs,
-                      const std::basic_string<CharT, Traits, Allocator> &rhs)
+inline bool operator<(const basic_string_view<CharT, Traits>& lhs,
+                      const std::basic_string<CharT, Traits, Allocator>& rhs)
 {
   return lhs < basic_string_view<CharT, Traits>(rhs);
 }
@@ -1251,34 +1251,34 @@ inline bool operator<(const basic_string_view<CharT, Traits> &lhs,
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline bool operator>(const basic_string_view<CharT, Traits> &lhs,
-                      const basic_string_view<CharT, Traits> &rhs)
+inline bool operator>(const basic_string_view<CharT, Traits>& lhs,
+                      const basic_string_view<CharT, Traits>& rhs)
 {
   return lhs.compare(rhs) > 0;
 }
 
 template <typename CharT, typename Traits>
-inline bool operator>(const basic_string_view<CharT, Traits> &lhs, const CharT *rhs)
+inline bool operator>(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
 {
   return lhs > basic_string_view<CharT, Traits>(rhs);
 }
 
 template <typename CharT, typename Traits>
-inline bool operator>(const CharT *lhs, const basic_string_view<CharT, Traits> &rhs)
+inline bool operator>(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) > rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>(const std::basic_string<CharT, Traits, Allocator> &lhs,
-                      const basic_string_view<CharT, Traits> &rhs)
+inline bool operator>(const std::basic_string<CharT, Traits, Allocator>& lhs,
+                      const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) > rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>(const basic_string_view<CharT, Traits> &lhs,
-                      const std::basic_string<CharT, Traits, Allocator> &rhs)
+inline bool operator>(const basic_string_view<CharT, Traits>& lhs,
+                      const std::basic_string<CharT, Traits, Allocator>& rhs)
 {
   return lhs > basic_string_view<CharT, Traits>(rhs);
 }
@@ -1286,34 +1286,34 @@ inline bool operator>(const basic_string_view<CharT, Traits> &lhs,
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline bool operator<=(const basic_string_view<CharT, Traits> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator<=(const basic_string_view<CharT, Traits>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return lhs.compare(rhs) <= 0;
 }
 
 template <typename CharT, typename Traits>
-inline bool operator<=(const basic_string_view<CharT, Traits> &lhs, const CharT *rhs)
+inline bool operator<=(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
 {
   return lhs <= basic_string_view<CharT, Traits>(rhs);
 }
 
 template <typename CharT, typename Traits>
-inline bool operator<=(const CharT *lhs, const basic_string_view<CharT, Traits> &rhs)
+inline bool operator<=(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) <= rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<=(const std::basic_string<CharT, Traits, Allocator> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator<=(const std::basic_string<CharT, Traits, Allocator>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) <= rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<=(const basic_string_view<CharT, Traits> &lhs,
-                       const std::basic_string<CharT, Traits, Allocator> &rhs)
+inline bool operator<=(const basic_string_view<CharT, Traits>& lhs,
+                       const std::basic_string<CharT, Traits, Allocator>& rhs)
 {
   return lhs <= basic_string_view<CharT, Traits>(rhs);
 }
@@ -1321,39 +1321,39 @@ inline bool operator<=(const basic_string_view<CharT, Traits> &lhs,
 //--------------------------------------------------------------------------
 
 template <typename CharT, typename Traits>
-inline bool operator>=(const basic_string_view<CharT, Traits> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator>=(const basic_string_view<CharT, Traits>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return lhs.compare(rhs) >= 0;
 }
 
 template <typename CharT, typename Traits>
-inline bool operator>=(const basic_string_view<CharT, Traits> &lhs, const CharT *rhs)
+inline bool operator>=(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
 {
   return lhs >= basic_string_view<CharT, Traits>(rhs);
 }
 
 template <typename CharT, typename Traits>
-inline bool operator>=(const CharT *lhs, const basic_string_view<CharT, Traits> &rhs)
+inline bool operator>=(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) >= rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>=(const std::basic_string<CharT, Traits, Allocator> &lhs,
-                       const basic_string_view<CharT, Traits> &rhs)
+inline bool operator>=(const std::basic_string<CharT, Traits, Allocator>& lhs,
+                       const basic_string_view<CharT, Traits>& rhs)
 {
   return basic_string_view<CharT, Traits>(lhs) >= rhs;
 }
 
 template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>=(const basic_string_view<CharT, Traits> &lhs,
-                       const std::basic_string<CharT, Traits, Allocator> &rhs)
+inline bool operator>=(const basic_string_view<CharT, Traits>& lhs,
+                       const std::basic_string<CharT, Traits, Allocator>& rhs)
 {
   return lhs >= basic_string_view<CharT, Traits>(rhs);
 }
 } // namespace cxx17
 
-#  endif
+#endif
 
 #endif

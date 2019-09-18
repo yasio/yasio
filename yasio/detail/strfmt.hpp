@@ -46,7 +46,7 @@ namespace yasio
  *AND it's also standard-compliant, see reference:
  *http://www.cplusplus.com/reference/cstdio/vsnprintf/
  */
-inline std::string strfmt(size_t n, const char *format, ...)
+inline std::string strfmt(size_t n, const char* format, ...)
 {
   va_list args;
   std::string buffer(n, '\0');

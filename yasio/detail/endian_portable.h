@@ -58,7 +58,7 @@ inline uint32_t htonf(float Value)
 {
   uint32_t Tempval;
   uint32_t Retval;
-  Tempval = *(uint32_t *)(&Value);
+  Tempval = *(uint32_t*)(&Value);
   Retval  = _WS2_32_WINSOCK_SWAP_LONG(Tempval);
   return Retval;
 }
@@ -69,7 +69,7 @@ inline float ntohf(uint32_t Value)
 {
   const uint32_t Tempval = _WS2_32_WINSOCK_SWAP_LONG(Value);
   float Retval;
-  *((uint32_t *)&Retval) = Tempval;
+  *((uint32_t*)&Retval) = Tempval;
   return Retval;
 }
 #  endif /* ntohf */
@@ -79,7 +79,7 @@ inline uint64_t htond(double Value)
 {
   uint64_t Tempval;
   uint64_t Retval;
-  Tempval = *(uint64_t *)(&Value);
+  Tempval = *(uint64_t*)(&Value);
   Retval  = _WS2_32_WINSOCK_SWAP_LONGLONG(Tempval);
   return Retval;
 }
@@ -90,7 +90,7 @@ inline double ntohd(uint64_t Value)
 {
   const uint64_t Tempval = _WS2_32_WINSOCK_SWAP_LONGLONG(Value);
   double Retval;
-  *((uint64_t *)&Retval) = Tempval;
+  *((uint64_t*)&Retval) = Tempval;
   return Retval;
 }
 #  endif /* ntohd */
@@ -144,13 +144,13 @@ static const unsigned char bits_rmask_table[8] = {
     0x1F /*00011111*/, 0x3F /*00111111*/, 0x7F /*01111111*/, 0xFF /*11111111*/
 };
 
-inline void set_bits_value(void *pByteValue, unsigned int pos, unsigned char bitsValue,
+inline void set_bits_value(void* pByteValue, unsigned int pos, unsigned char bitsValue,
                            unsigned int bits)
 {
   ASSERT(bits > 0 && bits <= (pos + 1) && pos < 8);
 
-  *((unsigned char *)pByteValue) =
-      ((*((unsigned char *)pByteValue) & bits_wmask_table[pos][bits - 1]) |
+  *((unsigned char*)pByteValue) =
+      ((*((unsigned char*)pByteValue) & bits_wmask_table[pos][bits - 1]) |
        (bitsValue << (pos + 1 - bits)));
 }
 

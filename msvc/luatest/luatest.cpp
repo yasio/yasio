@@ -4,7 +4,7 @@
 #include <thread>
 #pragma comment(lib, "lua51.lib")
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   sol::state s;
   s.open_libraries();

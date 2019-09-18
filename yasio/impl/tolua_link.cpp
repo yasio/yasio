@@ -14,7 +14,7 @@
 extern "C" {
 #  endif
 
-FILE *__cdecl __iob_func(unsigned int i) { return __acrt_iob_func(i); }
+FILE* __cdecl __iob_func(unsigned int i) { return __acrt_iob_func(i); }
 
 #  if defined(_fmode)
 #    undef _fmode

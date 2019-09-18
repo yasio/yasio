@@ -15,7 +15,7 @@
 
 using namespace yasio::inet;
 
-template <size_t _Size> void append_string(std::vector<char> &packet, const char (&message)[_Size])
+template <size_t _Size> void append_string(std::vector<char>& packet, const char (&message)[_Size])
 {
   packet.insert(packet.end(), message, message + _Size - 1);
 }
@@ -45,10 +45,9 @@ void yasioTest()
   auto v3 = ibs.read_i24();
   auto v4 = ibs.read_i24();
 
-
   io_service service;
 
-  resolv_fn_t resolv = [&](std::vector<ip::endpoint> &endpoints, const char *hostname,
+  resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname,
                            unsigned short port) {
     return service.__builtin_resolv(endpoints, hostname, port);
   };
@@ -65,8 +64,7 @@ void yasioTest()
   service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
     switch (event->kind())
     {
-      case YEK_PACKET:
-      {
+      case YEK_PACKET: {
         auto packet = std::move(event->packet());
         total_bytes_transferred += static_cast<int>(packet.size());
         fwrite(packet.data(), packet.size(), 1, stdout);
@@ -170,7 +168,7 @@ void yasioTest()
   }
 }
 
-int main(int, char **)
+int main(int, char**)
 {
   yasioTest();
 

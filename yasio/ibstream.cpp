@@ -42,19 +42,19 @@ namespace yasio
 
 ibstream_view::ibstream_view() { this->assign("", 0); }
 
-ibstream_view::ibstream_view(const void *data, int size) { this->assign(data, size); }
+ibstream_view::ibstream_view(const void* data, int size) { this->assign(data, size); }
 
-ibstream_view::ibstream_view(const obstream *obs)
+ibstream_view::ibstream_view(const obstream* obs)
 {
-  auto &buffer = obs->buffer();
+  auto& buffer = obs->buffer();
   this->assign(!buffer.empty() ? buffer.data() : "", static_cast<int>(buffer.size()));
 }
 
 ibstream_view::~ibstream_view() {}
 
-void ibstream_view::assign(const void *data, int size)
+void ibstream_view::assign(const void* data, int size)
 {
-  first_ = ptr_ = static_cast<const char *>(data);
+  first_ = ptr_ = static_cast<const char*>(data);
   last_         = first_ + size;
 }
 
@@ -111,19 +111,19 @@ cxx17::string_view ibstream_view::read_va()
   return read_bytes(count);
 }
 
-void ibstream_view::read_v(std::string &oav)
+void ibstream_view::read_v(std::string& oav)
 {
   auto sv = read_vx<uint32_t>();
   oav.assign(sv.data(), sv.length());
 }
 
-void ibstream_view::read_v16(std::string &oav)
+void ibstream_view::read_v16(std::string& oav)
 {
   auto sv = read_vx<uint16_t>();
   oav.assign(sv.data(), sv.length());
 }
 
-void ibstream_view::read_v8(std::string &oav)
+void ibstream_view::read_v8(std::string& oav)
 {
   auto sv = read_vx<uint8_t>();
   oav.assign(sv.data(), sv.length());
@@ -133,11 +133,11 @@ cxx17::string_view ibstream_view::read_v() { return read_vx<uint32_t>(); }
 cxx17::string_view ibstream_view::read_v16() { return read_vx<uint16_t>(); }
 cxx17::string_view ibstream_view::read_v8() { return read_vx<uint8_t>(); }
 
-void ibstream_view::read_v(void *oav, int len) { read_vx<uint32_t>().copy((char *)oav, len); }
-void ibstream_view::read_v16(void *oav, int len) { read_vx<uint16_t>().copy((char *)oav, len); }
-void ibstream_view::read_v8(void *oav, int len) { read_vx<uint8_t>().copy((char *)oav, len); }
+void ibstream_view::read_v(void* oav, int len) { read_vx<uint32_t>().copy((char*)oav, len); }
+void ibstream_view::read_v16(void* oav, int len) { read_vx<uint16_t>().copy((char*)oav, len); }
+void ibstream_view::read_v8(void* oav, int len) { read_vx<uint8_t>().copy((char*)oav, len); }
 
-void ibstream_view::read_bytes(std::string &oav, int len)
+void ibstream_view::read_bytes(std::string& oav, int len)
 {
   if (len > 0)
   {
@@ -146,7 +146,7 @@ void ibstream_view::read_bytes(std::string &oav, int len)
   }
 }
 
-void ibstream_view::read_bytes(void *oav, int len)
+void ibstream_view::read_bytes(void* oav, int len)
 {
   if (len > 0)
   {
@@ -164,7 +164,7 @@ cxx17::string_view ibstream_view::read_bytes(int len)
   return sv;
 }
 
-const char *ibstream_view::consume(size_t size)
+const char* ibstream_view::consume(size_t size)
 {
   if (ptr_ >= last_)
     throw std::logic_error("packet error, data insufficiently!");
@@ -202,7 +202,7 @@ ibstream::ibstream(std::vector<char> blob) : ibstream_view(), blob_(std::move(bl
 {
   this->assign(blob_.data(), static_cast<int>(blob_.size()));
 }
-ibstream::ibstream(const obstream *obs) : ibstream_view(), blob_(obs->buffer())
+ibstream::ibstream(const obstream* obs) : ibstream_view(), blob_(obs->buffer())
 {
   this->assign(blob_.data(), static_cast<int>(blob_.size()));
 }

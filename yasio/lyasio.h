@@ -42,7 +42,7 @@ SOFTWARE.
 extern "C" {
 #endif
 struct lua_State;
-YASIO_LUA_API int luaopen_yasio(lua_State *L);
+YASIO_LUA_API int luaopen_yasio(lua_State* L);
 #if defined(__cplusplus)
 }
 #endif

@@ -56,14 +56,14 @@ namespace stimer
 {
 // The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
 // so it's always works well.
-#define STIMER_TARGET_VALUE reinterpret_cast<void *>(~static_cast<uintptr_t>(0) - 1)
+#define STIMER_TARGET_VALUE reinterpret_cast<void*>(~static_cast<uintptr_t>(0) - 1)
 
-typedef void *TIMER_ID;
+typedef void* TIMER_ID;
 typedef std::function<void()> vcallback_t;
 
 struct TimerObject
 {
-  TimerObject(vcallback_t &&callback) : callback_(std::move(callback)), referenceCount_(1) {}
+  TimerObject(vcallback_t&& callback) : callback_(std::move(callback)), referenceCount_(1) {}
 
   vcallback_t callback_;
   static uintptr_t s_timerId;
@@ -133,7 +133,7 @@ YASIO_API void clear()
 
 extern "C" {
 struct lua_State;
-YASIO_API int luaopen_yasio_cclua(lua_State *L)
+YASIO_API int luaopen_yasio_cclua(lua_State* L)
 {
   int n = luaopen_yasio(L);
   sol::stack_table yasio(L, n);
@@ -151,7 +151,7 @@ YASIO_API int luaopen_yasio_cclua(lua_State *L)
 
 extern "C" {
 struct lua_State;
-YASIO_API int luaopen_yasio_cclua(lua_State *L)
+YASIO_API int luaopen_yasio_cclua(lua_State* L)
 {
   luaopen_yasio(L);
 

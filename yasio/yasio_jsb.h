@@ -29,13 +29,14 @@ SOFTWARE.
 #pragma once
 #include "jsapi.h"
 
-void jsb_register_yasio(JSContext *cx, JS::HandleObject global);
+void jsb_register_yasio(JSContext* cx, JS::HandleObject global);
 
 namespace yasio_jsb
 {
 namespace stimer
 {
-// !IMPORTANT: You should call this function when you want restart script Virtual Machine for some purpose.
+// !IMPORTANT: You should call this function when you want restart script Virtual Machine for some
+// purpose.
 void clear();
-}
+} // namespace stimer
 } // namespace yasio_jsb

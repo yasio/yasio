@@ -347,27 +347,27 @@ YASIO__NS_INLINE namespace ip
 
   namespace compat
   {
-  YASIO__DECL const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
-  YASIO__DECL int inet_pton(int af, const char *src, void *dst);
+  YASIO__DECL const char* inet_ntop(int af, const void* src, char* dst, socklen_t size);
+  YASIO__DECL int inet_pton(int af, const char* src, void* dst);
   } // namespace compat
 
   union endpoint
   {
   public:
     endpoint(void) { this->zeroset(); }
-    explicit endpoint(const addrinfo *info) { assign(info); }
-    explicit endpoint(const sockaddr *info) { assign(info); }
-    endpoint(const char *addr, unsigned short port) { assign(addr, port); }
+    explicit endpoint(const addrinfo* info) { assign(info); }
+    explicit endpoint(const sockaddr* info) { assign(info); }
+    endpoint(const char* addr, unsigned short port) { assign(addr, port); }
 
-    void assign(const addrinfo *info) { this->assign(info->ai_addr, info->ai_addrlen); }
+    void assign(const addrinfo* info) { this->assign(info->ai_addr, info->ai_addrlen); }
 
-    void assign(const void *ai_addr, size_t ai_addrlen)
+    void assign(const void* ai_addr, size_t ai_addrlen)
     {
       this->zeroset();
       ::memcpy(this, ai_addr, ai_addrlen);
     }
 
-    void assign(const sockaddr *addr)
+    void assign(const sockaddr* addr)
     {
       this->zeroset();
       switch (addr->sa_family)
@@ -381,7 +381,7 @@ YASIO__NS_INLINE namespace ip
       }
     }
 
-    bool assign(const char *addr, unsigned short port)
+    bool assign(const char* addr, unsigned short port)
     {
       this->zeroset();
 
@@ -412,7 +412,7 @@ YASIO__NS_INLINE namespace ip
 
     void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
 
-    void ip(const char *addr)
+    void ip(const char* addr)
     {
       /*
        * Windows XP no inet_pton or inet_ntop
@@ -476,8 +476,8 @@ YASIO__NS_INLINE namespace ip
     unsigned short port(void) const { return ntohs(in4_.sin_port); }
     void port(unsigned short value) { in4_.sin_port = htons(value); }
 
-    bool operator<(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
-    bool operator==(const endpoint &rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
+    bool operator<(const endpoint& rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
+    bool operator==(const endpoint& rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
 
     sockaddr sa_;
     sockaddr_in in4_;
@@ -490,7 +490,7 @@ YASIO__NS_INLINE namespace ip
     ipsv_unavailable = 0,
     ipsv_ipv4        = 1,
     ipsv_ipv6        = 2,
-    ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6
+    ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6,
   };
 } // namespace ip
 
@@ -522,24 +522,24 @@ public:
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
   // for support ipv6 ONLY network.
-  YASIO__DECL int xpconnect(const char *hostname, u_short port, u_short local_port = 0);
-  YASIO__DECL int xpconnect_n(const char *hostname, u_short port,
-                              const std::chrono::microseconds &wtimeout, u_short local_port = 0);
+  YASIO__DECL int xpconnect(const char* hostname, u_short port, u_short local_port = 0);
+  YASIO__DECL int xpconnect_n(const char* hostname, u_short port,
+                              const std::chrono::microseconds& wtimeout, u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  YASIO__DECL int pconnect(const char *hostname, u_short port, u_short local_port = 0);
-  YASIO__DECL int pconnect_n(const char *hostname, u_short port,
-                             const std::chrono::microseconds &wtimeout, u_short local_port = 0);
-  YASIO__DECL int pconnect_n(const char *hostname, u_short port, u_short local_port = 0);
+  YASIO__DECL int pconnect(const char* hostname, u_short port, u_short local_port = 0);
+  YASIO__DECL int pconnect_n(const char* hostname, u_short port,
+                             const std::chrono::microseconds& wtimeout, u_short local_port = 0);
+  YASIO__DECL int pconnect_n(const char* hostname, u_short port, u_short local_port = 0);
 
   // easy to connect a server ipv4 or ipv6.
-  YASIO__DECL int pconnect(const endpoint &ep, u_short local_port = 0);
-  YASIO__DECL int pconnect_n(const endpoint &ep, const std::chrono::microseconds &wtimeout,
+  YASIO__DECL int pconnect(const endpoint& ep, u_short local_port = 0);
+  YASIO__DECL int pconnect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout,
                              u_short local_port = 0);
-  YASIO__DECL int pconnect_n(const endpoint &ep, u_short local_port = 0);
+  YASIO__DECL int pconnect_n(const endpoint& ep, u_short local_port = 0);
 
   // easy to create a tcp ipv4 or ipv6 server socket.
-  YASIO__DECL int pserv(const char *addr, u_short port);
+  YASIO__DECL int pserv(const char* addr, u_short port);
 
 public:
   // Construct a empty socket object
@@ -547,13 +547,13 @@ public:
 
   // Construct with a exist socket handle
   YASIO__DECL xxsocket(socket_native_type handle);
-  YASIO__DECL xxsocket(const xxsocket &) = delete;
-  YASIO__DECL xxsocket(xxsocket &&); // Construct with a exist socket, it will replace the source
+  YASIO__DECL xxsocket(const xxsocket&) = delete;
+  YASIO__DECL xxsocket(xxsocket&&); // Construct with a exist socket, it will replace the source
 
-  YASIO__DECL xxsocket &operator=(socket_native_type handle);
-  YASIO__DECL xxsocket &
-  operator=(const xxsocket &) = delete; // Construct with a exist socket, it will replace the source
-  YASIO__DECL xxsocket &operator=(xxsocket &&);
+  YASIO__DECL xxsocket& operator=(socket_native_type handle);
+  YASIO__DECL xxsocket&
+  operator=(const xxsocket&) = delete; // Construct with a exist socket, it will replace the source
+  YASIO__DECL xxsocket& operator=(xxsocket&&);
 
   // See also as function: open
   YASIO__DECL xxsocket(int af, int type, int protocol);
@@ -561,7 +561,7 @@ public:
   YASIO__DECL ~xxsocket(void);
 
   // swap with other when this fd is closed.
-  YASIO__DECL xxsocket &swap(xxsocket &who);
+  YASIO__DECL xxsocket& swap(xxsocket& who);
 
   /* @brief: Open new socket
   ** @params:
@@ -580,14 +580,14 @@ public:
                                     DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
                                     LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
 
-  YASIO__DECL static bool connect_ex(SOCKET s, const struct sockaddr *name, int namelen,
+  YASIO__DECL static bool connect_ex(SOCKET s, const struct sockaddr* name, int namelen,
                                      PVOID lpSendBuffer, DWORD dwSendDataLength,
                                      LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped);
 
   YASIO__DECL static void translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
                                               DWORD dwLocalAddressLength,
-                                              DWORD dwRemoteAddressLength, sockaddr **LocalSockaddr,
-                                              LPINT LocalSockaddrLength, sockaddr **RemoteSockaddr,
+                                              DWORD dwRemoteAddressLength, sockaddr** LocalSockaddr,
+                                              LPINT LocalSockaddrLength, sockaddr** RemoteSockaddr,
                                               LPINT RemoteSockaddrLength);
 #endif
 
@@ -631,8 +631,8 @@ public:
   ** @returns:
   **         If no error occurs, bind returns [0]. Otherwise, it returns SOCKET_ERROR
   */
-  YASIO__DECL int bind(const char *addr, unsigned short port) const;
-  YASIO__DECL int bind(const endpoint &) const;
+  YASIO__DECL int bind(const char* addr, unsigned short port) const;
+  YASIO__DECL int bind(const endpoint&) const;
 
   /* @brief: Places this socket in a state in which it is listening for an incoming connection
   ** @params:
@@ -663,7 +663,7 @@ public:
   **        the actual connection is made.
   **        Otherwise, a value of [nullptr] is returned
   */
-  YASIO__DECL xxsocket accept_n(timeval *timeout);
+  YASIO__DECL xxsocket accept_n(timeval* timeout);
 
   /* @brief: Establishes a connection to a specified this socket
   ** @params:
@@ -674,10 +674,10 @@ public:
   **         If no error occurs, returns [0].
   **         Otherwise, it returns SOCKET_ERROR
   */
-  YASIO__DECL int connect(const char *addr, u_short port);
-  YASIO__DECL int connect(const endpoint &ep);
-  YASIO__DECL static int connect(socket_native_type s, const char *addr, u_short port);
-  YASIO__DECL static int connect(socket_native_type s, const endpoint &ep);
+  YASIO__DECL int connect(const char* addr, u_short port);
+  YASIO__DECL int connect(const endpoint& ep);
+  YASIO__DECL static int connect(socket_native_type s, const char* addr, u_short port);
+  YASIO__DECL static int connect(socket_native_type s, const endpoint& ep);
 
   /* @brief: Establishes a connection to a specified this socket with nonblocking
   ** @params:
@@ -687,14 +687,14 @@ public:
   ** @remark: Because on win32, there is no way to test whether the socket is non-blocking,
   ** so, after this function called, the socket will be always set to blocking mode.
   */
-  YASIO__DECL int connect_n(const char *addr, u_short port,
-                            const std::chrono::microseconds &wtimeout);
-  YASIO__DECL int connect_n(const endpoint &ep, const std::chrono::microseconds &wtimeout);
-  YASIO__DECL int connect_n(const char *addr, u_short port, timeval *timeout);
-  YASIO__DECL int connect_n(const endpoint &ep, timeval *timeout);
-  YASIO__DECL static int connect_n(socket_native_type s, const char *addr, u_short port,
-                                   timeval *timeout);
-  YASIO__DECL static int connect_n(socket_native_type s, const endpoint &ep, timeval *timeout);
+  YASIO__DECL int connect_n(const char* addr, u_short port,
+                            const std::chrono::microseconds& wtimeout);
+  YASIO__DECL int connect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout);
+  YASIO__DECL int connect_n(const char* addr, u_short port, timeval* timeout);
+  YASIO__DECL int connect_n(const endpoint& ep, timeval* timeout);
+  YASIO__DECL static int connect_n(socket_native_type s, const char* addr, u_short port,
+                                   timeval* timeout);
+  YASIO__DECL static int connect_n(socket_native_type s, const endpoint& ep, timeval* timeout);
 
   /* @brief: Establishes a connection to a specified this socket with nonblocking
   ** @params:
@@ -703,7 +703,7 @@ public:
   ** @remark: this function will return immediately, for tcp, you should detect whether the
   ** handshake complete by handle_write_ready.
   */
-  YASIO__DECL static int connect_n(socket_native_type s, const endpoint &ep);
+  YASIO__DECL static int connect_n(socket_native_type s, const endpoint& ep);
 
   /* @brief: Sends data on this connected socket
   ** @params: omit
@@ -713,7 +713,7 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  YASIO__DECL int send(const void *buf, int len, int flags = 0) const;
+  YASIO__DECL int send(const void* buf, int len, int flags = 0) const;
 
   /* @brief: nonblock send
    ** @params: omit
@@ -722,10 +722,10 @@ public:
    **         If no error occurs, send returns the total number of bytes sent,
    **         Oterwise, If retval <=0, mean error occured, and should close socket.
    */
-  YASIO__DECL int send_n(const void *buf, int len, timeval *timeout, int flags = 0);
-  YASIO__DECL int send_n(const void *buf, int len, const std::chrono::microseconds &wtimeout,
+  YASIO__DECL int send_n(const void* buf, int len, timeval* timeout, int flags = 0);
+  YASIO__DECL int send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout,
                          int flags = 0);
-  YASIO__DECL static int send_n(socket_native_type s, const void *buf, int len, timeval *timeout,
+  YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len, timeval* timeout,
                                 int flags = 0);
 
   /* @brief: Receives data from this connected socket or a bound connectionless socket.
@@ -736,11 +736,11 @@ public:
   **         the buffer pointed to by the buf parameter will contain this data received.
   **         If the connection has been gracefully closed, the return value is [0].
   */
-  YASIO__DECL int recv(void *buf, int len, int flags = 0) const;
+  YASIO__DECL int recv(void* buf, int len, int flags = 0) const;
 
-  YASIO__DECL bool read_until(std::string &buffer, const char delim);
-  YASIO__DECL bool read_until(std::string &buffer, const std::string &delims);
-  YASIO__DECL bool read_until(std::string &buffer, const char *delims, size_t len);
+  YASIO__DECL bool read_until(std::string& buffer, const char delim);
+  YASIO__DECL bool read_until(std::string& buffer, const std::string& delims);
+  YASIO__DECL bool read_until(std::string& buffer, const char* delims, size_t len);
 
   /* @brief: nonblock recv
   ** @params: omit
@@ -749,10 +749,10 @@ public:
   **         If no error occurs, send returns the total number of bytes recvived,
   **         Oterwise, If retval <=0, mean error occured, and should close socket.
   */
-  YASIO__DECL int recv_n(void *buf, int len, const std::chrono::microseconds &wtimeout,
+  YASIO__DECL int recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout,
                          int flags = 0) const;
-  YASIO__DECL int recv_n(void *buf, int len, timeval *timeout, int flags = 0) const;
-  YASIO__DECL static int recv_n(socket_native_type s, void *buf, int len, timeval *timeout,
+  YASIO__DECL int recv_n(void* buf, int len, timeval* timeout, int flags = 0) const;
+  YASIO__DECL static int recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
                                 int flags = 0);
 
   /* @brief: Sends data on this connected socket
@@ -763,8 +763,8 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  YASIO__DECL int send_i(const void *buf, int len, int flags = 0) const;
-  YASIO__DECL static int send_i(socket_native_type fd, const void *buf, int len, int flags = 0);
+  YASIO__DECL int send_i(const void* buf, int len, int flags = 0) const;
+  YASIO__DECL static int send_i(socket_native_type fd, const void* buf, int len, int flags = 0);
 
   /* @brief: Receives data from this connected socket or a bound connectionless socket.
   ** @params: omit
@@ -774,8 +774,8 @@ public:
   **         the buffer pointed to by the buf parameter will contain this data received.
   **         If the connection has been gracefully closed, the return value is [0].
   */
-  YASIO__DECL int recv_i(void *buf, int len, int flags = 0) const;
-  YASIO__DECL static int recv_i(socket_native_type s, void *buf, int len, int flags);
+  YASIO__DECL int recv_i(void* buf, int len, int flags = 0) const;
+  YASIO__DECL static int recv_i(socket_native_type s, void* buf, int len, int flags);
 
   /* @brief: Sends data on this connected socket
   ** @params: omit
@@ -785,7 +785,7 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  YASIO__DECL int sendto_i(const void *buf, int len, const endpoint &to, int flags = 0) const;
+  YASIO__DECL int sendto_i(const void* buf, int len, const endpoint& to, int flags = 0) const;
 
   /* @brief: Receives a datagram and stores the source address
   ** @params: omit
@@ -795,18 +795,18 @@ public:
   **         the buffer pointed to by the buf parameter will contain this data received.
   **         If the connection has been gracefully closed, the return value is [0].
   */
-  YASIO__DECL int recvfrom_i(void *buf, int len, endpoint &peer, int flags = 0) const;
+  YASIO__DECL int recvfrom_i(void* buf, int len, endpoint& peer, int flags = 0) const;
 
-  YASIO__DECL int handle_write_ready(timeval *timeo) const;
-  YASIO__DECL static int handle_write_ready(socket_native_type s, timeval *timeo);
-  YASIO__DECL static int handle_connect_ready(socket_native_type s, timeval *timeo);
+  YASIO__DECL int handle_write_ready(timeval* timeo) const;
+  YASIO__DECL static int handle_write_ready(socket_native_type s, timeval* timeo);
+  YASIO__DECL static int handle_connect_ready(socket_native_type s, timeval* timeo);
 
-  YASIO__DECL int handle_read_ready(const std::chrono::microseconds &wtimeout) const;
-  YASIO__DECL int handle_read_ready(timeval *timeo) const;
+  YASIO__DECL int handle_read_ready(const std::chrono::microseconds& wtimeout) const;
+  YASIO__DECL int handle_read_ready(timeval* timeo) const;
 
   YASIO__DECL static int handle_read_ready(socket_native_type s,
-                                           const std::chrono::microseconds &wtimeout);
-  YASIO__DECL static int handle_read_ready(socket_native_type s, timeval *timeo);
+                                           const std::chrono::microseconds& wtimeout);
+  YASIO__DECL static int handle_read_ready(socket_native_type s, timeval* timeo);
 
   /* @brief: Get local address info
   ** @params : None
@@ -854,10 +854,10 @@ public:
   ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   */
-  template <typename T> inline int set_optval(int level, int optname, const T &optval);
+  template <typename T> inline int set_optval(int level, int optname, const T& optval);
 
   template <typename T>
-  inline static int set_optval(socket_native_type, int level, int optname, const T &optval);
+  inline static int set_optval(socket_native_type, int level, int optname, const T& optval);
 
   /* @brief: Retrieves a socket option
   ** @params :
@@ -872,10 +872,10 @@ public:
   *returned
   */
   template <typename T>
-  inline int get_optval(int level, int optname, T &optval, socklen_t = sizeof(T)) const;
+  inline int get_optval(int level, int optname, T& optval, socklen_t = sizeof(T)) const;
 
   template <typename T>
-  inline static int get_optval(socket_native_type s, int level, int optname, T &optval,
+  inline static int get_optval(socket_native_type s, int level, int optname, T& optval,
                                socklen_t = sizeof(T));
 
   /* @brief: control the socket
@@ -887,9 +887,9 @@ public:
   **
   **
   */
-  template <typename _T> inline int ioctl(long cmd, const _T &argp) const;
+  template <typename _T> inline int ioctl(long cmd, const _T& argp) const;
 
-  template <typename _T> inline static int ioctl(socket_native_type s, long cmd, const _T &argp);
+  template <typename _T> inline static int ioctl(socket_native_type s, long cmd, const _T& argp);
 
   /* @brief: check is a client socket alive
   ** @params :
@@ -925,44 +925,44 @@ public:
   YASIO__DECL static int get_last_errno(void);
   YASIO__DECL static void set_last_errno(int error);
 
-  YASIO__DECL static const char *strerror(int error);
-  YASIO__DECL static const char *gai_strerror(int error);
+  YASIO__DECL static const char* strerror(int error);
+  YASIO__DECL static const char* gai_strerror(int error);
 
   /// <summary>
   /// Resolve all as ipv4 or ipv6 endpoints
   /// </summary>
-  YASIO__DECL static int resolve(std::vector<endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve(std::vector<endpoint>& endpoints, const char* hostname,
                                  unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only.
   /// </summary>
-  YASIO__DECL static int resolve_v4(std::vector<endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
                                     unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv6 address only.
   /// </summary>
-  YASIO__DECL static int resolve_v6(std::vector<endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
                                     unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 address only and convert to V4MAPPED format.
   /// </summary>
-  YASIO__DECL static int resolve_v4to6(std::vector<endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
                                        unsigned short port = 0);
 
   /// <summary>
   /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
   /// </summary>
-  YASIO__DECL static int force_resolve_v6(std::vector<endpoint> &endpoints, const char *hostname,
+  YASIO__DECL static int force_resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
                                           unsigned short port = 0);
 
   /// <summary>
   /// Resolve as ipv4 or ipv6 endpoints with callback
   /// </summary>
   template <typename _Fty>
-  inline static int resolve_i(const _Fty &callback, const char *hostname, unsigned short port = 0,
+  inline static int resolve_i(const _Fty& callback, const char* hostname, unsigned short port = 0,
                               int af = 0, int flags = 0)
   {
     addrinfo hint;
@@ -970,9 +970,9 @@ public:
     hint.ai_family = af;
     hint.ai_flags  = flags;
 
-    addrinfo *answerlist        = nullptr;
+    addrinfo* answerlist        = nullptr;
     char buffer[sizeof "65535"] = {'\0'};
-    const char *service         = nullptr;
+    const char* service         = nullptr;
     if (port > 0)
     {
       sprintf(buffer, "%u", port); // It's enough for unsigned short, so use sprintf ok.
@@ -1000,36 +1000,36 @@ private:
   socket_native_type fd;
 }; // namespace inet
 
-template <typename T> inline int xxsocket::set_optval(int level, int optname, const T &optval)
+template <typename T> inline int xxsocket::set_optval(int level, int optname, const T& optval)
 {
   return set_optval(this->fd, level, optname, optval);
 }
 
 template <typename T>
-inline int xxsocket::get_optval(int level, int optname, T &optval, socklen_t optlen) const
+inline int xxsocket::get_optval(int level, int optname, T& optval, socklen_t optlen) const
 {
   return get_optval(this->fd, level, optname, optval, optlen);
 }
 
 template <typename T>
-inline int xxsocket::set_optval(socket_native_type s, int level, int optname, const T &optval)
+inline int xxsocket::set_optval(socket_native_type s, int level, int optname, const T& optval)
 {
-  return ::setsockopt(s, level, optname, (const char *)&optval, sizeof(T));
+  return ::setsockopt(s, level, optname, (const char*)&optval, sizeof(T));
 }
 
 template <typename T>
-inline int xxsocket::get_optval(socket_native_type s, int level, int optname, T &optval,
+inline int xxsocket::get_optval(socket_native_type s, int level, int optname, T& optval,
                                 socklen_t optlen)
 {
-  return ::getsockopt(s, level, optname, (char *)&optval, &optlen);
+  return ::getsockopt(s, level, optname, (char*)&optval, &optlen);
 }
 
-template <typename _T> inline int xxsocket::ioctl(long cmd, const _T &value) const
+template <typename _T> inline int xxsocket::ioctl(long cmd, const _T& value) const
 {
   return xxsocket::ioctl(this->fd, cmd, value);
 }
 
-template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd, const _T &value)
+template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd, const _T& value)
 {
   u_long argp = value;
   return ::ioctlsocket(s, cmd, &argp);

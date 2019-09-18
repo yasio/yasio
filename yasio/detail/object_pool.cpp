@@ -44,7 +44,7 @@ namespace gc
 namespace detail
 {
 
-#define POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node *>(chunk->data)
+#define POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
 
 object_pool::object_pool(size_t element_size, size_t element_count)
     : free_link_(nullptr), chunk_(nullptr), element_size_(element_size),
@@ -68,8 +68,8 @@ void object_pool::cleanup(void)
     return;
   }
 
-  chunk_link_node *chunk  = this->chunk_;
-  free_link_node *linkend = this->tidy_chunk(chunk);
+  chunk_link_node* chunk  = this->chunk_;
+  free_link_node* linkend = this->tidy_chunk(chunk);
 
   while ((chunk = chunk->next) != nullptr)
   {
@@ -106,7 +106,7 @@ void object_pool::purge(void)
 #endif
 }
 
-void *object_pool::get(void)
+void* object_pool::get(void)
 {
   if (this->free_link_ != nullptr)
   {
@@ -116,9 +116,9 @@ void *object_pool::get(void)
   return allocate_from_process_heap();
 }
 
-void object_pool::release(void *_Ptr)
+void object_pool::release(void* _Ptr)
 {
-  free_link_node *ptr = reinterpret_cast<free_link_node *>(_Ptr);
+  free_link_node* ptr = reinterpret_cast<free_link_node*>(_Ptr);
   ptr->next           = this->free_link_;
   this->free_link_    = ptr;
 
@@ -127,7 +127,7 @@ void object_pool::release(void *_Ptr)
 #endif
 }
 
-void *object_pool::allocate_from_process_heap(void)
+void* object_pool::allocate_from_process_heap(void)
 {
   chunk_link new_chunk =
       (chunk_link)malloc(sizeof(chunk_link_node) + element_size_ * element_count_);
@@ -147,29 +147,29 @@ void *object_pool::allocate_from_process_heap(void)
 #if defined(_DEBUG)
   ++this->allocated_count_;
 #endif
-  return reinterpret_cast<void *>(ptr);
+  return reinterpret_cast<void*>(ptr);
 }
 
-void *object_pool::allocate_from_chunk(void)
+void* object_pool::allocate_from_chunk(void)
 {
-  free_link_node *ptr = this->free_link_;
+  free_link_node* ptr = this->free_link_;
   this->free_link_    = ptr->next;
 #if defined(_DEBUG)
   ++this->allocated_count_;
 #endif
-  return reinterpret_cast<void *>(ptr);
+  return reinterpret_cast<void*>(ptr);
 }
 
-object_pool::free_link_node *object_pool::tidy_chunk(chunk_link chunk)
+object_pool::free_link_node* object_pool::tidy_chunk(chunk_link chunk)
 {
-  char *rbegin = chunk->data + (element_count_ - 1) * element_size_;
+  char* rbegin = chunk->data + (element_count_ - 1) * element_size_;
 
-  for (char *ptr = chunk->data; ptr < rbegin; ptr += element_size_)
+  for (char* ptr = chunk->data; ptr < rbegin; ptr += element_size_)
   {
-    reinterpret_cast<free_link_node *>(ptr)->next =
-        reinterpret_cast<free_link_node *>(ptr + element_size_);
+    reinterpret_cast<free_link_node*>(ptr)->next =
+        reinterpret_cast<free_link_node*>(ptr + element_size_);
   }
-  return reinterpret_cast<free_link_node *>(rbegin);
+  return reinterpret_cast<free_link_node*>(rbegin);
 }
 
 } // namespace detail

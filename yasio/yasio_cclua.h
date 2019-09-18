@@ -42,7 +42,7 @@ SOFTWARE.
 extern "C" {
 #endif
 struct lua_State;
-YASIO_API int luaopen_yasio_cclua(lua_State *L);
+YASIO_API int luaopen_yasio_cclua(lua_State* L);
 #if defined(__cplusplus)
 }
 
@@ -50,7 +50,8 @@ namespace lyasio
 {
 namespace stimer
 {
-// !IMPORTANT: You should call function this when you want restart script Virtual Machine for some purpose.
+// !IMPORTANT: You should call function this when you want restart script Virtual Machine for some
+// purpose.
 YASIO_API void clear();
 } // namespace stimer
 } // namespace lyasio

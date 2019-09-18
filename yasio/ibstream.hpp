@@ -42,19 +42,19 @@ class ibstream_view
 {
 public:
   YASIO__DECL ibstream_view();
-  YASIO__DECL ibstream_view(const void *data, int size);
-  YASIO__DECL ibstream_view(const obstream *);
-  YASIO__DECL ibstream_view(const ibstream_view &right) = delete;
-  YASIO__DECL ibstream_view(ibstream_view &&right)      = delete;
+  YASIO__DECL ibstream_view(const void* data, int size);
+  YASIO__DECL ibstream_view(const obstream*);
+  YASIO__DECL ibstream_view(const ibstream_view& right) = delete;
+  YASIO__DECL ibstream_view(ibstream_view&& right)      = delete;
 
   YASIO__DECL ~ibstream_view();
 
-  YASIO__DECL void assign(const void *data, int size);
+  YASIO__DECL void assign(const void* data, int size);
 
-  YASIO__DECL ibstream_view &operator=(const ibstream_view &right) = delete;
-  YASIO__DECL ibstream_view &operator=(ibstream_view &&right) = delete;
+  YASIO__DECL ibstream_view& operator=(const ibstream_view& right) = delete;
+  YASIO__DECL ibstream_view& operator=(ibstream_view&& right) = delete;
 
-  template <typename _Nty> inline void read_ix(_Nty &ov);
+  template <typename _Nty> inline void read_ix(_Nty& ov);
 
   template <typename _Nty> inline _Nty read_i()
   {
@@ -70,16 +70,16 @@ public:
 
   YASIO__DECL cxx17::string_view read_va();
 
-  YASIO__DECL void read_v(std::string &);   // 32 bits length field
-  YASIO__DECL void read_v16(std::string &); // 16 bits length field
-  YASIO__DECL void read_v8(std::string &);  // 8 bits length field
+  YASIO__DECL void read_v(std::string&);   // 32 bits length field
+  YASIO__DECL void read_v16(std::string&); // 16 bits length field
+  YASIO__DECL void read_v8(std::string&);  // 8 bits length field
 
-  YASIO__DECL void read_v(void *, int);
-  YASIO__DECL void read_v16(void *, int);
-  YASIO__DECL void read_v8(void *, int);
+  YASIO__DECL void read_v(void*, int);
+  YASIO__DECL void read_v16(void*, int);
+  YASIO__DECL void read_v8(void*, int);
 
-  YASIO__DECL void read_bytes(std::string &oav, int len);
-  YASIO__DECL void read_bytes(void *oav, int len);
+  YASIO__DECL void read_bytes(std::string& oav, int len);
+  YASIO__DECL void read_bytes(void* oav, int len);
 
   YASIO__DECL cxx17::string_view read_v();
   YASIO__DECL cxx17::string_view read_v16();
@@ -87,7 +87,7 @@ public:
 
   YASIO__DECL cxx17::string_view read_bytes(int len);
 
-  const char *data() { return first_; }
+  const char* data() { return first_; }
   size_t length(void) { return last_ - first_; }
 
   YASIO__DECL ptrdiff_t seek(ptrdiff_t offset, int whence);
@@ -106,33 +106,33 @@ public:
 
 protected:
   // will throw std::logic_error
-  YASIO__DECL const char *consume(size_t size);
+  YASIO__DECL const char* consume(size_t size);
 
 protected:
-  const char *first_;
-  const char *last_;
-  const char *ptr_;
+  const char* first_;
+  const char* last_;
+  const char* ptr_;
 };
 
-template <typename _Nty> inline void ibstream_view::read_ix(_Nty &ov)
+template <typename _Nty> inline void ibstream_view::read_ix(_Nty& ov)
 {
   memcpy(&ov, consume(sizeof(ov)), sizeof(ov));
   ov = yasio::endian::ntohv(ov);
 }
 
-template <> inline void ibstream_view::read_ix<uint8_t>(uint8_t &ov)
+template <> inline void ibstream_view::read_ix<uint8_t>(uint8_t& ov)
 {
   memcpy(&ov, consume(sizeof(ov)), sizeof(ov));
 }
 
-template <> inline void ibstream_view::read_ix<float>(float &ov)
+template <> inline void ibstream_view::read_ix<float>(float& ov)
 {
   uint32_t nv;
   memcpy(&nv, consume(sizeof(nv)), sizeof(nv));
   ov = ntohf(nv);
 }
 
-template <> inline void ibstream_view::read_ix<double>(double &ov)
+template <> inline void ibstream_view::read_ix<double>(double& ov)
 {
   uint64_t nv;
   memcpy(&nv, consume(sizeof(nv)), sizeof(nv));
@@ -144,7 +144,7 @@ class ibstream : public ibstream_view
 {
 public:
   YASIO__DECL ibstream(std::vector<char> blob);
-  YASIO__DECL ibstream(const obstream *obs);
+  YASIO__DECL ibstream(const obstream* obs);
 
 private:
   std::vector<char> blob_;

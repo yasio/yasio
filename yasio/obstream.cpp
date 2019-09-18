@@ -116,19 +116,19 @@ void obstream::pop32(uint32_t value)
   offset_stack_.pop();
 }
 
-obstream::obstream(const obstream &right) : buffer_(right.buffer_) {}
+obstream::obstream(const obstream& right) : buffer_(right.buffer_) {}
 
-obstream::obstream(obstream &&right) : buffer_(std::move(right.buffer_)) {}
+obstream::obstream(obstream&& right) : buffer_(std::move(right.buffer_)) {}
 
 obstream::~obstream() {}
 
-obstream &obstream::operator=(const obstream &right)
+obstream& obstream::operator=(const obstream& right)
 {
   buffer_ = right.buffer_;
   return *this;
 }
 
-obstream &obstream::operator=(obstream &&right)
+obstream& obstream::operator=(obstream&& right)
 {
   buffer_ = std::move(right.buffer_);
   return *this;
@@ -173,16 +173,16 @@ void obstream::write_v8(cxx17::string_view value)
   write_v8(value.data(), static_cast<int>(value.size()));
 }
 
-void obstream::write_v(const void *v, int size) { write_vx<uint32_t>(v, size); }
-void obstream::write_v16(const void *v, int size) { write_vx<uint16_t>(v, size); }
-void obstream::write_v8(const void *v, int size) { write_vx<uint8_t>(v, size); }
+void obstream::write_v(const void* v, int size) { write_vx<uint32_t>(v, size); }
+void obstream::write_v16(const void* v, int size) { write_vx<uint16_t>(v, size); }
+void obstream::write_v8(const void* v, int size) { write_vx<uint8_t>(v, size); }
 
 void obstream::write_bytes(cxx17::string_view v)
 {
   return write_bytes(v.data(), static_cast<int>(v.size()));
 }
 
-void obstream::write_bytes(const void *v, int vl)
+void obstream::write_bytes(const void* v, int vl)
 {
   if (vl > 0)
   {
@@ -192,7 +192,7 @@ void obstream::write_bytes(const void *v, int vl)
   }
 }
 
-void obstream::save(const char *filename)
+void obstream::save(const char* filename)
 {
   std::ofstream fout;
   fout.open(filename, std::ios::binary);

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app 
+// universal app
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
@@ -27,8 +27,9 @@ SOFTWARE.
 */
 
 #pragma once
-namespace se {
-    class Object;
+namespace se
+{
+class Object;
 }
 
 bool jsb_register_yasio(se::Object* obj);
@@ -37,7 +38,8 @@ namespace yasio_jsb
 {
 namespace stimer
 {
-// !IMPORTANT: You should call this function when you want restart script Virtual Machine for some purpose.
+// !IMPORTANT: You should call this function when you want restart script Virtual Machine for some
+// purpose.
 void clear();
 } // namespace stimer
 } // namespace yasio_jsb

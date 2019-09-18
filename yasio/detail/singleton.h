@@ -24,10 +24,10 @@ template <typename _Ty, bool delayed = false> class singleton;
 template <typename _Ty> class singleton<_Ty, false>
 {
   typedef singleton<_Ty, false> _Myt;
-  typedef _Ty *pointer;
+  typedef _Ty* pointer;
 
 public:
-  template <typename... _Args> static pointer instance(_Args &&... args)
+  template <typename... _Args> static pointer instance(_Args&&... args)
   {
     if (_Myt::__single__)
       return _Myt::__single__.get();
@@ -66,10 +66,10 @@ private:
 template <typename _Ty> class singleton<_Ty, true>
 {
   typedef singleton<_Ty, true> _Myt;
-  typedef _Ty *pointer;
+  typedef _Ty* pointer;
 
 public:
-  template <typename... _Args> static pointer instance(_Args &&... args)
+  template <typename... _Args> static pointer instance(_Args&&... args)
   {
     if (_Myt::__single__)
       return _Myt::__single__.get();
@@ -96,17 +96,17 @@ public:
   }
 
 private:
-  template <typename _Fty, typename... _Args> static void delay_init(_Fty &&memf, _Args &&... args)
+  template <typename _Fty, typename... _Args> static void delay_init(_Fty&& memf, _Args&&... args)
   { // init use specific member func with more than 1 args
     std::mem_fn(memf)(_Myt::__single__.get(), args...);
   }
 
-  template <typename _Fty, typename _Arg> static void delay_init(_Fty &&memf, _Arg &&arg)
+  template <typename _Fty, typename _Arg> static void delay_init(_Fty&& memf, _Arg&& arg)
   { // init use specific member func with 1 arg
     std::mem_fn(memf)(_Myt::__single__.get(), arg);
   }
 
-  template <typename _Fty> static void delay_init(_Fty &&memf)
+  template <typename _Fty> static void delay_init(_Fty&& memf)
   { // init use specific member func without arg
     std::mem_fn(memf)(_Myt::__single__.get());
   }

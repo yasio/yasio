@@ -28,7 +28,7 @@ SOFTWARE.
 #ifndef YASIO__OBSTREAM_HPP
 #define YASIO__OBSTREAM_HPP
 #include <string>
-#include "yasio/detail/string_view.hpp"
+#include "yasio/cxx17/string_view.hpp"
 #include <sstream>
 #include <vector>
 #include <stack>

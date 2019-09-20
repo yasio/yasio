@@ -45,7 +45,7 @@ SOFTWARE.
 #include "yasio/detail/object_pool.h"
 #include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/singleton.h"
-#include "yasio/detail/string_view.hpp"
+#include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
 /*

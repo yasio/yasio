@@ -58,6 +58,10 @@ include_directories(
 #~ endif()
 
 set ( YASIO_CORE
+    yasio/xxsocket.hpp
+    yasio/yasio.hpp
+    yasio/ibstream.hpp
+    yasio/obstream.hpp
     yasio/xxsocket.cpp
     yasio/yasio.cpp
     yasio/ibstream.cpp
@@ -107,15 +111,11 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
     )
     target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
 else ( )
-    add_library(yasio SHARED
+    add_library(yasio STATIC
         ${YASIO_CORE}
         ${THIRDPART_SRC}
     )
 endif ( )
-
-if(UINT_ESPECIALLY)
-    ADD_DEFINITIONS(-DUINT_ESPECIALLY)
-endif()
 	
 if ( WIN32 AND NOT CYGWIN )
     target_link_libraries(yasio
@@ -128,3 +128,8 @@ else ( )
         ${THIRDPART_LIB} 
     )
 endif ( )
+
+add_subdirectory(test/cpptest)
+if ( WIN32 )
+    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "cpptest")
+endif ()

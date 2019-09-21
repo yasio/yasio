@@ -570,33 +570,27 @@ void io_service::clear_transports()
 
 void io_service::dispatch_events(int count)
 {
-  if (!this->has_events() || !options_.on_event_)
+  if (!options_.on_event_)
     return;
 
-  while (!this->event_queue_deal_.empty() && count > 0)
+  if (this->event_queue_deal_.empty())
+  {
+    if (this->event_queue_.empty())
+      return;
+    else
+    {
+      // swap event queue
+      std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
+      std::swap(this->event_queue_deal_, this->event_queue_);
+    }
+  }
+
+  do
   {
     auto event = std::move(this->event_queue_deal_.front());
     this->event_queue_deal_.pop_front();
     options_.on_event_(std::move(event));
-    --count;
-  }
-
-  if (this->event_queue_deal_.empty() && !this->event_queue_.empty())
-  {
-    {
-      // swap queue
-      std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
-      std::swap(this->event_queue_deal_, this->event_queue_);
-    }
-
-    while (!this->event_queue_deal_.empty() && count > 0)
-    {
-      auto event = std::move(this->event_queue_deal_.front());
-      this->event_queue_deal_.pop_front();
-      options_.on_event_(std::move(event));
-      --count;
-    }
-  }
+  } while (--count > 0);
 }
 
 void io_service::run()

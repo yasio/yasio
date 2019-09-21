@@ -431,10 +431,7 @@ public:
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
   YASIO__DECL void dispatch_events(int count = 512);
-  YASIO__DECL bool has_events()
-  {
-    return ((!(this->event_queue_.empty()) || (!this->event_queue_deal_.empty())));
-  }
+
   /* option: YOPT_CONNECT_TIMEOUT   timeout:int
              YOPT_SEND_TIMEOUT      timeout:int
              YOPT_RECONNECT_TIMEOUT timeout:int

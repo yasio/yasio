@@ -59,7 +59,7 @@ void yasioTest()
   deadline_timer udp_heartbeat(service);
   int total_bytes_transferred = 0;
 
-  int max_request_count = 2;
+  int max_request_count = 10;
 
   service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
     switch (event->kind())

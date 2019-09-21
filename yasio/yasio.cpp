@@ -874,7 +874,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> data)
   }
   else
   {
-    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", transport);
+    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
     return -1;
   }
 }

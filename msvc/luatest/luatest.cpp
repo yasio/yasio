@@ -1,6 +1,6 @@
 #include "yasio/lyasio.h"
-#include "yasio/detail/string_view.hpp"
-#include "yasio/detail/sol.hpp"
+#include "yasio/cxx17/string_view.hpp"
+#include "yasio/detail/sol/sol.hpp"
 #include <thread>
 #pragma comment(lib, "lua51.lib")
 

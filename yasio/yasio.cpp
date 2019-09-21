@@ -525,7 +525,7 @@ void io_service::cleanup()
     clear_transports();
     clear_channels();
     this->event_queue_.clear();
-    this->event_queue_deal.clear();
+    this->event_queue_deal_.clear();
     this->timer_queue_.clear();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
@@ -567,36 +567,36 @@ void io_service::clear_transports()
   }
   transports_.clear();
 }
-    
+
 void io_service::dispatch_events(int count)
 {
   if (!this->has_events() || !options_.on_event_)
     return;
 
-    while(!this->event_queue_deal.empty() && count > 0)
+  while (!this->event_queue_deal_.empty() && count > 0)
+  {
+    auto event = std::move(this->event_queue_deal_.front());
+    this->event_queue_deal_.pop_front();
+    options_.on_event_(std::move(event));
+    --count;
+  }
+
+  if (this->event_queue_deal_.empty() && !this->event_queue_.empty())
+  {
     {
-        auto event = std::move(this->event_queue_deal.front());
-        this->event_queue_deal.pop_front();
-        options_.on_event_(std::move(event));
-        --count;
+      // swap queue
+      std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
+      std::swap(this->event_queue_deal_, this->event_queue_);
     }
-    
-    if (this->event_queue_deal.empty() && !this->event_queue_.empty())
+
+    while (!this->event_queue_deal_.empty() && count > 0)
     {
-        {
-         //swap queue
-          std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
-          std::swap(this->event_queue_deal,this->event_queue_);
-        }
-        
-        while(!this->event_queue_deal.empty() && count > 0)
-        {
-            auto event = std::move(this->event_queue_deal.front());
-            this->event_queue_deal.pop_front();
-            options_.on_event_(std::move(event));
-            --count;
-        }
+      auto event = std::move(this->event_queue_deal_.front());
+      this->event_queue_deal_.pop_front();
+      options_.on_event_(std::move(event));
+      --count;
     }
+  }
 }
 
 void io_service::run()

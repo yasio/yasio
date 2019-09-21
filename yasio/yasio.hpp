@@ -433,7 +433,7 @@ public:
   YASIO__DECL void dispatch_events(int count = 512);
   YASIO__DECL bool has_events()
   {
-    return (!(this->event_queue_.empty()) or (!this->event_queue_deal_.empty()));
+    return ((!(this->event_queue_.empty()) || (!this->event_queue_deal_.empty())));
   }
   /* option: YOPT_CONNECT_TIMEOUT   timeout:int
              YOPT_SEND_TIMEOUT      timeout:int

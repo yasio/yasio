@@ -525,6 +525,7 @@ void io_service::cleanup()
     clear_transports();
     clear_channels();
     this->event_queue_.clear();
+    this->event_queue_deal_.clear();
     this->timer_queue_.clear();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
@@ -569,16 +570,33 @@ void io_service::clear_transports()
 
 void io_service::dispatch_events(int count)
 {
-  if (!options_.on_event_ || this->event_queue_.empty())
+  if (!this->has_events() || !options_.on_event_)
     return;
 
-  std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
-  do
+  while (!this->event_queue_deal_.empty() && count > 0)
   {
-    auto event = std::move(this->event_queue_.front());
-    this->event_queue_.pop_front();
+    auto event = std::move(this->event_queue_deal_.front());
+    this->event_queue_deal_.pop_front();
     options_.on_event_(std::move(event));
-  } while (!this->event_queue_.empty() && --count > 0);
+    --count;
+  }
+
+  if (this->event_queue_deal_.empty() && !this->event_queue_.empty())
+  {
+    {
+      // swap queue
+      std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
+      std::swap(this->event_queue_deal_, this->event_queue_);
+    }
+
+    while (!this->event_queue_deal_.empty() && count > 0)
+    {
+      auto event = std::move(this->event_queue_deal_.front());
+      this->event_queue_deal_.pop_front();
+      options_.on_event_(std::move(event));
+      --count;
+    }
+  }
 }
 
 void io_service::run()

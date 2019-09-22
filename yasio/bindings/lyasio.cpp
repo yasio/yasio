@@ -70,7 +70,7 @@ static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits,
 
 #if _HAS_CXX17_FULL_FEATURES
 
-#  include "yasio/detail/sol/sol.hpp"
+#  include "yasio/sol/sol.hpp"
 
 extern "C" {
 
@@ -256,7 +256,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
 #else
 
-#  include "yasio/detail/kaguya/kaguya.hpp"
+#  include "yasio/kaguya/kaguya.hpp"
 /// customize the type conversion from/to lua
 namespace kaguya
 {

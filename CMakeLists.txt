@@ -8,9 +8,9 @@ cmake_minimum_required(VERSION 3.0)
 
 if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT" CACHE STRING "")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd" CACHE STRING "")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd /Zi" CACHE STRING "")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT" CACHE STRING "")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd" CACHE STRING "")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd /Zi" CACHE STRING "")
 endif ()
 
 project(yasio)
@@ -66,7 +66,7 @@ set ( YASIO_CORE
     yasio/yasio.cpp
     yasio/ibstream.cpp
     yasio/obstream.cpp
-    yasio/impl/yasio_ni.cpp
+    yasio/bindings/yasio_ni.cpp
 )
 
 macro(source_group_by_dir proj_dir source_files)

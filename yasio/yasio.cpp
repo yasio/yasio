@@ -585,12 +585,12 @@ void io_service::dispatch_events(int count)
     }
   }
 
-  do
+  while (!this->event_queue_deal_.empty() && --count >= 0)
   {
     auto event = std::move(this->event_queue_deal_.front());
     this->event_queue_deal_.pop_front();
     options_.on_event_(std::move(event));
-  } while (--count > 0);
+  };
 }
 
 void io_service::run()

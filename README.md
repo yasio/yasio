@@ -28,23 +28,23 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 ## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
-[cpptest](https://github.com/halx99/yasio/blob/master/msvc/cpptest/cpptest.cpp)  
+[cpptest](https://github.com/halx99/yasio/blob/master/test/cpptest/cpptest.cpp)  
   
     
 ### Lua intergation: 
 #### common lua application integration:
-1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp``` with your project  
+1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp``` with your project  
 2. call luaopen_yasio after LUA VM initialized.  
 luatest(windows user): please download [luatest.zip](https://github.com/halx99/yasio/releases), extract it then open ```luatest.xsxproj``` by x-studio365 IDE  
   
 #### cocos2d-x lua integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external```  
 
-2. Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
-```yasio\impl\yasio_cclua.cpp``` to your compile system.
+2. Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp```
+```yasio\bindings\yasio_cclua.cpp``` to your compile system.
     + For Win32 & Apple platform:
-Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
-```yasio\impl\yasio_cclua.cpp``` to **libluacocos2d** project of your Visual Studio or xcode solution.  
+Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp```
+```yasio\bindings\yasio_cclua.cpp``` to **libluacocos2d** project of your Visual Studio or xcode solution.  
     + For Android:
 Add yasio to your application Android.mk files, such as:  
 ```
@@ -57,10 +57,10 @@ $(call import-module, external/yasio/build/android-lua)
 ### JSB integration  
 #### cocos2d-x jsb integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external``` 
-2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb.cpp to your compile system.
+2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, bindings/yasio_jsb.cpp to your compile system.
     + For Win32 & Apple platform:
-Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
-```yasio\impl\yasio_jsb.cpp``` to **libjscocos2d** project of your Visual Studio or xcode solution. 
+Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp```
+```yasio\bindings\yasio_jsb.cpp``` to **libjscocos2d** project of your Visual Studio or xcode solution. 
     + For Android: Add yasio to your application Android.mk files, such as: 
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
@@ -69,16 +69,16 @@ $(call import-module, external/yasio/build/android-jsb)
 3. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio_jsb.h``` firstly.
 #### CocosCreator jsb2.0 integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external/sources```, ```yasio``` as sub directory of ```external/sources```  
-2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, impl/yasio_jsb20.cpp to your compile system.
-    + For Win32 & Apple platform: Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\impl\lyasio.cpp```
-```yasio\impl\yasio_jsb.cpp``` to **libcocos2d** project of your Visual Studio or xcode solution.  
+2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, bindings/yasio_jsb20.cpp to your compile system.
+    + For Win32 & Apple platform: Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp```
+```yasio\bindings\yasio_jsb.cpp``` to **libcocos2d** project of your Visual Studio or xcode solution.  
     + For Andorid: Add follow 5 lines to cocos/Android.mk file:
 ```
 ../external/sources/yasio/xxsocket.cpp \
 ../external/sources/yasio/yasio.cpp \
 ../external/sources/yasio/ibstream.cpp \
 ../external/sources/yasio/obstream.cpp \
-../external/sources/yasio/impl/yasio_jsb20.cpp \
+../external/sources/yasio/bindings/yasio_jsb20.cpp \
 ```
 Just like:  
 ![image](https://github.com/halx99/yasio/raw/master/jsb20_android.png)  

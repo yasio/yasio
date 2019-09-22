@@ -30,7 +30,7 @@ SOFTWARE.
 #include "yasio/lyasio.h"
 #include "yasio/detail/object_pool.h"
 #include "yasio/detail/ref_ptr.h"
-#include "yasio/detail/string_view.hpp"
+#include "yasio/cxx17/string_view.hpp"
 
 #include "cocos2d.h"
 using namespace cocos2d;
@@ -129,7 +129,7 @@ YASIO_API void clear()
 
 #if _HAS_CXX17_FULL_FEATURES
 
-#  include "yasio/detail/sol.hpp"
+#  include "yasio/sol/sol.hpp"
 
 extern "C" {
 struct lua_State;
@@ -147,7 +147,7 @@ YASIO_API int luaopen_yasio_cclua(lua_State* L)
 
 #else
 
-#  include "yasio/detail/kaguya.hpp"
+#  include "yasio/kaguya/kaguya.hpp"
 
 extern "C" {
 struct lua_State;

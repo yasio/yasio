@@ -2,67 +2,71 @@
   <project-home>.</project-home>
   <exclude-files/>
   <assets>
-    <item path="CMakeLists.txt" dflag="131076"/>
-    <item path="yasio\detail\endian_portable.h" dflag="131076"/>
+    <item path="yasio\moodycamel\README.md" dflag="131076"/>
     <item path="yasio\detail\eventfd_select_interrupter.hpp" dflag="131076"/>
-    <item path="yasio\detail\config.hpp" dflag="131076"/>
-    <item path="yasio\detail\eventfd_select_interrupter.ipp" dflag="131076"/>
-    <item path="yasio\detail\ifaddrs.hpp" dflag="131076"/>
-    <item path="yasio\detail\ifaddrs.ipp" dflag="131076"/>
-    <item path="yasio\detail\pipe_select_interrupter.hpp" dflag="131076"/>
-    <item path="yasio\ibstream.cpp" dflag="131076"/>
-    <item path="yasio\xxsocket.hpp" dflag="131076"/>
-    <item path="yasio\yasio.cpp" dflag="131076"/>
-    <item path="yasio\xxsocket.cpp" dflag="131076"/>
-    <item path="yasio\yasio.hpp" dflag="131076"/>
+    <item path="yasio\detail\strfmt.hpp" dflag="131076"/>
     <item path="yasio\detail\object_pool.cpp" dflag="131076"/>
     <item path="yasio\detail\socket_select_interrupter.hpp" dflag="131076"/>
+    <item path="yasio\yasio.cpp" dflag="131076"/>
+    <item path="yasio\detail\ifaddrs.ipp" dflag="131076"/>
+    <item path="yasio\detail\eventfd_select_interrupter.ipp" dflag="131076"/>
+    <item path="yasio\detail\pipe_select_interrupter.hpp" dflag="131076"/>
+    <item path="yasio\detail\config.hpp" dflag="131076"/>
+    <item path="yasio\detail\endian_portable.h" dflag="131076"/>
+    <item path="yasio\detail\ifaddrs.hpp" dflag="131076"/>
+    <item path="yasio\xxsocket.cpp" dflag="131076"/>
+    <item path="yasio\xxsocket.hpp" dflag="131076"/>
+    <item path="CMakeLists.txt" dflag="131076"/>
+    <item path="yasio\yasio.hpp" dflag="131076"/>
+    <item path="yasio\ibstream.cpp" dflag="131076"/>
     <item path="yasio\detail\object_pool.h" dflag="131076"/>
-    <item path="yasio\detail\strfmt.hpp" dflag="131076"/>
-    <item path="yasio\ibstream.hpp" dflag="131076"/>
     <item path="yasio\detail\select_interrupter.hpp" dflag="131076"/>
-    <item path="yasio\detail\politedef.h" dflag="131076"/>
     <item path="yasio\detail\ref_ptr.h" dflag="131076"/>
-    <item path="yasio\detail\pipe_select_interrupter.ipp" dflag="131076"/>
-    <item path="yasio\detail\singleton.h" dflag="131076"/>
-    <item path="yasio\lyasio.h" dflag="131076"/>
-    <item path="yasio\obstream.cpp" dflag="131076"/>
-    <item path="yasio\detail\socket_select_interrupter.ipp" dflag="131076"/>
-    <item path="yasio\obstream.hpp" dflag="131076"/>
-    <item path="yasio\yasio_jsb20.h" dflag="131076"/>
     <item path="yasio\yasio_jsb.h" dflag="131076"/>
     <item path="yasio\yasio_cclua.h" dflag="131076"/>
-    <item path="yasio\bindings\yasio_jsb.cpp" dflag="131076"/>
     <item path="yasio\bindings\yasio_jsb20.cpp" dflag="131076"/>
-    <item path="yasio\bindings\yasio_cclua.cpp" dflag="131076"/>
-    <item path="yasio\bindings\tolua_link.cpp" dflag="131076"/>
-    <item path="yasio\bindings\lyasio.cpp" dflag="131076"/>
-    <item path="yasio\bindings\yasio_ni.cpp" dflag="131076"/>
-    <item path="build\CMakeFiles\3.14.1\CompilerIdCXX\CMakeCXXCompilerId.cpp" dflag="131076"/>
     <item path="test\cpptest\CMakeLists.txt" dflag="131076"/>
-    <item path="test\luatest\protocol_enums.lua" dflag="131076"/>
-    <item path="test\luatest\luatest.cpp" dflag="131076"/>
-    <item path="test\cpptest\cpptest.cpp" dflag="131076"/>
-    <item path="test\luatest\example.lua" dflag="131076"/>
-    <item path=".git\ms-persist.xml" dflag="131076"/>
-    <item path="test\cpptest\kcptest.cpp" dflag="131076"/>
-    <item path="test\luatest\protocol_base.lua" dflag="131076"/>
-    <item path="build\CMakeCache.txt" dflag="131076"/>
-    <item path="build\CMakeFiles\feature_tests.cxx" dflag="131076"/>
-    <item path="build\CMakeFiles\TargetDirectories.txt" dflag="131076"/>
-    <item path="test\luatest\protocol_enc.lua" dflag="131076"/>
-    <item path="test\jstest\example.js" dflag="131076"/>
+    <item path="yasio\obstream.cpp" dflag="131076"/>
+    <item path="yasio\detail\pipe_select_interrupter.ipp" dflag="131076"/>
+    <item path="yasio\detail\politedef.h" dflag="131076"/>
+    <item path="yasio\detail\socket_select_interrupter.ipp" dflag="131076"/>
+    <item path="yasio\yasio_jsb20.h" dflag="131076"/>
+    <item path="yasio\bindings\tolua_link.cpp" dflag="131076"/>
+    <item path="yasio\obstream.hpp" dflag="131076"/>
+    <item path="yasio\bindings\yasio_jsb.cpp" dflag="131076"/>
+    <item path="yasio\lyasio.h" dflag="131076"/>
+    <item path="yasio\bindings\yasio_ni.cpp" dflag="131076"/>
+    <item path="yasio\bindings\lyasio.cpp" dflag="131076"/>
+    <item path="yasio\ibstream.hpp" dflag="131076"/>
+    <item path="build\CMakeFiles\3.14.1\CompilerIdCXX\CMakeCXXCompilerId.cpp" dflag="131076"/>
+    <item path="yasio\detail\singleton.h" dflag="131076"/>
+    <item path="yasio\bindings\yasio_cclua.cpp" dflag="131076"/>
     <item path="test\luatest\yasio_ext\http_client.lua" dflag="131076"/>
-    <item path="build\CMakeFiles\3.14.1\VCTargetsPath.txt" dflag="131076"/>
+    <item path="test\luatest\protocol_base.lua" dflag="131076"/>
+    <item path="test\luatest\protocol_enc.lua" dflag="131076"/>
+    <item path="yasio\cxx17\string_view.hpp" dflag="131076"/>
+    <item path="test\luatest\example.lua" dflag="131076"/>
+    <item path="test\cpptest\kcptest.cpp" dflag="131076"/>
+    <item path="test\luatest\luatest.cpp" dflag="131076"/>
     <item path="build\CMakeFiles\feature_tests.c" dflag="131076"/>
     <item path="test\luatest\protocol_dec.lua" dflag="131076"/>
+    <item path="build\CMakeFiles\TargetDirectories.txt" dflag="131076"/>
+    <item path="build\CMakeFiles\3.14.1\VCTargetsPath.txt" dflag="131076"/>
+    <item path="test\cpptest\cpptest.cpp" dflag="131076"/>
     <item path="build\CMakeFiles\3.14.1\CompilerIdC\CMakeCCompilerId.c" dflag="131076"/>
-    <item path="yasio\detail\sol\sol_forward.hpp" dflag="131076"/>
-    <item path="yasio\detail\moodycamel\readerwriterqueue.h" dflag="131076"/>
-    <item path="yasio\detail\moodycamel\atomicops.h" dflag="131076"/>
-    <item path="yasio\detail\kaguya\kaguya.hpp" dflag="131076"/>
-    <item path="yasio\cxx17\string_view.hpp" dflag="131076"/>
-    <item path="yasio\detail\sol\sol.hpp" dflag="131076"/>
+    <item path="test\jstest\example.js" dflag="131076"/>
+    <item path="build\CMakeCache.txt" dflag="131076"/>
+    <item path="test\luatest\protocol_enums.lua" dflag="131076"/>
+    <item path="build\CMakeFiles\feature_tests.cxx" dflag="131076"/>
+    <item path="yasio\sol\sol.hpp" dflag="131076"/>
+    <item path="yasio\sol\sol_forward.hpp" dflag="131076"/>
+    <item path="yasio\moodycamel\atomicops.h" dflag="131076"/>
+    <item path="yasio\kaguya\kaguya.hpp" dflag="131076"/>
+    <item path="yasio\moodycamel\readerwriterqueue.h" dflag="131076"/>
+    <item path="version.md" dflag="131076"/>
+    <item path="README.md" dflag="131076"/>
+    <item path="yasio\sol\README.md" dflag="131076"/>
+    <item path="yasio\kaguya\README.md" dflag="131076"/>
   </assets>
   <inspect-dirs>
     <item/>

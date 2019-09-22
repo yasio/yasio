@@ -34,7 +34,7 @@ SOFTWARE.
 #  include "yasio/yasio.hpp"
 #endif
 #if defined(YASIO_HAVE_KCP)
-#  include "kcp/ikcp.h"
+#  include "yasio/kcp/ikcp.h"
 #endif
 #include <limits>
 #if defined(_WIN32)

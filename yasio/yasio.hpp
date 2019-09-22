@@ -46,6 +46,7 @@ SOFTWARE.
 #include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/singleton.h"
 #include "yasio/cxx17/string_view.hpp"
+#include "yasio/moodycamel/readerwriterqueue.h"
 #include "yasio/xxsocket.hpp"
 
 /*
@@ -309,9 +310,6 @@ protected:
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
 
-  // the mutex for write data to queue
-  std::recursive_mutex send_mtx_;
-
   io_channel* ctx_;
 
 public:
@@ -327,7 +325,7 @@ private:
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int& error) override;
   YASIO__DECL bool flush(long long& max_wait_duration) override;
-  std::deque<a_pdu_ptr> send_queue_;
+  moodycamel::ReaderWriterQueue<a_pdu_ptr> send_queue_;
 };
 
 #if defined(YASIO_HAVE_KCP)
@@ -341,6 +339,9 @@ private:
   YASIO__DECL void send(std::vector<char> data) override;
   YASIO__DECL int recv(int& error) override;
   YASIO__DECL bool flush(long long& max_wait_duration) override;
+
+  // the mutex for write data to queue
+  std::recursive_mutex send_mtx_;
   ikcpcb* kcp_;
 };
 #endif
@@ -573,9 +574,7 @@ private:
   std::thread worker_;
   std::thread::id worker_id_;
 
-  std::recursive_mutex event_queue_mtx_;
-  std::deque<event_ptr> event_queue_;
-  std::deque<event_ptr> event_queue_deal_;
+  moodycamel::ReaderWriterQueue<event_ptr> event_queue_;
 
   std::vector<io_channel*> channels_;
 

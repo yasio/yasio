@@ -8,7 +8,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/halx99/yasio.svg?label=Fork)](https://github.com/halx99/yasio)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/halx99/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/halx99/yasio/context:cpp)
 
-A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
+yasio is a multi-platform support library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
 The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
 **This lib has been used by project [RedAlert OL](http://hongjing.qq.com/) and run at millions of devices.**
 
@@ -49,7 +49,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
 Add yasio to your application Android.mk files, such as:  
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
-$(call import-module, external/yasio/build/android-lua)
+$(call import-module, external/yasio/jni/cocos-lua)
 ```
 
 3. Call luaopen_yasio_cclua(L) at your AppDelegate.cpp, please remember ```#include "yasio/yasio_cclua.h"``` firstly.  
@@ -64,7 +64,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
     + For Android: Add yasio to your application Android.mk files, such as: 
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
-$(call import-module, external/yasio/build/android-jsb)
+$(call import-module, external/yasio/jni/cocos-jsb)
 ```
 3. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio_jsb.h``` firstly.
 #### CocosCreator jsb2.0 integration:
@@ -80,8 +80,6 @@ $(call import-module, external/yasio/build/android-jsb)
 ../external/sources/yasio/obstream.cpp \
 ../external/sources/yasio/bindings/yasio_jsb20.cpp \
 ```
-Just like:  
-![image](https://github.com/halx99/yasio/raw/master/jsb20_android.png)  
 3. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio_jsb20.h``` firstly.  
 
 

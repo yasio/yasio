@@ -49,7 +49,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
 Add yasio to your application Android.mk files, such as:  
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
-$(call import-module, external/yasio/build/android-lua)
+$(call import-module, external/yasio/jni/cocos-lua)
 ```
 
 3. Call luaopen_yasio_cclua(L) at your AppDelegate.cpp, please remember ```#include "yasio/yasio_cclua.h"``` firstly.  
@@ -64,7 +64,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
     + For Android: Add yasio to your application Android.mk files, such as: 
 ```
 LOCAL_STATIC_LIBRARIES += yasio_static
-$(call import-module, external/yasio/build/android-jsb)
+$(call import-module, external/yasio/jni/cocos-jsb)
 ```
 3. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio_jsb.h``` firstly.
 #### CocosCreator jsb2.0 integration:

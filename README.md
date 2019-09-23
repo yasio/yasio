@@ -8,7 +8,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/halx99/yasio.svg?label=Fork)](https://github.com/halx99/yasio)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/halx99/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/halx99/yasio/context:cpp)
 
-A lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
+yasio is a lightweight & stable cross-platform support library with a focus on asynchronous socket I/O, support win32  &amp; linux  &amp; apple &amp; android &amp; wp8 &amp; wp8.1-universal &amp; win10-universal  
 The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
 **This lib has been used by project [RedAlert OL](http://hongjing.qq.com/) and run at millions of devices.**
 
@@ -80,8 +80,6 @@ $(call import-module, external/yasio/build/android-jsb)
 ../external/sources/yasio/obstream.cpp \
 ../external/sources/yasio/bindings/yasio_jsb20.cpp \
 ```
-Just like:  
-![image](https://github.com/halx99/yasio/raw/master/jsb20_android.png)  
 3. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio_jsb20.h``` firstly.  
 
 

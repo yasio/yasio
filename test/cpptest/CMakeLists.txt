@@ -11,4 +11,4 @@ include_directories ("${CPPTEST_INC_DIR}")
 
 add_executable (cpptest ${CPPTEST_SRC}) 
 
-target_link_libraries (cpptest LINK_PUBLIC yasio)
+target_link_libraries (cpptest LINK_PUBLIC yasio pthread)

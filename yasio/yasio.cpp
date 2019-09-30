@@ -576,7 +576,7 @@ void io_service::dispatch_events(int count)
     return;
 
   event_ptr event;
-  while (this->event_queue_.try_dequeue(event) && count-- > 0)
+  while (count-- > 0 && this->event_queue_.try_dequeue(event))
     options_.on_event_(std::move(event));
 }
 

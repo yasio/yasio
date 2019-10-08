@@ -289,7 +289,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 }
 
 // -------------------- io_transport_posix ---------------------
-void io_transport_posix::send(std::vector<char> data)
+void io_transport_posix::send(std::vector<char>&& data)
 {
   auto pdu = std::make_shared<a_pdu>(std::move(data));
   send_mtx_.lock();
@@ -374,7 +374,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> so
 }
 io_transport_kcp::~io_transport_kcp() { ikcp_release(this->kcp_); }
 
-void io_transport_kcp::send(std::vector<char> data)
+void io_transport_kcp::send(std::vector<char>&& data)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   ikcp_send(kcp_, data.data(), static_cast<int>(data.size()));
@@ -866,7 +866,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> data)
   {
     if (!data.empty())
     {
-      transport->send(data);
+      transport->send(std::move(data));
       this->interrupt();
       return static_cast<int>(data.size());
     }

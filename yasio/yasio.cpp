@@ -295,7 +295,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 }
 
 // -------------------- io_transport_posix ---------------------
-void io_transport_posix::send(std::vector<char> data)
+void io_transport_posix::send(std::vector<char>&& data)
 {
   auto pdu = std::make_shared<a_pdu>(std::move(data));
   send_queue_.emplace(std::move(pdu));
@@ -377,7 +377,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> so
 }
 io_transport_kcp::~io_transport_kcp() { ikcp_release(this->kcp_); }
 
-void io_transport_kcp::send(std::vector<char> data)
+void io_transport_kcp::send(std::vector<char>&& data)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   ikcp_send(kcp_, data.data(), static_cast<int>(data.size()));
@@ -853,7 +853,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> data)
   {
     if (!data.empty())
     {
-      transport->send(data);
+      transport->send(std::move(data));
       this->interrupt();
       return static_cast<int>(data.size());
     }
@@ -1523,10 +1523,10 @@ void io_service::set_option(int option, ...)
       options_.tcp_keepalive_.probs    = va_arg(ap, int);
       break;
     case YOPT_RESOLV_FN:
-      options_.resolv_ = std::move(*va_arg(ap, resolv_fn_t*));
+      options_.resolv_ = *va_arg(ap, resolv_fn_t*);
       break;
     case YOPT_PRINT_FN:
-      this->options_.print_ = std::move(*va_arg(ap, print_fn_t*));
+      this->options_.print_ = *va_arg(ap, print_fn_t*);
       break;
     case YOPT_CHANNEL_LFBFD_PARAMS: {
       auto index = static_cast<size_t>(va_arg(ap, int));
@@ -1542,12 +1542,12 @@ void io_service::set_option(int option, ...)
     }
 
     case YOPT_IO_EVENT_CB:
-      options_.on_event_ = std::move(*va_arg(ap, io_event_cb_t*));
+      options_.on_event_ = *va_arg(ap, io_event_cb_t*);
       break;
     case YOPT_CHANNEL_LFBFD_FN: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
-        this->channels_[index]->decode_len_ = std::move(*va_arg(ap, decode_len_fn_t*));
+        this->channels_[index]->decode_len_ = *va_arg(ap, decode_len_fn_t*);
     }
     break;
     case YOPT_CHANNEL_LOCAL_PORT: {

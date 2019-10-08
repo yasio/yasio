@@ -293,8 +293,8 @@ public:
   io_service& get_service() { return ctx_->get_service(); }
 
 private:
-  virtual void send(std::vector<char> data) = 0;
-  virtual int recv(int& error)              = 0;
+  virtual void send(std::vector<char>&& data) = 0;
+  virtual int recv(int& error)                = 0;
 
   // Try flush pending packet
   virtual bool flush(long long& max_wait_duration) = 0;
@@ -322,7 +322,7 @@ public:
   io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock) : io_transport(ctx, sock) {}
 
 private:
-  YASIO__DECL void send(std::vector<char> data) override;
+  YASIO__DECL void send(std::vector<char>&& data) override;
   YASIO__DECL int recv(int& error) override;
   YASIO__DECL bool flush(long long& max_wait_duration) override;
   moodycamel::ReaderWriterQueue<a_pdu_ptr> send_queue_;
@@ -336,7 +336,7 @@ public:
   YASIO__DECL ~io_transport_kcp();
 
 private:
-  YASIO__DECL void send(std::vector<char> data) override;
+  YASIO__DECL void send(std::vector<char>&& data) override;
   YASIO__DECL int recv(int& error) override;
   YASIO__DECL bool flush(long long& max_wait_duration) override;
 

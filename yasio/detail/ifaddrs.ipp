@@ -547,7 +547,7 @@ static int parse_netlink_reply(netlink_session* session, struct ifaddrs** ifaddr
   assert(ifaddrs_head);
   assert(last_ifaddr);
 
-  size_t buf_size = static_cast<size_t>(getpagesize());
+  int buf_size = static_cast<int>(getpagesize());
   YASIO_LOGV("receive buffer size == %d", buf_size);
 
   response       = (unsigned char*)malloc(sizeof(*response) * buf_size);
@@ -571,7 +571,7 @@ static int parse_netlink_reply(netlink_session* session, struct ifaddrs** ifaddr
     netlink_reply.msg_iov     = &reply_vector;
 
     length = recvmsg(session->sock_fd, &netlink_reply, 0);
-    YASIO_LOGV("  length == %d", (int)length);
+    YASIO_LOGV("  length == %d", static_cast<int>(length));
 
     if (length < 0)
     {
@@ -699,12 +699,12 @@ static int fill_ll_address(struct sockaddr_ll_extended** sa, struct ifinfomsg* n
   /* The assert can only fail for Iniband links, which are quite unlikely to be found
    * in any mobile devices
    */
-  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X", rta_payload_length,
-             sizeof((*sa)->sll_addr), net_interface->ifi_type);
-  if (static_cast<size_t>(rta_payload_length) > sizeof((*sa)->sll_addr))
+  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X", static_cast<int>(rta_payload_length),
+             static_cast<int>(sizeof((*sa)->sll_addr)), net_interface->ifi_type);
+  if (rta_payload_length > sizeof((*sa)->sll_addr))
   {
-    YASIO_LOG("Address is too long to place in sockaddr_ll (%d > %d)", rta_payload_length,
-              sizeof((*sa)->sll_addr));
+    YASIO_LOG("Address is too long to place in sockaddr_ll (%d > %d)", static_cast<int>(rta_payload_length),
+              static_cast<int>(sizeof((*sa)->sll_addr)));
     free(*sa);
     *sa = NULL;
     return -1;
@@ -1036,7 +1036,7 @@ static struct ifaddrs* get_link_info(const struct nlmsghdr* message)
         break;
 
       case IFLA_BROADCAST:
-        YASIO_LOGV("   interface broadcast (%d bytes)", RTA_PAYLOAD(attribute));
+        YASIO_LOGV("   interface broadcast (%u bytes)", RTA_PAYLOAD(attribute));
         if (fill_ll_address(&sa, net_interface, RTA_DATA(attribute), RTA_PAYLOAD(attribute)) < 0)
         {
           goto error;
@@ -1045,7 +1045,7 @@ static struct ifaddrs* get_link_info(const struct nlmsghdr* message)
         break;
 
       case IFLA_ADDRESS:
-        YASIO_LOGV("   interface address (%d bytes)", RTA_PAYLOAD(attribute));
+        YASIO_LOGV("   interface address (%u bytes)", RTA_PAYLOAD(attribute));
         if (fill_ll_address(&sa, net_interface, RTA_DATA(attribute), RTA_PAYLOAD(attribute)) < 0)
         {
           goto error;

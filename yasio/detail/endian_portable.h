@@ -4,6 +4,8 @@
 #include "politedef.h"
 #include <assert.h>
 
+#include <string.h>
+
 #if !defined(ASSERT)
 #  if defined(_DEBUG)
 #    define ASSERT(exp) assert(exp)
@@ -58,7 +60,7 @@ inline uint32_t htonf(float Value)
 {
   uint32_t Tempval;
   uint32_t Retval;
-  Tempval = *(uint32_t*)(&Value);
+  memcpy(&Tempval, &Value, sizeof(uint32_t));
   Retval  = _WS2_32_WINSOCK_SWAP_LONG(Tempval);
   return Retval;
 }
@@ -69,7 +71,7 @@ inline float ntohf(uint32_t Value)
 {
   const uint32_t Tempval = _WS2_32_WINSOCK_SWAP_LONG(Value);
   float Retval;
-  *((uint32_t*)&Retval) = Tempval;
+  memcpy(&Retval, &Tempval, sizeof(uint32_t));
   return Retval;
 }
 #  endif /* ntohf */
@@ -79,7 +81,7 @@ inline uint64_t htond(double Value)
 {
   uint64_t Tempval;
   uint64_t Retval;
-  Tempval = *(uint64_t*)(&Value);
+  memcpy(&Tempval, &Value, sizeof(uint64_t));
   Retval  = _WS2_32_WINSOCK_SWAP_LONGLONG(Tempval);
   return Retval;
 }
@@ -90,7 +92,7 @@ inline double ntohd(uint64_t Value)
 {
   const uint64_t Tempval = _WS2_32_WINSOCK_SWAP_LONGLONG(Value);
   double Retval;
-  *((uint64_t*)&Retval) = Tempval;
+  memcpy(&Retval, &Tempval, sizeof(uint64_t));
   return Retval;
 }
 #  endif /* ntohd */

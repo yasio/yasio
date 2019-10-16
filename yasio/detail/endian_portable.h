@@ -60,7 +60,7 @@ inline uint32_t htonf(float Value)
 {
   uint32_t Tempval;
   uint32_t Retval;
-  memcpy(&Retval, &Value, sizeof(uint32_t));
+  memcpy(&Tempval, &Value, sizeof(uint32_t));
   Retval  = _WS2_32_WINSOCK_SWAP_LONG(Tempval);
   return Retval;
 }

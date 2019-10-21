@@ -1231,7 +1231,7 @@ void io_service::do_unpack(transport_handle_t transport, int bytes_expected, int
 deadline_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, timer_cb_t cb,
                                         bool repeated)
 {
-  deadline_timer_ptr timer(new deadline_timer(*this));
+  auto timer = std::make_shared<deadline_timer>(*this);
   timer->expires_from_now(duration, repeated);
   timer->async_wait(
       [timer /*!important, hold on by lambda expression */, cb](bool cancelled) { cb(cancelled); });
@@ -1251,7 +1251,7 @@ void io_service::schedule_timer(deadline_timer* timer_ctl, timer_cb_t& timer_cb)
     return;
 
   this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
-  this->sort_timers_unlocked();
+  this->sort_timers();
   if (timer_ctl == this->timer_queue_.begin()->first)
     this->interrupt();
 }
@@ -1332,7 +1332,7 @@ void io_service::perform_timers()
   if (!loop_timers.empty())
   {
     this->timer_queue_.insert(this->timer_queue_.end(), loop_timers.begin(), loop_timers.end());
-    this->sort_timers_unlocked();
+    this->sort_timers();
   }
 }
 

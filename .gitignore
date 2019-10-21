@@ -4,6 +4,8 @@ ignored/*.*
 *.idb
 *.log
 *.obj
+*.so
+*.o
 *.lastbuildstate
 *.sdf
 *.tlog

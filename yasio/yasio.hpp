@@ -492,7 +492,7 @@ private:
     return std::find_if(timer_queue_.begin(), timer_queue_.end(),
                         [=](const timer_impl_t& timer) { return timer.first == key; });
   }
-  inline void sort_timers_unlocked()
+  inline void sort_timers()
   {
     std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
               [](const timer_impl_t& lhs, const timer_impl_t& rhs) {

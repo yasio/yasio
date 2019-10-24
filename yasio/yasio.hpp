@@ -35,7 +35,6 @@ SOFTWARE.
 #include <ctime>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <thread>
 #include <vector>
 #include <chrono>
@@ -43,13 +42,11 @@ SOFTWARE.
 #include "yasio/detail/config.hpp"
 #include "yasio/detail/endian_portable.h"
 #include "yasio/detail/object_pool.h"
-#include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/singleton.h"
+#include "yasio/detail/select_interrupter.hpp"
+#include "yasio/detail/concurrent_queue.hpp"
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
-#if !defined(YASIO_DISABLE_SPSC_QUEUE)
-#  include "yasio/moodycamel/readerwriterqueue.h"
-#endif
 
 #if !defined(MICROSECONDS_PER_SECOND)
 #  define MICROSECONDS_PER_SECOND 1000000LL
@@ -112,92 +109,6 @@ enum
   YEK_CONNECTION_LOST,
   YEK_PACKET,
 };
-
-template <typename _T> inline void clear_queue(_T& queue)
-{
-  _T tmp;
-  std::swap(tmp, queue);
-}
-
-template <typename _T, bool dual = false> class concurrent_queue;
-
-#if !defined(YASIO_DISABLE_SPSC_QUEUE)
-template <typename _T, bool dual> class concurrent_queue : public moodycamel::ReaderWriterQueue<_T>
-{
-public:
-  bool empty() const { return this->peek() == nullptr; }
-  void consume(size_t count, std::function<void(_T)>& func)
-  {
-    _T event;
-    while (count-- > 0 && this->try_dequeue(event))
-      func(std::move(event));
-  }
-  void clear() { clear_queue(static_cast<moodycamel::ReaderWriterQueue<_T>&>(*this)); }
-};
-#else
-template <typename _T> class concurrent_queue_primitive
-{
-public:
-  template <typename... _Valty> void emplace(_Valty&&... _Val)
-  {
-    std::lock_guard<std::recursive_mutex> lck(this->mtx_);
-    queue_.emplace(std::forward<_Valty>(_Val)...);
-  }
-  void pop()
-  {
-    std::lock_guard<std::recursive_mutex> lck(this->mtx_);
-    queue_.pop();
-  }
-  bool empty() const { return this->queue_.empty(); }
-  _T* peek()
-  {
-    if (this->empty())
-      return nullptr;
-    return &this->queue_.front();
-  }
-  void clear() { clear_queue(this->queue_); }
-
-protected:
-  std::queue<_T> queue_;
-  std::recursive_mutex mtx_;
-};
-template <typename _T> class concurrent_queue<_T, false> : public concurrent_queue_primitive<_T>
-{};
-template <typename _T> class concurrent_queue<_T, true> : public concurrent_queue_primitive<_T>
-{
-public:
-  void consume(size_t count, std::function<void(_T)>& func)
-  {
-    if (this->deal_.empty())
-    {
-      if (this->empty())
-        return;
-      else
-      {
-        // swap event queue
-        std::lock_guard<std::recursive_mutex> lck(this->mtx_);
-        std::swap(this->deal_, this->queue_);
-      }
-    }
-
-    while (!this->deal_.empty() && --count >= 0)
-    {
-      auto event = std::move(this->deal_.front());
-      deal_.pop();
-      func(std::move(event));
-    };
-  }
-
-  void clear()
-  {
-    clear_queue(queue_);
-    clear_queue(deal_);
-  }
-
-private:
-  std::queue<_T> deal_;
-};
-#endif
 
 // class fwds
 class a_pdu; // application layer protocol data unit.
@@ -406,7 +317,7 @@ private:
   YASIO__DECL int recv(int& error) override;
   YASIO__DECL bool flush(long long& max_wait_duration) override;
 
-  concurrent_queue<a_pdu_ptr> send_queue_;
+  concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 
 #if defined(YASIO_ENABLE_KCP)
@@ -654,7 +565,7 @@ private:
   std::thread::id worker_id_;
 
   std::recursive_mutex event_queue_mtx_;
-  concurrent_queue<event_ptr, true> event_queue_;
+  concurrency::concurrent_queue<event_ptr, true> event_queue_;
 
   std::vector<io_channel*> channels_;
 

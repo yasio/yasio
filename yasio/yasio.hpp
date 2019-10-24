@@ -49,16 +49,6 @@ SOFTWARE.
 #include "yasio/moodycamel/readerwriterqueue.h"
 #include "yasio/xxsocket.hpp"
 
-/*
-** If you want use kcp, please uncomment and add kcp/ikcp.c to your compile system.
-** Remember, before thus, please ensure execute: `git submodule update --init --recursive` to clone
-*kcp sources.
-** pitfall: yasio kcp support is experimental currently.
-*/
-// #define YASIO_HAVE_KCP
-
-#define _USING_OBJECT_POOL 1
-
 #if !defined(MICROSECONDS_PER_SECOND)
 #  define MICROSECONDS_PER_SECOND 1000000LL
 #endif
@@ -67,7 +57,9 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
+#if defined(YASIO_ENABLE_KCP)
 typedef struct IKCPCB ikcpcb;
+#endif
 
 namespace yasio
 {
@@ -104,7 +96,7 @@ enum
   YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
   YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
   YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
   YCM_KCP        = 1 << 4,
   YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
   YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
@@ -328,7 +320,7 @@ private:
   moodycamel::ReaderWriterQueue<a_pdu_ptr> send_queue_;
 };
 
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
 class io_transport_kcp : public io_transport
 {
 public:
@@ -374,7 +366,7 @@ public:
   std::vector<char>& packet() { return packet_; }
   long long timestamp() const { return timestamp_; }
 
-#if _USING_OBJECT_POOL
+#if !defined(YASIO_USE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 

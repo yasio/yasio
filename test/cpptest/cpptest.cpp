@@ -36,7 +36,7 @@ void yasioTest()
   obs.write_i24(16777217); // uint24 value overflow test
   obs.pop24();
 
-  yasio::ibstream_view ibs(obs.data(), obs.length());
+  yasio::ibstream_view ibs(obs.data(), static_cast<int>(obs.length()));
   ibs.seek(3, SEEK_CUR);
   auto r1 = ibs.read_i<double>();
   auto f1 = ibs.read_i<float>();

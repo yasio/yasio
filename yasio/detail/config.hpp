@@ -30,23 +30,35 @@ SOFTWARE.
 #define YASIO__CONFIG_HPP
 
 /*
-** Uncomment or add -DYASIO_HEADER_ONLY=1 to enable yasio core implementation header only
+** Uncomment or add compiler flag -DYASIO_HEADER_ONLY to enable yasio core implementation header
+** only
 */
 // #define YASIO_HEADER_ONLY 1
 
 /*
-** Uncomment or add -DYASIO_VERBOS_LOG=1 to enable verbos log
+** Uncomment or add compiler flag -DYASIO_VERBOS_LOG to enable verbos log
 */
 // #define YASIO_VERBOS_LOG 1
 
 /*
-** Uncomment or add -DYASIO_DISABLE_OBJECT_POOL to disable object_pool for allocating protocol data
-*unit
+** Uncomment or add compiler flag -DYASIO_DISABLE_SPSC_QUEUE to disable SPSC queue in io_service
+** Remark: Most of time, this library may used in game engines:
+**      1. send message: post send request at renderer thread, and perform send at `yasio_evloop`
+**         thread.
+**      2. receive message: unpack message at `yasio_evloop` thread, consume message at renderer
+**         thread.
+**      3. If you want use this library in other situation, you may need uncomment it.
+*/
+// #define YASIO_DISABLE_SPSC_QUEUE 1
+
+/*
+** Uncomment or add compiler flag -DYASIO_DISABLE_OBJECT_POOL to disable object_pool for allocating
+** protocol data unit
 */
 // #define YASIO_DISABLE_OBJECT_POOL 1
 
 /*
-** Uncomment or add -DYASIO_ENABLE_KCP=1 to enable kcp support
+** Uncomment or add compiler flag -DYASIO_ENABLE_KCP=1 to enable kcp support
 ** Remember, before thus, please ensure:
 ** 1. Execute: `git submodule update --init --recursive` to clone  kcp sources.
 ** 2. Add yasio/kcp/ikcp.c to your build system, even through the `YASIO_HEADER_ONLY` was defined.

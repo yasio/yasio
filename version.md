@@ -1,6 +1,4 @@
-yasio-3.23.6
-1. Fix jsb & jsb20 compile issue.
-2. Rename native interface ```yasio_close2``` to ```yasio_close_handle```
-3. Support detect whether ipv6 supported at android platform.
-4. Use dual event queue to avoid block recv operation when consumer thread do ```Long-Running Operations``` at event callback. 
-5. Remove specific vs project files, use cmake instead.
+yasio-3.26.0
+1. Rename macro ```YASIO_HAVE_KCP``` to ```YASIO_ENABLE_KCP``` and move to ```config.hpp```.
+2. Rename macro ```_USING_OBJECT_POOL``` to ```YASIO_DISABLE_OBJECT_POOL``` and move to ```config.hpp```.
+3. Add macro ```YASIO_DISABLE_SPSC_QUEUE``` to control whether disable single-producer, single-consumer lock-free queue.

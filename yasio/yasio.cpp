@@ -292,10 +292,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 // -------------------- io_transport_posix ---------------------
 void io_transport_posix::send(std::vector<char>&& data)
 {
-  auto pdu = std::make_shared<a_pdu>(std::move(data));
-  send_mtx_.lock();
-  send_queue_.push_back(pdu);
-  send_mtx_.unlock();
+  send_queue_.emplace(std::make_shared<a_pdu>(std::move(data)));
 }
 int io_transport_posix::recv(int& error)
 {
@@ -310,17 +307,15 @@ bool io_transport_posix::flush(long long& max_wait_duration)
   {
     if (!socket_->is_open())
       break;
-
-    if (!send_queue_.empty())
+    a_pdu_ptr* pv = send_queue_.peek();
+    if (pv != nullptr)
     {
-      std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-
-      auto v                 = send_queue_.front();
+      auto v                 = *pv;
       auto outstanding_bytes = static_cast<int>(v->data_.size() - v->offset_);
       int n                  = socket_->send_i(v->data_.data() + v->offset_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
-        send_queue_.pop_front();
+        send_queue_.pop();
 #if defined(YASIO_VERBOS_LOG)
         YASIO_SLOG_IMPL(get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
@@ -526,7 +521,6 @@ void io_service::cleanup()
     clear_transports();
     clear_channels();
     this->event_queue_.clear();
-    this->event_queue_deal_.clear();
     this->timer_queue_.clear();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
@@ -574,24 +568,7 @@ void io_service::dispatch_events(int count)
   if (!options_.on_event_)
     return;
 
-  if (this->event_queue_deal_.empty())
-  {
-    if (this->event_queue_.empty())
-      return;
-    else
-    {
-      // swap event queue
-      std::lock_guard<std::recursive_mutex> lck(this->event_queue_mtx_);
-      std::swap(this->event_queue_deal_, this->event_queue_);
-    }
-  }
-
-  while (!this->event_queue_deal_.empty() && --count >= 0)
-  {
-    auto event = std::move(this->event_queue_deal_.front());
-    this->event_queue_deal_.pop_front();
-    options_.on_event_(std::move(event));
-  };
+  this->event_queue_.consume(count, options_.on_event_);
 }
 
 void io_service::run()
@@ -883,9 +860,7 @@ void io_service::handle_event(event_ptr event)
 {
   if (options_.deferred_event_)
   {
-    event_queue_mtx_.lock();
-    event_queue_.push_back(std::move(event));
-    event_queue_mtx_.unlock();
+    event_queue_.emplace(std::move(event));
   }
   else
     options_.on_event_(std::move(event));

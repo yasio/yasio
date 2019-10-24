@@ -33,9 +33,6 @@ SOFTWARE.
 #if !defined(YASIO_HEADER_ONLY)
 #  include "yasio/yasio.hpp"
 #endif
-#if defined(YASIO_HAVE_KCP)
-#  include "yasio/kcp/ikcp.h"
-#endif
 #include <limits>
 #if defined(_WIN32)
 #  include <io.h>
@@ -82,6 +79,9 @@ namespace yasio
 {
 namespace inet
 {
+#if defined(YASIO_ENABLE_KCP)
+#  include "yasio/kcp/ikcp.c"
+#endif
 namespace
 {
 // error code
@@ -180,7 +180,7 @@ public:
   std::vector<char> data_; // sending data
   size_t offset_;          // offset
 
-#if _USING_OBJECT_POOL
+#if !defined(YASIO_USE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(a_pdu, 512)
 #endif
 };
@@ -360,24 +360,25 @@ bool io_transport_posix::flush(long long& max_wait_duration)
   return ret;
 }
 
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> sock)
     : io_transport(ctx, sock), kcp_(nullptr)
 {
-  this->kcp_ = ::ikcp_create(0, this);
-  ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
-  ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ikcpcb* /*kcp*/, void* user) {
-    auto t = (transport_handle_t)user;
-    return t->socket_->send_i(buf, len);
-  });
+  this->kcp_ = yasio::inet::ikcp_create(0, this);
+  yasio::inet::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
+  yasio::inet::ikcp_setoutput(
+      this->kcp_, [](const char* buf, int len, yasio::inet::ikcpcb* /*kcp*/, void* user) {
+        auto t = (transport_handle_t)user;
+        return t->socket_->send_i(buf, len);
+      });
 }
-io_transport_kcp::~io_transport_kcp() { ikcp_release(this->kcp_); }
+io_transport_kcp::~io_transport_kcp() { yasio::inet::ikcp_release(this->kcp_); }
 
 void io_transport_kcp::send(std::vector<char>&& data)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-  ikcp_send(kcp_, data.data(), static_cast<int>(data.size()));
+  yasio::inet::ikcp_send(kcp_, data.data(), static_cast<int>(data.size()));
 }
 int io_transport_kcp::recv(int& error)
 {
@@ -386,8 +387,8 @@ int io_transport_kcp::recv(int& error)
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
     // 0: ok, -1: again, -3: error
-    if (0 == ::ikcp_input(kcp_, sbuf, n))
-      n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+    if (0 == yasio::inet::ikcp_input(kcp_, sbuf, n))
+      n = yasio::inet::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
     else
     { // current, simply regards -1,-3 as error and trigger connection lost event.
       n     = 0;
@@ -403,9 +404,9 @@ bool io_transport_kcp::flush(long long& max_wait_duration)
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
   auto current = static_cast<IUINT32>(highp_clock() / 1000);
-  ::ikcp_update(kcp_, current);
+  yasio::inet::ikcp_update(kcp_, current);
 
-  auto expire_time        = ::ikcp_check(kcp_, current);
+  auto expire_time        = yasio::inet::ikcp_check(kcp_, current);
   long long wait_duration = (long long)(expire_time - current) * 1000;
   if (wait_duration < 0)
     wait_duration = 0;
@@ -1109,7 +1110,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   }
   else
     vp = operator new(sizeof(io_transport_posix));
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
   if (!(ctx->mask_ & YCM_KCP))
     transport = new (vp) io_transport_posix(ctx, socket);
   else

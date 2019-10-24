@@ -29,11 +29,29 @@ SOFTWARE.
 #ifndef YASIO__CONFIG_HPP
 #define YASIO__CONFIG_HPP
 
-// Uncomment or add -DYASIO_HEADER_ONLY to enable yasio core implementation header only
+/*
+** Uncomment or add -DYASIO_HEADER_ONLY=1 to enable yasio core implementation header only
+*/
 // #define YASIO_HEADER_ONLY 1
 
-// Uncomment or add -DYASIO_VERBOS_LOG to enable verbos log
+/*
+** Uncomment or add -DYASIO_VERBOS_LOG=1 to enable verbos log
+*/
 // #define YASIO_VERBOS_LOG 1
+
+/*
+** Uncomment or add -DYASIO_DISABLE_OBJECT_POOL to disable object_pool for allocating protocol data
+*unit
+*/
+// #define YASIO_DISABLE_OBJECT_POOL 1
+
+/*
+** Uncomment or add -DYASIO_ENABLE_KCP=1 to enable kcp support
+** Remember, before thus, please ensure execute: `git submodule update --init --recursive` to clone
+** kcp sources.
+** pitfall: yasio kcp support is experimental currently.
+*/
+// #define YASIO_ENABLE_KCP 1
 
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline

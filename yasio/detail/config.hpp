@@ -47,8 +47,9 @@ SOFTWARE.
 
 /*
 ** Uncomment or add -DYASIO_ENABLE_KCP=1 to enable kcp support
-** Remember, before thus, please ensure execute: `git submodule update --init --recursive` to clone
-** kcp sources.
+** Remember, before thus, please ensure:
+** 1. Execute: `git submodule update --init --recursive` to clone  kcp sources.
+** 2. Add yasio/kcp/ikcp.c to your build system, even through the `YASIO_HEADER_ONLY` was defined.
 ** pitfall: yasio kcp support is experimental currently.
 */
 // #define YASIO_ENABLE_KCP 1

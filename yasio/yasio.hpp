@@ -56,13 +56,14 @@ SOFTWARE.
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
 
+#if defined(YASIO_ENABLE_KCP)
+typedef struct IKCPCB ikcpcb;
+#endif
+
 namespace yasio
 {
 namespace inet
 {
-#if defined(YASIO_ENABLE_KCP)
-typedef struct IKCPCB ikcpcb;
-#endif
 // options
 enum
 {

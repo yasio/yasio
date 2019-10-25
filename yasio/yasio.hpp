@@ -133,7 +133,7 @@ typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
 
 typedef std::function<void(bool cancelled)> timer_cb_t;
 typedef std::pair<deadline_timer*, timer_cb_t> timer_impl_t;
-typedef std::function<void(event_ptr)> io_event_cb_t;
+typedef std::function<void(event_ptr&&)> io_event_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;

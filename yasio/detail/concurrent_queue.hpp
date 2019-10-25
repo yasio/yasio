@@ -52,7 +52,7 @@ template <typename _T, bool _Dual> class concurrent_queue : public moodycamel::R
 {
 public:
   bool empty() const { return this->peek() == nullptr; }
-  void consume(size_t count, std::function<void(_T)>& func)
+  void consume(size_t count, std::function<void(_T&&)>& func)
   {
     _T event;
     while (count-- > 0 && this->try_dequeue(event))
@@ -92,7 +92,7 @@ template <typename _T> class concurrent_queue<_T, false> : public concurrent_que
 template <typename _T> class concurrent_queue<_T, true> : public concurrent_queue_primitive<_T>
 {
 public:
-  void consume(size_t count, std::function<void(_T)>& func)
+  void consume(size_t count, std::function<void(_T&&)>& func)
   {
     if (this->deal_.empty())
     {

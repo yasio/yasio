@@ -564,7 +564,6 @@ private:
   std::thread worker_;
   std::thread::id worker_id_;
 
-  std::recursive_mutex event_queue_mtx_;
   concurrency::concurrent_queue<event_ptr, true> event_queue_;
 
   std::vector<io_channel*> channels_;

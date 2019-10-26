@@ -851,7 +851,7 @@ public:
   **       set_optval(SOL_SOCKET, SO_SNDTIMEO, 10);
   **       set_optval(SOL_SOCKET, SO_RCVTIMEO, 10);
   **
-  ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is
+  ** @returns: If no error occurs, set_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   */
   template <typename T> inline int set_optval(int level, int optname, const T& optval)
@@ -861,15 +861,15 @@ public:
   template <typename T>
   inline static int set_optval(socket_native_type s, int level, int optname, const T& optval)
   {
-    return xxsocket::set_optval(s, level, optname, &optval, static_cast<int>(sizeof(T)));
+    return xxsocket::set_optval(s, level, optname, &optval, static_cast<socklen_t>(sizeof T));
   }
 
-  int set_optval(int level, int optname, const void* optval, int optlen)
+  int set_optval(int level, int optname, const void* optval, socklen_t optlen)
   {
     return xxsocket::set_optval(this->fd, level, optname, optval, optlen);
   }
   static int set_optval(socket_native_type fd, int level, int optname, const void* optval,
-                        int optlen)
+                        socklen_t optlen)
   {
     return ::setsockopt(fd, level, optname, static_cast<const char*>(optval), optlen);
   }
@@ -883,26 +883,24 @@ public:
   **    optval: A variable to the buffer in which the value for the requested option is to be
   *returned.
   **
-  ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is
+  ** @returns: If no error occurs, get_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   */
   template <typename T>
-  inline int get_optval(int level, int optname, T& optval, socklen_t = sizeof(T)) const
+  inline int get_optval(int level, int optname, T& optval) const
   {
-    return get_optval(this->fd, level, optname, optval, optlen);
+    return get_optval(this->fd, level, optname, optval);
   }
-
   template <typename T>
-  inline static int get_optval(socket_native_type s, int level, int optname, T& optval,
-                               socklen_t = sizeof(T))
+  inline static int get_optval(socket_native_type sockfd, int level, int optname, T& optval)
   {
-    return ::getsockopt(s, level, optname, (char*)&optval, &optlen);
+    return ::getsockopt(sockfd, level, optname, (char*)&optval, static_cast<socklen_t>(sizeof T));
   }
 
   /* @brief: control the socket
   ** @params :
   **          see MSDN or man page
-  ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is
+  ** @returns: If no error occurs, ioctl returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   **
   **
@@ -921,7 +919,7 @@ public:
   /* @brief: check is a client socket alive
   ** @params :
   **          see MSDN or man page
-  ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is
+  ** @returns: If no error occurs, alive returns true. Otherwise, a value of false is
   *returned
   */
   YASIO__DECL bool alive(void) const;

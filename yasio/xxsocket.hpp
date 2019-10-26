@@ -854,10 +854,25 @@ public:
   ** @returns: If no error occurs, getsockopt returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   */
-  template <typename T> inline int set_optval(int level, int optname, const T& optval);
-
+  template <typename T> inline int set_optval(int level, int optname, const T& optval)
+  {
+    return set_optval(this->fd, level, optname, optval);
+  }
   template <typename T>
-  inline static int set_optval(socket_native_type, int level, int optname, const T& optval);
+  inline static int set_optval(socket_native_type s, int level, int optname, const T& optval)
+  {
+    return xxsocket::set_optval(s, level, optname, &optval, static_cast<int>(sizeof(T)));
+  }
+
+  int set_optval(int level, int optname, const void* optval, int optlen)
+  {
+    return xxsocket::set_optval(this->fd, level, optname, optval, optlen);
+  }
+  static int set_optval(socket_native_type fd, int level, int optname, const void* optval,
+                        int optlen)
+  {
+    return ::setsockopt(fd, level, optname, static_cast<const char*>(optval), optlen);
+  }
 
   /* @brief: Retrieves a socket option
   ** @params :
@@ -872,11 +887,17 @@ public:
   *returned
   */
   template <typename T>
-  inline int get_optval(int level, int optname, T& optval, socklen_t = sizeof(T)) const;
+  inline int get_optval(int level, int optname, T& optval, socklen_t = sizeof(T)) const
+  {
+    return get_optval(this->fd, level, optname, optval, optlen);
+  }
 
   template <typename T>
   inline static int get_optval(socket_native_type s, int level, int optname, T& optval,
-                               socklen_t = sizeof(T));
+                               socklen_t = sizeof(T))
+  {
+    return ::getsockopt(s, level, optname, (char*)&optval, &optlen);
+  }
 
   /* @brief: control the socket
   ** @params :
@@ -887,9 +908,15 @@ public:
   **
   **
   */
-  template <typename _T> inline int ioctl(long cmd, const _T& argp) const;
-
-  template <typename _T> inline static int ioctl(socket_native_type s, long cmd, const _T& argp);
+  template <typename _T> inline int ioctl(long cmd, const _T& value) const
+  {
+    return xxsocket::ioctl(this->fd, cmd, value);
+  }
+  template <typename _T> inline static int ioctl(socket_native_type s, long cmd, const _T& value)
+  {
+    u_long argp = static_cast<u_long>(value);
+    return ::ioctlsocket(s, cmd, &argp);
+  }
 
   /* @brief: check is a client socket alive
   ** @params :
@@ -999,41 +1026,6 @@ public:
 private:
   socket_native_type fd;
 }; // namespace inet
-
-template <typename T> inline int xxsocket::set_optval(int level, int optname, const T& optval)
-{
-  return set_optval(this->fd, level, optname, optval);
-}
-
-template <typename T>
-inline int xxsocket::get_optval(int level, int optname, T& optval, socklen_t optlen) const
-{
-  return get_optval(this->fd, level, optname, optval, optlen);
-}
-
-template <typename T>
-inline int xxsocket::set_optval(socket_native_type s, int level, int optname, const T& optval)
-{
-  return ::setsockopt(s, level, optname, (const char*)&optval, sizeof(T));
-}
-
-template <typename T>
-inline int xxsocket::get_optval(socket_native_type s, int level, int optname, T& optval,
-                                socklen_t optlen)
-{
-  return ::getsockopt(s, level, optname, (char*)&optval, &optlen);
-}
-
-template <typename _T> inline int xxsocket::ioctl(long cmd, const _T& value) const
-{
-  return xxsocket::ioctl(this->fd, cmd, value);
-}
-
-template <typename _T> inline int xxsocket::ioctl(socket_native_type s, long cmd, const _T& value)
-{
-  u_long argp = value;
-  return ::ioctlsocket(s, cmd, &argp);
-}
 
 } // namespace inet
 

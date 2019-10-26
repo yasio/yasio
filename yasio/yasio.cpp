@@ -1577,6 +1577,17 @@ void io_service::set_option(int option, ...)
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
+    case YOPT_TRANSPORT_SOL_SOCKET: {
+      auto obj = va_arg(ap, transport_handle_t);
+      if (obj && obj->socket_)
+      {
+        auto optname = va_arg(ap, int);
+        auto optval  = va_arg(ap, void*);
+        auto optlen  = va_arg(ap, int);
+        obj->socket_->set_optval(SOL_SOCKET, optname, optval, optlen);
+      }
+    }
+    break;
   }
 
   va_end(ap);

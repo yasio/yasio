@@ -54,7 +54,7 @@ SOFTWARE.
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 /* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
  * field. */
-#define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
+#define MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
 
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \

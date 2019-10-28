@@ -262,7 +262,7 @@ private:
     int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=0
     int length_field_length = 4;  // 1,2,3,4
     int length_adjustment   = 0;
-    int max_frame_length    = SZ(10, M);
+    int max_frame_length    = 10 * 1024 * 1024; // 10MBytes
   } lfb_;
   decode_len_fn_t decode_len_;
 };

@@ -29,7 +29,6 @@ SOFTWARE.
 #ifndef YASIO__OBJECT_POOL_H
 #define YASIO__OBJECT_POOL_H
 
-#include "politedef.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <memory>
@@ -209,7 +208,7 @@ public:
 
 //////////////////////// allocator /////////////////
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector, DO NOT use at non-msvc compiler.
-template <class _Ty, size_t _ElemCount = SZ(8, k) / sizeof(_Ty)> class object_pool_allocator
+template <class _Ty, size_t _ElemCount = 8192 / sizeof(_Ty)> class object_pool_allocator
 { // generic allocator for objects of class _Ty
 public:
   typedef _Ty value_type;

@@ -29,7 +29,6 @@ SOFTWARE.
 #ifndef YASIO__ENDIAN_PORTABLE_H
 #define YASIO__ENDIAN_PORTABLE_H
 
-#include "politedef.h"
 #include <assert.h>
 
 #include <string.h>

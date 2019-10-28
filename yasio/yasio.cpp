@@ -54,7 +54,7 @@ SOFTWARE.
 #define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
 /* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
  * field. */
-#define MAX_PDU_BUFFER_SIZE static_cast<int>(SZ(1, M))
+#define MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
 
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
@@ -1577,14 +1577,15 @@ void io_service::set_option(int option, ...)
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_TRANSPORT_SOL_SOCKET: {
+    case YOPT_TRANSPORT_SOCKOPT: {
       auto obj = va_arg(ap, transport_handle_t);
       if (obj && obj->socket_)
       {
-        auto optname = va_arg(ap, int);
-        auto optval  = va_arg(ap, void*);
-        auto optlen  = va_arg(ap, int);
-        obj->socket_->set_optval(SOL_SOCKET, optname, optval, optlen);
+        auto optlevel = va_arg(ap, int);
+        auto optname  = va_arg(ap, int);
+        auto optval   = va_arg(ap, void*);
+        auto optlen   = va_arg(ap, int);
+        obj->socket_->set_optval(optlevel, optname, optval, optlen);
       }
     }
     break;

@@ -29,7 +29,6 @@ SOFTWARE.
 #ifndef YASIO__OBJECT_POOL_H
 #define YASIO__OBJECT_POOL_H
 
-#include "politedef.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <memory>
@@ -52,8 +51,8 @@ namespace yasio
 {
 namespace gc
 {
-
-#define POOL_ESTIMATE_SIZE(element_type) sz_align(sizeof(element_type), sizeof(void*))
+#define YASIO_SZ_ALIGN(d, a) (((d) + ((a)-1)) & ~((a)-1))
+#define YASIO_POOL_ESTIMATE_SIZE(element_type) YASIO_SZ_ALIGN(sizeof(element_type), sizeof(void*))
 
 namespace detail
 {
@@ -112,7 +111,8 @@ public:                                                                         
                                                                                                    \
   static yasio::gc::detail::object_pool& get_pool()                                                \
   {                                                                                                \
-    static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
+    static yasio::gc::detail::object_pool s_pool(YASIO_POOL_ESTIMATE_SIZE(ELEMENT_TYPE),           \
+                                                 ELEMENT_COUNT);                                   \
     return s_pool;                                                                                 \
   }
 
@@ -147,7 +147,8 @@ public:                                                                         
                                                                                                    \
   yasio::gc::detail::object_pool& ELEMENT_TYPE::get_pool()                                         \
   {                                                                                                \
-    static yasio::gc::detail::object_pool s_pool(POOL_ESTIMATE_SIZE(ELEMENT_TYPE), ELEMENT_COUNT); \
+    static yasio::gc::detail::object_pool s_pool(YASIO_POOL_ESTIMATE_SIZE(ELEMENT_TYPE),           \
+                                                 ELEMENT_COUNT);                                   \
     return s_pool;                                                                                 \
   }
 } // namespace detail
@@ -158,7 +159,9 @@ template <typename _Ty, typename _Mutex = void> class object_pool : public detai
   void operator=(const object_pool&) = delete;
 
 public:
-  object_pool(size_t _ElemCount = 512) : detail::object_pool(POOL_ESTIMATE_SIZE(_Ty), _ElemCount) {}
+  object_pool(size_t _ElemCount = 512)
+      : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+  {}
 
   template <typename... _Args> _Ty* construct(const _Args&... args)
   {
@@ -179,7 +182,9 @@ public:
 template <typename _Ty> class object_pool<_Ty, std::mutex> : public detail::object_pool
 {
 public:
-  object_pool(size_t _ElemCount = 512) : detail::object_pool(POOL_ESTIMATE_SIZE(_Ty), _ElemCount) {}
+  object_pool(size_t _ElemCount = 512)
+      : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+  {}
 
   template <typename... _Args> _Ty* construct(const _Args&... args)
   {
@@ -209,7 +214,7 @@ public:
 
 //////////////////////// allocator /////////////////
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector, DO NOT use at non-msvc compiler.
-template <class _Ty, size_t _ElemCount = SZ(8, k) / sizeof(_Ty)> class object_pool_allocator
+template <class _Ty, size_t _ElemCount = 8192 / sizeof(_Ty)> class object_pool_allocator
 { // generic allocator for objects of class _Ty
 public:
   typedef _Ty value_type;

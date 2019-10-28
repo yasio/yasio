@@ -1,18 +1,18 @@
 # yasio - *Y*et *A*nother *S*ocket *IO* service
-[![Build Status](https://travis-ci.org/halx99/yasio.svg?branch=master)](https://travis-ci.org/halx99/yasio)
+[![Build Status](https://travis-ci.org/simdsoft/yasio.svg?branch=master)](https://travis-ci.org/simdsoft/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/halx99/yasio?branch=master&svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/release-v3.26.0-blue.svg)](https://github.com/halx99/yasio/releases)
+[![Release](https://img.shields.io/badge/release-v3.26.1-blue.svg)](https://github.com/simdsoft/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
-[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/halx99/yasio/blob/master/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/halx99/yasio.svg?label=Stars)](https://github.com/halx99/yasio)
-[![GitHub forks](https://img.shields.io/github/forks/halx99/yasio.svg?label=Fork)](https://github.com/halx99/yasio)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/halx99/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/halx99/yasio/context:cpp)
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/simdsoft/yasio/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/simdsoft/yasio.svg?label=Stars)](https://github.com/simdsoft/yasio)
+[![GitHub forks](https://img.shields.io/github/forks/simdsoft/yasio.svg?label=Fork)](https://github.com/simdsoft/yasio)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
 
 yasio is a multi-platform support library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
 The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
 **This lib has been used by project [RedAlert OL](http://hongjing.qq.com/) and run at millions of devices.**
 
-## Clone at github: [yasio](https://github.com/halx99/yasio)
+## Clone at github: [yasio](https://github.com/simdsoft/yasio)
 
 ## Features: 
 * support IPv6-only network.  
@@ -28,14 +28,14 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 ## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
-[cpptest](https://github.com/halx99/yasio/blob/master/test/cpptest/cpptest.cpp)  
+[cpptest](https://github.com/simdsoft/yasio/blob/master/test/cpptest/cpptest.cpp)  
   
     
 ### Lua intergation: 
 #### common lua application integration:
 1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp``` with your project  
 2. call luaopen_yasio after LUA VM initialized.  
-luatest(windows user): please download [luatest.zip](https://github.com/halx99/yasio/releases), extract it then open ```luatest.xsxproj``` by x-studio365 IDE  
+luatest(windows user): please download [luatest.zip](https://github.com/simdsoft/yasio/releases), extract it then open ```luatest.xsxproj``` by x-studio IDE  
   
 #### cocos2d-x lua integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external```  
@@ -84,7 +84,7 @@ $(call import-module, external/yasio/jni/cocos-jsb)
 
 
 #### JS demo:
-see: [example.js](https://github.com/halx99/yasio/blob/master/test/jstest/example.js)  
+see: [example.js](https://github.com/simdsoft/yasio/blob/master/test/jstest/example.js)  
   
   
 ## Quick test at linux platform with gcc compiler:  
@@ -97,5 +97,5 @@ see: [example.js](https://github.com/halx99/yasio/blob/master/test/jstest/exampl
 ## Unity3D integration guide
 Tencent xLua integration, see: [https://github.com/halx99/xLua](https://github.com/halx99/xLua)
 
-## For more detail usage: see [wiki](https://github.com/halx99/yasio/wiki)
+## For more detail usage: see [wiki](https://github.com/simdsoft/yasio/wiki)
 

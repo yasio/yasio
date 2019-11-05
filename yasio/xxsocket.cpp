@@ -1092,6 +1092,7 @@ done:
   return (0);
 }
 
+int xxsocket::connect_n(const endpoint& ep) { return xxsocket::connect_n(this->fd, ep); }
 int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
 {
 #ifdef _WIN32

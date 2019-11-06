@@ -51,10 +51,12 @@ SOFTWARE.
 #endif
 
 #define YASIO_SOMAXCONN 19
-#define MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
+#define YASIO_MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
+#define YASIO_DEFAULT_MULTICAST_TTL (int)8
+
 /* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
  * field. */
-#define MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
+#define YASIO_MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
 
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
@@ -209,6 +211,37 @@ io_channel::io_channel(io_service& service) : deadline_timer_(service)
   dns_queries_state_ = YDQS_FAILED;
 
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+}
+
+void io_channel::setup_multicast(std::shared_ptr<xxsocket>& sock)
+{
+  if (sock && !this->endpoints_.empty())
+  {
+    auto& ep = this->endpoints_[0];
+    // disable loopback
+    socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
+                        ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, (int)0);
+    // ttl
+    socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
+                        ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
+                        YASIO_DEFAULT_MULTICAST_TTL);
+
+    struct ip_mreq mreq;
+    mreq.imr_interface.s_addr = 0;
+    mreq.imr_multiaddr.s_addr = ep.in4_.sin_addr.s_addr;
+    sock->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+  }
+}
+
+void io_channel::cleanup_multicast(std::shared_ptr<xxsocket>& sock)
+{
+  if (sock && !this->endpoints_.empty())
+  {
+    struct ip_mreq mreq;
+    mreq.imr_interface.s_addr = 0;
+    mreq.imr_multiaddr.s_addr = this->endpoints_[0].in4_.sin_addr.s_addr;
+    sock->set_optval(IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+  }
 }
 
 void io_channel::setup_host(std::string host)
@@ -580,14 +613,14 @@ void io_service::run()
 
   // event loop
   fd_set fds_array[max_ops];
-  long long max_wait_duration = MAX_WAIT_DURATION;
+  long long max_wait_duration = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
     int nfds = do_evpoll(fds_array, max_wait_duration);
     if (this->state_ != io_service::state::RUNNING)
       break;
 
-    max_wait_duration = MAX_WAIT_DURATION;
+    max_wait_duration = YASIO_MAX_WAIT_DURATION;
 
     if (nfds == -1)
     {
@@ -636,6 +669,30 @@ void io_service::perform_transports(fd_set* fds_array, long long& max_wait_durat
       iter = transports_.erase(iter);
     }
   }
+
+  /*
+    Because Bind() the client socket to the socket address of the listening socket.  On Linux this
+    essentially passes the responsibility for receiving data for the client session from the
+    well-known listening socket, to the newly allocated client socket.  It is important to note
+    that this behavior is not the same on other platforms, like Windows (unfortunately), detail
+    see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+    https://cloud.tencent.com/developer/article/1004555
+    So we emulate thus by ourself.
+  */
+#if defined(_WIN32)
+  for (auto iter = dgram_clients_.begin(); iter != dgram_clients_.end();)
+  {
+    auto transport = iter->second;
+    if (transport->flush(max_wait_duration))
+      ++iter;
+    else
+    {
+      handle_close(transport);
+      iter = dgram_clients_.erase(iter);
+    }
+  }
+#endif
 }
 
 void io_service::perform_channels(fd_set* fds_array)
@@ -673,10 +730,11 @@ void io_service::perform_channels(fd_set* fds_array)
       }
       else if (ctx->mask_ & YCM_SERVER)
       {
-        if (ctx->opmask_ & YOPM_CLOSE_CHANNEL)
+        auto opmask = ctx->opmask_;
+        if (opmask & YOPM_CLOSE_CHANNEL)
           cleanup_io(ctx);
 
-        if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
+        if (opmask & YOPM_OPEN_CHANNEL)
           do_nonblocking_accept(ctx);
 
         finish = (ctx->state_ != YCS_OPENED);
@@ -740,26 +798,6 @@ void io_service::reopen(transport_handle_t transport)
 
 void io_service::open(size_t channel_index, int channel_mask)
 {
-#if defined(_WIN32)
-  if ((channel_mask & YCM_UDP) && (channel_mask & YCM_SERVER))
-  {
-    /*
-    Because Bind() the client socket to the socket address of the listening socket.  On Linux this
-    essentially passes the responsibility for receiving data for the client session from the
-    well-known listening socket, to the newly allocated client socket.  It is important to note
-    that this behavior is not the same on other platforms, like Windows (unfortunately), detail
-    see:
-    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
-    https://cloud.tencent.com/developer/article/1004555
-  */
-    YASIO_SLOG(
-        "[index: %d], YCM_UDP_SERVER does'n supported by Microsoft Winsock provider, you can use "
-        "YCM_UDP_CLIENT to communicate with peer!",
-        channel_index);
-    return;
-  }
-#endif
-
   // Gets channel
   if (channel_index >= channels_.size())
     return;
@@ -891,6 +929,8 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP)
       ctx->socket_->bind("0.0.0.0", ctx->local_port_);
+    if (ctx->mask_ & YCM_MULTICAST)
+      ctx->setup_multicast(ctx->socket_);
     ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     if (ret < 0)
     { // setup no blocking connect
@@ -971,6 +1011,12 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     {
       ctx->state_ = YCS_OPENED;
       ctx->socket_->set_nonblocking(true);
+      if (ctx->mask_ & YCM_UDP)
+      {
+        ctx->udp_buffer_.resize(YASIO_INET_BUFFER_SIZE);
+        if (ctx->mask_ & YCM_MULTICAST)
+          ctx->setup_multicast(ctx->socket_);
+      }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       YASIO_SLOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
     }
@@ -1010,46 +1056,72 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         else // YCM_UDP
         {
           ip::endpoint peer;
-
-          char buffer[65535];
-          int n = ctx->socket_->recvfrom_i(buffer, sizeof(buffer), peer);
+          int n = ctx->socket_->recvfrom_i(&ctx->udp_buffer_.front(),
+                                           static_cast<int>(ctx->udp_buffer_.size()), peer);
           if (n > 0)
           {
             YASIO_SLOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
 
-            // make a transport local --> peer udp session, just like tcp accept
-            auto client_sock = std::make_shared<xxsocket>();
-            if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+            /* make a transport local --> peer udp session, just like tcp accept */
+#if !defined(_WIN32)
+            auto transport = do_udp_accept(ctx, peer);
+#else // Win32 ONLY support one by one client <--> server for UDP.
+            auto it = this->dgram_clients_.find(peer);
+            auto transport =
+                it != this->dgram_clients_.end() ? it->second : do_udp_accept(ctx, peer);
+#endif
+            if (transport)
             {
-              client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-              error = client_sock->bind("0.0.0.0", ctx->port_) == 0
-                          ? xxsocket::connect(client_sock->native_handle(), peer)
-                          : -1;
-              if (error == 0)
-              {
-                auto transport = allocate_transport(ctx, std::move(client_sock));
-                handle_connect_succeed(transport);
-                this->handle_event(
-                    event_ptr(new io_event(transport->channel_index(), YEK_PACKET,
-                                           std::vector<char>(buffer, buffer + n), transport)));
-              }
-              else
-                YASIO_SLOG("%s", "udp-server: open socket fd failed!");
+              this->handle_event(event_ptr(new io_event(
+                  transport->channel_index(), YEK_PACKET,
+                  std::vector<char>(&ctx->udp_buffer_.front(), &ctx->udp_buffer_.front() + n),
+                  transport)));
             }
           }
+          else
+          {
+            YASIO_SLOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
+            cleanup_io(ctx);
+          }
         }
-      }
-      else
-      {
-        YASIO_SLOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
-        cleanup_io(ctx);
       }
     }
   }
 }
 
+transport_handle_t io_service::do_udp_accept(io_channel* ctx, ip::endpoint& peer)
+{
+  auto client_sock = std::make_shared<xxsocket>();
+  if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
+  {
+    client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    int error = client_sock->bind("0.0.0.0", ctx->port_) == 0
+                    ? xxsocket::connect(client_sock->native_handle(), peer)
+                    : -1;
+    if (error == 0)
+    {
+      auto transport = allocate_transport(ctx, std::move(client_sock));
+      if (ctx->mask_ & YCM_MULTICAST)
+        ctx->setup_multicast(transport->socket_);
+
+#if !defined(_WIN32)
+      handle_connect_succeed(transport);
+#else
+      notify_connect_succeed(transport);
+      this->dgram_clients_.emplace(peer, transport);
+#endif
+      return transport;
+    }
+    else
+      YASIO_SLOG("%s", "udp-server: open socket fd failed!");
+  }
+
+  return nullptr;
+}
+
 void io_service::handle_connect_succeed(transport_handle_t transport)
 {
+  this->transports_.push_back(transport);
   auto ctx = transport->ctx_;
   ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
   auto& connection = transport->socket_;
@@ -1067,6 +1139,14 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
       connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle,
                                 options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
   }
+
+  notify_connect_succeed(transport);
+}
+
+void io_service::notify_connect_succeed(transport_handle_t transport)
+{
+  auto ctx         = transport->ctx_;
+  auto& connection = transport->socket_;
 
   YASIO_SLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
              transport->id_, connection->local_endpoint().to_string().c_str(),
@@ -1093,7 +1173,6 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
 #else
   transport = new (vp) io_transport_posix(ctx, socket);
 #endif
-  this->transports_.push_back(transport);
 
   return transport;
 }
@@ -1102,10 +1181,9 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
   cleanup_io(ctx);
 
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
-
   YASIO_SLOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
              ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 }
 
 bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
@@ -1150,7 +1228,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
           transport->expected_packet_size_ = length;
           transport->expected_packet_.reserve(
               (std::min)(transport->expected_packet_size_,
-                         MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
+                         YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
           do_unpack(transport, transport->expected_packet_size_, n, max_wait_duration);
         }
         else if (length == 0)
@@ -1269,7 +1347,9 @@ void io_service::open_internal(io_channel* ctx, bool ignore_state)
   ctx->opmask_ |= YOPM_OPEN_CHANNEL;
 
   this->channel_ops_mtx_.lock();
-  this->channel_ops_.push_back(ctx);
+  if (std::find(this->channel_ops_.begin(), this->channel_ops_.end(), ctx) ==
+      this->channel_ops_.end())
+    this->channel_ops_.push_back(ctx);
   this->channel_ops_mtx_.unlock();
 
   this->interrupt();

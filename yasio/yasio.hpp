@@ -39,6 +39,9 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 #include <functional>
+#if defined(_WIN32)
+#  include <map>
+#endif
 #include "yasio/detail/config.hpp"
 #include "yasio/detail/endian_portable.h"
 #include "yasio/detail/object_pool.h"
@@ -55,6 +58,8 @@ SOFTWARE.
 #if !defined(_ARRAYSIZE)
 #  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 #endif
+
+#define YASIO_INET_BUFFER_SIZE 65536
 
 #if defined(YASIO_ENABLE_KCP)
 typedef struct IKCPCB ikcpcb;
@@ -102,6 +107,9 @@ enum
   YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
   YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
 #endif
+  YCM_MULTICAST        = 1 << 5,
+  YCM_MULTICAST_CLIENT = YCM_MULTICAST | YCM_UDP_CLIENT,
+  YCM_MULTICAST_SERVER = YCM_MULTICAST | YCM_UDP_SERVER,
 };
 
 // event kinds
@@ -224,6 +232,9 @@ public:
   io_service& get_service() { return deadline_timer_.service_; }
   inline int index() { return index_; }
 
+  void setup_multicast(std::shared_ptr<xxsocket>&);
+  void cleanup_multicast(std::shared_ptr<xxsocket>&);
+
 private:
   YASIO__DECL io_channel(io_service& service);
 
@@ -265,6 +276,9 @@ private:
     int max_frame_length    = 10 * 1024 * 1024; // 10MBytes
   } lfb_;
   decode_len_fn_t decode_len_;
+
+  // The buffer for udp only
+  std::vector<char> udp_buffer_;
 };
 
 class io_transport : public io_base
@@ -297,8 +311,8 @@ protected:
   virtual ~io_transport() {}
   unsigned int id_;
 
-  char buffer_[65536]; // recv buffer, 64K
-  int offset_ = 0;     // recv buffer offset
+  char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
+  int offset_ = 0;                      // recv buffer offset
 
   std::vector<char> expected_packet_;
   int expected_packet_size_ = -1;
@@ -519,6 +533,7 @@ private:
   }
   YASIO__DECL void handle_connect_succeed(transport_handle_t);
   YASIO__DECL void handle_connect_failed(io_channel*, int ec);
+  YASIO__DECL void notify_connect_succeed(transport_handle_t);
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, std::shared_ptr<xxsocket>);
 
@@ -561,6 +576,8 @@ private:
 
   YASIO__DECL static const char* strerror(int error);
 
+  YASIO__DECL transport_handle_t do_udp_accept(io_channel*, ip::endpoint& peer);
+
 private:
   state state_; // The service state
   std::thread worker_;
@@ -575,6 +592,10 @@ private:
 
   std::vector<transport_handle_t> transports_;
   std::vector<transport_handle_t> transports_pool_;
+
+#if defined(_WIN32)
+  std::map<ip::endpoint, transport_handle_t> dgram_clients_;
+#endif
 
   // select interrupter
   select_interrupter interrupter_;

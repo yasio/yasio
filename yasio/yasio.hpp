@@ -576,7 +576,7 @@ private:
 
   YASIO__DECL static const char* strerror(int error);
 
-  YASIO__DECL transport_handle_t do_udp_accept(io_channel*, ip::endpoint& peer);
+  YASIO__DECL transport_handle_t make_transport(io_channel*, ip::endpoint& peer);
 
 private:
   state state_; // The service state
@@ -594,7 +594,7 @@ private:
   std::vector<transport_handle_t> transports_pool_;
 
 #if defined(_WIN32)
-  std::map<ip::endpoint, transport_handle_t> dgram_clients_;
+  std::map<ip::endpoint, transport_handle_t> dgram_transports_;
 #endif
 
   // select interrupter

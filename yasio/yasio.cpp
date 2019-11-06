@@ -681,7 +681,7 @@ void io_service::perform_transports(fd_set* fds_array, long long& max_wait_durat
     So we emulate thus by ourself.
   */
 #if defined(_WIN32)
-  for (auto iter = dgram_clients_.begin(); iter != dgram_clients_.end();)
+  for (auto iter = dgram_transports_.begin(); iter != dgram_transports_.end();)
   {
     auto transport = iter->second;
     if (transport->flush(max_wait_duration))
@@ -689,7 +689,7 @@ void io_service::perform_transports(fd_set* fds_array, long long& max_wait_durat
     else
     {
       handle_close(transport);
-      iter = dgram_clients_.erase(iter);
+      iter = dgram_transports_.erase(iter);
     }
   }
 #endif
@@ -1060,15 +1060,15 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
                                            static_cast<int>(ctx->udp_buffer_.size()), peer);
           if (n > 0)
           {
-            YASIO_SLOG("udp-server: recvfrom peer: %s", peer.to_string().c_str());
+            YASIO_SLOGV("udp-server: recvfrom peer: %s", peer.to_string().c_str());
 
             /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
-            auto transport = do_udp_accept(ctx, peer);
+            auto transport = make_transport(ctx, peer);
 #else // Win32 ONLY support one by one client <--> server for UDP.
-            auto it = this->dgram_clients_.find(peer);
+            auto it = this->dgram_transports_.find(peer);
             auto transport =
-                it != this->dgram_clients_.end() ? it->second : do_udp_accept(ctx, peer);
+                it != this->dgram_transports_.end() ? it->second : make_transport(ctx, peer);
 #endif
             if (transport)
             {
@@ -1089,7 +1089,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
   }
 }
 
-transport_handle_t io_service::do_udp_accept(io_channel* ctx, ip::endpoint& peer)
+transport_handle_t io_service::make_transport(io_channel* ctx, ip::endpoint& peer)
 {
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
@@ -1108,7 +1108,7 @@ transport_handle_t io_service::do_udp_accept(io_channel* ctx, ip::endpoint& peer
       handle_connect_succeed(transport);
 #else
       notify_connect_succeed(transport);
-      this->dgram_clients_.emplace(peer, transport);
+      this->dgram_transports_.emplace(peer, transport);
 #endif
       return transport;
     }

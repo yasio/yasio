@@ -82,8 +82,8 @@ enum
   YOPT_CHANNEL_REMOTE_HOST,
   YOPT_CHANNEL_REMOTE_PORT,
   YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
-  YOPT_TRANSPORT_SOL_SOCKET, // Sets transport SOL_SOCKET, params: transport_handle, level, optname,
-                             // optval, optlen
+  YOPT_TRANSPORT_SOCKOPT, // Sets transport SOL_SOCKET, params: transport_handle, level, optname,
+                          // optval, optlen
 };
 
 // channel mask

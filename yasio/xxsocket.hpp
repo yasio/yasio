@@ -476,8 +476,11 @@ YASIO__NS_INLINE namespace ip
     unsigned short port(void) const { return ntohs(in4_.sin_port); }
     void port(unsigned short value) { in4_.sin_port = htons(value); }
 
-    bool operator<(const endpoint& rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) < 0; }
-    bool operator==(const endpoint& rhs) { return ::memcmp(this, &rhs, sizeof(rhs)) == 0; }
+    endpoint& operator=(const endpoint& rhs)
+    {
+      this->assign(&rhs.sa_);
+      return *this;
+    }
 
     sockaddr sa_;
     sockaddr_in in4_;
@@ -493,6 +496,11 @@ YASIO__NS_INLINE namespace ip
     ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6,
   };
 } // namespace ip
+
+inline bool operator<(const ip::endpoint& _Left, const ip::endpoint& _Right)
+{ // apply operator< to operands
+  return ::memcmp(&_Left, &_Right, sizeof(_Right)) < 0;
+}
 
 #if !YASIO__HAVE_NS_INLINE
 using namespace yasio::inet::ip;
@@ -703,6 +711,7 @@ public:
   ** @remark: this function will return immediately, for tcp, you should detect whether the
   ** handshake complete by handle_write_ready.
   */
+  YASIO__DECL int connect_n(const endpoint& ep);
   YASIO__DECL static int connect_n(socket_native_type s, const endpoint& ep);
 
   /* @brief: Sends data on this connected socket

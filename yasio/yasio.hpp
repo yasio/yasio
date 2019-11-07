@@ -434,7 +434,8 @@ public:
   // any other game engines' render thread.
   YASIO__DECL void dispatch(int count = 512);
 
-  // deprecated function, use dispatch instead.
+  // This function will be removed in the future, please use dispatch instead.
+  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::dispatch)
   YASIO__DECL void dispatch_events(int count = 512) { dispatch(count); }
 
   /* option: YOPT_CONNECT_TIMEOUT   timeout:int

@@ -102,6 +102,19 @@ SOFTWARE.
 
 #define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 
+/*
+** YASIO_OBSOLETE_DEPRECATE
+*/
+#if defined(__GNUC__) && ((__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1)))
+#  define YASIO_OBSOLETE_DEPRECATE(_Replacement) __attribute__((deprecated))
+#elif _MSC_VER >= 1400 // vs 2005 or higher
+#  define YASIO_OBSOLETE_DEPRECATE(_Replacement)                                                   \
+    __declspec(deprecated(                                                                         \
+        "This function will be removed in the future. Consider using " #_Replacement " instead."))
+#else
+#  define YASIO_OBSOLETE_DEPRECATE(_Replacement)
+#endif
+
 #include "strfmt.hpp"
 
 #endif

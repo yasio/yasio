@@ -284,7 +284,7 @@ public:
   bool is_open() const { return valid_ && socket_ && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
-  int channel_index() const { return ctx_->index(); }
+  int cindex() const { return ctx_->index(); }
   int status() const { return error_; }
   inline std::vector<char> take_packet()
   {
@@ -355,12 +355,12 @@ private:
 class io_event final
 {
 public:
-  io_event(int channel_index, int kind, int error, transport_handle_t transport)
-      : timestamp_(highp_clock()), cindex_(channel_index), kind_(kind), status_(error),
+  io_event(int cindex, int kind, int error, transport_handle_t transport)
+      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
         transport_(std::move(transport))
   {}
-  io_event(int channel_index, int type, std::vector<char> packet, transport_handle_t transport)
-      : timestamp_(highp_clock()), cindex_(channel_index), kind_(type), status_(0),
+  io_event(int cindex, int type, std::vector<char> packet, transport_handle_t transport)
+      : timestamp_(highp_clock()), cindex_(cindex), kind_(type), status_(0),
         transport_(std::move(transport)), packet_(std::move(packet))
   {}
   io_event(io_event&& rhs)
@@ -463,7 +463,7 @@ public:
   YASIO__DECL void set_option(int option, ...);
 
   // open a channel, default: YCM_TCP_CLIENT
-  YASIO__DECL void open(size_t channel_index, int channel_mask = YCM_TCP_CLIENT);
+  YASIO__DECL void open(size_t cindex, int channel_mask = YCM_TCP_CLIENT);
 
   YASIO__DECL void reopen(transport_handle_t);
 
@@ -471,7 +471,7 @@ public:
   YASIO__DECL void close(transport_handle_t);
 
   // close channel
-  YASIO__DECL void close(size_t channel_index = 0);
+  YASIO__DECL void close(size_t cindex = 0);
 
   // check whether the transport is open
   YASIO__DECL bool is_open(transport_handle_t) const;

@@ -58,6 +58,7 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  endif
 namespace cxx17
 {
+using std::basic_string_view;
 using std::string_view;
 using std::wstring_view;
 } // namespace cxx17
@@ -1355,5 +1356,46 @@ inline bool operator>=(const basic_string_view<CharT, Traits>& lhs,
 } // namespace cxx17
 
 #endif
+
+namespace cxx20
+{
+// starts_with(), since C++20:
+template <typename CharT>
+inline bool starts_with(cxx17::basic_string_view<CharT> lhs,
+                        cxx17::basic_string_view<CharT> v) // (1)
+{
+  return lhs.size() >= v.size() && lhs.compare(0, v.size(), v) == 0;
+}
+
+template <typename CharT>
+inline bool starts_with(cxx17::basic_string_view<CharT> lhs, CharT c) // (2)
+{
+  return !lhs.empty() && lhs.front() == c;
+}
+
+template <typename CharT>
+inline bool starts_with(cxx17::basic_string_view<CharT> lhs, CharT const* s) // (3)
+{
+  return starts_with(lhs, basic_string_view(s));
+}
+
+// ends_with(), since C++20:
+template <typename CharT>
+inline bool ends_with(cxx17::basic_string_view<CharT> lhs, cxx17::basic_string_view<CharT> v) // (1)
+{
+  return lhs.size() >= v.size() && lhs.compare(lhs.size() - v.size(), lhs.npos, v) == 0;
+}
+
+template <typename CharT> inline bool ends_with(cxx17::basic_string_view<CharT> lhs, CharT c) // (2)
+{
+  return !lhs.empty() && lhs.back() == c;
+}
+
+template <typename CharT>
+inline bool ends_with(cxx17::basic_string_view<CharT> lhs, CharT const* s) // (3)
+{
+  return ends_with(lhs, basic_string_view(s));
+}
+} // namespace cxx20
 
 #endif

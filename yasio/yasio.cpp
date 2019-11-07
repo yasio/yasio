@@ -347,7 +347,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
         YASIO_SLOG_IMPL(get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
                         "success, packet size:%d",
-                        cindex(), static_cast<int>(v->data_.size()),
+                        cindex(), static_cast<int>(v->buffer_.size()),
                         socket_->local_endpoint().to_string().c_str(),
                         socket_->peer_endpoint().to_string().c_str());
 #endif

@@ -319,6 +319,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
   this->state_                    = YCS_OPENED;
   this->id_                       = ++s_object_id;
   this->socket_                   = sock;
+  this->valid_                    = true;
 }
 
 // -------------------- io_transport_posix ---------------------
@@ -1185,7 +1186,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
 
 void io_service::deallocate_transport(transport_handle_t t)
 {
-  if (t && t->is_valid())
+  if (t && t->valid_)
   {
     t->invalid();
     t->~io_transport();

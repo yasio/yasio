@@ -306,7 +306,7 @@ protected:
   virtual ~io_transport() {}
 
   void invalid() { valid_ = false; }
-  bool is_valid() const { return valid_; }
+
   unsigned int id_;
 
   char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
@@ -317,7 +317,7 @@ protected:
 
   io_channel* ctx_;
 
-  std::atomic_bool valid_ = true;
+  std::atomic_bool valid_;
 
 public:
   void* ud_ = nullptr;

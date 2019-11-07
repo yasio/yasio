@@ -281,7 +281,7 @@ class io_transport : public io_base
   friend class io_service;
 
 public:
-  bool is_open() const { return socket_ != nullptr && socket_->is_open(); }
+  bool is_open() const { return valid_ && socket_ && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int channel_index() const { return ctx_->index(); }
@@ -303,7 +303,7 @@ private:
 
 protected:
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock);
-  virtual ~io_transport() {}
+  virtual ~io_transport() { valid_ = false; }
   unsigned int id_;
 
   char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
@@ -313,6 +313,8 @@ protected:
   int expected_packet_size_ = -1;
 
   io_channel* ctx_;
+
+  bool valid_ = true;
 
 public:
   void* ud_ = nullptr;

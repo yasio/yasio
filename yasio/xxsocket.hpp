@@ -658,20 +658,17 @@ public:
   ** @returns:
   **        If no error occurs, accept returns a new socket on which
   **        the actual connection is made.
-  **        Otherwise, a value of [nullptr] is returned
+  **        Otherwise, a value of [invalid_socket] is returned
   */
   YASIO__DECL xxsocket accept(socklen_t addrlen = sizeof(sockaddr));
 
   /* @brief: Permits an incoming connection attempt on this socket
   ** @params:
-  **        timeout : milliseconds of waiting for new connection
-  **
   ** @returns:
-  **        If no error occurs, accept returns a new socket on which
-  **        the actual connection is made.
-  **        Otherwise, a value of [nullptr] is returned
+  **        If no error occurs, return 0, and the new_sock will be the actual connection is made.
+  **        Otherwise, a EWOULDBLOCK,EAGAIN or other value is returned
   */
-  YASIO__DECL xxsocket accept_n(timeval* timeout);
+  YASIO__DECL int accept_n(socket_native_type& new_sock);
 
   /* @brief: Establishes a connection to a specified this socket
   ** @params:

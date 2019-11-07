@@ -963,24 +963,29 @@ int xxsocket::listen(int backlog) const { return ::listen(this->fd, backlog); }
 
 xxsocket xxsocket::accept(socklen_t) { return ::accept(this->fd, nullptr, nullptr); }
 
-xxsocket xxsocket::accept_n(timeval* timeout)
+int xxsocket::accept_n(socket_native_type& new_sock)
 {
-  xxsocket result;
-
-  set_nonblocking(true);
-
-  fd_set fds_rd;
-  FD_ZERO(&fds_rd);
-  FD_SET(this->fd, &fds_rd);
-
-  if (::select(1, &fds_rd, 0, 0, timeout) > 0)
+  for (;;)
   {
-    result = this->accept();
+    // Accept the waiting connection.
+    new_sock = ::accept(this->fd, nullptr, nullptr);
+
+    // Check if operation succeeded.
+    if (new_sock != invalid_socket)
+      return 0;
+
+    auto ec = get_last_errno();
+
+    // Retry operation if interrupted by signal.
+    if (ec == EINTR)
+      continue;
+
+    /* Operation failed.
+    ** The ec maybe EWOULDBLOCK, EAGAIN, ECONNABORTED, EPROTO,
+    ** Simply Fall through to retry operation.
+    */
+    return ec;
   }
-
-  set_nonblocking(false);
-
-  return result;
 }
 
 int xxsocket::connect(const char* addr, u_short port) { return connect(endpoint(addr, port)); }

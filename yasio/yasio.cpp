@@ -634,7 +634,7 @@ void io_service::run()
     if (nfds == -1)
     {
       int ec = xxsocket::get_last_errno();
-      YASIO_SLOG("do_evpoll failed, ec:%d, detail:%s\n", ec, io_service::strerror(ec));
+      YASIO_SLOG("do_evpoll failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
         goto _L_end;
       continue; // just continue.
@@ -724,7 +724,7 @@ void io_service::perform_channels(fd_set* fds_array)
               do_nonblocking_connect(ctx);
               break;
             case YDQS_FAILED:
-              YASIO_SLOG("[index: %d] getaddrinfo failed, ec:%d, detail:%s", ctx->index_,
+              YASIO_SLOG("[index: %d] getaddrinfo failed, ec=%d, detail:%s", ctx->index_,
                          ctx->error_, xxsocket::gai_strerror(ctx->error_));
               handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
               break;
@@ -827,7 +827,7 @@ void io_service::handle_close(transport_handle_t transport)
   auto ctx = ptr->ctx_;
   auto ec  = ptr->error_;
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_SLOG("[index: %d] the connection #%u is lost, offset:%d, ec:%d, detail:%s", ctx->index_,
+  YASIO_SLOG("[index: %d] the connection #%u is lost, offset:%d, ec=%d, detail:%s", ctx->index_,
              ptr->id_, ptr->offset_, ec, io_service::strerror(ec));
 
   cleanup_io(ptr);
@@ -1007,7 +1007,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
-      YASIO_SLOG("[index: %d] bind failed, ec:%d, detail:%s", ctx->index_, error,
+      YASIO_SLOG("[index: %d] bind failed, ec=%d, detail:%s", ctx->index_, error,
                  io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = YCS_CLOSED;
@@ -1025,13 +1025,14 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
           ctx->setup_multicast(ctx->socket_);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-      YASIO_SLOG("[index: %d] listening at %s...", ctx->index_, ep.to_string().c_str());
+      YASIO_SLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
+                 (int)ctx->socket_->native_handle(), ep.to_string().c_str());
     }
     else
     {
       error = xxsocket::get_last_errno();
-      YASIO_SLOG("[index: %d] listening failed, ec:%d, detail:%s", ctx->index_, error,
-                 io_service::strerror(error));
+      YASIO_SLOG("[index: %d] socket.fd=%d listening failed, ec=%d, detail:%s", ctx->index_,
+                 (int)ctx->socket_->native_handle(), error, io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = YCS_CLOSED;
     }
@@ -1052,13 +1053,15 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
       {
         if (ctx->mask_ & YCM_TCP)
         {
-          auto client_sock = std::make_shared<xxsocket>(ctx->socket_->accept());
-          if (client_sock->is_open())
+          socket_native_type sockfd;
+          error = ctx->socket_->accept_n(sockfd);
+          if (error == 0)
           {
-            handle_connect_succeed(ctx, std::move(client_sock));
+            handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
           }
-          else
-            YASIO_SLOG("%s", "tcp-server: accept client socket fd failed!");
+          else // The non blocking tcp accept failed can be ignored.
+            YASIO_SLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
+                        (int)ctx->socket_->native_handle(), error);
         }
         else // YCM_UDP
         {
@@ -1067,7 +1070,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
                                            static_cast<int>(ctx->udp_buffer_.size()), peer);
           if (n > 0)
           {
-            YASIO_SLOGV("udp-server: recvfrom peer: %s", peer.to_string().c_str());
+            YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
 
             /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
@@ -1087,7 +1090,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           }
           else
           {
-            YASIO_SLOG("The channel:%d has socket ec:%d, will be closed!", ctx->index_, error);
+            YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
             cleanup_io(ctx);
           }
         }
@@ -1198,7 +1201,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
   cleanup_io(ctx);
 
-  YASIO_SLOG("[index: %d] connect server %s:%u failed, ec:%d, detail:%s", ctx->index_,
+  YASIO_SLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
              ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 }
@@ -1224,7 +1227,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
-      YASIO_SLOGV("[index: %d] do_read status ok, ec:%d, detail:%s", transport->channel_index(),
+      YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->channel_index(),
                   error, io_service::strerror(error));
       if (n == -1)
         n = 0;

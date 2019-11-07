@@ -1,6 +1,6 @@
 image: Visual Studio 2017
 
-version: 3.26.1.{build}
+version: 3.30.{build}
 
 environment:
     matrix:

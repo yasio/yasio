@@ -50,14 +50,6 @@ SOFTWARE.
 #  include "yasio/kcp/ikcp.h"
 #endif
 
-#define YASIO_SOMAXCONN 19
-#define YASIO_MAX_WAIT_DURATION 5 * 60 * 1000 * 1000 // 5 minites
-#define YASIO_DEFAULT_MULTICAST_TTL (int)8
-
-/* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
- * field. */
-#define YASIO_MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
-
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
   {                                                                                                \
@@ -340,6 +332,8 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
   {
     if (!socket_->is_open())
       break;
+
+    int error     = -1;
     a_pdu_ptr* pv = send_queue_.peek();
     if (pv != nullptr)
     {
@@ -374,7 +368,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
       }
       else
       { // n <= 0
-        int error = xxsocket::get_last_errno();
+        error = xxsocket::get_last_errno();
         if (SHOULD_CLOSE_1(n, error))
         {
           if (((ctx_->mask_ & YCM_UDP) == 0) || error != EPERM)
@@ -389,7 +383,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
 
     // If still have work to do.
     if (!send_queue_.empty())
-      max_wait_duration = 0;
+      max_wait_duration = error != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
 
     ret = true;
   } while (false);
@@ -1594,7 +1588,8 @@ void io_service::set_option(int option, ...)
       options_.connect_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
-    case YOPT_RECONNECT_TIMEOUT: {
+    case YOPT_RECONNECT_TIMEOUT:
+    {
       int value = va_arg(ap, int);
       if (value > 0)
         options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
@@ -1624,7 +1619,8 @@ void io_service::set_option(int option, ...)
     case YOPT_PRINT_FN:
       this->options_.print_ = *va_arg(ap, print_fn_t*);
       break;
-    case YOPT_CHANNEL_LFBFD_PARAMS: {
+    case YOPT_CHANNEL_LFBFD_PARAMS:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1640,20 +1636,23 @@ void io_service::set_option(int option, ...)
     case YOPT_IO_EVENT_CB:
       options_.on_event_ = *va_arg(ap, io_event_cb_t*);
       break;
-    case YOPT_CHANNEL_LFBFD_FN: {
+    case YOPT_CHANNEL_LFBFD_FN:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->decode_len_ = *va_arg(ap, decode_len_fn_t*);
     }
     break;
-    case YOPT_CHANNEL_LOCAL_PORT: {
+    case YOPT_CHANNEL_LOCAL_PORT:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
       break;
     }
 
-    case YOPT_CHANNEL_REMOTE_HOST: {
+    case YOPT_CHANNEL_REMOTE_HOST:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1661,7 +1660,8 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_PORT: {
+    case YOPT_CHANNEL_REMOTE_PORT:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1669,7 +1669,8 @@ void io_service::set_option(int option, ...)
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
+    case YOPT_CHANNEL_REMOTE_ENDPOINT:
+    {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
@@ -1682,7 +1683,8 @@ void io_service::set_option(int option, ...)
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_TRANSPORT_SOCKOPT: {
+    case YOPT_TRANSPORT_SOCKOPT:
+    {
       auto obj = va_arg(ap, transport_handle_t);
       if (obj && obj->socket_)
       {

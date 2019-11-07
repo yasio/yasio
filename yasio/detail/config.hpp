@@ -25,7 +25,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 #ifndef YASIO__CONFIG_HPP
 #define YASIO__CONFIG_HPP
 
@@ -98,8 +97,6 @@ SOFTWARE.
 #  define YASIO_LOGV YASIO_LOG
 #endif
 
-#define YASIO_INET_BUFFER_SIZE 65536
-
 #define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 /*
@@ -114,6 +111,27 @@ SOFTWARE.
 #else
 #  define YASIO_OBSOLETE_DEPRECATE(_Replacement)
 #endif
+
+/*
+** The macros used by io_service.
+*/
+// The default max listen count of tcp server.
+#define YASIO_SOMAXCONN 19
+
+// The max wait duration in macroseconds when io_service nothing to do.
+#define YASIO_MAX_WAIT_DURATION 5 * 60 * 1000 * 1000
+
+// The the min wait duration in macroseconds when kernel send buffer is full.
+#define YASIO_WOULDBLOCK_WAIT_DURATION 16667
+
+// The default ttl of multicast
+#define YASIO_DEFAULT_MULTICAST_TTL (int)8
+
+#define YASIO_INET_BUFFER_SIZE 65536
+
+/* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
+ * field. */
+#define YASIO_MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
 
 #include "strfmt.hpp"
 

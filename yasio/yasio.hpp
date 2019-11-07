@@ -303,7 +303,10 @@ private:
 
 protected:
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock);
-  virtual ~io_transport() { valid_ = false; }
+  virtual ~io_transport() {}
+
+  void invalid() { valid_ = false; }
+  bool is_valid() const { return valid_; }
   unsigned int id_;
 
   char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
@@ -314,7 +317,7 @@ protected:
 
   io_channel* ctx_;
 
-  bool valid_ = true;
+  std::atomic_bool valid_ = true;
 
 public:
   void* ud_ = nullptr;
@@ -538,6 +541,7 @@ private:
   YASIO__DECL void notify_connect_succeed(transport_handle_t);
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, std::shared_ptr<xxsocket>);
+  YASIO__DECL void deallocate_transport(transport_handle_t);
 
   YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);
   YASIO__DECL void unregister_descriptor(const socket_native_type fd, int flags);
@@ -598,7 +602,7 @@ private:
   std::vector<io_channel*> channel_ops_;
 
   std::vector<transport_handle_t> transports_;
-  std::vector<transport_handle_t> transports_pool_;
+  std::vector<transport_handle_t> tpool_;
 
 #if defined(_WIN32)
   std::map<ip::endpoint, transport_handle_t> dgram_transports_;

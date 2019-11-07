@@ -474,9 +474,9 @@ io_service::~io_service()
   if (this->state_ == io_service::state::STOPPED)
     cleanup();
 
-  for (auto o : transports_pool_)
+  for (auto o : tpool_)
     ::operator delete(o);
-  transports_pool_.clear();
+  tpool_.clear();
 
   options_.resolv_ = nullptr;
   options_.print_  = nullptr;
@@ -600,7 +600,7 @@ void io_service::clear_transports()
   {
     cleanup_io(transport);
     transport->~io_transport();
-    this->transports_pool_.push_back(transport);
+    this->tpool_.push_back(transport);
   }
   transports_.clear();
 }
@@ -839,8 +839,7 @@ void io_service::handle_close(transport_handle_t transport)
     ctx->set_last_errno(0);
   } // server channel, do nothing.
 
-  ptr->~io_transport();
-  transports_pool_.push_back(ptr);
+  deallocate_transport(ptr);
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, ptr)));
@@ -1165,10 +1164,10 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
 {
   transport_handle_t transport;
   void* vp;
-  if (!transports_pool_.empty())
+  if (!tpool_.empty())
   { // allocate from pool
-    vp = transports_pool_.back();
-    transports_pool_.pop_back();
+    vp = tpool_.back();
+    tpool_.pop_back();
   }
   else
     vp = operator new(sizeof(io_transport_posix));
@@ -1182,6 +1181,16 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
 #endif
 
   return transport;
+}
+
+void io_service::deallocate_transport(transport_handle_t t)
+{
+  if (t && t->is_valid())
+  {
+    t->invalid();
+    t->~io_transport();
+    this->tpool_.push_back(t);
+  }
 }
 
 void io_service::handle_connect_failed(io_channel* ctx, int error)

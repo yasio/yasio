@@ -1,7 +1,7 @@
 config=release
 TARGET=libyasio.so
 
-CXXFLAGS = -c -fPIC -Wall -Wno-unused-result -Wextra -Wundef -Wcast-align -Wcast-qual -Wno-old-style-cast -Wdouble-promotion -DYASIO_ENABLE_KCP=1 -std=$(cxxstd)
+CXXFLAGS = -c -fPIC -Wall -Wno-unused-result -Wextra -Wundef -Wcast-align -Wcast-qual -Wno-old-style-cast -Wdouble-promotion -DYASIO_HAVE_KCP=1 -std=$(cxxstd)
 CFLAGS = -c -fPIC
 
 ifeq ($(CXX),clang++)

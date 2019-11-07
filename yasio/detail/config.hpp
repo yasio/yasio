@@ -58,13 +58,13 @@ SOFTWARE.
 // #define YASIO_DISABLE_OBJECT_POOL 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_ENABLE_KCP=1 to enable kcp support
+** Uncomment or add compiler flag -DYASIO_HAVE_KCP for kcp support
 ** Remember, before thus, please ensure:
-** 1. Execute: `git submodule update --init --recursive` to clone  kcp sources.
+** 1. Execute: `git submodule update --init --recursive` to clone the kcp sources.
 ** 2. Add yasio/kcp/ikcp.c to your build system, even through the `YASIO_HEADER_ONLY` was defined.
 ** pitfall: yasio kcp support is experimental currently.
 */
-// #define YASIO_ENABLE_KCP 1
+// #define YASIO_HAVE_KCP 1
 
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
@@ -97,6 +97,10 @@ SOFTWARE.
 #else
 #  define YASIO_LOGV YASIO_LOG
 #endif
+
+#define YASIO_INET_BUFFER_SIZE 65536
+
+#define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 #include "strfmt.hpp"
 

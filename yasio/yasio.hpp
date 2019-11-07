@@ -55,13 +55,7 @@ SOFTWARE.
 #  define MICROSECONDS_PER_SECOND 1000000LL
 #endif
 
-#if !defined(_ARRAYSIZE)
-#  define _ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
-#endif
-
-#define YASIO_INET_BUFFER_SIZE 65536
-
-#if defined(YASIO_ENABLE_KCP)
+#if defined(YASIO_HAVE_KCP)
 typedef struct IKCPCB ikcpcb;
 #endif
 
@@ -76,6 +70,7 @@ enum
   YOPT_RECONNECT_TIMEOUT,
   YOPT_DNS_CACHE_TIMEOUT,
   YOPT_DEFER_EVENT,
+  YOPT_DEFER_HANDLER,
   YOPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
   YOPT_RESOLV_FN,
   YOPT_PRINT_FN,
@@ -102,7 +97,7 @@ enum
   YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
   YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
   YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
-#if defined(YASIO_ENABLE_KCP)
+#if defined(YASIO_HAVE_KCP)
   YCM_KCP        = 1 << 4,
   YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
   YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
@@ -141,7 +136,7 @@ typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
 
-typedef std::function<void(bool cancelled)> timer_cb_t;
+typedef std::function<void(bool)> timer_cb_t;
 typedef std::pair<deadline_timer*, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr&&)> io_event_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
@@ -300,11 +295,11 @@ public:
   io_service& get_service() { return ctx_->get_service(); }
 
 private:
-  virtual void send(std::vector<char>&& data) = 0;
-  virtual int recv(int& error)                = 0;
+  virtual void write(std::vector<char>&&, std::function<void()>&&) = 0;
+  virtual int do_read(int& error)                                  = 0;
 
   // Try flush pending packet
-  virtual bool flush(long long& max_wait_duration) = 0;
+  virtual bool do_write(long long& max_wait_duration) = 0;
 
 protected:
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock);
@@ -329,14 +324,14 @@ public:
   io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock) : io_transport(ctx, sock) {}
 
 private:
-  YASIO__DECL void send(std::vector<char>&& data) override;
-  YASIO__DECL int recv(int& error) override;
-  YASIO__DECL bool flush(long long& max_wait_duration) override;
+  YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int do_read(int& error) override;
+  YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 
-#if defined(YASIO_ENABLE_KCP)
+#if defined(YASIO_HAVE_KCP)
 class io_transport_kcp : public io_transport
 {
 public:
@@ -344,9 +339,9 @@ public:
   YASIO__DECL ~io_transport_kcp();
 
 private:
-  YASIO__DECL void send(std::vector<char>&& data) override;
-  YASIO__DECL int recv(int& error) override;
-  YASIO__DECL bool flush(long long& max_wait_duration) override;
+  YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int do_read(int& error) override;
+  YASIO__DECL bool do_write(long long& max_wait_duration) override;
   ikcpcb* kcp_;
   std::recursive_mutex send_mtx_;
 };
@@ -437,7 +432,10 @@ public:
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
-  YASIO__DECL void dispatch_events(int count = 512);
+  YASIO__DECL void dispatch(int count = 512);
+
+  // deprecated function, use dispatch instead.
+  YASIO__DECL void dispatch_events(int count = 512) { dispatch(count); }
 
   /* option: YOPT_CONNECT_TIMEOUT   timeout:int
              YOPT_SEND_TIMEOUT      timeout:int
@@ -475,7 +473,8 @@ public:
   // check whether the channel is open
   YASIO__DECL bool is_open(size_t cahnnel_index = 0) const;
 
-  YASIO__DECL int write(transport_handle_t transport, std::vector<char> data);
+  YASIO__DECL int write(transport_handle_t transport, std::vector<char> buffer,
+                        std::function<void()> = nullptr);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
   deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb, bool repeated = false)
@@ -544,8 +543,12 @@ private:
   YASIO__DECL void run(void);
 
   YASIO__DECL bool do_read(transport_handle_t, fd_set* fds_array, long long& max_wait_duration);
-  YASIO__DECL void do_unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
-                             long long& max_wait_duration);
+  YASIO__DECL bool do_write(transport_handle_t transport, long long& max_wait_duration)
+  {
+    return transport->do_write(max_wait_duration);
+  }
+  YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
+                          long long& max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED
   YASIO__DECL bool cleanup_io(io_base* ctx);
@@ -583,7 +586,8 @@ private:
   std::thread worker_;
   std::thread::id worker_id_;
 
-  concurrency::concurrent_queue<event_ptr, true> event_queue_;
+  concurrency::concurrent_queue<event_ptr, true> events_;
+  concurrency::concurrent_queue<std::function<void()>, true> handlers_;
 
   std::vector<io_channel*> channels_;
 
@@ -623,7 +627,8 @@ private:
     // Default dns cache time: 10 minutes
     highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
 
-    bool deferred_event_ = true;
+    bool deferred_event_   = true;
+    bool deferred_handler_ = true;
     // tcp keepalive settings
     struct __unnamed01
     {

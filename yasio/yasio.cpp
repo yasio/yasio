@@ -347,7 +347,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
         YASIO_SLOG_IMPL(get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
                         "success, packet size:%d",
-                        channel_index(), static_cast<int>(v->data_.size()),
+                        cindex(), static_cast<int>(v->data_.size()),
                         socket_->local_endpoint().to_string().c_str(),
                         socket_->peer_endpoint().to_string().c_str());
 #endif
@@ -753,12 +753,12 @@ void io_service::perform_channels(fd_set* fds_array)
   }
 }
 
-void io_service::close(size_t channel_index)
+void io_service::close(size_t cindex)
 {
   // Gets channel context
-  if (channel_index >= channels_.size())
+  if (cindex >= channels_.size())
     return;
-  auto ctx = channels_[channel_index];
+  auto ctx = channels_[cindex];
 
   if (!(ctx->opmask_ & YOPM_CLOSE_CHANNEL))
   {
@@ -783,12 +783,12 @@ bool io_service::is_open(transport_handle_t transport) const
   return transport->state_ == YCS_OPENED;
 }
 
-bool io_service::is_open(size_t channel_index) const
+bool io_service::is_open(size_t cindex) const
 {
   // Gets channel
-  if (channel_index >= channels_.size())
+  if (cindex >= channels_.size())
     return false;
-  auto ctx = channels_[channel_index];
+  auto ctx = channels_[cindex];
   return ctx->state_ == YCS_OPENED;
 }
 
@@ -799,12 +799,12 @@ void io_service::reopen(transport_handle_t transport)
     open_internal(ctx);
 }
 
-void io_service::open(size_t channel_index, int channel_mask)
+void io_service::open(size_t cindex, int channel_mask)
 {
   // Gets channel
-  if (channel_index >= channels_.size())
+  if (cindex >= channels_.size())
     return;
-  auto ctx = channels_[channel_index];
+  auto ctx = channels_[cindex];
 
   ctx->mask_ = channel_mask;
   if (channel_mask & YCM_TCP)
@@ -1077,7 +1077,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             if (transport)
             {
               this->handle_event(event_ptr(new io_event(
-                  transport->channel_index(), YEK_PACKET,
+                  transport->cindex(), YEK_PACKET,
                   std::vector<char>(&ctx->udp_buffer_.front(), &ctx->udp_buffer_.front() + n),
                   transport)));
             }
@@ -1221,7 +1221,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
-      YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->channel_index(),
+      YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(),
                   error, io_service::strerror(error));
       if (n == -1)
         n = 0;
@@ -1231,7 +1231,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
         YASIO_SLOG("[index: %d] do_read ok, received data len: %d, "
                    "buffer data "
                    "len: %d",
-                   transport->channel_index(), n, n + transport->offset_);
+                   transport->cindex(), n, n + transport->offset_);
       }
 #endif
       if (transport->expected_packet_size_ == -1)
@@ -1300,9 +1300,9 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     // it.
     YASIO_SLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
-                transport->channel_index(), transport->expected_packet_size_);
+                transport->cindex(), transport->expected_packet_size_);
     this->handle_event(event_ptr(
-        new io_event(transport->channel_index(), YEK_PACKET, transport->take_packet(), transport)));
+        new io_event(transport->cindex(), YEK_PACKET, transport->take_packet(), transport)));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu

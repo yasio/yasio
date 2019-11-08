@@ -39,9 +39,9 @@ namespace yasio
 class obstream
 {
 public:
-  YASIO__DECL obstream(size_t buffersize = 256);
-  YASIO__DECL obstream(const obstream& right);
-  YASIO__DECL obstream(obstream&& right);
+  YASIO__DECL obstream(size_t capacity = 256);
+  YASIO__DECL obstream(const obstream& rhs);
+  YASIO__DECL obstream(obstream&& rhs);
   YASIO__DECL ~obstream();
 
   YASIO__DECL void push8();
@@ -60,8 +60,8 @@ public:
   YASIO__DECL void pop32();
   YASIO__DECL void pop32(uint32_t);
 
-  YASIO__DECL obstream& operator=(const obstream& right);
-  YASIO__DECL obstream& operator=(obstream&& right);
+  YASIO__DECL obstream& operator=(const obstream& rhs);
+  YASIO__DECL obstream& operator=(obstream&& rhs);
 
   template <typename _Nty> inline void write_i(_Nty value);
 

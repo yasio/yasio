@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2019 halx99
+Copyright (c) 2012-2020 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ SOFTWARE.
 namespace yasio
 {
 
-obstream::obstream(size_t buffersize) { buffer_.reserve(buffersize); }
+obstream::obstream(size_t capacity) { buffer_.reserve(capacity); }
 
 void obstream::push8()
 {

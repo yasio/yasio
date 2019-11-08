@@ -1405,7 +1405,7 @@ void io_service::perform_timers()
       auto timer_ctl = earliest.first;
       auto& timer_cb = earliest.second;
       timer_queue_.pop_back(); // pop the expired timer from timer queue
-      if (!options_.deferred_handler_)
+      if (options_.deferred_handler_)
         this->handlers_.enqueue([=, cancelled = timer_ctl->cancelled_]() { timer_cb(cancelled); });
       else
         timer_cb(timer_ctl->cancelled_);

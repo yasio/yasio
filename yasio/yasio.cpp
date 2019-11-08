@@ -785,11 +785,8 @@ bool io_service::is_open(transport_handle_t transport) const
 
 bool io_service::is_open(size_t cindex) const
 {
-  // Gets channel
-  if (cindex >= channels_.size())
-    return false;
-  auto ctx = channels_[cindex];
-  return ctx->state_ == YCS_OPENED;
+  auto ctx = cindex_to_handle(cindex);
+  return ctx != nullptr && ctx->state_ == YCS_OPENED;
 }
 
 void io_service::reopen(transport_handle_t transport)
@@ -801,18 +798,24 @@ void io_service::reopen(transport_handle_t transport)
 
 void io_service::open(size_t cindex, int channel_mask)
 {
-  // Gets channel
-  if (cindex >= channels_.size())
-    return;
-  auto ctx = channels_[cindex];
+  auto ctx = cindex_to_handle(cindex);
+  if (ctx != nullptr)
+  {
+    ctx->mask_ = channel_mask;
+    if (channel_mask & YCM_TCP)
+      ctx->protocol_ = SOCK_STREAM;
+    else if (channel_mask & YCM_UDP)
+      ctx->protocol_ = SOCK_DGRAM;
 
-  ctx->mask_ = channel_mask;
-  if (channel_mask & YCM_TCP)
-    ctx->protocol_ = SOCK_STREAM;
-  else if (channel_mask & YCM_UDP)
-    ctx->protocol_ = SOCK_DGRAM;
+    open_internal(ctx);
+  }
+}
 
-  open_internal(ctx);
+io_channel* io_service::cindex_to_handle(size_t cindex) const
+{
+  if (cindex < channels_.size())
+    return channels_[cindex];
+  return nullptr;
 }
 
 void io_service::handle_close(transport_handle_t transport)
@@ -1221,8 +1224,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     }
     if (n > 0 || !SHOULD_CLOSE_0(n, error))
     {
-      YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(),
-                  error, io_service::strerror(error));
+      YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
+                  io_service::strerror(error));
       if (n == -1)
         n = 0;
 #if defined(YASIO_VERBOS_LOG)
@@ -1676,8 +1679,8 @@ void io_service::set_option(int option, ...)
     case YOPT_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_TRANSPORT_SOCKOPT: {
-      auto obj = va_arg(ap, transport_handle_t);
+    case YOPT_IO_SOCKOPT: {
+      auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)
       {
         auto optlevel = va_arg(ap, int);

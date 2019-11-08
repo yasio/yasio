@@ -82,8 +82,7 @@ enum
   YOPT_CHANNEL_REMOTE_HOST,
   YOPT_CHANNEL_REMOTE_PORT,
   YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
-  YOPT_TRANSPORT_SOCKOPT, // Sets transport SOL_SOCKET, params: transport_handle, level, optname,
-                          // optval, optlen
+  YOPT_IO_SOCKOPT, // Sets io_base sockopt, params: io_base*,level,optname,optval,optlen
 };
 
 // channel mask
@@ -478,6 +477,8 @@ public:
 
   // check whether the channel is open
   YASIO__DECL bool is_open(size_t cahnnel_index = 0) const;
+
+  YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 
   YASIO__DECL int write(transport_handle_t transport, std::vector<char> buffer,
                         std::function<void()> = nullptr);

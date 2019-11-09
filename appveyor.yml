@@ -13,6 +13,7 @@ install:
     # Remove the VS Xamarin targets to reduce AppVeyor specific noise in build
     # logs.  See also http://help.appveyor.com/discussions/problems/4569
     # - del "C:\Program Files (x86)\MSBuild\15.0\Microsoft.Common.targets\ImportAfter\Xamarin.Common.targets"
+    - git submodule update --init --recursive
 
 build_script:
     - cd build

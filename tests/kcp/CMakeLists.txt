@@ -9,10 +9,7 @@ include_directories ("${KCPTEST_INC_DIR}")
 
 add_executable (kcptest ${KCPTEST_SRC}) 
 
-if (WIN32)
-    set (KCPTEST_LDLIBS yasio)
-else ()
-    set (KCPTEST_LDLIBS yasio pthread)
+if (NOT WIN32)
+    set (KCPTEST_LDLIBS pthread)
+    target_link_libraries (kcptest ${KCPTEST_LDLIBS})
 endif()
-
-# target_link_libraries (kcptest ${KCPTEST_LDLIBS})

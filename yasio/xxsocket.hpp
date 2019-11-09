@@ -355,6 +355,7 @@ YASIO__NS_INLINE namespace ip
   {
   public:
     endpoint(void) { this->zeroset(); }
+    endpoint(const endpoint& rhs) { this->assign(&rhs.sa_); }
     explicit endpoint(const addrinfo* info) { assign(info); }
     explicit endpoint(const sockaddr* info) { assign(info); }
     endpoint(const char* addr, unsigned short port) { assign(addr, port); }

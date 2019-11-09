@@ -15,4 +15,5 @@ install:
   - git submodule update --init --recursive
 
 script:
+  - git submodule update --init --recursive
   - make cxxstd=c++11 config=release -j2

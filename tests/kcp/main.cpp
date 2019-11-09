@@ -2,37 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define YASIO_HAVE_KCP 1
+#define YASIO_HEADER_ONLY 1
+
 #include "yasio/yasio.hpp"
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
-#if defined(_WIN32)
-#  include <Shlwapi.h>
-#  pragma comment(lib, "shlwapi.lib")
-#  define strcasestr StrStrIA
-#endif
-
+using namespace yasio;
 using namespace yasio::inet;
 
-template <size_t _Size> void append_string(std::vector<char>& packet, const char (&message)[_Size])
-{
-  packet.insert(packet.end(), message, message + _Size - 1);
-}
-
-struct smallitem
-{
-  int a;
-  int b;
-  int c;
-  int d;
-};
-
-void yasioTest()
+void run_test()
 {
   yasio::inet::io_hostent endpoints[] = {
       {"127.0.0.1", 30001}, // udp client1
       {"127.0.0.1", 30002}, // udp client2
-      {"www.ip138.com", 80} // http client
   };
 
   io_service service;
@@ -46,9 +30,6 @@ void yasioTest()
   service.set_option(YOPT_RESOLV_FN, &resolv);
 
   std::vector<transport_handle_t> transports;
-
-  service.set_option(YOPT_LOG_FILE, "yasio.log");
-
   deadline_timer udp_msg_delay(service);
   service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
     switch (event->kind())
@@ -56,24 +37,23 @@ void yasioTest()
       case YEK_PACKET: {
         auto packet = std::move(event->packet());
         packet.push_back('\0');
-        printf("index:%d, receive data:%s\n", event->transport()->channel_index(), packet.data());
+        printf("index:%d, receive data:%s\n", event->transport()->cindex(), packet.data());
 
         if (event->cindex() == 1)
         { // response udp client
-
-          std::vector<char> packet_resp;
-          append_string(packet_resp, "hello udp client 0\n");
+          obstream obs;
+          obs.write_bytes("hello udp client 0\n");
           printf("---- response a packet to udp client 0\n");
-          service.write(event->transport(), packet_resp);
+          service.write(event->transport(), std::move(obs.buffer()));
         }
         else
         {
           auto transport = event->transport();
           service.schedule(std::chrono::seconds(3), [&service, transport](bool) {
-            std::vector<char> packet_resp;
-            append_string(packet_resp, "hello udp client 1\n");
+            obstream obs;
+            obs.write_bytes("hello udp client 1\n");
             printf("---- send a packet to udp client 1\n");
-            service.write(transport, packet_resp);
+            service.write(transport, std::move(obs.buffer()));
           });
         }
         break;
@@ -84,18 +64,18 @@ void yasioTest()
           auto transport = event->transport();
           if (event->cindex() == 1)
           {
-            std::vector<char> packet;
-            append_string(packet, "GET /index.htm HTTP/1.1\r\n");
+            obstream obs;
+            obs.write_bytes("GET /index.htm HTTP/1.1\r\n");
 
-            append_string(packet, "Host: www.ip138.com\r\n");
+            obs.write_bytes("Host: www.ip138.com\r\n");
 
-            append_string(packet, "User-Agent: Mozilla/5.0 (Windows NT 10.0; "
+            obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; "
                                   "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
                                   "Chrome/51.0.2704.106 Safari/537.36\r\n");
-            append_string(packet, "Accept: */*;q=0.8\r\n");
-            append_string(packet, "Connection: Close\r\n\r\n");
+            obs.write_bytes("Accept: */*;q=0.8\r\n");
+            obs.write_bytes("Connection: Close\r\n\r\n");
 
-            service.write(transport, std::move(packet));
+            service.write(transport, std::move(obs.buffer()));
           }
         }
         break;
@@ -116,7 +96,7 @@ void yasioTest()
   time_t duration = 0;
   while (service.is_running())
   {
-    service.dispatch_events();
+    service.dispatch();
     if (duration >= 6000000)
     {
       break;
@@ -128,7 +108,7 @@ void yasioTest()
 
 int main(int, char**)
 {
-  yasioTest();
+  run_test();
 
   return 0;
 }

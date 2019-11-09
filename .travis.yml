@@ -11,5 +11,8 @@ matrix:
     - os: osx
       compiler: gcc
 
+install:
+  - git submodule update --init --recursive
+
 script:
   - make cxxstd=c++11 config=release -j2

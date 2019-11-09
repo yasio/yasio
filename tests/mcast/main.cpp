@@ -15,7 +15,7 @@ void yasioMulticastTest()
 
   io_hostent hosts[] = {{"224.0.0.19", 20524}};
 
-  service.start_service(hosts, _ARRAYSIZE(hosts), [&](event_ptr&& event) {
+  service.start_service(hosts, YASIO_ARRAYSIZE(hosts), [&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

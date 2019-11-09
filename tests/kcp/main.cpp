@@ -31,7 +31,7 @@ void run_test()
 
   std::vector<transport_handle_t> transports;
   deadline_timer udp_msg_delay(service);
-  service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr event) {
+  service.start_service(endpoints, YASIO_ARRAYSIZE(endpoints), [&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

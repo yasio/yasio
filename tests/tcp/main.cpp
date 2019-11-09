@@ -55,7 +55,7 @@ void yasioTest()
 
   int max_request_count = 10;
 
-  service.start_service(endpoints, _ARRAYSIZE(endpoints), [&](event_ptr&& event) {
+  service.start_service(endpoints, YASIO_ARRAYSIZE(endpoints), [&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

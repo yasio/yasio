@@ -1652,7 +1652,7 @@ bool js_yasio_io_service_close(JSContext* ctx, uint32_t argc, jsval* vp)
   return false;
 }
 
-bool js_yasio_io_service_dispatch_events(JSContext* ctx, uint32_t argc, jsval* vp)
+bool js_yasio_io_service_dispatch(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   bool ok          = true;
   io_service* cobj = nullptr;
@@ -1663,18 +1663,18 @@ bool js_yasio_io_service_dispatch_events(JSContext* ctx, uint32_t argc, jsval* v
   js_proxy_t* proxy = jsb_get_js_proxy(obj);
   cobj              = (io_service*)(proxy ? proxy->ptr : nullptr);
   JSB_PRECONDITION2(cobj, ctx, false,
-                    "js_yasio_io_service_dispatch_events : Invalid Native Object");
+                    "js_yasio_io_service_dispatch : Invalid Native Object");
 
   do
   {
     if (argc == 1)
     {
-      cobj->dispatch_events(args.get(0).toInt32());
+      cobj->dispatch(args.get(0).toInt32());
       return true;
     }
   } while (false);
 
-  JS_ReportError(ctx, "js_yasio_io_service_dispatch_events : wrong number of arguments");
+  JS_ReportError(ctx, "js_yasio_io_service_dispatch : wrong number of arguments");
   return false;
 }
 
@@ -1821,7 +1821,7 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
       JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("dispatch_events", js_yasio_io_service_dispatch_events, 1,
+      JS_FN("dispatch", js_yasio_io_service_dispatch, 1,
             JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write", js_yasio_io_service_write, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),

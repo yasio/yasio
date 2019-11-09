@@ -206,9 +206,9 @@ io_channel::io_channel(io_service& service) : deadline_timer_(service)
 
 void io_channel::setup_multicast(std::shared_ptr<xxsocket>& sock)
 {
-  if (sock && !this->endpoints_.empty())
+  if (sock && !this->remote_eps_.empty())
   {
-    auto& ep = this->endpoints_[0];
+    auto& ep = this->remote_eps_[0];
     // disable loopback
     socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                         ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, (int)0);
@@ -226,27 +226,27 @@ void io_channel::setup_multicast(std::shared_ptr<xxsocket>& sock)
 
 void io_channel::cleanup_multicast(std::shared_ptr<xxsocket>& sock)
 {
-  if (sock && !this->endpoints_.empty())
+  if (sock && !this->remote_eps_.empty())
   {
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
-    mreq.imr_multiaddr.s_addr = this->endpoints_[0].in4_.sin_addr.s_addr;
+    mreq.imr_multiaddr.s_addr = this->remote_eps_[0].in4_.sin_addr.s_addr;
     sock->set_optval(IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
 }
 
-void io_channel::setup_host(std::string host)
+void io_channel::setup_remote_host(std::string host)
 {
-  if (this->host_ != host)
+  if (this->remote_host_ != host)
   {
-    this->host_ = std::move(host);
+    this->remote_host_ = std::move(host);
 
-    this->endpoints_.clear();
+    this->remote_eps_.clear();
 
     ip::endpoint ep;
-    if (ep.assign(this->host_.c_str(), this->port_))
+    if (ep.assign(this->remote_host_.c_str(), this->remote_port_))
     {
-      this->endpoints_.push_back(ep);
+      this->remote_eps_.push_back(ep);
       this->dns_queries_state_ = YDQS_READY;
     }
     else
@@ -254,15 +254,15 @@ void io_channel::setup_host(std::string host)
   }
 }
 
-void io_channel::setup_port(u_short port)
+void io_channel::setup_remote_port(u_short port)
 {
   if (port == 0)
     return;
-  if (this->port_ != port)
+  if (this->remote_port_ != port)
   {
-    this->port_ = port;
-    if (!this->endpoints_.empty())
-      for (auto& ep : this->endpoints_)
+    this->remote_port_ = port;
+    if (!this->remote_eps_.empty())
+      for (auto& ep : this->remote_eps_)
         ep.port(port);
   }
 }
@@ -571,7 +571,7 @@ void io_service::cleanup()
 io_channel* io_service::new_channel(const io_hostent& ep)
 {
   auto ctx = new io_channel(*this);
-  ctx->setup_hostent(ep.host_, ep.port_);
+  ctx->init(ep.host_, ep.port_);
   ctx->index_ = static_cast<int>(this->channels_.size());
   this->channels_.push_back(ctx);
   return ctx;
@@ -918,15 +918,16 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   ctx->opmask_ &= ~YOPM_OPEN_CHANNEL;
 
-  if (ctx->endpoints_.empty())
+  if (ctx->remote_eps_.empty())
   {
     this->handle_connect_failed(ctx, YERR_NO_AVAIL_ADDR);
     return;
   }
 
   ctx->state_ = YCS_OPENING;
-  auto& ep    = ctx->endpoints_[0];
-  YASIO_SLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->host_.c_str(), ctx->port_);
+  auto& ep    = ctx->remote_eps_[0];
+  YASIO_SLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(),
+             ctx->remote_port_);
   int ret = -1;
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
@@ -994,8 +995,8 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
 void io_service::do_nonblocking_accept(io_channel* ctx)
 { // channel is server
   cleanup_io(ctx);
-
-  ip::endpoint ep(ipsv_ & ipsv_ipv4 ? "0.0.0.0" : "::", ctx->port_);
+  // v4: "0.0.0.0", v6: "::"
+  ip::endpoint ep(ctx->local_host_.c_str(), ctx->local_port_);
 
   if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
@@ -1071,11 +1072,11 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
 
             /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
-            auto transport = make_transport(ctx, peer);
+            auto transport = make_dgram_transport(ctx, peer);
 #else // Win32 ONLY support one by one client <--> server for UDP.
             auto it = this->dgram_transports_.find(peer);
             auto transport =
-                it != this->dgram_transports_.end() ? it->second : make_transport(ctx, peer);
+                it != this->dgram_transports_.end() ? it->second : make_dgram_transport(ctx, peer);
 #endif
             if (transport)
             {
@@ -1096,13 +1097,13 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
   }
 }
 
-transport_handle_t io_service::make_transport(io_channel* ctx, ip::endpoint& peer)
+transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoint& peer)
 {
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
   {
     client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-    int error = client_sock->bind("0.0.0.0", ctx->port_) == 0
+    int error = client_sock->bind("0.0.0.0", ctx->local_port_) == 0
                     ? xxsocket::connect(client_sock->native_handle(), peer)
                     : -1;
     if (error == 0)
@@ -1199,7 +1200,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
   cleanup_io(ctx);
 
   YASIO_SLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
-             ctx->host_.c_str(), ctx->port_, error, io_service::strerror(error));
+             ctx->remote_host_.c_str(), ctx->remote_port_, error, io_service::strerror(error));
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 }
 
@@ -1237,16 +1238,16 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
                    transport->cindex(), n, n + transport->offset_);
       }
 #endif
-      if (transport->expected_packet_size_ == -1)
+      if (transport->expected_size_ == -1)
       { // decode length
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
-          transport->expected_packet_size_ = length;
+          transport->expected_size_ = length;
           transport->expected_packet_.reserve(
-              (std::min)(transport->expected_packet_size_,
+              (std::min)(transport->expected_size_,
                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-          unpack(transport, transport->expected_packet_size_, n, max_wait_duration);
+          unpack(transport, transport->expected_size_, n, max_wait_duration);
         }
         else if (length == 0)
         {
@@ -1263,9 +1264,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
       else
       { // process incompleted pdu
         unpack(transport,
-               transport->expected_packet_size_ -
-                   static_cast<int>(transport->expected_packet_.size()),
-               n, max_wait_duration);
+               transport->expected_size_ - static_cast<int>(transport->expected_packet_.size()), n,
+               max_wait_duration);
       }
     }
     else
@@ -1303,9 +1303,9 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     // it.
     YASIO_SLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
-                transport->cindex(), transport->expected_packet_size_);
+                transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
-        new io_event(transport->cindex(), YEK_PACKET, transport->take_packet(), transport)));
+        new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
   }
   else
   { // all buffer consumed, set offset to ZERO, pdu
@@ -1508,14 +1508,14 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->set_last_errno(EINPROGRESS);
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->host_.c_str());
+  YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->remote_host_.c_str());
 
-  ctx->endpoints_.clear();
+  ctx->remote_eps_.clear();
   std::thread resolv_thread([=] { // 6.563ms
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
-    int error = options_.resolv_(ctx->endpoints_, ctx->host_.c_str(), ctx->port_);
+    int error = options_.resolv_(ctx->remote_eps_, ctx->remote_host_.c_str(), ctx->remote_port_);
     if (error == 0)
     {
       ctx->dns_queries_state_     = YDQS_READY;
@@ -1643,18 +1643,23 @@ void io_service::set_option(int option, ...)
         this->channels_[index]->decode_len_ = *va_arg(ap, decode_len_fn_t*);
     }
     break;
+    case YOPT_CHANNEL_LOCAL_HOST: {
+      auto index = static_cast<size_t>(va_arg(ap, int));
+      if (index < this->channels_.size())
+        this->channels_[index]->local_host_ = va_arg(ap, const char*);
+      break;
+    }
     case YOPT_CHANNEL_LOCAL_PORT: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
         this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
       break;
     }
-
     case YOPT_CHANNEL_REMOTE_HOST: {
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
-        this->channels_[index]->setup_host(va_arg(ap, const char*));
+        this->channels_[index]->setup_remote_host(va_arg(ap, const char*));
       }
     }
     break;
@@ -1662,7 +1667,16 @@ void io_service::set_option(int option, ...)
       auto index = static_cast<size_t>(va_arg(ap, int));
       if (index < this->channels_.size())
       {
-        this->channels_[index]->setup_port((u_short)va_arg(ap, int));
+        this->channels_[index]->setup_remote_port((u_short)va_arg(ap, int));
+      }
+    }
+    break;
+    case YOPT_CHANNEL_LOCAL_ENDPOINT: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel != nullptr)
+      {
+        channel->local_host_ = (va_arg(ap, const char*));
+        channel->local_port_ = ((u_short)va_arg(ap, int));
       }
     }
     break;
@@ -1671,8 +1685,8 @@ void io_service::set_option(int option, ...)
       if (index < this->channels_.size())
       {
         auto channel = this->channels_[index];
-        channel->setup_host(va_arg(ap, const char*));
-        channel->setup_port((u_short)va_arg(ap, int));
+        channel->setup_remote_host(va_arg(ap, const char*));
+        channel->setup_remote_port((u_short)va_arg(ap, int));
       }
     }
     break;

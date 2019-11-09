@@ -79,6 +79,8 @@ enum
   YOPT_CHANNEL_LFBFD_FN, // length field based frame decode function, Native C++ ONLY
   YOPT_CHANNEL_LFBFD_PARAMS,
   YOPT_CHANNEL_LOCAL_PORT, // Sets channel local port
+  YOPT_CHANNEL_LOCAL_HOST, // Sets channel local host, for server only to bind specified ifaddr
+  YOPT_CHANNEL_LOCAL_ENDPOINT,
   YOPT_CHANNEL_REMOTE_HOST,
   YOPT_CHANNEL_REMOTE_PORT,
   YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
@@ -225,34 +227,43 @@ class io_channel : public io_base
 public:
   io_service& get_service() { return deadline_timer_.service_; }
   inline int index() { return index_; }
-
-  void setup_multicast(std::shared_ptr<xxsocket>&);
-  void cleanup_multicast(std::shared_ptr<xxsocket>&);
+  inline u_short local_port() { return local_port_; }
 
 private:
   YASIO__DECL io_channel(io_service& service);
 
-  inline void setup_hostent(std::string host, u_short port)
+  inline void init(std::string host, u_short port)
   {
-    setup_host(host);
-    setup_port(port);
+    setup_remote_host(host);
+    setup_remote_port(port);
+    local_host_ = host;
+    local_port_ = port;
   }
 
-  YASIO__DECL void setup_host(std::string host);
-  YASIO__DECL void setup_port(u_short port);
+  YASIO__DECL void setup_remote_host(std::string host);
+  YASIO__DECL void setup_remote_port(u_short port);
+
+  YASIO__DECL void setup_multicast(std::shared_ptr<xxsocket>&);
+  YASIO__DECL void cleanup_multicast(std::shared_ptr<xxsocket>&);
 
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
 
   u_short mask_ = 0;
-  // specific local port, if not zero, tcp/udp client will use it as fixed port
+
+  /*
+  ** !!! for tcp/udp client, if not zero, will use it as fixed port.
+  ** !!! for tcp/udp server, local port must be specified.
+  */
   u_short local_port_ = 0;
 
-  std::atomic<u_short> dns_queries_state_;
-  u_short port_ = 0;
-  std::string host_;
+  /*
+  ** !!! for tcp/udp client, remote port must be specified,
+  ** !!! for tcp/udp server, remote port is unused.
+  */
+  u_short remote_port_ = 0;
 
-  std::vector<ip::endpoint> endpoints_;
+  std::atomic<u_short> dns_queries_state_;
 
   highp_time_t dns_queries_timestamp_ = 0;
 
@@ -271,6 +282,10 @@ private:
   } lfb_;
   decode_len_fn_t decode_len_;
 
+  std::string local_host_;  // only for server wan't bind to specified ifaddr.
+  std::string remote_host_; // only for client to connect remote host.
+  std::vector<ip::endpoint> remote_eps_;
+
   // The buffer for udp only
   std::vector<char> udp_buffer_;
 };
@@ -285,9 +300,9 @@ public:
   ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int cindex() const { return ctx_->index(); }
   int status() const { return error_; }
-  inline std::vector<char> take_packet()
+  inline std::vector<char> fetch_packet()
   {
-    expected_packet_size_ = -1;
+    expected_size_ = -1;
     return std::move(expected_packet_);
   }
 
@@ -312,7 +327,7 @@ protected:
   int offset_ = 0;                      // recv buffer offset
 
   std::vector<char> expected_packet_;
-  int expected_packet_size_ = -1;
+  int expected_size_ = -1;
 
   io_channel* ctx_;
 
@@ -587,7 +602,7 @@ private:
 
   YASIO__DECL static const char* strerror(int error);
 
-  YASIO__DECL transport_handle_t make_transport(io_channel*, ip::endpoint& peer);
+  YASIO__DECL transport_handle_t make_dgram_transport(io_channel*, ip::endpoint& peer);
 
 private:
   state state_; // The service state

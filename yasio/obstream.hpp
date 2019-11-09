@@ -85,6 +85,7 @@ public:
 
   YASIO__DECL void write_bytes(cxx17::string_view);
   YASIO__DECL void write_bytes(const void* v, int vl);
+  YASIO__DECL void write_byte(char v);
 
   size_t length() const { return buffer_.size(); }
   const char* data() const { return buffer_.data(); }

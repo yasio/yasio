@@ -192,6 +192,8 @@ void obstream::write_bytes(const void* v, int vl)
   }
 }
 
+void obstream::write_byte(char v) { buffer_.push_back(v); }
+
 void obstream::save(const char* filename)
 {
   std::ofstream fout;

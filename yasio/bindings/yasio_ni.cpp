@@ -29,14 +29,16 @@ SOFTWARE.
 /*
 ** yasio_ni.cpp: The yasio native interface for interop.
 */
-#include <string.h>
-#include "yasio/yasio.hpp"
+#if !defined(_WIN32) || defined(_WINDLL)
 
-#if defined(_WINDLL)
-#  define YASIO_NI_API __declspec(dllexport)
-#else
-#  define YASIO_NI_API
-#endif
+#  include <string.h>
+#  include "yasio/yasio.hpp"
+
+#  if defined(_WINDLL)
+#    define YASIO_NI_API __declspec(dllexport)
+#  else
+#    define YASIO_NI_API
+#  endif
 
 using namespace yasio::inet;
 
@@ -63,9 +65,7 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
 }
 } // namespace
 
-#if defined(__cplusplus)
 extern "C" {
-#endif
 
 YASIO_NI_API int yasio_start(const char* params,
                              void (*callback)(uint32_t emask, int cidx, intptr_t sid,
@@ -174,10 +174,7 @@ YASIO_NI_API int yasio_write(intptr_t thandle, const unsigned char* bytes, int l
   auto p = reinterpret_cast<transport_handle_t>(thandle);
   return yasio_shared_service->write(p, std::move(buf));
 }
-YASIO_NI_API void yasio_dispatch(int count)
-{
-  yasio_shared_service->dispatch(count);
-}
+YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service->dispatch(count); }
 YASIO_NI_API void yasio_stop() { yasio_shared_service->stop_service(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
@@ -190,6 +187,5 @@ YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {
   ::memcpy(dst, src, len);
 }
-#if defined(__cplusplus)
-}
+
 #endif

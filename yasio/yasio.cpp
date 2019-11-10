@@ -609,7 +609,7 @@ void io_service::dispatch(int count)
 
 void io_service::run()
 {
-  _set_thread_name("yasio-evloop");
+  _set_thread_name("yasio");
 
   // Call once at startup
   this->ipsv_ = xxsocket::getipsv();
@@ -1406,7 +1406,10 @@ void io_service::perform_timers()
       auto& timer_cb = earliest.second;
       timer_queue_.pop_back(); // pop the expired timer from timer queue
       if (options_.deferred_handler_)
-        this->handlers_.enqueue([=, cancelled = timer_ctl->cancelled_]() { timer_cb(cancelled); });
+      {
+        bool cancelled = timer_ctl->cancelled_;
+        this->handlers_.enqueue([=]() { timer_cb(cancelled); });
+      }
       else
         timer_cb(timer_ctl->cancelled_);
       if (timer_ctl->repeated_)
@@ -1622,53 +1625,47 @@ void io_service::set_option(int option, ...)
       this->options_.print_ = *va_arg(ap, print_fn_t*);
       break;
     case YOPT_CHANNEL_LFBFD_PARAMS: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
       {
-        auto ctx                      = this->channels_[index];
-        ctx->lfb_.max_frame_length    = va_arg(ap, int);
-        ctx->lfb_.length_field_offset = va_arg(ap, int);
-        ctx->lfb_.length_field_length = va_arg(ap, int);
-        ctx->lfb_.length_adjustment   = va_arg(ap, int);
+        channel->lfb_.max_frame_length    = va_arg(ap, int);
+        channel->lfb_.length_field_offset = va_arg(ap, int);
+        channel->lfb_.length_field_length = va_arg(ap, int);
+        channel->lfb_.length_adjustment   = va_arg(ap, int);
       }
       break;
     }
-
     case YOPT_IO_EVENT_CB:
       options_.on_event_ = *va_arg(ap, io_event_cb_t*);
       break;
     case YOPT_CHANNEL_LFBFD_FN: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-        this->channels_[index]->decode_len_ = *va_arg(ap, decode_len_fn_t*);
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->decode_len_ = *va_arg(ap, decode_len_fn_t*);
     }
     break;
     case YOPT_CHANNEL_LOCAL_HOST: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-        this->channels_[index]->local_host_ = va_arg(ap, const char*);
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->local_host_ = va_arg(ap, const char*);
       break;
     }
     case YOPT_CHANNEL_LOCAL_PORT: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-        this->channels_[index]->local_port_ = (u_short)va_arg(ap, int);
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->local_port_ = (u_short)va_arg(ap, int);
       break;
     }
     case YOPT_CHANNEL_REMOTE_HOST: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->setup_remote_host(va_arg(ap, const char*));
-      }
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->setup_remote_host(va_arg(ap, const char*));
     }
     break;
     case YOPT_CHANNEL_REMOTE_PORT: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
-      {
-        this->channels_[index]->setup_remote_port((u_short)va_arg(ap, int));
-      }
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->setup_remote_port((u_short)va_arg(ap, int));
     }
     break;
     case YOPT_CHANNEL_LOCAL_ENDPOINT: {
@@ -1681,10 +1678,9 @@ void io_service::set_option(int option, ...)
     }
     break;
     case YOPT_CHANNEL_REMOTE_ENDPOINT: {
-      auto index = static_cast<size_t>(va_arg(ap, int));
-      if (index < this->channels_.size())
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
       {
-        auto channel = this->channels_[index];
         channel->setup_remote_host(va_arg(ap, const char*));
         channel->setup_remote_port((u_short)va_arg(ap, int));
       }

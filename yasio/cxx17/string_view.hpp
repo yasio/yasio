@@ -344,26 +344,26 @@ inline size_t __xxtraits_rfind_not_ch(const typename _Traits::char_type* _Haysta
 ///
 /// \ingroup core
 ////////////////////////////////////////////////////////////////////////////
-template <typename CharT, typename Traits = std::char_traits<CharT>> class basic_string_view;
+template <typename _CharT, typename _Traits = std::char_traits<_CharT>> class basic_string_view;
 
-template <typename CharT, typename Traits> class basic_string_view
+template <typename _CharT, typename _Traits> class basic_string_view
 {
   //------------------------------------------------------------------------
   // Public Member Types
   //------------------------------------------------------------------------
 public:
-  using char_type   = CharT;
-  using traits_type = Traits;
+  using char_type   = _CharT;
+  using traits_type = _Traits;
   using size_type   = size_t;
 
-  using value_type      = CharT;
+  using value_type      = _CharT;
   using reference       = value_type&;
   using const_reference = const value_type&;
   using pointer         = value_type*;
   using const_pointer   = const value_type*;
 
-  using iterator       = const CharT*;
-  using const_iterator = const CharT*;
+  using iterator       = const _CharT*;
+  using const_iterator = const _CharT*;
 
   //------------------------------------------------------------------------
   // Public Members
@@ -382,7 +382,7 @@ public:
   ///
   /// \param str the string to view
   template <typename Allocator>
-  basic_string_view(const std::basic_string<CharT, Traits, Allocator>& str);
+  basic_string_view(const std::basic_string<_CharT, _Traits, Allocator>& str);
 
   /// \brief Constructs a basic_string_view from an ansi-string
   ///
@@ -499,11 +499,12 @@ public:
   ///
   /// \return A basic_string containing a copy of the characters of the current
   /// view.
-  template <class Allocator = std::allocator<CharT>>
-  std::basic_string<CharT, Traits, Allocator> to_string(const Allocator& a = Allocator()) const;
+  template <class Allocator = std::allocator<_CharT>>
+  std::basic_string<_CharT, _Traits, Allocator> to_string(const Allocator& a = Allocator()) const;
 
   /// \copydoc basic_string_view::to_string
-  template <class Allocator> explicit operator std::basic_string<CharT, Traits, Allocator>() const;
+  template <class Allocator>
+  explicit operator std::basic_string<_CharT, _Traits, Allocator>() const;
 
   //------------------------------------------------------------------------
   // Operations
@@ -692,24 +693,24 @@ using u32string_view = basic_string_view<char32_t>;
 // Constructor
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline basic_string_view<CharT, Traits>::basic_string_view() : m_str(nullptr), m_size(0)
+template <typename _CharT, typename _Traits>
+inline basic_string_view<_CharT, _Traits>::basic_string_view() : m_str(nullptr), m_size(0)
 {}
 
-template <typename CharT, typename Traits>
+template <typename _CharT, typename _Traits>
 template <typename Allocator>
-inline basic_string_view<CharT, Traits>::basic_string_view(
-    const std::basic_string<CharT, Traits, Allocator>& str)
+inline basic_string_view<_CharT, _Traits>::basic_string_view(
+    const std::basic_string<_CharT, _Traits, Allocator>& str)
     : m_str(str.c_str()), m_size(str.size())
 {}
 
-template <typename CharT, typename Traits>
-inline basic_string_view<CharT, Traits>::basic_string_view(const char_type* str)
+template <typename _CharT, typename _Traits>
+inline basic_string_view<_CharT, _Traits>::basic_string_view(const char_type* str)
     : m_str(str), m_size(traits_type::length(str))
 {}
 
-template <typename CharT, typename Traits>
-inline basic_string_view<CharT, Traits>::basic_string_view(const char_type* str, size_type count)
+template <typename _CharT, typename _Traits>
+inline basic_string_view<_CharT, _Traits>::basic_string_view(const char_type* str, size_type count)
     : m_str(str), m_size(count)
 {}
 
@@ -717,29 +718,29 @@ inline basic_string_view<CharT, Traits>::basic_string_view(const char_type* str,
 // Capacity
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::size() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::size() const
 {
   return m_size;
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::length() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::length() const
 {
   return size();
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::max_size() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::max_size() const
 {
   return npos - 1;
 }
 
-template <typename CharT, typename Traits>
-inline bool basic_string_view<CharT, Traits>::empty() const
+template <typename _CharT, typename _Traits>
+inline bool basic_string_view<_CharT, _Traits>::empty() const
 {
   return m_size == 0;
 }
@@ -748,46 +749,46 @@ inline bool basic_string_view<CharT, Traits>::empty() const
 // Element Access
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline const typename basic_string_view<CharT, Traits>::char_type*
-basic_string_view<CharT, Traits>::c_str() const
+template <typename _CharT, typename _Traits>
+inline const typename basic_string_view<_CharT, _Traits>::char_type*
+basic_string_view<_CharT, _Traits>::c_str() const
 {
   return m_str;
 }
 
-template <typename CharT, typename Traits>
-inline const typename basic_string_view<CharT, Traits>::char_type*
-basic_string_view<CharT, Traits>::data() const
+template <typename _CharT, typename _Traits>
+inline const typename basic_string_view<_CharT, _Traits>::char_type*
+basic_string_view<_CharT, _Traits>::data() const
 {
   return m_str;
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_reference
-    basic_string_view<CharT, Traits>::operator[](size_t pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_reference
+    basic_string_view<_CharT, _Traits>::operator[](size_t pos) const
 {
   return m_str[pos];
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_reference
-basic_string_view<CharT, Traits>::at(size_t pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_reference
+basic_string_view<_CharT, _Traits>::at(size_t pos) const
 {
   return pos < m_size ? m_str[pos]
                       : throw std::out_of_range("Input out of range in basic_string_view::at"),
          m_str[pos];
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_reference
-basic_string_view<CharT, Traits>::front() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_reference
+basic_string_view<_CharT, _Traits>::front() const
 {
   return *m_str;
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_reference
-basic_string_view<CharT, Traits>::back() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_reference
+basic_string_view<_CharT, _Traits>::back() const
 {
   return m_str[m_size - 1];
 }
@@ -796,20 +797,20 @@ basic_string_view<CharT, Traits>::back() const
 // Modifiers
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline void basic_string_view<CharT, Traits>::remove_prefix(size_type n)
+template <typename _CharT, typename _Traits>
+inline void basic_string_view<_CharT, _Traits>::remove_prefix(size_type n)
 {
   m_str += n, m_size -= n;
 }
 
-template <typename CharT, typename Traits>
-inline void basic_string_view<CharT, Traits>::remove_suffix(size_type n)
+template <typename _CharT, typename _Traits>
+inline void basic_string_view<_CharT, _Traits>::remove_suffix(size_type n)
 {
   m_size -= n;
 }
 
-template <typename CharT, typename Traits>
-inline void basic_string_view<CharT, Traits>::swap(basic_string_view& v)
+template <typename _CharT, typename _Traits>
+inline void basic_string_view<_CharT, _Traits>::swap(basic_string_view& v)
 {
   using std::swap;
   swap(m_size, v.m_size);
@@ -820,29 +821,29 @@ inline void basic_string_view<CharT, Traits>::swap(basic_string_view& v)
 // Conversions
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
+template <typename _CharT, typename _Traits>
 template <class Allocator>
-inline std::basic_string<CharT, Traits, Allocator>
-basic_string_view<CharT, Traits>::to_string(const Allocator& a) const
+inline std::basic_string<_CharT, _Traits, Allocator>
+basic_string_view<_CharT, _Traits>::to_string(const Allocator& a) const
 {
-  return std::basic_string<CharT, Traits, Allocator>(m_str, m_size, a);
+  return std::basic_string<_CharT, _Traits, Allocator>(m_str, m_size, a);
 }
 
-template <typename CharT, typename Traits>
+template <typename _CharT, typename _Traits>
 template <class Allocator>
-inline basic_string_view<CharT, Traits>::operator std::basic_string<CharT, Traits, Allocator>()
+inline basic_string_view<_CharT, _Traits>::operator std::basic_string<_CharT, _Traits, Allocator>()
     const
 {
-  return std::basic_string<CharT, Traits, Allocator>(m_str, m_size);
+  return std::basic_string<_CharT, _Traits, Allocator>(m_str, m_size);
 }
 
 //--------------------------------------------------------------------------
 // String Operations
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::copy(char_type* dest, size_type count, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::copy(char_type* dest, size_type count, size_type pos) const
 {
   if (pos >= m_size)
     throw std::out_of_range("Index out of range in basic_string_view::copy");
@@ -852,275 +853,275 @@ basic_string_view<CharT, Traits>::copy(char_type* dest, size_type count, size_ty
   return rcount;
 }
 
-template <typename CharT, typename Traits>
-inline basic_string_view<CharT, Traits> basic_string_view<CharT, Traits>::substr(size_t pos,
-                                                                                 size_t len) const
+template <typename _CharT, typename _Traits>
+inline basic_string_view<_CharT, _Traits>
+basic_string_view<_CharT, _Traits>::substr(size_t pos, size_t len) const
 {
   const size_type max_length = pos > m_size ? 0 : m_size - pos;
 
   return pos < m_size
-             ? basic_string_view<CharT, Traits>(m_str + pos, len > max_length ? max_length : len)
+             ? basic_string_view<_CharT, _Traits>(m_str + pos, len > max_length ? max_length : len)
              : throw std::out_of_range("Index out of range in basic_string_view::substr");
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(basic_string_view v) const
+template <typename _CharT, typename _Traits>
+inline int basic_string_view<_CharT, _Traits>::compare(basic_string_view v) const
 {
   const size_type rlen = (std::min)(m_size, v.m_size);
-  const int compare    = Traits::compare(m_str, v.m_str, rlen);
+  const int compare    = _Traits::compare(m_str, v.m_str, rlen);
 
   return (compare ? compare : (m_size < v.m_size ? -1 : (m_size > v.m_size ? 1 : 0)));
 }
 
-template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(size_type pos, size_type count,
-                                                     basic_string_view v) const
+template <typename _CharT, typename _Traits>
+inline int basic_string_view<_CharT, _Traits>::compare(size_type pos, size_type count,
+                                                       basic_string_view v) const
 {
   return substr(pos, count).compare(v);
 }
 
-template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(size_type pos1, size_type count1,
-                                                     basic_string_view v, size_type pos2,
-                                                     size_type count2) const
+template <typename _CharT, typename _Traits>
+inline int basic_string_view<_CharT, _Traits>::compare(size_type pos1, size_type count1,
+                                                       basic_string_view v, size_type pos2,
+                                                       size_type count2) const
 {
   return substr(pos1, count1).compare(v.substr(pos2, count2));
 }
 
-template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(const char_type* s) const
+template <typename _CharT, typename _Traits>
+inline int basic_string_view<_CharT, _Traits>::compare(const char_type* s) const
 {
-  return compare(basic_string_view<CharT, Traits>(s));
+  return compare(basic_string_view<_CharT, _Traits>(s));
 }
 
-template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(size_type pos, size_type count,
-                                                     const char_type* s) const
+template <typename _CharT, typename _Traits>
+inline int basic_string_view<_CharT, _Traits>::compare(size_type pos, size_type count,
+                                                       const char_type* s) const
 {
-  return substr(pos, count).compare(basic_string_view<CharT, Traits>(s));
+  return substr(pos, count).compare(basic_string_view<_CharT, _Traits>(s));
 }
 
-template <typename CharT, typename Traits>
-inline int basic_string_view<CharT, Traits>::compare(size_type pos, size_type count1,
-                                                     const char_type* s, size_type count2) const
+template <typename _CharT, typename _Traits>
+inline int basic_string_view<_CharT, _Traits>::compare(size_type pos, size_type count1,
+                                                       const char_type* s, size_type count2) const
 {
-  return substr(pos, count1).compare(basic_string_view<CharT, Traits>(s, count2));
-}
-
-//--------------------------------------------------------------------------
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find(basic_string_view v, size_type pos) const
-{
-  return __xxtraits_find<Traits>(m_str, m_size, pos, v.m_str, v.m_size);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find(char_type c, size_type pos) const
-{
-  return find(basic_string_view<CharT, Traits>(&c, 1), pos);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find(const char_type* s, size_type pos, size_type count) const
-{
-  return find(basic_string_view<CharT, Traits>(s, count), pos);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find(const char_type* s, size_type pos) const
-{
-  return find(basic_string_view<CharT, Traits>(s), pos);
+  return substr(pos, count1).compare(basic_string_view<_CharT, _Traits>(s, count2));
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::rfind(basic_string_view v, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find(basic_string_view v, size_type pos) const
 {
-  return __xxtraits_rfind<Traits>(m_str, m_size, pos, v.m_str, v.m_size);
+  return __xxtraits_find<_Traits>(m_str, m_size, pos, v.m_str, v.m_size);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::rfind(char_type c, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find(char_type c, size_type pos) const
 {
-  return rfind(basic_string_view<CharT, Traits>(&c, 1), pos);
+  return find(basic_string_view<_CharT, _Traits>(&c, 1), pos);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::rfind(const char_type* s, size_type pos, size_type count) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find(const char_type* s, size_type pos, size_type count) const
 {
-  return rfind(basic_string_view<CharT, Traits>(s, count), pos);
+  return find(basic_string_view<_CharT, _Traits>(s, count), pos);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::rfind(const char_type* s, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find(const char_type* s, size_type pos) const
 {
-  return rfind(basic_string_view<CharT, Traits>(s), pos);
-}
-
-//--------------------------------------------------------------------------
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_of(basic_string_view v, size_type pos) const
-{
-  return __xxtraits_find_first_of(m_str, m_size, pos, v.m_str, v.m_size);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_of(char_type c, size_type pos) const
-{
-  return __xxtraits_find_ch(m_str, m_size, pos, c);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_of(const char_type* s, size_type pos,
-                                                size_type count) const
-{
-  return find_first_of(basic_string_view<CharT, Traits>(s, count), pos);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_of(const char_type* s, size_type pos) const
-{
-  return find_first_of(basic_string_view<CharT, Traits>(s), pos);
+  return find(basic_string_view<_CharT, _Traits>(s), pos);
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_of(basic_string_view v, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::rfind(basic_string_view v, size_type pos) const
 {
-  return __xxtraits_find_last_of(m_str, m_size, pos, v.m_str, v.m_size);
+  return __xxtraits_rfind<_Traits>(m_str, m_size, pos, v.m_str, v.m_size);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_of(char_type c, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::rfind(char_type c, size_type pos) const
 {
-  return __xxtraits_rfind_ch(m_str, m_size, pos, c);
+  return rfind(basic_string_view<_CharT, _Traits>(&c, 1), pos);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_of(const char_type* s, size_type pos,
-                                               size_type count) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::rfind(const char_type* s, size_type pos, size_type count) const
 {
-  return find_last_of(basic_string_view<CharT, Traits>(s, count), pos);
+  return rfind(basic_string_view<_CharT, _Traits>(s, count), pos);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_of(const char_type* s, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::rfind(const char_type* s, size_type pos) const
 {
-  return find_last_of(basic_string_view<CharT, Traits>(s), pos);
-}
-
-//--------------------------------------------------------------------------
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_not_of(basic_string_view v, size_type pos) const
-{
-  return __xxtraits_find_first_not_of(m_str, m_size, pos, v.m_str, v.m_size, pos);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_not_of(char_type c, size_type pos) const
-{
-  return __xxtraits_find_not_ch(m_str, m_size, pos, c);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_not_of(const char_type* s, size_type pos,
-                                                    size_type count) const
-{
-  return find_first_not_of(basic_string_view<CharT, Traits>(s, count), pos);
-}
-
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_first_not_of(const char_type* s, size_type pos) const
-{
-  return find_first_not_of(basic_string_view<CharT, Traits>(s), pos);
+  return rfind(basic_string_view<_CharT, _Traits>(s), pos);
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_not_of(basic_string_view v, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_of(basic_string_view v, size_type pos) const
+{
+  return __xxtraits_find_first_of<_Traits>(m_str, m_size, pos, v.m_str, v.m_size);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_of(char_type c, size_type pos) const
+{
+  return __xxtraits_find_ch<_Traits>(m_str, m_size, pos, c);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_of(const char_type* s, size_type pos,
+                                                  size_type count) const
+{
+  return find_first_of(basic_string_view<_CharT, _Traits>(s, count), pos);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_of(const char_type* s, size_type pos) const
+{
+  return find_first_of(basic_string_view<_CharT, _Traits>(s), pos);
+}
+
+//--------------------------------------------------------------------------
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_of(basic_string_view v, size_type pos) const
+{
+  return __xxtraits_find_last_of<_Traits>(m_str, m_size, pos, v.m_str, v.m_size);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_of(char_type c, size_type pos) const
+{
+  return __xxtraits_rfind_ch<_Traits>(m_str, m_size, pos, c);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_of(const char_type* s, size_type pos,
+                                                 size_type count) const
+{
+  return find_last_of(basic_string_view<_CharT, _Traits>(s, count), pos);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_of(const char_type* s, size_type pos) const
+{
+  return find_last_of(basic_string_view<_CharT, _Traits>(s), pos);
+}
+
+//--------------------------------------------------------------------------
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_not_of(basic_string_view v, size_type pos) const
+{
+  return __xxtraits_find_first_not_of<_Traits>(m_str, m_size, pos, v.m_str, v.m_size, pos);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_not_of(char_type c, size_type pos) const
+{
+  return __xxtraits_find_not_ch<_Traits>(m_str, m_size, pos, c);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_not_of(const char_type* s, size_type pos,
+                                                      size_type count) const
+{
+  return find_first_not_of(basic_string_view<_CharT, _Traits>(s, count), pos);
+}
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_first_not_of(const char_type* s, size_type pos) const
+{
+  return find_first_not_of(basic_string_view<_CharT, _Traits>(s), pos);
+}
+
+//--------------------------------------------------------------------------
+
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_not_of(basic_string_view v, size_type pos) const
 {
   return _xxtraits_find_last_not_of(m_str, m_size, pos, v.m_str, v.m_size);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_not_of(char_type c, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_not_of(char_type c, size_type pos) const
 {
-  return __xxtraits_rfind_not_ch(m_str, m_size, pos, c);
+  return __xxtraits_rfind_not_ch<_Traits>(m_str, m_size, pos, c);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_not_of(const char_type* s, size_type pos,
-                                                   size_type count) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_not_of(const char_type* s, size_type pos,
+                                                     size_type count) const
 {
-  return find_last_not_of(basic_string_view<CharT, Traits>(s, count), pos);
+  return find_last_not_of(basic_string_view<_CharT, _Traits>(s, count), pos);
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::size_type
-basic_string_view<CharT, Traits>::find_last_not_of(const char_type* s, size_type pos) const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::size_type
+basic_string_view<_CharT, _Traits>::find_last_not_of(const char_type* s, size_type pos) const
 {
-  return find_last_not_of(basic_string_view<CharT, Traits>(s), pos);
+  return find_last_not_of(basic_string_view<_CharT, _Traits>(s), pos);
 }
 
 //--------------------------------------------------------------------------
 // Iterator
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_iterator
-basic_string_view<CharT, Traits>::begin() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_iterator
+basic_string_view<_CharT, _Traits>::begin() const
 {
   return m_str;
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_iterator
-basic_string_view<CharT, Traits>::end() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_iterator
+basic_string_view<_CharT, _Traits>::end() const
 {
   return m_str + m_size;
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_iterator
-basic_string_view<CharT, Traits>::cbegin() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_iterator
+basic_string_view<_CharT, _Traits>::cbegin() const
 {
   return m_str;
 }
 
-template <typename CharT, typename Traits>
-inline typename basic_string_view<CharT, Traits>::const_iterator
-basic_string_view<CharT, Traits>::cend() const
+template <typename _CharT, typename _Traits>
+inline typename basic_string_view<_CharT, _Traits>::const_iterator
+basic_string_view<_CharT, _Traits>::cend() const
 {
   return m_str + m_size;
 }
@@ -1129,16 +1130,16 @@ basic_string_view<CharT, Traits>::cend() const
 // Public Functions
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o,
-                                              const basic_string_view<CharT, Traits>& str)
+template <typename _CharT, typename _Traits>
+std::basic_ostream<_CharT, _Traits>& operator<<(std::basic_ostream<_CharT, _Traits>& o,
+                                                const basic_string_view<_CharT, _Traits>& str)
 {
   o.write(str.data(), str.size());
   return o;
 }
 
-template <typename CharT, typename Traits>
-inline void swap(basic_string_view<CharT, Traits>& lhs, basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline void swap(basic_string_view<_CharT, _Traits>& lhs, basic_string_view<_CharT, _Traits>& rhs)
 {
   lhs.swap(rhs);
 }
@@ -1147,211 +1148,211 @@ inline void swap(basic_string_view<CharT, Traits>& lhs, basic_string_view<CharT,
 // Comparison Functions
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline bool operator==(const basic_string_view<CharT, Traits>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator==(const basic_string_view<_CharT, _Traits>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
   return lhs.compare(rhs) == 0;
 }
 
-template <typename CharT, typename Traits>
-inline bool operator==(basic_string_view<CharT, Traits> lhs, const CharT* rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator==(basic_string_view<_CharT, _Traits> lhs, const _CharT* rhs)
 {
-  return lhs == basic_string_view<CharT, Traits>(rhs);
+  return lhs == basic_string_view<_CharT, _Traits>(rhs);
 }
 
-template <typename CharT, typename Traits>
-inline bool operator==(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator==(const _CharT* lhs, const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) == rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) == rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator==(const std::basic_string<CharT, Traits, Allocator>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator==(const std::basic_string<_CharT, _Traits, Allocator>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) == rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) == rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator==(const basic_string_view<CharT, Traits>& lhs,
-                       const std::basic_string<CharT, Traits, Allocator>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator==(const basic_string_view<_CharT, _Traits>& lhs,
+                       const std::basic_string<_CharT, _Traits, Allocator>& rhs)
 {
-  return lhs == basic_string_view<CharT, Traits>(rhs);
+  return lhs == basic_string_view<_CharT, _Traits>(rhs);
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline bool operator!=(const basic_string_view<CharT, Traits>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator!=(const basic_string_view<_CharT, _Traits>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
   return lhs.compare(rhs) != 0;
 }
 
-template <typename CharT, typename Traits>
-inline bool operator!=(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator!=(const basic_string_view<_CharT, _Traits>& lhs, const _CharT* rhs)
 {
-  return lhs != basic_string_view<CharT, Traits>(rhs);
+  return lhs != basic_string_view<_CharT, _Traits>(rhs);
 }
 
-template <typename CharT, typename Traits>
-inline bool operator!=(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator!=(const _CharT* lhs, const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) != rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) != rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator!=(const std::basic_string<CharT, Traits, Allocator>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator!=(const std::basic_string<_CharT, _Traits, Allocator>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) != rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) != rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator!=(const basic_string_view<CharT, Traits>& lhs,
-                       const std::basic_string<CharT, Traits, Allocator>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator!=(const basic_string_view<_CharT, _Traits>& lhs,
+                       const std::basic_string<_CharT, _Traits, Allocator>& rhs)
 {
-  return lhs != basic_string_view<CharT, Traits>(rhs);
+  return lhs != basic_string_view<_CharT, _Traits>(rhs);
 }
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline bool operator<(const basic_string_view<CharT, Traits>& lhs,
-                      const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator<(const basic_string_view<_CharT, _Traits>& lhs,
+                      const basic_string_view<_CharT, _Traits>& rhs)
 {
   return lhs.compare(rhs) < 0;
 }
 
-template <typename CharT, typename Traits>
-inline bool operator<(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator<(const basic_string_view<_CharT, _Traits>& lhs, const _CharT* rhs)
 {
-  return lhs < basic_string_view<CharT, Traits>(rhs);
+  return lhs < basic_string_view<_CharT, _Traits>(rhs);
 }
 
-template <typename CharT, typename Traits>
-inline bool operator<(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator<(const _CharT* lhs, const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) < rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) < rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<(const std::basic_string<CharT, Traits, Allocator>& lhs,
-                      const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator<(const std::basic_string<_CharT, _Traits, Allocator>& lhs,
+                      const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) < rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) < rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<(const basic_string_view<CharT, Traits>& lhs,
-                      const std::basic_string<CharT, Traits, Allocator>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator<(const basic_string_view<_CharT, _Traits>& lhs,
+                      const std::basic_string<_CharT, _Traits, Allocator>& rhs)
 {
-  return lhs < basic_string_view<CharT, Traits>(rhs);
+  return lhs < basic_string_view<_CharT, _Traits>(rhs);
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline bool operator>(const basic_string_view<CharT, Traits>& lhs,
-                      const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator>(const basic_string_view<_CharT, _Traits>& lhs,
+                      const basic_string_view<_CharT, _Traits>& rhs)
 {
   return lhs.compare(rhs) > 0;
 }
 
-template <typename CharT, typename Traits>
-inline bool operator>(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator>(const basic_string_view<_CharT, _Traits>& lhs, const _CharT* rhs)
 {
-  return lhs > basic_string_view<CharT, Traits>(rhs);
+  return lhs > basic_string_view<_CharT, _Traits>(rhs);
 }
 
-template <typename CharT, typename Traits>
-inline bool operator>(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator>(const _CharT* lhs, const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) > rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) > rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>(const std::basic_string<CharT, Traits, Allocator>& lhs,
-                      const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator>(const std::basic_string<_CharT, _Traits, Allocator>& lhs,
+                      const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) > rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) > rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>(const basic_string_view<CharT, Traits>& lhs,
-                      const std::basic_string<CharT, Traits, Allocator>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator>(const basic_string_view<_CharT, _Traits>& lhs,
+                      const std::basic_string<_CharT, _Traits, Allocator>& rhs)
 {
-  return lhs > basic_string_view<CharT, Traits>(rhs);
+  return lhs > basic_string_view<_CharT, _Traits>(rhs);
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline bool operator<=(const basic_string_view<CharT, Traits>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator<=(const basic_string_view<_CharT, _Traits>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
   return lhs.compare(rhs) <= 0;
 }
 
-template <typename CharT, typename Traits>
-inline bool operator<=(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator<=(const basic_string_view<_CharT, _Traits>& lhs, const _CharT* rhs)
 {
-  return lhs <= basic_string_view<CharT, Traits>(rhs);
+  return lhs <= basic_string_view<_CharT, _Traits>(rhs);
 }
 
-template <typename CharT, typename Traits>
-inline bool operator<=(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator<=(const _CharT* lhs, const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) <= rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) <= rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<=(const std::basic_string<CharT, Traits, Allocator>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator<=(const std::basic_string<_CharT, _Traits, Allocator>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) <= rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) <= rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator<=(const basic_string_view<CharT, Traits>& lhs,
-                       const std::basic_string<CharT, Traits, Allocator>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator<=(const basic_string_view<_CharT, _Traits>& lhs,
+                       const std::basic_string<_CharT, _Traits, Allocator>& rhs)
 {
-  return lhs <= basic_string_view<CharT, Traits>(rhs);
+  return lhs <= basic_string_view<_CharT, _Traits>(rhs);
 }
 
 //--------------------------------------------------------------------------
 
-template <typename CharT, typename Traits>
-inline bool operator>=(const basic_string_view<CharT, Traits>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator>=(const basic_string_view<_CharT, _Traits>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
   return lhs.compare(rhs) >= 0;
 }
 
-template <typename CharT, typename Traits>
-inline bool operator>=(const basic_string_view<CharT, Traits>& lhs, const CharT* rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator>=(const basic_string_view<_CharT, _Traits>& lhs, const _CharT* rhs)
 {
-  return lhs >= basic_string_view<CharT, Traits>(rhs);
+  return lhs >= basic_string_view<_CharT, _Traits>(rhs);
 }
 
-template <typename CharT, typename Traits>
-inline bool operator>=(const CharT* lhs, const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits>
+inline bool operator>=(const _CharT* lhs, const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) >= rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) >= rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>=(const std::basic_string<CharT, Traits, Allocator>& lhs,
-                       const basic_string_view<CharT, Traits>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator>=(const std::basic_string<_CharT, _Traits, Allocator>& lhs,
+                       const basic_string_view<_CharT, _Traits>& rhs)
 {
-  return basic_string_view<CharT, Traits>(lhs) >= rhs;
+  return basic_string_view<_CharT, _Traits>(lhs) >= rhs;
 }
 
-template <typename CharT, typename Traits, typename Allocator>
-inline bool operator>=(const basic_string_view<CharT, Traits>& lhs,
-                       const std::basic_string<CharT, Traits, Allocator>& rhs)
+template <typename _CharT, typename _Traits, typename Allocator>
+inline bool operator>=(const basic_string_view<_CharT, _Traits>& lhs,
+                       const std::basic_string<_CharT, _Traits, Allocator>& rhs)
 {
-  return lhs >= basic_string_view<CharT, Traits>(rhs);
+  return lhs >= basic_string_view<_CharT, _Traits>(rhs);
 }
 } // namespace cxx17
 
@@ -1360,39 +1361,41 @@ inline bool operator>=(const basic_string_view<CharT, Traits>& lhs,
 namespace cxx20
 {
 // starts_with(), since C++20:
-template <typename CharT>
-inline bool starts_with(cxx17::basic_string_view<CharT> lhs,
-                        cxx17::basic_string_view<CharT> v) // (1)
+template <typename _CharT>
+inline bool starts_with(cxx17::basic_string_view<_CharT> lhs,
+                        cxx17::basic_string_view<_CharT> v) // (1)
 {
   return lhs.size() >= v.size() && lhs.compare(0, v.size(), v) == 0;
 }
 
-template <typename CharT>
-inline bool starts_with(cxx17::basic_string_view<CharT> lhs, CharT c) // (2)
+template <typename _CharT>
+inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, _CharT c) // (2)
 {
   return !lhs.empty() && lhs.front() == c;
 }
 
-template <typename CharT>
-inline bool starts_with(cxx17::basic_string_view<CharT> lhs, CharT const* s) // (3)
+template <typename _CharT>
+inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // (3)
 {
   return starts_with(lhs, basic_string_view(s));
 }
 
 // ends_with(), since C++20:
-template <typename CharT>
-inline bool ends_with(cxx17::basic_string_view<CharT> lhs, cxx17::basic_string_view<CharT> v) // (1)
+template <typename _CharT>
+inline bool ends_with(cxx17::basic_string_view<_CharT> lhs,
+                      cxx17::basic_string_view<_CharT> v) // (1)
 {
   return lhs.size() >= v.size() && lhs.compare(lhs.size() - v.size(), lhs.npos, v) == 0;
 }
 
-template <typename CharT> inline bool ends_with(cxx17::basic_string_view<CharT> lhs, CharT c) // (2)
+template <typename _CharT>
+inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT c) // (2)
 {
   return !lhs.empty() && lhs.back() == c;
 }
 
-template <typename CharT>
-inline bool ends_with(cxx17::basic_string_view<CharT> lhs, CharT const* s) // (3)
+template <typename _CharT>
+inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // (3)
 {
   return ends_with(lhs, basic_string_view(s));
 }

@@ -28,7 +28,7 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 ## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
-please see: [tcptest](https://github.com/simdsoft/yasio/blob/master/tests/tcptest/main.cpp)  
+please see: [tcptest](https://github.com/simdsoft/yasio/blob/master/tests/tcp/main.cpp)  
   
     
 ### Lua intergation: 
@@ -88,7 +88,7 @@ see: [example.js](https://github.com/simdsoft/yasio/blob/master/examples/js/exam
   
   
 ## Quick test at linux platform with gcc compiler:  
-```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp tests/tcptest/main.cpp --std=c++11 -lpthread -I./ -o cpptest && ./cpptest``` or ```g++ tests/tcptest/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest``` 
+```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp tests/tcp/main.cpp --std=c++11 -lpthread -I./ -o tcptest && ./tcptest``` or ```g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest``` 
   
 ## pitfall: 
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  

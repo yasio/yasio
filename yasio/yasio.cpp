@@ -312,6 +312,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
   this->id_                       = ++s_object_id;
   this->socket_                   = sock;
   this->valid_                    = true;
+  this->ud_.ptr                   = nullptr;
 }
 
 // -------------------- io_transport_posix ---------------------

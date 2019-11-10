@@ -334,7 +334,12 @@ protected:
   std::atomic_bool valid_;
 
 public:
-  void* ud_ = nullptr;
+  // The user data
+  union
+  {
+    void* ptr;
+    int ival;
+  } ud_;
 };
 
 class io_transport_posix : public io_transport

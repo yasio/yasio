@@ -187,5 +187,6 @@ YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {
   ::memcpy(dst, src, len);
 }
+}
 
 #endif

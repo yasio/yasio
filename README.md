@@ -1,7 +1,7 @@
 # yasio - *Y*et *A*nother *S*ocket *IO* service
 [![Build Status](https://travis-ci.org/simdsoft/yasio.svg?branch=master)](https://travis-ci.org/simdsoft/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/release-v3.26.1-blue.svg)](https://github.com/simdsoft/yasio/releases)
+[![Release](https://img.shields.io/badge/release-v3.30-blue.svg)](https://github.com/simdsoft/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/simdsoft/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/simdsoft/yasio.svg?label=Stars)](https://github.com/simdsoft/yasio)
@@ -28,7 +28,7 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 ## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
-[cpptest](https://github.com/simdsoft/yasio/blob/master/test/cpptest/cpptest.cpp)  
+[tcptest](https://github.com/simdsoft/yasio/blob/master/tests/tcptest/main.cpp)  
   
     
 ### Lua intergation: 
@@ -84,11 +84,11 @@ $(call import-module, external/yasio/jni/cocos-jsb)
 
 
 #### JS demo:
-see: [example.js](https://github.com/simdsoft/yasio/blob/master/test/jstest/example.js)  
+see: [example.js](https://github.com/simdsoft/yasio/blob/master/examples/js/example.js)  
   
   
 ## Quick test at linux platform with gcc compiler:  
-```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp test/cpptest/cpptest.cpp --std=c++11 -lpthread -I./ -o cpptest && ./cpptest``` or ```g++ test/cpptest/cpptest.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o cpptest && ./cpptest``` 
+```g++ yasio/xxsocket.cpp yasio/yasio.cpp yasio/ibstream.cpp yasio/obstream.cpp tests/tcptest/main.cpp --std=c++11 -lpthread -I./ -o cpptest && ./cpptest``` or ```g++ tests/tcptest/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest``` 
   
 ## pitfall: 
 1. For Microsoft Visual Studio, if your project has specific precompiled header, you should include it at head of xxsocket.cpp or specific the compile option: ```C/C++ --> Advance -->'Forced Include File'``` to it(such as pch.h).  

@@ -1,5 +1,5 @@
 ##########################################################################################
-# Customize file classifications.                                                        #
+# The yasio Customize file classifications.                                              #
 # Results from files under any classifier will be excluded from LGTM                     #
 # statistics.                                                                            #
 ##########################################################################################
@@ -44,13 +44,6 @@ extraction:
   # Define settings for C/C++ analysis
   #####################################
   cpp:
-    # The `prepare` step exists for customization on LGTM.com only.
-    # prepare:
-    #   # The `packages` section is valid for LGTM.com only. It names Ubuntu packages to
-    #   # be installed.
-    #   packages:
-    #     - libxml2-dev
-    #     - libxslt1-dev
     # Add an `after-prepare` step if you need to run commands after the prepare step.
     # Each command should be listed on a separate line.
     # This step is useful for C/C++ analysis where you want to prepare the environment
@@ -66,7 +59,7 @@ extraction:
     # then uses to build the codebase.
     configure:
       command:
-        - cd build
+        - cd $LGTM_SRC/build
         - cmake ..
     # The `index` step builds the code and extracts information during the build
     # process.
@@ -74,4 +67,5 @@ extraction:
       # Override the autobuild process by specifying a list of custom build commands
       # to use instead. 
       build_command:
-        - cmake --build . --config %CFG% --clean-first
+        - cd $LGTM_SRC/build
+        - cmake --build . --config Release --clean-first

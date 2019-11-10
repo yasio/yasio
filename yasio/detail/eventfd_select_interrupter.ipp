@@ -31,13 +31,6 @@
 
 #include <unistd.h>
 
-//#include <boost/asio/detail/cstdint.hpp>
-//#include <boost/asio/detail/eventfd_select_interrupter.hpp>
-//#include <boost/asio/detail/throw_error.hpp>
-//#include <boost/asio/error.hpp>
-//
-//#include <boost/asio/detail/push_options.hpp>
-
 namespace yasio
 {
 namespace inet
@@ -83,12 +76,6 @@ void eventfd_select_interrupter::open_descriptors()
       write_descriptor_ = pipe_fds[1];
       ::fcntl(write_descriptor_, F_SETFL, O_NONBLOCK);
       ::fcntl(write_descriptor_, F_SETFD, FD_CLOEXEC);
-    }
-    else
-    {
-      /*boost::system::error_code ec(errno,
-          boost::asio::error::get_system_category());
-      boost::asio::detail::throw_error(ec, "eventfd_select_interrupter");*/
     }
   }
 }

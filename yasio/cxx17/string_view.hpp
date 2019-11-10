@@ -52,7 +52,6 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #endif
 
 #if _HAS_STD_STRING_VIEW
-//#pragma message("_HAS_STD_STRING_VIEW = 1")
 #  if __has_include(<string_view>)
 #    include <string_view>
 #  endif
@@ -63,7 +62,6 @@ using std::string_view;
 using std::wstring_view;
 } // namespace cxx17
 #else
-//#pragma message("_HAS_STD_STRING_VIEW = 0")
 
 #  include <algorithm>
 #  include <exception>

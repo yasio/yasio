@@ -45,12 +45,6 @@ void pipe_select_interrupter::open_descriptors()
     ::fcntl(write_descriptor_, F_SETFD, FD_CLOEXEC);
 #endif // defined(FD_CLOEXEC)
   }
-  else
-  {
-    /*boost::system::error_code ec(errno,
-        boost::asio::error::get_system_category());
-    boost::asio::detail::throw_error(ec, "pipe_select_interrupter");*/
-  }
 }
 
 pipe_select_interrupter::~pipe_select_interrupter() { close_descriptors(); }

@@ -147,7 +147,6 @@ const char* inet_ntop(int af, const void* src, char* dst, socklen_t size)
     case AF_INET6:
       return (inet_ntop6((const u_char*)src, dst, size));
     default:
-      // __set_errno(EAFNOSUPPORT);
       errno = EAFNOSUPPORT;
       return (NULL);
   }
@@ -1139,7 +1138,6 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
   int bytes_transferred;
   int n;
   int errcode = 0;
-  // int send_times = 0;
 
   for (bytes_transferred = 0; bytes_transferred < len; bytes_transferred += n)
   {

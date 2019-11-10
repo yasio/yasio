@@ -240,9 +240,8 @@ YASIO__NS_INLINE namespace ip
     unsigned short identifier;
 
     // flags and frag
-    // unsigned short flags:3;
-    // unsigned short frag:13;
-    unsigned short flags_and_frag;
+    unsigned short flags : 3;
+    unsigned short frag : 13;
 
     // time of living, decreased by route, if zero, this packet will by dropped
     // avoid foward looply.
@@ -638,7 +637,6 @@ public:
   /** Gets the socket fd value **/
   YASIO__DECL socket_native_type native_handle(void) const;
 
-  // Detach fd only;
   YASIO__DECL socket_native_type detach(void);
 
   /* @brief: Set this socket io mode to nonblocking
@@ -648,21 +646,6 @@ public:
   */
   YASIO__DECL int set_nonblocking(bool nonblocking) const;
   YASIO__DECL static int set_nonblocking(socket_native_type s, bool nonblocking);
-
-  /* @brief: Set this socket io mode to blocking
-  ** @params:
-  **
-  ** @returns: [0] succeed, otherwise, a value of SOCKET_ERROR is returned.
-  */
-  // int set_blocking(void) const;
-
-  /* @brief: Set this socket io mode
-  ** @params:
-  **        mode: [nonblocking] or [blocking]
-  **
-  ** @returns: [0] succeed, otherwise, a value of SOCKET_ERROR is returned.
-  */
-  // int set_mode(u_long mode = nonblocking) const;
 
   /* @brief: Associates a local address with this socket
   ** @params:

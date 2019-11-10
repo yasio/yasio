@@ -82,7 +82,7 @@ namespace
 // error code
 enum
 {
-  YERR_OK,                    // NO ERROR.
+  YERR_OK             = 0,    // NO ERROR.
   YERR_INVALID_PACKET = -500, // Invalid packet.
   YERR_DPL_ILLEGAL_PDU,       // Decode pdu length error.
   YERR_RESOLV_HOST_FAILED,    // Resolve host failed.
@@ -144,7 +144,7 @@ static void _set_thread_name(const char* threadName)
   THREADNAME_INFO info;
   info.dwType     = 0x1000;
   info.szName     = threadName;
-  info.dwThreadID = GetCurrentThreadId(); // dwThreadID;
+  info.dwThreadID = GetCurrentThreadId();
   info.dwFlags    = 0;
 #  if !defined(__MINGW64__) && !defined(__MINGW32__)
   __try

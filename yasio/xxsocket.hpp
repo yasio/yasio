@@ -347,7 +347,7 @@ YASIO__NS_INLINE namespace ip
 
   namespace compat
   {
-  YASIO__DECL const char* inet_ntop(int af, const void* src, char* dst, socklen_t size);
+  YASIO__DECL const char* inet_ntop(int af, const void* src, char* dst, socklen_t);
   YASIO__DECL int inet_pton(int af, const char* src, void* dst);
   } // namespace compat
 
@@ -431,7 +431,7 @@ YASIO__NS_INLINE namespace ip
     }
 
     int af() const { return sa_.sa_family; }
-    std::string to_string(void) const
+    std::string to_string() const
     {
       std::string addr(64, '[');
 
@@ -473,6 +473,38 @@ YASIO__NS_INLINE namespace ip
       ipstring.resize(n);
 
       return ipstring;
+    }
+    /*
+     %N: s_net
+     %H: s_host
+     %L: s_lh
+     %M: s_impno
+     %l: low byte of port
+     %h: high byte of port
+    */
+    std::string to_strf_v4(const char* foramt)
+    {
+      static const char* const fmts[] = {"%N", "%H", "%L", "%M", "%l", "%h"};
+
+      unsigned char addr_bin[sizeof(in4_.sin_addr.s_addr) + sizeof(u_short)];
+      memcpy(addr_bin, &in4_.sin_addr.s_addr, sizeof(in4_.sin_addr.s_addr));
+      memcpy(addr_bin + sizeof(in4_.sin_addr.s_addr), &in4_.sin_port, sizeof(in4_.sin_port));
+
+      char strVal[sizeof("255")] = {0};
+      const size_t _N0           = sizeof("%N") - 1;
+      std::string s              = foramt;
+      for (size_t idx = 0; idx < YASIO_ARRAYSIZE(fmts); ++idx)
+      {
+        auto fmt   = fmts[idx];
+        auto offst = s.find(fmt);
+        if (offst != std::string::npos)
+        {
+          sprintf(strVal, "%u", addr_bin[idx]);
+          s.replace(offst, _N0, strVal);
+        }
+      }
+
+      return s;
     }
     unsigned short port(void) const { return ntohs(in4_.sin_port); }
     void port(unsigned short value) { in4_.sin_port = htons(value); }

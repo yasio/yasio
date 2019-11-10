@@ -28,7 +28,7 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 ## Intergation guides:  
 ### cpp intergation: 
 Compile yasio\xxsocket.cpp yasio\yasio.cpp with your project  
-[tcptest](https://github.com/simdsoft/yasio/blob/master/tests/tcptest/main.cpp)  
+please see: [tcptest](https://github.com/simdsoft/yasio/blob/master/tests/tcptest/main.cpp)  
   
     
 ### Lua intergation: 

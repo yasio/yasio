@@ -1,8 +1,8 @@
 //
 // Copyright (c) 2014-2019 HALX99 - All Rights Reserved
 //
-#ifndef YASIO__SINGLETON_H
-#define YASIO__SINGLETON_H
+#ifndef YASIO__SINGLETON_HPP
+#define YASIO__SINGLETON_HPP
 #include <new>
 #include <memory>
 #include <functional>

@@ -43,9 +43,9 @@ SOFTWARE.
 #  include <map>
 #endif
 #include "yasio/detail/config.hpp"
-#include "yasio/detail/endian_portable.h"
-#include "yasio/detail/object_pool.h"
-#include "yasio/detail/singleton.h"
+#include "yasio/detail/endian_portable.hpp"
+#include "yasio/detail/object_pool.hpp"
+#include "yasio/detail/singleton.hpp"
 #include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/concurrent_queue.hpp"
 #include "yasio/cxx17/string_view.hpp"

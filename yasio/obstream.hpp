@@ -32,7 +32,7 @@ SOFTWARE.
 #include <sstream>
 #include <vector>
 #include <stack>
-#include "yasio/detail/endian_portable.h"
+#include "yasio/detail/endian_portable.hpp"
 #include "yasio/detail/config.hpp"
 namespace yasio
 {

@@ -33,7 +33,7 @@ SOFTWARE.
 #include <exception>
 #include <vector>
 #include "yasio/cxx17/string_view.hpp"
-#include "yasio/detail/endian_portable.h"
+#include "yasio/detail/endian_portable.hpp"
 #include "yasio/detail/config.hpp"
 namespace yasio
 {

@@ -4,3 +4,6 @@
 [submodule "examples/lua/luajit"]
 	path = examples/lua/luajit
 	url = https://github.com/LuaJIT/LuaJIT
+[submodule "yasio/kcp"]
+	path = yasio/kcp
+	url = https://github.com/simdsoft/kcp

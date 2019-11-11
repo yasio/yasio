@@ -50,6 +50,7 @@ namespace gc
 #define YASIO_SZ_ALIGN(d, a) (((d) + ((a)-1)) & ~((a)-1))
 #define YASIO_POOL_ESTIMATE_SIZE(element_type) YASIO_SZ_ALIGN(sizeof(element_type), sizeof(void*))
 #define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
+#define YASIO_POOL_PREALLOCATE 1
 
 namespace detail
 {
@@ -78,7 +79,7 @@ public:
         allocated_count_(0)
 #endif
   {
-#if OBJECT_POOL_PREALLOCATE
+#if YASIO_POOL_PREALLOCATE
     release(allocate_from_process_heap()); // preallocate 1 chunk
 #endif
   }

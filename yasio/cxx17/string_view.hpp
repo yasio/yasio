@@ -1356,6 +1356,19 @@ inline bool operator>=(const basic_string_view<_CharT, _Traits>& lhs,
 
 #endif
 
+namespace cxx17
+{
+template <typename _CharT, typename _Traits, typename Allocator>
+void assign(std::basic_string<_CharT, _Traits, Allocator>& lhs,
+            const basic_string_view<_CharT, _Traits>& rhs)
+{
+  if (!rhs.empty())
+    lhs.assign(rhs.data(), rhs.size());
+  else
+    lhs.clear();
+}
+} // namespace cxx17
+
 namespace cxx20
 {
 // starts_with(), since C++20:

@@ -412,7 +412,7 @@ private:
   std::vector<char> packet_;
 };
 
-class io_service
+class io_service // lgtm [cpp/include-non-header]
 {
   friend class deadline_timer;
   friend class io_transport_posix;
@@ -470,10 +470,12 @@ public:
              YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
              YOPT_RESOLV_FN   func:resolv_fn_t*
              YOPT_PRINT_FN func:print_fn_t, native only, you must ensure thread safe of it.
-             YOPT_CHANNEL_LFBFD_PARAMS    index:int, max_frame_length:int, length_field_offst:int,
+             YOPT_CHANNEL_LFBFD_PARAMS  index:int, max_frame_length:int, length_field_offst:int,
                                     length_field_length:int, length_adjustment:int
              YOPT_IO_EVENT_CB func:io_event_callback_t*
+             YOPT_CHANNEL_LOCAL_HOST index:int, ip:const char*
              YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
+             YOPT_CHANNEL_LOCAL_ENDPOINT index:int, ip:const char*, port:int
              YOPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
              YOPT_CHANNEL_REMOTE_PORT index:int, port:int
              YOPT_CHANNEL_REMOTE_ENDPOINT index:int, ip:const char*, port:int
@@ -685,7 +687,7 @@ private:
 #define yasio_shared_service yasio::gc::singleton<yasio::inet::io_service>::instance()
 
 #if defined(YASIO_HEADER_ONLY)
-#  include "yasio/yasio.cpp"
+#  include "yasio/yasio.cpp" // lgtm [cpp/include-non-header]
 #endif
 
 #endif

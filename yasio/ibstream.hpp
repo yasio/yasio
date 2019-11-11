@@ -153,7 +153,7 @@ private:
 } // namespace yasio
 
 #if defined(YASIO_HEADER_ONLY)
-#  include "yasio/ibstream.cpp"
+#  include "yasio/ibstream.cpp" // lgtm [cpp/include-non-header]
 #endif
 
 #endif

@@ -82,12 +82,12 @@ namespace
 // error code
 enum
 {
-  YERR_OK             = 0,    // NO ERROR.
-  YERR_INVALID_PACKET = -500, // Invalid packet.
-  YERR_DPL_ILLEGAL_PDU,       // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED,    // Resolve host failed.
-  YERR_NO_AVAIL_ADDR,         // No available address to connect.
-  YERR_LOCAL_SHUTDOWN,        // Local shutdown the connection.
+  YERR_OK                 = 0,    // NO ERROR.
+  YERR_INVALID_PACKET     = -500, // Invalid packet.
+  YERR_DPL_ILLEGAL_PDU    = -499, // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED = -498, // Resolve host failed.
+  YERR_NO_AVAIL_ADDR      = -497, // No available address to connect.
+  YERR_LOCAL_SHUTDOWN     = -496, // Local shutdown the connection.
 };
 
 // event mask
@@ -1584,7 +1584,7 @@ const char* io_service::strerror(int error)
   }
 }
 
-void io_service::set_option(int option, ...)
+void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-function]
 {
   va_list ap;
   va_start(ap, option);

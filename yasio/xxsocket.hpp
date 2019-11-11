@@ -296,7 +296,7 @@ YASIO__NS_INLINE namespace ip
         flg_reserved : 2;
     unsigned short win_length;
     unsigned short checksum;
-    unsigned short urp; // emergency
+    unsigned short urp; // lgtm [cpp/class-many-fields]
   };
 
   struct udp_header
@@ -1062,7 +1062,7 @@ namespace net = inet;
 #endif
 
 #if defined(YASIO_HEADER_ONLY)
-#  include "yasio/xxsocket.cpp"
+#  include "yasio/xxsocket.cpp" // lgtm [cpp/include-non-header]
 #endif
 
 #endif

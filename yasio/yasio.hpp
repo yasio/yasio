@@ -241,7 +241,7 @@ private:
     local_port_ = port;
   }
 
-  YASIO__DECL void enable_multicast(std::shared_ptr<xxsocket>&, bool loopback);
+  YASIO__DECL void enable_multicast(std::shared_ptr<xxsocket>&, int loopback);
   YASIO__DECL void disable_multicast(std::shared_ptr<xxsocket>&);
 
   YASIO__DECL void setup_remote_host(std::string host);

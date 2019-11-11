@@ -204,14 +204,14 @@ io_channel::io_channel(io_service& service) : deadline_timer_(service)
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
-void io_channel::enable_multicast(std::shared_ptr<xxsocket>& sock, bool loopback)
+void io_channel::enable_multicast(std::shared_ptr<xxsocket>& sock, int loopback)
 {
   if (sock && !this->remote_eps_.empty())
   {
     auto& ep = this->remote_eps_[0];
     // loopback
     sock->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                     ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, (int)loopback);
+                     ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
     // ttl
     sock->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                      ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,

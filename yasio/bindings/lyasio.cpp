@@ -378,9 +378,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
               "close", static_cast<void (io_service::*)(transport_handle_t)>(&io_service::close),
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
-              "write",
-              static_cast<int (io_service::*)(transport_handle_t transport,
-                                              std::vector<char> data)>(&io_service::write),
+              "write", &io_service::write,
               [](io_service* service, transport_handle_t transport, yasio::obstream* obs) {
                 return service->write(transport, std::move(obs->buffer()));
               })

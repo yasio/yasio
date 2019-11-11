@@ -613,7 +613,7 @@ void io_service::run()
   _set_thread_name("yasio");
 
   // Call once at startup
-  this->ipsv_ = xxsocket::getipsv();
+  this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
 
   // event loop
   fd_set fds_array[max_ops];
@@ -802,7 +802,7 @@ void io_service::open(size_t cindex, int channel_mask)
   auto ctx = cindex_to_handle(cindex);
   if (ctx != nullptr)
   {
-    ctx->mask_ = channel_mask;
+    ctx->mask_ = static_cast<u_short>(channel_mask);
     if (channel_mask & YCM_TCP)
       ctx->protocol_ = SOCK_STREAM;
     else if (channel_mask & YCM_UDP)
@@ -913,7 +913,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 {
   assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY));
   if (this->ipsv_ == 0)
-    this->ipsv_ = xxsocket::getipsv();
+    this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
   if (ctx->socket_->is_open())
     cleanup_io(ctx);
 

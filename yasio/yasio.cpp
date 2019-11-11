@@ -204,18 +204,18 @@ io_channel::io_channel(io_service& service) : deadline_timer_(service)
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
-void io_channel::setup_multicast(std::shared_ptr<xxsocket>& sock)
+void io_channel::enable_multicast(std::shared_ptr<xxsocket>& sock, bool loopback)
 {
   if (sock && !this->remote_eps_.empty())
   {
     auto& ep = this->remote_eps_[0];
-    // disable loopback
-    socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                        ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, (int)0);
+    // loopback
+    sock->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
+                     ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, (int)loopback);
     // ttl
-    socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                        ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
-                        YASIO_DEFAULT_MULTICAST_TTL);
+    sock->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
+                     ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
+                     YASIO_DEFAULT_MULTICAST_TTL);
 
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
@@ -224,7 +224,7 @@ void io_channel::setup_multicast(std::shared_ptr<xxsocket>& sock)
   }
 }
 
-void io_channel::cleanup_multicast(std::shared_ptr<xxsocket>& sock)
+void io_channel::disable_multicast(std::shared_ptr<xxsocket>& sock)
 {
   if (sock && !this->remote_eps_.empty())
   {
@@ -935,8 +935,8 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP)
       ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-    if (ctx->mask_ & YCM_MULTICAST)
-      ctx->setup_multicast(ctx->socket_);
+    if (ctx->mask_ & YCM_MCAST)
+      ctx->enable_multicast(ctx->socket_, ctx->mask_ & YCM_MCAST_LOOPBACK);
     ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     if (ret < 0)
     { // setup no blocking connect
@@ -1003,6 +1003,8 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   {
     int error = 0;
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->mask_ & YCM_MCAST)
+      ctx->enable_multicast(ctx->socket_, ctx->mask_ & YCM_MCAST_LOOPBACK);
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
@@ -1017,12 +1019,10 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     {
       ctx->state_ = YCS_OPENED;
       ctx->socket_->set_nonblocking(true);
+
       if (ctx->mask_ & YCM_UDP)
-      {
         ctx->udp_buffer_.resize(YASIO_INET_BUFFER_SIZE);
-        if (ctx->mask_ & YCM_MULTICAST)
-          ctx->setup_multicast(ctx->socket_);
-      }
+
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       YASIO_SLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
                  (int)ctx->socket_->native_handle(), ep.to_string().c_str());
@@ -1109,10 +1109,10 @@ transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoin
                     : -1;
     if (error == 0)
     {
-      auto transport = allocate_transport(ctx, std::move(client_sock));
-      if (ctx->mask_ & YCM_MULTICAST)
-        ctx->setup_multicast(transport->socket_);
+      if (ctx->mask_ & YCM_MCAST)
+        ctx->enable_multicast(client_sock, ctx->mask_ & YCM_MCAST_LOOPBACK);
 
+      auto transport = allocate_transport(ctx, std::move(client_sock));
 #if !defined(_WIN32)
       handle_connect_succeed(transport);
 #else

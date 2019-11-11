@@ -103,9 +103,10 @@ enum
   YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
   YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
 #endif
-  YCM_MULTICAST        = 1 << 5,
-  YCM_MULTICAST_CLIENT = YCM_MULTICAST | YCM_UDP_CLIENT,
-  YCM_MULTICAST_SERVER = YCM_MULTICAST | YCM_UDP_SERVER,
+  YCM_MCAST          = 1 << 5,
+  YCM_MCAST_CLIENT   = YCM_MCAST | YCM_UDP_CLIENT,
+  YCM_MCAST_SERVER   = YCM_MCAST | YCM_UDP_SERVER,
+  YCM_MCAST_LOOPBACK = 1 << 6,
 };
 
 // event kinds
@@ -240,11 +241,11 @@ private:
     local_port_ = port;
   }
 
+  YASIO__DECL void enable_multicast(std::shared_ptr<xxsocket>&, bool loopback);
+  YASIO__DECL void disable_multicast(std::shared_ptr<xxsocket>&);
+
   YASIO__DECL void setup_remote_host(std::string host);
   YASIO__DECL void setup_remote_port(u_short port);
-
-  YASIO__DECL void setup_multicast(std::shared_ptr<xxsocket>&);
-  YASIO__DECL void cleanup_multicast(std::shared_ptr<xxsocket>&);
 
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);

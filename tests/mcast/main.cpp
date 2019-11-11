@@ -13,7 +13,7 @@ void yasioMulticastTest()
 {
   io_service service;
 
-  io_hostent hosts[] = {{"224.0.0.19", 20524}};
+  io_hostent hosts[] = {{"0.0.0.0", 20524}};
 
   service.start_service(hosts, YASIO_ARRAYSIZE(hosts), [&](event_ptr&& event) {
     switch (event->kind())
@@ -55,7 +55,10 @@ void yasioMulticastTest()
   });
 
   service.set_option(YOPT_CHANNEL_LFBFD_PARAMS, 0, 16384, -1, 0, 0);
-  service.open(0, YCM_MULTICAST_SERVER);
+
+  /// channel 0: enable  multicast server
+  service.set_option(YOPT_CHANNEL_REMOTE_HOST, 0, "224.0.0.19");
+  service.open(0, YCM_MCAST_SERVER | YCM_MCAST_LOOPBACK);
 
   time_t duration = 0;
   while (service.is_running())

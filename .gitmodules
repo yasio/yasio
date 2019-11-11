@@ -1,6 +1,6 @@
 [submodule "yasio/kcp"]
 	path = yasio/kcp
-	url = https://github.com/skywind3000/kcp
+	url = https://github.com/simdsoft/kcp
 [submodule "examples/ftp_server"]
 	path = examples/ftp_server
 	url = https://github.com/simdsoft/ftp_server

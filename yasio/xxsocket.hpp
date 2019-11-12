@@ -284,9 +284,9 @@ YASIO__NS_INLINE namespace ip
     unsigned short tcp_length;
   };
 
-  struct tcp_header // lgtm [cpp/class-many-fields]
+  struct tcp_header
   {
-    unsigned short src_port;
+    unsigned short src_port; // lgtm [cpp/class-many-fields]
     unsigned short dst_port;
     unsigned int seqno;
     unsigned int ackno;

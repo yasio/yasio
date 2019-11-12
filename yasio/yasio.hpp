@@ -348,8 +348,8 @@ private:
   std::string remote_host_; // only for client to connect remote host.
   std::vector<ip::endpoint> remote_eps_;
 
-  // The buffer for udp only
-  std::vector<char> udp_buffer_;
+  // Current it's only for UDP
+  std::vector<char> buffer_;
 };
 
 class io_transport : public io_base

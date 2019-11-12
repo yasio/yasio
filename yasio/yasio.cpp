@@ -1023,7 +1023,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       {
         if (ctx->flags_ & YCF_MCAST)
           ctx->enable_multicast(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
-        ctx->udp_buffer_.resize(YASIO_INET_BUFFER_SIZE);
+        ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       YASIO_SLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
@@ -1067,8 +1067,8 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         else // YCM_UDP
         {
           ip::endpoint peer;
-          int n = ctx->socket_->recvfrom_i(&ctx->udp_buffer_.front(),
-                                           static_cast<int>(ctx->udp_buffer_.size()), peer);
+          int n = ctx->socket_->recvfrom_i(&ctx->buffer_.front(),
+                                           static_cast<int>(ctx->buffer_.size()), peer);
           if (n > 0)
           {
             YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
@@ -1085,7 +1085,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             {
               this->handle_event(event_ptr(new io_event(
                   transport->cindex(), YEK_PACKET,
-                  std::vector<char>(&ctx->udp_buffer_.front(), &ctx->udp_buffer_.front() + n),
+                  std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n),
                   transport)));
             }
           }
@@ -1701,6 +1701,7 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
             channel->flags_ |= YCF_MCAST_LOOPBACK;
 
           channel->setup_remote_host(va_arg(ap, const char*));
+          channel->setup_remote_port((u_short)va_arg(ap, int));
         }
       }
       break;

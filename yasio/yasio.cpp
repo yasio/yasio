@@ -1708,7 +1708,7 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_B_SOCKOPT: {
+    case YOPT_I_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)
       {

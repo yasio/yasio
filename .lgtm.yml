@@ -11,6 +11,7 @@
 queries:
   # Start by hiding the results of all queries.
   - include: "*"
+  - exclude: "yasio/kcp"
 
 #########################################################################################
 # Define changes to the default code extraction process.                                #

@@ -414,7 +414,7 @@ private:
   std::vector<char> packet_;
 };
 
-class io_service // lgtm [cpp/include-non-header]
+class io_service // lgtm [cpp/class-many-fields]
 {
   friend class deadline_timer;
   friend class io_transport_posix;

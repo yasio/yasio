@@ -54,11 +54,11 @@ void yasioMulticastTest()
     }
   });
 
-  service.set_option(YOPT_CHANNEL_LFBFD_PARAMS, 0, 16384, -1, 0, 0);
+  service.set_option(YOPT_C_LFBFD_PARAMS, 0, 16384, -1, 0, 0);
 
-  /// channel 0: enable  multicast server
-  service.set_option(YOPT_CHANNEL_REMOTE_HOST, 0, "224.0.0.19");
-  service.open(0, YCM_MCAST_SERVER | YCM_MCAST_LOOPBACK);
+  /// channel 0: enable  multicast
+  service.set_option(YOPT_C_MCAST_PARAMS, 0, 1, 1, "224.0.0.19");
+  service.open(0, YCM_UDP_SERVER);
 
   time_t duration = 0;
   while (service.is_running())

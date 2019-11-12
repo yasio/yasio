@@ -45,7 +45,7 @@ void yasioTest()
                            unsigned short port) {
     return service.__builtin_resolv(endpoints, hostname, port);
   };
-  service.set_option(YOPT_RESOLV_FN, &resolv);
+  service.set_option(YOPT_S_RESOLV_FN, &resolv);
 
   std::vector<transport_handle_t> transports;
 
@@ -109,8 +109,7 @@ void yasioTest()
   ** if no response, then he connection will shutdown by driver.
   ** At windows will close with error: 10054
   */
-  service.set_option(YOPT_TCP_KEEPALIVE, 5, 10, 2);
-  service.set_option(YOPT_CHANNEL_LFBFD_PARAMS, 0, 16384, -1, 0, 0);
+  service.set_option(YOPT_S_TCP_KEEPALIVE, 5, 10, 2);
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
   service.open(0); // open http client

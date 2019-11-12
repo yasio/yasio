@@ -21,13 +21,7 @@ void run_test()
 
   io_service service;
 
-  service.set_option(YOPT_TCP_KEEPALIVE, 60, 30, 3);
-
-  resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname,
-                           unsigned short port) {
-    return service.__builtin_resolv(endpoints, hostname, port);
-  };
-  service.set_option(YOPT_RESOLV_FN, &resolv);
+  service.set_option(YOPT_S_TCP_KEEPALIVE, 60, 30, 3);
 
   std::vector<transport_handle_t> transports;
   deadline_timer udp_msg_delay(service);
@@ -87,11 +81,14 @@ void run_test()
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  service.set_option(YOPT_CHANNEL_LOCAL_PORT, 0, 30002);
-  service.set_option(YOPT_CHANNEL_LOCAL_PORT, 1, 30001);
+  service.set_option(YOPT_C_LOCAL_PORT, 0, 30002);
+  service.set_option(YOPT_C_LOCAL_PORT, 1, 30001);
 
-  service.open(0, YCM_KCP_CLIENT);
-  service.open(1, YCM_KCP_CLIENT);
+  service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_KCP);
+  service.set_option(YOPT_C_MOD_FLAGS, 1, YCF_KCP);
+
+  service.open(0, YCM_UDP_CLIENT);
+  service.open(1, YCM_UDP_CLIENT);
 
   time_t duration = 0;
   while (service.is_running())

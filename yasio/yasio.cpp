@@ -935,8 +935,8 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP)
       ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-    if (ctx->mask_ & YCM_MCAST)
-      ctx->enable_multicast(ctx->socket_, ctx->mask_ & YCM_MCAST_LOOPBACK);
+    if (ctx->flags_ & YCF_MCAST)
+      ctx->enable_multicast(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
     ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     if (ret < 0)
     { // setup no blocking connect
@@ -1003,8 +1003,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   {
     int error = 0;
     ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-    if (ctx->mask_ & YCM_MCAST)
-      ctx->enable_multicast(ctx->socket_, ctx->mask_ & YCM_MCAST_LOOPBACK);
+
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
@@ -1021,8 +1020,11 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       ctx->socket_->set_nonblocking(true);
 
       if (ctx->mask_ & YCM_UDP)
+      {
+        if (ctx->flags_ & YCF_MCAST)
+          ctx->enable_multicast(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
         ctx->udp_buffer_.resize(YASIO_INET_BUFFER_SIZE);
-
+      }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       YASIO_SLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
                  (int)ctx->socket_->native_handle(), ep.to_string().c_str());
@@ -1109,8 +1111,8 @@ transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoin
                     : -1;
     if (error == 0)
     {
-      if (ctx->mask_ & YCM_MCAST)
-        ctx->enable_multicast(client_sock, ctx->mask_ & YCM_MCAST_LOOPBACK);
+      if (ctx->flags_ & YCF_MCAST)
+        ctx->enable_multicast(client_sock, ctx->flags_ & YCF_MCAST_LOOPBACK);
 
       auto transport = allocate_transport(ctx, std::move(client_sock));
 #if !defined(_WIN32)
@@ -1175,7 +1177,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   else
     vp = operator new(sizeof(io_transport_posix));
 #if defined(YASIO_HAVE_KCP)
-  if (!(ctx->mask_ & YCM_KCP))
+  if (!(ctx->flags_ & YCF_KCP))
     transport = new (vp) io_transport_posix(ctx, socket);
   else
     transport = new (vp) io_transport_kcp(ctx, socket);
@@ -1591,41 +1593,35 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
 
   switch (option)
   {
-    case YOPT_CONNECT_TIMEOUT:
+    case YOPT_S_TIMEOUTS: {
+      options_.dns_cache_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       options_.connect_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YOPT_RECONNECT_TIMEOUT: {
       int value = va_arg(ap, int);
       if (value > 0)
         options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
       else
         options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
+      break;
     }
-    break;
-    case YOPT_DNS_CACHE_TIMEOUT:
-      options_.dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    case YOPT_DEFER_EVENT:
-      options_.deferred_event_ = !!va_arg(ap, int);
-      break;
-    case YOPT_DEFER_HANDLER:
+    case YOPT_S_DEFERS:
+      options_.deferred_event_   = !!va_arg(ap, int);
       options_.deferred_handler_ = !!va_arg(ap, int);
       break;
-    case YOPT_TCP_KEEPALIVE:
+    case YOPT_S_TCP_KEEPALIVE:
       options_.tcp_keepalive_.onoff    = 1;
       options_.tcp_keepalive_.idle     = va_arg(ap, int);
       options_.tcp_keepalive_.interval = va_arg(ap, int);
       options_.tcp_keepalive_.probs    = va_arg(ap, int);
       break;
-    case YOPT_RESOLV_FN:
+    case YOPT_S_RESOLV_FN:
       options_.resolv_ = *va_arg(ap, resolv_fn_t*);
       break;
-    case YOPT_PRINT_FN:
+    case YOPT_S_PRINT_FN:
       this->options_.print_ = *va_arg(ap, print_fn_t*);
       break;
-    case YOPT_CHANNEL_LFBFD_PARAMS: {
+    case YOPT_C_LFBFD_PARAMS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
@@ -1636,40 +1632,40 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       }
       break;
     }
-    case YOPT_IO_EVENT_CB:
+    case YOPT_S_EVENT_CB:
       options_.on_event_ = *va_arg(ap, io_event_cb_t*);
       break;
-    case YOPT_CHANNEL_LFBFD_FN: {
+    case YOPT_C_LFBFD_FN: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->decode_len_ = *va_arg(ap, decode_len_fn_t*);
     }
     break;
-    case YOPT_CHANNEL_LOCAL_HOST: {
+    case YOPT_C_LOCAL_HOST: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->local_host_ = va_arg(ap, const char*);
       break;
     }
-    case YOPT_CHANNEL_LOCAL_PORT: {
+    case YOPT_C_LOCAL_PORT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->local_port_ = (u_short)va_arg(ap, int);
       break;
     }
-    case YOPT_CHANNEL_REMOTE_HOST: {
+    case YOPT_C_REMOTE_HOST: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->setup_remote_host(va_arg(ap, const char*));
     }
     break;
-    case YOPT_CHANNEL_REMOTE_PORT: {
+    case YOPT_C_REMOTE_PORT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->setup_remote_port((u_short)va_arg(ap, int));
     }
     break;
-    case YOPT_CHANNEL_LOCAL_ENDPOINT: {
+    case YOPT_C_LOCAL_ENDPOINT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel != nullptr)
       {
@@ -1678,7 +1674,7 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       }
     }
     break;
-    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
+    case YOPT_C_REMOTE_ENDPOINT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
@@ -1686,11 +1682,33 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         channel->setup_remote_port((u_short)va_arg(ap, int));
       }
     }
-    break;
-    case YOPT_NO_NEW_THREAD:
+    case YOPT_C_MOD_FLAGS: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        channel->flags_ |= (u_short)va_arg(ap, int);
+      }
+      break;
+    }
+    case YOPT_C_MCAST_PARAMS: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        if (va_arg(ap, int))
+        {
+          channel->flags_ |= YCF_MCAST;
+          if (va_arg(ap, int))
+            channel->flags_ |= YCF_MCAST_LOOPBACK;
+
+          channel->setup_remote_host(va_arg(ap, const char*));
+        }
+      }
+      break;
+    }
+    case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_IO_SOCKOPT: {
+    case YOPT_B_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)
       {

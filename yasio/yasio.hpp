@@ -66,25 +66,24 @@ namespace inet
 // options
 enum
 {
-  YOPT_CONNECT_TIMEOUT = 1,
-  YOPT_RECONNECT_TIMEOUT,
-  YOPT_DNS_CACHE_TIMEOUT,
-  YOPT_DEFER_EVENT,
-  YOPT_DEFER_HANDLER,
-  YOPT_TCP_KEEPALIVE, // the default usually is idle=7200, interval=75, probes=10
-  YOPT_RESOLV_FN,
-  YOPT_PRINT_FN,
-  YOPT_IO_EVENT_CB,
-  YOPT_NO_NEW_THREAD,    // Don't start a new thread to run event loop
-  YOPT_CHANNEL_LFBFD_FN, // length field based frame decode function, Native C++ ONLY
-  YOPT_CHANNEL_LFBFD_PARAMS,
-  YOPT_CHANNEL_LOCAL_PORT, // Sets channel local port
-  YOPT_CHANNEL_LOCAL_HOST, // Sets channel local host, for server only to bind specified ifaddr
-  YOPT_CHANNEL_LOCAL_ENDPOINT,
-  YOPT_CHANNEL_REMOTE_HOST,
-  YOPT_CHANNEL_REMOTE_PORT,
-  YOPT_CHANNEL_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
-  YOPT_IO_SOCKOPT, // Sets io_base sockopt, params: io_base*,level,optname,optval,optlen
+  YOPT_S_TIMEOUTS, // Set timeouts in seconds, dns cache timeout, connect timeout, reconnect timeout
+  YOPT_S_DEFERS,   // defer dispatch event, defer dispatch handler
+  YOPT_S_RESOLV_FN,       // Set custom resolve function, native C++ ONLY
+  YOPT_S_PRINT_FN,        // Set custom print function, native C++ ONLY
+  YOPT_S_EVENT_CB,        // Set custom print function
+  YOPT_S_TCP_KEEPALIVE,   // the default usually is idle=7200, interval=75, probes=10
+  YOPT_S_NO_NEW_THREAD,   // Don't start a new thread to run event loop
+  YOPT_C_LFBFD_FN,        // length field based frame decode function, native C++ ONLY
+  YOPT_C_LFBFD_PARAMS,    // length field based frame decode params, native C++ ONLY
+  YOPT_C_LOCAL_PORT,      // Sets channel local port
+  YOPT_C_LOCAL_HOST,      // Sets channel local host, for server only to bind specified ifaddr
+  YOPT_C_LOCAL_ENDPOINT,  // Sets channel local endpoint: host, port
+  YOPT_C_REMOTE_HOST,     // Sets channel remote host
+  YOPT_C_REMOTE_PORT,     // Sets channel remote port
+  YOPT_C_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
+  YOPT_C_MOD_FLAGS,       // Sets channl flags
+  YOPT_C_MCAST_PARAMS,    // Set channle multicast params: enabled, loopback, mcast_ip
+  YOPT_B_SOCKOPT,         // Sets io_base sockopt
 };
 
 // channel mask
@@ -98,15 +97,16 @@ enum
   YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
   YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
   YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
+};
+
+// channel flags
+enum
+{
+  YCF_MCAST          = 1,
+  YCF_MCAST_LOOPBACK = 1 << 2,
 #if defined(YASIO_HAVE_KCP)
-  YCM_KCP        = 1 << 4,
-  YCM_KCP_CLIENT = YCM_KCP | YCM_UDP_CLIENT,
-  YCM_KCP_SERVER = YCM_KCP | YCM_UDP_SERVER,
+  YCF_KCP = 1 << 3,
 #endif
-  YCM_MCAST          = 1 << 5,
-  YCM_MCAST_CLIENT   = YCM_MCAST | YCM_UDP_CLIENT,
-  YCM_MCAST_SERVER   = YCM_MCAST | YCM_UDP_SERVER,
-  YCM_MCAST_LOOPBACK = 1 << 6,
 };
 
 // event kinds
@@ -250,7 +250,8 @@ private:
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
 
-  u_short mask_ = 0;
+  u_short mask_  = 0;
+  u_short flags_ = 0;
 
   /*
   ** !!! for tcp/udp client, if not zero, will use it as fixed port.
@@ -463,24 +464,26 @@ public:
   YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::dispatch)
   YASIO__DECL void dispatch_events(int count = 512) { dispatch(count); }
 
-  /* option: YOPT_CONNECT_TIMEOUT   timeout:int
-             YOPT_SEND_TIMEOUT      timeout:int
-             YOPT_RECONNECT_TIMEOUT timeout:int
-             YOPT_DNS_CACHE_TIMEOUT timeout:int
-             YOPT_DEFER_EVENT       defer:int
-             YOPT_TCP_KEEPALIVE     idle:int, interal:int, probes:int
-             YOPT_RESOLV_FN   func:resolv_fn_t*
-             YOPT_PRINT_FN func:print_fn_t, native only, you must ensure thread safe of it.
-             YOPT_CHANNEL_LFBFD_PARAMS  index:int, max_frame_length:int, length_field_offst:int,
+  /* option: YOPT_S_TIMEOUTS   dns cache timeout:int, connect, timeout:int,reconnect timeout:int
+             YOPT_S_DEFERS       defer:int, defer handler:int
+             YOPT_S_TCP_KEEPALIVE     idle:int, interal:int, probes:int
+             YOPT_S_RESOLV_FN   func:resolv_fn_t*
+             YOPT_S_PRINT_FN func:print_fn_t, native only, you must ensure thread safe of it.
+             YOPT_S_EVENT_CB func:io_event_callback_t*
+             YOPT_S_NO_NEW_THREAD value:int
+             YOPT_C_LFBFD_PARAMS  index:int, max_frame_length:int, length_field_offst:int,
                                     length_field_length:int, length_adjustment:int
-             YOPT_IO_EVENT_CB func:io_event_callback_t*
-             YOPT_CHANNEL_LOCAL_HOST index:int, ip:const char*
-             YOPT_CHANNEL_LOCAL_PORT  index:int, port:int
-             YOPT_CHANNEL_LOCAL_ENDPOINT index:int, ip:const char*, port:int
-             YOPT_CHANNEL_REMOTE_HOST index:int, ip:const char*
-             YOPT_CHANNEL_REMOTE_PORT index:int, port:int
-             YOPT_CHANNEL_REMOTE_ENDPOINT index:int, ip:const char*, port:int
-             YOPT_NO_NEW_THREAD value:int
+             YOPT_C_LOCAL_HOST index:int, ip:const char*
+             YOPT_C_LOCAL_PORT  index:int, port:int
+             YOPT_C_LOCAL_ENDPOINT index:int, ip:const char*, port:int
+             YOPT_C_REMOTE_HOST index:int, ip:const char*
+             YOPT_C_REMOTE_PORT index:int, port:int
+             YOPT_C_REMOTE_ENDPOINT index:int, ip:const char*, port:int
+             YOPT_C_MOD_FLAGS index:int, flags:int
+             YOPT_C_MCAST_PARAMS index:int, enabled:int, [optional] loopback:int,
+                                 [optional]ip:const char*
+             YOPT_B_SOCKOPT: io_base*,level,optname,optval,optlen
+
   */
   YASIO__DECL void set_option(int option, ...);
 

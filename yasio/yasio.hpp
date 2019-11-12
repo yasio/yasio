@@ -83,7 +83,7 @@ enum
   YOPT_C_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
   YOPT_C_MOD_FLAGS,       // Sets channl flags
   YOPT_C_MCAST_PARAMS,    // Set channle multicast params: enabled, loopback, mcast_ip
-  YOPT_B_SOCKOPT,         // Sets io_base sockopt
+  YOPT_I_SOCKOPT,         // Sets io_base sockopt
 };
 
 // channel mask

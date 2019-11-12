@@ -34,18 +34,11 @@ void yasioMulticastTest()
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
-          /*struct ip_mreq mreq;
-          mreq.imr_interface.s_addr = inet_addr("0.0.0.0");
-          mreq.imr_multiaddr.s_addr = inet_addr("224.0.0.19");
-          service.set_option(YOPT_TRANSPORT_SOCKOPT, event->transport(), IPPROTO_IP,
-                             IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));*/
-
           obstream obs;
           obs.write_bytes("hello client, my ip is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n");
           service.write(event->transport(), std::move(obs.buffer()));
-          // service.open(0, YCM_UDP_SERVER);
         }
         break;
       case YEK_CONNECTION_LOST:
@@ -53,8 +46,6 @@ void yasioMulticastTest()
         break;
     }
   });
-
-  service.set_option(YOPT_C_LFBFD_PARAMS, 0, 16384, -1, 0, 0);
 
   /// channel 0: enable  multicast
   service.set_option(YOPT_C_MCAST_PARAMS, 0, 1, 1, "224.0.0.19");
@@ -71,7 +62,6 @@ void yasioMulticastTest()
 
 int main(int, char**)
 {
-  // yasioTest();
   // reference:
   // https://www.winsocketdotnetworkprogramming.com/winsock2programming/winsock2advancedmulticast9a.html
   yasioMulticastTest();

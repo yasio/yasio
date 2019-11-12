@@ -66,7 +66,7 @@ namespace inet
 // options
 enum
 {
-  YOPT_S_TIMEOUTS, // Set timeouts in seconds, dns cache timeout, connect timeout, reconnect timeout
+  YOPT_S_TIMEOUTS = 1, // Set timeouts in seconds, dns cache timeout, connect timeout, reconnect timeout
   YOPT_S_DEFERS,   // defer dispatch event, defer dispatch handler
   YOPT_S_RESOLV_FN,       // Set custom resolve function, native C++ ONLY
   YOPT_S_PRINT_FN,        // Set custom print function, native C++ ONLY
@@ -112,7 +112,7 @@ enum
 // event kinds
 enum
 {
-  YEK_CONNECT_RESPONSE = 0,
+  YEK_CONNECT_RESPONSE = 1,
   YEK_CONNECTION_LOST,
   YEK_PACKET,
 };

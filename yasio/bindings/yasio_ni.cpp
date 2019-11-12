@@ -40,6 +40,8 @@ SOFTWARE.
 #    define YASIO_NI_API
 #  endif
 
+#  define YASIO_MAX_OPTION_ARGC 5
+
 using namespace yasio::inet;
 
 namespace
@@ -116,7 +118,7 @@ YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t s
     }
     return ret;
   };
-  yasio_shared_service->set_option(YOPT_RESOLV_FN, &fn);
+  yasio_shared_service->set_option(YOPT_S_RESOLV_FN, &fn);
 }
 YASIO_NI_API void yasio_set_option(int opt, const char* params)
 {
@@ -124,7 +126,7 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
   auto service          = yasio_shared_service;
   switch (opt)
   {
-    case YOPT_CHANNEL_REMOTE_ENDPOINT: {
+    case YOPT_C_REMOTE_ENDPOINT: {
       int cidx = 0;
       std::string ip;
       int port = 0;
@@ -143,22 +145,24 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
       service->set_option(opt, cidx, ip.c_str(), port);
     }
     break;
-    case YOPT_CHANNEL_LFBFD_PARAMS: {
-      int args[5];
-      int idx = 0;
+    case YOPT_C_LFBFD_PARAMS:
+    case YOPT_S_TIMEOUTS: {
+      int args[YASIO_MAX_OPTION_ARGC];
+      int idx    = 0;
+      int limits = opt == YOPT_C_LFBFD_PARAMS ? 5 : 3;
       fast_split(&strParams.front(), strParams.length(), ';', [&](char* s, char* e) {
         auto ch = *e;
-        if (idx < 5)
+        if (idx < limits)
           args[idx] = atoi(s);
         ++idx;
         *e = ch;
       });
-      service->set_option(opt, args[0], args[1], args[2], args[3], args[4]);
+      if (opt == YOPT_C_LFBFD_PARAMS)
+        service->set_option(opt, args[0], args[1], args[2], args[3], args[4]);
+      else
+        service->set_option(opt, args[0], args[1], args[2]);
       break;
     }
-    case YOPT_DNS_CACHE_TIMEOUT:
-      service->set_option(opt, atoi(params));
-      break;
   }
 }
 YASIO_NI_API void yasio_open(int cindex, int kind) { yasio_shared_service->open(cindex, kind); }
@@ -181,7 +185,7 @@ YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_
 YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*))
 {
   yasio::inet::print_fn_t custom_print = print_fn;
-  yasio_shared_service->set_option(YOPT_PRINT_FN, &custom_print);
+  yasio_shared_service->set_option(YOPT_S_PRINT_FN, &custom_print);
 }
 YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {

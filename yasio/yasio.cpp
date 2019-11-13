@@ -976,7 +976,8 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   int ret = -1;
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->flags_ & YCF_REUSEPORT)
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_host_.empty())
       ctx->local_host_ = YASIO_ANY_ADDR(this->ipsv_);
 
@@ -1063,7 +1064,8 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
     int error = 0;
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->flags_ & YCF_REUSEPORT)
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
 
     if (ctx->socket_->bind(ep) != 0)
     {
@@ -1171,7 +1173,8 @@ transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoin
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
   {
-    client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->flags_ & YCF_REUSEPORT)
+      client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     int error = client_sock->bind("0.0.0.0", ctx->local_port_) == 0
                     ? xxsocket::connect(client_sock->native_handle(), peer)
                     : -1;
@@ -1750,6 +1753,7 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       if (channel)
       {
         channel->flags_ |= (u_short)va_arg(ap, int);
+        channel->flags_ &= ~(u_short)va_arg(ap, int);
       }
       break;
     }

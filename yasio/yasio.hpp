@@ -132,7 +132,7 @@ enum
   YOPT_C_REMOTE_ENDPOINT,
 
   // Sets channl flags
-  // params: index:int, flags:int
+  // params: index:int, flagToAdd:int, flagToRemove:int
   YOPT_C_MOD_FLAGS,
 
   // Sets io_base sockopt
@@ -161,6 +161,7 @@ enum
 #if defined(YASIO_HAVE_KCP)
   YCF_KCP = 1 << 3,
 #endif
+  YCF_REUSEPORT = 1 << 4,
 };
 
 // event kinds

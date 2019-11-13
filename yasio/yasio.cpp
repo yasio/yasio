@@ -68,7 +68,7 @@ SOFTWARE.
 #  define YASIO_SLOGV YASIO_SLOG
 #endif
 
-#define YASIO_ANY_ADDR(flags) ipsv_& ipsv_ipv4 ? "0.0.0.0" : "::"
+#define YASIO_ANY_ADDR(flags) (flags) & ipsv_ipv4 ? "0.0.0.0" : "::"
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -1750,22 +1750,6 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       if (channel)
       {
         channel->flags_ |= (u_short)va_arg(ap, int);
-      }
-      break;
-    }
-    case YOPT_C_MCAST_PARAMS: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
-      if (channel)
-      {
-        if (va_arg(ap, int))
-        {
-          channel->flags_ |= YCF_MCAST;
-          if (va_arg(ap, int))
-            channel->flags_ |= YCF_MCAST_LOOPBACK;
-
-          channel->setup_remote_host(va_arg(ap, const char*));
-          channel->setup_remote_port((u_short)va_arg(ap, int));
-        }
       }
       break;
     }

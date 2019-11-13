@@ -135,12 +135,6 @@ enum
   // params: index:int, flags:int
   YOPT_C_MOD_FLAGS,
 
-  // Set channle multicast params: enabled, loopback, mcast_ip
-  // params: index:int, enabled:int,
-  //         [optional] loopback:int,
-  //         [optional] ip:const char*
-  YOPT_C_MCAST_PARAMS,
-
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
   YOPT_I_SOCKOPT,

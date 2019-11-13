@@ -162,7 +162,7 @@ enum
 // channel flags
 enum
 {
-  YCF_MCAST          = 1,
+  YCF_MCAST          = 1 << 1,
   YCF_MCAST_LOOPBACK = 1 << 2,
 #if defined(YASIO_HAVE_KCP)
   YCF_KCP = 1 << 3,
@@ -297,12 +297,10 @@ private:
   {
     setup_remote_host(host);
     setup_remote_port(port);
-    local_host_ = host;
-    local_port_ = port;
   }
 
-  YASIO__DECL void enable_multicast(std::shared_ptr<xxsocket>&, int loopback);
-  YASIO__DECL void disable_multicast(std::shared_ptr<xxsocket>&);
+  YASIO__DECL int join_multicast_group(std::shared_ptr<xxsocket>&, int loopback);
+  YASIO__DECL void leave_multicast_group(std::shared_ptr<xxsocket>&);
 
   YASIO__DECL void setup_remote_host(std::string host);
   YASIO__DECL void setup_remote_port(u_short port);
@@ -320,8 +318,8 @@ private:
   u_short local_port_ = 0;
 
   /*
-  ** !!! for tcp/udp client, remote port must be specified,
-  ** !!! for tcp/udp server, remote port is unused.
+  ** !!! for tcp/udp client, remote port must be specified
+  ** !!! for tcp/udp server, remote port == local port
   */
   u_short remote_port_ = 0;
 
@@ -344,8 +342,18 @@ private:
   } lfb_;
   decode_len_fn_t decode_len_;
 
-  std::string local_host_;  // only for server wan't bind to specified ifaddr.
-  std::string remote_host_; // only for client to connect remote host.
+  /*
+  !!! for tcp/udp server only, local_host will be ADDR_ANY or specified by set_option
+      YOPT_C_LOCAL_HOST
+  */
+  std::string local_host_;
+
+  /*
+  !!! for tcp/udp client to connect remote host.
+  !!! for multicast, it's used as multicast address,
+      doesn't connect even through recvfrom on packet from remote
+  */
+  std::string remote_host_;
   std::vector<ip::endpoint> remote_eps_;
 
   // Current it's only for UDP
@@ -407,13 +415,18 @@ public:
 class io_transport_posix : public io_transport
 {
 public:
-  io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock) : io_transport(ctx, sock) {}
+  YASIO__DECL io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock);
 
 private:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
+  // set the low level send/recv primitives.
+  YASIO__DECL void set_primitives(bool connected);
+
+  std::function<int(const void*, int)> send_cb_;
+  std::function<int(void*, int)> recv_cb_;
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 

@@ -132,7 +132,7 @@ enum
   YOPT_C_REMOTE_ENDPOINT,
 
   // Sets channl flags
-  // params: index:int, flagToAdd:int, flagToRemove:int
+  // params: index:int, flagsToAdd:int, flagsToRemove:int
   YOPT_C_MOD_FLAGS,
 
   // Sets io_base sockopt

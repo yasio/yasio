@@ -1388,7 +1388,7 @@ inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, _CharT c) // (2)
 template <typename _CharT>
 inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // (3)
 {
-  return starts_with(lhs, cxx17::basic_string_view(s));
+  return starts_with(lhs, cxx17::basic_string_view<_CharT>(s));
 }
 
 // ends_with(), since C++20:
@@ -1408,7 +1408,7 @@ inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT c) // (2)
 template <typename _CharT>
 inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // (3)
 {
-  return ends_with(lhs, cxx17::basic_string_view(s));
+  return ends_with(lhs, cxx17::basic_string_view<_CharT>(s));
 }
 } // namespace cxx20
 

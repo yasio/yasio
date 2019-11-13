@@ -7,6 +7,10 @@
 #########################################################################################
 # Use the `queries` block to change the default display of query results.               #
 #########################################################################################
+path_classifiers:
+  test: tests
+  library:
+    - exclude: yasio/kcp
 
 queries:
   # Start by hiding the results of all queries.

@@ -20,8 +20,8 @@ void yasioMulticastTest()
   io_service service;
 
   io_hostent hosts[] = {
-      {"224.0.0.19", 20524}, // multicast server
-      {"224.0.0.19", 20524}  // multicast client
+      {"224.0.0.19", 22016}, // multicast server
+      {"224.0.0.19", 22016}  // multicast client
   };
 
   service.start_service(hosts, YASIO_ARRAYSIZE(hosts), [&](event_ptr&& event) {
@@ -29,8 +29,7 @@ void yasioMulticastTest()
 
     switch (event->kind())
     {
-      case YEK_PACKET:
-      {
+      case YEK_PACKET: {
         // print packet msg
         auto packet = std::move(event->packet());
         fwrite(packet.data(), packet.size(), 1, stdout);
@@ -38,15 +37,14 @@ void yasioMulticastTest()
         fflush(stdout);
 
         if (event->cindex() == MCAST_SERVER_INDEX)
-        { // multicast udp server channel
+        {
+          // multicast udp server channel
           // delay reply msg
           obstream obs;
           obs.write_bytes("hello client, my ip is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n\n");
-          service.schedule(std::chrono::seconds(2), [&, thandle, obs](bool) {
-            service.write(thandle, std::move(obs.buffer()));
-          });
+          service.write(thandle, std::move(obs.buffer()));
         }
         else if (event->cindex() == MCAST_CLIENT_INDEX)
         {
@@ -54,7 +52,10 @@ void yasioMulticastTest()
           obs.write_bytes("hello server, my ip is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n");
-          service.write(thandle, std::move(obs.buffer()));
+
+          service.schedule(std::chrono::milliseconds(1000), [&, thandle, obs](bool) {
+            service.write(thandle, std::move(obs.buffer()));
+          });
         }
         break;
       }

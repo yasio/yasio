@@ -415,18 +415,20 @@ void io_transport_posix::set_primitives(bool connected)
       ip::endpoint peer;
       int n = socket_->recvfrom_i(data, len, peer);
 
-      // Try established 4 tuple
-      // if (n > 0 && 0 == socket_->connect_n(peer))
-      // {
-      //   // multicast client
-      //   ctx_->leave_multicast_group(socket_);
-      // 
-      //   YASIO_LOG("The multicast client: [%s] --> [%s] is connected.",
-      //             socket_->local_endpoint().to_string().c_str(),
-      //             socket_->peer_endpoint().to_string().c_str());
-      // 
-      //   set_primitives(true);
-      // }
+      // Now the 'peer' is a real host address
+      // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
+      if (n > 0 && 0 == socket_->connect_n(peer))
+      {
+        ctx_->leave_multicast_group(socket_);
+
+        YASIO_SLOG_IMPL(
+            get_service().options_,
+            "[index: %d] the connection #%u [%s] --> [%s] is established through multicast: [%s].",
+            ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
+            socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
+
+        set_primitives(true);
+      }
       return n;
     };
   }
@@ -1135,7 +1137,9 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
             auto transport = make_dgram_transport(ctx, peer);
-#else // Win32 ONLY support one by one client <--> server for UDP.
+#else
+            // for win32, we manage dgram clients by ourself, and perfrom write operation only in
+            // dgram_transports, the read operation still dispatch by channel.
             auto it = this->dgram_transports_.find(peer);
             auto transport =
                 it != this->dgram_transports_.end() ? it->second : make_dgram_transport(ctx, peer);
@@ -1149,8 +1153,12 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           }
           else
           {
-            YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
-            cleanup_io(ctx);
+            error = xxsocket::get_last_errno();
+            if (SHOULD_CLOSE_0(n, error))
+            {
+              YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
+              close(ctx->index_);
+            }
           }
         }
       }
@@ -1214,11 +1222,9 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
   auto ctx         = transport->ctx_;
   auto& connection = transport->socket_;
 
-  std::string local = connection->local_endpoint().to_string();
-  std::string peer  = connection->peer_endpoint().to_string();
   YASIO_SLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
-             transport->id_, ctx->mask_ & YCM_CLIENT ? local.c_str() : peer.c_str(),
-             ctx->mask_ & YCM_CLIENT ? peer.c_str() : local.c_str());
+             transport->id_, connection->local_endpoint().to_string().c_str(),
+             connection->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }
 

@@ -984,7 +984,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if (!(ctx->flags_ & YCF_MCAST))
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     else
-      ret = ctx->join_multicast_group(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK & 0x1);
+      ret = ctx->join_multicast_group(ctx->socket_, (ctx->flags_ & YCF_MCAST_LOOPBACK) != 0);
     if (ret < 0)
     { // setup no blocking connect
       int error = xxsocket::get_last_errno();
@@ -1082,7 +1082,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       if (ctx->mask_ & YCM_UDP)
       {
         if (ctx->flags_ & YCF_MCAST)
-          ctx->join_multicast_group(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK & 0x1);
+          ctx->join_multicast_group(ctx->socket_, (ctx->flags_ & YCF_MCAST_LOOPBACK) != 0);
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);

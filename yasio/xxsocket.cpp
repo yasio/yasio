@@ -948,14 +948,17 @@ int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
 
 int xxsocket::bind(const char* addr, unsigned short port) const
 {
-  endpoint local_ep(addr, port);
-
-  return this->bind(local_ep);
+  return this->bind(endpoint(addr, port));
 }
 
 int xxsocket::bind(const endpoint& ep) const
 {
   return ::bind(this->fd, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
+}
+
+int xxsocket::bind_any(bool ipv6) const
+{
+  return this->bind(endpoint(!ipv6 ? "0.0.0.0" : "::", 0));
 }
 
 int xxsocket::listen(int backlog) const { return ::listen(this->fd, backlog); }

@@ -657,6 +657,7 @@ public:
   */
   YASIO__DECL int bind(const char* addr, unsigned short port) const;
   YASIO__DECL int bind(const endpoint&) const;
+  YASIO__DECL int bind_any(bool ipv6 = false) const;
 
   /* @brief: Places this socket in a state in which it is listening for an incoming connection
   ** @params:

@@ -304,7 +304,9 @@ private:
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
 
   u_short mask_  = 0;
-  u_short flags_ = 0;
+  
+  // For compat reason, we set default flags to YCF_REUSEPORT
+  u_short flags_ = YCF_REUSEPORT;
 
   /*
   ** !!! for tcp/udp client, if not zero, will use it as fixed port.

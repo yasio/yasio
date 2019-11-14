@@ -4,14 +4,18 @@
 # statistics.                                                                            #
 ##########################################################################################
 
-#########################################################################################
-# Use the `queries` block to change the default display of query results.               #
-#########################################################################################
+##########################################################################################
+# Use the `path_classifiers` block to define changes to the default classification of    #
+# files.                                                                                 #
+##########################################################################################
 path_classifiers:
   test: tests
   library:
-    - exclude: yasio/kcp
+    - exclude: yasio/kcp/*.c
 
+#########################################################################################
+# Use the `queries` block to change the default display of query results.               #
+#########################################################################################
 queries:
   # Start by hiding the results of all queries.
   - include: "*"
@@ -73,4 +77,4 @@ extraction:
       # to use instead. 
       build_command:
         - cd $LGTM_SRC/build
-        - cmake --build . --config Release --clean-first
+        - cmake --build . --target ftp_server --config Release --clean-first

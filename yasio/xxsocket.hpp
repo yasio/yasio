@@ -286,7 +286,7 @@ YASIO__NS_INLINE namespace ip
 
   struct tcp_header
   {
-    unsigned short src_port;
+    unsigned short src_port; // lgtm [cpp/class-many-fields]
     unsigned short dst_port;
     unsigned int seqno;
     unsigned int ackno;
@@ -296,7 +296,7 @@ YASIO__NS_INLINE namespace ip
         flg_reserved : 2;
     unsigned short win_length;
     unsigned short checksum;
-    unsigned short urp; // lgtm [cpp/class-many-fields]
+    unsigned short urp;
   };
 
   struct udp_header

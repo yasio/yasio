@@ -66,24 +66,78 @@ namespace inet
 // options
 enum
 {
-  YOPT_S_TIMEOUTS, // Set timeouts in seconds, dns cache timeout, connect timeout, reconnect timeout
-  YOPT_S_DEFERS,   // defer dispatch event, defer dispatch handler
-  YOPT_S_RESOLV_FN,       // Set custom resolve function, native C++ ONLY
-  YOPT_S_PRINT_FN,        // Set custom print function, native C++ ONLY
-  YOPT_S_EVENT_CB,        // Set custom print function
-  YOPT_S_TCP_KEEPALIVE,   // the default usually is idle=7200, interval=75, probes=10
-  YOPT_S_NO_NEW_THREAD,   // Don't start a new thread to run event loop
-  YOPT_C_LFBFD_FN,        // length field based frame decode function, native C++ ONLY
-  YOPT_C_LFBFD_PARAMS,    // length field based frame decode params, native C++ ONLY
-  YOPT_C_LOCAL_PORT,      // Sets channel local port
-  YOPT_C_LOCAL_HOST,      // Sets channel local host, for server only to bind specified ifaddr
-  YOPT_C_LOCAL_ENDPOINT,  // Sets channel local endpoint: host, port
-  YOPT_C_REMOTE_HOST,     // Sets channel remote host
-  YOPT_C_REMOTE_PORT,     // Sets channel remote port
-  YOPT_C_REMOTE_ENDPOINT, // Sets remote endpoint: host, port
-  YOPT_C_MOD_FLAGS,       // Sets channl flags
-  YOPT_C_MCAST_PARAMS,    // Set channle multicast params: enabled, loopback, mcast_ip
-  YOPT_B_SOCKOPT,         // Sets io_base sockopt
+  // Set timeouts in seconds
+  // params: dns_cache_timeout:int(600), connect_timeout:int(10),reconnect_timeout:int(-1)
+  YOPT_S_TIMEOUTS = 1,
+
+  // Set with defer dispatch event & handler
+  // params: defer_event:int(0), defer_handler:int(0)
+  YOPT_S_DEFERS,
+
+  // Set custom resolve function, native C++ ONLY
+  // params: func:resolv_fn_t*
+  YOPT_S_RESOLV_FN,
+
+  // Set custom print function, native C++ ONLY, you must ensure thread safe of it.
+  // parmas: func:print_fn_t,
+  YOPT_S_PRINT_FN,
+
+  // Set custom print function
+  // params: func:io_event_cb_t*
+  YOPT_S_EVENT_CB,
+
+  // Set tcp keepalive in seconds, probes is tries.
+  // params: idle:int(7200), interal:int(75), probes:int(10)
+  YOPT_S_TCP_KEEPALIVE,
+
+  // Don't start a new thread to run event loop
+  // value:int(0)
+  YOPT_S_NO_NEW_THREAD,
+
+  // length field based frame decode function, native C++ ONLY
+  // params: index:int, func:decode_len_fn_t*
+  YOPT_C_LFBFD_FN,
+
+  // length field based frame decode params, native C++ ONLY
+  // params:
+  //     index:int,
+  //     max_frame_length:int(10MBytes),
+  //     length_field_offset:int(-1),
+  //     length_field_length:int(4),
+  //     length_adjustment:int(0)
+  YOPT_C_LFBFD_PARAMS,
+
+  // Sets channel local port
+  // params: index:int, port:int
+  YOPT_C_LOCAL_PORT,
+
+  // Sets channel local host, for server only to bind specified ifaddr
+  // params: index:int, ip:const char*
+  YOPT_C_LOCAL_HOST,
+
+  // Sets channel local endpoint
+  // params: index:int, ip:const char*, port:int
+  YOPT_C_LOCAL_ENDPOINT,
+
+  // Sets channel remote host
+  // params: index:int, ip:const char*
+  YOPT_C_REMOTE_HOST,
+
+  // Sets channel remote port
+  // params: index:int, port:int
+  YOPT_C_REMOTE_PORT,
+
+  // Sets remote endpoint
+  // params: index:int, ip:const char*, port:int
+  YOPT_C_REMOTE_ENDPOINT,
+
+  // Sets channl flags
+  // params: index:int, flagsToAdd:int, flagsToRemove:int
+  YOPT_C_MOD_FLAGS,
+
+  // Sets io_base sockopt
+  // params: io_base*,level:int,optname:int,optval:int,optlen:int
+  YOPT_I_SOCKOPT,
 };
 
 // channel mask
@@ -102,17 +156,18 @@ enum
 // channel flags
 enum
 {
-  YCF_MCAST          = 1,
+  YCF_MCAST          = 1 << 1,
   YCF_MCAST_LOOPBACK = 1 << 2,
 #if defined(YASIO_HAVE_KCP)
   YCF_KCP = 1 << 3,
 #endif
+  YCF_REUSEPORT = 1 << 4,
 };
 
 // event kinds
 enum
 {
-  YEK_CONNECT_RESPONSE = 0,
+  YEK_CONNECT_RESPONSE = 1,
   YEK_CONNECTION_LOST,
   YEK_PACKET,
 };
@@ -237,12 +292,10 @@ private:
   {
     setup_remote_host(host);
     setup_remote_port(port);
-    local_host_ = host;
-    local_port_ = port;
   }
 
-  YASIO__DECL void enable_multicast(std::shared_ptr<xxsocket>&, int loopback);
-  YASIO__DECL void disable_multicast(std::shared_ptr<xxsocket>&);
+  YASIO__DECL int join_multicast_group(std::shared_ptr<xxsocket>&, int loopback);
+  YASIO__DECL void leave_multicast_group(std::shared_ptr<xxsocket>&);
 
   YASIO__DECL void setup_remote_host(std::string host);
   YASIO__DECL void setup_remote_port(u_short port);
@@ -251,7 +304,9 @@ private:
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
 
   u_short mask_  = 0;
-  u_short flags_ = 0;
+  
+  // For compat reason, we set default flags to YCF_REUSEPORT
+  u_short flags_ = YCF_REUSEPORT;
 
   /*
   ** !!! for tcp/udp client, if not zero, will use it as fixed port.
@@ -260,8 +315,8 @@ private:
   u_short local_port_ = 0;
 
   /*
-  ** !!! for tcp/udp client, remote port must be specified,
-  ** !!! for tcp/udp server, remote port is unused.
+  ** !!! for tcp/udp client, remote port must be specified
+  ** !!! for tcp/udp server, remote port == local port
   */
   u_short remote_port_ = 0;
 
@@ -284,12 +339,22 @@ private:
   } lfb_;
   decode_len_fn_t decode_len_;
 
-  std::string local_host_;  // only for server wan't bind to specified ifaddr.
-  std::string remote_host_; // only for client to connect remote host.
+  /*
+  !!! for tcp/udp server only, local_host will be ADDR_ANY or specified by set_option
+      YOPT_C_LOCAL_HOST
+  */
+  std::string local_host_;
+
+  /*
+  !!! for tcp/udp client to connect remote host.
+  !!! for multicast, it's used as multicast address,
+      doesn't connect even through recvfrom on packet from remote
+  */
+  std::string remote_host_;
   std::vector<ip::endpoint> remote_eps_;
 
-  // The buffer for udp only
-  std::vector<char> udp_buffer_;
+  // Current it's only for UDP
+  std::vector<char> buffer_;
 };
 
 class io_transport : public io_base
@@ -347,13 +412,18 @@ public:
 class io_transport_posix : public io_transport
 {
 public:
-  io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock) : io_transport(ctx, sock) {}
+  YASIO__DECL io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock);
 
 private:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
+  // set the low level send/recv primitives.
+  YASIO__DECL void set_primitives(bool connected);
+
+  std::function<int(const void*, int)> send_cb_;
+  std::function<int(void*, int)> recv_cb_;
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 
@@ -414,7 +484,7 @@ private:
   std::vector<char> packet_;
 };
 
-class io_service // lgtm [cpp/include-non-header]
+class io_service // lgtm [cpp/class-many-fields]
 {
   friend class deadline_timer;
   friend class io_transport_posix;
@@ -464,27 +534,7 @@ public:
   YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::dispatch)
   YASIO__DECL void dispatch_events(int count = 512) { dispatch(count); }
 
-  /* option: YOPT_S_TIMEOUTS   dns cache timeout:int, connect, timeout:int,reconnect timeout:int
-             YOPT_S_DEFERS       defer:int, defer handler:int
-             YOPT_S_TCP_KEEPALIVE     idle:int, interal:int, probes:int
-             YOPT_S_RESOLV_FN   func:resolv_fn_t*
-             YOPT_S_PRINT_FN func:print_fn_t, native only, you must ensure thread safe of it.
-             YOPT_S_EVENT_CB func:io_event_callback_t*
-             YOPT_S_NO_NEW_THREAD value:int
-             YOPT_C_LFBFD_PARAMS  index:int, max_frame_length:int, length_field_offst:int,
-                                    length_field_length:int, length_adjustment:int
-             YOPT_C_LOCAL_HOST index:int, ip:const char*
-             YOPT_C_LOCAL_PORT  index:int, port:int
-             YOPT_C_LOCAL_ENDPOINT index:int, ip:const char*, port:int
-             YOPT_C_REMOTE_HOST index:int, ip:const char*
-             YOPT_C_REMOTE_PORT index:int, port:int
-             YOPT_C_REMOTE_ENDPOINT index:int, ip:const char*, port:int
-             YOPT_C_MOD_FLAGS index:int, flags:int
-             YOPT_C_MCAST_PARAMS index:int, enabled:int, [optional] loopback:int,
-                                 [optional]ip:const char*
-             YOPT_B_SOCKOPT: io_base*,level,optname,optval,optlen
-
-  */
+  // set option, see enum YOPT_XXX
   YASIO__DECL void set_option(int option, ...);
 
   // open a channel, default: YCM_TCP_CLIENT

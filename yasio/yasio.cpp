@@ -68,6 +68,8 @@ SOFTWARE.
 #  define YASIO_SLOGV YASIO_SLOG
 #endif
 
+#define YASIO_ANY_ADDR(flags) (flags) & ipsv_ipv4 ? "0.0.0.0" : "::"
+
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -204,7 +206,7 @@ io_channel::io_channel(io_service& service) : deadline_timer_(service)
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
-void io_channel::enable_multicast(std::shared_ptr<xxsocket>& sock, int loopback)
+int io_channel::join_multicast_group(std::shared_ptr<xxsocket>& sock, int loopback)
 {
   if (sock && !this->remote_eps_.empty())
   {
@@ -220,11 +222,12 @@ void io_channel::enable_multicast(std::shared_ptr<xxsocket>& sock, int loopback)
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
     mreq.imr_multiaddr.s_addr = ep.in4_.sin_addr.s_addr;
-    sock->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+    return sock->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
+  return -1;
 }
 
-void io_channel::disable_multicast(std::shared_ptr<xxsocket>& sock)
+void io_channel::leave_multicast_group(std::shared_ptr<xxsocket>& sock)
 {
   if (sock && !this->remote_eps_.empty())
   {
@@ -316,13 +319,18 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 }
 
 // -------------------- io_transport_posix ---------------------
+io_transport_posix::io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock)
+    : io_transport(ctx, sock)
+{
+  this->set_primitives(!(ctx->flags_ & YCF_MCAST) || !(ctx->mask_ & YCM_CLIENT));
+}
 void io_transport_posix::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
 }
 int io_transport_posix::do_read(int& error)
 {
-  int n = socket_->recv_i(buffer_ + offset_, sizeof(buffer_) - offset_);
+  int n = recv_cb_(buffer_ + offset_, sizeof(buffer_) - offset_);
   error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
@@ -340,7 +348,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
     {
       auto v                 = *pv;
       auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->offset_);
-      int n                  = socket_->send_i(v->buffer_.data() + v->offset_, outstanding_bytes);
+      int n                  = send_cb_(v->buffer_.data() + v->offset_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop();
@@ -391,7 +399,40 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
 
   return ret;
 }
+void io_transport_posix::set_primitives(bool connected)
+{
+  if (connected)
+  {
+    this->send_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
+    this->recv_cb_ = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
+  }
+  else
+  {
+    this->send_cb_ = [=](const void* data, size_t len) {
+      return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
+    };
+    this->recv_cb_ = [=](void* data, int len) {
+      ip::endpoint peer;
+      int n = socket_->recvfrom_i(data, len, peer);
 
+      // Now the 'peer' is a real host address
+      // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
+      if (n > 0 && 0 == socket_->connect_n(peer))
+      {
+        ctx_->leave_multicast_group(socket_);
+
+        YASIO_SLOG_IMPL(
+            get_service().options_,
+            "[index: %d] the connection #%u [%s] --> [%s] is established through multicast: [%s].",
+            ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
+            socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
+
+        set_primitives(true);
+      }
+      return n;
+    };
+  }
+}
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> sock)
@@ -932,12 +973,18 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   int ret = -1;
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
-    if (ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP)
-      ctx->socket_->bind("0.0.0.0", ctx->local_port_);
-    if (ctx->flags_ & YCF_MCAST)
-      ctx->enable_multicast(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
-    ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+    if (ctx->flags_ & YCF_REUSEPORT)
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->local_host_.empty())
+      ctx->local_host_ = YASIO_ANY_ADDR(this->ipsv_);
+
+    if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
+      ctx->socket_->bind(ctx->local_host_.c_str(), ctx->local_port_);
+
+    if (!(ctx->flags_ & YCF_MCAST))
+      ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+    else
+      ret = ctx->join_multicast_group(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
     if (ret < 0)
     { // setup no blocking connect
       int error = xxsocket::get_last_errno();
@@ -996,13 +1043,26 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
 void io_service::do_nonblocking_accept(io_channel* ctx)
 { // channel is server
   cleanup_io(ctx);
-  // v4: "0.0.0.0", v6: "::"
+
+  // init ep properly once for bind
+  // for server, local_port_ can't be zero
+  if (ctx->local_host_.empty())
+  {
+    if (!(ctx->flags_ & YCF_MCAST))
+      ctx->local_host_ = ctx->remote_host_;
+    else
+      ctx->local_host_ = YASIO_ANY_ADDR(ipsv_);
+  }
+  if (ctx->local_port_ == 0)
+    ctx->local_port_ = ctx->remote_port_;
+
   ip::endpoint ep(ctx->local_host_.c_str(), ctx->local_port_);
 
   if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
     int error = 0;
-    ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->flags_ & YCF_REUSEPORT)
+      ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
 
     if (ctx->socket_->bind(ep) != 0)
     {
@@ -1022,8 +1082,8 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       if (ctx->mask_ & YCM_UDP)
       {
         if (ctx->flags_ & YCF_MCAST)
-          ctx->enable_multicast(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
-        ctx->udp_buffer_.resize(YASIO_INET_BUFFER_SIZE);
+          ctx->join_multicast_group(ctx->socket_, ctx->flags_ & YCF_MCAST_LOOPBACK);
+        ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       YASIO_SLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
@@ -1067,8 +1127,8 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         else // YCM_UDP
         {
           ip::endpoint peer;
-          int n = ctx->socket_->recvfrom_i(&ctx->udp_buffer_.front(),
-                                           static_cast<int>(ctx->udp_buffer_.size()), peer);
+          int n = ctx->socket_->recvfrom_i(&ctx->buffer_.front(),
+                                           static_cast<int>(ctx->buffer_.size()), peer);
           if (n > 0)
           {
             YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
@@ -1076,7 +1136,9 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
             auto transport = make_dgram_transport(ctx, peer);
-#else // Win32 ONLY support one by one client <--> server for UDP.
+#else
+            // for win32, we manage dgram clients by ourself, and perfrom write operation only in
+            // dgram_transports, the read operation still dispatch by channel.
             auto it = this->dgram_transports_.find(peer);
             auto transport =
                 it != this->dgram_transports_.end() ? it->second : make_dgram_transport(ctx, peer);
@@ -1085,14 +1147,17 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             {
               this->handle_event(event_ptr(new io_event(
                   transport->cindex(), YEK_PACKET,
-                  std::vector<char>(&ctx->udp_buffer_.front(), &ctx->udp_buffer_.front() + n),
-                  transport)));
+                  std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n), transport)));
             }
           }
           else
           {
-            YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
-            cleanup_io(ctx);
+            error = xxsocket::get_last_errno();
+            if (SHOULD_CLOSE_0(n, error))
+            {
+              YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
+              close(ctx->index_);
+            }
           }
         }
       }
@@ -1105,15 +1170,13 @@ transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoin
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0))
   {
-    client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+    if (ctx->flags_ & YCF_REUSEPORT)
+      client_sock->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     int error = client_sock->bind("0.0.0.0", ctx->local_port_) == 0
                     ? xxsocket::connect(client_sock->native_handle(), peer)
                     : -1;
     if (error == 0)
     {
-      if (ctx->flags_ & YCF_MCAST)
-        ctx->enable_multicast(client_sock, ctx->flags_ & YCF_MCAST_LOOPBACK);
-
       auto transport = allocate_transport(ctx, std::move(client_sock));
 #if !defined(_WIN32)
       handle_connect_succeed(transport);
@@ -1687,28 +1750,14 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       if (channel)
       {
         channel->flags_ |= (u_short)va_arg(ap, int);
-      }
-      break;
-    }
-    case YOPT_C_MCAST_PARAMS: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
-      if (channel)
-      {
-        if (va_arg(ap, int))
-        {
-          channel->flags_ |= YCF_MCAST;
-          if (va_arg(ap, int))
-            channel->flags_ |= YCF_MCAST_LOOPBACK;
-
-          channel->setup_remote_host(va_arg(ap, const char*));
-        }
+        channel->flags_ &= ~(u_short)va_arg(ap, int);
       }
       break;
     }
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-    case YOPT_B_SOCKOPT: {
+    case YOPT_I_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)
       {

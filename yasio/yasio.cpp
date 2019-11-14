@@ -901,10 +901,7 @@ void io_service::handle_close(transport_handle_t transport)
 void io_service::register_descriptor(const socket_native_type fd, int flags)
 {
   if ((flags & YEM_POLLIN) != 0)
-  {
     FD_SET(fd, &(fds_array_[read_op]));
-    YASIO_LOG("registering YEM_POLLIN for: %d", (int)fd);
-  }
 
   if ((flags & YEM_POLLOUT) != 0)
     FD_SET(fd, &(fds_array_[write_op]));

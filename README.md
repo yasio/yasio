@@ -14,6 +14,9 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 
 ## Clone at github: [yasio](https://github.com/simdsoft/yasio)
 
+## Core framework
+![image](https://github.com/simdsoft/yasio/blob/master/framework.png)  
+
 ## Features: 
 * support IPv6-only network.  
 * support multi-connections at one thread.  
@@ -23,7 +26,7 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 * support cocos2d-x jsb  
 * support CocosCreator jsb2.0  
 * support Unity3D
-* per io_service, per thread to process socket read,write,connect operations.  
+* support multicast
   
 ## Intergation guides:  
 ### cpp intergation: 

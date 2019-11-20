@@ -380,6 +380,7 @@ public:
   }
 
   io_service& get_service() { return ctx_->get_service(); }
+  unsigned int id() { return id_; }
 
 private:
   virtual void write(std::vector<char>&&, std::function<void()>&&) = 0;

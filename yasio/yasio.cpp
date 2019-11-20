@@ -1469,7 +1469,7 @@ void io_service::perform_timers()
     {
       auto earliest  = std::move(timer_queue_.back());
       auto timer_ctl = earliest.first;
-      auto timer_cb = earliest.second;
+      auto& timer_cb = earliest.second;
       timer_queue_.pop_back(); // pop the expired timer from timer queue
       if (options_.deferred_handler_)
       {

@@ -235,7 +235,13 @@ public:
     expire_time_     = highp_clock_t::now() + this->duration_;
   }
 
-  void expires_from_now() { expire_time_ = highp_clock_t::now() + this->duration_; }
+  void set_repeated(bool repeated) { repeated_ = repeated; }
+
+  void expires_from_now()
+  {
+    this->cancelled_ = false;
+    expire_time_     = highp_clock_t::now() + this->duration_;
+  }
 
   // Wait timer timeout or cancelled.
   YASIO__DECL void async_wait(timer_cb_t);

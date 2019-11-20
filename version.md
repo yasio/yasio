@@ -5,3 +5,4 @@ yasio-3.30
 4. Add a workaround implementation to support win32 udp-server.
 5. Add io_service::cindex_to_handle.
 6. Add ftp sever example.
+7. Optimize deadline timer, provide set_repeated to control timer looply.

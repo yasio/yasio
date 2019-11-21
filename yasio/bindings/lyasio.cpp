@@ -125,7 +125,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
             service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char*>(),
                                 static_cast<int>(va[2]));
             break;
-          case YOPT_TCP_KEEPALIVE:
+          case YOPT_S_TCP_KEEPALIVE:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
                                 static_cast<int>(va[2]));
             break;

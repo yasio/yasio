@@ -1296,25 +1296,25 @@ bool js_yasio_io_service_set_option(se::State& s)
       auto opt   = arg0.toInt32();
       switch (opt)
       {
-        case YOPT_CHANNEL_REMOTE_HOST:
+        case YOPT_C_REMOTE_HOST:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str());
           break;
-        case YOPT_CHANNEL_REMOTE_PORT:
-        case YOPT_CHANNEL_LOCAL_PORT:
+        case YOPT_C_REMOTE_PORT:
+        case YOPT_C_LOCAL_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
-        case YOPT_CHANNEL_REMOTE_ENDPOINT:
+        case YOPT_C_REMOTE_ENDPOINT:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str(),
                               args[3].toInt32());
           break;
-        case YOPT_TCP_KEEPALIVE:
+        case YOPT_S_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
-        case YOPT_CHANNEL_LFBFD_PARAMS:
+        case YOPT_C_LFBFD_PARAMS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
                               args[4].toInt32(), args[5].toInt32());
           break;
-        case YOPT_IO_EVENT_CB: {
+        case YOPT_S_EVENT_CB: {
           se::Value jsThis(s.thisObject());
           se::Value jsFunc(args[1]);
           jsThis.toObject()->attachObject(jsFunc.toObject());
@@ -1448,21 +1448,20 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
+  YASIO_EXPORT_ENUM(YCF_MCAST);
+  YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 #if defined(YASIO_HAVE_KCP)
-  YASIO_EXPORT_ENUM(YCM_KCP_CLIENT);
-  YASIO_EXPORT_ENUM(YCM_KCP_SERVER);
+  YASIO_EXPORT_ENUM(YCF_KCP);
 #endif
-  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
-  YASIO_EXPORT_ENUM(YOPT_RECONNECT_TIMEOUT);
-  YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
-  YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
-  YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
+  YASIO_EXPORT_ENUM(YOPT_S_DEFERS);
+  YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
+  YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
+  YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);

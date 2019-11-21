@@ -1662,8 +1662,7 @@ bool js_yasio_io_service_dispatch(JSContext* ctx, uint32_t argc, jsval* vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t* proxy = jsb_get_js_proxy(obj);
   cobj              = (io_service*)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false,
-                    "js_yasio_io_service_dispatch : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_dispatch : Invalid Native Object");
 
   do
   {
@@ -1698,32 +1697,32 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
       auto opt  = arg0.toInt32();
       switch (opt)
       {
-        case YOPT_CHANNEL_REMOTE_HOST:
+        case YOPT_C_REMOTE_HOST:
           if (args[2].isString())
           {
             JSStringWrapper str(args[2].toString());
             service->set_option(opt, args[1].toInt32(), str.get());
           }
           break;
-        case YOPT_CHANNEL_REMOTE_PORT:
-        case YOPT_CHANNEL_LOCAL_PORT:
+        case YOPT_C_REMOTE_PORT:
+        case YOPT_C_LOCAL_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
-        case YOPT_CHANNEL_REMOTE_ENDPOINT:
+        case YOPT_C_REMOTE_ENDPOINT:
           if (args[2].isString())
           {
             JSStringWrapper str(args[2].toString());
             service->set_option(opt, args[1].toInt32(), str.get(), args[3].toInt32());
           }
           break;
-        case YOPT_TCP_KEEPALIVE:
+        case YOPT_S_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
-        case YOPT_CHANNEL_LFBFD_PARAMS:
+        case YOPT_C_LFBFD_PARAMS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
                               args[4].toInt32(), args[5].toInt32());
           break;
-        case YOPT_IO_EVENT_CB: {
+        case YOPT_S_EVENT_CB: {
           JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
           auto func = std::make_shared<JSFunctionWrapper>(ctx, jstarget, args[1], args.thisv());
           io_event_cb_t callback = [=](inet::event_ptr event) {
@@ -1821,8 +1820,7 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
       JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("dispatch", js_yasio_io_service_dispatch, 1,
-            JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("dispatch", js_yasio_io_service_dispatch, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write", js_yasio_io_service_write, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
@@ -1872,21 +1870,20 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
+  YASIO_EXPORT_ENUM(YCF_MCAST);
+  YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 #if defined(YASIO_HAVE_KCP)
-  YASIO_EXPORT_ENUM(YCM_KCP_CLIENT);
-  YASIO_EXPORT_ENUM(YCM_KCP_SERVER);
+  YASIO_EXPORT_ENUM(YCF_KCP);
 #endif
-  YASIO_EXPORT_ENUM(YOPT_CONNECT_TIMEOUT);
-  YASIO_EXPORT_ENUM(YOPT_RECONNECT_TIMEOUT);
-  YASIO_EXPORT_ENUM(YOPT_DNS_CACHE_TIMEOUT);
-  YASIO_EXPORT_ENUM(YOPT_DEFER_EVENT);
-  YASIO_EXPORT_ENUM(YOPT_TCP_KEEPALIVE);
-  YASIO_EXPORT_ENUM(YOPT_IO_EVENT_CB);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_LOCAL_PORT);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_HOST);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_PORT);
-  YASIO_EXPORT_ENUM(YOPT_CHANNEL_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
+  YASIO_EXPORT_ENUM(YOPT_S_DEFERS);
+  YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
+  YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
+  YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);

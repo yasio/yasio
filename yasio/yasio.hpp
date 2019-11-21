@@ -225,17 +225,14 @@ class deadline_timer
 {
 public:
   ~deadline_timer() {}
-  deadline_timer(io_service& service) : service_(service), repeated_(false), cancelled_(false) {}
+  deadline_timer(io_service& service) : service_(service), cancelled_(false) {}
 
-  void expires_from_now(const std::chrono::microseconds& duration, bool repeated = false)
+  void expires_from_now(const std::chrono::microseconds& duration)
   {
     this->duration_  = duration;
-    this->repeated_  = repeated;
     this->cancelled_ = false;
     expire_time_     = highp_clock_t::now() + this->duration_;
   }
-
-  void set_repeated(bool repeated) { repeated_ = repeated; }
 
   void expires_from_now()
   {
@@ -264,7 +261,6 @@ public:
 
   io_service& service_;
 
-  bool repeated_;
   bool cancelled_;
   std::chrono::microseconds duration_;
   std::chrono::time_point<highp_clock_t> expire_time_;
@@ -567,12 +563,11 @@ public:
                         std::function<void()> = nullptr);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
-  deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb, bool repeated = false)
+  deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb)
   {
-    return schedule(std::chrono::microseconds(duration), std::move(cb), repeated);
+    return schedule(std::chrono::microseconds(duration), std::move(cb));
   }
-  YASIO__DECL deadline_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t,
-                                          bool repeated = false);
+  YASIO__DECL deadline_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
   YASIO__DECL void cleanup();
 
@@ -580,7 +575,7 @@ public:
                                    unsigned short port = 0);
 
 private:
-  YASIO__DECL void schedule_timer(deadline_timer*, timer_cb_t&);
+  YASIO__DECL void schedule_timer(deadline_timer*, timer_cb_t&&);
   YASIO__DECL void remove_timer(deadline_timer*);
 
   inline std::vector<timer_impl_t>::iterator find_timer(deadline_timer* key)

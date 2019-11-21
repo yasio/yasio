@@ -33,6 +33,8 @@ SOFTWARE.
 
 #include <string.h>
 
+#include <stdint.h>
+
 #if !defined(ASSERT)
 #  if defined(_DEBUG)
 #    define ASSERT(exp) assert(exp)

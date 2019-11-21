@@ -529,11 +529,6 @@ YASIO__NS_INLINE namespace ip
   };
 } // namespace ip
 
-inline bool operator<(const ip::endpoint& _Left, const ip::endpoint& _Right)
-{ // apply operator< to operands
-  return ::memcmp(&_Left, &_Right, sizeof(_Right)) < 0;
-}
-
 #if !YASIO__HAVE_NS_INLINE
 using namespace yasio::inet::ip;
 #endif
@@ -1057,6 +1052,15 @@ private:
 
 namespace net = inet;
 } // namespace yasio
+
+namespace std
+{ // VS2013 the operator must be at namespace std
+inline bool operator<(const yasio::inet::ip::endpoint& _Left,
+                      const yasio::inet::ip::endpoint& _Right)
+{ // apply operator< to operands
+  return ::memcmp(&_Left, &_Right, sizeof(_Right)) < 0;
+}
+} // namespace std
 
 #if defined(_MSC_VER)
 #  pragma warning(pop)

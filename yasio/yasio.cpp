@@ -182,7 +182,10 @@ public:
 };
 
 /// deadline_timer
-void deadline_timer::async_wait(timer_cb_t cb) { this->service_.schedule_timer(this, cb); }
+void deadline_timer::async_wait(timer_cb_t cb)
+{
+  this->service_.schedule_timer(this, std::move(cb));
+}
 
 void deadline_timer::cancel()
 {
@@ -1380,17 +1383,16 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
   }
 }
 
-deadline_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, timer_cb_t cb,
-                                        bool repeated)
+deadline_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, timer_cb_t cb)
 {
   auto timer = std::make_shared<deadline_timer>(*this);
-  timer->expires_from_now(duration, repeated);
+  timer->expires_from_now(duration);
   timer->async_wait(
       [timer /*!important, hold on by lambda expression */, cb](bool cancelled) { cb(cancelled); });
   return timer;
 }
 
-void io_service::schedule_timer(deadline_timer* timer_ctl, timer_cb_t& timer_cb)
+void io_service::schedule_timer(deadline_timer* timer_ctl, timer_cb_t&& timer_cb)
 {
   // pitfall: this service only hold the weak pointer of the timer
   // object, so before dispose the timer object need call
@@ -1462,7 +1464,6 @@ void io_service::perform_timers()
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
-  std::vector<timer_impl_t> loop_timers;
   while (!this->timer_queue_.empty())
   {
     if (timer_queue_.back().first->expired())
@@ -1478,20 +1479,9 @@ void io_service::perform_timers()
       }
       else
         timer_cb(timer_ctl->cancelled_);
-      if (timer_ctl->repeated_)
-      {
-        timer_ctl->expires_from_now();
-        loop_timers.push_back(earliest);
-      }
     }
     else
       break;
-  }
-
-  if (!loop_timers.empty())
-  {
-    this->timer_queue_.insert(this->timer_queue_.end(), loop_timers.begin(), loop_timers.end());
-    this->sort_timers();
   }
 }
 

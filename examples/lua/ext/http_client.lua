@@ -134,7 +134,7 @@ function _M:sendHttpGetRequest(url, callback)
             responseData = ""
         }
         self.requests[idleChannelIndex] = requestItem
-        self.service:set_option(yasio.YOPT_CHANNEL_REMOTE_ENDPOINT, idleChannelIndex, params.host, params.port)
+        self.service:set_option(yasio.YOPT_C_REMOTE_ENDPOINT, idleChannelIndex, params.host, params.port)
         self.service:open(idleChannelIndex, yasio.YCM_TCP_CLIENT)
         return true
     else

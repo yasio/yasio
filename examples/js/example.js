@@ -45,7 +45,7 @@ function yasioTest() {
       cc.log("yasio server: The connection is lost!");
     }
   });
-  yserver.set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 
+  yserver.set_option(yasio.YOPT_C_LFBFD_PARAMS, 
     0, // channelIndex
     65535, // maxFrameLength, 最大包长度
     0,  // lenghtFieldOffset, 长度字段偏移，相对于包起始字节
@@ -100,7 +100,7 @@ function yasioTest() {
     }
   });
 
-  yclient.set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 
+  yclient.set_option(yasio.YOPT_C_LFBFD_PARAMS, 
     0, // channelIndex
     65535, // maxFrameLength, 最大包长度
     0,  // lenghtFieldOffset, 长度字段偏移，相对于包起始字节

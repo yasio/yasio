@@ -25,7 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-// object_pool.hpp: a simple & high-performance object pool implementation v1.3
+// object_pool.hpp: a simple & high-performance object pool implementation v1.3.1
 #ifndef YASIO__OBJECT_POOL_HPP
 #define YASIO__OBJECT_POOL_HPP
 
@@ -74,10 +74,6 @@ public:
   OBJECT_POOL_DECL object_pool(size_t element_size, size_t element_count)
       : free_link_(nullptr), chunk_(nullptr), element_size_(element_size),
         element_count_(element_count)
-#ifdef _DEBUG
-        ,
-        allocated_count_(0)
-#endif
   {
 #if YASIO_POOL_PREALLOCATE
     release(allocate_from_process_heap()); // preallocate 1 chunk
@@ -99,10 +95,6 @@ public:
     }
 
     free_link_ = nullptr;
-
-#if defined(_DEBUG)
-    allocated_count_ = 0;
-#endif
   }
 
   OBJECT_POOL_DECL void cleanup(void)
@@ -125,10 +117,6 @@ public:
     linkend->next = nullptr;
 
     this->free_link_ = YASIO_POOL_FL_BEGIN(this->chunk_);
-
-#if defined(_DEBUG)
-    this->allocated_count_ = 0;
-#endif
   }
 
   OBJECT_POOL_DECL void* get(void)
@@ -146,10 +134,6 @@ public:
     free_link_node* ptr = reinterpret_cast<free_link_node*>(_Ptr);
     ptr->next           = this->free_link_;
     this->free_link_    = ptr;
-
-#if defined(_DEBUG)
-    --this->allocated_count_;
-#endif
   }
 
 private:
@@ -157,9 +141,6 @@ private:
   {
     free_link_node* ptr = this->free_link_;
     this->free_link_    = ptr->next;
-#if defined(_DEBUG)
-    ++this->allocated_count_;
-#endif
     return reinterpret_cast<void*>(ptr);
   }
   OBJECT_POOL_DECL void* allocate_from_process_heap(void)
@@ -179,9 +160,6 @@ private:
     auto ptr         = YASIO_POOL_FL_BEGIN(new_chunk);
     this->free_link_ = ptr->next;
 
-#if defined(_DEBUG)
-    ++this->allocated_count_;
-#endif
     return reinterpret_cast<void*>(ptr);
   }
 
@@ -202,10 +180,6 @@ private:
   chunk_link chunk_;    // chunk link
   const size_t element_size_;
   const size_t element_count_;
-
-#if defined(_DEBUG)
-  size_t allocated_count_; // allocated count
-#endif
 };
 
 #define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                                 \

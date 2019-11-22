@@ -42,6 +42,7 @@ SOFTWARE.
 #if defined(_WIN32)
 #  include <map>
 #endif
+#include "yasio/detail/sz.hpp"
 #include "yasio/detail/config.hpp"
 #include "yasio/detail/endian_portable.hpp"
 #include "yasio/detail/object_pool.hpp"
@@ -337,7 +338,7 @@ private:
     int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=-1
     int length_field_length = 4;  // 1,2,3,4
     int length_adjustment   = 0;
-    int max_frame_length    = 10 * 1024 * 1024; // 10MBytes
+    int max_frame_length    = YASIO_SZ(10, M); // 10MBytes
   } lfb_;
   decode_len_fn_t decode_len_;
 

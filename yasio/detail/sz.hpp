@@ -32,7 +32,7 @@ static const uint64_t YASIO__MB = (1024 * YASIO__KB);
 static const uint64_t YASIO__GB = (1024 * YASIO__MB);
 static const uint64_t YASIO__TB = (1024 * YASIO__GB);
 static const uint64_t YASIO__PB = (1024 * YASIO__TB);
-static const uint64_t YASIO__EB = (1024 * YASIO__EB);
+static const uint64_t YASIO__EB = (1024 * YASIO__PB);
 
 #define YASIO__K YASIO__KB
 #define YASIO__M YASIO__MB
@@ -47,6 +47,6 @@ static const uint64_t YASIO__EB = (1024 * YASIO__EB);
 #define YASIO__t YASIO__T
 #define YASIO__e YASIO__E
 
-#define YASIO_SZ(n, u) ((n)*YASIO__##u##)
+#define YASIO_SZ(n, u) ((n)*YASIO__##u)
 
 #endif

@@ -9,13 +9,13 @@ using namespace yasio::inet;
 void yasio_echo_server(const char *ip, u_short port)
 {
   io_service udp_server;
-  udp_server.set_option(YOPT_NO_NEW_THREAD, 1);
+  udp_server.set_option(YOPT_S_NO_NEW_THREAD, 1);
 
-  // !important, because we set YOPT_NO_NEW_THREAD, so need a timer to start server
+  // !important, because we set YOPT_S_NO_NEW_THREAD, so need a timer to start server
   deadline_timer starter(udp_server);
   starter.expires_from_now(std::chrono::seconds(1));
   starter.async_wait([&](bool) {
-    udp_server.set_option(YOPT_CHANNEL_LFBFD_PARAMS, 0, 65535, -1, 0, 0);
+    udp_server.set_option(YOPT_C_LFBFD_PARAMS, 0, 65535, -1, 0, 0);
     udp_server.open(0, YCM_UDP_SERVER);
   });
 
@@ -177,7 +177,7 @@ function _M:sendHttpGetRequest(url, callback)
             responseData = ""
         }
         self.requests[idleChannelIndex] = requestItem
-        self.service:set_option(yasio.YOPT_CHANNEL_REMOTE_ENDPOINT, idleChannelIndex, params.host, params.port)
+        self.service:set_option(yasio.YOPT_C_REMOTE_ENDPOINT, idleChannelIndex, params.host, params.port)
         self.service:open(idleChannelIndex, yasio.YCM_TCP_CLIENT)
         return true
     else
@@ -225,7 +225,7 @@ public static extern void yasio_close_handle(IntPtr thandle);
 public static extern void yasio_write(IntPtr thandle, byte[] bytes, int len);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_dispatch_events(int maxEvents);
+public static extern void yasio_dispatch(int maxEvents);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_set_option(int opt, string strParam);
@@ -294,14 +294,14 @@ else if (k == YEK_CONNECTION_LOST)
     printf("The connection with frontend is lost: %d, waiting new to income...", e->status());
 }
 });
-yasio_shared_service->set_option(YOPT_CHANNEL_LFBFD_PARAMS,
+yasio_shared_service->set_option(YOPT_C_LFBFD_PARAMS,
     0, -- channelIndex  
     65535, -- maxFrameLength
     0,  -- lenghtFieldOffset
     4, -- lengthFieldLength
     0 -- lengthAdjustment
 );
-yasio_shared_service->set_option(YOPT_DEFER_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
+yasio_shared_service->set_option(YOPT_S_DEFERRED_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
 yasio_shared_service->open(0, YCM_TCP_SERVER);
 
 // ********************* client ***********************
@@ -336,14 +336,14 @@ yasio_shared_service->start_service(&ep, [=](event_ptr e) {
         printf("The connection with backend is lost: %d, waiting new to income...", e->status());
     }
     });
-yasio_shared_service->set_option(YOPT_CHANNEL_LFBFD_PARAMS,
+yasio_shared_service->set_option(YOPT_C_LFBFD_PARAMS,
     0, -- channelIndex  
     65535, -- maxFrameLength
     0,  -- lenghtFieldOffset
     4, -- lengthFieldLength
     0 -- lengthAdjustment
 );
-yasio_shared_service->set_option(YOPT_DEFER_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
+yasio_shared_service->set_option(YOPT_S_DEFERRED_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
 yasio_shared_service->open(0, YCM_TCP_CLIENT);
 ```
 

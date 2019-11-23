@@ -33,6 +33,7 @@ SOFTWARE.
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <sstream>
 #include <vector>
 #include <chrono>
@@ -1055,10 +1056,12 @@ namespace net = inet;
 
 namespace std
 { // VS2013 the operator must be at namespace std
-inline bool operator<(const yasio::inet::ip::endpoint& _Left,
-                      const yasio::inet::ip::endpoint& _Right)
-{ // apply operator< to operands
-  return ::memcmp(&_Left, &_Right, sizeof(_Right)) < 0;
+inline bool operator<(const yasio::inet::ip::endpoint& lhs, const yasio::inet::ip::endpoint& rhs)
+{ // apply operator < to operands
+  if (lhs.af() == AF_INET)
+    return (static_cast<uint64_t>(lhs.in4_.sin_addr.s_addr) + lhs.in4_.sin_port) <
+           (static_cast<uint64_t>(rhs.in4_.sin_addr.s_addr) + rhs.in4_.sin_port);
+  return ::memcmp(&lhs, &rhs, sizeof(rhs)) < 0;
 }
 } // namespace std
 

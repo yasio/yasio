@@ -46,20 +46,18 @@ set_option(opt,...)
 功能：设置选项
 参数说明(超时时间单位均为秒):  
 opt: 选项枚举，取值有:
-  + yasio.YOPT_CONNECT_TIMEOUT: 设置连接超时时间,默认10秒, 例如: ```tcpclient:set_option(yasio.YOPT_CONNECT_TIMEOUT, 30)```
-  + yasio.YOPT_RECONNECT_TIMEOUT: 设置重连超时时间, -1: 不自动重连 > 0: 当连接断开后指定超时时间后自动重连
-  + yasio.YOPT_DNS_CACHE_TIMEOUT: 设置域名解析缓存时间超时, 默认10分钟
-  + yasio.YOPT_TCP_KEEPALIVE: 设置tcp协议keepalive参数，例如```tcpclient:set_option(yasio.YOPT_TCP_KEEPALIVE, 60, 10, 3)```, 60是发送底层协议心跳的空闲等待时间，10是发送心跳间隔, 3是未收到对方回应心跳重试次数
-  + yasio.YOPT_PRINT_FN: 设置网络日志自定义打印函数，注意函数必须是线程安全的
-  + yasio.YOPT_IO_EVENT_CB: 设置网络事件回调
-  + yasio.YOPT_CHANNEL_LOCAL_PORT: 设置信道本地端口, 例如```tcpclient:set_option(yasio.YOPT_CHANNEL_LOCAL_PORT, 0, 20191)```, 0是信道索引, 20191是端口
-  + yasio.YOPT_CHANNEL_REMOTE_HOST: 设置信道远程域名/ip, 参数顺序为: 信道索引, 远程域名/ip
-  + yasio.YOPT_CHANNEL_REMOTE_PORT: 设置信道远程端口, 参数顺序为: 信道索引, 端口
-  + yasio.YOPT_CHANNEL_REMOTE_ENDPOINT: 设置信道远程域名/ip和端口, 参数顺序为: 信道索引, 远程域名/ip, 端口
-  + yasio.YOPT_CHANNEL_LFBFD_PARAMS: 设置Length Field Based Frame Decode参数, 例如:
+  + yasio.YOPT_S_TIMEOUTS: dns缓存时间(600s),  TCP连接超时时间(1s), TCP断线重连重连超时时间, -1: 不自动重连 > 0: 当连接断开后指定超时时间后自动重连
+  + yasio.YOPT_S_TCP_KEEPALIVE: 设置tcp协议keepalive参数，例如```tcpclient:set_option(yasio.YOPT_S_TCP_KEEPALIVE, 60, 10, 3)```, 60是发送底层协议心跳的空闲等待时间，10是发送心跳间隔, 3是未收到对方回应心跳重试次数
+  + yasio.YOPT_S_PRINT_FN: 设置网络日志自定义打印函数，注意函数必须是线程安全的
+  + yasio.YOPT_S_EVENT_CB: 设置网络事件回调
+  + yasio.YOPT_C_LOCAL_PORT: 设置信道本地端口, 例如```tcpclient:set_option(yasio.YOPT_C_LOCAL_PORT, 0, 20191)```, 0是信道索引, 20191是端口
+  + yasio.YOPT_C_REMOTE_HOST: 设置信道远程域名/ip, 参数顺序为: 信道索引, 远程域名/ip
+  + yasio.YOPT_C_REMOTE_PORT: 设置信道远程端口, 参数顺序为: 信道索引, 端口
+  + yasio.YOPT_C_REMOTE_ENDPOINT: 设置信道远程域名/ip和端口, 参数顺序为: 信道索引, 远程域名/ip, 端口
+  + yasio.YOPT_C_LFBFD_PARAMS: 设置Length Field Based Frame Decode参数, 例如:
 ```lua
 -- 对于有包长度字段的协议，对于tcp自定义二进制协议，强烈建议设计包长度字段，并设置此选项，业务无须关心粘包问题
-tcpclient:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 
+tcpclient:set_option(yasio.YOPT_C_LFBFD_PARAMS, 
     0, -- channelIndex, 信道索引
     65535, -- maxFrameLength, 最大包长度
     0,  -- lenghtFieldOffset, 长度字段偏移，相对于包起始字节
@@ -67,7 +65,7 @@ tcpclient:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS,
     0 -- lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
 )
 -- 对于没有包长度字段设计的协议，例如http， 设置包长度字段为-1， 那么底层服务收到多少字节就会传回给上层多少字节
-httpclient:set_option(yasio.YOPT_CHANNEL_LFBFD_PARAMS, 0, 65535, -1, 0, 0)
+httpclient:set_option(yasio.YOPT_C_LFBFD_PARAMS, 0, 65535, -1, 0, 0)
 ```
 
 ## open
@@ -95,8 +93,8 @@ void write(transport, data)
 transport: 传输回话句柄  
 data: 要发送的数据, 对于Lua可以是obstream或者string类型； 对于js可以是string,ArrayBuffer,Uint8Array,Int8Array
 
-## dispatch_events
-void dispatch_events(max_events)  
+## dispatch
+void dispatch(max_events)  
 功能: 分派网络事件  
 参数说明:  
 max_events: 每次调用从事件队列分派最大事件数，通常固定为64,128,256就足够了  

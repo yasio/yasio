@@ -71,8 +71,8 @@ enum
   // params: dns_cache_timeout:int(600), connect_timeout:int(10),reconnect_timeout:int(-1)
   YOPT_S_TIMEOUTS = 1,
 
-  // Set with defer dispatch event & handler
-  // params: defer_event:int(0), defer_handler:int(0)
+  // Set with defer dispatch event & handler, default is: 1, 0
+  // params: defer_event:int(1), defer_handler:int(0)
   YOPT_S_DEFERS,
 
   // Set custom resolve function, native C++ ONLY
@@ -715,7 +715,7 @@ private:
     highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
 
     bool deferred_event_   = true;
-    bool deferred_handler_ = true;
+    bool deferred_handler_ = false;
     // tcp keepalive settings
     struct __unnamed01
     {

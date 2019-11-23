@@ -176,7 +176,7 @@ public:
   size_t offset_;            // offset
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
-#if !defined(YASIO_USE_OBJECT_POOL)
+#if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(a_pdu, 512)
 #endif
 };

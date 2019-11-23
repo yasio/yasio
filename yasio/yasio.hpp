@@ -475,7 +475,7 @@ public:
   std::vector<char>& packet() { return packet_; }
   long long timestamp() const { return timestamp_; }
 
-#if !defined(YASIO_USE_OBJECT_POOL)
+#if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 

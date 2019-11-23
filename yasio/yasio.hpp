@@ -71,9 +71,9 @@ enum
   // params: dns_cache_timeout:int(600), connect_timeout:int(10),reconnect_timeout:int(-1)
   YOPT_S_TIMEOUTS = 1,
 
-  // Set with defer dispatch event & handler, default is: 1, 0
-  // params: defer_event:int(1), defer_handler:int(0)
-  YOPT_S_DEFERS,
+  // Set with deferred dispatch event, default is: 1
+  // params: deferred_event:int(1)
+  YOPT_S_DEFERRED_EVENT,
 
   // Set custom resolve function, native C++ ONLY
   // params: func:resolv_fn_t*
@@ -674,7 +674,6 @@ private:
   std::thread::id worker_id_;
 
   concurrency::concurrent_queue<event_ptr, true> events_;
-  concurrency::concurrent_queue<std::function<void()>, true> handlers_;
 
   std::vector<io_channel*> channels_;
 
@@ -714,8 +713,8 @@ private:
     // Default dns cache time: 10 minutes
     highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
 
-    bool deferred_event_   = true;
-    bool deferred_handler_ = false;
+    bool deferred_event_ = true;
+
     // tcp keepalive settings
     struct __unnamed01
     {

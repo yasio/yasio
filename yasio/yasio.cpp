@@ -364,13 +364,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
                         socket_->peer_endpoint().to_string().c_str());
 #endif
         if (v->handler_)
-        {
-          auto& owner = get_service();
-          if (owner.options_.deferred_handler_)
-            owner.handlers_.enqueue(std::move(v->handler_));
-          else
-            v->handler_();
-        }
+          v->handler_();
       }
       else if (n > 0)
       {
@@ -536,9 +530,8 @@ void io_service::start_service(const io_hostent* channel_eps, int channel_count,
     }
     else
     {
-      this->worker_id_                 = std::this_thread::get_id();
-      this->options_.deferred_event_   = false;
-      this->options_.deferred_handler_ = false;
+      this->worker_id_               = std::this_thread::get_id();
+      this->options_.deferred_event_ = false;
       run();
       this->state_ = io_service::state::STOPPED;
       cleanup();
@@ -602,7 +595,6 @@ void io_service::cleanup()
     clear_transports();
     clear_channels();
     this->events_.clear();
-    this->handlers_.clear();
     this->timer_queue_.clear();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
@@ -649,7 +641,6 @@ void io_service::dispatch(int count)
 {
   if (options_.on_event_)
     this->events_.consume(count, options_.on_event_);
-  this->handlers_.consume(count, [](std::function<void()>&& func) { func(); });
 }
 
 void io_service::run()
@@ -1472,13 +1463,7 @@ void io_service::perform_timers()
       auto timer_ctl = earliest.first;
       auto& timer_cb = earliest.second;
       timer_queue_.pop_back(); // pop the expired timer from timer queue
-      if (options_.deferred_handler_)
-      {
-        bool cancelled = timer_ctl->cancelled_;
-        this->handlers_.enqueue([=]() { timer_cb(cancelled); });
-      }
-      else
-        timer_cb(timer_ctl->cancelled_);
+      timer_cb(timer_ctl->cancelled_);
     }
     else
       break;
@@ -1658,9 +1643,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
       break;
     }
-    case YOPT_S_DEFERS:
-      options_.deferred_event_   = !!va_arg(ap, int);
-      options_.deferred_handler_ = !!va_arg(ap, int);
+    case YOPT_S_DEFERRED_EVENT:
+      options_.deferred_event_ = !!va_arg(ap, int);
       break;
     case YOPT_S_TCP_KEEPALIVE:
       options_.tcp_keepalive_.onoff    = 1;

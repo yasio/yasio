@@ -95,11 +95,11 @@ enum
   // value:int(0)
   YOPT_S_NO_NEW_THREAD,
 
-  // length field based frame decode function, native C++ ONLY
+  // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
   YOPT_C_LFBFD_FN,
 
-  // length field based frame decode params, native C++ ONLY
+  // Sets channel length field based frame decode params
   // params:
   //     index:int,
   //     max_frame_length:int(10MBytes),
@@ -128,7 +128,7 @@ enum
   // params: index:int, port:int
   YOPT_C_REMOTE_PORT,
 
-  // Sets remote endpoint
+  // Sets channel remote endpoint
   // params: index:int, ip:const char*, port:int
   YOPT_C_REMOTE_ENDPOINT,
 

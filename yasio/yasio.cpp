@@ -405,7 +405,7 @@ void io_transport_posix::set_primitives(bool connected)
   }
   else
   {
-    this->send_cb_ = [=](const void* data, size_t len) {
+    this->send_cb_ = [=](const void* data, int len) {
       return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
     };
     this->recv_cb_ = [=](void* data, int len) {

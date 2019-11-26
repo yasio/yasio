@@ -1,8 +1,8 @@
 //
-// Copyright (c) 2014-2019 HALX99 - All Rights Reserved
+// Copyright (c) 2014-2020 HALX99 - All Rights Reserved
 //
-#ifndef YASIO__REF_PTR_H
-#define YASIO__REF_PTR_H
+#ifndef YASIO__REF_PTR_HPP
+#define YASIO__REF_PTR_HPP
 #include <iostream>
 
 #define __SAFE_RELEASE(p)                                                                          \

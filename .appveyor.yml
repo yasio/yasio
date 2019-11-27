@@ -1,13 +1,23 @@
-image: Visual Studio 2017
+image:
+  - Visual Studio 2019
+  - Visual Studio 2013
 
 version: 3.30.{build}
 
 environment:
     matrix:
-      - GEN: "Visual Studio 15 2017"
+      - GEN: "Visual Studio 16 2019"
         CFG: Release
-      - GEN: "Visual Studio 15 2017 Win64"
+        ARCH: -A Win32
+      - GEN: "Visual Studio 16 2019"
         CFG: Release
+        ARCH: -A Win64
+      - GEN: "Visual Studio 12 2013"
+        CFG: Release
+        ARCH: 
+      - GEN: "Visual Studio 12 2013 Win64"
+        CFG: Release
+        ARCH: 
 
 install:
     # Remove the VS Xamarin targets to reduce AppVeyor specific noise in build
@@ -17,6 +27,6 @@ install:
 
 build_script:
     - cd build
-    - cmake -G "%GEN%" ..
+    - cmake %ARCH% -G "%GEN%" ..
     - cmake --build . --config %CFG% --clean-first
 

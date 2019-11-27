@@ -1,6 +1,5 @@
 image:
   - Visual Studio 2019
-  - Visual Studio 2013
 
 version: 3.30.{build}
 
@@ -10,12 +9,6 @@ environment:
         CFG: Release
         ARCH: -A Win32
       - GEN: "Visual Studio 16 2019"
-        CFG: Release
-        ARCH: -A Win64
-      - GEN: "Visual Studio 12 2013"
-        CFG: Release
-        ARCH: 
-      - GEN: "Visual Studio 12 2013 Win64"
         CFG: Release
         ARCH: 
 

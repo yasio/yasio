@@ -29,6 +29,8 @@ See: https://github.com/bitwizeshift/string_view-standalone
 */
 #ifndef YASIO__STRING_VIEW_HPP
 #define YASIO__STRING_VIEW_HPP
+#include <ctype.h>
+#include <string.h>
 #include <string>
 
 #define __YASIO_SYM2LITERAL(s) #s
@@ -1410,6 +1412,77 @@ inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // 
 {
   return ends_with(lhs, cxx17::basic_string_view<_CharT>(s));
 }
+
+/// The case insensitive implementation of starts_with, ends_with
+namespace ic
+{
+template <typename _CharT>
+inline bool iequals(cxx17::basic_string_view<_CharT> lhs, cxx17::basic_string_view<_CharT> v);
+#if defined(_MSC_VER)
+template <>
+inline bool iequals<char>(cxx17::basic_string_view<char> lhs, cxx17::basic_string_view<char> v)
+{
+  return lhs.size() == v.size() && ::_strnicmp(lhs.data(), v.data(), v.size()) == 0;
+}
+template <>
+inline bool iequals<wchar_t>(cxx17::basic_string_view<wchar_t> lhs,
+                             cxx17::basic_string_view<wchar_t> v)
+{
+  return lhs.size() == v.size() && ::_wcsnicmp(lhs.data(), v.data(), v.size()) == 0;
+}
+#else
+template <>
+inline bool iequals<char>(cxx17::basic_string_view<char> lhs, cxx17::basic_string_view<char> v)
+{
+  return lhs.size() == v.size() && ::strncasecmp(lhs.data(), v.data(), v.size()) == 0;
+}
+template <>
+inline bool iequals<wchar_t>(cxx17::basic_string_view<wchar_t> lhs,
+                             cxx17::basic_string_view<wchar_t> v)
+{
+  return lhs.size() == v.size() && ::wcsncasecmp(lhs.data(), v.data(), v.size()) == 0;
+}
+#endif
+// starts_with(), since C++20:
+template <typename _CharT>
+inline bool starts_with(cxx17::basic_string_view<_CharT> lhs,
+                        cxx17::basic_string_view<_CharT> v) // (1)
+{
+  return lhs.size() >= v.size() && iequals(lhs.substr(0, v.size()), v);
+}
+
+template <typename _CharT>
+inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, _CharT c) // (2)
+{
+  return !lhs.empty() && ::tolower(lhs.front()) == ::tolower(c);
+}
+
+template <typename _CharT>
+inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // (3)
+{
+  return starts_with(lhs, cxx17::basic_string_view<_CharT>(s));
+}
+
+// ends_with(), since C++20:
+template <typename _CharT>
+inline bool ends_with(cxx17::basic_string_view<_CharT> lhs,
+                      cxx17::basic_string_view<_CharT> v) // (1)
+{
+  return lhs.size() >= v.size() && iequals(lhs.substr(lhs.size() - v.size(), lhs.npos), v);
+}
+
+template <typename _CharT>
+inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT c) // (2)
+{
+  return !lhs.empty() && ::tolower(lhs.back()) == ::tolower(c);
+}
+
+template <typename _CharT>
+inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, _CharT const* s) // (3)
+{
+  return ends_with(lhs, cxx17::basic_string_view<_CharT>(s));
+}
+} // namespace ic
 } // namespace cxx20
 
 #endif

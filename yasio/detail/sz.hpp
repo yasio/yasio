@@ -50,4 +50,6 @@ static const uint64_t YASIO__EB = (1024 * YASIO__PB); // lgtm [cpp/unused-static
 
 #define YASIO_SZ(n, u) ((n)*YASIO__##u)
 
+define YASIO_SZ_ALIGN(d, a) (((d) + ((a)-1)) & ~((a)-1))
+
 #endif

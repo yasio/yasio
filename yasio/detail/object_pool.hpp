@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2019 halx99
+Copyright (c) 2012-2020 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <memory>
 #include <mutex>
+#include "sz.hpp"
 
 #define OBJECT_POOL_DECL inline
 
@@ -47,7 +48,6 @@ namespace yasio
 {
 namespace gc
 {
-#define YASIO_SZ_ALIGN(d, a) (((d) + ((a)-1)) & ~((a)-1))
 #define YASIO_POOL_ESTIMATE_SIZE(element_type) YASIO_SZ_ALIGN(sizeof(element_type), sizeof(void*))
 #define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
 #define YASIO_POOL_PREALLOCATE 1

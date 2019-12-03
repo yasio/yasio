@@ -336,20 +336,22 @@ bool io_transport_posix::prepare_write_to(const char* addr, u_short port)
   if (!(ctx_->mask_ & YCM_UDP))
     return false;
 
-  using namespace std;
+  using namespace std; // for operator< of ip::endpoint
   if (!(this->peer_ < ep) && !(ep < this->peer_))
+  {
     this->peer_ = ep;
 
-  if (connected_)
-  {
-    this->ctx_->get_service().unregister_descriptor(this->socket_->native_handle(),
-                                                    YEM_POLLIN | YEM_POLLOUT);
-    this->socket_->reopen(AF_INET, SOCK_STREAM);
-    this->socket_->bind(ctx_->local_host_.c_str(), ctx_->local_port_);
-    this->ctx_->get_service().register_descriptor(this->socket_->native_handle(), YEM_POLLIN);
+    if (connected_)
+    {
+      this->ctx_->get_service().unregister_descriptor(this->socket_->native_handle(),
+                                                      YEM_POLLIN | YEM_POLLOUT);
+      this->socket_->reopen(AF_INET, SOCK_STREAM);
+      this->socket_->bind(ctx_->local_host_.c_str(), ctx_->local_port_);
+      this->ctx_->get_service().register_descriptor(this->socket_->native_handle(), YEM_POLLIN);
 
-    // unbind 4 tuple
-    set_primitives(false, false);
+      // unbind 4 tuple
+      set_primitives(false, false);
+    }
   }
   return true;
 }

@@ -55,7 +55,7 @@ LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/jni/cocos-lua)
 ```
 
-3. Call luaopen_yasio_cclua(L) at your AppDelegate.cpp, please remember ```#include "yasio/yasio_cclua.h"``` firstly.  
+3. Call luaopen_yasio_cclua(L) at your AppDelegate.cpp, please remember ```#include "yasio/bindings/yasio_cclua.h"``` firstly.  
 
 ### JSB integration  
 #### cocos2d-x jsb integration:

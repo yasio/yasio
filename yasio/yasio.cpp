@@ -765,7 +765,7 @@ void io_service::perform_channels(fd_set* fds_array)
         {
           do_nonblocking_connect_completion(ctx, fds_array);
         }
-        finish = ctx->error_ != EINPROGRESS;
+        finish = ctx->error_ != EINPROGRESS && (ctx->opmask_ & YOPM_OPEN_CHANNEL) == 0;
       }
       else if (ctx->mask_ & YCM_SERVER)
       {
@@ -998,7 +998,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
       }
     }
     else if (ret == 0)
-    { // connect server succed immidiately.
+    { // connect server successful immediately.
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
       handle_connect_succeed(ctx, ctx->socket_);
     } // !!!NEVER GO HERE

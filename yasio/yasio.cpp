@@ -133,17 +133,17 @@ enum : short
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #  pragma pack(push, 8)
-typedef struct tagTHREADNAME_INFO
+typedef struct _yasio__thread_info
 {
   DWORD dwType;     // Must be 0x1000.
   LPCSTR szName;    // Pointer to name (in user addr space).
   DWORD dwThreadID; // Thread ID (-1=caller thread).
   DWORD dwFlags;    // Reserved for future use, must be zero.
-} THREADNAME_INFO;
+} yasio__thread_info;
 #  pragma pack(pop)
-static void _set_thread_name(const char* threadName)
+static void yasio__set_thread_name(const char* threadName)
 {
-  THREADNAME_INFO info;
+  yasio__thread_info info;
   info.dwType     = 0x1000;
   info.szName     = threadName;
   info.dwThreadID = GetCurrentThreadId();
@@ -158,11 +158,11 @@ static void _set_thread_name(const char* threadName)
 #  endif
 }
 #elif defined(ANDROID)
-#  define _set_thread_name(name) pthread_setname_np(pthread_self(), name)
+#  define yasio__set_thread_name(name) pthread_setname_np(pthread_self(), name)
 #elif defined(__APPLE__)
-#  define _set_thread_name(name) pthread_setname_np(name)
+#  define yasio__set_thread_name(name) pthread_setname_np(name)
 #else
-#  define _set_thread_name(name)
+#  define yasio__set_thread_name(name)
 #endif
 } // namespace
 
@@ -645,7 +645,7 @@ void io_service::dispatch(int count)
 
 void io_service::run()
 {
-  _set_thread_name("yasio");
+  yasio__set_thread_name("yasio");
 
   // Call once at startup
   this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());

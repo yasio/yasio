@@ -1,4 +1,4 @@
-#include "yasio/lyasio.h"
+#include "yasio/bindings/lyasio.h"
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/detail/sol/sol.hpp"
 #include <thread>

@@ -28,7 +28,7 @@ SOFTWARE.
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 #include "yasio/yasio.hpp"
-#include "yasio/lyasio.h"
+#include "yasio/bindings/lyasio.h"
 
 namespace lyasio
 {

@@ -69,7 +69,7 @@ Add ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```y
 LOCAL_STATIC_LIBRARIES += yasio_static
 $(call import-module, external/yasio/jni/cocos-jsb)
 ```
-3. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio_jsb.h``` firstly.
+3. Add register code to your AppDelegate.cpp: ```sc->addRegisterCallback(jsb_register_yasio);```, please include ```yasio/bindings/yasio_jsb.h``` firstly.
 #### CocosCreator jsb2.0 integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external/sources```, ```yasio``` as sub directory of ```external/sources```  
 2. Add obstream.cpp, ibstream.cpp, xxsocket.cpp, yasio.cpp, bindings/yasio_jsb20.cpp to your compile system.
@@ -83,7 +83,7 @@ $(call import-module, external/yasio/jni/cocos-jsb)
 ../external/sources/yasio/obstream.cpp \
 ../external/sources/yasio/bindings/yasio_jsb20.cpp \
 ```
-3. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio_jsb20.h``` firstly.  
+3. Add register code to your jsb_module_register.cpp: ```se->addRegisterCallback(jsb_register_yasio);``` , please include ```yasio/bindings/yasio_jsb20.h``` firstly.  
 
 
 #### JS demo:

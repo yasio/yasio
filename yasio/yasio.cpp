@@ -5,10 +5,10 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2019 HALX99
+Copyright (c) 2012-2020 HALX99
 
 HAL: Hardware Abstraction Layer
-X99: Intel X99
+X99: Intel X99 Mainboard Platform
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1181,7 +1181,11 @@ transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoin
       return transport;
     }
     else
-      YASIO_SLOG("%s", "udp-server: open socket fd failed!");
+    {
+      error = xxsocket::get_last_errno();
+      YASIO_SLOG("udp-server: bind address failed, ec=%d, detail:%s", error,
+                 xxsocket::strerror(error));
+    }
   }
 
   return nullptr;

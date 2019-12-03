@@ -5,7 +5,7 @@ yasio-3.30
 4. Add a workaround implementation to support win32 udp-server.
 5. Add io_service::cindex_to_handle.
 6. Add ftp sever example.
-7. Optimize deadline timer, provide set_repeated to control timer looply.
+7. Remove loop behavior of deadline_timer, user can schedule again when it's expired.
 8. Add defer invoke timer callback support.
 9. Add obstream::write_byte.
 10. Add to_strf_v4 for ip::endpoint.

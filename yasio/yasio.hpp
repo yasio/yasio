@@ -385,6 +385,7 @@ private:
 
   // Try flush pending packet
   virtual bool do_write(long long& max_wait_duration) = 0;
+  virtual bool prepare_write_to(const char* addr, u_short port) { return false; }
 
 protected:
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock);
@@ -423,11 +424,15 @@ private:
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
+  YASIO__DECL bool prepare_write_to(const char* addr, u_short port) override;
+
   // set the low level send/recv primitives.
-  YASIO__DECL void set_primitives(bool connected);
+  YASIO__DECL void update_primitives(bool connecting = true);
 
   std::function<int(const void*, int)> send_cb_;
   std::function<int(void*, int)> recv_cb_;
+  ip::endpoint peer_;
+  bool connected_; // whether bind 4 tuple with peer
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 
@@ -562,6 +567,9 @@ public:
 
   YASIO__DECL int write(transport_handle_t transport, std::vector<char> buffer,
                         std::function<void()> = nullptr);
+
+  YASIO__DECL int write_to(transport_handle_t transport, std::vector<char> buffer, const char* addr,
+                           u_short port, std::function<void()> = nullptr);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service
   deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb)

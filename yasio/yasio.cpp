@@ -325,12 +325,81 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 io_transport_posix::io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock)
     : io_transport(ctx, sock)
 {
-  this->set_primitives(!(ctx->flags_ & YCF_MCAST) || !(ctx->mask_ & YCM_CLIENT));
+  connected_  = !(ctx->flags_ & YCF_MCAST) || !(ctx->mask_ & YCM_CLIENT);
+  this->peer_ = connected_ ? sock->peer_endpoint() : ctx_->remote_eps_[0];
+  this->update_primitives(true);
 }
+
+bool io_transport_posix::prepare_write_to(const char* addr, u_short port)
+{
+  ip::endpoint ep(addr, port);
+  if (!(ctx_->mask_ & YCM_UDP))
+    return false;
+
+  using namespace std;
+  if (!(this->peer_ < ep) && !(ep < this->peer_))
+    this->peer_ = ep;
+
+  if (connected_)
+  {
+    this->ctx_->get_service().unregister_descriptor(this->socket_->native_handle(),
+                                                    YEM_POLLIN | YEM_POLLOUT);
+    this->socket_->reopen(AF_INET, SOCK_STREAM);
+    this->ctx_->get_service().register_descriptor(this->socket_->native_handle(), YEM_POLLIN);
+    connected_ = false;
+    update_primitives(false);
+  }
+  return true;
+}
+
+void io_transport_posix::update_primitives(bool connecting)
+{
+  if (connected_)
+  {
+    this->send_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
+    this->recv_cb_ = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
+  }
+  else
+  {
+    this->send_cb_ = [=](const void* data, int len) {
+      return socket_->sendto_i(data, len, this->peer_);
+    };
+    if (connecting)
+      this->recv_cb_ = [=](void* data, int len) {
+        ip::endpoint peer;
+        int n = socket_->recvfrom_i(data, len, peer);
+
+        // Now the 'peer' is a real host address
+        // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
+        if (n > 0 && 0 == socket_->connect_n(peer))
+        {
+          ctx_->leave_multicast_group(socket_);
+
+          YASIO_SLOG_IMPL(get_service().options_,
+                          "[index: %d] the connection #%u [%s] --> [%s] is established through "
+                          "multicast: [%s].",
+                          ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
+                          socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
+
+          this->peer_      = peer;
+          this->connected_ = true;
+          update_primitives();
+        }
+        return n;
+      };
+    else // for support write_to
+      this->recv_cb_ = [=](void* data, int len) {
+        ip::endpoint peer;
+        return socket_->recvfrom_i(data, len, peer);
+      };
+  }
+}
+
 void io_transport_posix::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
 }
+
 int io_transport_posix::do_read(int& error)
 {
   int n = recv_cb_(buffer_ + offset_, sizeof(buffer_) - offset_);
@@ -396,40 +465,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
 
   return ret;
 }
-void io_transport_posix::set_primitives(bool connected)
-{
-  if (connected)
-  {
-    this->send_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
-    this->recv_cb_ = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
-  }
-  else
-  {
-    this->send_cb_ = [=](const void* data, int len) {
-      return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
-    };
-    this->recv_cb_ = [=](void* data, int len) {
-      ip::endpoint peer;
-      int n = socket_->recvfrom_i(data, len, peer);
 
-      // Now the 'peer' is a real host address
-      // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
-      if (n > 0 && 0 == socket_->connect_n(peer))
-      {
-        ctx_->leave_multicast_group(socket_);
-
-        YASIO_SLOG_IMPL(
-            get_service().options_,
-            "[index: %d] the connection #%u [%s] --> [%s] is established through multicast: [%s].",
-            ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
-            socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
-
-        set_primitives(true);
-      }
-      return n;
-    };
-  }
-}
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> sock)
@@ -923,6 +959,26 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   if (transport && transport->is_open())
   {
     if (!buffer.empty())
+    {
+      transport->write(std::move(buffer), std::move(handler));
+      this->interrupt();
+      return static_cast<int>(buffer.size());
+    }
+    return 0;
+  }
+  else
+  {
+    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
+    return -1;
+  }
+}
+
+int io_service::write_to(transport_handle_t transport, std::vector<char> buffer, const char* addr,
+                         u_short port, std::function<void()> handler)
+{
+  if (transport && transport->is_open())
+  {
+    if (!buffer.empty() && transport->prepare_write_to(addr, port))
     {
       transport->write(std::move(buffer), std::move(handler));
       this->interrupt();

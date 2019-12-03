@@ -427,12 +427,12 @@ private:
   YASIO__DECL bool prepare_write_to(const char* addr, u_short port) override;
 
   // set the low level send/recv primitives.
-  YASIO__DECL void update_primitives(bool connecting = true);
+  YASIO__DECL void set_primitives(bool connected, bool request_connect);
 
   std::function<int(const void*, int)> send_cb_;
   std::function<int(void*, int)> recv_cb_;
   ip::endpoint peer_;
-  bool connected_; // whether bind 4 tuple with peer
+  bool connected_ = false; // whether bind 4 tuple with peer
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 

@@ -325,9 +325,9 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 io_transport_posix::io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock)
     : io_transport(ctx, sock)
 {
-  connected_  = !(ctx->flags_ & YCF_MCAST) || !(ctx->mask_ & YCM_CLIENT);
-  this->peer_ = connected_ ? sock->peer_endpoint() : ctx_->remote_eps_[0];
-  this->update_primitives(true);
+  bool connected = !(ctx->flags_ & YCF_MCAST) || !(ctx->mask_ & YCM_CLIENT);
+  this->peer_    = connected ? sock->peer_endpoint() : ctx_->remote_eps_[0];
+  this->set_primitives(connected, !connected);
 }
 
 bool io_transport_posix::prepare_write_to(const char* addr, u_short port)
@@ -345,16 +345,22 @@ bool io_transport_posix::prepare_write_to(const char* addr, u_short port)
     this->ctx_->get_service().unregister_descriptor(this->socket_->native_handle(),
                                                     YEM_POLLIN | YEM_POLLOUT);
     this->socket_->reopen(AF_INET, SOCK_STREAM);
+    this->socket_->bind(ctx_->local_host_.c_str(), ctx_->local_port_);
     this->ctx_->get_service().register_descriptor(this->socket_->native_handle(), YEM_POLLIN);
-    connected_ = false;
-    update_primitives(false);
+
+    // unbind 4 tuple
+    set_primitives(false, false);
   }
   return true;
 }
 
-void io_transport_posix::update_primitives(bool connecting)
+void io_transport_posix::set_primitives(bool connected, bool request_connect)
 {
-  if (connected_)
+  if (this->connected_ == connected)
+    return;
+  this->connected_ = connected;
+
+  if (connected)
   {
     this->send_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
     this->recv_cb_ = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
@@ -364,7 +370,7 @@ void io_transport_posix::update_primitives(bool connecting)
     this->send_cb_ = [=](const void* data, int len) {
       return socket_->sendto_i(data, len, this->peer_);
     };
-    if (connecting)
+    if (request_connect)
       this->recv_cb_ = [=](void* data, int len) {
         ip::endpoint peer;
         int n = socket_->recvfrom_i(data, len, peer);
@@ -381,9 +387,8 @@ void io_transport_posix::update_primitives(bool connecting)
                           ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
                           socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
 
-          this->peer_      = peer;
-          this->connected_ = true;
-          update_primitives();
+          this->peer_ = peer;
+          set_primitives(true, false);
         }
         return n;
       };

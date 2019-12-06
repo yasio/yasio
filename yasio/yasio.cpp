@@ -974,11 +974,6 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if (ctx->local_host_.empty())
       ctx->local_host_ = YASIO_ANY_ADDR(this->ipsv_);
 
-#if defined(__APPLE__) || defined(__linux__)
-    if (ctx->mask_ & YCM_TCP)
-      ctx->socket_->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
-#endif
-
     if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
       ctx->socket_->bind(ctx->local_host_.c_str(), ctx->local_port_);
 
@@ -1213,6 +1208,10 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
   }
   if (ctx->mask_ & YCM_TCP)
   {
+#if defined(__APPLE__) || defined(__linux__)
+    if (ctx->mask_ & YCM_TCP)
+      connection->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
+#endif
     // apply tcp keepalive options
     if (options_.tcp_keepalive_.onoff)
       connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle,

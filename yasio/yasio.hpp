@@ -297,8 +297,8 @@ private:
     setup_remote_port(port);
   }
 
-  YASIO__DECL int join_multicast_group(std::shared_ptr<xxsocket>&, int loopback);
-  YASIO__DECL void leave_multicast_group(std::shared_ptr<xxsocket>&);
+  YASIO__DECL int join_multicast_group();
+  YASIO__DECL void leave_multicast_group();
 
   YASIO__DECL void setup_remote_host(std::string host);
   YASIO__DECL void setup_remote_port(u_short port);

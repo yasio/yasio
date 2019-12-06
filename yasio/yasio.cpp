@@ -209,35 +209,37 @@ io_channel::io_channel(io_service& service) : deadline_timer_(service)
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
-int io_channel::join_multicast_group(std::shared_ptr<xxsocket>& sock, int loopback)
+int io_channel::join_multicast_group()
 {
-  if (sock && !this->remote_eps_.empty())
+  if (socket_ && !this->remote_eps_.empty())
   {
     auto& ep = this->remote_eps_[0];
     // loopback
-    sock->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
+      
+    int loopback = (flags_ & YCF_MCAST_LOOPBACK) != 0;
+    socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                      ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
     // ttl
-    sock->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
+    socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                      ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
                      YASIO_DEFAULT_MULTICAST_TTL);
 
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
     mreq.imr_multiaddr.s_addr = ep.in4_.sin_addr.s_addr;
-    return sock->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+    return socket_->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
   return -1;
 }
 
-void io_channel::leave_multicast_group(std::shared_ptr<xxsocket>& sock)
+void io_channel::leave_multicast_group()
 {
-  if (sock && !this->remote_eps_.empty())
+  if (socket_ && !this->remote_eps_.empty())
   {
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
     mreq.imr_multiaddr.s_addr = this->remote_eps_[0].in4_.sin_addr.s_addr;
-    sock->set_optval(IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+    socket_->set_optval(IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
 }
 
@@ -416,7 +418,7 @@ void io_transport_posix::set_primitives(bool connected)
       // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
       if (n > 0 && 0 == socket_->connect_n(peer))
       {
-        ctx_->leave_multicast_group(socket_);
+        ctx_->leave_multicast_group();
 
         YASIO_SLOG_IMPL(
             get_service().options_,
@@ -978,7 +980,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if (!(ctx->flags_ & YCF_MCAST))
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     else
-      ret = ctx->join_multicast_group(ctx->socket_, (ctx->flags_ & YCF_MCAST_LOOPBACK) != 0);
+      ret = ctx->join_multicast_group();
     if (ret < 0)
     { // setup no blocking connect
       int error = xxsocket::get_last_errno();
@@ -1076,7 +1078,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       if (ctx->mask_ & YCM_UDP)
       {
         if (ctx->flags_ & YCF_MCAST)
-          ctx->join_multicast_group(ctx->socket_, (ctx->flags_ & YCF_MCAST_LOOPBACK) != 0);
+          ctx->join_multicast_group();
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);

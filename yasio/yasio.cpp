@@ -157,7 +157,7 @@ static void yasio__set_thread_name(const char* threadName)
   {}
 #  endif
 }
-#elif defined(ANDROID)
+#elif defined(__linux__)
 #  define yasio__set_thread_name(name) pthread_setname_np(pthread_self(), name)
 #elif defined(__APPLE__)
 #  define yasio__set_thread_name(name) pthread_setname_np(name)
@@ -215,14 +215,14 @@ int io_channel::join_multicast_group()
   {
     auto& ep = this->remote_eps_[0];
     // loopback
-      
+
     int loopback = (flags_ & YCF_MCAST_LOOPBACK) != 0;
     socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                     ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
+                        ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
     // ttl
     socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                     ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
-                     YASIO_DEFAULT_MULTICAST_TTL);
+                        ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
+                        YASIO_DEFAULT_MULTICAST_TTL);
 
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
@@ -973,6 +973,11 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_host_.empty())
       ctx->local_host_ = YASIO_ANY_ADDR(this->ipsv_);
+    
+#if defined(__APPLE__) || defined(__linux__)
+    if (ctx->mask_ & YCM_TCP)
+      ctx->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
+#endif
 
     if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
       ctx->socket_->bind(ctx->local_host_.c_str(), ctx->local_port_);

@@ -92,6 +92,9 @@ typedef int socklen_t;
 #  if !defined(ioctlsocket)
 #    define ioctlsocket ioctl
 #  endif
+#  if defined(__linux__)
+#    define SO_NOSIGPIPE MSG_NOSIGNAL
+#  endif
 typedef int socket_native_type;
 #  undef socket
 #endif

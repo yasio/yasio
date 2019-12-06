@@ -973,10 +973,10 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
       ctx->socket_->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
     if (ctx->local_host_.empty())
       ctx->local_host_ = YASIO_ANY_ADDR(this->ipsv_);
-    
+
 #if defined(__APPLE__) || defined(__linux__)
     if (ctx->mask_ & YCM_TCP)
-      ctx->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
+      ctx->socket_->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
 #endif
 
     if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))

@@ -15,3 +15,4 @@ yasio-3.30
 14. Mark io_service::dispatch_events deprecated, use dispatch to instead.
 15. Add YCF_REUSEPORT to control whether to enable socket can bind same port, default and previous vesion is enabled.
 16. Implement case insensitive starts_with, ends_with at string_view.hpp.
+17. Ignore SIGPIPE for tcp at non-win32 system.

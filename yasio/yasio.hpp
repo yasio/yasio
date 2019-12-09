@@ -68,7 +68,7 @@ namespace inet
 enum
 {
   // Set timeouts in seconds
-  // params: dns_cache_timeout:int(600), connect_timeout:int(10),reconnect_timeout:int(-1)
+  // params: dns_cache_timeout:int(600), connect_timeout:int(10)
   YOPT_S_TIMEOUTS = 1,
 
   // Set with deferred dispatch event, default is: 1
@@ -708,8 +708,7 @@ private:
   // options
   struct __unnamed_options
   {
-    highp_time_t connect_timeout_   = 10LL * MICROSECONDS_PER_SECOND;
-    highp_time_t reconnect_timeout_ = -1;
+    highp_time_t connect_timeout_ = 10LL * MICROSECONDS_PER_SECOND;
     // Default dns cache time: 10 minutes
     highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
 

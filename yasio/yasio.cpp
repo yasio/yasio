@@ -406,7 +406,7 @@ void io_transport_posix::set_primitives(bool connected)
     this->recv_cb_ = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
   }
   else
-  {
+  { // Only for multicast client
     this->send_cb_ = [=](const void* data, int len) {
       return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
     };
@@ -879,19 +879,6 @@ void io_service::handle_close(transport_handle_t transport)
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, ptr)));
-
-  // @Process tcp client reconnect
-  if (ctx->mask_ == YCM_TCP_CLIENT)
-  {
-    if (options_.reconnect_timeout_ > 0 && ctx->state_ != YCS_OPENING)
-    {
-      ctx->state_ = YCS_OPENING;
-      this->schedule(options_.reconnect_timeout_, [=](bool cancelled) {
-        if (!cancelled)
-          this->open_internal(ctx, true);
-      });
-    }
-  }
 }
 
 void io_service::register_descriptor(const socket_native_type fd, int flags)
@@ -1646,11 +1633,6 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       options_.connect_timeout_ =
           static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      int value = va_arg(ap, int);
-      if (value > 0)
-        options_.reconnect_timeout_ = static_cast<highp_time_t>(value) * MICROSECONDS_PER_SECOND;
-      else
-        options_.reconnect_timeout_ = -1; // means auto reconnect is disabled.
       break;
     }
     case YOPT_S_DEFERRED_EVENT:

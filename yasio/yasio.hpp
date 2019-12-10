@@ -160,8 +160,8 @@ enum
   YCM_TCP_SERVER   = YCM_TCP | YCM_SERVER | YCM_POSIX,
   YCM_UDP_CLIENT   = YCM_UDP | YCM_CLIENT | YCM_POSIX,
   YCM_UDP_SERVER   = YCM_UDP | YCM_SERVER | YCM_POSIX,
-  YCM_MCAST_CLIENT = YCM_MCAST | YCM_CLIENT,
-  YCM_MCAST_SERVER = YCM_MCAST | YCM_SERVER | YCM_POSIX,
+  YCM_MCAST_CLIENT = YCM_MCAST | YCM_CLIENT | YCM_UDP,
+  YCM_MCAST_SERVER = YCM_MCAST | YCM_SERVER | YCM_UDP | YCM_POSIX,
 #if defined(YASIO_HAVE_KCP)
   YCM_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
 #endif
@@ -173,9 +173,10 @@ enum
 // channel flags
 enum
 {
-  YCF_MCAST_LOOPBACK = 1 << 1,
-  YCF_REUSEPORT      = 1 << 2,
-  YCF_HANDSHAKING = 1 << 3, /* The flag to indicate channel is handshaking or not fully connected */
+  YCF_MCAST_LOOPBACK    = 1 << 1,
+  YCF_REUSEPORT         = 1 << 2,
+  YCF_MCAST_HANDSHAKING = 1 << 3,
+  YCF_SSL_HANDSHAKING   = 1 << 4,
 };
 
 // event kinds
@@ -406,7 +407,7 @@ private:
   YASIO__DECL virtual void set_primitives() {}
 
 protected:
-  YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
+  YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   virtual ~io_transport() {}
 
   void invalid() { valid_ = false; }
@@ -435,7 +436,7 @@ public:
 class io_transport_posix : public io_transport
 {
 public:
-  io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket>& sock) : io_transport(ctx, sock) {}
+  io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport(ctx, s) {}
 
 protected:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
@@ -452,7 +453,8 @@ protected:
 class io_transport_mcast : public io_transport_posix
 {
 public:
-  YASIO__DECL io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
+  YASIO__DECL io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& s);
+  YASIO__DECL ~io_transport_mcast();
 
 protected:
   YASIO__DECL void set_primitives() override;
@@ -463,7 +465,7 @@ protected:
 class io_transport_kcp : public io_transport
 {
 public:
-  YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
+  YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL ~io_transport_kcp();
 
 protected:

@@ -316,12 +316,12 @@ int io_channel::__builtin_decode_len(void* ud, int n)
 }
 
 // -------------------- io_transport ---------------------
-io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& sock) : ctx_(ctx)
+io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_(ctx)
 {
   static unsigned int s_object_id = 0;
   this->state_                    = YCS_OPENED;
   this->id_                       = ++s_object_id;
-  this->socket_                   = sock;
+  this->socket_                   = s;
   this->valid_                    = true;
   this->ud_.ptr                   = nullptr;
 }
@@ -406,8 +406,9 @@ void io_transport_posix::set_primitives()
 io_transport_mcast::io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
     : io_transport_posix(ctx, sock)
 {
-  ctx->flags_ |= YCF_HANDSHAKING;
+  ctx->flags_ |= YCF_MCAST_HANDSHAKING;
 }
+io_transport_mcast::~io_transport_mcast() { ctx_->flags_ &= ~YCF_MCAST_HANDSHAKING; }
 void io_transport_mcast::set_primitives()
 {
   this->write_cb_ = [=](const void* data, int len) {
@@ -425,11 +426,10 @@ void io_transport_mcast::set_primitives()
     return n;
   };
 }
-
 int io_transport_mcast::do_read(int& error)
 {
-  int n = super::do_read(error);
-  if (ctx_->flags_ & YCF_HANDSHAKING)
+  int n = io_transport_posix::do_read(error);
+  if (ctx_->flags_ & YCF_MCAST_HANDSHAKING)
   {
     if (n > 0 && ctx_->remote_eps_.size() > YASIO_MCAST_EPI)
     {
@@ -437,15 +437,15 @@ int io_transport_mcast::do_read(int& error)
       // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
       if (0 == socket_->connect_n(ctx_->remote_eps_[YASIO_MCAST_EPI]))
       {
-        ctx_->flags_ &= ~YCF_HANDSHAKING;
+        ctx_->flags_ &= ~YCF_MCAST_HANDSHAKING;
         ctx_->leave_multicast_group();
         io_transport_posix::set_primitives();
 
-        YASIO_SLOG_IMPL(
-            get_service().options_,
-            "[index: %d] the connection #%u [%s] --> [%s] is established through multicast: [%s].",
-            ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
-            socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
+        YASIO_SLOG_IMPL(get_service().options_,
+                        "[index: %d] the connection #%u [%s] --> [%s] is established through "
+                        "multicast: [%s].",
+                        ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
+                        socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
         return n;
       }
     }
@@ -455,8 +455,8 @@ int io_transport_mcast::do_read(int& error)
 
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
-io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
-    : io_transport(ctx, sock), kcp_(nullptr)
+io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
+    : io_transport(ctx, s), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
   ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
@@ -985,7 +985,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
       ctx->socket_->bind(ctx->local_host_.c_str(), ctx->local_port_);
 
-    if (!(ctx->flags_ & YCM_MCAST))
+    if (!(ctx->mask_ & YCM_MCAST))
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     else
       ret = ctx->join_multicast_group();
@@ -1031,7 +1031,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
             0 &&
         error == 0)
     {
-      // remove write event avoid high-CPU occupation
+      // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
       unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
       handle_connect_succeed(ctx, ctx->socket_);
     }
@@ -1052,7 +1052,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   // for server, local_port_ can't be zero
   if (ctx->local_host_.empty())
   {
-    if (!(ctx->flags_ & YCM_MCAST))
+    if ((ctx->mask_ & YCM_MCAST) == 0)
       ctx->local_host_ = ctx->remote_host_;
     else
       ctx->local_host_ = YASIO_ANY_ADDR(ipsv_);
@@ -1085,7 +1085,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
 
       if (ctx->mask_ & YCM_UDP)
       {
-        if (ctx->flags_ & YCM_MCAST)
+        if (ctx->mask_ & YCM_MCAST)
           ctx->join_multicast_group();
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }

@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2019 halx99
+Copyright (c) 2012-2020 HALX99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -195,8 +195,4 @@ inline unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, u
 
 } // namespace yasio
 
-/*
- * Copyright (c) 2012-2019 by HALX99  ALL RIGHTS RESERVED.
- * Consult your license regarding permissions and restrictions.
- **/
 #endif

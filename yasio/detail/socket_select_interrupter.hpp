@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2019 halx99
+Copyright (c) 2012-2020 HALX99
 
 Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 Copyright (c) 2008 Roelof Naude (roelof.naude at gmail dot com)

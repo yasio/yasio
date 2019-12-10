@@ -70,6 +70,9 @@ SOFTWARE.
 
 #define YASIO_ANY_ADDR(flags) (flags) & ipsv_ipv4 ? "0.0.0.0" : "::"
 
+// The multicast explicit peer endpoint index
+#define YASIO_MCAST_EPI 1
+
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -313,7 +316,7 @@ int io_channel::__builtin_decode_len(void* ud, int n)
 }
 
 // -------------------- io_transport ---------------------
-io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ctx_(ctx)
+io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& sock) : ctx_(ctx)
 {
   static unsigned int s_object_id = 0;
   this->state_                    = YCS_OPENED;
@@ -324,18 +327,13 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock) : ct
 }
 
 // -------------------- io_transport_posix ---------------------
-io_transport_posix::io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock)
-    : io_transport(ctx, sock)
-{
-  this->set_primitives(!(ctx->flags_ & YCF_MCAST) || !(ctx->mask_ & YCM_CLIENT));
-}
 void io_transport_posix::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
 }
 int io_transport_posix::do_read(int& error)
 {
-  int n = recv_cb_(buffer_ + offset_, sizeof(buffer_) - offset_);
+  int n = read_cb_(buffer_ + offset_, sizeof(buffer_) - offset_);
   error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
@@ -353,7 +351,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
     {
       auto v                 = *pv;
       auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->offset_);
-      int n                  = send_cb_(v->buffer_.data() + v->offset_, outstanding_bytes);
+      int n                  = write_cb_(v->buffer_.data() + v->offset_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop();
@@ -398,43 +396,66 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
 
   return ret;
 }
-void io_transport_posix::set_primitives(bool connected)
+void io_transport_posix::set_primitives()
 {
-  if (connected)
-  {
-    this->send_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
-    this->recv_cb_ = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
-  }
-  else
-  { // Only for multicast client
-    this->send_cb_ = [=](const void* data, int len) {
-      return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
-    };
-    this->recv_cb_ = [=](void* data, int len) {
-      ip::endpoint peer;
-      int n = socket_->recvfrom_i(data, len, peer);
+  this->write_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
+  this->read_cb_  = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
+}
 
+// ----------------------- io_transport_mcast ----------------
+io_transport_mcast::io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
+    : io_transport_posix(ctx, sock)
+{
+  ctx->flags_ |= YCF_HANDSHAKING;
+}
+void io_transport_mcast::set_primitives()
+{
+  this->write_cb_ = [=](const void* data, int len) {
+    return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
+  };
+  this->read_cb_ = [=](void* data, int len) {
+    ip::endpoint peer;
+    int n = socket_->recvfrom_i(data, len, peer);
+
+    if (n > 0)
+    { // record explicit peer endpoint
+      ctx_->remote_eps_.resize(YASIO_MCAST_EPI + 1);
+      ctx_->remote_eps_[YASIO_MCAST_EPI] = peer;
+    }
+    return n;
+  };
+}
+
+int io_transport_mcast::do_read(int& error)
+{
+  int n = super::do_read(error);
+  if (ctx_->flags_ & YCF_HANDSHAKING)
+  {
+    if (n > 0 && ctx_->remote_eps_.size() > YASIO_MCAST_EPI)
+    {
       // Now the 'peer' is a real host address
       // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
-      if (n > 0 && 0 == socket_->connect_n(peer))
+      if (0 == socket_->connect_n(ctx_->remote_eps_[YASIO_MCAST_EPI]))
       {
+        ctx_->flags_ &= ~YCF_HANDSHAKING;
         ctx_->leave_multicast_group();
+        super::set_primitives();
 
         YASIO_SLOG_IMPL(
             get_service().options_,
             "[index: %d] the connection #%u [%s] --> [%s] is established through multicast: [%s].",
             ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
             socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
-
-        set_primitives(true);
+        return n;
       }
-      return n;
-    };
+    }
   }
+  return n;
 }
+
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
-io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> sock)
+io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
     : io_transport(ctx, sock), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
@@ -964,7 +985,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
       ctx->socket_->bind(ctx->local_host_.c_str(), ctx->local_port_);
 
-    if (!(ctx->flags_ & YCF_MCAST))
+    if (!(ctx->flags_ & YCM_MCAST))
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     else
       ret = ctx->join_multicast_group();
@@ -1031,7 +1052,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   // for server, local_port_ can't be zero
   if (ctx->local_host_.empty())
   {
-    if (!(ctx->flags_ & YCF_MCAST))
+    if (!(ctx->flags_ & YCM_MCAST))
       ctx->local_host_ = ctx->remote_host_;
     else
       ctx->local_host_ = YASIO_ANY_ADDR(ipsv_);
@@ -1064,7 +1085,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
 
       if (ctx->mask_ & YCM_UDP)
       {
-        if (ctx->flags_ & YCF_MCAST)
+        if (ctx->flags_ & YCM_MCAST)
           ctx->join_multicast_group();
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
@@ -1230,14 +1251,19 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   }
   else
     vp = operator new(sizeof(io_transport_posix));
-#if defined(YASIO_HAVE_KCP)
-  if (!(ctx->flags_ & YCF_KCP))
+
+  if (ctx->mask_ & YCM_POSIX)
     transport = new (vp) io_transport_posix(ctx, socket);
-  else
+  else if (ctx->mask_ & YCM_MCAST)
+    transport = new (vp) io_transport_mcast(ctx, socket);
+#if defined(YASIO_HAVE_KCP)
+  else if (ctx->mask_ & YCM_KCP)
     transport = new (vp) io_transport_kcp(ctx, socket);
-#else
-  transport = new (vp) io_transport_posix(ctx, socket);
 #endif
+  else
+    transport = new (vp) io_transport_posix(ctx, socket);
+
+  transport->set_primitives();
 
   return transport;
 }

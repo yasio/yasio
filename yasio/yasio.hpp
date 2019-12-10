@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2019 halx99
+Copyright (c) 2012-2020 halx99
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -141,28 +141,41 @@ enum
   YOPT_I_SOCKOPT,
 };
 
-// channel mask
+// channel mask, contains transport type: POSIX, MCAST, KCP, SSL
 enum
 {
-  YCM_CLIENT     = 1,
-  YCM_SERVER     = 1 << 1,
-  YCM_TCP        = 1 << 2,
-  YCM_UDP        = 1 << 3,
-  YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
-  YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
-  YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
-  YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
+  YCM_CLIENT = 1,
+  YCM_SERVER = 1 << 1,
+  YCM_POSIX  = 1 << 2,
+  YCM_TCP    = 1 << 3,
+  YCM_UDP    = 1 << 4,
+  YCM_MCAST  = 1 << 5,
+#if defined(YASIO_HAVE_KCP)
+  YCM_KCP = 1 << 6,
+#endif
+#if defined(YASIO_HAVE_SSL)
+  YCM_SSL = 1 << 7,
+#endif
+  YCM_TCP_CLIENT   = YCM_TCP | YCM_CLIENT | YCM_POSIX,
+  YCM_TCP_SERVER   = YCM_TCP | YCM_SERVER | YCM_POSIX,
+  YCM_UDP_CLIENT   = YCM_UDP | YCM_CLIENT | YCM_POSIX,
+  YCM_UDP_SERVER   = YCM_UDP | YCM_SERVER | YCM_POSIX,
+  YCM_MCAST_CLIENT = YCM_MCAST | YCM_CLIENT,
+  YCM_MCAST_SERVER = YCM_MCAST | YCM_SERVER | YCM_POSIX,
+#if defined(YASIO_HAVE_KCP)
+  YCM_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
+#endif
+#if defined(YASIO_HAVE_SSL)
+  YCM_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
+#endif
 };
 
 // channel flags
 enum
 {
-  YCF_MCAST          = 1 << 1,
-  YCF_MCAST_LOOPBACK = 1 << 2,
-#if defined(YASIO_HAVE_KCP)
-  YCF_KCP = 1 << 3,
-#endif
-  YCF_REUSEPORT = 1 << 4,
+  YCF_MCAST_LOOPBACK = 1 << 1,
+  YCF_REUSEPORT      = 1 << 2,
+  YCF_HANDSHAKING = 1 << 3, /* The flag to indicate channel is handshaking or not fully connected */
 };
 
 // event kinds
@@ -180,6 +193,8 @@ class io_event;
 class io_channel;
 class io_transport;
 class io_transport_posix;
+class io_transport_mcast; // for multicast client
+class io_transport_kcp;
 class io_service;
 
 // recommand user always use transport_handle_t, in the future, it's maybe void* or intptr_t
@@ -282,6 +297,7 @@ class io_channel : public io_base
 {
   friend class io_service;
   friend class io_transport_posix;
+  friend class io_transport_mcast;
 
 public:
   io_service& get_service() { return deadline_timer_.service_; }
@@ -386,8 +402,11 @@ private:
   // Try flush pending packet
   virtual bool do_write(long long& max_wait_duration) = 0;
 
+  // Sets the underlying layer socket io primitives.
+  YASIO__DECL virtual void set_primitives() {}
+
 protected:
-  YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket> sock);
+  YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
   virtual ~io_transport() {}
 
   void invalid() { valid_ = false; }
@@ -416,26 +435,37 @@ public:
 class io_transport_posix : public io_transport
 {
 public:
-  YASIO__DECL io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket> sock);
+  io_transport_posix::io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
+      : io_transport(ctx, sock)
+  {}
 
-private:
+protected:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
-  // set the low level send/recv primitives.
-  YASIO__DECL void set_primitives(bool connected);
+  YASIO__DECL void set_primitives() override;
 
-  std::function<int(const void*, int)> send_cb_;
-  std::function<int(void*, int)> recv_cb_;
+  std::function<int(const void*, int)> write_cb_;
+  std::function<int(void*, int)> read_cb_;
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
+};
+
+class io_transport_mcast : public io_transport_posix
+{
+  typedef io_transport_posix super;
+
+public:
+  YASIO__DECL io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
+  YASIO__DECL void set_primitives() override;
+  YASIO__DECL int do_read(int& error) override;
 };
 
 #if defined(YASIO_HAVE_KCP)
 class io_transport_kcp : public io_transport
 {
 public:
-  YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket> sock);
+  YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
   YASIO__DECL ~io_transport_kcp();
 
 private:
@@ -492,6 +522,7 @@ class io_service // lgtm [cpp/class-many-fields]
 {
   friend class deadline_timer;
   friend class io_transport_posix;
+  friend class io_transport_mcast;
   friend class io_transport_kcp;
 
 public:

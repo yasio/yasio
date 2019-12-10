@@ -76,11 +76,11 @@ void yasioMulticastTest()
   });
 
   /// channel 0: enable  multicast
-  service.set_option(YOPT_C_MOD_FLAGS, MCAST_SERVER_INDEX, YCF_MCAST | YCF_REUSEPORT | YCF_MCAST_LOOPBACK, 0);
-  service.open(MCAST_SERVER_INDEX, YCM_UDP_SERVER); // for udp-server model YCF_REUSEPORT is required.
+  service.set_option(YOPT_C_MOD_FLAGS, MCAST_SERVER_INDEX, YCF_REUSEPORT | YCF_MCAST_LOOPBACK, 0);
+  service.open(MCAST_SERVER_INDEX, YCM_MCAST_SERVER);
 
-  service.set_option(YOPT_C_MOD_FLAGS, MCAST_CLIENT_INDEX, YCF_MCAST | YCF_MCAST_LOOPBACK, 0);
-  service.open(MCAST_CLIENT_INDEX, YCM_UDP_CLIENT);
+  service.set_option(YOPT_C_MOD_FLAGS, MCAST_CLIENT_INDEX, YCF_MCAST_LOOPBACK, 0);
+  service.open(MCAST_CLIENT_INDEX, YCM_MCAST_CLIENT);
 
   time_t duration = 0;
   while (service.is_running())

@@ -84,11 +84,8 @@ void run_test()
   service.set_option(YOPT_C_LOCAL_PORT, 0, 30002);
   service.set_option(YOPT_C_LOCAL_PORT, 1, 30001);
 
-  service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_KCP, 0);
-  service.set_option(YOPT_C_MOD_FLAGS, 1, YCF_KCP, 0);
-
-  service.open(0, YCM_UDP_CLIENT);
-  service.open(1, YCM_UDP_CLIENT);
+  service.open(0, YCM_KCP_CLIENT);
+  service.open(1, YCM_KCP_CLIENT);
 
   time_t duration = 0;
   while (service.is_running())

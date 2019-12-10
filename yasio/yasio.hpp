@@ -435,9 +435,7 @@ public:
 class io_transport_posix : public io_transport
 {
 public:
-  io_transport_posix::io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
-      : io_transport(ctx, sock)
-  {}
+  io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket>& sock) : io_transport(ctx, sock) {}
 
 protected:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
@@ -453,10 +451,10 @@ protected:
 
 class io_transport_mcast : public io_transport_posix
 {
-  typedef io_transport_posix super;
-
 public:
   YASIO__DECL io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
+
+protected:
   YASIO__DECL void set_primitives() override;
   YASIO__DECL int do_read(int& error) override;
 };
@@ -468,7 +466,7 @@ public:
   YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& sock);
   YASIO__DECL ~io_transport_kcp();
 
-private:
+protected:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;

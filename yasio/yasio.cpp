@@ -439,7 +439,7 @@ int io_transport_mcast::do_read(int& error)
       {
         ctx_->flags_ &= ~YCF_HANDSHAKING;
         ctx_->leave_multicast_group();
-        super::set_primitives();
+        io_transport_posix::set_primitives();
 
         YASIO_SLOG_IMPL(
             get_service().options_,

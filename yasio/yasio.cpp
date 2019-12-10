@@ -46,6 +46,12 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#if defined(YASIO_HAVE_SSL)
+#  include <openssl/bio.h>
+#  include <openssl/ssl.h>
+#  include <openssl/err.h>
+#endif
+
 #if defined(YASIO_HAVE_KCP)
 #  include "yasio/kcp/ikcp.h"
 #endif
@@ -87,12 +93,13 @@ namespace
 // error code
 enum
 {
-  YERR_OK                 = 0,    // NO ERROR.
-  YERR_INVALID_PACKET     = -500, // Invalid packet.
-  YERR_DPL_ILLEGAL_PDU    = -499, // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED = -498, // Resolve host failed.
-  YERR_NO_AVAIL_ADDR      = -497, // No available address to connect.
-  YERR_LOCAL_SHUTDOWN     = -496, // Local shutdown the connection.
+  YERR_OK                   = 0,    // NO ERROR.
+  YERR_INVALID_PACKET       = -500, // Invalid packet.
+  YERR_DPL_ILLEGAL_PDU      = -499, // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED   = -498, // Resolve host failed.
+  YERR_NO_AVAIL_ADDR        = -497, // No available address to connect.
+  YERR_LOCAL_SHUTDOWN       = -496, // Local shutdown the connection.
+  YERR_SSL_HANDSHAKE_FAILED = -495, // SSL handshake fail
 };
 
 // event mask
@@ -201,6 +208,19 @@ void deadline_timer::cancel()
 }
 
 void deadline_timer::unschedule() { this->service_.remove_timer(this); }
+
+#if defined(YASIO_HAVE_SSL)
+/// ssl_auto_handle
+void ssl_auto_handle::dispose()
+{
+  if (ssl_)
+  {
+    ::SSL_shutdown(ssl_);
+    ::SSL_free(ssl_);
+    ssl_ = nullptr;
+  }
+}
+#endif
 
 /// io_channel
 io_channel::io_channel(io_service& service) : deadline_timer_(service)
@@ -452,7 +472,19 @@ int io_transport_mcast::do_read(int& error)
   }
   return n;
 }
-
+// ----------------------- io_transport_ssl ----------------
+#if defined(YASIO_HAVE_SSL)
+io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s)
+    : io_transport_posix(ctx, s), ssl_(std::move(ctx->ssl_))
+{
+  ctx->flags_ &= ~YCF_SSL_HANDSHAKING;
+}
+void io_transport_ssl::set_primitives()
+{
+  this->read_cb_  = [=](void* data, int len) { return ::SSL_read(ssl_, data, len); };
+  this->write_cb_ = [=](const void* data, int len) { return ::SSL_write(ssl_, data, len); };
+}
+#endif
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
@@ -670,6 +702,10 @@ void io_service::run()
 {
   yasio__set_thread_name("yasio");
 
+#if defined(YASIO_HAVE_SSL)
+  init_ssl_context();
+#endif
+
   // Call once at startup
   this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
 
@@ -715,6 +751,10 @@ void io_service::run()
 
 _L_end:
   (void)0; // ONLY for xcode compiler happy.
+
+#if defined(YASIO_HAVE_SSL)
+  cleanup_ssl();
+#endif
 }
 
 void io_service::perform_transports(fd_set* fds_array, long long& max_wait_duration)
@@ -1019,30 +1059,122 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
 void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_array)
 {
-  assert(ctx->mask_ == YCM_TCP_CLIENT);
+  assert((ctx->mask_ & YCM_TCP) && (ctx->mask_ & YCM_CLIENT));
   assert(ctx->state_ == YCS_OPENING);
 
-  int error = -1;
-  if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
-      FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+  if (ctx->state_ == YCS_OPENING)
   {
-    socklen_t len = sizeof(error);
-    if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >=
-            0 &&
-        error == 0)
+#if !defined(YASIO_HAVE_SSL)
+    int error = -1;
+    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
+        FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
     {
-      // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
-      unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
-      handle_connect_succeed(ctx, ctx->socket_);
+      socklen_t len = sizeof(error);
+      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >=
+              0 &&
+          error == 0)
+      {
+        // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
+        unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
+        handle_connect_succeed(ctx, ctx->socket_);
+      }
+      else
+      {
+        handle_connect_failed(ctx, error);
+      }
+
+      ctx->deadline_timer_.cancel();
+    }
+#else
+    if ((ctx->flags_ & YCF_SSL_HANDSHAKING) == 0)
+    {
+      int error = -1;
+      if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
+          FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+      {
+        socklen_t len = sizeof(error);
+        if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error,
+                         &len) >= 0 &&
+            error == 0)
+        {
+          // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
+          unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
+          if ((ctx->mask_ & YCM_SSL) == 0)
+            handle_connect_succeed(ctx, ctx->socket_);
+          else
+            do_ssl_handshake(ctx);
+        }
+        else
+        {
+          handle_connect_failed(ctx, error);
+        }
+
+        ctx->deadline_timer_.cancel();
+      }
     }
     else
-    {
-      handle_connect_failed(ctx, error);
-    }
-
-    ctx->deadline_timer_.cancel();
+      do_ssl_handshake(ctx);
+#endif
   }
 }
+
+#if defined(YASIO_HAVE_SSL)
+void io_service::init_ssl_context()
+{
+  SSL_load_error_strings();
+  int result = SSL_library_init();
+  ssl_ctx_   = SSL_CTX_new(SSLv23_client_method());
+
+  ::ERR_clear_error();
+  ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
+  if (::SSL_CTX_load_verify_locations(ssl_ctx_, "cacert.pem", nullptr) != 1)
+    YASIO_LOG("load ca certifaction file failed!");
+
+  SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
+}
+SSL_CTX* io_service::get_ssl_context() { return ssl_ctx_; }
+void io_service::cleanup_ssl()
+{
+  if (ssl_ctx_)
+  {
+    SSL_CTX_free((SSL_CTX*)ssl_ctx_);
+    ssl_ctx_ = nullptr;
+  }
+}
+void io_service::do_ssl_handshake(io_channel* ctx)
+{
+  if (!ctx->ssl_)
+  {
+    auto ssl = ::SSL_new(get_ssl_context());
+    ::SSL_set_fd(ssl, ctx->socket_->native_handle());
+    ::SSL_set_connect_state(ssl);
+    ctx->flags_ |= YCF_SSL_HANDSHAKING; // start ssl handshake
+    ctx->ssl_.reset(ssl);
+  }
+
+  int ret = ::SSL_do_handshake(ctx->ssl_);
+  if (ret != 1)
+  {
+    int error = ::SSL_get_error(ctx->ssl_, ret);
+    /*
+    When using a non-blocking socket, nothing is to be done, but select() can be used to check for
+    the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
+    */
+    if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+      ; // Nothing need to do
+    else
+    {
+      YASIO_LOG("SSL_do_handshake fail with ret=%d,error=%d, errno=%d, detail:%s\n", ret, error,
+                errno, strerror(errno));
+
+      ctx->ssl_.dispose();
+      handle_connect_failed(ctx, YERR_SSL_HANDSHAKE_FAILED);
+    }
+  }
+  else
+    handle_connect_succeed(ctx, ctx->socket_);
+}
+#endif
 
 void io_service::do_nonblocking_accept(io_channel* ctx)
 { // channel is server
@@ -1242,6 +1374,12 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
 
 transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_ptr<xxsocket> socket)
 {
+#if !defined(YASIO_HAVE_SSL)
+  static const int s_transport_max_size = sizeof(io_transport_posix);
+#else
+  static const int s_transport_max_size = sizeof(io_transport_ssl);
+#endif
+
   transport_handle_t transport;
   void* vp;
   if (!tpool_.empty())
@@ -1250,7 +1388,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
     tpool_.pop_back();
   }
   else
-    vp = operator new(sizeof(io_transport_posix));
+    vp = operator new(s_transport_max_size);
 
   if (ctx->mask_ & YCM_POSIX)
     transport = new (vp) io_transport_posix(ctx, socket);
@@ -1259,6 +1397,10 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
 #if defined(YASIO_HAVE_KCP)
   else if (ctx->mask_ & YCM_KCP)
     transport = new (vp) io_transport_kcp(ctx, socket);
+#endif
+#if defined(YASIO_HAVE_SSL)
+  else if (ctx->mask_ & YCM_SSL)
+    transport = new (vp) io_transport_ssl(ctx, socket);
 #endif
   else
     transport = new (vp) io_transport_posix(ctx, socket);
@@ -1280,6 +1422,11 @@ void io_service::deallocate_transport(transport_handle_t t)
 
 void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
+#if defined(YASIO_HAVE_SSL)
+  // Remove tmp flags
+  ctx->flags_ &= ~YCF_SSL_HANDSHAKING;
+#endif
+
   cleanup_io(ctx);
 
   YASIO_SLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
@@ -1640,6 +1787,8 @@ const char* io_service::strerror(int error)
       return "An existing connection was shutdown by local host!";
     case YERR_INVALID_PACKET:
       return "Invalid packet!";
+    case YERR_SSL_HANDSHAKE_FAILED:
+      return "SSL handeshake failed!";
     case -1:
       return "Unknown error!";
     default:

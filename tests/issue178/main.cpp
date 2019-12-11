@@ -19,12 +19,11 @@ int main()
         if (event->cindex() == 1)
           printf("Got a packet from server, size=%d\n", (int)event->packet().size());
         break;
-      case YEK_CONNECT_RESPONSE:
-      {
+      case YEK_CONNECT_RESPONSE: {
         if (event->cindex() == 0)
         {
-          printf("A client is income, status=%d, %lld, combine 2 packet and send to client!\n", event->status(),
-                 event->timestamp());
+          printf("A client is income, status=%d, %lld, combine 2 packet and send to client!\n",
+                 event->status(), event->timestamp());
 
           // send 2 packet
           obstream obs1;
@@ -52,12 +51,11 @@ int main()
   service.set_option(YOPT_C_LFBFD_PARAMS, 0, 65535, 0, 4, 0);
   service.set_option(YOPT_C_LFBFD_PARAMS, 1, 65535, 0, 4, 0);
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // disable event queue
-  service.open(0, YCM_TCP_SERVER);              // open server client
+
+  service.open(0, YCM_TCP_SERVER);              // open server
 
   delay_timer.expires_from_now(std::chrono::seconds(1));
-    delay_timer.async_wait([&](bool) { 
-        service.open(1, YCM_TCP_CLIENT);
-  });
+  delay_timer.async_wait([&](bool) { service.open(1, YCM_TCP_CLIENT); });
 
   getchar();
   return 0;

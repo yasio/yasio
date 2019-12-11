@@ -45,8 +45,9 @@ void stop_service()
 set_option(opt,...)
 功能：设置选项
 参数说明(超时时间单位均为秒):  
+### 重要说明: ```YOPT_S_```开头的选项在start_service之前设置，```YOPT_C_```开头的选项需要在start_service之后设置才有效
 opt: 选项枚举，取值有:
-  + yasio.YOPT_S_TIMEOUTS: dns缓存时间(600s),  TCP连接超时时间(1s), TCP断线重连重连超时时间, -1: 不自动重连 > 0: 当连接断开后指定超时时间后自动重连
+  + yasio.YOPT_S_TIMEOUTS: dns缓存时间(600s),  TCP连接超时时间(5s)
   + yasio.YOPT_S_TCP_KEEPALIVE: 设置tcp协议keepalive参数，例如```tcpclient:set_option(yasio.YOPT_S_TCP_KEEPALIVE, 60, 10, 3)```, 60是发送底层协议心跳的空闲等待时间，10是发送心跳间隔, 3是未收到对方回应心跳重试次数
   + yasio.YOPT_S_PRINT_FN: 设置网络日志自定义打印函数，注意函数必须是线程安全的
   + yasio.YOPT_S_EVENT_CB: 设置网络事件回调

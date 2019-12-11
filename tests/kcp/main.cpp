@@ -15,8 +15,8 @@ using namespace yasio::inet;
 void run_test()
 {
   yasio::inet::io_hostent endpoints[] = {
-      {"127.0.0.1", 30001}, // udp client1
-      {"127.0.0.1", 30002}, // udp client2
+      {"127.0.0.1", 30001}, // kcp client1
+      {"127.0.0.1", 30002}, // kcp client2
   };
 
   io_service service;

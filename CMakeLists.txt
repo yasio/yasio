@@ -133,9 +133,15 @@ endif ( )
 add_subdirectory(tests/tcp)
 add_subdirectory(tests/mcast)
 add_subdirectory(tests/kcp)
+add_subdirectory(tests/ssl)
 add_subdirectory(tests/issue166)
 add_subdirectory(tests/udp_echo_server)
 add_subdirectory(examples/ftp_server)
+
+# SSL support
+add_subdirectory(openssl)
+target_link_libraries(yasio crypto ssl)
+
 if ( WIN32 )
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
 endif ()

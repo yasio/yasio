@@ -753,7 +753,7 @@ _L_end:
   (void)0; // ONLY for xcode compiler happy.
 
 #if defined(YASIO_HAVE_SSL)
-  cleanup_ssl();
+  cleanup_ssl_context();
 #endif
 }
 
@@ -1133,7 +1133,7 @@ void io_service::init_ssl_context()
   SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
 }
 SSL_CTX* io_service::get_ssl_context() { return ssl_ctx_; }
-void io_service::cleanup_ssl()
+void io_service::cleanup_ssl_context()
 {
   if (ssl_ctx_)
   {

@@ -19,6 +19,7 @@ int main()
         if (event->cindex() == 1)
           printf("Got a packet from server, size=%d\n", (int)event->packet().size());
         break;
+
       case YEK_CONNECT_RESPONSE: {
         if (event->cindex() == 0)
         {

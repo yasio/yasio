@@ -23,7 +23,7 @@ proto.e101 = function(msg)
     obs:write_v(msg.passwd);
 
     -- finish message encode.
-    obs:pop32(); -- finish encode
+    obs:pop32(obs.length()); -- finish encode
 
     return obs;
 end

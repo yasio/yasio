@@ -102,8 +102,8 @@ local elapsedTime = 0
 local partial2Sent = false
 
 local function yasio_update(dt)
-    server:dispatch_events(128)
-    client:dispatch_events(128)
+    server:dispatch(128)
+    client:dispatch(128)
     http_client:update()
     elapsedTime = elapsedTime + dt
     if elapsedTime > 6 and not partial2Sent then

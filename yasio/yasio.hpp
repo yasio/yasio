@@ -105,7 +105,8 @@ enum
   //     max_frame_length:int(10MBytes),
   //     length_field_offset:int(-1),
   //     length_field_length:int(4),
-  //     length_adjustment:int(0)
+  //     length_adjustment:int(0),
+  //     initial_bytes_to_strip:int(0)
   YOPT_C_LFBFD_PARAMS,
 
   // Sets channel local port
@@ -357,6 +358,7 @@ private:
     int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=-1
     int length_field_length = 4;  // 1,2,3,4
     int length_adjustment   = 0;
+    int initial_bytes_to_strip = 0;
   } lfb_;
   decode_len_fn_t decode_len_;
 
@@ -390,7 +392,8 @@ public:
   int status() const { return error_; }
   inline std::vector<char> fetch_packet()
   {
-    expected_size_ = -1;
+    expected_size_          = -1;
+    initial_bytes_to_strip_ = 0;
     return std::move(expected_packet_);
   }
 
@@ -419,7 +422,8 @@ protected:
   int offset_ = 0;                      // recv buffer offset
 
   std::vector<char> expected_packet_;
-  int expected_size_ = -1;
+  int expected_size_          = -1;
+  int initial_bytes_to_strip_ = 0;
 
   io_channel* ctx_;
 

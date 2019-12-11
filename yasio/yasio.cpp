@@ -1326,11 +1326,13 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
-          transport->expected_size_ = length;
+          transport->expected_size_          = length;
+          transport->initial_bytes_to_strip_ = transport->ctx_->lfb_.initial_bytes_to_strip;
           transport->expected_packet_.reserve(
-              (std::min)(transport->expected_size_,
+              (std::min)(length - transport->initial_bytes_to_strip_,
                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
           unpack(transport, transport->expected_size_, n, max_wait_duration);
+          transport->initial_bytes_to_strip_ = 0;
         }
         else if (length == 0)
         {
@@ -1369,9 +1371,9 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
                         long long& max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->offset_;
-  transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
-                                     transport->buffer_ +
-                                         (std::min)(bytes_expected, bytes_available));
+  transport->expected_packet_.insert(
+      transport->expected_packet_.end(), transport->buffer_ + transport->initial_bytes_to_strip_,
+      transport->buffer_ + (std::min)(bytes_expected, bytes_available));
 
   transport->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
   if (transport->offset_ >= 0)
@@ -1680,10 +1682,11 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
-        channel->lfb_.max_frame_length    = va_arg(ap, int);
-        channel->lfb_.length_field_offset = va_arg(ap, int);
-        channel->lfb_.length_field_length = va_arg(ap, int);
-        channel->lfb_.length_adjustment   = va_arg(ap, int);
+        channel->lfb_.max_frame_length       = va_arg(ap, int);
+        channel->lfb_.length_field_offset    = va_arg(ap, int);
+        channel->lfb_.length_field_length    = va_arg(ap, int);
+        channel->lfb_.length_adjustment      = va_arg(ap, int);
+        channel->lfb_.initial_bytes_to_strip = va_arg(ap, int);
       }
       break;
     }

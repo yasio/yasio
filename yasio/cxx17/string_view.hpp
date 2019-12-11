@@ -31,6 +31,7 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #define YASIO__STRING_VIEW_HPP
 #include <ctype.h>
 #include <string.h>
+#include <wchar.h>
 #include <string>
 
 #define __YASIO_SYM2LITERAL(s) #s

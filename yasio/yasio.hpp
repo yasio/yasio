@@ -353,10 +353,10 @@ private:
 
   struct __unnamed01
   {
+    int max_frame_length    = YASIO_SZ(10, M); // 10MBytes
     int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=-1
     int length_field_length = 4;  // 1,2,3,4
     int length_adjustment   = 0;
-    int max_frame_length    = YASIO_SZ(10, M); // 10MBytes
   } lfb_;
   decode_len_fn_t decode_len_;
 

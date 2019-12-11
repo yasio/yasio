@@ -135,6 +135,7 @@ add_subdirectory(tests/mcast)
 add_subdirectory(tests/kcp)
 add_subdirectory(tests/ssl)
 add_subdirectory(tests/issue166)
+add_subdirectory(tests/issue178)
 add_subdirectory(tests/udp_echo_server)
 add_subdirectory(examples/ftp_server)
 

@@ -423,8 +423,8 @@ void io_transport_posix::set_primitives()
 }
 
 // ----------------------- io_transport_mcast ----------------
-io_transport_mcast::io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& sock)
-    : io_transport_posix(ctx, sock)
+io_transport_mcast::io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& s)
+    : io_transport_posix(ctx, s)
 {
   ctx->flags_ |= YCF_MCAST_HANDSHAKING;
 }

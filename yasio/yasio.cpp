@@ -324,6 +324,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->socket_                   = s;
   this->valid_                    = true;
   this->ud_.ptr                   = nullptr;
+  this->initial_bytes_to_strip_   = ctx->lfb_.initial_bytes_to_strip;
 }
 
 // -------------------- io_transport_posix ---------------------
@@ -1326,8 +1327,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->offset_ + n);
         if (length > 0)
         {
-          transport->expected_size_          = length;
-          transport->initial_bytes_to_strip_ = transport->ctx_->lfb_.initial_bytes_to_strip;
+          transport->expected_size_ = length;
           transport->expected_packet_.reserve(
               (std::min)(length - transport->initial_bytes_to_strip_,
                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.

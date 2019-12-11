@@ -299,6 +299,7 @@ struct io_base
 class io_channel : public io_base
 {
   friend class io_service;
+  friend class io_transport;
   friend class io_transport_posix;
   friend class io_transport_mcast;
 
@@ -393,7 +394,7 @@ public:
   inline std::vector<char> fetch_packet()
   {
     expected_size_          = -1;
-    initial_bytes_to_strip_ = 0;
+    initial_bytes_to_strip_ = ctx_->lfb_.initial_bytes_to_strip;
     return std::move(expected_packet_);
   }
 

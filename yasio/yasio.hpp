@@ -60,6 +60,11 @@ SOFTWARE.
 typedef struct IKCPCB ikcpcb;
 #endif
 
+#if defined(YASIO_HAVE_SSL)
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct ssl_st SSL;
+#endif
+
 namespace yasio
 {
 namespace inet
@@ -195,6 +200,7 @@ class io_channel;
 class io_transport;
 class io_transport_posix;
 class io_transport_mcast; // for multicast client
+class io_transport_ssl;   // for ssl client
 class io_transport_kcp;
 class io_service;
 
@@ -294,11 +300,40 @@ struct io_base
   short state_    = 0;
 };
 
+#if defined(YASIO_HAVE_SSL)
+class ssl_auto_handle
+{
+public:
+  ssl_auto_handle() : ssl_(nullptr) {}
+  ~ssl_auto_handle() { dispose(); }
+  ssl_auto_handle(ssl_auto_handle&& rhs) : ssl_(rhs.release()) {}
+  ssl_auto_handle& operator=(ssl_auto_handle&& rhs) { this->reset(rhs.release()); }
+  SSL* release()
+  {
+    auto tmp = ssl_;
+    ssl_     = nullptr;
+    return tmp;
+  }
+  void reset(SSL* ssl)
+  {
+    if (ssl_)
+      dispose();
+    ssl_ = ssl;
+  }
+  operator SSL*() { return ssl_; }
+  YASIO__DECL void dispose();
+
+protected:
+  SSL* ssl_ = nullptr;
+};
+#endif
+
 class io_channel : public io_base
 {
   friend class io_service;
   friend class io_transport_posix;
   friend class io_transport_mcast;
+  friend class io_transport_ssl;
 
 public:
   io_service& get_service() { return deadline_timer_.service_; }
@@ -375,6 +410,10 @@ private:
 
   // Current it's only for UDP
   std::vector<char> buffer_;
+
+#if defined(YASIO_HAVE_SSL)
+  ssl_auto_handle ssl_;
+#endif
 };
 
 class io_transport : public io_base
@@ -460,6 +499,20 @@ protected:
   YASIO__DECL void set_primitives() override;
   YASIO__DECL int do_read(int& error) override;
 };
+
+#if defined(YASIO_HAVE_SSL)
+class io_transport_ssl : public io_transport_posix
+{
+public:
+  YASIO__DECL io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s);
+  YASIO__DECL void set_primitives() override;
+
+#  if defined(YASIO_HAVE_SSL)
+protected:
+  ssl_auto_handle ssl_;
+#  endif
+};
+#endif
 
 #if defined(YASIO_HAVE_KCP)
 class io_transport_kcp : public io_transport
@@ -643,6 +696,13 @@ private:
   YASIO__DECL void do_nonblocking_connect(io_channel*);
   YASIO__DECL void do_nonblocking_connect_completion(io_channel*, fd_set* fds_array);
 
+#if defined(YASIO_HAVE_SSL)
+  YASIO__DECL void init_ssl_context();
+  YASIO__DECL void cleanup_ssl_context();
+  YASIO__DECL SSL_CTX* get_ssl_context();
+  YASIO__DECL void do_ssl_handshake(io_channel*);
+#endif
+
   inline void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
   {
     handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
@@ -766,6 +826,10 @@ private:
 
   // The ip stack version supported by localhost
   u_short ipsv_ = 0;
+
+#if defined(YASIO_HAVE_SSL)
+  SSL_CTX* ssl_ctx_ = nullptr;
+#endif
 }; // io_service
 } // namespace inet
 } /* namespace yasio */

@@ -1,4 +1,4 @@
-
+// yasio-v3.30
 function yasioTest() {
   // ------- start of yasio test ----------
   var yserver = new yasio.io_service();
@@ -24,7 +24,7 @@ function yasioTest() {
       obs.write_f(28.9);
       obs.write_lf(209.79);
       obs.write_v("hello client!");
-      obs.pop32();
+      obs.pop32(obs.length());
 
       cc.log("yasio server: will send partial1 of data after 3 seconds...");
       var partial1 = obs.sub(0, 10);
@@ -112,11 +112,11 @@ function yasioTest() {
 
   // run the event-loop
   cc.yserverID = yasio.setInterval(function () {
-    yserver.dispatch_events(128);
+    yserver.dispatch(128);
   }, 0.01);
 
   cc.yclientID = yasio.setInterval(function () {
-    yclient.dispatch_events(128);
+    yclient.dispatch(128);
   }, 0.01);
 
   // ========== end of yasio test ==========

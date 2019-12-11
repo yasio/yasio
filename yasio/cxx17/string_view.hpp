@@ -54,15 +54,38 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #  define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
 #endif
 
+/// wcsncasecmp workaround for android API level < 23, copy from msvc ucrt 10.0.18362.0 'wcsnicmp'
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 23
+inline int wcsncasecmp(wchar_t const* const lhs, wchar_t const* const rhs, size_t const count)
+{
+  if (count == 0)
+  {
+    return 0;
+  }
+
+  wchar_t const* lhs_ptr = reinterpret_cast<wchar_t const*>(lhs);
+  wchar_t const* rhs_ptr = reinterpret_cast<wchar_t const*>(rhs);
+
+  int result;
+  int lhs_value;
+  int rhs_value;
+  size_t remaining = count;
+  do
+  {
+    lhs_value = ::towlower(*lhs_ptr++);
+    rhs_value = ::towlower(*rhs_ptr++);
+    result    = lhs_value - rhs_value;
+  } while (result == 0 && lhs_value != 0 && --remaining != 0);
+
+  return result;
+}
+#endif
+
+/// string_view workaround on c++11
 #if _HAS_STD_STRING_VIEW
 #  if __has_include(<string_view>)
 #    include <string_view>
 #  endif
-
-#  include <algorithm>
-#  include <exception>
-#  include <stdexcept>
-
 namespace cxx17
 {
 using std::basic_string_view;
@@ -70,7 +93,9 @@ using std::string_view;
 using std::wstring_view;
 } // namespace cxx17
 #else
-
+#  include <algorithm>
+#  include <exception>
+#  include <stdexcept>
 namespace cxx17
 {
 template <class _Traits>
@@ -1424,51 +1449,25 @@ inline bool iequals(cxx17::basic_string_view<_CharT> lhs, cxx17::basic_string_vi
 template <>
 inline bool iequals<char>(cxx17::basic_string_view<char> lhs, cxx17::basic_string_view<char> v)
 {
-  return lhs.size() == v.size() && _strnicmp(lhs.data(), v.data(), v.size()) == 0;
+  return lhs.size() == v.size() && ::_strnicmp(lhs.data(), v.data(), v.size()) == 0;
 }
 template <>
 inline bool iequals<wchar_t>(cxx17::basic_string_view<wchar_t> lhs,
                              cxx17::basic_string_view<wchar_t> v)
 {
-  return lhs.size() == v.size() && _wcsnicmp(lhs.data(), v.data(), v.size()) == 0;
+  return lhs.size() == v.size() && ::_wcsnicmp(lhs.data(), v.data(), v.size()) == 0;
 }
 #else
-// wcsncasecmp workaround for android API level < 23, copy from msvc ucrt 10.0.18362.0 'wcsnicmp'
-#  if defined(__ANDROID_API__) && __ANDROID_API__ < 23
-inline int wcsncasecmp(wchar_t const* const lhs, wchar_t const* const rhs, size_t const count)
-{
-  if (count == 0)
-  {
-    return 0;
-  }
-
-  wchar_t const* lhs_ptr = reinterpret_cast<wchar_t const*>(lhs);
-  wchar_t const* rhs_ptr = reinterpret_cast<wchar_t const*>(rhs);
-
-  int result;
-  int lhs_value;
-  int rhs_value;
-  size_t remaining = count;
-  do
-  {
-    lhs_value = ::towlower(*lhs_ptr++);
-    rhs_value = ::towlower(*rhs_ptr++);
-    result    = lhs_value - rhs_value;
-  } while (result == 0 && lhs_value != 0 && --remaining != 0);
-
-  return result;
-}
-#  endif
 template <>
 inline bool iequals<char>(cxx17::basic_string_view<char> lhs, cxx17::basic_string_view<char> v)
 {
-  return lhs.size() == v.size() && strncasecmp(lhs.data(), v.data(), v.size()) == 0;
+  return lhs.size() == v.size() && ::strncasecmp(lhs.data(), v.data(), v.size()) == 0;
 }
 template <>
 inline bool iequals<wchar_t>(cxx17::basic_string_view<wchar_t> lhs,
                              cxx17::basic_string_view<wchar_t> v)
 {
-  return lhs.size() == v.size() && wcsncasecmp(lhs.data(), v.data(), v.size()) == 0;
+  return lhs.size() == v.size() && ::wcsncasecmp(lhs.data(), v.data(), v.size()) == 0;
 }
 #endif
 // starts_with(), since C++20:

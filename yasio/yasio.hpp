@@ -424,7 +424,7 @@ protected:
 
   std::vector<char> expected_packet_;
   int expected_size_          = -1;
-  int initial_bytes_to_strip_ = 0;
+  int initial_bytes_to_strip_;
 
   io_channel* ctx_;
 

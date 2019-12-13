@@ -49,6 +49,7 @@ SOFTWARE.
 #include "yasio/detail/singleton.hpp"
 #include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/concurrent_queue.hpp"
+#include "yasio/detail/utils.hpp"
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
@@ -204,10 +205,6 @@ class io_service;
 typedef io_transport* transport_handle_t;
 
 // typedefs
-typedef long long highp_time_t;
-typedef std::chrono::high_resolution_clock highp_clock_t;
-typedef std::chrono::system_clock system_clock_t;
-
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
@@ -218,13 +215,6 @@ typedef std::function<void(event_ptr&&)> io_event_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
-
-// The high precision micro seconds timestamp
-template <typename _T = highp_clock_t> inline long long highp_clock()
-{
-  auto duration = _T::now().time_since_epoch();
-  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-}
 
 struct io_hostent
 {
@@ -393,8 +383,7 @@ public:
   int status() const { return error_; }
   inline std::vector<char> fetch_packet()
   {
-    expected_size_          = -1;
-    initial_bytes_to_strip_ = ctx_->lfb_.initial_bytes_to_strip;
+    expected_size_ = -1;
     return std::move(expected_packet_);
   }
 
@@ -423,8 +412,7 @@ protected:
   int offset_ = 0;                      // recv buffer offset
 
   std::vector<char> expected_packet_;
-  int expected_size_          = -1;
-  int initial_bytes_to_strip_;
+  int expected_size_ = -1;
 
   io_channel* ctx_;
 
@@ -672,7 +660,7 @@ private:
     return transport->do_write(max_wait_duration);
   }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
-                          long long& max_wait_duration);
+                          int bytes_strip, long long& max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED
   YASIO__DECL bool cleanup_io(io_base* ctx);

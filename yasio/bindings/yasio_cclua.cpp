@@ -127,7 +127,7 @@ YASIO_API void clear()
 } // namespace stimer
 } // namespace lyasio
 
-#if _HAS_CXX17_FULL_FEATURES
+#if YASIO__HAS_CXX17
 
 #  include "yasio/sol/sol.hpp"
 

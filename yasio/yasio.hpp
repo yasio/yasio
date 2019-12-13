@@ -107,8 +107,13 @@ enum
   //     length_field_offset:int(-1),
   //     length_field_length:int(4),
   //     length_adjustment:int(0),
-  //     initial_bytes_to_strip:int(0)
+  //
   YOPT_C_LFBFD_PARAMS,
+
+  // Sets channel length field based frame decode initial bytes to strip, default is 0
+  // params:
+  //   initial_bytes_to_strip:int(0)
+  YOPT_C_LFBFD_IBTS,
 
   // Sets channel local port
   // params: index:int, port:int

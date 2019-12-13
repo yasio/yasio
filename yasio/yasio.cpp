@@ -1687,6 +1687,12 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       }
       break;
     }
+    case YOPT_C_LFBFD_IBTS: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->lfb_.initial_bytes_to_strip = ::yasio::clamp(va_arg(ap, int), 0, YASIO_MAX_IBTS);
+      break;
+    }
     case YOPT_S_EVENT_CB:
       options_.on_event_ = *va_arg(ap, io_event_cb_t*);
       break;

@@ -1679,11 +1679,10 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
-        channel->lfb_.max_frame_length       = va_arg(ap, int);
-        channel->lfb_.length_field_offset    = va_arg(ap, int);
-        channel->lfb_.length_field_length    = va_arg(ap, int);
-        channel->lfb_.length_adjustment      = va_arg(ap, int);
-        channel->lfb_.initial_bytes_to_strip = ::yasio::clamp(va_arg(ap, int), 0, YASIO_MAX_IBTS);
+        channel->lfb_.max_frame_length    = va_arg(ap, int);
+        channel->lfb_.length_field_offset = va_arg(ap, int);
+        channel->lfb_.length_field_length = va_arg(ap, int);
+        channel->lfb_.length_adjustment   = va_arg(ap, int);
       }
       break;
     }

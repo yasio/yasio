@@ -111,7 +111,8 @@ enum
 
   // Sets channel length field based frame decode initial bytes to strip, default is 0
   // params:
-  //   initial_bytes_to_strip:int(0)
+  //     index:int,
+  //     initial_bytes_to_strip:int(0)
   YOPT_C_LFBFD_IBTS,
 
   // Sets channel local port

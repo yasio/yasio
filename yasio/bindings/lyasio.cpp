@@ -68,7 +68,7 @@ static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits,
 };
 } // namespace lyasio
 
-#if _HAS_CXX17_FULL_FEATURES
+#if YASIO__HAS_CXX17
 
 #  include "yasio/sol/sol.hpp"
 
@@ -76,6 +76,7 @@ extern "C" {
 
 YASIO_LUA_API int luaopen_yasio(lua_State* L)
 {
+  using namespace yasio;
   using namespace yasio::inet;
   sol::state_view state_view(L);
 
@@ -332,6 +333,7 @@ extern "C" {
 
 YASIO_LUA_API int luaopen_yasio(lua_State* L)
 {
+  using namespace yasio;
   using namespace yasio::inet;
   kaguya::State state(L);
 
@@ -551,4 +553,4 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
 } /* extern "C" */
 
-#endif /* _HAS_CXX17_FULL_FEATURES */
+#endif /* YASIO__HAS_CXX17 */

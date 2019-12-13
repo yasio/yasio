@@ -42,6 +42,7 @@ SOFTWARE.
 
 #  define YASIO_MAX_OPTION_ARGC 5
 
+using namespace yasio;
 using namespace yasio::inet;
 
 namespace

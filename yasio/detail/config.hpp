@@ -65,6 +65,12 @@ SOFTWARE.
 */
 // #define YASIO_HAVE_KCP 1
 
+/*
+** Uncomment or add compiler flag -DYASIO_ENABLE_IBTS to enable InitialBytesToStrip param
+** for length field based frame decode mechanism
+*/
+// YASIO_ENABLE_IBTS 1
+
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
 #else
@@ -132,6 +138,11 @@ SOFTWARE.
 /* max pdu buffer length, avoid large memory allocation when application layer decode a huge length
  * field. */
 #define YASIO_MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
+
+// The max InitialBytesToStrip for length field based frame decode mechanism
+#if defined(YASIO_ENABLE_IBTS)
+#define YASIO_MAX_IBTS 32
+#endif
 
 #include "strfmt.hpp"
 

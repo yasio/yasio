@@ -27,7 +27,7 @@ SOFTWARE.
 */
 #ifndef YASIO__FEATURE_TEST_HPP
 #define YASIO__FEATURE_TEST_HPP
-#ifdef _WIN32
+#if defined(_MSC_VER) && _MSC_VER > 1900
 #  include <vcruntime.h>
 #endif
 

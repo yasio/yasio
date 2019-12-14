@@ -234,7 +234,40 @@ public:                                                                         
   }
 } // namespace detail
 
-template <typename _Ty, typename _Mutex = void> class object_pool : public detail::object_pool
+template <typename _Ty, typename _Mutex = std::mutex> class object_pool : public detail::object_pool
+{
+public:
+  object_pool(size_t _ElemCount = 512)
+      : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+  {}
+
+  template <typename... _Args> _Ty* construct(const _Args&... args)
+  {
+    return new (allocate()) _Ty(args...);
+  }
+
+  void destroy(void* _Ptr)
+  {
+    ((_Ty*)_Ptr)->~_Ty(); // call the destructor
+    release(_Ptr);
+  }
+
+  void* allocate()
+  {
+    std::lock_guard<_Mutex> lk(this->mutex_);
+    return get();
+  }
+
+  void deallocate(void* _Ptr)
+  {
+    std::lock_guard<_Mutex> lk(this->mutex_);
+    release(_Ptr);
+  }
+
+  _Mutex mutex_;
+};
+
+template <typename _Ty> class object_pool<_Ty, void> : public detail::object_pool
 {
   object_pool(const object_pool&) = delete;
   void operator=(const object_pool&) = delete;
@@ -258,39 +291,6 @@ public:
   void* allocate() { return get(); }
 
   void deallocate(void* _Ptr) { release(_Ptr); }
-};
-
-template <typename _Ty> class object_pool<_Ty, std::mutex> : public detail::object_pool
-{
-public:
-  object_pool(size_t _ElemCount = 512)
-      : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
-  {}
-
-  template <typename... _Args> _Ty* construct(const _Args&... args)
-  {
-    return new (allocate()) _Ty(args...);
-  }
-
-  void destroy(void* _Ptr)
-  {
-    ((_Ty*)_Ptr)->~_Ty(); // call the destructor
-    release(_Ptr);
-  }
-
-  void* allocate()
-  {
-    std::lock_guard<std::mutex> lk(this->mutex_);
-    return get();
-  }
-
-  void deallocate(void* _Ptr)
-  {
-    std::lock_guard<std::mutex> lk(this->mutex_);
-    release(_Ptr);
-  }
-
-  std::mutex mutex_;
 };
 
 //////////////////////// allocator /////////////////

@@ -4,7 +4,7 @@
 # http://opensource.org/licenses/MIT
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 
 if ( WIN32 AND NOT CYGWIN AND NOT ( CMAKE_SYSTEM_NAME STREQUAL "WindowsStore" ) AND NOT ANDROID)
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MD /O2" CACHE STRING "")
@@ -21,12 +21,7 @@ if ( IOS )
 endif ()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-
-find_path(YASIO_PROJECT_DIR NAMES SConstruct
-    PATHS 
-    ${CMAKE_SOURCE_DIR}
-    NO_DEFAULT_PATH
-    )
+option(BUILD_WITH_SSL "Build with internal ssl support" OFF)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
@@ -137,6 +132,17 @@ add_subdirectory(tests/issue166)
 add_subdirectory(tests/issue178)
 add_subdirectory(tests/udp_echo_server)
 add_subdirectory(examples/ftp_server)
+
+if (BUILD_WITH_SSL)
+# SSL support
+    # target_include_directories
+    target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
+
+    add_subdirectory(openssl)
+    target_link_libraries(yasio crypto ssl)
+    add_subdirectory(tests/ssl)
+endif ()
+
 if ( WIN32 )
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
 endif ()

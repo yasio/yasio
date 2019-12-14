@@ -1079,9 +1079,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
         handle_connect_succeed(ctx, ctx->socket_);
       }
       else
-      {
         handle_connect_failed(ctx, error);
-      }
 
       ctx->deadline_timer_.cancel();
     }
@@ -1105,15 +1103,14 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
             do_ssl_handshake(ctx);
         }
         else
-        {
           handle_connect_failed(ctx, error);
-        }
-
-        ctx->deadline_timer_.cancel();
       }
     }
     else
       do_ssl_handshake(ctx);
+
+    if (ctx->state_ != YCS_OPENING)
+      ctx->deadline_timer_.cancel();
 #endif
   }
 }

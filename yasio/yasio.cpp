@@ -1122,14 +1122,15 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
 void io_service::init_ssl_context()
 {
   SSL_load_error_strings();
-  int result = SSL_library_init();
-  ssl_ctx_   = SSL_CTX_new(SSLv23_client_method());
+  SSL_library_init();
+  ssl_ctx_ = ::SSL_CTX_new(SSLv23_client_method());
 
-  ::ERR_clear_error();
-  ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
-  if (::SSL_CTX_load_verify_locations(ssl_ctx_, "cacert.pem", nullptr) != 1)
-    YASIO_LOG("load ca certifaction file failed!");
-
+  if (!this->options_.capath_.empty())
+  {
+    ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
+    if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.capath_.c_str(), nullptr) != 1)
+      YASIO_LOG("load ca certifaction file failed!");
+  }
   SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
 }
 SSL_CTX* io_service::get_ssl_context() { return ssl_ctx_; }
@@ -1903,6 +1904,11 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
+#if defined(YASIO_HAVE_SSL)
+    case YOPT_S_SSL_CACERT:
+      this->options_.capath_ = va_arg(ap, const char*);
+      break;
+#endif
     case YOPT_I_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)

@@ -101,6 +101,10 @@ enum
   // value:int(0)
   YOPT_S_NO_NEW_THREAD,
 
+  // Sets ssl verification cert, if empty, don't verify
+  // value:const char*
+  YOPT_S_SSL_CACERT,
+
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
   YOPT_C_LFBFD_FN,
@@ -821,6 +825,10 @@ private:
     io_event_cb_t on_event_;
     // The custom debug print function
     print_fn_t print_;
+#if defined(YASIO_HAVE_SSL)
+    // The full path cacert(.pem) file for ssl verifaction
+    std::string capath_;
+#endif
   } options_;
 
   // The ip stack version supported by localhost

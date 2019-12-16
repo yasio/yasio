@@ -42,9 +42,9 @@ SOFTWARE.
 /*
 ** Uncomment or add compiler flag -DYASIO_DISABLE_SPSC_QUEUE to disable SPSC queue in io_service
 ** Remark: Most of time, this library may used in game engines:
-**      1. send message: post send request at renderer thread, and perform send at `yasio_evloop`
+**      1. send message: post send request at renderer thread, and perform send at `io_service`
 **         thread.
-**      2. receive message: unpack message at `yasio_evloop` thread, consume message at renderer
+**      2. receive message: unpack message at `io_service` thread, consume message at renderer
 **         thread.
 **      3. If you want use this library in other situation, you may need uncomment it.
 */

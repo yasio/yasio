@@ -29,7 +29,7 @@ SOFTWARE.
 /*
 ** yasio_ni.cpp: The yasio native interface for interop.
 */
-#if !defined(_WIN32) || defined(_WINDLL) || 1
+#if !defined(_WIN32) || defined(_WINDLL)
 
 #  include <string.h>
 #  include "yasio/yasio.hpp"

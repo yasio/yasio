@@ -134,6 +134,7 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
       int idx  = 0;
       fast_split(&strParams.front(), strParams.length(), ';', [&](char* s, char* e) {
         auto ch = *e;
+        *e      = '\0';
         if (idx == 0)
           cidx = atoi(s);
         else if (idx == 1)
@@ -150,9 +151,10 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
     case YOPT_S_TIMEOUTS: {
       int args[YASIO_MAX_OPTION_ARGC];
       int idx    = 0;
-      int limits = opt == YOPT_C_LFBFD_PARAMS ? 5 : 3;
+      int limits = opt == YOPT_C_LFBFD_PARAMS ? 5 : 2;
       fast_split(&strParams.front(), strParams.length(), ';', [&](char* s, char* e) {
         auto ch = *e;
+        *e      = '\0';
         if (idx < limits)
           args[idx] = atoi(s);
         ++idx;

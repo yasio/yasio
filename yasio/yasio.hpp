@@ -204,10 +204,6 @@ class io_service;
 typedef io_transport* transport_handle_t;
 
 // typedefs
-typedef long long highp_time_t;
-typedef std::chrono::high_resolution_clock highp_clock_t;
-typedef std::chrono::system_clock system_clock_t;
-
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
@@ -218,13 +214,6 @@ typedef std::function<void(event_ptr&&)> io_event_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
-
-// The high precision micro seconds timestamp
-template <typename _T = highp_clock_t> inline long long highp_clock()
-{
-  auto duration = _T::now().time_since_epoch();
-  return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
-}
 
 struct io_hostent
 {

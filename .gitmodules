@@ -6,4 +6,4 @@
 	url = https://github.com/simdsoft/LuaJIT
 [submodule "yasio/kcp"]
 	path = yasio/kcp
-	url = https://github.com/simdsoft/kcp
+	url = https://github.com/skywind3000/kcp

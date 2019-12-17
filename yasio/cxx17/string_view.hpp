@@ -33,26 +33,7 @@ See: https://github.com/bitwizeshift/string_view-standalone
 #include <string.h>
 #include <wchar.h>
 #include <string>
-
-#define __YASIO_SYM2LITERAL(s) #s
-#define YASIO_SYM2LITERAL(s) __YASIO_SYM2LITERAL(s)
-
-#if (defined(__cplusplus) && __cplusplus == 201703L) ||                                            \
-    (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                       \
-     ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                  \
-      (defined(_MSVC_LANG) && (_MSVC_LANG > 201402L))))
-#  ifndef _HAS_STD_STRING_VIEW
-#    define _HAS_STD_STRING_VIEW 1
-#  endif // C++17 features macro
-#endif   // C++17 features check
-
-#if !defined(_HAS_STD_STRING_VIEW)
-#  define _HAS_STD_STRING_VIEW 0
-#endif
-
-#if !defined(_HAS_CXX17_FULL_FEATURES)
-#  define _HAS_CXX17_FULL_FEATURES _HAS_STD_STRING_VIEW
-#endif
+#include "yasio/cxx17/feature_test.hpp"
 
 /// wcsncasecmp workaround for android API level < 23, copy from msvc ucrt 10.0.18362.0 'wcsnicmp'
 #if defined(__ANDROID_API__) && __ANDROID_API__ < 23
@@ -82,7 +63,7 @@ inline int wcsncasecmp(wchar_t const* const lhs, wchar_t const* const rhs, size_
 #endif
 
 /// string_view workaround on c++11
-#if _HAS_STD_STRING_VIEW
+#if YASIO__HAS_CXX17
 #  if __has_include(<string_view>)
 #    include <string_view>
 #  endif

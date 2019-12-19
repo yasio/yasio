@@ -5,11 +5,7 @@ set(LUA_SRC_PATH ${EXAMPLE_LUA_SRC_DIR}/lua)
 file(GLOB LUA_SRC_FILES 
     "${LUA_SRC_PATH}/*.c")
 
-message(${LUA_SRC_FILES})
-
 list(REMOVE_ITEM LUA_SRC_FILES "${LUA_SRC_PATH}/lua.c")
-
-message(${LUA_SRC_FILES})
 
 set (EXAMPLE_LUA_SRC ${EXAMPLE_LUA_SRC_DIR}/main.cpp
     ${EXAMPLE_LUA_SRC_DIR}/../../yasio/bindings/lyasio.cpp

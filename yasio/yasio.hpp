@@ -599,8 +599,17 @@ public:
 
   /// deprecated start_service API
   YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
-  YASIO__DECL
-  void start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb);
+  void start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb)
+  {
+    if (state_ == io_service::state::INITIALIZED)
+    {
+      /// recreate channels
+      clear_channels();
+      create_channels(channel_eps, channel_count);
+
+      start_service(cb);
+    }
+  }
   YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
   void start_service(const io_hostent* channel_eps, io_event_cb_t cb)
   {
@@ -618,7 +627,6 @@ public:
 
   YASIO__DECL void start_service(io_event_cb_t cb);
   YASIO__DECL void stop_service();
-  YASIO__DECL void wait_service();
 
   bool is_running() const { return this->state_ == io_service::state::RUNNING; }
 
@@ -687,7 +695,10 @@ private:
   YASIO__DECL void start_resolve(io_channel*);
 
   YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
-  YASIO__DECL void cleanup();
+  YASIO__DECL void dispose();
+
+  /* Call by stop_service, wait io_service thread exit properly & do cleanup */
+  YASIO__DECL void join();
 
   YASIO__DECL void open_internal(io_channel*, bool ignore_state = false);
 
@@ -846,7 +857,7 @@ private:
 } // namespace inet
 } /* namespace yasio */
 
-#define yasio_shared_service yasio::gc::singleton<yasio::inet::io_service>::instance()
+#define yasio_shared_service yasio::gc::singleton<yasio::inet::io_service>::instance
 
 #if defined(YASIO_HEADER_ONLY)
 #  include "yasio/yasio.cpp" // lgtm [cpp/include-non-header]

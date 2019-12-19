@@ -95,21 +95,33 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       &io_event::timestamp);
 
   lyasio.new_usertype<io_service>(
-      "io_service", "start_service",
-      [](io_service* service, sol::table channel_eps, sol::function cb) {
-        std::vector<io_hostent> hosts;
-        auto host = channel_eps["host"];
-        if (host != sol::nil)
-          hosts.push_back(io_hostent(host, channel_eps["port"]));
-        else
-        {
-          for (auto item : channel_eps)
-          {
-            auto ep = item.second.as<sol::table>();
-            hosts.push_back(io_hostent(ep["host"], ep["port"]));
-          }
-        }
-        service->start_service(hosts, [=](event_ptr ev) { cb(std::move(ev)); });
+      "io_service", "new",
+      sol::initializers(
+          [](io_service& uninitialized_memory) { return new (&uninitialized_memory) io_service(); },
+          [](io_service& uninitialized_memory, int n) {
+            return new (&uninitialized_memory) io_service(n);
+          },
+          [](io_service& uninitialized_memory, sol::table channel_eps) {
+            std::vector<io_hostent> hosts;
+            auto host = channel_eps["host"];
+            if (host != sol::nil)
+              hosts.push_back(io_hostent(host, channel_eps["port"]));
+            else
+            {
+              for (auto item : channel_eps)
+              {
+                auto ep = item.second.as<sol::table>();
+                hosts.push_back(io_hostent(ep["host"], ep["port"]));
+              }
+            }
+            return new (&uninitialized_memory)
+                io_service(!hosts.empty() ? &hosts.front() : nullptr, hosts.size());
+          }),
+      sol::meta_function::garbage_collect,
+      sol::destructor([](io_service& memory_from_lua) { memory_from_lua.~io_service(); }),
+      "start_service",
+      [](io_service* service, sol::function cb) {
+        service->start_service([=](event_ptr ev) { cb(std::move(ev)); });
       },
       "stop_service", &io_service::stop_service, "set_option",
       [](io_service* service, int opt, sol::variadic_args va) {
@@ -120,6 +132,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
             break;
           case YOPT_C_REMOTE_PORT:
           case YOPT_C_LOCAL_PORT:
+          case YOPT_S_TIMEOUTS:
+#  if YASIO_VERSION_NUM >= YASIO_VERSION_NUM
+          case YOPT_C_LFBFD_IBTS:
+#  endif
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]));
             break;
           case YOPT_C_REMOTE_ENDPOINT:
@@ -359,10 +375,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
   lyasio["io_service"].setClass(
       kaguya::UserdataMetatable<io_service>()
-          .setConstructors<io_service()>()
           .addOverloadedFunctions(
-              "start_service",
-              [](io_service* service, kaguya::LuaTable channel_eps, io_event_cb_t cb) {
+              "new", []() { return new io_service(); },
+              [](int channel_count) { return new io_service(channel_count); },
+              [](kaguya::LuaTable channel_eps) {
                 std::vector<io_hostent> hosts;
                 auto host = channel_eps["host"];
                 if (host)
@@ -373,8 +389,12 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                     hosts.push_back(io_hostent(ep["host"], ep["port"]));
                   });
                 }
-                service->start_service(hosts, std::move(cb));
+
+                return new io_service(!hosts.empty() ? &hosts.front() : nullptr, hosts.size());
               })
+          .addOverloadedFunctions(
+              "start_service",
+              [](io_service* service, io_event_cb_t cb) { service->start_service(std::move(cb)); })
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch", &io_service::dispatch)
           .addFunction("open", &io_service::open)
@@ -386,6 +406,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
               "write", &io_service::write,
+              [](io_service* service, transport_handle_t transport, cxx17::string_view s) {
+                return service->write(transport,
+                                      std::vector<char>(s.data(), s.data() + s.length()));
+              },
               [](io_service* service, transport_handle_t transport, yasio::obstream* obs) {
                 return service->write(transport, std::move(obs->buffer()));
               })
@@ -399,6 +423,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                 break;
               case YOPT_C_REMOTE_PORT:
               case YOPT_C_LOCAL_PORT:
+              case YOPT_S_TIMEOUTS:
+#  if YASIO_VERSION_NUM >= YASIO_VERSION_NUM
+              case YOPT_C_LFBFD_IBTS:
+#  endif
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                 break;
               case YOPT_C_REMOTE_ENDPOINT:

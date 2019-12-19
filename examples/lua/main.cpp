@@ -1,8 +1,7 @@
 #include "yasio/bindings/lyasio.h"
 #include "yasio/cxx17/string_view.hpp"
-#include "yasio/detail/sol/sol.hpp"
+#include "yasio/sol/sol.hpp"
 #include <thread>
-#pragma comment(lib, "lua51.lib")
 
 int main(int argc, char** argv)
 {
@@ -10,7 +9,18 @@ int main(int argc, char** argv)
   s.open_libraries();
   luaopen_yasio(s.lua_state());
 
-  sol::function function = s.script_file("example.lua");
+  cxx17::string_view path  = argv[0];
+  auto pos = path.find_last_of('/\\');
+  if (pos != cxx17::string_view::npos)
+    path.remove_suffix(path.size() - pos - 1);
+  std::string package_path = s["package"]["path"];
+  package_path.push_back(';');
+  package_path.append(path.data());
+  package_path.append("scripts/?.lua;./scripts/?.lua");
+  s["package"]["path"]   = package_path; 
+
+  package_path           = s["package"]["path"];
+  sol::function function = s.script_file("scripts/example.lua");
 
   do
   {

@@ -10,7 +10,7 @@ int main(int argc, char** argv)
   luaopen_yasio(s.lua_state());
 
   cxx17::string_view path  = argv[0];
-  auto pos = path.find_last_of('/\\');
+  auto pos = path.find_last_of("/\\");
   if (pos != cxx17::string_view::npos)
     path.remove_suffix(path.size() - pos - 1);
   std::string package_path = s["package"]["path"];

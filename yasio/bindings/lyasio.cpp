@@ -133,7 +133,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
           case YOPT_C_REMOTE_PORT:
           case YOPT_C_LOCAL_PORT:
           case YOPT_S_TIMEOUTS:
-#  if YASIO_VERSION_NUM >= YASIO_VERSION_NUM
+#  if YASIO_VERSION_NUM >= 0x033100
           case YOPT_C_LFBFD_IBTS:
 #  endif
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]));
@@ -424,7 +424,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
               case YOPT_C_REMOTE_PORT:
               case YOPT_C_LOCAL_PORT:
               case YOPT_S_TIMEOUTS:
-#  if YASIO_VERSION_NUM >= YASIO_VERSION_NUM
+#  if YASIO_VERSION_NUM >= 0x033100
               case YOPT_C_LFBFD_IBTS:
 #  endif
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));

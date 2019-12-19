@@ -297,9 +297,9 @@ public:
   inline u_short local_port() { return local_port_; }
 
 private:
-  YASIO__DECL io_channel(io_service& service);
+  YASIO__DECL io_channel(io_service& service, int index);
 
-  inline void init(std::string host, u_short port)
+  inline void setup(std::string host, u_short port)
   {
     setup_remote_host(host);
     setup_remote_port(port);
@@ -335,7 +335,7 @@ private:
 
   highp_time_t dns_queries_timestamp_ = 0;
 
-  int index_    = -1;
+  int index_;
   int protocol_ = 0;
 
   // The deadline timer for resolve & connect
@@ -528,15 +528,20 @@ public:
 
 public:
   YASIO__DECL io_service();
+  YASIO__DECL io_service(int channel_count);
+  YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 
-  // start async socket io service
-  YASIO__DECL void start_service(const io_hostent* channel_eps, int channel_count,
-                                 io_event_cb_t cb);
+  /// deprecated start_service API
+  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
+  YASIO__DECL
+  void start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb);
+  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
   void start_service(const io_hostent* channel_eps, io_event_cb_t cb)
   {
     this->start_service(channel_eps, 1, std::move(cb));
   }
+  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
   void start_service(std::vector<io_hostent> channel_eps, io_event_cb_t cb)
   {
     if (!channel_eps.empty())
@@ -546,6 +551,7 @@ public:
     }
   }
 
+  YASIO__DECL void start_service(io_event_cb_t cb);
   YASIO__DECL void stop_service();
   YASIO__DECL void wait_service();
 
@@ -592,8 +598,6 @@ public:
   }
   YASIO__DECL deadline_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
-  YASIO__DECL void cleanup();
-
   YASIO__DECL int __builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                    unsigned short port = 0);
 
@@ -617,7 +621,8 @@ private:
   // Start a async resolve, It's only for internal use
   YASIO__DECL void start_resolve(io_channel*);
 
-  YASIO__DECL void init(const io_hostent* channel_eps, int channel_count, io_event_cb_t& cb);
+  YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
+  YASIO__DECL void cleanup();
 
   YASIO__DECL void open_internal(io_channel*, bool ignore_state = false);
 
@@ -668,7 +673,7 @@ private:
   // new/delete client socket connection channel
   // please call this at initialization, don't new channel at runtime
   // dynmaically: because this API is not thread safe.
-  YASIO__DECL io_channel* new_channel(const io_hostent& ep);
+  YASIO__DECL void create_channels(const io_hostent* eps, int count);
   // Clear all channels after service exit.
   YASIO__DECL void clear_channels();   // destroy all channels
   YASIO__DECL void clear_transports(); // destroy all transports

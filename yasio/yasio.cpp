@@ -203,13 +203,13 @@ void deadline_timer::cancel()
 void deadline_timer::unschedule() { this->service_.remove_timer(this); }
 
 /// io_channel
-io_channel::io_channel(io_service& service) : deadline_timer_(service)
+io_channel::io_channel(io_service& service, int index) : deadline_timer_(service)
 {
   socket_.reset(new xxsocket());
   state_             = YCS_CLOSED;
   dns_queries_state_ = YDQS_FAILED;
-
-  decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+  index_             = index;
+  decode_len_        = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
 int io_channel::join_multicast_group()
@@ -511,20 +511,19 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 #endif
 
 // ------------------------ io_service ------------------------
-
 io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
 {
-  FD_ZERO(&fds_array_[read_op]);
-  FD_ZERO(&fds_array_[write_op]);
-  FD_ZERO(&fds_array_[except_op]);
-
-  maxfdp_ = 0;
-
-  options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
-    return this->__builtin_resolv(eps, host, port);
-  };
+  this->init(nullptr, 1);
 }
-
+io_service::io_service(int channel_count) : state_(io_service::state::IDLE), interrupter_()
+{
+  this->init(nullptr, channel_count);
+}
+io_service::io_service(const io_hostent* channel_eps, int channel_count)
+    : state_(io_service::state::IDLE), interrupter_()
+{
+  this->init(channel_eps, channel_count);
+}
 io_service::~io_service()
 {
   stop_service();
@@ -541,9 +540,13 @@ io_service::~io_service()
 
 void io_service::start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb)
 {
-  if (state_ == io_service::state::IDLE)
+  if (state_ == io_service::state::INITIALIZED)
   {
-    this->init(channel_eps, channel_count, cb);
+    clear_channels();
+    create_channels(channel_eps, channel_count);
+
+    if (cb)
+      options_.on_event_ = std::move(cb);
 
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
@@ -557,11 +560,32 @@ void io_service::start_service(const io_hostent* channel_eps, int channel_count,
       this->options_.deferred_event_ = false;
       run();
       this->state_ = io_service::state::STOPPED;
-      cleanup();
     }
   }
 }
 
+void io_service::start_service(io_event_cb_t cb)
+{
+  if (state_ == io_service::state::INITIALIZED)
+  {
+    if (cb)
+      options_.on_event_ = std::move(cb);
+
+    this->state_ = io_service::state::RUNNING;
+    if (!options_.no_new_thread_)
+    {
+      this->worker_    = std::thread(&io_service::run, this);
+      this->worker_id_ = worker_.get_id();
+    }
+    else
+    {
+      this->worker_id_               = std::this_thread::get_id();
+      this->options_.deferred_event_ = false;
+      run();
+      this->state_ = io_service::state::STOPPED;
+    }
+  }
+}
 void io_service::stop_service()
 {
   if (this->state_ == io_service::state::RUNNING)
@@ -590,23 +614,27 @@ void io_service::wait_service()
   }
 }
 
-void io_service::init(const io_hostent* channel_eps, int channel_count, io_event_cb_t& cb)
+void io_service::init(const io_hostent* channel_eps, int channel_count)
 {
   if (this->state_ != io_service::state::IDLE)
     return;
   if (channel_count <= 0)
     return;
-  if (cb)
-    options_.on_event_ = std::move(cb);
+
+  FD_ZERO(&fds_array_[read_op]);
+  FD_ZERO(&fds_array_[write_op]);
+  FD_ZERO(&fds_array_[except_op]);
+
+  maxfdp_ = 0;
+
+  options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
+    return this->__builtin_resolv(eps, host, port);
+  };
 
   register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
-  // Initialize channels
-  for (auto i = 0; i < channel_count; ++i)
-  {
-    auto& channel_ep = channel_eps[i];
-    (void)new_channel(channel_ep);
-  }
+  // Create channels
+  create_channels(channel_eps, channel_count);
 
   this->state_ = io_service::state::INITIALIZED;
 }
@@ -628,13 +656,15 @@ void io_service::cleanup()
   }
 }
 
-io_channel* io_service::new_channel(const io_hostent& ep)
+void io_service::create_channels(const io_hostent* channel_eps, int channel_count)
 {
-  auto ctx = new io_channel(*this);
-  ctx->init(ep.host_, ep.port_);
-  ctx->index_ = static_cast<int>(this->channels_.size());
-  this->channels_.push_back(ctx);
-  return ctx;
+  for (auto i = 0; i < channel_count; ++i)
+  {
+    auto channel = new io_channel(*this, i);
+    if (channel_eps != nullptr)
+      channel->setup(channel_eps[i].host_, channel_eps[i].port_);
+    channels_.push_back(channel);
+  }
 }
 
 void io_service::clear_channels()

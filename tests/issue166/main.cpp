@@ -7,9 +7,9 @@ int main()
   yasio::inet::io_hostent endpoints[] = {
       {"127.0.0.1", 8010} // tcp client
   };
-  io_service service;
+  io_service service(endpoints, 1);
   int retry_count = 0;
-  service.start_service(endpoints, [&](event_ptr event) {
+  service.start_service([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_CONNECT_RESPONSE: {

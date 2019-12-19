@@ -17,14 +17,14 @@ enum
 
 void yasioMulticastTest()
 {
-  io_service service;
 
   io_hostent hosts[] = {
       {"224.0.0.19", 22016}, // multicast server
       {"224.0.0.19", 22016}  // multicast client
   };
 
-  service.start_service(hosts, YASIO_ARRAYSIZE(hosts), [&](event_ptr&& event) {
+  io_service service(hosts, YASIO_ARRAYSIZE(hosts));
+  service.start_service([&](event_ptr&& event) {
     auto thandle = event->transport();
 
     switch (event->kind())

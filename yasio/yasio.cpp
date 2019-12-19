@@ -527,41 +527,7 @@ io_service::io_service(const io_hostent* channel_eps, int channel_count)
 io_service::~io_service()
 {
   stop_service();
-  if (this->state_ == io_service::state::STOPPED)
-    cleanup();
-
-  for (auto o : tpool_)
-    ::operator delete(o);
-  tpool_.clear();
-
-  options_.resolv_ = nullptr;
-  options_.print_  = nullptr;
-}
-
-void io_service::start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb)
-{
-  if (state_ == io_service::state::INITIALIZED)
-  {
-    clear_channels();
-    create_channels(channel_eps, channel_count);
-
-    if (cb)
-      options_.on_event_ = std::move(cb);
-
-    this->state_ = io_service::state::RUNNING;
-    if (!options_.no_new_thread_)
-    {
-      this->worker_    = std::thread(&io_service::run, this);
-      this->worker_id_ = worker_.get_id();
-    }
-    else
-    {
-      this->worker_id_               = std::this_thread::get_id();
-      this->options_.deferred_event_ = false;
-      run();
-      this->state_ = io_service::state::STOPPED;
-    }
-  }
+  dispose();
 }
 
 void io_service::start_service(io_event_cb_t cb)
@@ -586,6 +552,7 @@ void io_service::start_service(io_event_cb_t cb)
     }
   }
 }
+
 void io_service::stop_service()
 {
   if (this->state_ == io_service::state::RUNNING)
@@ -593,13 +560,13 @@ void io_service::stop_service()
     this->state_ = io_service::state::STOPPING;
 
     this->interrupt();
-    this->wait_service();
+    this->join();
   }
   else if (this->state_ == io_service::state::STOPPING)
-    this->wait_service();
+    this->join();
 }
 
-void io_service::wait_service()
+void io_service::join()
 {
   if (this->worker_.joinable())
   {
@@ -607,7 +574,7 @@ void io_service::wait_service()
     {
       this->worker_.join();
       this->state_ = io_service::state::STOPPED;
-      cleanup();
+      clear_transports();
     }
     else
       errno = EAGAIN;
@@ -639,11 +606,10 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   this->state_ = io_service::state::INITIALIZED;
 }
 
-void io_service::cleanup()
+void io_service::dispose()
 {
   if (this->state_ == io_service::state::STOPPED)
   {
-    clear_transports();
     clear_channels();
     this->events_.clear();
     this->timer_queue_.clear();
@@ -651,6 +617,13 @@ void io_service::cleanup()
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
     options_.on_event_ = nullptr;
+    options_.resolv_   = nullptr;
+    options_.print_    = nullptr;
+
+    /// purge transport pool memory
+    for (auto o : tpool_)
+      ::operator delete(o);
+    tpool_.clear();
 
     this->state_ = io_service::state::IDLE;
   }

@@ -70,43 +70,16 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
 
 extern "C" {
 
-YASIO_NI_API int yasio_start(const char* params,
+YASIO_NI_API void yasio_start(int channel_count,
                              void (*callback)(uint32_t emask, int cidx, intptr_t sid,
                                               intptr_t bytes, int len))
 {
-  std::vector<io_hostent> hosts;
-  std::string strParams = params;
-  fast_split(&strParams.front(), strParams.length(), ';', [&](char* s, char* e) {
-    if (s != e)
-    {
-      io_hostent host;
-      int idx = 0;
-      fast_split(s, e - s, ':', [&](char* ss, char* ee) {
-        auto ch = *ee;
-        *ee     = '\0';
-        switch (idx++)
-        {
-          case 0:
-            host.host_.assign(ss, ee);
-            break;
-          case 1:
-            host.port_ = atoi(ss);
-            break;
-        }
-        *ee = ch;
-      });
-      hosts.push_back(std::move(host));
-    }
-  });
-
-  yasio_shared_service->start_service(hosts, [=](event_ptr e) {
+  yasio_shared_service(channel_count)->start_service([=](event_ptr e) {
     uint32_t emask = ((e->kind() << 16) & 0xffff0000) | (e->status() & 0xffff);
     callback(emask, e->cindex(), reinterpret_cast<intptr_t>(e->transport()),
              reinterpret_cast<intptr_t>(!e->packet().empty() ? e->packet().data() : nullptr),
              static_cast<int>(e->packet().size()));
   });
-
-  return static_cast<int>(hosts.size());
 }
 YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t sbuf))
 {
@@ -119,12 +92,12 @@ YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t s
     }
     return ret;
   };
-  yasio_shared_service->set_option(YOPT_S_RESOLV_FN, &fn);
+  yasio_shared_service()->set_option(YOPT_S_RESOLV_FN, &fn);
 }
 YASIO_NI_API void yasio_set_option(int opt, const char* params)
 {
   std::string strParams = params;
-  auto service          = yasio_shared_service;
+  auto service          = yasio_shared_service();
   switch (opt)
   {
     case YOPT_C_REMOTE_ENDPOINT: {
@@ -168,27 +141,27 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
     }
   }
 }
-YASIO_NI_API void yasio_open(int cindex, int kind) { yasio_shared_service->open(cindex, kind); }
-YASIO_NI_API void yasio_close(int cindex) { yasio_shared_service->close(cindex); }
+YASIO_NI_API void yasio_open(int cindex, int kind) { yasio_shared_service()->open(cindex, kind); }
+YASIO_NI_API void yasio_close(int cindex) { yasio_shared_service()->close(cindex); }
 YASIO_NI_API void yasio_close_handle(intptr_t thandle)
 {
   auto p = reinterpret_cast<transport_handle_t>(thandle);
-  yasio_shared_service->close(p);
+  yasio_shared_service()->close(p);
 }
 YASIO_NI_API int yasio_write(intptr_t thandle, const unsigned char* bytes, int len)
 {
   std::vector<char> buf(bytes, bytes + len);
   auto p = reinterpret_cast<transport_handle_t>(thandle);
-  return yasio_shared_service->write(p, std::move(buf));
+  return yasio_shared_service()->write(p, std::move(buf));
 }
-YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service->dispatch(count); }
-YASIO_NI_API void yasio_stop() { yasio_shared_service->stop_service(); }
+YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service()->dispatch(count); }
+YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop_service(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
 YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*))
 {
   yasio::inet::print_fn_t custom_print = print_fn;
-  yasio_shared_service->set_option(YOPT_S_PRINT_FN, &custom_print);
+  yasio_shared_service()->set_option(YOPT_S_PRINT_FN, &custom_print);
 }
 YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {

@@ -19,13 +19,13 @@ void run_test()
       {"127.0.0.1", 30002}, // kcp client2
   };
 
-  io_service service;
+  io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 
   service.set_option(YOPT_S_TCP_KEEPALIVE, 60, 30, 3);
 
   std::vector<transport_handle_t> transports;
   deadline_timer udp_msg_delay(service);
-  service.start_service(endpoints, YASIO_ARRAYSIZE(endpoints), [&](event_ptr event) {
+  service.start_service([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

@@ -39,7 +39,7 @@ void yasioTest()
   auto v3 = ibs.read_i24();
   auto v4 = ibs.read_i24();
 
-  io_service service;
+  io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 
   resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname,
                            unsigned short port) {
@@ -55,7 +55,7 @@ void yasioTest()
 
   int max_request_count = 10;
 
-  service.start_service(endpoints, YASIO_ARRAYSIZE(endpoints), [&](event_ptr&& event) {
+  service.start_service([&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

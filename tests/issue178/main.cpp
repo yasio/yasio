@@ -10,9 +10,9 @@ int main()
       {"0.0.0.0", 8010},  // tcp server
       {"127.0.0.1", 8010} // tcp client
   };
-  io_service service;
+  io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
   deadline_timer delay_timer(service);
-  service.start_service(endpoints, YASIO_ARRAYSIZE(endpoints), [&](event_ptr event) {
+  service.start_service([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET:

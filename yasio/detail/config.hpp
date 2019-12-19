@@ -118,6 +118,11 @@ SOFTWARE.
 #endif
 
 /*
+**  The yasio version macros
+*/
+#define YASIO_VERSION_NUM 0x033100
+
+/*
 ** The macros used by io_service.
 */
 // The default max listen count of tcp server.

@@ -49,8 +49,7 @@ static auto obstream_write_v = [](yasio::obstream* obs, cxx17::string_view val,
       return obs->write_v8(val);
   }
 };
-static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits,
-                                 bool /*raw*/ = false) {
+static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits) {
   // default: Use variant length of length field, just like .net BinaryReader.ReadString,
   // see:
   // https://github.com/mono/mono/blob/master/mcs/class/referencesource/mscorlib/system/io/binaryreader.cs

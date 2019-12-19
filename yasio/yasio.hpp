@@ -597,34 +597,6 @@ public:
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 
-  /// deprecated start_service API
-  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
-  void start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb)
-  {
-    if (state_ == io_service::state::INITIALIZED)
-    {
-      /// recreate channels
-      clear_channels();
-      create_channels(channel_eps, channel_count);
-
-      start_service(cb);
-    }
-  }
-  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
-  void start_service(const io_hostent* channel_eps, io_event_cb_t cb)
-  {
-    this->start_service(channel_eps, 1, std::move(cb));
-  }
-  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
-  void start_service(std::vector<io_hostent> channel_eps, io_event_cb_t cb)
-  {
-    if (!channel_eps.empty())
-    {
-      this->start_service(&channel_eps.front(), static_cast<int>(channel_eps.size()),
-                          std::move(cb));
-    }
-  }
-
   YASIO__DECL void start_service(io_event_cb_t cb);
   YASIO__DECL void stop_service();
 
@@ -634,10 +606,6 @@ public:
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
   YASIO__DECL void dispatch(int count = 512);
-
-  // This function will be removed in the future, please use dispatch instead.
-  YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::dispatch)
-  YASIO__DECL void dispatch_events(int count = 512) { dispatch(count); }
 
   // set option, see enum YOPT_XXX
   YASIO__DECL void set_option(int option, ...);

@@ -4,3 +4,6 @@
 [submodule "yasio/kcp"]
 	path = yasio/kcp
 	url = https://github.com/skywind3000/kcp
+[submodule "examples/lua/lua"]
+	path = examples/lua/lua
+	url = https://github.com/lua/lua

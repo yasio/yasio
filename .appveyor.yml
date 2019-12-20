@@ -30,5 +30,6 @@ build_script:
   - cd build
   - mkdir build_win
   - cd build_win
+  - cmake --version
   - cmake %GEN% ../../
   - cmake --build . --config Release --clean-first

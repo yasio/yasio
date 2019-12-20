@@ -15,5 +15,6 @@ matrix:
 
 script:
   - cd build
+  - cmake --version
   - cmake ..
   - cmake --build . --config Release --clean-first

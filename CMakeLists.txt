@@ -25,9 +25,6 @@ option(BUILD_WITH_SSL "Build with internal ssl support" OFF)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
-#set(LUA_SRC_PATH lua-5.3.5/src)
-#set(LUAJIT_SRC_PATH luajit-2.1.0b3/src)
-
 if (NOT WIN32 OR CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
@@ -90,14 +87,14 @@ if (APPLE)
            ${YASIO_CORE}
            ${THIRDPART_SRC}
         )
-		set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
+	set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
     else ()
         set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
-        add_library(yasio MODULE
+        add_library(yasio STATIC
             ${YASIO_CORE}
             ${THIRDPART_SRC}
         )
-        set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
+        # set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
     endif ()
 elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
     add_library(yasio STATIC
@@ -125,14 +122,16 @@ else ( )
     )
 endif ( )
 
-add_subdirectory(tests/tcp)
-add_subdirectory(tests/mcast)
-add_subdirectory(tests/kcp)
-add_subdirectory(tests/issue166)
-add_subdirectory(tests/issue178)
-add_subdirectory(tests/udp_echo_server)
-add_subdirectory(examples/lua)
-add_subdirectory(examples/ftp_server)
+if(NOT IOS)
+    add_subdirectory(tests/tcp)
+    add_subdirectory(tests/mcast)
+    add_subdirectory(tests/kcp)
+    add_subdirectory(tests/issue166)
+    add_subdirectory(tests/issue178)
+    add_subdirectory(tests/udp_echo_server)
+    add_subdirectory(examples/lua)
+    add_subdirectory(examples/ftp_server)
+endif ()
 
 if (BUILD_WITH_SSL)
 # SSL support
@@ -141,7 +140,9 @@ if (BUILD_WITH_SSL)
 
     add_subdirectory(openssl)
     target_link_libraries(yasio crypto ssl)
-    add_subdirectory(tests/ssl)
+    if(NOT IOS)
+        add_subdirectory(tests/ssl)
+    endif()
 endif ()
 
 if ( WIN32 )

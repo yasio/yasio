@@ -1,13 +1,13 @@
 // yasio-v3.30
 function yasioTest() {
   // ------- start of yasio test ----------
-  var yserver = new yasio.io_service();
   var hostents = [
     { host: "0.0.0.0", port: 8081 },
     { host: "0.0.0.0", port: 8082 },
   ];
 
-  yserver.start_service(hostents, function (event) {
+  var yserver = new yasio.io_service(hostents);
+  yserver.start_service(function (event) {
     var kind = event.kind();
     if (kind == yasio.YEK_CONNECT_RESPONSE) {
       cc.log("yasio event --> a connection income, kind=%d", event.kind());
@@ -54,11 +54,11 @@ function yasioTest() {
   );
   yserver.open(0, yasio.YCM_TCP_SERVER);
 
-  var yclient = new yasio.io_service();
+  var yclient = new yasio.io_service({ host: "127.0.0.1", port: 8081 });
 
   var tsport_c = null;
 
-  yclient.start_service({ host: "127.0.0.1", port: 8081 }, function (event) {
+  yclient.start_service(function (event) {
     var kind = event.kind();
     if (kind == yasio.YEK_CONNECT_RESPONSE) {
       cc.log("yasio event --> connect server succeed, kind=%d", event.kind());

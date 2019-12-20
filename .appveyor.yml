@@ -28,5 +28,7 @@ install:
 
 build_script:
   - cd build
-  - cmake %GEN% ..
+  - mkdir build_win
+  - cd build_win
+  - cmake %GEN% ../../
   - cmake --build . --config Release --clean-first

@@ -30,7 +30,7 @@ function build_osx()
     # ios
     mkdir -p build_ios
     cd build_ios
-    cmake .. -GXcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator
+    cmake ../../ -GXcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator
     cmake --build . --config Release -- -quiet --jobs $NUM_OF_CORES -destination "platform=iOS Simulator,name=iPhone Retina (4-inch)"
     cd ..
 

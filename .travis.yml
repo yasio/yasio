@@ -14,4 +14,6 @@ matrix:
       compiler: gcc
 
 script:
-  - make cxxstd=c++11 config=release -j2
+  - cd build
+  - cmake ..
+  - cmake --build . --config Release --clean-first

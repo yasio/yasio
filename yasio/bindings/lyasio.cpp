@@ -391,9 +391,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
                 return new io_service(!hosts.empty() ? &hosts.front() : nullptr, hosts.size());
               })
-          .addOverloadedFunctions(
-              "start_service",
-              [](io_service* service, io_event_cb_t cb) { service->start_service(std::move(cb)); })
+          .addFunction("start_service",
+                       [](io_service* service, kaguya::LuaFunction cb) {
+                         io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void { cb(e.get()); };
+                         service->start_service(std::move(fnwrap));
+                       })
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch", &io_service::dispatch)
           .addFunction("open", &io_service::open)
@@ -404,7 +406,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
               "close", static_cast<void (io_service::*)(transport_handle_t)>(&io_service::close),
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
-              "write", &io_service::write,
+              "write",
+              static_cast<int (io_service::*)(transport_handle_t, std::vector<char>)>(
+                  &io_service::write),
               [](io_service* service, transport_handle_t transport, cxx17::string_view s) {
                 return service->write(transport,
                                       std::vector<char>(s.data(), s.data() + s.length()));
@@ -539,8 +543,8 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                                   .setConstructors<yasio::ibstream(std::vector<char>),
                                                    yasio::ibstream(const yasio::obstream*)>());
 
-  lyasio["highp_clock"] = &highp_clock<highp_clock_t>;
-  lyasio["highp_time"]  = &highp_clock<system_clock_t>;
+  // lyasio["highp_clock"] = kaguya::function(&highp_clock<highp_clock_t>);
+  // lyasio["highp_time"]  = kaguya::function(&highp_clock<system_clock_t>);
 
   // ##-- yasio enums
 #  define YASIO_EXPORT_ENUM(v) lyasio[#  v] = v

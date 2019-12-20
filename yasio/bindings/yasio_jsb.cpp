@@ -25,6 +25,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
+#define YASIO_HEADER_ONLY 1
+
 #include "yasio/bindings/yasio_jsb.h"
 #include "yasio/yasio.hpp"
 #include "yasio/ibstream.hpp"
@@ -260,7 +263,7 @@ bool jsval_to_std_vector_hostent(JSContext* ctx, JS::HandleValue vp,
   return true;
 }
 
-template <typename T> static bool jsb_yasio_constructor(JSContext* ctx, uint32_t argc, jsval* vp)
+template <typename T> static bool jsb_yasio__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   JS::CallArgs args          = JS::CallArgsFromVp(argc, vp);
   bool ok                    = true;
@@ -276,7 +279,7 @@ template <typename T> static bool jsb_yasio_constructor(JSContext* ctx, uint32_t
   return true;
 }
 
-template <typename T> static void jsb_yasio_finalize(JSFreeOp* fop, JSObject* obj)
+template <typename T> static void jsb_yasio__dtor(JSFreeOp* fop, JSObject* obj)
 {
   CCLOG("jsbindings: finalizing JS object %p(%s)", obj, TypeTest<T>::s_name());
   js_proxy_t* nproxy;
@@ -443,7 +446,7 @@ bool jsb_yasio_highp_clock(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   auto args = JS::CallArgsFromVp(argc, vp);
 
-  args.rval().setDouble(yasio::inet::highp_clock());
+  args.rval().setDouble(yasio::highp_clock());
   return true;
 }
 
@@ -451,7 +454,7 @@ bool jsb_yasio_highp_time(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   auto args = JS::CallArgsFromVp(argc, vp);
 
-  args.rval().setDouble(yasio::inet::highp_clock<yasio::inet::system_clock_t>());
+  args.rval().setDouble(yasio::highp_clock<yasio::system_clock_t>());
   return true;
 }
 
@@ -683,7 +686,7 @@ void js_register_yasio_ibstream(JSContext* ctx, JS::HandleObject global)
   jsb_ibstream_class->enumerate   = JS_EnumerateStub;
   jsb_ibstream_class->resolve     = JS_ResolveStub;
   jsb_ibstream_class->convert     = JS_ConvertStub;
-  jsb_ibstream_class->finalize    = jsb_yasio_finalize<yasio::ibstream>;
+  jsb_ibstream_class->finalize    = jsb_yasio__dtor<yasio::ibstream>;
   jsb_ibstream_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
@@ -729,7 +732,7 @@ void js_register_yasio_ibstream(JSContext* ctx, JS::HandleObject global)
 JSClass* jsb_obstream_class;
 JSObject* jsb_obstream_prototype;
 
-static bool jsb_yasio_obstream_constructor(JSContext* ctx, uint32_t argc, jsval* vp)
+static bool jsb_yasio_obstream__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   JS::CallArgs args     = JS::CallArgsFromVp(argc, vp);
   bool ok               = true;
@@ -1223,7 +1226,7 @@ void js_register_yasio_obstream(JSContext* ctx, JS::HandleObject global)
   jsb_obstream_class->enumerate   = JS_EnumerateStub;
   jsb_obstream_class->resolve     = JS_ResolveStub;
   jsb_obstream_class->convert     = JS_ConvertStub;
-  jsb_obstream_class->finalize    = jsb_yasio_finalize<yasio::obstream>;
+  jsb_obstream_class->finalize    = jsb_yasio__dtor<yasio::obstream>;
   jsb_obstream_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
@@ -1255,7 +1258,7 @@ void js_register_yasio_obstream(JSContext* ctx, JS::HandleObject global)
 
   // JS::RootedObject parentProto(ctx, jsb_cocos2d_Ref_prototype);
   jsb_obstream_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_obstream_class,
-                                        jsb_yasio_obstream_constructor, 0, properties, funcs,
+                                        jsb_yasio_obstream__ctor, 0, properties, funcs,
                                         NULL, // no static properties
                                         st_funcs);
 
@@ -1451,7 +1454,7 @@ void js_register_yasio_io_event(JSContext* ctx, JS::HandleObject global)
   jsb_io_event_class->enumerate   = JS_EnumerateStub;
   jsb_io_event_class->resolve     = JS_ResolveStub;
   jsb_io_event_class->convert     = JS_ConvertStub;
-  jsb_io_event_class->finalize    = jsb_yasio_finalize<io_event>;
+  jsb_io_event_class->finalize    = jsb_yasio__dtor<io_event>;
   jsb_io_event_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
@@ -1486,6 +1489,54 @@ void js_register_yasio_io_event(JSContext* ctx, JS::HandleObject global)
 JSClass* jsb_io_service_class;
 JSObject* jsb_io_service_prototype;
 
+static bool jsb_yasio_io_service__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
+{
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  bool ok           = true;
+
+  io_service* cobj = nullptr;
+  if (argc == 1)
+  {
+    auto arg0 = args.get(0);
+    if (JS_IsArrayObject(ctx, arg0))
+    {
+      std::vector<inet::io_hostent> hostents;
+      jsval_to_std_vector_hostent(ctx, arg0, &hostents);
+      cobj = new (std::nothrow) io_service(!hostents.empty() ? &hostents.front() : nullptr,
+                                           std::max(1, (int)hostents.size()));
+    }
+    if (arg0.isObject())
+    {
+      inet::io_hostent ioh;
+      jsval_to_hostent(ctx, arg0, &ioh);
+      cobj = new (std::nothrow) io_service(&ioh, 1);
+    }
+    else if (arg0.isNumber())
+      cobj = new (std::nothrow) io_service(args.get(0).toInt32());
+  }
+  else
+  {
+    cobj = new (std::nothrow) io_service();
+  }
+
+  if (cobj != nullptr)
+  {
+    js_type_class_t* typeClass = js_get_type_from_native<io_service>(cobj);
+
+    // link the native object with the javascript object
+    JS::RootedObject jsobj(
+        ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<io_service>::s_name()));
+    args.rval().set(OBJECT_TO_JSVAL(jsobj));
+    if (JS_HasProperty(ctx, jsobj, "_ctor", &ok) && ok)
+      ScriptingCore::getInstance()->executeFunctionWithOwner(OBJECT_TO_JSVAL(jsobj), "_ctor", args);
+  }
+  else
+  {
+    args.rval().setNull();
+  }
+  return false;
+}
+
 bool js_yasio_io_service_start_service(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   bool ok          = true;
@@ -1500,15 +1551,14 @@ bool js_yasio_io_service_start_service(JSContext* ctx, uint32_t argc, jsval* vp)
 
   do
   {
-    if (argc == 2)
+    if (argc == 1)
     {
-      auto arg0 = args.get(0); // hostent or hostents
-      auto arg1 = args.get(1); // function, callback
-      CC_BREAK_IF((JS_TypeOfValue(ctx, args.get(1)) != JSTYPE_FUNCTION));
+      auto arg0 = args.get(0); // event cb
+      CC_BREAK_IF((JS_TypeOfValue(ctx, arg0) != JSTYPE_FUNCTION));
 
       JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
-      auto func = std::make_shared<JSFunctionWrapper>(ctx, jstarget, arg1, args.thisv());
-      io_event_cb_t callback = [=](inet::event_ptr event) {
+      auto func            = std::make_shared<JSFunctionWrapper>(ctx, jstarget, arg0, args.thisv());
+      io_event_cb_t fnwrap = [=](inet::event_ptr event) {
         JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
         jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
         JS::RootedValue rval(ctx);
@@ -1519,18 +1569,7 @@ bool js_yasio_io_service_start_service(JSContext* ctx, uint32_t argc, jsval* vp)
         }
       };
 
-      if (JS_IsArrayObject(ctx, arg0))
-      {
-        std::vector<inet::io_hostent> hostents;
-        jsval_to_std_vector_hostent(ctx, arg0, &hostents);
-        cobj->start_service(std::move(hostents), std::move(callback));
-      }
-      else if (arg0.isObject())
-      {
-        inet::io_hostent ioh;
-        jsval_to_hostent(ctx, arg0, &ioh);
-        cobj->start_service(&ioh, std::move(callback));
-      }
+      cobj->start_service(std::move(fnwrap));
 
       args.rval().setUndefined();
       return true;
@@ -1807,7 +1846,7 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
   jsb_io_service_class->enumerate   = JS_EnumerateStub;
   jsb_io_service_class->resolve     = JS_ResolveStub;
   jsb_io_service_class->convert     = JS_ConvertStub;
-  jsb_io_service_class->finalize    = jsb_yasio_finalize<io_service>;
+  jsb_io_service_class->finalize    = jsb_yasio__dtor<io_service>;
   jsb_io_service_class->flags       = JSCLASS_HAS_RESERVED_SLOTS(2);
 
   static JSPropertySpec properties[] = {JS_PS_END};
@@ -1828,7 +1867,7 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
   jsb_io_service_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_io_service_class,
-                                          jsb_yasio_constructor<io_service>, 0, properties, funcs,
+                                          jsb_yasio_io_service__ctor, 0, properties, funcs,
                                           NULL, // no static properties
                                           st_funcs);
 

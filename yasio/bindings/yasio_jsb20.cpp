@@ -25,6 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#define YASIO_HEADER_ONLY 1
+
 #include "yasio/bindings/yasio_jsb20.h"
 #include "yasio/yasio.hpp"
 #include "yasio/ibstream.hpp"
@@ -243,14 +245,14 @@ SE_BIND_FUNC(jsb_yasio_killTimer)
 
 bool jsb_yasio_highp_clock(se::State& s)
 {
-  s.rval().setNumber(yasio::inet::highp_clock());
+  s.rval().setNumber(yasio::highp_clock());
   return true;
 }
 SE_BIND_FUNC(jsb_yasio_highp_clock)
 
 bool jsb_yasio_highp_time(se::State& s)
 {
-  s.rval().setNumber(yasio::inet::highp_clock<yasio::inet::system_clock_t>());
+  s.rval().setNumber(yasio::highp_clock<yasio::system_clock_t>());
   return true;
 }
 SE_BIND_FUNC(jsb_yasio_highp_time)
@@ -321,7 +323,7 @@ cxx17::string_view seval_to_string_view(const se::Value& v, bool* unrecognized_o
 
 //////////////////// common template functions //////////////
 
-template <typename T> static bool jsb_yasio_constructor(se::State& s)
+template <typename T> static bool jsb_yasio__ctor(se::State& s)
 {
   auto cobj = new (std::nothrow) T();
   s.thisObject()->setPrivateData(cobj);
@@ -329,7 +331,7 @@ template <typename T> static bool jsb_yasio_constructor(se::State& s)
   return true;
 }
 
-template <typename T> static bool jsb_yasio_finalize(se::State& s)
+template <typename T> static bool jsb_yasio__dtor(se::State& s)
 {
   auto iter = se::NonRefNativePtrCreatedByCtorMap::find(s.nativeThisObject());
   if (iter != se::NonRefNativePtrCreatedByCtorMap::end())
@@ -356,8 +358,8 @@ template <typename T> static bool jsb_yasio_finalize(se::State& s)
 
 ///////////////////////// ibstream /////////////////////////////////
 
-static auto js_yasio_ibstream_finalize = jsb_yasio_finalize<yasio::ibstream>;
-SE_BIND_FINALIZE_FUNC(js_yasio_ibstream_finalize)
+static auto js_yasio_ibstream__dtor = jsb_yasio__dtor<yasio::ibstream>;
+SE_BIND_FINALIZE_FUNC(js_yasio_ibstream__dtor)
 
 static bool js_yasio_ibstream_read_bool(se::State& s)
 {
@@ -568,7 +570,7 @@ void js_register_yasio_ibstream(se::Object* obj)
   DEFINE_IBSTREAM_FUNC(read_bytes);
   DEFINE_IBSTREAM_FUNC(length);
   DEFINE_IBSTREAM_FUNC(seek);
-  cls->defineFinalizeFunction(_SE(js_yasio_ibstream_finalize));
+  cls->defineFinalizeFunction(_SE(js_yasio_ibstream__dtor));
   cls->install();
   JSBClassType::registerClass<yasio::ibstream>(cls);
 
@@ -578,10 +580,10 @@ void js_register_yasio_ibstream(se::Object* obj)
 ///////////////////////// obstream /////////////////////////////////
 se::Object* __jsb_yasio_obstream_proto = nullptr;
 se::Class* __jsb_yasio_obstream_class  = nullptr;
-static auto js_yasio_obstream_finalize = jsb_yasio_finalize<yasio::obstream>;
-SE_BIND_FINALIZE_FUNC(js_yasio_obstream_finalize)
+static auto js_yasio_obstream__dtor    = jsb_yasio__dtor<yasio::obstream>;
+SE_BIND_FINALIZE_FUNC(js_yasio_obstream__dtor)
 
-static bool jsb_yasio_obstream_constructor(se::State& s)
+static bool jsb_yasio_obstream__ctor(se::State& s)
 {
   const auto& args = s.args();
   size_t argc      = args.size();
@@ -605,7 +607,7 @@ static bool jsb_yasio_obstream_constructor(se::State& s)
 
   return true;
 }
-SE_BIND_CTOR(jsb_yasio_obstream_constructor, __jsb_yasio_obstream_class, js_yasio_obstream_finalize)
+SE_BIND_CTOR(jsb_yasio_obstream__ctor, __jsb_yasio_obstream_class, js_yasio_obstream__dtor)
 
 static bool js_yasio_obstream_push32(se::State& s)
 {
@@ -928,7 +930,7 @@ void js_register_yasio_obstream(se::Object* obj)
 {
 #define DEFINE_OBSTREAM_FUNC(funcName)                                                             \
   cls->defineFunction(#funcName, _SE(js_yasio_obstream_##funcName))
-  auto cls = se::Class::create("obstream", obj, nullptr, _SE(jsb_yasio_obstream_constructor));
+  auto cls = se::Class::create("obstream", obj, nullptr, _SE(jsb_yasio_obstream__ctor));
 
   DEFINE_OBSTREAM_FUNC(push32);
   DEFINE_OBSTREAM_FUNC(push24);
@@ -951,7 +953,7 @@ void js_register_yasio_obstream(se::Object* obj)
   DEFINE_OBSTREAM_FUNC(length);
   DEFINE_OBSTREAM_FUNC(sub);
 
-  cls->defineFinalizeFunction(_SE(js_yasio_obstream_finalize));
+  cls->defineFinalizeFunction(_SE(js_yasio_obstream__dtor));
   cls->install();
   JSBClassType::registerClass<yasio::obstream>(cls);
   __jsb_yasio_obstream_proto = cls->getProto();
@@ -974,8 +976,8 @@ void js_register_yasio_transport(se::Object* obj)
 
 ///////////////////////// io_event /////////////////////////////////
 
-static auto jsb_yasio_io_event_finalize = jsb_yasio_finalize<io_event>;
-SE_BIND_FINALIZE_FUNC(jsb_yasio_io_event_finalize)
+static auto jsb_yasio_io_event__dtor = jsb_yasio__dtor<io_event>;
+SE_BIND_FINALIZE_FUNC(jsb_yasio_io_event__dtor)
 
 bool js_yasio_io_event_kind(se::State& s)
 {
@@ -1091,7 +1093,7 @@ void js_register_yasio_io_event(se::Object* obj)
   DEFINE_IO_EVENT_FUNC(transport);
   DEFINE_IO_EVENT_FUNC(timestamp);
 
-  cls->defineFinalizeFunction(_SE(jsb_yasio_io_event_finalize));
+  cls->defineFinalizeFunction(_SE(jsb_yasio_io_event__dtor));
   cls->install();
   JSBClassType::registerClass<io_event>(cls);
 
@@ -1103,11 +1105,47 @@ void js_register_yasio_io_event(se::Object* obj)
 se::Object* __jsb_yasio_io_service_proto = nullptr;
 se::Class* __jsb_yasio_io_service_class  = nullptr;
 
-static auto jsb_yasio_io_service_constructor = jsb_yasio_constructor<io_service>;
-static auto jsb_yasio_io_service_finalize    = jsb_yasio_finalize<io_service>;
-SE_BIND_FINALIZE_FUNC(jsb_yasio_io_service_finalize)
-SE_BIND_CTOR(jsb_yasio_io_service_constructor, __jsb_yasio_io_service_class,
-             jsb_yasio_io_service_finalize)
+static bool jsb_yasio_io_service__ctor(se::State& s)
+{
+  io_service* cobj = nullptr;
+  const auto& args = s.args();
+  size_t argc      = args.size();
+
+  if (argc == 1)
+  {
+    auto arg0 = args[0]; // hostent or hostents
+
+    if (arg0.toObject()->isArray())
+    {
+      std::vector<inet::io_hostent> hostents;
+      seval_to_std_vector_hostent(arg0, &hostents);
+      cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr,
+                            (std::max)((int)hostents.size(), 1));
+    }
+    else if (arg0.isObject())
+    {
+      inet::io_hostent ioh;
+      seval_to_hostent(arg0, &ioh);
+      cobj = new io_service(&ioh, 1);
+    }
+
+    s.rval().setUndefined();
+    return true;
+  }
+  else
+    cobj = new (std::nothrow) io_service();
+
+  if (cobj != nullptr)
+  {
+    s.thisObject()->setPrivateData(cobj);
+    se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
+  }
+  return true;
+}
+
+static auto jsb_yasio_io_service__dtor = jsb_yasio__dtor<io_service>;
+SE_BIND_FINALIZE_FUNC(jsb_yasio_io_service__dtor)
+SE_BIND_CTOR(jsb_yasio_io_service__ctor, __jsb_yasio_io_service_class, jsb_yasio_io_service__dtor)
 
 bool js_yasio_io_service_start_service(se::State& s)
 {
@@ -1120,14 +1158,13 @@ bool js_yasio_io_service_start_service(se::State& s)
   {
     if (argc == 2)
     {
-      auto arg0 = args[0]; // hostent or hostents
-      auto arg1 = args[1]; // function, callback
-      CC_BREAK_IF(!arg1.toObject()->isFunction());
+      auto arg0 = args[0]; // io_event cb
+      CC_BREAK_IF(!arg0.toObject()->isFunction());
 
       se::Value jsThis(s.thisObject());
-      se::Value jsFunc(args[1]);
+      se::Value& jsFunc = arg0;
       jsThis.toObject()->attachObject(jsFunc.toObject());
-      io_event_cb_t callback = [=](inet::event_ptr event) {
+      io_event_cb_t fnwrap = [=](inet::event_ptr event) {
         se::ValueArray invokeArgs;
         invokeArgs.resize(1);
         native_ptr_to_seval<io_event>(event.release(), &invokeArgs[0]);
@@ -1140,18 +1177,7 @@ bool js_yasio_io_service_start_service(se::State& s)
         }
       };
 
-      if (arg0.toObject()->isArray())
-      {
-        std::vector<inet::io_hostent> hostents;
-        seval_to_std_vector_hostent(arg0, &hostents);
-        cobj->start_service(std::move(hostents), std::move(callback));
-      }
-      else if (arg0.isObject())
-      {
-        inet::io_hostent ioh;
-        seval_to_hostent(arg0, &ioh);
-        cobj->start_service(&ioh, std::move(callback));
-      }
+      cobj->start_service(std::move(fnwrap));
 
       s.rval().setUndefined();
       return true;
@@ -1392,7 +1418,7 @@ void js_register_yasio_io_service(se::Object* obj)
 {
 #define DEFINE_IO_SERVICE_FUNC(funcName)                                                           \
   cls->defineFunction(#funcName, _SE(js_yasio_io_service_##funcName))
-  auto cls = se::Class::create("io_service", obj, nullptr, _SE(jsb_yasio_io_service_constructor));
+  auto cls = se::Class::create("io_service", obj, nullptr, _SE(jsb_yasio_io_service__ctor));
 
   DEFINE_IO_SERVICE_FUNC(set_option);
   DEFINE_IO_SERVICE_FUNC(start_service);
@@ -1403,7 +1429,7 @@ void js_register_yasio_io_service(se::Object* obj)
   DEFINE_IO_SERVICE_FUNC(dispatch);
   DEFINE_IO_SERVICE_FUNC(write);
 
-  cls->defineFinalizeFunction(_SE(jsb_yasio_io_service_finalize));
+  cls->defineFinalizeFunction(_SE(jsb_yasio_io_service__dtor));
 
   cls->install();
   JSBClassType::registerClass<io_service>(cls);

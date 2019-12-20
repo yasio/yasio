@@ -19,10 +19,22 @@ function build_osx()
     NUM_OF_CORES=`getconf _NPROCESSORS_ONLN`
 
     cd $YASIO_ROOT/build
+    
+    # osx
     mkdir -p build_osx
     cd build_osx
     cmake ../../ -GXcode
     cmake --build . --config Release -- -quiet
+    cd ..
+    
+    # ios
+    mkdir -p build_ios
+    cd build_ios
+    cmake .. -GXcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator
+    cmake --build . --config Release -- -quiet --jobs $NUM_OF_CORES -destination "platform=iOS Simulator,name=iPhone Retina (4-inch)"
+    cd ..
+
+    
     exit 0
 }
 

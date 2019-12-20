@@ -4,7 +4,8 @@ using namespace yasio::inet;
 
 void run_udp_echo_server(const char *ip, u_short port)
 {
-  io_service udp_server;
+  io_hostent endpoints[] = {{ip, port}};
+  io_service udp_server(endpoints, 1);
   udp_server.set_option(YOPT_S_NO_NEW_THREAD, 1);
 
   // !important, because we set YOPT_S_NO_NEW_THREAD, so need a timer to start server
@@ -15,8 +16,7 @@ void run_udp_echo_server(const char *ip, u_short port)
     udp_server.open(0, YCM_UDP_SERVER);
   });
 
-  io_hostent endpoints[] = {{ip, port}};
-  udp_server.start_service(endpoints, [&](event_ptr ev) {
+  udp_server.start_service([&](event_ptr ev) {
     switch (ev->kind())
     {
       case YEK_PACKET:

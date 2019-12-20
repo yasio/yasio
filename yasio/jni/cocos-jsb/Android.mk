@@ -10,10 +10,6 @@ LOCAL_CPPFLAGS := -std=c++11 -pthread -frtti -fexceptions
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../../ $(LOCAL_PATH)/../../../spidermonkey/include/android $(LOCAL_PATH)/../../../../cocos
 
-LOCAL_SRC_FILES := ../../xxsocket.cpp \
-    ../../yasio.cpp \
-    ../../ibstream.cpp \
-    ../../obstream.cpp \
-    ../../bindings/yasio_jsb.cpp
+LOCAL_SRC_FILES := ../../bindings/yasio_jsb.cpp
 
 include $(BUILD_STATIC_LIBRARY)

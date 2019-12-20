@@ -391,11 +391,13 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
                 return new io_service(!hosts.empty() ? &hosts.front() : nullptr, hosts.size());
               })
-          .addFunction("start_service",
-                       [](io_service* service, kaguya::LuaFunction cb) {
-                         io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void { cb(e.get()); };
-                         service->start_service(std::move(fnwrap));
-                       })
+          .addStaticFunction("start_service",
+                             [](io_service* service, kaguya::LuaFunction cb) {
+                               io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void {
+                                 cb(e.get());
+                               };
+                               service->start_service(std::move(fnwrap));
+                             })
           .addFunction("stop_service", &io_service::stop_service)
           .addFunction("dispatch", &io_service::dispatch)
           .addFunction("open", &io_service::open)

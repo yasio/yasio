@@ -21,17 +21,19 @@ function build_osx()
     cd $YASIO_ROOT/build
     
     # osx
+    echo "Building macOS..."
     mkdir -p build_osx
     cd build_osx
     cmake ../../ -GXcode
-    cmake --build . --config Release -- -quiet
+    cmake --build . --config Release
     cd ..
     
     # ios
     mkdir -p build_ios
+    echo "Building iOS..."
     cd build_ios
     cmake ../../ -G Xcode -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
-    cmake --build . --config Release -- -quiet
+    cmake --build . --config Release
     cd ..
 
     

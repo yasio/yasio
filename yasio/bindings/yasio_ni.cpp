@@ -71,12 +71,12 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
 extern "C" {
 
 YASIO_NI_API void yasio_start(int channel_count,
-                             void (*callback)(uint32_t emask, int cidx, intptr_t sid,
+                             void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,
                                               intptr_t bytes, int len))
 {
   yasio_shared_service(channel_count)->start_service([=](event_ptr e) {
     uint32_t emask = ((e->kind() << 16) & 0xffff0000) | (e->status() & 0xffff);
-    callback(emask, e->cindex(), reinterpret_cast<intptr_t>(e->transport()),
+    event_cb(emask, e->cindex(), reinterpret_cast<intptr_t>(e->transport()),
              reinterpret_cast<intptr_t>(!e->packet().empty() ? e->packet().data() : nullptr),
              static_cast<int>(e->packet().size()));
   });

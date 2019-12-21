@@ -1,3 +1,8 @@
+yasio-3.30.2
+  
+1. Fix jsb2.0 bindings issue, see: [#192](https://github.com/simdsoft/yasio/issues/192)
+  
+  
 yasio-3.30.1
   
 1. Add construct channel at io_service constructor, now all options could be set before start_service if you doesn't use the start_service with channel hostents, and mark them deprecated

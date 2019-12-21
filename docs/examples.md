@@ -1,49 +1,5 @@
 # examples
 
-## yasio-ni .net API
-```c#
-const string LIBNAME = "yasio-ni";
-
-public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr thandle, IntPtr bytes, int len);
-public delegate void YNIPrintDelegate(string msg);
-/// <summary>
-/// Start a low level socket io service
-/// </summary>
-/// <param name="strParam">
-/// format: "ip:port;ip:port;ip:port"
-/// </param>
-/// <param name="d"></param>
-/// <returns></returns>
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern int yasio_start(string strParam, YNIEventDelegate d);
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_open(int cindex, int cmask);
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_close(int cindex);
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_close_handle(IntPtr thandle);
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_write(IntPtr thandle, byte[] bytes, int len);
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_dispatch(int maxEvents);
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_set_option(int opt, string strParam);
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_stop();
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern long yasio_highp_time();
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern long yasio_set_print_fn(YNIPrintDelegate callback);
-```
-
 ## Remote Debug based on TCP
 典型的基于TCP的服务端客户端远程调试示例，使用yasio的io_servcie实现，调试后端和调试前端无需自己开线程，直接使用服务线程处理调试协议即可。协议头一般定义为如下方式即可：
 ```C++

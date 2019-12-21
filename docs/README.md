@@ -36,10 +36,13 @@
 		* [write](./io_service.md#write)
 		* [dispatch](./io_service.md#dispatch)
 		* [Design Patterns](./io_service.md#Design-Patterns)
-		* [yasio-ni 。net API](./io_service.md#yasio-ni-dotnet-API)
-	* [examples](./examples.md)
-		* [yasio-ni .net API](./examples.md#yasio-ni-dotnet-api)
-		* [Remote Debug based on TCP](./examples.md#Remote-Debug-based-on-TCP)
+* [yasio-interop](./yasio-interop.md)
+	* [yasio-ni](./yasio-interop.md#YASIO-NI)
+	* [.NET API](./yasio-interop.md#dotnet-API)
+* [misc]
+	* [demo](./demo.md)
+		* [Remote Debug based on TCP](./demo.md#Remote-Debug-based-on-TCP)
+	* [examples] please see directories ```examples``` and ```tests```
 	* [references](http://www.man7.org/linux/man-pages/man2/select.2.html)
 		* [select](http://www.man7.org/linux/man-pages/man2/select.2.html)
 		* [poll](http://www.man7.org/linux/man-pages/man2/poll.2.html)

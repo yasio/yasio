@@ -36,9 +36,9 @@
 		* [write](./io_service.md#write)
 		* [dispatch](./io_service.md#dispatch)
 		* [Design Patterns](./io_service.md#Design-Patterns)
-* [yasio-interop](./yasio-interop.md)
-	* [yasio-ni](./yasio-interop.md#YASIO-NI)
-	* [.NET API](./yasio-interop.md#dotnet-API)
+* [yasio-interop](./yasio_interop.md)
+	* [yasio-ni](./yasio_interop.md#YASIO-NI)
+	* [.NET API](./yasio_interop.md#dotnet-API)
 * [misc]
 	* [demo](./demo.md)
 		* [Remote Debug based on TCP](./demo.md#Remote-Debug-based-on-TCP)

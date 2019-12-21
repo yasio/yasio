@@ -2,7 +2,7 @@ image:
   - Visual Studio 2019
   - Visual Studio 2013
 
-version: 3.30.{build}
+version: 3.30.1.{build}
 
 environment:
     matrix:

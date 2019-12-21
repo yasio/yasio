@@ -462,7 +462,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
   ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (transport_handle_t)user;
-    return t->socket_->send_i(buf, len);
+    return t->socket_->send(buf, len);
   });
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
@@ -475,7 +475,7 @@ void io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&&
 int io_transport_kcp::do_read(int& error)
 {
   char sbuf[2048];
-  int n = socket_->recv_i(sbuf, sizeof(sbuf));
+  int n = socket_->recv(sbuf, sizeof(sbuf));
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
     // 0: ok, -1: again, -3: error

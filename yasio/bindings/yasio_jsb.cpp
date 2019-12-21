@@ -1505,7 +1505,7 @@ static bool jsb_yasio_io_service__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
       cobj = new (std::nothrow) io_service(!hostents.empty() ? &hostents.front() : nullptr,
                                            std::max(1, (int)hostents.size()));
     }
-    if (arg0.isObject())
+    else if (arg0.isObject())
     {
       inet::io_hostent ioh;
       jsval_to_hostent(ctx, arg0, &ioh);
@@ -1737,6 +1737,7 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
       switch (opt)
       {
         case YOPT_C_REMOTE_HOST:
+        case YOPT_C_LOCAL_HOST:
           if (args[2].isString())
           {
             JSStringWrapper str(args[2].toString());
@@ -1745,6 +1746,7 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
           break;
         case YOPT_C_REMOTE_PORT:
         case YOPT_C_LOCAL_PORT:
+        case YOPT_S_TIMEOUTS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_REMOTE_ENDPOINT:
@@ -1921,7 +1923,6 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
   YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
-  YASIO_EXPORT_ENUM(YOPT_S_DEFERRED_EVENT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);

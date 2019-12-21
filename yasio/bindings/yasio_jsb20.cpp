@@ -1113,21 +1113,25 @@ static bool jsb_yasio_io_service__ctor(se::State& s)
 
   if (argc == 1)
   {
-    auto arg0 = args[0]; // hostent or hostents
-
-    if (arg0.toObject()->isArray())
+    auto& arg0 = args[0]; // hostent or hostents
+    if (arg0.isObject())
     {
-      std::vector<inet::io_hostent> hostents;
-      seval_to_std_vector_hostent(arg0, &hostents);
-      cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr,
-                            (std::max)((int)hostents.size(), 1));
+      if (arg0.toObject()->isArray())
+      {
+        std::vector<inet::io_hostent> hostents;
+        seval_to_std_vector_hostent(arg0, &hostents);
+        cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr,
+                              (std::max)((int)hostents.size(), 1));
+      }
+      else
+      {
+        inet::io_hostent ioh;
+        seval_to_hostent(arg0, &ioh);
+        cobj = new io_service(&ioh, 1);
+      }
     }
-    else if (arg0.isObject())
-    {
-      inet::io_hostent ioh;
-      seval_to_hostent(arg0, &ioh);
-      cobj = new io_service(&ioh, 1);
-    }
+    else if (arg0.isNumber())
+      cobj = new io_service(arg0.toInt32());
   }
   else
     cobj = new (std::nothrow) io_service();
@@ -1321,10 +1325,12 @@ bool js_yasio_io_service_set_option(se::State& s)
       switch (opt)
       {
         case YOPT_C_REMOTE_HOST:
+        case YOPT_C_LOCAL_HOST:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str());
           break;
         case YOPT_C_REMOTE_PORT:
         case YOPT_C_LOCAL_PORT:
+        case YOPT_S_TIMEOUTS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_REMOTE_ENDPOINT:
@@ -1357,11 +1363,9 @@ bool js_yasio_io_service_set_option(se::State& s)
           service->set_option(opt, std::addressof(callback));
           break;
         }
-
         default:
           service->set_option(opt, args[1].toInt32());
       }
-
       return true;
     }
   } while (false);
@@ -1484,7 +1488,6 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
   YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
-  YASIO_EXPORT_ENUM(YOPT_S_DEFERRED_EVENT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);

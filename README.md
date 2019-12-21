@@ -10,7 +10,7 @@
 
 yasio is a multi-platform support library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
 The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
-**This lib has been used by project [RedAlert OL](http://hongjing.qq.com/) and run at millions of devices.**
+**This lib has been used by project [RedAlert OL/红警OL项目](http://hongjing.qq.com/) and run at millions of devices.**
 
 ## Clone at github: [yasio](https://github.com/simdsoft/yasio)
 

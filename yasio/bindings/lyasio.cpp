@@ -127,17 +127,19 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       [](io_service* service, int opt, sol::variadic_args va) {
         switch (opt)
         {
+          case YOPT_C_LOCAL_HOST:
           case YOPT_C_REMOTE_HOST:
             service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char*>());
             break;
-          case YOPT_C_REMOTE_PORT:
-          case YOPT_C_LOCAL_PORT:
-          case YOPT_S_TIMEOUTS:
 #  if YASIO_VERSION_NUM >= 0x033100
           case YOPT_C_LFBFD_IBTS:
 #  endif
+          case YOPT_S_TIMEOUTS:
+          case YOPT_C_LOCAL_PORT:
+          case YOPT_C_REMOTE_PORT:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]));
             break;
+          case YOPT_C_LOCAL_ENDPOINT:
           case YOPT_C_REMOTE_ENDPOINT:
             service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char*>(),
                                 static_cast<int>(va[2]));
@@ -256,17 +258,19 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
   YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
-  YASIO_EXPORT_ENUM(YOPT_S_DEFERRED_EVENT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
-  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_ENDPOINT);
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);
+
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);
@@ -424,18 +428,21 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                                               kaguya::VariadicArgType args) {
             switch (opt)
             {
+              case YOPT_C_LOCAL_HOST:
               case YOPT_C_REMOTE_HOST:
                 service->set_option(opt, static_cast<int>(args[0]),
                                     static_cast<const char*>(args[1]));
                 break;
-              case YOPT_C_REMOTE_PORT:
-              case YOPT_C_LOCAL_PORT:
-              case YOPT_S_TIMEOUTS:
+
 #  if YASIO_VERSION_NUM >= 0x033100
               case YOPT_C_LFBFD_IBTS:
 #  endif
+              case YOPT_S_TIMEOUTS:
+              case YOPT_C_LOCAL_PORT:
+              case YOPT_C_REMOTE_PORT:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                 break;
+              case YOPT_C_LOCAL_ENDPOINT:
               case YOPT_C_REMOTE_ENDPOINT:
                 service->set_option(opt, static_cast<int>(args[0]),
                                     static_cast<const char*>(args[1]), static_cast<int>(args[2]));
@@ -568,17 +575,19 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
   YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
-  YASIO_EXPORT_ENUM(YOPT_S_DEFERRED_EVENT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
-  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_ENDPOINT);
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);
+
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);

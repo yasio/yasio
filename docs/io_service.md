@@ -1,18 +1,18 @@
 # io_service
 
 ## start_service
-void start_service(endpoint/endpoints, callback)  
+void start_service(cb)  
 功能：启动网络服务  
 参数说明:  
 **endpoint/endpoints**: 信道地址ip/域名:端口， 格式:  
 ```lua
-{host="ip138.com", port="80"}
+{host=ip138.com, port=80}
 ```
 或多个信道
 ```lua
 {
-    {host="ip138.com", port="80"},
-    {host="baidu.com", port="80"}
+    {host="ip138.com", port=80},
+    {host="baidu.com", port=80}
 }
 ```
 **callback**: 网络事件会调函数, 示例:
@@ -23,8 +23,8 @@ end
 ```
 完整调用示例:
 ```lua
-local service = io_service.new()
-service:start_service({host="ip138.com", port="80"}, function(event)
+local service = io_service.new({host="ip138.com", port=80})
+service:start_service(function(event)
         local kind = event:kind()
         if(kind == yasio.YEK_CONNECT_RESPONSE) then
             if(event:status() == 0) then
@@ -35,7 +35,7 @@ service:start_service({host="ip138.com", port="80"}, function(event)
         end
     end)
 ```
-注意: start_service只是启动服务，配置支持信道个数，不会发起连接，只有调用open打开信道时才会发起连接
+注意: start_service只是启动服务，不会发起连接，只有调用open打开信道时才会发起连接
 
 ## stop_service
 void stop_service()  
@@ -105,3 +105,40 @@ max_events: 每次调用从事件队列分派最大事件数，通常固定为64
 ## Design Patterns
 + 单利模式: 在C++中使用框架预定义宏yasio_shared_service即可， 这种方式很方便给C#导出接口调用
 + 非单利模式: 就像普通对象一样实例化后即可使用
+
+## yasio-ni dotnet API
+```c#
+const string LIBNAME = "yasio-ni";
+
+public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr thandle, IntPtr bytes, int len);
+public delegate void YNIPrintDelegate(string msg);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern int yasio_start(int channel_count, YNIEventDelegate d);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_open(int cindex, int cmask);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_close(int cindex);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_close_handle(IntPtr thandle);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_write(IntPtr thandle, byte[] bytes, int len);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_dispatch(int maxEvents);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_set_option(int opt, string strParam);
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_stop();
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern long yasio_highp_time();
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern long yasio_set_print_fn(YNIPrintDelegate callback);
+```

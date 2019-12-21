@@ -1128,9 +1128,6 @@ static bool jsb_yasio_io_service__ctor(se::State& s)
       seval_to_hostent(arg0, &ioh);
       cobj = new io_service(&ioh, 1);
     }
-
-    s.rval().setUndefined();
-    return true;
   }
   else
     cobj = new (std::nothrow) io_service();
@@ -1140,6 +1137,8 @@ static bool jsb_yasio_io_service__ctor(se::State& s)
     s.thisObject()->setPrivateData(cobj);
     se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
   }
+  else
+    s.rval().setNull();
   return true;
 }
 
@@ -1156,13 +1155,12 @@ bool js_yasio_io_service_start_service(se::State& s)
 
   do
   {
-    if (argc == 2)
+    if (argc == 1)
     {
-      auto arg0 = args[0]; // io_event cb
-      CC_BREAK_IF(!arg0.toObject()->isFunction());
+      auto& jsFunc = args[0]; // io_event cb
+      CC_BREAK_IF(!jsFunc.toObject()->isFunction());
 
       se::Value jsThis(s.thisObject());
-      se::Value& jsFunc = arg0;
       jsThis.toObject()->attachObject(jsFunc.toObject());
       io_event_cb_t fnwrap = [=](inet::event_ptr event) {
         se::ValueArray invokeArgs;

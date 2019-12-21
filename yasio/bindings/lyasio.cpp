@@ -554,8 +554,8 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                                   .setConstructors<yasio::ibstream(std::vector<char>),
                                                    yasio::ibstream(const yasio::obstream*)>());
 
-  // lyasio["highp_clock"] = kaguya::function(&highp_clock<highp_clock_t>);
-  // lyasio["highp_time"]  = kaguya::function(&highp_clock<system_clock_t>);
+  lyasio.setField("highp_clock", &highp_clock<highp_clock_t>);
+  lyasio.setField("highp_time", &highp_clock<system_clock_t>);
 
   // ##-- yasio enums
 #  define YASIO_EXPORT_ENUM(v) lyasio[#  v] = v

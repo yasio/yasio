@@ -1112,18 +1112,6 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
   return xxsocket::connect(s, ep);
 }
 
-int xxsocket::send(const void* buf, int len, int flags) const
-{
-  int bytes_transferred = 0;
-  int n                 = 0;
-  do
-  {
-    bytes_transferred += (n = ::send(this->fd, (const char*)buf + bytes_transferred,
-                                     len - bytes_transferred, flags));
-  } while (bytes_transferred < len && n > 0);
-  return bytes_transferred;
-}
-
 int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)
 {
   timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
@@ -1147,7 +1135,7 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
     // Try to transfer as much of the remaining data as possible.
     // Since the socket is in non-blocking mode, this call will not
     // block.
-    n = xxsocket::send_i(s, (const char*)buf + bytes_transferred, len - bytes_transferred, flags);
+    n = xxsocket::send(s, (const char*)buf + bytes_transferred, len - bytes_transferred, flags);
     //++send_times;
     // Check for errors.
     if (n <= 0)
@@ -1183,19 +1171,6 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
   return bytes_transferred;
 }
 
-int xxsocket::recv(void* buf, int len, int flags) const
-{
-  int bytes_transfrred = 0;
-  int n                = 0;
-  do
-  {
-    bytes_transfrred +=
-        (n = ::recv(this->fd, (char*)buf + bytes_transfrred, len - bytes_transfrred, flags));
-
-  } while (bytes_transfrred < len && n > 0);
-  return bytes_transfrred;
-}
-
 int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags) const
 {
   timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
@@ -1219,7 +1194,8 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
     // Try to transfer as much of the remaining data as possible.
     // Since the socket is in non-blocking mode, this call will not
     // block.
-    n = recv_i(s, static_cast<char*>(buf) + bytes_transferred, len - bytes_transferred, flags);
+    n = xxsocket::recv(s, static_cast<char*>(buf) + bytes_transferred, len - bytes_transferred,
+                       flags);
 
     // Check for errors.
     if (n <= 0)
@@ -1276,7 +1252,7 @@ bool xxsocket::read_until(std::string& buffer, const char* delims, size_t len)
   for (; retry > 0;)
   {
     memset(buf, 0, sizeof(buf));
-    n = recv_i(buf, sizeof(buf));
+    n = this->recv(buf, sizeof(buf));
     if (n <= 0)
     {
       auto error = xxsocket::get_last_errno();
@@ -1312,36 +1288,36 @@ bool xxsocket::read_until(std::string& buffer, const char* delims, size_t len)
   return ok;
 }
 
-int xxsocket::send_i(const void* buf, int len, int flags) const
+int xxsocket::send(const void* buf, int len, int flags) const
 {
-  return ::send(this->fd, (const char*)buf, len, flags);
+  return static_cast<int>(::send(this->fd, (const char*)buf, len, flags));
 }
 
-int xxsocket::send_i(socket_native_type s, const void* buf, int len, int flags)
+int xxsocket::send(socket_native_type s, const void* buf, int len, int flags)
 {
-  return ::send(s, (const char*)buf, len, flags);
+  return static_cast<int>(::send(s, (const char*)buf, len, flags));
 }
 
-int xxsocket::recv_i(void* buf, int len, int flags) const
+int xxsocket::recv(void* buf, int len, int flags) const
 {
-  return recv_i(this->fd, buf, len, flags);
+  return static_cast<int>(this->recv(this->fd, buf, len, flags));
 }
 
-int xxsocket::recv_i(socket_native_type s, void* buf, int len, int flags)
+int xxsocket::recv(socket_native_type s, void* buf, int len, int flags)
 {
-  return ::recv(s, (char*)buf, len, flags);
+  return static_cast<int>(::recv(s, (char*)buf, len, flags));
 }
 
-int xxsocket::recvfrom_i(void* buf, int len, endpoint& from, int flags) const
+int xxsocket::sendto(const void* buf, int len, const endpoint& to, int flags) const
+{
+  return static_cast<int>(::sendto(this->fd, (const char*)buf, len, flags, &to.sa_,
+                                   to.af() == AF_INET6 ? sizeof(to.in6_) : sizeof(to.in4_)));
+}
+
+int xxsocket::recvfrom(void* buf, int len, endpoint& from, int flags) const
 {
   socklen_t addrlen = sizeof(from);
-  return ::recvfrom(this->fd, (char*)buf, len, flags, &from.sa_, &addrlen);
-}
-
-int xxsocket::sendto_i(const void* buf, int len, const endpoint& to, int flags) const
-{
-  return ::sendto(this->fd, (const char*)buf, len, flags, &to.sa_,
-                  to.af() == AF_INET6 ? sizeof(to.in6_) : sizeof(to.in4_));
+  return static_cast<int>(::recvfrom(this->fd, (char*)buf, len, flags, &from.sa_, &addrlen));
 }
 
 int xxsocket::handle_write_ready(timeval* timeo) const
@@ -1440,7 +1416,7 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
 
 xxsocket::operator socket_native_type(void) const { return this->fd; }
 
-bool xxsocket::alive(void) const { return this->send_i("", 0) != -1; }
+bool xxsocket::alive(void) const { return this->send("", 0) != -1; }
 
 int xxsocket::shutdown(int how) const { return ::shutdown(this->fd, how); }
 

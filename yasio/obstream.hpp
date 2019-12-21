@@ -65,7 +65,8 @@ public:
 
   template <typename _Nty> inline void write_i(_Nty value);
 
-  YASIO__DECL void write_i24(uint32_t value); // highest byte ignored
+  YASIO__DECL void write_i24(int32_t value); // highest bit as sign
+  YASIO__DECL void write_u24(uint32_t value); // highest byte ignored
 
   YASIO__DECL void write_i7(int value);
 

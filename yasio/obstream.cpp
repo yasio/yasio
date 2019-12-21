@@ -134,7 +134,12 @@ obstream& obstream::operator=(obstream&& right)
   return *this;
 }
 
-void obstream::write_i24(uint32_t value)
+void obstream::write_i24(int32_t value)
+{
+  write_u24(value);
+}
+
+void obstream::write_u24(uint32_t value)
 {
   value = htonl(value) >> 8;
   write_bytes(&value, 3);

@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 #include "yasio/yasio.hpp"
 
@@ -24,20 +25,22 @@ void yasioTest()
   obstest.push24();
   obstest.write_i(3.141592654);
   obstest.write_i(1.17723f);
-  obstest.write_i24(16777215);
-  obstest.write_i24(16777213);
+  obstest.write_u24(0x112233);
+  obstest.write_u24(16777217); // uint24 value overflow test
   obstest.write_i24(259);
-  obstest.write_i24(16777217); // uint24 value overflow test
+  obstest.write_i24(-16);
   obstest.pop24();
 
   yasio::ibstream_view ibs(obstest.data(), static_cast<int>(obstest.length()));
   ibs.seek(3, SEEK_CUR);
   auto r1 = ibs.read_i<double>();
   auto f1 = ibs.read_i<float>();
-  auto v1 = ibs.read_i24();
-  auto v2 = ibs.read_i24();
-  auto v3 = ibs.read_i24();
-  auto v4 = ibs.read_i24();
+  auto v1 = ibs.read_u24(); // should be 0x112233(1122867)
+  auto v2 = ibs.read_u24(); // should be 1
+  auto v3 = ibs.read_i24(); // should be 259
+  auto v4 = ibs.read_i24(); // should be -16
+
+  std::cout << r1 << ", " << f1 << ", " << v1 << ", " << v2 << ", " << v3 << ", " << v4 << "\n";
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 

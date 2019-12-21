@@ -63,16 +63,16 @@ public:
   }
 
   // Interrupt the select call.
-  inline void interrupt() { xxsocket::send_i(write_descriptor_, "\0", 1); }
+  inline void interrupt() { xxsocket::send(write_descriptor_, "\0", 1); }
 
   // Reset the select interrupt. Returns true if the call was interrupted.
   inline bool reset()
   {
     char buffer[1024];
-    int bytes_read       = xxsocket::recv_i(read_descriptor_, buffer, sizeof(buffer), 0);
+    int bytes_read       = xxsocket::recv(read_descriptor_, buffer, sizeof(buffer), 0);
     bool was_interrupted = (bytes_read > 0);
     while (bytes_read == sizeof(buffer))
-      bytes_read = xxsocket::recv_i(read_descriptor_, buffer, sizeof(buffer), 0);
+      bytes_read = xxsocket::recv(read_descriptor_, buffer, sizeof(buffer), 0);
     return was_interrupted;
   }
 

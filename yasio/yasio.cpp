@@ -418,8 +418,8 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
 }
 void io_transport_posix::set_primitives()
 {
-  this->write_cb_ = [=](const void* data, int len) { return socket_->send_i(data, len); };
-  this->read_cb_  = [=](void* data, int len) { return socket_->recv_i(data, len, 0); };
+  this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
+  this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
 }
 
 // ----------------------- io_transport_mcast ----------------
@@ -432,11 +432,11 @@ io_transport_mcast::~io_transport_mcast() { ctx_->flags_ &= ~YCF_MCAST_HANDSHAKI
 void io_transport_mcast::set_primitives()
 {
   this->write_cb_ = [=](const void* data, int len) {
-    return socket_->sendto_i(data, len, ctx_->remote_eps_[0]);
+    return socket_->sendto(data, len, ctx_->remote_eps_[0]);
   };
   this->read_cb_ = [=](void* data, int len) {
     ip::endpoint peer;
-    int n = socket_->recvfrom_i(data, len, peer);
+    int n = socket_->recvfrom(data, len, peer);
 
     if (n > 0)
     { // record explicit peer endpoint
@@ -1264,8 +1264,8 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         else // YCM_UDP
         {
           ip::endpoint peer;
-          int n = ctx->socket_->recvfrom_i(&ctx->buffer_.front(),
-                                           static_cast<int>(ctx->buffer_.size()), peer);
+          int n = ctx->socket_->recvfrom(&ctx->buffer_.front(),
+                                         static_cast<int>(ctx->buffer_.size()), peer);
           if (n > 0)
           {
             YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());

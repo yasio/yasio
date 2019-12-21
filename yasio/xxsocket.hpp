@@ -727,16 +727,6 @@ public:
   YASIO__DECL int connect_n(const endpoint& ep);
   YASIO__DECL static int connect_n(socket_native_type s, const endpoint& ep);
 
-  /* @brief: Sends data on this connected socket
-  ** @params: omit
-  **
-  ** @returns:
-  **         If no error occurs, send returns the total number of bytes sent,
-  **         which can be less than the number requested to be sent in the len parameter.
-  **         Otherwise, a value of SOCKET_ERROR is returned.
-  */
-  YASIO__DECL int send(const void* buf, int len, int flags = 0) const;
-
   /* @brief: nonblock send
    ** @params: omit
    **
@@ -749,16 +739,6 @@ public:
                          int flags = 0);
   YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len, timeval* timeout,
                                 int flags = 0);
-
-  /* @brief: Receives data from this connected socket or a bound connectionless socket.
-  ** @params: omit
-  **
-  ** @returns:
-  **         If no error occurs, recv returns the number of bytes received and
-  **         the buffer pointed to by the buf parameter will contain this data received.
-  **         If the connection has been gracefully closed, the return value is [0].
-  */
-  YASIO__DECL int recv(void* buf, int len, int flags = 0) const;
 
   YASIO__DECL bool read_until(std::string& buffer, const char delim);
   YASIO__DECL bool read_until(std::string& buffer, const std::string& delims);
@@ -785,8 +765,8 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  YASIO__DECL int send_i(const void* buf, int len, int flags = 0) const;
-  YASIO__DECL static int send_i(socket_native_type fd, const void* buf, int len, int flags = 0);
+  YASIO__DECL int send(const void* buf, int len, int flags = 0) const;
+  YASIO__DECL static int send(socket_native_type fd, const void* buf, int len, int flags = 0);
 
   /* @brief: Receives data from this connected socket or a bound connectionless socket.
   ** @params: omit
@@ -796,8 +776,8 @@ public:
   **         the buffer pointed to by the buf parameter will contain this data received.
   **         If the connection has been gracefully closed, the return value is [0].
   */
-  YASIO__DECL int recv_i(void* buf, int len, int flags = 0) const;
-  YASIO__DECL static int recv_i(socket_native_type s, void* buf, int len, int flags);
+  YASIO__DECL int recv(void* buf, int len, int flags = 0) const;
+  YASIO__DECL static int recv(socket_native_type s, void* buf, int len, int flags);
 
   /* @brief: Sends data on this connected socket
   ** @params: omit
@@ -807,7 +787,7 @@ public:
   **         which can be less than the number requested to be sent in the len parameter.
   **         Otherwise, a value of SOCKET_ERROR is returned.
   */
-  YASIO__DECL int sendto_i(const void* buf, int len, const endpoint& to, int flags = 0) const;
+  YASIO__DECL int sendto(const void* buf, int len, const endpoint& to, int flags = 0) const;
 
   /* @brief: Receives a datagram and stores the source address
   ** @params: omit
@@ -817,7 +797,7 @@ public:
   **         the buffer pointed to by the buf parameter will contain this data received.
   **         If the connection has been gracefully closed, the return value is [0].
   */
-  YASIO__DECL int recvfrom_i(void* buf, int len, endpoint& peer, int flags = 0) const;
+  YASIO__DECL int recvfrom(void* buf, int len, endpoint& peer, int flags = 0) const;
 
   YASIO__DECL int handle_write_ready(timeval* timeo) const;
   YASIO__DECL static int handle_write_ready(socket_native_type s, timeval* timeo);

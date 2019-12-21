@@ -1,3 +1,8 @@
+yasio-3.30.3
+  
+1. Optimize jsb, jsb2.0 and lua binding.
+
+
 yasio-3.30.2
   
 1. Fix jsb2.0 bindings issue, see: [#192](https://github.com/simdsoft/yasio/issues/192)

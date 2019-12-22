@@ -145,7 +145,7 @@ public:
 
   void clear()
   {
-    clear_queue(queue_);
+    concurrent_queue_primitive<_T>::clear();
     clear_queue(deal_);
   }
 

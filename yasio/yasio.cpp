@@ -944,9 +944,10 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   {
     if (!buffer.empty())
     {
+      auto n = static_cast<int>(buffer.size());
       transport->write(std::move(buffer), std::move(handler));
       this->interrupt();
-      return static_cast<int>(buffer.size());
+      return n;
     }
     return 0;
   }

@@ -518,16 +518,10 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 #endif
 
 // ------------------------ io_service ------------------------
-io_service::io_service() : state_(io_service::state::IDLE), interrupter_()
-{
-  this->init(nullptr, 1);
-}
-io_service::io_service(int channel_count) : state_(io_service::state::IDLE), interrupter_()
-{
-  this->init(nullptr, channel_count);
-}
+io_service::io_service() { this->init(nullptr, 1); }
+io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
+io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }
 io_service::io_service(const io_hostent* channel_eps, int channel_count)
-    : state_(io_service::state::IDLE), interrupter_()
 {
   this->init(channel_eps, channel_count);
 }

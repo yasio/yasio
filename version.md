@@ -4,6 +4,18 @@ yasio-3.31.0
 2. Add SSL client support, use YASIO_HAVE_SSL to enable, YCM_SSL_CLIENT to open a channel with ssl client support
   
   
+yasio-3.30.4
+
+1. Make normal concurrent queue more safe if SPSC queue is disabled.
+2. Make sure udp recv buf enough at kcp transport do_read.
+3. Fix io_service::write always retur 0.
+  
+  
+yasio-3.30.3
+  
+1. Optimize jsb, jsb2.0 and lua binding.
+  
+  
 yasio-3.30.2
   
 1. Fix jsb2.0 bindings issue, see: [#192](https://github.com/simdsoft/yasio/issues/192)

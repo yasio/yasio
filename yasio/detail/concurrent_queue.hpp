@@ -61,20 +61,56 @@ public:
   void clear() { clear_queue(static_cast<moodycamel::ReaderWriterQueue<_T>&>(*this)); }
 };
 #else
+
 template <typename _T> class concurrent_queue_primitive
 {
+  struct concurrent_item
+  {
+  public:
+    concurrent_item(std::recursive_mutex& mtx, std::queue<_T>& queue)
+        : mtx_(mtx), queue_(queue), pitem_(nullptr)
+    {}
+    ~concurrent_item()
+    {
+      if (pitem_ != nullptr)
+        mtx_.unlock();
+    }
+
+    explicit operator bool()
+    {
+      if (!queue_.empty())
+      {
+        mtx_.lock();
+        if (!queue_.empty())
+          pitem_ = &queue_.front();
+        else
+          mtx_.unlock();
+        return pitem_ != nullptr;
+      }
+      return false;
+    }
+
+    _T& operator*() { return *pitem_; }
+
+  private:
+    std::recursive_mutex& mtx_;
+    std::queue<_T>& queue_;
+    _T* pitem_;
+  };
+
 public:
   template <typename... _Valty> void emplace(_Valty&&... _Val)
   {
     std::lock_guard<std::recursive_mutex> lck(this->mtx_);
     queue_.emplace(std::forward<_Valty>(_Val)...);
   }
-  _T& front() { return queue_.front(); }
+
   void pop() { queue_.pop(); }
   bool empty() const { return this->queue_.empty(); }
   void clear() { clear_queue(this->queue_); }
 
-  std::recursive_mutex& internal_lock_object() { return mtx_; }
+  // peek item to read/write thread safe
+  concurrent_item peek() { return concurrent_item{mtx_, queue_}; }
 
 protected:
   std::queue<_T> queue_;

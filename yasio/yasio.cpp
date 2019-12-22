@@ -366,17 +366,10 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
       break;
 
     int error = -1;
-#if !defined(YASIO_DISABLE_SPSC_QUEUE)
-    a_pdu_ptr* pv = send_queue_.peek();
-    if (pv != nullptr)
+    auto wrap = send_queue_.peek();
+    if (wrap)
     {
-      auto v = *pv;
-#else
-    if (!send_queue_.empty())
-    {
-      std::lock_guard<std::recursive_mutex> lck(send_queue_.internal_lock_object());
-      auto v = send_queue_.front();
-#endif
+      auto v                 = *wrap;
       auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->offset_);
       int n                  = write_cb_(v->buffer_.data() + v->offset_, outstanding_bytes);
       if (n == outstanding_bytes)

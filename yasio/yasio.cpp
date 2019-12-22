@@ -365,11 +365,18 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
     if (!socket_->is_open())
       break;
 
-    int error     = -1;
+    int error = -1;
+#if !defined(YASIO_DISABLE_SPSC_QUEUE)
     a_pdu_ptr* pv = send_queue_.peek();
     if (pv != nullptr)
     {
-      auto v                 = *pv;
+      auto v = *pv;
+#else
+    if (!send_queue_.empty())
+    {
+      std::lock_guard<std::recursive_mutex> lck(send_queue_.internal_lock_object());
+      auto v = send_queue_.front();
+#endif
       auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->offset_);
       int n                  = write_cb_(v->buffer_.data() + v->offset_, outstanding_bytes);
       if (n == outstanding_bytes)
@@ -1643,11 +1650,11 @@ void io_service::perform_timers()
 int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
 {
   /*
-@Optimize, swap nfds, make sure do_read & do_write event chould
-be perform when no need to call socket.select However, the
-connection exception will detected through do_read or do_write,
-but it's ok.
-*/
+   @Optimize, swap nfds, make sure do_read & do_write event chould
+   be perform when no need to call socket.select However, the
+   connection exception will detected through do_read or do_write,
+   but it's ok.
+   */
   int nfds = 1;
 
   ::memcpy(fdsa, this->fds_array_, sizeof(this->fds_array_));

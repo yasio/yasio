@@ -69,19 +69,12 @@ public:
     std::lock_guard<std::recursive_mutex> lck(this->mtx_);
     queue_.emplace(std::forward<_Valty>(_Val)...);
   }
-  void pop()
-  {
-    std::lock_guard<std::recursive_mutex> lck(this->mtx_);
-    queue_.pop();
-  }
+  _T& front() { return queue_.front(); }
+  void pop() { queue_.pop(); }
   bool empty() const { return this->queue_.empty(); }
-  _T* peek()
-  {
-    if (this->empty())
-      return nullptr;
-    return &this->queue_.front();
-  }
   void clear() { clear_queue(this->queue_); }
+
+  std::recursive_mutex& internal_lock_object() { return mtx_; }
 
 protected:
   std::queue<_T> queue_;

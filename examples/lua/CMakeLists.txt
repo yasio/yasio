@@ -45,3 +45,11 @@ add_custom_command(TARGET example_lua
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts
     $<TARGET_FILE_DIR:example_lua>/scripts/
     )
+
+if(MSVC)
+    add_custom_command(TARGET example_lua
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/example_lua.xsxproj
+        $<TARGET_FILE_DIR:example_lua>/example_lua.xsxproj
+        )
+endif()

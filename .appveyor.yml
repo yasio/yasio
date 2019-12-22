@@ -1,15 +1,15 @@
 image:
-  - Visual Studio 2019
   - Visual Studio 2013
+  - Visual Studio 2019
 
 version: 3.31.0.{build}
 
 environment:
     matrix:
-      - GEN: -A Win32 -G "Visual Studio 16 2019"
-      - GEN: -G "Visual Studio 16 2019"
       - GEN: -G "Visual Studio 12 2013"
       - GEN: -G "Visual Studio 12 2013 Win64"
+      - GEN: -A Win32 -G "Visual Studio 16 2019"
+      - GEN: -G "Visual Studio 16 2019"
 matrix:
   exclude:
     - image: Visual Studio 2019

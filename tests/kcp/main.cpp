@@ -4,6 +4,7 @@
 
 #define YASIO_HAVE_KCP 1
 #define YASIO_HEADER_ONLY 1
+#define YASIO_DISABLE_SPSC_QUEUE 1
 
 #include "yasio/yasio.hpp"
 #include "yasio/ibstream.hpp"

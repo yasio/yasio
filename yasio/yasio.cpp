@@ -513,13 +513,20 @@ void io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&&
 }
 int io_transport_kcp::do_read(int& error)
 {
-  char sbuf[2048];
+  char sbuf[YASIO_INET_BUFFER_SIZE];
   int n = socket_->recv(sbuf, sizeof(sbuf));
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
     // 0: ok, -1: again, -3: error
     if (0 == ::ikcp_input(kcp_, sbuf, n))
+    {
       n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+      if (n < 0) // EAGAIN/EWOULDBLOCK
+      {
+        n     = -1;
+        error = EWOULDBLOCK;
+      }
+    }
     else
     { // current, simply regards -1,-3 as error and trigger connection lost event.
       n     = 0;

@@ -594,6 +594,7 @@ public:
 public:
   YASIO__DECL io_service();
   YASIO__DECL io_service(int channel_count);
+  YASIO__DECL io_service(const io_hostent& channel_eps);
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 
@@ -751,7 +752,7 @@ private:
   YASIO__DECL transport_handle_t make_dgram_transport(io_channel*, ip::endpoint& peer);
 
 private:
-  state state_; // The service state
+  state state_ = state::IDLE; // The service state
   std::thread worker_;
   std::thread::id worker_id_;
 

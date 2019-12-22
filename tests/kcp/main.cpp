@@ -12,7 +12,16 @@
 using namespace yasio;
 using namespace yasio::inet;
 
+// KCP speed: 1.3MB/s(windows), 1.8MB/s(linux)
+// UDP speed: 1.3GB/s(windows), 2.2GB/s(linux)
+#define USE_KCP 0
+
+#if USE_KCP
 #define TRANSFER_PROTOCOL YCM_KCP_CLIENT
+#else
+#define TRANSFER_PROTOCOL YCM_UDP_CLIENT
+#endif
+
 static int s_bytes_sent = 0;
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
@@ -97,13 +106,13 @@ void start_receiver(io_service& service)
             printf("Speed: %gB/s, Total Time: %g(s), Total Bytes: %lld\n", speed, time_elapsed,
                    total_bytes);
           else if (speed < 1024 * 1024)
-            printf("Speed: %gKB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024,
+            printf("Speed: %.1lfKB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024,
                    time_elapsed, total_bytes);
           else if (speed < 1024 * 1024 * 1024)
-            printf("Speed: %gMB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024 / 1024,
+            printf("Speed: %.1lfMB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024 / 1024,
                    time_elapsed, total_bytes);
           else
-            printf("Speed: %gGB/s, Total Time: %g(s), Total Bytes: %lld\n",
+            printf("Speed: %.1lfGB/s, Total Time: %g(s), Total Bytes: %lld\n",
                    speed / 1024 / 1024 / 1024, time_elapsed, total_bytes);
           last_print_time = time_elapsed;
         }

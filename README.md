@@ -38,7 +38,8 @@ please see: [tcptest](https://github.com/simdsoft/yasio/blob/master/tests/tcp/ma
 #### common lua application integration:
 1. Compile ```yasio\xxsocket.cpp``` ```yasio\yasio.cpp``` ```yasio\ibstream.cpp``` ```yasio\obstream.cpp``` ```yasio\bindings\lyasio.cpp``` with your project  
 2. call luaopen_yasio after LUA VM initialized.  
-luatest(windows user): please download [luatest.zip](https://github.com/simdsoft/yasio/releases), extract it then open ```luatest.xsxproj``` by x-studio IDE  
+build example_lua & debug it(windows user): build ```Debug``` version with cmake, open ```example_lua.xsxproj```  by [x-studio ide](https://x-studio.net/) at the same directory of example_lua.exe,  
+then you can toggle breakpoint and debug the example_lua.exe
   
 #### cocos2d-x lua integration:
 1. Copy the folder ```yasio``` to cocos2d-x engine's folder ```external```, ```yasio``` as sub directory of ```external```  

@@ -1,0 +1,19 @@
+<Project fullMode="0">
+  <assets>
+    <item path="scripts\protocol_enums.lua" dflag="131076"/>
+    <item path="scripts\protocol_enc.lua" dflag="131076"/>
+    <item path="scripts\protocol_base.lua" dflag="131076"/>
+    <item path="scripts\yasio_lext\http_client.lua" dflag="131076"/>
+    <item path="scripts\example.lua" dflag="131076"/>
+    <item path="scripts\protocol_dec.lua" dflag="131076"/>
+  </assets>
+  <debug-options>
+    <start-program>example_lua.exe</start-program>
+    <start-working-dir>.</start-working-dir>
+    <start-command/>
+  </debug-options>
+  <project-home>.</project-home>
+  <ssheets/>
+  <assets.ref/>
+</Project>
+

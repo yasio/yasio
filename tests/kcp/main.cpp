@@ -12,65 +12,56 @@
 using namespace yasio;
 using namespace yasio::inet;
 
-void run_test()
+#define TRANSFER_PROTOCOL YCM_KCP_CLIENT
+static int s_bytes_sent = 0;
+
+void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  yasio::inet::io_hostent endpoints[] = {
-      {"127.0.0.1", 30001}, // kcp client1
-      {"127.0.0.1", 30002}, // kcp client2
+  auto cb = [=] {
+    if (s_bytes_sent > 0)
+    {
+      udp_send_repeat_forever(service, thandle, obs);
+    }
   };
 
-  io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
+  s_bytes_sent = service->write(thandle, obs->buffer(), cb);
+}
 
-  service.set_option(YOPT_S_TCP_KEEPALIVE, 60, 30, 3);
+void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
+{
+  s_bytes_sent = service->write(thandle, obs->buffer());
 
-  std::vector<transport_handle_t> transports;
-  deadline_timer udp_msg_delay(service);
+  if (s_bytes_sent > 0)
+  {
+    service->schedule(std::chrono::milliseconds(1),
+                      [=](bool) { kcp_send_repeat_forever(service, thandle, obs); });
+  }
+}
+
+void start_sender(io_service& service)
+{
+  static const int PER_PACKET_SIZE =
+      TRANSFER_PROTOCOL == YCM_KCP_CLIENT ? YASIO_SZ(60, k) : YASIO_SZ(63, k);
+  static char buffer[PER_PACKET_SIZE];
+  static obstream obs;
+  obs.write_bytes(buffer, PER_PACKET_SIZE);
+  deadline_timer timer(service);
+
   service.start_service([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET: {
-        auto packet = std::move(event->packet());
-        packet.push_back('\0');
-        printf("index:%d, receive data:%s\n", event->transport()->cindex(), packet.data());
-
-        if (event->cindex() == 1)
-        { // response udp client
-          obstream obs;
-          obs.write_bytes("hello udp client 0\n");
-          printf("---- response a packet to udp client 0\n");
-          service.write(event->transport(), std::move(obs.buffer()));
-        }
-        else
-        {
-          auto transport = event->transport();
-          service.schedule(std::chrono::seconds(3), [&service, transport](bool) {
-            obstream obs;
-            obs.write_bytes("hello udp client 1\n");
-            printf("---- send a packet to udp client 1\n");
-            service.write(transport, std::move(obs.buffer()));
-          });
-        }
         break;
       }
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
-          auto transport = event->transport();
-          if (event->cindex() == 1)
-          {
-            obstream obs;
-            obs.write_bytes("GET /index.htm HTTP/1.1\r\n");
+          auto thandle = event->transport();
 
-            obs.write_bytes("Host: www.ip138.com\r\n");
-
-            obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; "
-                                  "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                                  "Chrome/51.0.2704.106 Safari/537.36\r\n");
-            obs.write_bytes("Accept: */*;q=0.8\r\n");
-            obs.write_bytes("Connection: Close\r\n\r\n");
-
-            service.write(transport, std::move(obs.buffer()));
-          }
+          if (TRANSFER_PROTOCOL == YCM_KCP_CLIENT)
+            kcp_send_repeat_forever(&service, thandle, &obs);
+          else
+            udp_send_repeat_forever(&service, thandle, &obs);
         }
         break;
       case YEK_CONNECTION_LOST:
@@ -79,30 +70,75 @@ void run_test()
     }
   });
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::milliseconds(170));
+
+  service.set_option(YOPT_C_LOCAL_PORT, 0, 30001);
+  service.open(0, TRANSFER_PROTOCOL);
+}
+
+static io_service* s_sender;
+void start_receiver(io_service& service)
+{
+  static long long total_bytes  = 0;
+  static long long time_start   = yasio::highp_clock<>();
+  static double last_print_time = 0;
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
+  service.start_service([&](event_ptr event) {
+    switch (event->kind())
+    {
+      case YEK_PACKET: {
+        auto packet = std::move(event->packet());
+        total_bytes += packet.size();
+        auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+        auto speed        = total_bytes / time_elapsed;
+        if ((time_elapsed - last_print_time) > 0.5)
+        {
+          if (speed < 1024)
+            printf("Speed: %gB/s, Total Time: %g(s), Total Bytes: %lld\n", speed, time_elapsed,
+                   total_bytes);
+          else if (speed < 1024 * 1024)
+            printf("Speed: %gKB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024,
+                   time_elapsed, total_bytes);
+          else if (speed < 1024 * 1024 * 1024)
+            printf("Speed: %gMB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024 / 1024,
+                   time_elapsed, total_bytes);
+          else
+            printf("Speed: %gGB/s, Total Time: %g(s), Total Bytes: %lld\n",
+                   speed / 1024 / 1024 / 1024, time_elapsed, total_bytes);
+          last_print_time = time_elapsed;
+        }
+
+        break;
+      }
+      case YEK_CONNECT_RESPONSE:
+        if (event->status() == 0)
+        {
+          printf("start recive data...\n");
+        }
+        break;
+      case YEK_CONNECTION_LOST:
+        printf("The connection is lost(user end)!\n");
+        break;
+    }
+  });
 
   service.set_option(YOPT_C_LOCAL_PORT, 0, 30002);
-  service.set_option(YOPT_C_LOCAL_PORT, 1, 30001);
-
-  service.open(0, YCM_KCP_CLIENT);
-  service.open(1, YCM_KCP_CLIENT);
-
-  time_t duration = 0;
-  while (service.is_running())
-  {
-    service.dispatch();
-    if (duration >= 6000000)
-    {
-      break;
-    }
-    duration += 50;
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  }
+  service.open(0, TRANSFER_PROTOCOL);
 }
 
 int main(int, char**)
 {
-  run_test();
+  io_hostent receiver_ep("127.0.0.1", 30001), sender_ep("127.0.0.1", 30002);
+  io_service receiver(&receiver_ep, 1), sender(&sender_ep, 1);
 
+  s_sender = &sender;
+  start_receiver(receiver);
+  start_sender(sender);
+
+  while (true)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    sender.dispatch();
+  }
   return 0;
 }

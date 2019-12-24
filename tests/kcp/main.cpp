@@ -39,7 +39,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
   while (s_time_elapsed < s_send_limit_time)
   {
     service->write(thandle, obs->buffer());
-    std::this_thread::sleep_for(std::chrono::microseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(10000));
   }
 }
 

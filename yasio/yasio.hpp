@@ -457,7 +457,7 @@ protected:
   unsigned int id_;
 
   char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
-  int offset_ = 0;                      // recv buffer offset
+  int wpos_ = 0;                        // recv buffer write pos
 
   std::vector<char> expected_packet_;
   int expected_size_ = -1;

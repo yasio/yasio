@@ -23,9 +23,9 @@ using namespace yasio::inet;
 #  define TRANSFER_PROTOCOL YCM_UDP_CLIENT
 #endif
 
-static double s_time_elapsed  = 0;
+static double s_time_elapsed          = 0;
 static const double s_send_limit_time = 20; // max send time in seconds
-static int s_bytes_sent = 0;
+static int s_bytes_sent               = 0;
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
@@ -36,9 +36,10 @@ void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
 void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  while(s_time_elapsed < s_send_limit_time)
+  while (s_time_elapsed < s_send_limit_time)
   {
     service->write(thandle, obs->buffer());
+    std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 }
 

@@ -14,6 +14,7 @@ matrix:
     - os: linux
       env:
         - BUILD_TARGET=android
+        - NDK_VER=r16b
 
 install:
   - travis/install.sh

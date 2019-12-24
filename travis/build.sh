@@ -49,7 +49,7 @@ function build_android()
     echo "Building android..."
     cd $YASIO_ROOT/build
     mkdir -p build_armv7
-    cmake ../ -G "Unix Makefiles" -Bbuild_armv7 -DANDROID_STL=c++_shared -DCMAKE_TOOLCHAIN_FILE=/usr/local/src/android-ndk-r16b/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+    cmake ../ -G "Unix Makefiles" -Bbuild_armv7 -DANDROID_STL=c++_shared -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-$NDK_VER/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
     cmake --build build_armv7 --target yasio
 }
 

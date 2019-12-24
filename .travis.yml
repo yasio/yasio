@@ -1,18 +1,23 @@
 osx_image: xcode11
 language: cpp
-os:
-  - linux
-  - osx
-
-compiler:
-  - clang
-  - gcc
-
 matrix:
-  exclude:
+  include:
     - os: osx
-      compiler: gcc
+      env: 
+        - BUILD_TARGET=osx
+    - os: linux
+      env: 
+        - BUILD_TARGET=linux
+    - os: osx
+      env: 
+        - BUILD_TARGET=ios
+    - os: linux
+      env:
+        - BUILD_TARGET=android
+        - NDK_VER=r16b
+
+install:
+  - travis/install.sh
 
 script:
-  - cmake --version
   - travis/build.sh

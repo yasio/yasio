@@ -333,7 +333,7 @@ void io_transport_posix::write(std::vector<char>&& buffer, std::function<void()>
 }
 int io_transport_posix::do_read(int& error)
 {
-  int n = read_cb_(buffer_ + offset_, sizeof(buffer_) - offset_);
+  int n = read_cb_(buffer_ + wpos_, sizeof(buffer_) - wpos_);
   error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
@@ -380,7 +380,6 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
           if (((ctx_->mask_ & YCM_UDP) == 0) || error != EPERM)
           { // Fix issue: #126, simply ignore EPERM for UDP
             set_last_errno(error);
-            offset_ = n;
             break;
           }
         }
@@ -481,7 +480,7 @@ int io_transport_kcp::do_read(int& error)
     // 0: ok, -1: again, -3: error
     if (0 == ::ikcp_input(kcp_, sbuf, n))
     {
-      n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+      n = ::ikcp_recv(kcp_, buffer_ + wpos_, sizeof(buffer_) - wpos_);
       if (n < 0) // EAGAIN/EWOULDBLOCK
       {
         n     = -1;
@@ -887,8 +886,8 @@ void io_service::handle_close(transport_handle_t transport)
   auto ctx = ptr->ctx_;
   auto ec  = ptr->error_;
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_SLOG("[index: %d] the connection #%u is lost, offset:%d, ec=%d, detail:%s", ctx->index_,
-             ptr->id_, ptr->offset_, ec, io_service::strerror(ec));
+  YASIO_SLOG("[index: %d] the connection #%u is lost, ec=%d, detail:%s", ctx->index_, ptr->id_, ec,
+             io_service::strerror(ec));
 
   cleanup_io(ptr);
 
@@ -1328,7 +1327,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
 #endif
       if (transport->expected_size_ == -1)
       { // decode length
-        int length = transport->ctx_->decode_len_(transport->buffer_, transport->offset_ + n);
+        int length = transport->ctx_->decode_len_(transport->buffer_, transport->wpos_ + n);
         if (length > 0)
         {
           transport->expected_size_ = length;
@@ -1341,7 +1340,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
         {
           // header insufficient, wait readfd ready at
           // next event step.
-          transport->offset_ += n;
+          transport->wpos_ += n;
         }
         else
         {
@@ -1359,7 +1358,6 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     else
     { // n == 0: The return value will be 0 when the peer has performed an orderly shutdown.
       transport->set_last_errno(error);
-      transport->offset_ = n;
       break;
     }
 
@@ -1373,17 +1371,17 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
 void io_service::unpack(transport_handle_t transport, int bytes_expected, int bytes_transferred,
                         long long& max_wait_duration)
 {
-  auto bytes_available = bytes_transferred + transport->offset_;
+  auto bytes_available = bytes_transferred + transport->wpos_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
                                      transport->buffer_ +
                                          (std::min)(bytes_expected, bytes_available));
 
-  transport->offset_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
-  if (transport->offset_ >= 0)
-  {                             // pdu received properly
-    if (transport->offset_ > 0) // move remain data to head of buffer and hold offset.
+  transport->wpos_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
+  if (transport->wpos_ >= 0)
+  {                           // pdu received properly
+    if (transport->wpos_ > 0) // move remain data to head of buffer and hold offset.
     {
-      ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->offset_);
+      ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->wpos_);
       // not all data consumed, so add events for this context
       max_wait_duration = 0;
     }
@@ -1398,7 +1396,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
   else
   { // all buffer consumed, set offset to ZERO, pdu
     // incomplete, continue recv remain data.
-    transport->offset_ = 0;
+    transport->wpos_ = 0;
   }
 }
 

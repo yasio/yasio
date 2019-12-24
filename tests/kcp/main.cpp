@@ -36,17 +36,16 @@ void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
 void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  service->write(thandle, obs->buffer());
-
-  if (s_time_elapsed < s_send_limit_time)
-    service->schedule(std::chrono::milliseconds(1),
-                      [=](bool) { kcp_send_repeat_forever(service, thandle, obs); });
+  while(s_time_elapsed < s_send_limit_time)
+  {
+    service->write(thandle, obs->buffer());
+  }
 }
 
 void start_sender(io_service& service)
 {
   static const int PER_PACKET_SIZE =
-      TRANSFER_PROTOCOL == YCM_KCP_CLIENT ? YASIO_SZ(60, k) : YASIO_SZ(63, k);
+      TRANSFER_PROTOCOL == YCM_KCP_CLIENT ? YASIO_SZ(62, k) : YASIO_SZ(63, k);
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);

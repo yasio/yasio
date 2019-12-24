@@ -490,7 +490,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
     : io_transport(ctx, s), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
-  ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
+  ::ikcp_nodelay(this->kcp_, 1, 10/*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (transport_handle_t)user;
     return t->socket_->send(buf, len);
@@ -512,7 +512,7 @@ int io_transport_kcp::do_read(int& error)
     // 0: ok, -1: again, -3: error
     if (0 == ::ikcp_input(kcp_, sbuf, n))
     {
-      n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
+      n = ::ikcp_recv(kcp_, buffer_ + wpos_, sizeof(buffer_) - wpos_);
       if (n < 0) // EAGAIN/EWOULDBLOCK
       {
         n     = -1;

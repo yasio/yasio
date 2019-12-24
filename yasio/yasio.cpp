@@ -180,10 +180,10 @@ class a_pdu
 {
 public:
   a_pdu(std::vector<char>&& buffer, std::function<void()>&& handler)
-      : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
+      : rpos_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
   {}
 
-  size_t offset_;            // offset
+  size_t rpos_;              // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
@@ -370,8 +370,8 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
     if (wrap)
     {
       auto v                 = *wrap;
-      auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->offset_);
-      int n                  = write_cb_(v->buffer_.data() + v->offset_, outstanding_bytes);
+      auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->rpos_);
+      int n                  = write_cb_(v->buffer_.data() + v->rpos_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop();
@@ -389,8 +389,8 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
       else if (n > 0)
       {
         // #performance: change offset only, remain data will be send next loop.
-        v->offset_ += n;
-        outstanding_bytes = static_cast<int>(v->buffer_.size() - v->offset_);
+        v->rpos_ += n;
+        outstanding_bytes = static_cast<int>(v->buffer_.size() - v->rpos_);
       }
       else
       { // n <= 0

@@ -51,6 +51,8 @@ function build_android()
     mkdir -p build_armv7
     cmake ../ -G "Unix Makefiles" -Bbuild_armv7 -DANDROID_STL=c++_shared -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-$NDK_VER/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
     cmake --build build_armv7 --target yasio
+    
+    exit 0
 }
 
 if [ $BUILD_TARGET == "linux" ]

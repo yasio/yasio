@@ -5,6 +5,34 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 YASIO_ROOT="$DIR"/..
 
+function build_osx()
+{   
+    echo "Building osx..."
+    NUM_OF_CORES=`getconf _NPROCESSORS_ONLN`
+
+    cd $YASIO_ROOT/build
+    
+    mkdir -p build_osx
+    cd build_osx
+    cmake ../../ -GXcode
+    cmake --build . --config Release
+    
+    exit 0
+}
+
+function build_ios()
+{  
+    echo "Building iOS..."
+    cd $YASIO_ROOT/build
+    
+    mkdir -p build_ios
+    cd build_ios
+    cmake ../../ -G Xcode -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
+    cmake --build . --config Release
+    
+    exit 0
+}
+
 function build_linux()
 {
     echo "Building linux..."
@@ -12,40 +40,31 @@ function build_linux()
     mkdir -p build_linux
     cmake ../ -G "Unix Makefiles" -Bbuild_linux -DCMAKE_BUILD_TYPE=Release
     cmake --build build_linux -- -j `nproc`
-}
-
-function build_osx()
-{
-    NUM_OF_CORES=`getconf _NPROCESSORS_ONLN`
-
-    cd $YASIO_ROOT/build
-    
-    # osx
-    echo "Building macOS..."
-    mkdir -p build_osx
-    cd build_osx
-    cmake ../../ -GXcode
-    cmake --build . --config Release
-    cd ..
-    
-    # ios
-    mkdir -p build_ios
-    echo "Building iOS..."
-    cd build_ios
-    cmake ../../ -G Xcode -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
-    cmake --build . --config Release
-    cd ..
-
     
     exit 0
 }
 
-if [ $TRAVIS_OS_NAME == "linux" ]
+function build_android()
+{
+    echo "Building android..."
+    cd $YASIO_ROOT/build
+    mkdir -p build_armv7
+    cmake ../ -G "Unix Makefiles" -Bbuild_armv7 -DANDROID_STL=c++_shared -DCMAKE_TOOLCHAIN_FILE=/usr/local/src/android-ndk-r16b/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+    cmake --build build_armv7 --target yasio
+}
+
+if [ $BUILD_TARGET == "linux" ]
 then
     build_linux
-elif [ $TRAVIS_OS_NAME == "osx" ]
+elif [ $BUILD_TARGET == "osx" ]
 then
     build_osx
+elif [ $BUILD_TARGET == "ios" ]
+then
+    build_ios
+elif [ $BUILD_TARGET == "android" ]
+then
+    build_android
 else
   exit 0
 fi

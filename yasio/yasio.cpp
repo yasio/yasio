@@ -1697,8 +1697,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->decode_len_ = *va_arg(ap, decode_len_fn_t*);
+      break;
     }
-    break;
     case YOPT_C_LOCAL_HOST: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
@@ -1715,14 +1715,14 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->setup_remote_host(va_arg(ap, const char*));
+      break;
     }
-    break;
     case YOPT_C_REMOTE_PORT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->setup_remote_port((u_short)va_arg(ap, int));
+      break;
     }
-    break;
     case YOPT_C_LOCAL_ENDPOINT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel != nullptr)
@@ -1730,8 +1730,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         channel->local_host_ = (va_arg(ap, const char*));
         channel->local_port_ = ((u_short)va_arg(ap, int));
       }
+      break;
     }
-    break;
     case YOPT_C_REMOTE_ENDPOINT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
@@ -1739,6 +1739,7 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         channel->setup_remote_host(va_arg(ap, const char*));
         channel->setup_remote_port((u_short)va_arg(ap, int));
       }
+      break;
     }
     case YOPT_C_MOD_FLAGS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
@@ -1762,8 +1763,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         auto optlen   = va_arg(ap, int);
         obj->socket_->set_optval(optlevel, optname, optval, optlen);
       }
+      break;
     }
-    break;
   }
 
   va_end(ap);

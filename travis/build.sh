@@ -13,9 +13,9 @@ function build_osx()
     cd $YASIO_ROOT/build
     
     mkdir -p build_osx
-    cd build_osx
-    cmake ../../ -GXcode
-    cmake --build . --config Release
+    
+    cmake ../ -GXcode -Bbuild_osx
+    cmake --build build_osx --config Release
     
     exit 0
 }
@@ -26,9 +26,9 @@ function build_ios()
     cd $YASIO_ROOT/build
     
     mkdir -p build_ios
-    cd build_ios
-    cmake ../../ -G Xcode -DCMAKE_TOOLCHAIN_FILE=../ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
-    cmake --build . --config Release
+    
+    cmake ../ -G Xcode -Bbuild_ios -DCMAKE_TOOLCHAIN_FILE=../cmake/ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
+    cmake --build build_ios --config Release
     
     exit 0
 }

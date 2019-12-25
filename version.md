@@ -1,3 +1,8 @@
+yasio-3.30.5
+  
+1. Fix missing break at set_option for YOPT_C_REMOTE_ENDPOINT.
+  
+  
 yasio-3.30.4
 
 1. Make normal concurrent queue more safe if SPSC queue is disabled.

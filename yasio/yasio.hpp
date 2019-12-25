@@ -537,7 +537,7 @@ public:
   YASIO_OBSOLETE_DEPRECATE(yasio::inet::io_service::start_service(io_event_cb_t cb))
   void start_service(const io_hostent* channel_eps, int channel_count, io_event_cb_t cb)
   {
-    if (state_ == io_service::state::INITIALIZED)
+    if (state_ == io_service::state::IDLE)
     {
       /// recreate channels
       clear_channels();

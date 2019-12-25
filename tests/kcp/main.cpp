@@ -17,12 +17,12 @@ using namespace yasio::inet;
 
 // KCP speed: 1.3MB/s(windows), 1.8MB/s(linux)
 // UDP speed: 1.3GB/s(windows), 2.2GB/s(linux)
-#define USE_KCP 0
+#define USE_KCP 1
 
 #if USE_KCP
-#define TRANSFER_PROTOCOL YCM_KCP_CLIENT
+#  define TRANSFER_PROTOCOL YCM_KCP_CLIENT
 #else
-#define TRANSFER_PROTOCOL YCM_UDP_CLIENT
+#  define TRANSFER_PROTOCOL YCM_UDP_CLIENT
 #endif
 
 static double s_time_elapsed          = 0;
@@ -38,21 +38,14 @@ void setup_kcp_transfer(transport_handle_t handle)
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  auto cb = [=] {
-    if (s_bytes_sent > 0)
-    {
-      udp_send_repeat_forever(service, thandle, obs);
-    }
-  };
+  auto cb = [=] { udp_send_repeat_forever(service, thandle, obs); };
 
-  s_bytes_sent = service->write(thandle, obs->buffer(), cb);
+  service->write(thandle, obs->buffer(), cb);
 }
 
 void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  s_bytes_sent = service->write(thandle, obs->buffer());
-
-  if (s_bytes_sent > 0)
+  while (s_time_elapsed < s_send_limit_time)
   {
     service->write(thandle, obs->buffer());
 #if !defined(_WIN32)
@@ -64,7 +57,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 void start_sender(io_service& service)
 {
   static const int PER_PACKET_SIZE =
-      TRANSFER_PROTOCOL == YCM_KCP_CLIENT ? YASIO_SZ(60, k) : YASIO_SZ(63, k);
+      TRANSFER_PROTOCOL == YCM_KCP_CLIENT ? YASIO_SZ(62, k) : YASIO_SZ(63, k);
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
@@ -132,6 +125,8 @@ void start_receiver(io_service& service)
                    speed / 1024 / 1024 / 1024, time_elapsed, total_bytes);
           last_print_time = time_elapsed;
         }
+
+        s_time_elapsed = time_elapsed;
 
         break;
       }

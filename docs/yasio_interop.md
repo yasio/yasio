@@ -5,8 +5,9 @@
 YASIO_NI_API void yasio_start(int channel_count,
                               void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,
                               intptr_t bytes, int len));
-YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t sbuf));
 YASIO_NI_API void yasio_set_option(int opt, const char* params);
+YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t sbuf));
+YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*));
 YASIO_NI_API void yasio_open(int cindex, int kind);
 YASIO_NI_API void yasio_close(int cindex);
 YASIO_NI_API int yasio_write(intptr_t thandle, const unsigned char* bytes, int len);
@@ -14,7 +15,6 @@ YASIO_NI_API void yasio_dispatch(int count);
 YASIO_NI_API void yasio_stop();
 YASIO_NI_API long long yasio_highp_time(void);
 YASIO_NI_API long long yasio_highp_clock(void);
-YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*));
 YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len);
 ```
 
@@ -30,6 +30,7 @@ YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len);
 const string LIBNAME = "yasio-ni";
 
 public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr thandle, IntPtr bytes, int len);
+public delegate int YNIResolvDelegate(string host, IntPtr sbuf);
 public delegate void YNIPrintDelegate(string msg);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -52,14 +53,18 @@ public static extern void yasio_dispatch(int maxEvents);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_set_option(int opt, string strParam);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_set_resolv_fn(YNIResolvDelegate fnResolv);
+
+[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+public static extern void yasio_set_print_fn(YNIPrintDelegate fnPrint);
+
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_stop();
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern long yasio_highp_time();
-
-[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern long yasio_set_print_fn(YNIPrintDelegate callback);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_memcpy(IntPtr destination, IntPtr source, uint length);

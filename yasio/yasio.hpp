@@ -520,11 +520,10 @@ class io_service // lgtm [cpp/class-many-fields]
 public:
   enum class state
   {
+    UNINITIALIZED,
     IDLE,
-    INITIALIZED,
     RUNNING,
     STOPPING,
-    STOPPED,
   };
 
 public:
@@ -577,8 +576,8 @@ public:
   YASIO__DECL void dispatch_events(int count = 512) { dispatch(count); }
 
   // set option, see enum YOPT_XXX
-  YASIO__DECL void set_option(int option, ...);
-  YASIO__DECL void set_option_internal(int option, va_list args);
+  YASIO__DECL void set_option(int opt, ...);
+  YASIO__DECL void set_option_internal(int opt, va_list args);
 
   // open a channel, default: YCM_TCP_CLIENT
   YASIO__DECL void open(size_t cindex, int channel_mask = YCM_TCP_CLIENT);
@@ -638,6 +637,8 @@ private:
 
   YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
   YASIO__DECL void dispose();
+
+  YASIO__DECL void on_service_stopped();
 
   /* Call by stop_service, wait io_service thread exit properly & do cleanup */
   YASIO__DECL void join();
@@ -714,7 +715,7 @@ private:
   YASIO__DECL transport_handle_t make_dgram_transport(io_channel*, ip::endpoint& peer);
 
 private:
-  state state_ = state::IDLE; // The service state
+  state state_ = state::UNINITIALIZED; // The service state
   std::thread worker_;
   std::thread::id worker_id_;
 

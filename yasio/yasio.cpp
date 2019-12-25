@@ -529,10 +529,9 @@ io_service::~io_service()
   stop_service();
   dispose();
 }
-
 void io_service::start_service(io_event_cb_t cb)
 {
-  if (state_ == io_service::state::INITIALIZED)
+  if (state_ == io_service::state::IDLE)
   {
     if (cb)
       options_.on_event_ = std::move(cb);
@@ -548,11 +547,10 @@ void io_service::start_service(io_event_cb_t cb)
       this->worker_id_               = std::this_thread::get_id();
       this->options_.deferred_event_ = false;
       run();
-      this->state_ = io_service::state::STOPPED;
+      on_service_stopped();
     }
   }
 }
-
 void io_service::stop_service()
 {
   if (this->state_ == io_service::state::RUNNING)
@@ -565,6 +563,11 @@ void io_service::stop_service()
   else if (this->state_ == io_service::state::STOPPING)
     this->join();
 }
+void io_service::on_service_stopped()
+{
+  clear_transports();
+  this->state_ = io_service::state::IDLE;
+}
 
 void io_service::join()
 {
@@ -573,8 +576,7 @@ void io_service::join()
     if (std::this_thread::get_id() != this->worker_id_)
     {
       this->worker_.join();
-      this->state_ = io_service::state::STOPPED;
-      clear_transports();
+      on_service_stopped();
     }
     else
       errno = EAGAIN;
@@ -583,7 +585,7 @@ void io_service::join()
 
 void io_service::init(const io_hostent* channel_eps, int channel_count)
 {
-  if (this->state_ != io_service::state::IDLE)
+  if (this->state_ != io_service::state::UNINITIALIZED)
     return;
   if (channel_count <= 0)
     return;
@@ -603,12 +605,12 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   // Create channels
   create_channels(channel_eps, channel_count);
 
-  this->state_ = io_service::state::INITIALIZED;
+  this->state_ = io_service::state::IDLE;
 }
 
 void io_service::dispose()
 {
-  if (this->state_ == io_service::state::STOPPED)
+  if (this->state_ == io_service::state::IDLE)
   {
     clear_channels();
     this->events_.clear();
@@ -625,7 +627,7 @@ void io_service::dispose()
       ::operator delete(o);
     tpool_.clear();
 
-    this->state_ = io_service::state::IDLE;
+    this->state_ = io_service::state::UNINITIALIZED;
   }
 }
 
@@ -1649,16 +1651,16 @@ const char* io_service::strerror(int error)
       return xxsocket::strerror(error);
   }
 }
-void io_service::set_option(int option, ...)
+void io_service::set_option(int opt, ...)
 {
   va_list ap;
-  va_start(ap, option);
-  set_option_internal(option, ap);
+  va_start(ap, opt);
+  set_option_internal(opt, ap);
   va_end(ap);
 }
-void io_service::set_option_internal(int option, va_list ap) // lgtm [cpp/poorly-documented-function]
+void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-documented-function]
 {
-  switch (option)
+  switch (opt)
   {
     case YOPT_S_TIMEOUTS: {
       options_.dns_cache_timeout_ =

@@ -490,7 +490,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
     : io_transport(ctx, s), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
-  ::ikcp_nodelay(this->kcp_, 1, 10/*MAX_WAIT_DURATION / 1000*/, 2, 1);
+  ::ikcp_nodelay(this->kcp_, 1, 10 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (transport_handle_t)user;
     return t->socket_->send(buf, len);
@@ -1845,8 +1845,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->decode_len_ = *va_arg(ap, decode_len_fn_t*);
+      break;
     }
-    break;
     case YOPT_C_LOCAL_HOST: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
@@ -1863,14 +1863,14 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->setup_remote_host(va_arg(ap, const char*));
+      break;
     }
-    break;
     case YOPT_C_REMOTE_PORT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->setup_remote_port((u_short)va_arg(ap, int));
+      break;
     }
-    break;
     case YOPT_C_LOCAL_ENDPOINT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel != nullptr)
@@ -1878,8 +1878,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         channel->local_host_ = (va_arg(ap, const char*));
         channel->local_port_ = ((u_short)va_arg(ap, int));
       }
+      break;
     }
-    break;
     case YOPT_C_REMOTE_ENDPOINT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
@@ -1887,6 +1887,7 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         channel->setup_remote_host(va_arg(ap, const char*));
         channel->setup_remote_port((u_short)va_arg(ap, int));
       }
+      break;
     }
     case YOPT_C_MOD_FLAGS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
@@ -1915,8 +1916,8 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
         auto optlen   = va_arg(ap, int);
         obj->socket_->set_optval(optlevel, optname, optval, optlen);
       }
+      break;
     }
-    break;
   }
 
   va_end(ap);

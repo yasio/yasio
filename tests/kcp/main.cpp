@@ -10,6 +10,8 @@
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
+#include "yasio/kcp/ikcp.h"
+
 using namespace yasio;
 using namespace yasio::inet;
 
@@ -23,7 +25,16 @@ using namespace yasio::inet;
 #define TRANSFER_PROTOCOL YCM_UDP_CLIENT
 #endif
 
-static int s_bytes_sent = 0;
+static double s_time_elapsed          = 0;
+static const double s_send_limit_time = 20; // max send time in seconds
+
+void setup_kcp_transfer(transport_handle_t handle)
+{
+  auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
+  ::ikcp_setmtu(kcp_handle, YASIO_SZ(63, k));
+  ::ikcp_wndsize(kcp_handle, 4096, 8192);
+  kcp_handle->interval = 0;
+}
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
@@ -43,8 +54,10 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
   if (s_bytes_sent > 0)
   {
-    service->schedule(std::chrono::milliseconds(1),
-                      [=](bool) { kcp_send_repeat_forever(service, thandle, obs); });
+    service->write(thandle, obs->buffer());
+#if !defined(_WIN32)
+    std::this_thread::sleep_for(std::chrono::microseconds(10000));
+#endif
   }
 }
 
@@ -67,6 +80,7 @@ void start_sender(io_service& service)
         if (event->status() == 0)
         {
           auto thandle = event->transport();
+          setup_kcp_transfer(thandle);
 
           if (TRANSFER_PROTOCOL == YCM_KCP_CLIENT)
             kcp_send_repeat_forever(&service, thandle, &obs);
@@ -123,6 +137,7 @@ void start_receiver(io_service& service)
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
+          setup_kcp_transfer(event->transport());
           printf("start recive data...\n");
         }
         break;

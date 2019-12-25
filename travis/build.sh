@@ -27,7 +27,7 @@ function build_ios()
     
     mkdir -p build_ios
     
-    cmake ../ -G Xcode -Bbuild_ios -DCMAKE_TOOLCHAIN_FILE=../cmake/ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
+    cmake ../ -G Xcode -Bbuild_ios -DCMAKE_TOOLCHAIN_FILE=../../cmake/ios.toolchain.cmake -DCMAKE_SYSTEM_NAME=iOS -DPLATFORM=OS
     cmake --build build_ios --config Release
     
     exit 0

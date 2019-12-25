@@ -73,10 +73,11 @@ void start_sender(io_service& service)
         if (event->status() == 0)
         {
           auto thandle = event->transport();
-          setup_kcp_transfer(thandle);
-
           if (TRANSFER_PROTOCOL == YCM_KCP_CLIENT)
+          {
+            setup_kcp_transfer(thandle);
             kcp_send_repeat_forever(&service, thandle, &obs);
+          }
           else
             udp_send_repeat_forever(&service, thandle, &obs);
         }
@@ -132,7 +133,8 @@ void start_receiver(io_service& service)
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
-          setup_kcp_transfer(event->transport());
+          if (TRANSFER_PROTOCOL == YCM_KCP_CLIENT)
+            setup_kcp_transfer(event->transport());
           printf("start recive data...\n");
         }
         break;

@@ -1791,12 +1791,15 @@ const char* io_service::strerror(int error)
       return xxsocket::strerror(error);
   }
 }
-
-void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-function]
+void io_service::set_option(int option, ...)
 {
   va_list ap;
   va_start(ap, option);
-
+  set_option_internal(option, ap);
+  va_end(ap);
+}
+void io_service::set_option_internal(int option, va_list ap) // lgtm [cpp/poorly-documented-function]
+{
   switch (option)
   {
     case YOPT_S_TIMEOUTS: {
@@ -1919,8 +1922,6 @@ void io_service::set_option(int option, ...) // lgtm [cpp/poorly-documented-func
       break;
     }
   }
-
-  va_end(ap);
 }
 } // namespace inet
 } // namespace yasio

@@ -611,6 +611,7 @@ public:
 
   // set option, see enum YOPT_XXX
   YASIO__DECL void set_option(int option, ...);
+  YASIO__DECL void set_option_internal(int option, va_list args);
 
   // open a channel, default: YCM_TCP_CLIENT
   YASIO__DECL void open(size_t cindex, int channel_mask = YCM_TCP_CLIENT);

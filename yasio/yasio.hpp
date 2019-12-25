@@ -96,6 +96,10 @@ enum
   // value:int(0)
   YOPT_S_NO_NEW_THREAD,
 
+  // Sets ssl verification cert, if empty, don't verify
+  // value:const char*
+  YOPT_S_SSL_CACERT,
+
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
   YOPT_C_LFBFD_FN,
@@ -106,8 +110,14 @@ enum
   //     max_frame_length:int(10MBytes),
   //     length_field_offset:int(-1),
   //     length_field_length:int(4),
-  //     length_adjustment:int(0)
+  //     length_adjustment:int(0),
   YOPT_C_LFBFD_PARAMS,
+
+  // Sets channel length field based frame decode initial bytes to strip, default is 0
+  // params:
+  //     index:int,
+  //     initial_bytes_to_strip:int(0)
+  YOPT_C_LFBFD_IBTS,
 
   // Sets channel local port
   // params: index:int, port:int

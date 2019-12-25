@@ -1338,12 +1338,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
           unpack(transport, transport->expected_size_, n, max_wait_duration);
         }
-        else if (length == 0)
-        {
-          // header insufficient, wait readfd ready at
-          // next event step.
+        else if (length == 0) // header insufficient, wait readfd ready at next event step.
           transport->wpos_ += n;
-        }
         else
         {
           transport->set_last_errno(YERR_DPL_ILLEGAL_PDU);
@@ -1395,11 +1391,8 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     this->handle_event(event_ptr(
         new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
   }
-  else
-  { // all buffer consumed, set offset to ZERO, pdu
-    // incomplete, continue recv remain data.
+  else /* all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;
-  }
 }
 
 deadline_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, timer_cb_t cb)

@@ -458,6 +458,7 @@ class io_transport_kcp : public io_transport
 public:
   YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL ~io_transport_kcp();
+  ikcpcb* internal_object() { return kcp_; }
 
 protected:
   YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;

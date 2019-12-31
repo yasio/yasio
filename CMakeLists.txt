@@ -22,6 +22,7 @@ endif ()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 option(BUILD_WITH_SSL "Build with internal ssl support" OFF)
+option(BUILD_WITH_CARES "Build with internal c-ares support" OFF)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
@@ -42,12 +43,6 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${THIRDPART_INC}
 )
-
-#~ if(WIN32)
-#~     LINK_DIRECTORIES(
-#~     "${CMAKE_SOURCE_DIR}\\lib"
-#~     )
-#~ endif()
 
 set ( YASIO_CORE
     yasio/xxsocket.hpp
@@ -133,8 +128,8 @@ if(NOT IOS)
     add_subdirectory(examples/ftp_server)
 endif ()
 
+### SSL support
 if (BUILD_WITH_SSL)
-# SSL support
     # target_include_directories
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
 
@@ -144,6 +139,18 @@ if (BUILD_WITH_SSL)
         add_subdirectory(tests/ssl)
     endif()
 endif ()
+
+### c-ares support
+if (BUILD_WITH_CARES)
+    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1)
+    set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
+    set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
+    set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
+    add_subdirectory(c-ares)
+    target_link_libraries(yasio c-ares)
+    include_directories($<TARGET_FILE_DIR:c-ares>)
+endif()
+
 
 if ( WIN32 )
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")

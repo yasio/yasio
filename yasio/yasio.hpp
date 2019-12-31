@@ -66,6 +66,11 @@ typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_st SSL;
 #endif
 
+#if defined(YASIO_HAVE_CARES)
+typedef struct ares_channeldata* ares_channel;
+typedef struct ares_addrinfo ares_addrinfo;
+#endif
+
 namespace yasio
 {
 namespace inet
@@ -678,9 +683,9 @@ private:
 
   YASIO__DECL void open_internal(io_channel*, bool ignore_state = false);
 
-  YASIO__DECL void perform_transports(fd_set* fds_array, long long& max_wait_duration);
-  YASIO__DECL void perform_channels(fd_set* fds_array);
-  YASIO__DECL void perform_timers();
+  YASIO__DECL void process_transports(fd_set* fds_array, long long& max_wait_duration);
+  YASIO__DECL void process_channels(fd_set* fds_array);
+  YASIO__DECL void process_timers();
 
   YASIO__DECL void interrupt();
 
@@ -696,6 +701,15 @@ private:
   YASIO__DECL void cleanup_ssl_context();
   YASIO__DECL SSL_CTX* get_ssl_context();
   YASIO__DECL void do_ssl_handshake(io_channel*);
+#endif
+
+#if defined(YASIO_HAVE_CARES)
+  static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
+  void ares_work_started() { ++ares_outstanding_work_; }
+  void ares_work_finished() { --ares_outstanding_work_; }
+  YASIO__DECL void process_ares_requests(fd_set* fds_array);
+  YASIO__DECL void init_ares_channel();
+  YASIO__DECL void cleanup_ares_channel();
 #endif
 
   inline void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
@@ -828,6 +842,10 @@ private:
 
 #if defined(YASIO_HAVE_SSL)
   SSL_CTX* ssl_ctx_ = nullptr;
+#endif
+#if defined(YASIO_HAVE_CARES)
+  ares_channel ares_         = nullptr; // the ares handle for non blocking io dns resolve support
+  int ares_outstanding_work_ = 0;
 #endif
 }; // io_service
 } // namespace inet

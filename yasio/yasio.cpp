@@ -56,6 +56,12 @@ SOFTWARE.
 #  include "yasio/kcp/ikcp.h"
 #endif
 
+#if defined(YASIO_HAVE_CARES)
+extern "C" {
+#  include "c-ares/ares.h"
+}
+#endif
+
 #define YASIO_SLOG_IMPL(options, format, ...)                                                      \
   do                                                                                               \
   {                                                                                                \
@@ -174,6 +180,37 @@ static void yasio__set_thread_name(const char* threadName)
 #else
 #  define yasio__set_thread_name(name)
 #endif
+
+struct yasio__global_state
+{
+  enum
+  {
+    INITF_SSL   = 1,
+    INITF_CARES = 2,
+  };
+
+public:
+  yasio__global_state()
+  {
+#if defined(YASIO_HAVE_SSL)
+    if (OPENSSL_init_ssl(0, NULL) == 1)
+      init_flags_ |= INITF_SSL;
+#endif
+#if defined(YASIO_HAVE_CARES)
+    if (::ares_library_init(ARES_LIB_INIT_ALL) == 0)
+      init_flags_ |= INITF_CARES;
+#endif
+  }
+#if defined(YASIO_HAVE_CARES)
+  ~yasio__global_state()
+  {
+    if (init_flags_ & INITF_CARES)
+      ::ares_library_cleanup();
+  }
+#endif
+private:
+  int init_flags_ = 0;
+};
 } // namespace
 
 class a_pdu
@@ -565,6 +602,8 @@ void io_service::start_service(io_event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
+    static yasio__global_state __global_state;
+
     if (cb)
       options_.on_event_ = std::move(cb);
 
@@ -711,6 +750,10 @@ void io_service::run()
   init_ssl_context();
 #endif
 
+#if defined(YASIO_HAVE_CARES)
+  init_ares_channel();
+#endif
+
   // Call once at startup
   this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
 
@@ -744,25 +787,33 @@ void io_service::run()
       --nfds;
     }
 
-    // perform active transports
-    perform_transports(fds_array, max_wait_duration);
+#if defined(YASIO_HAVE_CARES)
+    // process possible async resolve requests.
+    process_ares_requests(fds_array);
+#endif
 
-    // perform active channels
-    perform_channels(fds_array);
+    // process active transports
+    process_transports(fds_array, max_wait_duration);
 
-    // perform timeout timers
-    perform_timers();
+    // process active channels
+    process_channels(fds_array);
+
+    // process timeout timers
+    process_timers();
   }
 
 _L_end:
   (void)0; // ONLY for xcode compiler happy.
 
+#if defined(YASIO_HAVE_CARES)
+  cleanup_ares_channel();
+#endif
 #if defined(YASIO_HAVE_SSL)
   cleanup_ssl_context();
 #endif
 }
 
-void io_service::perform_transports(fd_set* fds_array, long long& max_wait_duration)
+void io_service::process_transports(fd_set* fds_array, long long& max_wait_duration)
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
@@ -802,7 +853,7 @@ void io_service::perform_transports(fd_set* fds_array, long long& max_wait_durat
 #endif
 }
 
-void io_service::perform_channels(fd_set* fds_array)
+void io_service::process_channels(fd_set* fds_array)
 {
   if (!this->channel_ops_.empty())
   {
@@ -1124,8 +1175,6 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
 #if defined(YASIO_HAVE_SSL)
 void io_service::init_ssl_context()
 {
-  SSL_load_error_strings();
-  SSL_library_init();
   ssl_ctx_ = ::SSL_CTX_new(SSLv23_client_method());
 
   if (!this->options_.capath_.empty())
@@ -1177,6 +1226,81 @@ void io_service::do_ssl_handshake(io_channel* ctx)
   }
   else
     handle_connect_succeed(ctx, ctx->socket_);
+}
+#endif
+
+#if defined(YASIO_HAVE_CARES)
+void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist)
+{
+  auto ctx              = (io_channel*)arg;
+  auto& current_service = ctx->get_service();
+
+  ctx->deadline_timer_.cancel();
+  current_service.ares_work_finished();
+
+  if (status == ARES_SUCCESS)
+  {
+    if (answerlist != nullptr)
+    {
+      for (auto ai = answerlist->nodes; ai != nullptr; ai = ai->ai_next)
+      {
+        if (ai->ai_family == AF_INET6 || ai->ai_family == AF_INET)
+        {
+          ctx->remote_eps_.push_back(ip::endpoint(ai->ai_addr));
+          break;
+        }
+      }
+    }
+  }
+
+  if (!ctx->remote_eps_.empty())
+  {
+    ctx->dns_queries_state_     = YDQS_READY;
+    ctx->dns_queries_timestamp_ = highp_clock();
+  }
+  else
+  {
+    ctx->set_last_errno(YERR_RESOLV_HOST_FAILED);
+    YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
+    YASIO_SLOG_IMPL(current_service.options_,
+                    "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status:%d", ctx->index_,
+                    ctx->remote_host_.c_str(), status);
+  }
+
+  current_service.interrupt();
+}
+void io_service::process_ares_requests(fd_set* fds_array)
+{
+  if (this->ares_outstanding_work_ > 0)
+  {
+    ares_socket_t socks[ARES_GETSOCK_MAXNUM] = {0};
+    int bitmask = ::ares_getsock(this->ares_, socks, _ARRAYSIZE(socks));
+
+    for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
+    {
+      if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
+      {
+        auto fd = socks[i];
+        ::ares_process_fd(this->ares_, FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD,
+                          FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
+      }
+      else
+        break;
+    }
+  }
+}
+void io_service::init_ares_channel()
+{
+  if (::ares_init(&ares_) != ARES_SUCCESS)
+    YASIO_LOG("init c-ares channel failed!");
+}
+void io_service::cleanup_ares_channel()
+{
+  if (ares_ != nullptr)
+  {
+    ::ares_destroy(this->ares_);
+    this->ares_ = nullptr;
+  }
 }
 #endif
 
@@ -1616,7 +1740,7 @@ bool io_service::close_internal(io_channel* ctx)
   return false;
 }
 
-void io_service::perform_timers()
+void io_service::process_timers()
 {
   if (this->timer_queue_.empty())
     return;
@@ -1653,11 +1777,18 @@ int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
   auto wait_duration = get_wait_duration(max_wait_duration);
   if (wait_duration > 0)
   {
-    timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
-                       (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
+                        (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+
+#if defined(YASIO_HAVE_CARES)
+    if (this->ares_outstanding_work_ > 0 &&
+        ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op]) > 0)
+      ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
+#endif
+
     YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-    nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
+    nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
     YASIO_SLOGV("socket.select waked up, retval=%d", nfds);
   }
   else
@@ -1723,6 +1854,7 @@ void io_service::start_resolve(io_channel* ctx)
   YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->remote_host_.c_str());
 
   ctx->remote_eps_.clear();
+#if !defined(YASIO_HAVE_CARES)
   std::thread resolv_thread([=] { // 6.563ms
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
@@ -1753,6 +1885,33 @@ void io_service::start_resolve(io_channel* ctx)
     this->interrupt();
   });
   resolv_thread.detach();
+#else
+  ares_addrinfo_hints hint; // 8~11.5ms/3ms(hosts)
+  memset(&hint, 0x0, sizeof(hint));
+
+  if (this->ipsv_ & ipsv_ipv4)
+    hint.ai_family = AF_INET;
+  else
+    hint.ai_family = AF_INET6;
+  char sport[sizeof "65535"] = {'\0'};
+  const char* service = nullptr;
+  if (ctx->remote_port_ > 0)
+  {
+    sprintf(sport, "%u", ctx->remote_port_); // It's enough for unsigned short, so use sprintf ok.
+    service = sport;
+  }
+  ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
+                     io_service::ares_getaddrinfo_cb, ctx);
+  ares_work_started();
+  ctx->deadline_timer_.expires_from_now(std::chrono::seconds(10));
+  ctx->deadline_timer_.async_wait([=](bool cancelled) {
+    if (!cancelled)
+    {
+      ::ares_cancel(this->ares_);
+      handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
+    }
+  });
+#endif
 }
 
 int io_service::__builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,

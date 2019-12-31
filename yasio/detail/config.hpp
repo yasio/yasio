@@ -57,6 +57,17 @@ SOFTWARE.
 // #define YASIO_DISABLE_OBJECT_POOL 1
 
 /*
+** Uncomment or add compiler flag -DYASIO_ENABLE_LFBFD_IBTS enable 'Initial Bytes To Strip' for
+** 'Length Field Based Frame Decode' mechanism
+*/
+// #define YASIO_ENABLE_LFBFD_IBTS 1
+
+/*
+** Uncomment or add compiler flag -DYASIO_HAVE_CARES to use c-ares to perform async resolve
+*/
+// #define YASIO_HAVE_CARES 1
+
+/*
 ** Uncomment or add compiler flag -DYASIO_HAVE_KCP for kcp support
 ** Remember, before thus, please ensure:
 ** 1. Execute: `git submodule update --init --recursive` to clone the kcp sources.

@@ -706,7 +706,7 @@ private:
 #if defined(YASIO_HAVE_CARES)
   static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   void ares_work_started() { ++ares_outstanding_work_; }
-  void ares_work_finished() { --ares_outstanding_work_; }
+  void ares_work_finished() { if(ares_outstanding_work_ > 0) --ares_outstanding_work_; }
   YASIO__DECL void process_ares_requests(fd_set* fds_array);
   YASIO__DECL void init_ares_channel();
   YASIO__DECL void cleanup_ares_channel();

@@ -21,8 +21,9 @@ if ( IOS )
 endif ()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-option(BUILD_WITH_SSL "Build with internal ssl support" OFF)
-option(BUILD_WITH_CARES "Build with internal c-ares support" OFF)
+option(YASIO_BUILD_WITH_SSL "Build with internal ssl support" OFF)
+option(YASIO_BUILD_WITH_CARES "Build with internal c-ares support" OFF)
+option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
@@ -117,7 +118,7 @@ else ( )
     )
 endif ( )
 
-if(NOT IOS)
+if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)
     add_subdirectory(tests/kcp)
@@ -129,7 +130,7 @@ if(NOT IOS)
 endif ()
 
 ### SSL support
-if (BUILD_WITH_SSL)
+if (YASIO_BUILD_WITH_SSL)
     # target_include_directories
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
 
@@ -141,7 +142,7 @@ if (BUILD_WITH_SSL)
 endif ()
 
 ### c-ares support
-if (BUILD_WITH_CARES)
+if (YASIO_BUILD_WITH_CARES)
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1)
     set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
@@ -151,7 +152,6 @@ if (BUILD_WITH_CARES)
     include_directories($<TARGET_FILE_DIR:c-ares>)
 endif()
 
-
-if ( WIN32 )
+if (WIN32 AND YASIO_BUILD_TESTS)
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
 endif ()

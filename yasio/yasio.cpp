@@ -1258,7 +1258,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     ctx->dns_queries_state_     = YDQS_READY;
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-    YASIO_SLOG_IMPL(current_service.options_, "[index: %d]", "resolve %s succeed, cost: %g(ms)",
+    YASIO_SLOG_IMPL(current_service.options_, "[index: %d] resolve %s succeed, cost: %g(ms)",
                     ctx->index_, ctx->remote_host_.c_str(),
                     (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
@@ -1279,7 +1279,7 @@ void io_service::process_ares_requests(fd_set* fds_array)
   if (this->ares_outstanding_work_ > 0)
   {
     ares_socket_t socks[ARES_GETSOCK_MAXNUM] = {0};
-    int bitmask = ::ares_getsock(this->ares_, socks, _ARRAYSIZE(socks));
+    int bitmask = ::ares_getsock(this->ares_, socks, ARES_GETSOCK_MAXNUM);
 
     for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
     {
@@ -1873,7 +1873,7 @@ void io_service::start_resolve(io_channel* ctx)
       ctx->dns_queries_state_     = YDQS_READY;
       ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-      YASIO_SLOG("[index: %d]", "resolve %s succeed, cost: %g(ms)", ctx->index_,
+      YASIO_SLOG("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_,
                  ctx->remote_host_.c_str(),
                  (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif

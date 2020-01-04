@@ -762,13 +762,13 @@ void io_service::run()
   long long max_wait_duration = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int nfds = do_evpoll(fds_array, max_wait_duration);
+    int retval = do_evpoll(fds_array, max_wait_duration);
     if (this->state_ != io_service::state::RUNNING)
       break;
 
     max_wait_duration = YASIO_MAX_WAIT_DURATION;
 
-    if (nfds == -1)
+    if (retval == -1)
     {
       int ec = xxsocket::get_last_errno();
       YASIO_SLOG("do_evpoll failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
@@ -777,14 +777,14 @@ void io_service::run()
       continue; // just continue.
     }
 
-    if (nfds == 0)
-      YASIO_SLOGV("%s", "do_evpoll is timeout, do perform_timeout_timers()");
+    if (retval == 0)
+      YASIO_SLOGV("%s", "do_evpoll is timeout, process_timers()");
 
     // Reset the interrupter.
-    else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
+    else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
       interrupter_.reset();
-      --nfds;
+      --retval;
     }
 
 #if defined(YASIO_HAVE_CARES)
@@ -1767,13 +1767,7 @@ void io_service::process_timers()
 
 int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
 {
-  /*
-   @Optimize, swap nfds, make sure do_read & do_write event chould
-   be perform when no need to call socket.select However, the
-   connection exception will detected through do_read or do_write,
-   but it's ok.
-   */
-  int n = 1;
+  int retval = 1;
 
   ::memcpy(fdsa, this->fds_array_, sizeof(this->fds_array_));
 
@@ -1794,13 +1788,11 @@ int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
 
     YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
-    n = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
-    YASIO_SLOGV("socket.select waked up, retval=%d", nfds);
+    retval = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
+    YASIO_SLOGV("socket.select waked up, retval=%d", retval);
   }
-  else
-    n = static_cast<int>(channels_.size()) << 1;
 
-  return n;
+  return retval;
 }
 
 long long io_service::get_wait_duration(long long usec)

@@ -57,12 +57,6 @@ SOFTWARE.
 // #define YASIO_DISABLE_OBJECT_POOL 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_ENABLE_LFBFD_IBTS enable 'Initial Bytes To Strip' for
-** 'Length Field Based Frame Decode' mechanism
-*/
-// #define YASIO_ENABLE_LFBFD_IBTS 1
-
-/*
 ** Uncomment or add compiler flag -DYASIO_ENABLE_ARES_PROFILER to test async resolve performance
 */
 // #define YASIO_ENABLE_ARES_PROFILER 1

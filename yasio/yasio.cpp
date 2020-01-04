@@ -1773,7 +1773,7 @@ int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
    connection exception will detected through do_read or do_write,
    but it's ok.
    */
-  int nfds = 1;
+  int n = 1;
 
   ::memcpy(fdsa, this->fds_array_, sizeof(this->fds_array_));
 
@@ -1784,20 +1784,23 @@ int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
                         (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 
 #if defined(YASIO_HAVE_CARES)
+    int maxfd = -1;
     if (this->ares_outstanding_work_ > 0 &&
-        ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op]) > 0)
+        (maxfd = ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op])) > 0) {
       ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
+      if(this->maxfdp_ < maxfd) this->maxfdp_ = maxfd;
+    }
 #endif
 
     YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
-    nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
+    n = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
     YASIO_SLOGV("socket.select waked up, retval=%d", nfds);
   }
   else
-    nfds = static_cast<int>(channels_.size()) << 1;
+    n = static_cast<int>(channels_.size()) << 1;
 
-  return nfds;
+  return n;
 }
 
 long long io_service::get_wait_duration(long long usec)

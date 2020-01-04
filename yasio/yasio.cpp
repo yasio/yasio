@@ -1257,6 +1257,11 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   {
     ctx->dns_queries_state_     = YDQS_READY;
     ctx->dns_queries_timestamp_ = highp_clock();
+#  if defined(YASIO_ENABLE_ARES_PROFILER)
+    YASIO_SLOG_IMPL(current_service.options_, "[index: %d]", "resolve %s succeed, cost: %g(ms)",
+                    ctx->index_, ctx->remote_host_.c_str(),
+                    (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+#  endif
   }
   else
   {
@@ -1852,8 +1857,11 @@ void io_service::start_resolve(io_channel* ctx)
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
   YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->remote_host_.c_str());
-
   ctx->remote_eps_.clear();
+
+#if defined(YASIO_ENABLE_ARES_PROFILER)
+  ctx->ares_start_time_ = highp_clock();
+#endif
 #if !defined(YASIO_HAVE_CARES)
   std::thread resolv_thread([=] { // 6.563ms
     addrinfo hint;
@@ -1864,6 +1872,11 @@ void io_service::start_resolve(io_channel* ctx)
     {
       ctx->dns_queries_state_     = YDQS_READY;
       ctx->dns_queries_timestamp_ = highp_clock();
+#  if defined(YASIO_ENABLE_ARES_PROFILER)
+      YASIO_SLOG("[index: %d]", "resolve %s succeed, cost: %g(ms)", ctx->index_,
+                 ctx->remote_host_.c_str(),
+                 (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+#  endif
     }
     else
     {

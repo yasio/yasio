@@ -1790,7 +1790,7 @@ int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
 #endif
 
     YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-                timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
+                waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
     nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
     YASIO_SLOGV("socket.select waked up, retval=%d", nfds);
   }

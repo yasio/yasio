@@ -743,7 +743,7 @@ private:
     return transport->do_write(max_wait_duration);
   }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
-                          int bytes_strip, long long& max_wait_duration);
+                          int bytes_to_strip, long long& max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED
   YASIO__DECL bool cleanup_io(io_base* ctx);

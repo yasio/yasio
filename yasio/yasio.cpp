@@ -1606,13 +1606,13 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->wpos_ + n);
         if (length > 0)
         {
-          int bytes_strip =
+          int bytes_to_strip =
               ::yasio::clamp(transport->ctx_->lfb_.initial_bytes_to_strip, 0, length - 1);
           transport->expected_size_ = length;
           transport->expected_packet_.reserve(
-              (std::min)(length - bytes_strip,
+              (std::min)(length - bytes_to_strip,
                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-          unpack(transport, transport->expected_size_, n, bytes_strip, max_wait_duration);
+          unpack(transport, transport->expected_size_, n, bytes_to_strip, max_wait_duration);
         }
         else if (length == 0) // header insufficient, wait readfd ready at next event step.
           transport->wpos_ += n;
@@ -1636,38 +1636,36 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     }
 
     ret = true;
-
   } while (false);
 
   return ret;
 }
 
 void io_service::unpack(transport_handle_t transport, int bytes_expected, int bytes_transferred,
-                        int bytes_strip, long long& max_wait_duration)
+                        int bytes_to_strip, long long& max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->wpos_;
   transport->expected_packet_.insert(
-      transport->expected_packet_.end(), transport->buffer_ + bytes_strip,
+      transport->expected_packet_.end(), transport->buffer_ + bytes_to_strip,
       transport->buffer_ + (std::min)(bytes_expected, bytes_available));
 
-  transport->wpos_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
+  // set wpos to bytes of remain buffer
+  transport->wpos_ = bytes_available - bytes_expected;
   if (transport->wpos_ >= 0)
-  {                           // pdu received properly
-    if (transport->wpos_ > 0) // move remain data to head of buffer and hold offset.
-    {
+  { /* pdu received properly */
+    if (transport->wpos_ > 0)
+    { /* move remain data to head of buffer and hold wpos. */
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->wpos_);
-      // not all data consumed, so add events for this context
       max_wait_duration = 0;
     }
-    // move properly pdu to ready queue, the other thread who care about will retrieve
-    // it.
+    // move properly pdu to ready queue, the other thread who care about will retrieve it.
     YASIO_SLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
         new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
   }
-  else /* all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data. */
+  else /* all buffer consumed, set wpos to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;
 }
 

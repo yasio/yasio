@@ -1862,7 +1862,7 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->ares_start_time_ = highp_clock();
 #endif
 #if !defined(YASIO_HAVE_CARES)
-  std::thread async_resolv_thread([=] { // 6.563ms
+  std::thread async_resolv_thread([=] {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
@@ -1898,7 +1898,7 @@ void io_service::start_resolve(io_channel* ctx)
   });
   async_resolv_thread.detach();
 #else
-  ares_addrinfo_hints hint; // 8~11.5ms/3ms(hosts)
+  ares_addrinfo_hints hint;
   memset(&hint, 0x0, sizeof(hint));
 
   if (this->ipsv_ & ipsv_ipv4)

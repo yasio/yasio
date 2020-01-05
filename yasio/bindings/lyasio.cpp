@@ -134,7 +134,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 #  if YASIO_VERSION_NUM >= 0x033100
           case YOPT_C_LFBFD_IBTS:
 #  endif
-          case YOPT_S_TIMEOUTS:
           case YOPT_C_LOCAL_PORT:
           case YOPT_C_REMOTE_PORT:
             service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]));
@@ -257,7 +256,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
-  YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
+  YASIO_EXPORT_ENUM(YOPT_S_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_S_DNS_CACHE_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
@@ -437,7 +438,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 #  if YASIO_VERSION_NUM >= 0x033100
               case YOPT_C_LFBFD_IBTS:
 #  endif
-              case YOPT_S_TIMEOUTS:
               case YOPT_C_LOCAL_PORT:
               case YOPT_C_REMOTE_PORT:
                 service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
@@ -574,7 +574,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
-  YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
+  YASIO_EXPORT_ENUM(YOPT_S_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_S_DNS_CACHE_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);

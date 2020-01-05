@@ -665,7 +665,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
 
-  maxfdp_ = 0;
+  this->max_nfds_ = 0;
 
   options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
     return this->__builtin_resolv(eps, host, port);
@@ -718,7 +718,7 @@ void io_service::clear_channels()
   this->channel_ops_.clear();
   for (auto channel : channels_)
   {
-    channel->deadline_timer_.cancel();
+    channel->deadline_timer_.unschedule();
     cleanup_io(channel);
     delete channel;
   }
@@ -762,7 +762,7 @@ void io_service::run()
   long long max_wait_duration = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int retval = do_evpoll(fds_array, max_wait_duration);
+    int retval = do_select(fds_array, max_wait_duration);
     if (this->state_ != io_service::state::RUNNING)
       break;
 
@@ -771,14 +771,14 @@ void io_service::run()
     if (retval == -1)
     {
       int ec = xxsocket::get_last_errno();
-      YASIO_SLOG("do_evpoll failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
+      YASIO_SLOG("do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
         goto _L_end;
       continue; // just continue.
     }
 
     if (retval == 0)
-      YASIO_SLOGV("%s", "do_evpoll is timeout, process_timers()");
+      YASIO_SLOGV("%s", "do_select is timeout, process_timers()");
 
     // Reset the interrupter.
     else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
@@ -1009,8 +1009,8 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
   if ((flags & YEM_POLLERR) != 0)
     FD_SET(fd, &(fds_array_[except_op]));
 
-  if (maxfdp_ < static_cast<int>(fd) + 1)
-    maxfdp_ = static_cast<int>(fd) + 1;
+  if (max_nfds_ < static_cast<int>(fd) + 1)
+    max_nfds_ = static_cast<int>(fd) + 1;
 }
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 {
@@ -1258,7 +1258,8 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     ctx->dns_queries_state_     = YDQS_READY;
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-    YASIO_SLOG_IMPL(current_service.options_, "[index: %d] resolve %s succeed, cost: %g(ms)",
+    YASIO_SLOG_IMPL(current_service.options_,
+                    "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost: %g(ms)",
                     ctx->index_, ctx->remote_host_.c_str(),
                     (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
@@ -1687,13 +1688,16 @@ void io_service::schedule_timer(deadline_timer* timer_ctl, timer_cb_t&& timer_cb
     return;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  if (this->find_timer(timer_ctl) != timer_queue_.end())
-    return;
-
-  this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
-  this->sort_timers();
-  if (timer_ctl == this->timer_queue_.begin()->first)
-    this->interrupt();
+  auto timer_it = this->find_timer(timer_ctl);
+  if (timer_it == timer_queue_.end())
+  {
+    this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
+    this->sort_timers();
+    if (timer_ctl == this->timer_queue_.begin()->first)
+      this->interrupt();
+  }
+  else // always replace timer_cb
+    timer_it->second = std::move(timer_cb);
 }
 
 void io_service::remove_timer(deadline_timer* timer)
@@ -1765,7 +1769,7 @@ void io_service::process_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
+int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
 {
   int retval = 1;
 
@@ -1778,17 +1782,19 @@ int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
                         (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 
 #if defined(YASIO_HAVE_CARES)
-    int maxfd = -1;
+    int nfds = -1;
     if (this->ares_outstanding_work_ > 0 &&
-        (maxfd = ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op])) > 0) {
+        (nfds = ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op])) > 0)
+    {
       ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
-      if(this->maxfdp_ < maxfd) this->maxfdp_ = maxfd;
+      if (this->max_nfds_ < nfds)
+        this->max_nfds_ = nfds;
     }
 #endif
 
     YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
-    retval = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
+    retval = ::select(this->max_nfds_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
     YASIO_SLOGV("socket.select waked up, retval=%d", retval);
   }
 
@@ -1849,14 +1855,14 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->set_last_errno(EINPROGRESS);
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->remote_host_.c_str());
+  YASIO_SLOG("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();
 
 #if defined(YASIO_ENABLE_ARES_PROFILER)
   ctx->ares_start_time_ = highp_clock();
 #endif
 #if !defined(YASIO_HAVE_CARES)
-  std::thread resolv_thread([=] { // 6.563ms
+  std::thread async_resolv_thread([=] { // 6.563ms
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
@@ -1890,7 +1896,7 @@ void io_service::start_resolve(io_channel* ctx)
     */
     this->interrupt();
   });
-  resolv_thread.detach();
+  async_resolv_thread.detach();
 #else
   ares_addrinfo_hints hint; // 8~11.5ms/3ms(hosts)
   memset(&hint, 0x0, sizeof(hint));
@@ -1906,10 +1912,8 @@ void io_service::start_resolve(io_channel* ctx)
     sprintf(sport, "%u", ctx->remote_port_); // It's enough for unsigned short, so use sprintf ok.
     service = sport;
   }
-  ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
-                     io_service::ares_getaddrinfo_cb, ctx);
-  ares_work_started();
-  ctx->deadline_timer_.expires_from_now(std::chrono::seconds(10));
+
+  ctx->deadline_timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
   ctx->deadline_timer_.async_wait([=](bool cancelled) {
     if (!cancelled)
     {
@@ -1917,6 +1921,9 @@ void io_service::start_resolve(io_channel* ctx)
       handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
     }
   });
+  ares_work_started();
+  ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
+                     io_service::ares_getaddrinfo_cb, ctx);
 #endif
 }
 
@@ -1969,13 +1976,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
 {
   switch (opt)
   {
-    case YOPT_S_TIMEOUTS: {
-      options_.dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      options_.connect_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    }
     case YOPT_S_DEFERRED_EVENT:
       options_.deferred_event_ = !!va_arg(ap, int);
       break;
@@ -1990,6 +1990,26 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_PRINT_FN:
       this->options_.print_ = *va_arg(ap, print_fn_t*);
+      break;
+    case YOPT_S_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
+#if defined(YASIO_HAVE_SSL)
+    case YOPT_S_SSL_CACERT:
+      this->options_.capath_ = va_arg(ap, const char*);
+      break;
+#endif
+    case YOPT_S_CONNECT_TIMEOUT:
+      options_.connect_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_S_DNS_CACHE_TIMEOUT:
+      options_.dns_cache_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_S_DNS_QUERIES_TIMEOUT:
+      options_.dns_queries_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
     case YOPT_C_LFBFD_PARAMS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
@@ -2068,14 +2088,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       }
       break;
     }
-    case YOPT_S_NO_NEW_THREAD:
-      this->options_.no_new_thread_ = !!va_arg(ap, int);
-      break;
-#if defined(YASIO_HAVE_SSL)
-    case YOPT_S_SSL_CACERT:
-      this->options_.capath_ = va_arg(ap, const char*);
-      break;
-#endif
     case YOPT_I_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)

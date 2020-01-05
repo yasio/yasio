@@ -1,11 +1,27 @@
 yasio-3.31.0
   
-1. Add Initial Bytes To Strip support for length field based frame decode, use YOPT_C_LFBFD_IBTS
-2. Add SSL client support, use YASIO_HAVE_SSL to enable, YCM_SSL_CLIENT to open a channel with ssl client support
+1. Add Initial Bytes To Strip support for length field based frame decode, use YOPT_C_LFBFD_IBTS.
+2. Add SSL client support, use YASIO_HAVE_SSL to enable, YCM_SSL_CLIENT to open a channel with ssl client support.
+3. Integrate c-ares support, YASIO_HAVE_CARES to enable, make sure your build system already have c-ares.
+4. Refactor timeout options, use YOPT_S_CONNECT_TIMEOUT, YOPT_S_DNS_CACHE_TIMEOUT, YOPT_S_DNS_QUERIES_TIMEOUT to instead YOPT_S_TIMEOUTS.
+5. Optimize schedule_timer behavior, always replace timer_cb when timer exist.
+6. Remove deprecated functions.
+7. Remove tolua support.
+  
+  
+yasio-3.30.6
+  
+1. Make option enums compatible with v3.31.
+2. Simplify io_service state.
+  
+  
+yasio-3.30.5
+  
+1. Fix missing break at set_option for YOPT_C_REMOTE_ENDPOINT.
   
   
 yasio-3.30.4
-
+  
 1. Make normal concurrent queue more safe if SPSC queue is disabled.
 2. Make sure udp recv buf enough at kcp transport do_read.
 3. Fix io_service::write always retur 0.

@@ -21,12 +21,14 @@ The core design is reference from [asio](https://github.com/chriskohlhoff/asio) 
 * support IPv6-only network.  
 * support multi-connections at one thread.  
 * support deadline timer.  
-* processing tcp sticky internal, user do not need to care it.  
+* support unpack tcp packet internal, user do not need to care it.  
 * support lua bindings  
 * support cocos2d-x jsb  
 * support CocosCreator jsb2.0  
 * support Unity3D
 * support multicast
+* support ssl client with openssl
+* support async resolve with c-ares
   
 ## Intergation guides:  
 ### cpp intergation: 

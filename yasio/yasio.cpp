@@ -190,7 +190,7 @@ struct yasio__global_state
   };
 
 public:
-  yasio__global_state() : init_flags_(0)
+  yasio__global_state()
   {
 #if defined(YASIO_HAVE_SSL)
     if (OPENSSL_init_ssl(0, NULL) == 1)
@@ -208,9 +208,10 @@ public:
       ::ares_library_cleanup();
 #endif
   }
-
+#if defined(YASIO_HAVE_SSL) || defined(YASIO_HAVE_CARES)
 private:
   int init_flags_;
+#endif
 };
 } // namespace
 

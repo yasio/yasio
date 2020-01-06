@@ -77,7 +77,8 @@ namespace inet
 {
 // options
 enum
-{
+{ // lgtm [cpp/irregular-enum-init]
+
   // Set with deferred dispatch event, default is: 1
   // params: deferred_event:int(1)
   YOPT_S_DEFERRED_EVENT = 1,

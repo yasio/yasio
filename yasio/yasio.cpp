@@ -1370,9 +1370,9 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
                         long long& max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->wpos_;
-  transport->expected_packet_.insert(
-      transport->expected_packet_.end(), transport->buffer_,
-      transport->buffer_ + (std::min)(bytes_expected, bytes_available));
+  transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
+                                     transport->buffer_ +
+                                         (std::min)(bytes_expected, bytes_available));
 
   // set wpos to bytes of remain buffer
   transport->wpos_ = bytes_available - bytes_expected;

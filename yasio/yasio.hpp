@@ -32,7 +32,6 @@ SOFTWARE.
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
-#include <ctime>
 #include <memory>
 #include <mutex>
 #include <thread>

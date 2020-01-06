@@ -1333,7 +1333,6 @@ bool js_yasio_io_service_set_option(se::State& s)
 #endif
         case YOPT_C_REMOTE_PORT:
         case YOPT_C_LOCAL_PORT:
-        case YOPT_S_TIMEOUTS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_REMOTE_ENDPOINT:
@@ -1490,7 +1489,9 @@ bool jsb_register_yasio(se::Object* obj)
 
   YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
 
-  YASIO_EXPORT_ENUM(YOPT_S_TIMEOUTS);
+  YASIO_EXPORT_ENUM(YOPT_S_CONNECT_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_S_DNS_CACHE_TIMEOUT);
+  YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);

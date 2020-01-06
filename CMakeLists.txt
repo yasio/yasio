@@ -22,6 +22,7 @@ endif ()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 
+option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
@@ -42,12 +43,6 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${THIRDPART_INC}
 )
-
-#~ if(WIN32)
-#~     LINK_DIRECTORIES(
-#~     "${CMAKE_SOURCE_DIR}\\lib"
-#~     )
-#~ endif()
 
 set ( YASIO_CORE
     yasio/xxsocket.hpp
@@ -122,7 +117,7 @@ else ( )
     )
 endif ( )
 
-if(NOT IOS)
+if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)
     add_subdirectory(tests/kcp)
@@ -133,6 +128,7 @@ if(NOT IOS)
     add_subdirectory(examples/ftp_server)
 endif ()
 
-if ( WIN32 )
+if (WIN32 AND YASIO_BUILD_TESTS)
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
 endif ()
+

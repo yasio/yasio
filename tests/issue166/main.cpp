@@ -32,7 +32,7 @@ int main()
       }
     }
   });
-  service.set_option(YOPT_S_TIMEOUTS, 5, 5, -1);
+  service.set_option(YOPT_S_CONNECT_TIMEOUT, 5);
   service.set_option(YOPT_C_LFBFD_PARAMS, 0, 65535, 0, 4, 0);
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // disable event queue
   service.open(0, YCM_TCP_CLIENT);              // open tcp client

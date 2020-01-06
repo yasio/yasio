@@ -68,13 +68,9 @@ namespace inet
 // options
 enum
 {
-  // Set timeouts in seconds
-  // params: dns_cache_timeout:int(600), connect_timeout:int(10)
-  YOPT_S_TIMEOUTS = 1,
-
   // Set with deferred dispatch event, default is: 1
   // params: deferred_event:int(1)
-  YOPT_S_DEFERRED_EVENT,
+  YOPT_S_DEFERRED_EVENT = 1,
 
   // Set custom resolve function, native C++ ONLY
   // params: func:resolv_fn_t*
@@ -100,9 +96,21 @@ enum
   // value:const char*
   YOPT_S_SSL_CACERT,
 
+  // Set connect timeout in seconds
+  // params: connect_timeout:int(10)
+  YOPT_S_CONNECT_TIMEOUT,
+
+  // Set dns cache timeout in seconds
+  // params: dns_cache_timeout : int(600),
+  YOPT_S_DNS_CACHE_TIMEOUT,
+
+  // Set dns queries timeout in seconds, only works when have c-ares
+  // params: dns_queries_timeout : int(10)
+  YOPT_S_DNS_QUERIES_TIMEOUT,
+
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
-  YOPT_C_LFBFD_FN,
+  YOPT_C_LFBFD_FN = 101,
 
   // Sets channel length field based frame decode params
   // params:
@@ -149,7 +157,7 @@ enum
 
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
-  YOPT_I_SOCKOPT,
+  YOPT_I_SOCKOPT = 201,
 };
 
 // channel mask, contains transport type: POSIX, MCAST, KCP, SSL
@@ -655,15 +663,15 @@ private:
 
   YASIO__DECL void open_internal(io_channel*, bool ignore_state = false);
 
-  YASIO__DECL void perform_transports(fd_set* fds_array, long long& max_wait_duration);
-  YASIO__DECL void perform_channels(fd_set* fds_array);
-  YASIO__DECL void perform_timers();
+  YASIO__DECL void process_transports(fd_set* fds_array, long long& max_wait_duration);
+  YASIO__DECL void process_channels(fd_set* fds_array);
+  YASIO__DECL void process_timers();
 
   YASIO__DECL void interrupt();
 
   YASIO__DECL long long get_wait_duration(long long usec);
 
-  YASIO__DECL int do_evpoll(fd_set* fds_array, long long max_wait_duration);
+  YASIO__DECL int do_select(fd_set* fds_array, long long max_wait_duration);
 
   YASIO__DECL void do_nonblocking_connect(io_channel*);
   YASIO__DECL void do_nonblocking_connect_completion(io_channel*, fd_set* fds_array);
@@ -750,8 +758,8 @@ private:
   std::vector<timer_impl_t> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 
-  // socket event set
-  int maxfdp_;
+  // the max nfds for socket.select, must be max_fd + 1
+  int max_nfds_;
   enum
   {
     read_op,
@@ -764,9 +772,8 @@ private:
   // options
   struct __unnamed_options
   {
-    highp_time_t connect_timeout_ = 10LL * MICROSECONDS_PER_SECOND;
-    // Default dns cache time: 10 minutes
-    highp_time_t dns_cache_timeout_ = 600LL * MICROSECONDS_PER_SECOND;
+    highp_time_t connect_timeout_     = 10LL * MICROSECONDS_PER_SECOND;
+    highp_time_t dns_cache_timeout_   = 600LL * MICROSECONDS_PER_SECOND;
 
     bool deferred_event_ = true;
 

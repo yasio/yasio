@@ -122,8 +122,7 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
       service->set_option(opt, cidx, ip.c_str(), port);
       break;
     }
-    case YOPT_C_LFBFD_PARAMS:
-    case YOPT_S_TIMEOUTS: {
+    case YOPT_C_LFBFD_PARAMS: {
       int args[YASIO_MAX_OPTION_ARGC];
       int idx    = 0;
       int limits = opt == YOPT_C_LFBFD_PARAMS ? 5 : 2;
@@ -141,6 +140,11 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
         service->set_option(opt, args[0], args[1]);
       break;
     }
+    case YOPT_S_CONNECT_TIMEOUT:
+    case YOPT_S_DNS_CACHE_TIMEOUT:
+    case YOPT_S_DNS_QUERIES_TIMEOUT:
+      service->set_option(opt, atoi(params));
+      break;
   }
 }
 YASIO_NI_API void yasio_set_option_vp(int opt, ...)

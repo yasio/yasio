@@ -10,7 +10,7 @@ yasio-3.30.5
   
   
 yasio-3.30.4
-
+  
 1. Make normal concurrent queue more safe if SPSC queue is disabled.
 2. Make sure udp recv buf enough at kcp transport do_read.
 3. Fix io_service::write always retur 0.

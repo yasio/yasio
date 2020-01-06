@@ -87,12 +87,13 @@ namespace
 // error code
 enum
 {
-  YERR_OK                 = 0,    // NO ERROR.
-  YERR_INVALID_PACKET     = -500, // Invalid packet.
-  YERR_DPL_ILLEGAL_PDU    = -499, // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED = -498, // Resolve host failed.
-  YERR_NO_AVAIL_ADDR      = -497, // No available address to connect.
-  YERR_LOCAL_SHUTDOWN     = -496, // Local shutdown the connection.
+  YERR_OK                   = 0,    // NO ERROR.
+  YERR_INVALID_PACKET       = -500, // Invalid packet.
+  YERR_DPL_ILLEGAL_PDU      = -499, // Decode pdu length error.
+  YERR_RESOLV_HOST_FAILED   = -498, // Resolve host failed.
+  YERR_NO_AVAIL_ADDR        = -497, // No available address to connect.
+  YERR_LOCAL_SHUTDOWN       = -496, // Local shutdown the connection.
+  YERR_SSL_HANDSHAKE_FAILED = -495, // SSL handshake fail
 };
 
 // event mask
@@ -458,7 +459,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
     : io_transport(ctx, s), kcp_(nullptr)
 {
   this->kcp_ = ::ikcp_create(0, this);
-  ::ikcp_nodelay(this->kcp_, 1, 16 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
+  ::ikcp_nodelay(this->kcp_, 1, 10 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (transport_handle_t)user;
     return t->socket_->send(buf, len);
@@ -594,7 +595,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   FD_ZERO(&fds_array_[write_op]);
   FD_ZERO(&fds_array_[except_op]);
 
-  maxfdp_ = 0;
+  this->max_nfds_ = 0;
 
   options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
     return this->__builtin_resolv(eps, host, port);
@@ -647,7 +648,7 @@ void io_service::clear_channels()
   this->channel_ops_.clear();
   for (auto channel : channels_)
   {
-    channel->deadline_timer_.cancel();
+    channel->deadline_timer_.unschedule();
     cleanup_io(channel);
     delete channel;
   }
@@ -683,46 +684,46 @@ void io_service::run()
   long long max_wait_duration = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    int nfds = do_evpoll(fds_array, max_wait_duration);
+    int retval = do_select(fds_array, max_wait_duration);
     if (this->state_ != io_service::state::RUNNING)
       break;
 
     max_wait_duration = YASIO_MAX_WAIT_DURATION;
 
-    if (nfds == -1)
+    if (retval == -1)
     {
       int ec = xxsocket::get_last_errno();
-      YASIO_SLOG("do_evpoll failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
+      YASIO_SLOG("do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
         goto _L_end;
       continue; // just continue.
     }
 
-    if (nfds == 0)
-      YASIO_SLOGV("%s", "do_evpoll is timeout, do perform_timeout_timers()");
+    if (retval == 0)
+      YASIO_SLOGV("%s", "do_select is timeout, process_timers()");
 
     // Reset the interrupter.
-    else if (nfds > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
+    else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
       interrupter_.reset();
-      --nfds;
+      --retval;
     }
 
-    // perform active transports
-    perform_transports(fds_array, max_wait_duration);
+    // process active transports
+    process_transports(fds_array, max_wait_duration);
 
-    // perform active channels
-    perform_channels(fds_array);
+    // process active channels
+    process_channels(fds_array);
 
-    // perform timeout timers
-    perform_timers();
+    // process timeout timers
+    process_timers();
   }
 
 _L_end:
   (void)0; // ONLY for xcode compiler happy.
 }
 
-void io_service::perform_transports(fd_set* fds_array, long long& max_wait_duration)
+void io_service::process_transports(fd_set* fds_array, long long& max_wait_duration)
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
@@ -762,7 +763,7 @@ void io_service::perform_transports(fd_set* fds_array, long long& max_wait_durat
 #endif
 }
 
-void io_service::perform_channels(fd_set* fds_array)
+void io_service::process_channels(fd_set* fds_array)
 {
   if (!this->channel_ops_.empty())
   {
@@ -918,8 +919,8 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
   if ((flags & YEM_POLLERR) != 0)
     FD_SET(fd, &(fds_array_[except_op]));
 
-  if (maxfdp_ < static_cast<int>(fd) + 1)
-    maxfdp_ = static_cast<int>(fd) + 1;
+  if (max_nfds_ < static_cast<int>(fd) + 1)
+    max_nfds_ = static_cast<int>(fd) + 1;
 }
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 {
@@ -1360,7 +1361,6 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     }
 
     ret = true;
-
   } while (false);
 
   return ret;
@@ -1370,28 +1370,27 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
                         long long& max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->wpos_;
-  transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_,
-                                     transport->buffer_ +
-                                         (std::min)(bytes_expected, bytes_available));
+  transport->expected_packet_.insert(
+      transport->expected_packet_.end(), transport->buffer_,
+      transport->buffer_ + (std::min)(bytes_expected, bytes_available));
 
-  transport->wpos_ = bytes_available - bytes_expected; // set offset to bytes of remain buffer
+  // set wpos to bytes of remain buffer
+  transport->wpos_ = bytes_available - bytes_expected;
   if (transport->wpos_ >= 0)
-  {                           // pdu received properly
-    if (transport->wpos_ > 0) // move remain data to head of buffer and hold offset.
-    {
+  { /* pdu received properly */
+    if (transport->wpos_ > 0)
+    { /* move remain data to head of buffer and hold wpos. */
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->wpos_);
-      // not all data consumed, so add events for this context
       max_wait_duration = 0;
     }
-    // move properly pdu to ready queue, the other thread who care about will retrieve
-    // it.
+    // move properly pdu to ready queue, the other thread who care about will retrieve it.
     YASIO_SLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
         new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
   }
-  else /* all buffer consumed, set offset to ZERO, pdu incomplete, continue recv remain data. */
+  else /* all buffer consumed, set wpos to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;
 }
 
@@ -1413,13 +1412,16 @@ void io_service::schedule_timer(deadline_timer* timer_ctl, timer_cb_t&& timer_cb
     return;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  if (this->find_timer(timer_ctl) != timer_queue_.end())
-    return;
-
-  this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
-  this->sort_timers();
-  if (timer_ctl == this->timer_queue_.begin()->first)
-    this->interrupt();
+  auto timer_it = this->find_timer(timer_ctl);
+  if (timer_it == timer_queue_.end())
+  {
+    this->timer_queue_.emplace_back(timer_ctl, std::move(timer_cb));
+    this->sort_timers();
+    if (timer_ctl == this->timer_queue_.begin()->first)
+      this->interrupt();
+  }
+  else // always replace timer_cb
+    timer_it->second = std::move(timer_cb);
 }
 
 void io_service::remove_timer(deadline_timer* timer)
@@ -1469,7 +1471,7 @@ bool io_service::close_internal(io_channel* ctx)
   return false;
 }
 
-void io_service::perform_timers()
+void io_service::process_timers()
 {
   if (this->timer_queue_.empty())
     return;
@@ -1491,32 +1493,24 @@ void io_service::perform_timers()
   }
 }
 
-int io_service::do_evpoll(fd_set* fdsa, long long max_wait_duration)
+int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
 {
-  /*
-   @Optimize, swap nfds, make sure do_read & do_write event chould
-   be perform when no need to call socket.select However, the
-   connection exception will detected through do_read or do_write,
-   but it's ok.
-   */
-  int nfds = 1;
+  int retval = 1;
 
   ::memcpy(fdsa, this->fds_array_, sizeof(this->fds_array_));
 
   auto wait_duration = get_wait_duration(max_wait_duration);
   if (wait_duration > 0)
   {
-    timeval timeout = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
-                       (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
+                        (decltype(timeval::tv_usec))(wait_duration % 1000000)};
     YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
-                timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-    nfds = ::select(this->maxfdp_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &timeout);
-    YASIO_SLOGV("socket.select waked up, retval=%d", nfds);
+                waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
+    retval = ::select(this->max_nfds_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
+    YASIO_SLOGV("socket.select waked up, retval=%d", retval);
   }
-  else
-    nfds = static_cast<int>(channels_.size()) << 1;
 
-  return nfds;
+  return retval;
 }
 
 long long io_service::get_wait_duration(long long usec)
@@ -1573,10 +1567,9 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->set_last_errno(EINPROGRESS);
   YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  YASIO_SLOG("[index: %d] resolving domain name: %s", ctx->index_, ctx->remote_host_.c_str());
-
+  YASIO_SLOG("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();
-  std::thread resolv_thread([=] { // 6.563ms
+  std::thread async_resolv_thread([=] {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
 
@@ -1605,7 +1598,7 @@ void io_service::start_resolve(io_channel* ctx)
     */
     this->interrupt();
   });
-  resolv_thread.detach();
+  async_resolv_thread.detach();
 }
 
 int io_service::__builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
@@ -1655,13 +1648,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
 {
   switch (opt)
   {
-    case YOPT_S_TIMEOUTS: {
-      options_.dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      options_.connect_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
-      break;
-    }
     case YOPT_S_DEFERRED_EVENT:
       options_.deferred_event_ = !!va_arg(ap, int);
       break;
@@ -1676,6 +1662,17 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_PRINT_FN:
       this->options_.print_ = *va_arg(ap, print_fn_t*);
+      break;
+    case YOPT_S_NO_NEW_THREAD:
+      this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
+    case YOPT_S_CONNECT_TIMEOUT:
+      options_.connect_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+      break;
+    case YOPT_S_DNS_CACHE_TIMEOUT:
+      options_.dns_cache_timeout_ =
+          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
       break;
     case YOPT_C_LFBFD_PARAMS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
@@ -1748,9 +1745,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       }
       break;
     }
-    case YOPT_S_NO_NEW_THREAD:
-      this->options_.no_new_thread_ = !!va_arg(ap, int);
-      break;
     case YOPT_I_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_)

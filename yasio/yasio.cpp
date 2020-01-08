@@ -197,8 +197,12 @@ public:
       init_flags_ |= INITF_SSL;
 #endif
 #if defined(YASIO_HAVE_CARES)
-    if (::ares_library_init(ARES_LIB_INIT_ALL) == 0)
+    int ares_status = ::ares_library_init(ARES_LIB_INIT_ALL);
+    if (ares_status == 0)
       init_flags_ |= INITF_CARES;
+    else
+      YASIO_LOG("init c-ares library failed, status=%d, detail:%s", ares_status,
+                ::ares_strerror(ares_status));
 #endif
   }
   ~yasio__global_state()
@@ -1298,7 +1302,22 @@ void io_service::process_ares_requests(fd_set* fds_array)
 void io_service::init_ares_channel()
 {
   auto status = ::ares_init(&ares_);
-  if (::ares_init(&ares_) != ARES_SUCCESS)
+  if (::ares_init(&ares_) == ARES_SUCCESS)
+  {
+    YASIO_LOG("init c-ares channel succeed");
+
+    // print dns servers
+    ares_addr_node* name_servers = nullptr;
+    ::ares_get_servers(ares_, &name_servers);
+    std::string dns_info = "the c-ares name servers are below:";
+    for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
+    {
+      dns_info.append("c-ares dns.ip:%s");
+      dns_info.append(yasio::inet::endpoint::ip(name_server->family, &name_server->addr));
+    }
+    YASIO_LOG("%s", dns_info.c_str());
+  }
+  else
     YASIO_LOG("init c-ares channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
 }
 void io_service::cleanup_ares_channel()

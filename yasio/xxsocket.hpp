@@ -460,19 +460,14 @@ YASIO__NS_INLINE namespace ip
     }
     std::string ip() const
     {
+      return ip(sa_.sa_family,
+                sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr : (void*)&in6_.sin6_addr);
+    }
+    static std::string ip(int af, const void* src)
+    {
       std::string ipstring(64, '\0');
 
-      size_t n = 0;
-
-      switch (sa_.sa_family)
-      {
-        case AF_INET:
-          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &ipstring.front(), 64));
-          break;
-        case AF_INET6:
-          n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &ipstring.front(), 64));
-          break;
-      }
+      size_t n = strlen(compat::inet_ntop(af, src, &ipstring.front(), 64));
       ipstring.resize(n);
 
       return ipstring;

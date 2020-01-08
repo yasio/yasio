@@ -1313,8 +1313,27 @@ void io_service::init_ares_channel()
     {
       std::stringstream dns_info;
       dns_info << "the c-ares name servers are:";
+      int flags = 0;
       for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
+      {
+        switch (name_server->family)
+        {
+          case AF_INET:
+            if (!IN4_IS_ADDR_LOOPBACK((in_addr*)&name_server->addr) &&
+                !IN4_IS_ADDR_LINKLOCAL((in_addr*)&name_server->addr))
+              flags |= ipsv_ipv4;
+            break;
+          case AF_INET6:
+            if (IN6_IS_ADDR_GLOBAL((in_addr6*)&name_server->addr))
+            {
+              flags |= ipsv_ipv6;
+            }
+            break;
+        }
         dns_info << yasio::inet::endpoint::ip(name_server->family, &name_server->addr) << "; ";
+      }
+      if (flags == 0) // if no valid name server, set to 8.8.8.8 as workaround
+        ::ares_set_servers_csv(ares_, "8.8.8.8");
       YASIO_LOG("%s", dns_info.str().c_str());
       ::ares_free_data(name_servers);
     }

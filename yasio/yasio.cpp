@@ -34,6 +34,7 @@ SOFTWARE.
 #  include "yasio/yasio.hpp"
 #endif
 #include <limits>
+#include <sstream>
 #if defined(_WIN32)
 #  include <io.h>
 #  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR | O_BINARY, S_IWRITE | S_IREAD
@@ -1306,17 +1307,15 @@ void io_service::init_ares_channel()
   {
     YASIO_LOG("init c-ares channel succeed");
 
-    // print dns servers
+    // list all dns servers for resov problem diagnosis
     ares_addr_node* name_servers = nullptr;
     if (::ares_get_servers(ares_, &name_servers) == ARES_SUCCESS)
     {
-      std::string dns_info = "the c-ares name servers are below:";
+      std::stringstream dns_info;
+      dns_info << "the c-ares name servers are:";
       for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
-      {
-        dns_info.append("c-ares dns.ip:%s");
-        dns_info.append(yasio::inet::endpoint::ip(name_server->family, &name_server->addr));
-      }
-      YASIO_LOG("%s", dns_info.c_str());
+        dns_info << yasio::inet::endpoint::ip(name_server->family, &name_server->addr) << "; ";
+      YASIO_LOG("%s", dns_info.str().c_str());
       ::ares_free_data(name_servers);
     }
   }

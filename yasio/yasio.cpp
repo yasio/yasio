@@ -1324,7 +1324,7 @@ void io_service::init_ares_channel()
               flags |= ipsv_ipv4;
             break;
           case AF_INET6:
-            if (IN6_IS_ADDR_GLOBAL((in_addr6*)&name_server->addr))
+            if (IN6_IS_ADDR_GLOBAL((in6_addr*)&name_server->addr))
             {
               flags |= ipsv_ipv6;
             }

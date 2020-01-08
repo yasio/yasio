@@ -1308,14 +1308,17 @@ void io_service::init_ares_channel()
 
     // print dns servers
     ares_addr_node* name_servers = nullptr;
-    ::ares_get_servers(ares_, &name_servers);
-    std::string dns_info = "the c-ares name servers are below:";
-    for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
+    if (::ares_get_servers(ares_, &name_servers) == ARES_SUCCESS)
     {
-      dns_info.append("c-ares dns.ip:%s");
-      dns_info.append(yasio::inet::endpoint::ip(name_server->family, &name_server->addr));
+      std::string dns_info = "the c-ares name servers are below:";
+      for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
+      {
+        dns_info.append("c-ares dns.ip:%s");
+        dns_info.append(yasio::inet::endpoint::ip(name_server->family, &name_server->addr));
+      }
+      YASIO_LOG("%s", dns_info.c_str());
+      ::ares_free_data(name_servers);
     }
-    YASIO_LOG("%s", dns_info.c_str());
   }
   else
     YASIO_LOG("init c-ares channel failed, status=%d, detail:%s", status, ::ares_strerror(status));

@@ -875,8 +875,6 @@ void io_service::process_channels(fd_set* fds_array)
               do_nonblocking_connect(ctx);
               break;
             case YDQS_FAILED:
-              YASIO_SLOG("[index: %d] getaddrinfo failed, ec=%d, detail:%s", ctx->index_,
-                         ctx->error_, xxsocket::gai_strerror(ctx->error_));
               handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
               break;
             default:; // YDQS_INPRROGRESS
@@ -1261,8 +1259,8 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
     YASIO_SLOG_IMPL(current_service.options_,
-                    "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost: %g(ms)",
-                    ctx->index_, ctx->remote_host_.c_str(),
+                    "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)", ctx->index_,
+                    ctx->remote_host_.c_str(),
                     (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
   }
@@ -1271,8 +1269,8 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     ctx->set_last_errno(YERR_RESOLV_HOST_FAILED);
     YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     YASIO_SLOG_IMPL(current_service.options_,
-                    "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status:%d", ctx->index_,
-                    ctx->remote_host_.c_str(), status);
+                    "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
+                    ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
   }
 
   current_service.interrupt();
@@ -1299,8 +1297,9 @@ void io_service::process_ares_requests(fd_set* fds_array)
 }
 void io_service::init_ares_channel()
 {
+  auto status = ::ares_init(&ares_);
   if (::ares_init(&ares_) != ARES_SUCCESS)
-    YASIO_LOG("init c-ares channel failed!");
+    YASIO_LOG("init c-ares channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
 }
 void io_service::cleanup_ares_channel()
 {
@@ -1881,7 +1880,8 @@ void io_service::start_resolve(io_channel* ctx)
     }
     else
     {
-      ctx->set_last_errno(error);
+      YASIO_SLOG("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_,
+                 ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
       YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     }
     /*

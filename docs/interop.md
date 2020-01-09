@@ -1,6 +1,6 @@
 # yasio interop
 
-## yasio NI
+## yasio NI(Native Interface) API
 ```c
 YASIO_NI_API void yasio_start(int channel_count,
                               void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,

@@ -489,7 +489,7 @@ static int getipsv_internal(void)
       memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
 
       auto straddr = ep.to_string();
-      YASIO_LOG("getipsv_internal: endpoint=%s", straddr.c_str());
+      YASIO_LOGV("getipsv_internal: endpoint=%s", straddr.c_str());
       ++count;
       switch (ep.af())
       {
@@ -499,9 +499,7 @@ static int getipsv_internal(void)
           break;
         case AF_INET6:
           if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-          {
             flags |= ipsv_ipv6;
-          }
           break;
       }
       if (flags == ipsv_dual_stack)
@@ -544,7 +542,7 @@ static int getipsv_internal(void)
     if (!straddr.empty())
     {
       ++count;
-      YASIO_LOG("getipsv_internal: endpoint=%s", straddr.c_str());
+      YASIO_LOGV("getipsv_internal: endpoint=%s", straddr.c_str());
     }
 
     switch (ep.af())
@@ -555,9 +553,7 @@ static int getipsv_internal(void)
         break;
       case AF_INET6:
         if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-        {
           flags |= ipsv_ipv6;
-        }
         break;
     }
     if (flags == ipsv_dual_stack)
@@ -580,7 +576,7 @@ int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
 
   int error = -1;
 
-  xxsocket::resolve_i(
+  xxsocket::resolv_i(
       [&](const endpoint& ep) {
         switch (ep.af())
         {
@@ -591,16 +587,14 @@ int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
             }
             else if (flags & ipsv_ipv6)
             {
-              xxsocket::resolve_i(
+              xxsocket::resolv_i(
                   [&](const endpoint& ep6) { return 0 == (error = pconnect(ep6, local_port)); },
                   hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
           case AF_INET6:
             if (flags & ipsv_ipv6)
-            {
               error = pconnect(ep, local_port);
-            }
             break;
         }
 
@@ -618,18 +612,16 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
 
   int error = -1;
 
-  xxsocket::resolve_i(
+  xxsocket::resolv_i(
       [&](const endpoint& ep) {
         switch (ep.af())
         {
           case AF_INET:
             if (flags & ipsv_ipv4)
-            {
               error = pconnect_n(ep, wtimeout, local_port);
-            }
             else if (flags & ipsv_ipv6)
             {
-              xxsocket::resolve_i(
+              xxsocket::resolv_i(
                   [&](const endpoint& ep6) {
                     return 0 == (error = pconnect_n(ep6, wtimeout, local_port));
                   },
@@ -638,15 +630,13 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
             break;
           case AF_INET6:
             if (flags & ipsv_ipv6)
-            {
               error = pconnect_n(ep, wtimeout, local_port);
-            }
             break;
         }
 
         return error == 0;
       },
-      hostname, port, AF_UNSPEC, AI_ALL);
+      hostname, port, AF_UNSPEC, AI_ALL, SOCK_STREAM);
 
   return error;
 }
@@ -654,8 +644,8 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
 int xxsocket::pconnect(const char* hostname, u_short port, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolve_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); },
-                      hostname, port);
+  xxsocket::resolv_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); },
+                     hostname, port, SOCK_STREAM);
   return error;
 }
 
@@ -663,21 +653,21 @@ int xxsocket::pconnect_n(const char* hostname, u_short port,
                          const std::chrono::microseconds& wtimeout, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolve_i(
+  xxsocket::resolv_i(
       [&](const endpoint& ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
-      hostname, port);
+      hostname, port, SOCK_STREAM);
   return error;
 }
 
 int xxsocket::pconnect_n(const char* hostname, u_short port, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolve_i(
+  xxsocket::resolv_i(
       [&](const endpoint& ep) {
         (error = pconnect_n(ep, local_port));
         return true;
       },
-      hostname, port);
+      hostname, port, SOCK_STREAM);
   return error;
 }
 
@@ -720,9 +710,7 @@ int xxsocket::pserv(const char* addr, u_short port)
   endpoint local(addr, port);
 
   if (!this->reopen(local.af()))
-  {
     return -1;
-  }
 
   set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
@@ -733,58 +721,59 @@ int xxsocket::pserv(const char* addr, u_short port)
   return this->listen();
 }
 
-int xxsocket::resolve(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port)
+int xxsocket::resolv(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
+                     int socktype)
 {
-  return resolve_i(
+  return resolv_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
       },
-      hostname, port, AF_UNSPEC, AI_ALL);
+      hostname, port, AF_UNSPEC, AI_ALL, socktype);
 }
 
-int xxsocket::resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
-                         unsigned short port)
+int xxsocket::resolv_v4(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
+                        int socktype)
 {
-  return resolve_i(
+  return resolv_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
       },
-      hostname, port, AF_INET, 0);
+      hostname, port, AF_INET, 0, socktype);
 }
 
-int xxsocket::resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                         unsigned short port)
+int xxsocket::resolv_v6(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
+                        int socktype)
 {
-  return resolve_i(
+  return resolv_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
       },
-      hostname, port, AF_INET6, 0);
+      hostname, port, AF_INET6, 0, socktype);
 }
 
-int xxsocket::resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
-                            unsigned short port)
+int xxsocket::resolv_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
+                           unsigned short port, int socktype)
 {
-  return xxsocket::resolve_i(
+  return xxsocket::resolv_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
       },
-      hostname, port, AF_INET6, AI_V4MAPPED);
+      hostname, port, AF_INET6, AI_V4MAPPED, socktype);
 }
 
-int xxsocket::force_resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                               unsigned short port)
+int xxsocket::force_resolv_v6(std::vector<endpoint>& endpoints, const char* hostname,
+                              unsigned short port, int socktype)
 {
-  return resolve_i(
+  return resolv_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
       },
-      hostname, port, AF_INET6, AI_ALL | AI_V4MAPPED);
+      hostname, port, AF_INET6, AI_ALL | AI_V4MAPPED, socktype);
 }
 
 xxsocket::xxsocket(void) : fd(invalid_socket) {}
@@ -796,9 +785,7 @@ xxsocket::xxsocket(xxsocket&& right) : fd(invalid_socket) { swap(right); }
 xxsocket& xxsocket::operator=(socket_native_type handle)
 {
   if (!this->is_open())
-  {
     this->fd = handle;
-  }
   return *this;
 }
 
@@ -820,9 +807,7 @@ xxsocket& xxsocket::swap(xxsocket& rhs)
 bool xxsocket::open(int af, int type, int protocol)
 {
   if (invalid_socket == this->fd)
-  {
     this->fd = ::socket(af, type, protocol);
-  }
   return is_open();
 }
 
@@ -1238,64 +1223,6 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, long long timeout
   return bytes_transferred;
 }
 
-bool xxsocket::read_until(std::string& buffer, const char delim)
-{
-  return read_until(buffer, &delim, sizeof(delim));
-}
-
-bool xxsocket::read_until(std::string& buffer, const std::string& delims)
-{
-  return read_until(buffer, delims.c_str(), delims.size());
-}
-
-bool xxsocket::read_until(std::string& buffer, const char* delims, size_t len)
-{
-  if (len == static_cast<size_t>(-1))
-    len = strlen(delims);
-
-  bool ok = false;
-  char buf[128];
-  int retry = 3; // retry three times
-  int n     = 0;
-  for (; retry > 0;)
-  {
-    memset(buf, 0, sizeof(buf));
-    n = this->recv(buf, sizeof(buf));
-    if (n <= 0)
-    {
-      auto error = xxsocket::get_last_errno();
-      if (n == -1 &&
-          (error == EAGAIN || error == EINTR || error == EWOULDBLOCK || error == EINPROGRESS))
-      {
-        timeval tv = {3, 500000};
-        int rtn    = handle_read_ready(&tv);
-
-        if (rtn != -1)
-        { // read ready
-          continue;
-        }
-      }
-
-      // read not ready, retry.
-      --retry;
-      continue;
-    }
-
-    buffer.append(buf, n);
-    if (buffer.size() >= len)
-    {
-      auto eof = &buffer[buffer.size() - len];
-      if (0 == memcmp(eof, delims, len))
-      {
-        ok = true;
-        break;
-      }
-    }
-  }
-
-  return ok;
-}
-
 int xxsocket::send(const void* buf, int len, int flags) const
 {
   return static_cast<int>(::send(this->fd, (const char*)buf, len, flags));
@@ -1349,9 +1276,8 @@ int xxsocket::handle_connect_ready(socket_native_type s, timeval* timeo)
   FD_SET(s, &fds_wr);
 
   if (::select(0, nullptr, &fds_wr, nullptr, timeo) > 0 && FD_ISSET(s, &fds_wr))
-  { // connect successfully
     return 0;
-  }
+
   return -1;
 }
 

@@ -35,9 +35,9 @@ SOFTWARE.
 // #define YASIO_HEADER_ONLY 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_VERBOS_LOG to enable verbos log
+** Uncomment or add compiler flag -DYASIO_VERBOSE_LOG to enable verbose log
 */
-// #define YASIO_VERBOS_LOG 1
+// #define YASIO_VERBOSE_LOG 1
 
 /*
 ** Uncomment or add compiler flag -DYASIO_DISABLE_SPSC_QUEUE to disable SPSC queue in io_service
@@ -106,7 +106,7 @@ SOFTWARE.
 #  define YASIO_LOG(format, ...) printf(("%s" format "\n"), "[yasio]", ##__VA_ARGS__)
 #endif
 
-#if !defined(YASIO_VERBOS_LOG)
+#if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_LOGV(fmt, ...) (void)0
 #else
 #  define YASIO_LOGV YASIO_LOG

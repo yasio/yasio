@@ -1,3 +1,11 @@
+yasio-3.31.2
+  
+1. Optimize singleton implementation, see: https://github.com/simdsoft/yasio/issues/200
+2. Fix typo, YASIO_VERBOS_LOG to YASIO_VERBOSE_LOG.
+3. Explicit set socktype for ```getaddrinfo```, see: https://github.com/simdsoft/yasio/issues/201
+4. Improve xxsocket send_n/recv_n implementation and behavior, see: https://github.com/simdsoft/yasio/issues/202
+  
+  
 yasio-3.31.1
   
 1. Make c-ares works well on android 8 or later.

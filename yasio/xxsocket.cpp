@@ -576,7 +576,7 @@ int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
 
   int error = -1;
 
-  xxsocket::resolv_i(
+  xxsocket::resolve_i(
       [&](const endpoint& ep) {
         switch (ep.af())
         {
@@ -587,7 +587,7 @@ int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
             }
             else if (flags & ipsv_ipv6)
             {
-              xxsocket::resolv_i(
+              xxsocket::resolve_i(
                   [&](const endpoint& ep6) { return 0 == (error = pconnect(ep6, local_port)); },
                   hostname, port, AF_INET6, AI_V4MAPPED);
             }
@@ -612,7 +612,7 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
 
   int error = -1;
 
-  xxsocket::resolv_i(
+  xxsocket::resolve_i(
       [&](const endpoint& ep) {
         switch (ep.af())
         {
@@ -621,7 +621,7 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
               error = pconnect_n(ep, wtimeout, local_port);
             else if (flags & ipsv_ipv6)
             {
-              xxsocket::resolv_i(
+              xxsocket::resolve_i(
                   [&](const endpoint& ep6) {
                     return 0 == (error = pconnect_n(ep6, wtimeout, local_port));
                   },
@@ -644,8 +644,8 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
 int xxsocket::pconnect(const char* hostname, u_short port, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolv_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); },
-                     hostname, port);
+  xxsocket::resolve_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); },
+                      hostname, port);
   return error;
 }
 
@@ -653,7 +653,7 @@ int xxsocket::pconnect_n(const char* hostname, u_short port,
                          const std::chrono::microseconds& wtimeout, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolv_i(
+  xxsocket::resolve_i(
       [&](const endpoint& ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
       hostname, port);
   return error;
@@ -662,7 +662,7 @@ int xxsocket::pconnect_n(const char* hostname, u_short port,
 int xxsocket::pconnect_n(const char* hostname, u_short port, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolv_i(
+  xxsocket::resolve_i(
       [&](const endpoint& ep) {
         (error = pconnect_n(ep, local_port));
         return true;
@@ -721,10 +721,10 @@ int xxsocket::pserv(const char* addr, u_short port)
   return this->listen();
 }
 
-int xxsocket::resolv(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
-                     int socktype)
+int xxsocket::resolve(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
+                      int socktype)
 {
-  return resolv_i(
+  return resolve_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
@@ -732,10 +732,10 @@ int xxsocket::resolv(std::vector<endpoint>& endpoints, const char* hostname, uns
       hostname, port, AF_UNSPEC, AI_ALL, socktype);
 }
 
-int xxsocket::resolv_v4(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
-                        int socktype)
+int xxsocket::resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
+                         unsigned short port, int socktype)
 {
-  return resolv_i(
+  return resolve_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
@@ -743,10 +743,10 @@ int xxsocket::resolv_v4(std::vector<endpoint>& endpoints, const char* hostname, 
       hostname, port, AF_INET, 0, socktype);
 }
 
-int xxsocket::resolv_v6(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
-                        int socktype)
+int xxsocket::resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
+                         unsigned short port, int socktype)
 {
-  return resolv_i(
+  return resolve_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
@@ -754,10 +754,10 @@ int xxsocket::resolv_v6(std::vector<endpoint>& endpoints, const char* hostname, 
       hostname, port, AF_INET6, 0, socktype);
 }
 
-int xxsocket::resolv_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
-                           unsigned short port, int socktype)
+int xxsocket::resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
+                            unsigned short port, int socktype)
 {
-  return xxsocket::resolv_i(
+  return xxsocket::resolve_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;
@@ -765,10 +765,10 @@ int xxsocket::resolv_v4to6(std::vector<endpoint>& endpoints, const char* hostnam
       hostname, port, AF_INET6, AI_V4MAPPED, socktype);
 }
 
-int xxsocket::force_resolv_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                              unsigned short port, int socktype)
+int xxsocket::resolve_tov6(std::vector<endpoint>& endpoints, const char* hostname,
+                           unsigned short port, int socktype)
 {
-  return resolv_i(
+  return resolve_i(
       [&](const endpoint& ep) {
         endpoints.push_back(ep);
         return false;

@@ -498,7 +498,7 @@ int io_transport_mcast::do_read(int& error)
     {
       // Now the 'peer' is a real host address
       // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
-      if (0 == socket_->connect_n(ctx_->remote_eps_[YASIO_MCAST_EPI]))
+      if (0 == socket_->connect(ctx_->remote_eps_[YASIO_MCAST_EPI]))
       {
         ctx_->flags_ &= ~YCF_MCAST_HANDSHAKING;
         ctx_->leave_multicast_group();

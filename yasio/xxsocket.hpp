@@ -100,6 +100,10 @@ typedef int socket_native_type;
 #endif
 #include <fcntl.h> // common platform header
 
+#if !defined(MICROSECONDS_PER_SECOND)
+#  define MICROSECONDS_PER_SECOND 1000000LL
+#endif
+
 #ifndef SO_REUSEPORT
 #  define SO_REUSEPORT SO_REUSEADDR
 #endif
@@ -663,6 +667,15 @@ public:
   YASIO__DECL int set_nonblocking(bool nonblocking) const;
   YASIO__DECL static int set_nonblocking(socket_native_type s, bool nonblocking);
 
+  /* @brief: Test whether the socket has nonblocking flag
+  ** @params:
+  **
+  ** @returns: [1] yes. [0] no
+  ** @pitfall: for wsock2, will return [-1] when it's a unconnected SOCK_STREAM
+  */
+  YASIO__DECL int test_nonblocking() const;
+  YASIO__DECL static int test_nonblocking(socket_native_type s);
+
   /* @brief: Associates a local address with this socket
   ** @params:
   **        addr: four point address, if set "0.0.0.0" ipv4, "::" ipv6, the socket will listen at
@@ -751,27 +764,27 @@ public:
    **         If no error occurs, send returns the total number of bytes sent,
    **         Oterwise, If retval <=0, mean error occured, and should close socket.
    */
-  YASIO__DECL int send_n(const void* buf, int len, timeval* timeout, int flags = 0);
   YASIO__DECL int send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout,
                          int flags = 0);
-  YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len, timeval* timeout,
-                                int flags = 0);
+  YASIO__DECL int send_n(const void* buf, int len, long long timeout_usec, int flags = 0);
+  YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len,
+                                long long timeout_usec, int flags = 0);
 
   YASIO__DECL bool read_until(std::string& buffer, const char delim);
   YASIO__DECL bool read_until(std::string& buffer, const std::string& delims);
   YASIO__DECL bool read_until(std::string& buffer, const char* delims, size_t len);
 
   /* @brief: nonblock recv
-  ** @params: omit
-  **
+  ** @params:
+  **       The timeout is in microseconds
   ** @returns:
   **         If no error occurs, send returns the total number of bytes recvived,
   **         Oterwise, If retval <=0, mean error occured, and should close socket.
   */
   YASIO__DECL int recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout,
                          int flags = 0) const;
-  YASIO__DECL int recv_n(void* buf, int len, timeval* timeout, int flags = 0) const;
-  YASIO__DECL static int recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
+  YASIO__DECL int recv_n(void* buf, int len, long long timeout_usec, int flags = 0) const;
+  YASIO__DECL static int recv_n(socket_native_type s, void* buf, int len, long long timeout_usec,
                                 int flags = 0);
 
   /* @brief: Sends data on this connected socket

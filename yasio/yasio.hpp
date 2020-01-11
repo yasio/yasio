@@ -52,10 +52,6 @@ SOFTWARE.
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
-#if !defined(MICROSECONDS_PER_SECOND)
-#  define MICROSECONDS_PER_SECOND 1000000LL
-#endif
-
 #if defined(YASIO_HAVE_KCP)
 typedef struct IKCPCB ikcpcb;
 #endif

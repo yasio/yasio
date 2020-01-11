@@ -36,6 +36,8 @@ SOFTWARE.
 #  include "yasio/xxsocket.hpp"
 #endif
 
+#include "yasio/detail/utils.hpp"
+
 #if !defined(_WIN32)
 #  include "yasio/detail/ifaddrs.hpp"
 #endif
@@ -45,7 +47,7 @@ SOFTWARE.
 #  define TCP_KEEPIDLE TCP_KEEPALIVE
 #endif
 
-#define TIME_GRANULARITY 1000000
+#define MICROSECONDS_PER_SECOND 1000000
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -920,8 +922,32 @@ int xxsocket::set_nonblocking(bool nonblocking) const
 
 int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
 {
+#if defined(_WIN32)
   u_long argp = nonblocking;
   return ::ioctlsocket(s, FIONBIO, &argp);
+#else
+  int flags = ::fcntl(s, F_GETFL, 0);
+  ::fcntl(s, F_SETFL, nonblocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK));
+#endif
+}
+
+int xxsocket::test_nonblocking() const { return xxsocket::test_nonblocking(this->fd); }
+int xxsocket::test_nonblocking(socket_native_type s)
+{
+#if defined(_WIN32)
+  int r = 0;
+  unsigned char b[1];
+  r = xxsocket::recv(s, b, 0, 0);
+  if (r == 0)
+    return 1;
+  else if (r == -1 && GetLastError() == WSAEWOULDBLOCK)
+    return 0;
+  return -1; /* In  case it is a connection socket (TCP) and it is not in connected state you will
+                get here 10060 */
+#else
+  int flags = ::fcntl(s, F_GETFL, 0);
+  return flags & O_NONBLOCK;
+#endif
 }
 
 int xxsocket::bind(const char* addr, unsigned short port) const
@@ -986,15 +1012,17 @@ int xxsocket::connect(socket_native_type s, const endpoint& ep)
 
 int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
 {
-  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
-                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
+  timeval timeout = {
+      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / MICROSECONDS_PER_SECOND),
+      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % MICROSECONDS_PER_SECOND)};
   return connect_n(addr, port, &timeout);
 }
 
 int xxsocket::connect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
-  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
-                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
+  timeval timeout = {
+      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / MICROSECONDS_PER_SECOND),
+      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % MICROSECONDS_PER_SECOND)};
   return connect_n(ep, &timeout);
 }
 
@@ -1022,12 +1050,9 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep, timeval* timeo
 {
   fd_set rset, wset;
   int n, error = 0;
-#ifdef _WIN32
+
   set_nonblocking(s, true);
-#else
-  int flags = ::fcntl(s, F_GETFL, 0);
-  ::fcntl(s, F_SETFL, flags | O_NONBLOCK);
-#endif
+
   if ((n = xxsocket::connect(s, ep)) < 0)
   {
     error = xxsocket::get_last_errno();
@@ -1066,47 +1091,38 @@ done:
     return (-1);
   }
 
-  /* restore file status flags */
-#ifdef _WIN32
+  /* Since v3.31.2, we don't restore file status flags for unify behavior for all platforms */
   // pitfall: because on win32, there is no way to test whether the s is non-blocking
   // so, can't restore properly
-  set_nonblocking(s, false);
-#else
-  ::fcntl(s, F_SETFL, flags);
-#endif
   return (0);
 }
 
 int xxsocket::connect_n(const endpoint& ep) { return xxsocket::connect_n(this->fd, ep); }
 int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
 {
-#ifdef _WIN32
   set_nonblocking(s, true);
-#else
-  int flags = ::fcntl(s, F_GETFL, 0);
-  ::fcntl(s, F_SETFL, flags | O_NONBLOCK);
-#endif
 
   return xxsocket::connect(s, ep);
 }
 
 int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)
 {
-  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
-                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
-  return send_n(this->fd, buf, len, &timeout, flags);
+  return send_n(this->fd, buf, len, wtimeout.count(), flags);
 }
 
-int xxsocket::send_n(const void* buf, int len, timeval* timeout, int flags)
+int xxsocket::send_n(const void* buf, int len, long long timeout_usec, int flags)
 {
-  return xxsocket::send_n(this->fd, buf, len, timeout, flags);
+  return xxsocket::send_n(this->fd, buf, len, timeout_usec, flags);
 }
 
-int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* timeout, int flags)
+int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long timeout_usec,
+                     int flags)
 {
   int bytes_transferred;
   int n;
   int errcode = 0;
+
+  xxsocket::set_nonblocking(s, true);
 
   for (bytes_transferred = 0; bytes_transferred < len; bytes_transferred += n)
   {
@@ -1114,29 +1130,36 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
     // Since the socket is in non-blocking mode, this call will not
     // block.
     n = xxsocket::send(s, (const char*)buf + bytes_transferred, len - bytes_transferred, flags);
-    //++send_times;
+
     // Check for errors.
     if (n <= 0)
     {
       // Check for possible blocking.
-#ifdef _WIN32
-      errcode = WSAGetLastError();
-#else
-      errcode = errno;
-#endif
+      errcode = xxsocket::get_last_errno();
+
       if (n == -1 &&
           (errcode == EAGAIN || errcode == EWOULDBLOCK || errcode == ENOBUFS || errcode == EINTR))
       {
+
         // Wait upto <timeout> for the blocking to subside.
-        int const rtn = handle_write_ready(s, timeout);
+        timeval waitd_tv = {
+            static_cast<decltype(timeval::tv_sec)>(timeout_usec / MICROSECONDS_PER_SECOND),
+            static_cast<decltype(timeval::tv_usec)>(timeout_usec % MICROSECONDS_PER_SECOND)};
+        auto start    = yasio::highp_clock();
+        int const rtn = handle_write_ready(s, &waitd_tv);
 
         // Did select() succeed?
         if (rtn != -1)
         {
-          // Blocking subsided in <timeout> period.  Continue
-          // data transfer.
-          n = 0;
-          continue;
+          if (timeout_usec > 0)
+          {
+            // Blocking subsided in <timeout> period.  Continue
+            // data transfer.
+            n = 0;
+            continue;
+          }
+          else
+            break;
         }
       }
 
@@ -1151,21 +1174,24 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, timeval* ti
 
 int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags) const
 {
-  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
-                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
-  return recv_n(this->fd, buf, len, &timeout, flags);
+  /*timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() /
+     MICROSECONDS_PER_SECOND), static_cast<decltype(timeval::tv_usec)>(wtimeout.count() %
+     MICROSECONDS_PER_SECOND)};*/
+  return recv_n(this->fd, buf, len, wtimeout.count(), flags);
 }
 
-int xxsocket::recv_n(void* buf, int len, timeval* timeout, int flags) const
+int xxsocket::recv_n(void* buf, int len, long long timeout_usec, int flags) const
 {
-  return recv_n(this->fd, buf, len, timeout, flags);
+  return recv_n(this->fd, buf, len, timeout_usec, flags);
 }
 
-int xxsocket::recv_n(socket_native_type s, void* buf, int len, timeval* timeout, int flags)
+int xxsocket::recv_n(socket_native_type s, void* buf, int len, long long timeout_usec, int flags)
 {
   int bytes_transferred;
   int n;
   int ec = 0;
+
+  xxsocket::set_nonblocking(s, true);
 
   for (bytes_transferred = 0; bytes_transferred < len; bytes_transferred += n)
   {
@@ -1179,23 +1205,31 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
     if (n <= 0)
     {
       // Check for possible blocking.
-#ifdef _WIN32
-      ec = WSAGetLastError();
-#else
-      ec      = errno; // socket errno
-#endif
+      ec = xxsocket::get_last_errno();
       if (n == -1 && (ec == EAGAIN || ec == EINTR || ec == EWOULDBLOCK || ec == EINPROGRESS))
       {
         // Wait upto <timeout> for the blocking to subside.
-        int const rtn = handle_read_ready(s, timeout);
+        timeval waitd_tv = {
+            static_cast<decltype(timeval::tv_sec)>(timeout_usec / MICROSECONDS_PER_SECOND),
+            static_cast<decltype(timeval::tv_usec)>(timeout_usec % MICROSECONDS_PER_SECOND)};
+
+        auto start    = yasio::highp_clock();
+        int const rtn = handle_read_ready(s, &waitd_tv);
+
+        timeout_usec -= (yasio::highp_clock() - start);
 
         // Did select() succeed?
         if (rtn != -1)
         {
-          // Blocking subsided in <timeout> period.  Continue
-          // data transfer.
-          n = 0;
-          continue;
+          if (timeout_usec > 0)
+          {
+            // Blocking subsided in <timeout> period.  Continue
+            // data transfer.
+            n = 0;
+            continue;
+          }
+          else
+            break;
         }
       }
 
@@ -1334,8 +1368,9 @@ int xxsocket::handle_read_ready(timeval* timeo) const { return handle_read_ready
 
 int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microseconds& wtimeout)
 {
-  timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / TIME_GRANULARITY),
-                     static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % TIME_GRANULARITY)};
+  timeval timeout = {
+      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / MICROSECONDS_PER_SECOND),
+      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % MICROSECONDS_PER_SECOND)};
   return handle_read_ready(s, &timeout);
 }
 

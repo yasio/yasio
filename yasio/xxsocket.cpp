@@ -636,7 +636,7 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
 
         return error == 0;
       },
-      hostname, port, AF_UNSPEC, AI_ALL, SOCK_STREAM);
+      hostname, port, AF_UNSPEC, AI_ALL);
 
   return error;
 }
@@ -645,7 +645,7 @@ int xxsocket::pconnect(const char* hostname, u_short port, u_short local_port)
 {
   int error = -1;
   xxsocket::resolv_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); },
-                     hostname, port, SOCK_STREAM);
+                     hostname, port);
   return error;
 }
 
@@ -655,7 +655,7 @@ int xxsocket::pconnect_n(const char* hostname, u_short port,
   int error = -1;
   xxsocket::resolv_i(
       [&](const endpoint& ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
-      hostname, port, SOCK_STREAM);
+      hostname, port);
   return error;
 }
 
@@ -667,7 +667,7 @@ int xxsocket::pconnect_n(const char* hostname, u_short port, u_short local_port)
         (error = pconnect_n(ep, local_port));
         return true;
       },
-      hostname, port, SOCK_STREAM);
+      hostname, port);
   return error;
 }
 

@@ -1606,7 +1606,7 @@ int io_service::__builtin_resolv(std::vector<ip::endpoint>& endpoints, const cha
 {
   if (this->ipsv_ & ipsv_ipv4)
     return xxsocket::resolve_v4(endpoints, hostname, port);
-  else if (this->ipsv_ & ipsv_ipv6) // localhost is IPV6 ONLY network
+  else if (this->ipsv_ & ipsv_ipv6) // localhost is IPv6_only network
     return xxsocket::resolve_v6(endpoints, hostname, port) != 0
                ? xxsocket::resolve_v4to6(endpoints, hostname, port)
                : 0;

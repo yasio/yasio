@@ -100,6 +100,10 @@ typedef int socket_native_type;
 #endif
 #include <fcntl.h> // common platform header
 
+#if !defined(MICROSECONDS_PER_SECOND)
+#  define MICROSECONDS_PER_SECOND 1000000LL
+#endif
+
 #ifndef SO_REUSEPORT
 #  define SO_REUSEPORT SO_REUSEADDR
 #endif
@@ -188,6 +192,28 @@ typedef int socket_native_type;
 #  define EBADF WSAEBADF
 #  define EFAULT WSAEFAULT
 #  define EAGAIN WSATRY_AGAIN
+#endif
+
+#if !defined(_WS2IPDEF_)
+inline bool IN4_IS_ADDR_LOOPBACK(const in_addr* a)
+{
+  return ((a->s_addr & 0xff) == 0x7f); // 127/8
+}
+inline bool IN4_IS_ADDR_LINKLOCAL(const in_addr* a)
+{
+  return ((a->s_addr & 0xffff) == 0xfea9); // 169.254/16
+}
+inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
+{
+  //
+  // Check the format prefix and exclude addresses
+  // whose high 4 bits are all zero or all one.
+  // This is a cheap way of excluding v4-compatible,
+  // v4-mapped, loopback, multicast, link-local, site-local.
+  //
+  unsigned int High = (a->s6_addr[0] & 0xf0);
+  return ((High != 0) && (High != 0xf0));
+}
 #endif
 
 // shoulde close connection condition when retval of recv <= 0
@@ -460,19 +486,14 @@ YASIO__NS_INLINE namespace ip
     }
     std::string ip() const
     {
+      return ip(sa_.sa_family,
+                sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr : (void*)&in6_.sin6_addr);
+    }
+    static std::string ip(int af, const void* src)
+    {
       std::string ipstring(64, '\0');
 
-      size_t n = 0;
-
-      switch (sa_.sa_family)
-      {
-        case AF_INET:
-          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &ipstring.front(), 64));
-          break;
-        case AF_INET6:
-          n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &ipstring.front(), 64));
-          break;
-      }
+      size_t n = strlen(compat::inet_ntop(af, src, &ipstring.front(), 64));
       ipstring.resize(n);
 
       return ipstring;
@@ -646,6 +667,15 @@ public:
   YASIO__DECL int set_nonblocking(bool nonblocking) const;
   YASIO__DECL static int set_nonblocking(socket_native_type s, bool nonblocking);
 
+  /* @brief: Test whether the socket has nonblocking flag
+  ** @params:
+  **
+  ** @returns: [1] yes. [0] no
+  ** @pitfall: for wsock2, will return [-1] when it's a unconnected SOCK_STREAM
+  */
+  YASIO__DECL int test_nonblocking() const;
+  YASIO__DECL static int test_nonblocking(socket_native_type s);
+
   /* @brief: Associates a local address with this socket
   ** @params:
   **        addr: four point address, if set "0.0.0.0" ipv4, "::" ipv6, the socket will listen at
@@ -734,27 +764,23 @@ public:
    **         If no error occurs, send returns the total number of bytes sent,
    **         Oterwise, If retval <=0, mean error occured, and should close socket.
    */
-  YASIO__DECL int send_n(const void* buf, int len, timeval* timeout, int flags = 0);
   YASIO__DECL int send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout,
                          int flags = 0);
-  YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len, timeval* timeout,
-                                int flags = 0);
-
-  YASIO__DECL bool read_until(std::string& buffer, const char delim);
-  YASIO__DECL bool read_until(std::string& buffer, const std::string& delims);
-  YASIO__DECL bool read_until(std::string& buffer, const char* delims, size_t len);
+  YASIO__DECL int send_n(const void* buf, int len, long long timeout_usec, int flags = 0);
+  YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len,
+                                long long timeout_usec, int flags = 0);
 
   /* @brief: nonblock recv
-  ** @params: omit
-  **
+  ** @params:
+  **       The timeout is in microseconds
   ** @returns:
   **         If no error occurs, send returns the total number of bytes recvived,
   **         Oterwise, If retval <=0, mean error occured, and should close socket.
   */
   YASIO__DECL int recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout,
                          int flags = 0) const;
-  YASIO__DECL int recv_n(void* buf, int len, timeval* timeout, int flags = 0) const;
-  YASIO__DECL static int recv_n(socket_native_type s, void* buf, int len, timeval* timeout,
+  YASIO__DECL int recv_n(void* buf, int len, long long timeout_usec, int flags = 0) const;
+  YASIO__DECL static int recv_n(socket_native_type s, void* buf, int len, long long timeout_usec,
                                 int flags = 0);
 
   /* @brief: Sends data on this connected socket
@@ -964,43 +990,44 @@ public:
   /// Resolve all as ipv4 or ipv6 endpoints
   /// </summary>
   YASIO__DECL static int resolve(std::vector<endpoint>& endpoints, const char* hostname,
-                                 unsigned short port = 0);
+                                 unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv4 address only.
   /// </summary>
   YASIO__DECL static int resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
-                                    unsigned short port = 0);
+                                    unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv6 address only.
   /// </summary>
   YASIO__DECL static int resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                                    unsigned short port = 0);
+                                    unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv4 address only and convert to V4MAPPED format.
   /// </summary>
   YASIO__DECL static int resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
-                                       unsigned short port = 0);
+                                       unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
   /// </summary>
-  YASIO__DECL static int force_resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                                          unsigned short port = 0);
+  YASIO__DECL static int resolve_tov6(std::vector<endpoint>& endpoints, const char* hostname,
+                                      unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv4 or ipv6 endpoints with callback
   /// </summary>
   template <typename _Fty>
   inline static int resolve_i(const _Fty& callback, const char* hostname, unsigned short port = 0,
-                              int af = 0, int flags = 0)
+                              int af = 0, int flags = 0, int socktype = SOCK_STREAM)
   {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));
-    hint.ai_family = af;
-    hint.ai_flags  = flags;
+    hint.ai_flags    = flags;
+    hint.ai_family   = af;
+    hint.ai_socktype = socktype;
 
     addrinfo* answerlist        = nullptr;
     char buffer[sizeof "65535"] = {'\0'};
@@ -1014,11 +1041,11 @@ public:
     if (nullptr == answerlist)
       return error;
 
-    for (auto answer = answerlist; answer != nullptr; answer = answer->ai_next)
+    for (auto ai = answerlist; ai != nullptr; ai = ai->ai_next)
     {
-      if (answer->ai_family == AF_INET6 || answer->ai_family == AF_INET)
+      if (ai->ai_family == AF_INET6 || ai->ai_family == AF_INET)
       {
-        if (callback(endpoint(answer)))
+        if (callback(endpoint(ai)))
           break;
       }
     }

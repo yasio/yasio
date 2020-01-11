@@ -1,3 +1,13 @@
+yasio-3.30.8
+  
+1. Sync optimizations from v3.31.2.
+  
+  
+yasio-3.30.7
+  
+1. Sync optimizations from v3.31.
+  
+  
 yasio-3.30.6
   
 1. Make option enums compatible with v3.31.

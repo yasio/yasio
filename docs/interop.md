@@ -1,6 +1,6 @@
 # yasio interop
 
-## yasio NI
+## yasio NI(Native Interface) API
 ```c
 YASIO_NI_API void yasio_start(int channel_count,
                               void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,
@@ -69,42 +69,36 @@ public static extern long yasio_highp_time();
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_memcpy(IntPtr destination, IntPtr source, uint length);
 
+/// <summary>
 /// The yasio constants
+/// </summary>
 public enum YEnums
 {
-    /// <summary>
-    /// Channel mask enums, copy from yasio.hpp
-    /// </summary>
+    #region Channel mask enums, copy from yasio.hpp
     YCM_CLIENT = 1,
     YCM_SERVER = 1 << 1,
-    YCM_POSIX  = 1 << 2,
-    YCM_TCP    = 1 << 3,
-    YCM_UDP    = 1 << 4,
-    YCM_MCAST  = 1 << 5,
-    YCM_KCP    = 1 << 6,
-    YCM_SSL    = 1 << 7,
-    YCM_TCP_CLIENT   = YCM_TCP | YCM_CLIENT | YCM_POSIX,
-    YCM_TCP_SERVER   = YCM_TCP | YCM_SERVER | YCM_POSIX,
-    YCM_UDP_CLIENT   = YCM_UDP | YCM_CLIENT | YCM_POSIX,
-    YCM_UDP_SERVER   = YCM_UDP | YCM_SERVER | YCM_POSIX,
+    YCM_POSIX = 1 << 2,
+    YCM_TCP = 1 << 3,
+    YCM_UDP = 1 << 4,
+    YCM_MCAST = 1 << 5,
+    YCM_KCP = 1 << 6,
+    YCM_SSL = 1 << 7,
+    YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT | YCM_POSIX,
+    YCM_TCP_SERVER = YCM_TCP | YCM_SERVER | YCM_POSIX,
+    YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT | YCM_POSIX,
+    YCM_UDP_SERVER = YCM_UDP | YCM_SERVER | YCM_POSIX,
+    #endregion
 
-    /// <summary>
-    /// Event kind enums, copy from yasio.hpp
-    /// </summary>
+    #region Event kind enums, copy from yasio.hpp
     YEK_CONNECT_RESPONSE = 1,
     YEK_CONNECTION_LOST,
     YEK_PACKET,
+    #endregion
 
-    /// <summary>
-    /// All supported options by native, copy from yasio.hpp
-    /// </summary>
-    // Set timeouts in seconds
-    // params: dns_cache_timeout:int(600), connect_timeout:int(10)
-    YOPT_S_TIMEOUTS = 1,
-
+    #region All supported options by native, copy from yasio.hpp
     // Set with deferred dispatch event, default is: 1
     // params: deferred_event:int(1)
-    YOPT_S_DEFERRED_EVENT,
+    YOPT_S_DEFERRED_EVENT = 1,
 
     // Set custom resolve function, native C++ ONLY
     // params: func:resolv_fn_t*
@@ -126,9 +120,25 @@ public enum YEnums
     // value:int(0)
     YOPT_S_NO_NEW_THREAD,
 
+    // Sets ssl verification cert, if empty, don't verify
+    // value:const char*
+    YOPT_S_SSL_CACERT,
+
+    // Set connect timeout in seconds
+    // params: connect_timeout:int(10)
+    YOPT_S_CONNECT_TIMEOUT,
+
+    // Set dns cache timeout in seconds
+    // params: dns_cache_timeout : int(600),
+    YOPT_S_DNS_CACHE_TIMEOUT,
+
+    // Set dns queries timeout in seconds, only works when have c-ares
+    // params: dns_queries_timeout : int(10)
+    YOPT_S_DNS_QUERIES_TIMEOUT,
+
     // Sets channel length field based frame decode function, native C++ ONLY
     // params: index:int, func:decode_len_fn_t*
-    YOPT_C_LFBFD_FN,
+    YOPT_C_LFBFD_FN = 101,
 
     // Sets channel length field based frame decode params
     // params:
@@ -136,8 +146,14 @@ public enum YEnums
     //     max_frame_length:int(10MBytes),
     //     length_field_offset:int(-1),
     //     length_field_length:int(4),
-    //     length_adjustment:int(0)
+    //     length_adjustment:int(0),
     YOPT_C_LFBFD_PARAMS,
+
+    // Sets channel length field based frame decode initial bytes to strip, default is 0
+    // params:
+    //     index:int,
+    //     initial_bytes_to_strip:int(0)
+    YOPT_C_LFBFD_IBTS,
 
     // Sets channel local port
     // params: index:int, port:int
@@ -169,7 +185,8 @@ public enum YEnums
 
     // Sets io_base sockopt
     // params: io_base*,level:int,optname:int,optval:int,optlen:int
-    YOPT_I_SOCKOPT,
+    YOPT_I_SOCKOPT = 201,
+    #endregion
 };
 
 ```

@@ -17,6 +17,9 @@ function build_osx()
     cmake ../ -GXcode -Bbuild_osx
     cmake --build build_osx --config Release
     
+    echo "run test issue201 on osx..."
+    build_osx/tests/issue201/Release/issue201
+    
     exit 0
 }
 
@@ -40,6 +43,9 @@ function build_linux()
     mkdir -p build_linux
     cmake ../ -G "Unix Makefiles" -Bbuild_linux -DCMAKE_BUILD_TYPE=Release
     cmake --build build_linux -- -j `nproc`
+    
+    echo "run test issue201 on linux..."
+    build_linux/tests/issue201/issue201
     
     exit 0
 }

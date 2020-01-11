@@ -47,8 +47,6 @@ SOFTWARE.
 #  define TCP_KEEPIDLE TCP_KEEPALIVE
 #endif
 
-#define MICROSECONDS_PER_SECOND 1000000
-
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 4996)
@@ -927,7 +925,7 @@ int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
   return ::ioctlsocket(s, FIONBIO, &argp);
 #else
   int flags = ::fcntl(s, F_GETFL, 0);
-  ::fcntl(s, F_SETFL, nonblocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK));
+  return ::fcntl(s, F_SETFL, nonblocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK));
 #endif
 }
 
@@ -1147,6 +1145,7 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long t
             static_cast<decltype(timeval::tv_usec)>(timeout_usec % MICROSECONDS_PER_SECOND)};
         auto start    = yasio::highp_clock();
         int const rtn = handle_write_ready(s, &waitd_tv);
+        timeout_usec -= (yasio::highp_clock() - start);
 
         // Did select() succeed?
         if (rtn != -1)
@@ -1174,9 +1173,6 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long t
 
 int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags) const
 {
-  /*timeval timeout = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() /
-     MICROSECONDS_PER_SECOND), static_cast<decltype(timeval::tv_usec)>(wtimeout.count() %
-     MICROSECONDS_PER_SECOND)};*/
   return recv_n(this->fd, buf, len, wtimeout.count(), flags);
 }
 

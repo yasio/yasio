@@ -989,39 +989,39 @@ public:
   /// <summary>
   /// Resolve all as ipv4 or ipv6 endpoints
   /// </summary>
-  YASIO__DECL static int resolv(std::vector<endpoint>& endpoints, const char* hostname,
-                                unsigned short port = 0, int socktype = SOCK_STREAM);
+  YASIO__DECL static int resolve(std::vector<endpoint>& endpoints, const char* hostname,
+                                 unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv4 address only.
   /// </summary>
-  YASIO__DECL static int resolv_v4(std::vector<endpoint>& endpoints, const char* hostname,
-                                   unsigned short port = 0, int socktype = SOCK_STREAM);
+  YASIO__DECL static int resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
+                                    unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv6 address only.
   /// </summary>
-  YASIO__DECL static int resolv_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                                   unsigned short port = 0, int socktype = SOCK_STREAM);
+  YASIO__DECL static int resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
+                                    unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv4 address only and convert to V4MAPPED format.
   /// </summary>
-  YASIO__DECL static int resolv_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
-                                      unsigned short port = 0, int socktype = SOCK_STREAM);
+  YASIO__DECL static int resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
+                                       unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Force resolve all addres to ipv6 endpoints, IP4 with AI_V4MAPPED
   /// </summary>
-  YASIO__DECL static int force_resolv_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                                         unsigned short port = 0, int socktype = SOCK_STREAM);
+  YASIO__DECL static int resolve_tov6(std::vector<endpoint>& endpoints, const char* hostname,
+                                      unsigned short port = 0, int socktype = SOCK_STREAM);
 
   /// <summary>
   /// Resolve as ipv4 or ipv6 endpoints with callback
   /// </summary>
   template <typename _Fty>
-  inline static int resolv_i(const _Fty& callback, const char* hostname, unsigned short port = 0,
-                             int af = 0, int flags = 0, int socktype = SOCK_STREAM)
+  inline static int resolve_i(const _Fty& callback, const char* hostname, unsigned short port = 0,
+                              int af = 0, int flags = 0, int socktype = SOCK_STREAM)
   {
     addrinfo hint;
     memset(&hint, 0x0, sizeof(hint));

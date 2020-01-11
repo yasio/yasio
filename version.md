@@ -1,3 +1,11 @@
+yasio-3.31.2
+  
+1. Optimize singleton implementation, see: https://github.com/simdsoft/yasio/issues/200
+2. Fix typo, YASIO_VERBOS_LOG to YASIO_VERBOSE_LOG.
+3. Explicit set socktype for ```getaddrinfo```, see: https://github.com/simdsoft/yasio/issues/201
+4. Improve xxsocket send_n/recv_n implementation and behavior, see: https://github.com/simdsoft/yasio/issues/202
+  
+  
 yasio-3.31.1
   
 1. Make c-ares works well on android 8 or later.
@@ -12,6 +20,16 @@ yasio-3.31.0
 5. Optimize schedule_timer behavior, always replace timer_cb when timer exist.
 6. Remove deprecated functions.
 7. Remove tolua support.
+  
+  
+yasio-3.30.8
+  
+1. Sync optimizations from v3.31.2.
+  
+  
+yasio-3.30.7
+  
+1. Sync optimizations from v3.31.
   
   
 yasio-3.30.6

@@ -107,7 +107,7 @@ end
 _G.yservice = service -- Store service to global table as a singleton instance
 ```
 
-## 使用g++快速运行tcptest测试程序(向www.ip138.com发送HTTP-GET请求)
+## 使用g++快速运行tcptest测试程序
 ```sh
 g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest
 ```

@@ -9,11 +9,11 @@
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)
 
-**yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持win32 & linux & apple & android & win10-universal。 
-核心设计参考自[asio](https://github.com/chriskohlhoff/asio), 但更加小巧。 
-**本程序库已用于[红警OL手游项目](https://hongjing.qq.com/) 并且稳定运行于上百万移动设备上。**
-**同时，yasio还被用于[x-studio软件](https://x-studio.net/) 实现局域网UDP+TCP发现更新机制。**
-
+**yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持win32 & linux & apple & android & win10-universal。  
+核心设计参考自[asio](https://github.com/chriskohlhoff/asio), 但更加小巧。  
+**本程序库已用于[红警OL手游项目](https://hongjing.qq.com/) 并且稳定运行于上百万移动设备上。**  
+**同时，yasio还被用于[x-studio软件](https://x-studio.net/) 实现局域网UDP+TCP发现更新机制。**  
+  
 ## 用法
 ### C++
 ```cpp

@@ -23,7 +23,7 @@ using namespace yasio::inet;
 int main()
 {
   io_service service({host="www.ip138.com", port=80});
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch event at netwrok thread
   service.start_service([&](event_ptr&& ev) {
     switch (ev->kind())
     {
@@ -69,7 +69,6 @@ int main()
 ```lua
 local host = "www.ip138.com"
 local service = yasio.io_service.new({host, 80})
-service.set_option(YOPT_S_DEFERRED_EVENT, 0)
 local respdata = ""
 service.start_service(function(ev)
         local k = ev.kind()

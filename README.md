@@ -23,7 +23,7 @@ using namespace yasio::inet;
 
 int main()
 {
-  io_service service({host="www.ip138.com", port=80});
+  io_service service({host="www.ip138.com", port=80}); // 直接在网络线程分派网络事件
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start_service([&](event_ptr&& ev) {
     switch (ev->kind())
@@ -70,14 +70,14 @@ int main()
 ```lua
 local host = "www.ip138.com"
 local service = yasio.io_service.new({host, 80})
-service.set_option(YOPT_S_DEFERRED_EVENT, 0)
 local respdata = ""
+-- 传入网络事件处理函数启动网络服务线程，网络事件有: 消息包，连接响应，连接丢失
 service.start_service(function(ev)
         local k = ev.kind()
         if (k == yasio.YEK_PACKET) then
             respdata = respdata .. ev:packet():to_string()
         elseif k == yasio.YEK_CONNECT_RESPONSE then
-            if ev:status() == 0 then
+            if ev:status() == 0 then -- status为0表示连接建立成功
                 local transport = ev:transport()
                 local obs = yasio.obstream.new()
                 obs.write_bytes("GET / HTTP/1.1\r\n")
@@ -94,12 +94,12 @@ service.start_service(function(ev)
             print("request finish, respdata: " ..  respdata)
         end
     end)
--- open channel 0 as tcp client
+-- 将信道0作为TCP客户端打开，并向服务器发起异步连接，进行TCP三次握手
 service.open(0, yasio.YCM_TCP_CLIENT)
 
--- should be call at the thread of lua_State, for game engine, it's should be renderer loop.
+-- 由于lua_State和渲染对象，不支持在其他线程操作，因此分派网络事件封装为全局Lua函数，并且以下函数应该在主线程或者游戏引擎渲染线程调用
 function gDispatchNetworkEvent(...)
-    service.dispatch(128) -- dispatch max event is 128 per frame
+    service.dispatch(128) -- 每帧最多处理128个网络事件
 end
 
 _G.yservice = service -- Store service to global table as a singleton instance

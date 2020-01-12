@@ -9,12 +9,11 @@
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)
 
-**yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持win32 & linux & apple & android & win10-universal。 
-核心设计参考自[asio](https://github.com/chriskohlhoff/asio), 但更加小巧。 
-**本程序库已用于[红警OL手游项目](https://hongjing.qq.com/) 并且稳定运行于上百万移动设备上。**
-**同时，yasio还被用于[x-studio软件](https://x-studio.net/) 实现局域网UDP+TCP发现更新机制。**
+**yasio** is a multi-platform support library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
+The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
+**This lib has been used by project [RedAlert OL](https://hongjing.qq.com/) and run at millions of devices.**
 
-## 用法
+## Usage
 ### C++
 ```cpp
 #include "yasio/yasio.hpp"
@@ -105,12 +104,12 @@ end
 _G.yservice = service -- Store service to global table as a singleton instance
 ```
 
-## 使用g++快速运行tcptest测试案例(向www.ip138.com发送HTTP-GET请求)
+## Simple run tcptest with g++
 ```sh
 g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest
 ```
 
-## 使用CMake编译yasio的测试程序和示例程序
+## Build more examples with cmake
 ```sh
 git clone https://github.com/simdsoft/yasio
 cd yasio
@@ -118,25 +117,26 @@ git submodule update --init --recursive
 cd build
 cmake ..
 
-# 使用CMake命令行编译
-# 或者直接用VS打开 yasio.sln 解决方案
+# Use cmake command to build examples & tests, 
+# or open yasio.sln with visual studio(2013~2019 supported) at win32 platform
 cmake --build . --config Debug
 ```
 
-## 特性: 
-* 支持IPv6_only网络。  
-* 支持处理多个连接的所有网络事件。  
-* 支持计时器。  
-* 支持TCP粘包处理，用户完全不用关心。  
-* 支持Lua绑定。  
-* 支持Cocos2d-x jsb绑定。  
-* 支持CocosCreator jsb2.0绑定。  
-* 支持Unity3D C#绑定。  
-* 支持组播。  
-* 支持SSL客户端，基于OpenSSL。  
-* 支持非阻塞域名解析，基于c-ares。  
+## Features: 
+* support IPv6-only network.  
+* support multi-connections at one thread.  
+* support deadline timer.  
+* support unpack tcp packet internal, user do not need to care it.  
+* support lua bindings  
+* support cocos2d-x jsb  
+* support CocosCreator jsb2.0  
+* support Unity3D
+* support multicast
+* support ssl client with openssl
+* support async resolve with c-ares
   
-## 核心框架
+## Core framework
 ![image](https://github.com/simdsoft/yasio/blob/master/framework.png)  
 
-## 更多详细用法，请查看 [文档](https://github.com/simdsoft/docs)
+## For more detail usage: see [wiki](https://github.com/simdsoft/yasio/wiki)
+

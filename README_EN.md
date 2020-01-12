@@ -22,7 +22,7 @@ using namespace yasio::inet;
 
 int main()
 {
-  io_service service({host="www.ip138.com", port=80});
+  io_service service({"www.ip138.com", 80});
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch event at netwrok thread
   service.start_service([&](event_ptr&& ev) {
     switch (ev->kind())
@@ -67,8 +67,8 @@ int main()
 
 ### Lua
 ```lua
-local host = "www.ip138.com"
-local service = yasio.io_service.new({host, 80})
+local ip138 = "www.ip138.com"
+local service = yasio.io_service.new({host=ip138, port=80})
 local respdata = ""
 service.start_service(function(ev)
         local k = ev.kind()
@@ -80,7 +80,7 @@ service.start_service(function(ev)
                 local obs = yasio.obstream.new()
                 obs.write_bytes("GET / HTTP/1.1\r\n")
 
-                obs.write_bytes("Host: " .. host .. "\r\n")
+                obs.write_bytes("Host: " .. ip138 .. "\r\n")
 
                 obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36\r\n")
                 obs.write_bytes("Accept: */*;q=0.8\r\n")

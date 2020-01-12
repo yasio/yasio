@@ -25,7 +25,7 @@ using namespace yasio::inet;
 
 int main()
 {
-  io_service service({host="www.ip138.com", port=80}); // 直接在网络线程分派网络事件
+  io_service service({"www.ip138.com", 80}); // 直接在网络线程分派网络事件
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start_service([&](event_ptr&& ev) {
     switch (ev->kind())

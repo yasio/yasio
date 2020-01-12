@@ -70,8 +70,8 @@ int main()
 
 ### Lua
 ```lua
-local host = "www.ip138.com"
-local service = yasio.io_service.new({host, 80})
+local ip138 = "www.ip138.com"
+local service = yasio.io_service.new({host=ip138, port=80})
 local respdata = ""
 -- 传入网络事件处理函数启动网络服务线程，网络事件有: 消息包，连接响应，连接丢失
 service.start_service(function(ev)
@@ -84,7 +84,7 @@ service.start_service(function(ev)
                 local obs = yasio.obstream.new()
                 obs.write_bytes("GET / HTTP/1.1\r\n")
 
-                obs.write_bytes("Host: " .. host .. "\r\n")
+                obs.write_bytes("Host: " .. ip138 .. "\r\n")
 
                 obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36\r\n")
                 obs.write_bytes("Accept: */*;q=0.8\r\n")

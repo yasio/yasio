@@ -141,7 +141,7 @@ cmake --build . --config Debug
 ## yasio核心设计，充分利用了多路io复用模型(服务器高并发的基石)，以下是框架图
 ![image](https://github.com/simdsoft/yasio/blob/master/framework.png)  
 
-## 集成指导
-https://github.com/simdsoft/yasio/wiki/Integrate-Guides
+## 集成指南
+[https://github.com/simdsoft/yasio/wiki/Integrate-Guides](https://github.com/simdsoft/yasio/wiki/Integrate-Guides)
 
 ## 更多详细用法，请查看 [文档](https://github.com/simdsoft/yasio/tree/master/docs)

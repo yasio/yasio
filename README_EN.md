@@ -14,7 +14,7 @@
 ## Showcase
 * [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.
 * [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
-* [xlua](https://github.com/simdsoft/xlua): Integrate yasio to xlua, make the unity3d game project based on xlua call use yasio lua bindings APIs.
+* [xlua](https://github.com/simdsoft/xlua): Integrate yasio to xlua, make the unity3d game project based on xlua can use yasio lua bindings APIs.
 
 ## Usage
 ### C++

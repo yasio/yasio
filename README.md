@@ -129,7 +129,7 @@ cmake --build . --config Debug
 * 支持IPv6_only网络。  
 * 支持处理多个连接的所有网络事件。  
 * 支持计时器。  
-* 支持TCP粘包处理，用户完全不用关心。  
+* 支持TCP粘包处理，业务完全不必关心。  
 * 支持Lua绑定。  
 * 支持Cocos2d-x jsb绑定。  
 * 支持CocosCreator jsb2.0绑定。  

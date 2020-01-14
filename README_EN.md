@@ -9,9 +9,12 @@
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)
 
-**yasio** is a multi-platform support library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
-The core design is reference from [asio](https://github.com/chriskohlhoff/asio) but very small.  
-**This lib has been used by project [RedAlert OL](https://hongjing.qq.com/) and run at millions of devices.**
+**yasio** is a multi-platform support and lightweight library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
+
+## Showcase
+* [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.
+* [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
+* [xlua](https://github.com/simdsoft/xlua): Integrate yasio to xlua, make the unity3d game project based on xlua call use yasio lua bindings APIs.
 
 ## Usage
 ### C++

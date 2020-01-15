@@ -9,7 +9,7 @@
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)
 
-**yasio** is a multi-platform support and lightweight library with focus on asynchronous TCP socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
+**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
 
 ## Showcase
 * [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.
@@ -136,6 +136,7 @@ cmake --build . --config Debug
 * support multicast
 * support ssl client with openssl
 * support async resolve with c-ares
+* Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
   
 ## Core framework
 ![image](https://github.com/simdsoft/yasio/blob/master/framework.png)  

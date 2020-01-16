@@ -45,7 +45,7 @@ void stop_service()
 set_option(opt,...)
 功能：设置选项
 参数说明(超时时间单位均为秒):  
-### 重要说明: ```YOPT_S_```开头的选项在start_service之前设置，```YOPT_C_```开头的选项需要在start_service之后设置才有效
+### 说明: 所有选项均可在start_service之前设置
 opt: 选项枚举，取值有:
   + yasio.YOPT_S_CONNECT_TIMEOUT: TCP连接超时时间(10s)
   + yasio.YOPT_S_DNS_CACHE_TIMEOUT: dns缓存时间(600s)

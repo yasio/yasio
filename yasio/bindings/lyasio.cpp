@@ -416,8 +416,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
               static_cast<void (io_service::*)(size_t)>(&io_service::close))
           .addOverloadedFunctions(
               "write",
-              static_cast<int (io_service::*)(transport_handle_t, std::vector<char>)>(
-                  &io_service::write),
               [](io_service* service, transport_handle_t transport, cxx17::string_view s) {
                 return service->write(transport,
                                       std::vector<char>(s.data(), s.data() + s.length()));

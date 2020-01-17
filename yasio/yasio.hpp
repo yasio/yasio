@@ -644,11 +644,15 @@ public:
 
   YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 
-  int write(transport_handle_t transport, std::vector<char> buffer)
+  int write(transport_handle_t thandle, const void* buf, size_t len)
   {
-    return write(transport, std::move(buffer), nullptr);
+    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len));
   }
-  YASIO__DECL int write(transport_handle_t transport, std::vector<char> buffer,
+  int write(transport_handle_t thandle, std::vector<char> buffer)
+  {
+    return write(thandle, std::move(buffer), nullptr);
+  }
+  YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
                         std::function<void()>);
 
   // The deadlien_timer support, !important, the callback is called on the thread of io_service

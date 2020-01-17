@@ -23,7 +23,7 @@ hostents: 信道地址列表， 格式：
 void start_service(cb)  
 功能：启动网络服务  
 参数说明:  
-**cb**: 网络事件会调函数, 示例:
+**cb**: 网络事件回调函数, 示例:
 ```lua
 function(event)
   local kind = event:kind()
@@ -101,7 +101,7 @@ void close(transport)
 void write(transport, data)  
 功能：向指定会话发送数据  
 参数说明:  
-transport: 传输回话句柄  
+transport: 传输会话句柄  
 data: 要发送的数据, 对于Lua可以是obstream或者string类型； 对于js可以是string,ArrayBuffer,Uint8Array,Int8Array
 
 ## dispatch
@@ -113,5 +113,5 @@ max_events: 每次调用从事件队列分派最大事件数，通常固定为64
 备注: 对于游戏引擎，通常使用方法是在渲染线程每帧调用此函数来实现网络事件分派回调发生在渲染线程，以便直接根据业务逻辑更新游戏界面
 
 ## Design Patterns
-+ 单利模式: 在C++中使用框架预定义宏yasio_shared_service即可， 这种方式很方便给C#导出接口调用
++ 单利模式: 在C++中使用框架预定义宏yasio_shared_service()即可， 这种方式很方便给C#导出接口调用
 + 非单利模式: 就像普通对象一样实例化后即可使用

@@ -1,27 +1,35 @@
 # io_service
-
-## start_service
-void start_service(cb)  
-功能：启动网络服务  
-参数说明:  
-**endpoint/endpoints**: 信道地址ip/域名:端口， 格式:  
+## new
+io_service io_service.new(count)  
+io_service io_service.new(hostent)  
+io_service io_service.new(hostents)  
+重载版本参数说明:  
+count: 信道数量  
+  
+hostent: 信道地址，格式:  
 ```lua
 {host=ip138.com, port=80}
 ```
-或多个信道
+  
+hostents: 信道地址列表， 格式：  
 ```lua
 {
     {host="ip138.com", port=80},
     {host="baidu.com", port=80}
 }
 ```
-**callback**: 网络事件会调函数, 示例:
+
+## start_service
+void start_service(cb)  
+功能：启动网络服务  
+参数说明:  
+**cb**: 网络事件会调函数, 示例:
 ```lua
 function(event)
   local kind = event:kind()
 end
 ```
-完整调用示例:
+调用示例:
 ```lua
 local service = io_service.new({host="ip138.com", port=80})
 service:start_service(function(event)

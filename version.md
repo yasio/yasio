@@ -1,3 +1,8 @@
+yasio-3.31.3
+  
+1. Optimize API io_service::write, add write raw buf support.
+  
+  
 yasio-3.31.2
   
 1. Optimize singleton implementation, see: https://github.com/simdsoft/yasio/issues/200

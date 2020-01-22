@@ -215,7 +215,7 @@ enum
 
 // class fwds
 class a_pdu; // application layer protocol data unit.
-class deadline_timer;
+class highp_timer;
 class io_event;
 class io_channel;
 class io_transport;
@@ -231,10 +231,13 @@ typedef io_transport* transport_handle_t;
 // typedefs
 typedef std::shared_ptr<a_pdu> a_pdu_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
-typedef std::shared_ptr<deadline_timer> deadline_timer_ptr;
+typedef std::shared_ptr<highp_timer> highp_timer_ptr;
 
-typedef std::function<void(bool)> timer_cb_t;
-typedef std::pair<deadline_timer*, timer_cb_t> timer_impl_t;
+typedef highp_timer deadline_timer;
+typedef highp_timer_ptr deadline_timer_ptr;
+
+typedef std::function<void()> timer_cb_t;
+typedef std::pair<highp_timer*, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr&&)> io_event_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
@@ -254,24 +257,19 @@ struct io_hostent
   u_short port_;
 };
 
-class deadline_timer
+class highp_timer
 {
 public:
-  ~deadline_timer() {}
-  deadline_timer(io_service& service) : service_(service), cancelled_(false) {}
+  ~highp_timer() {}
+  highp_timer(io_service& service) : service_(service) {}
 
   void expires_from_now(const std::chrono::microseconds& duration)
   {
-    this->duration_  = duration;
-    this->cancelled_ = false;
-    expire_time_     = highp_clock_t::now() + this->duration_;
+    this->duration_ = duration;
+    expire_time_    = highp_clock_t::now() + this->duration_;
   }
 
-  void expires_from_now()
-  {
-    this->cancelled_ = false;
-    expire_time_     = highp_clock_t::now() + this->duration_;
-  }
+  void expires_from_now() { expire_time_ = highp_clock_t::now() + this->duration_; }
 
   // Wait timer timeout or cancelled.
   YASIO__DECL void async_wait(timer_cb_t);
@@ -282,9 +280,6 @@ public:
   // Check if timer is expired?
   bool expired() const { return wait_duration().count() <= 0; }
 
-  // Remove from io_service's timer queue
-  YASIO__DECL void unschedule();
-
   // Gets wait duration of timer.
   std::chrono::microseconds wait_duration() const
   {
@@ -294,7 +289,6 @@ public:
 
   io_service& service_;
 
-  bool cancelled_;
   std::chrono::microseconds duration_;
   std::chrono::time_point<highp_clock_t> expire_time_;
 };
@@ -347,7 +341,7 @@ class io_channel : public io_base
   friend class io_transport_ssl;
 
 public:
-  io_service& get_service() { return deadline_timer_.service_; }
+  io_service& get_service() { return timer_.service_; }
   inline int index() { return index_; }
   inline u_short local_port() { return local_port_; }
 
@@ -393,8 +387,8 @@ private:
   int index_;
   int protocol_ = 0;
 
-  // The deadline timer for resolve & connect
-  deadline_timer deadline_timer_;
+  // The timer for check resolve & connect timeout
+  highp_timer timer_;
 
   struct __unnamed01
   {
@@ -590,7 +584,7 @@ private:
 
 class io_service // lgtm [cpp/class-many-fields]
 {
-  friend class deadline_timer;
+  friend class highp_timer;
   friend class io_transport_posix;
   friend class io_transport_mcast;
   friend class io_transport_kcp;
@@ -645,28 +639,28 @@ public:
   YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 
   int write(transport_handle_t thandle, const void* buf, size_t len,
-                        std::function<void()> handler = nullptr)
+            std::function<void()> handler = nullptr)
   {
     return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(handler));
   }
   YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
                         std::function<void()> = nullptr);
 
-  // The deadlien_timer support, !important, the callback is called on the thread of io_service
-  deadline_timer_ptr schedule(highp_time_t duration, timer_cb_t cb)
+  // The highp_timer support, !important, the callback is called on the thread of io_service
+  highp_timer_ptr schedule(highp_time_t duration, timer_cb_t cb)
   {
     return schedule(std::chrono::microseconds(duration), std::move(cb));
   }
-  YASIO__DECL deadline_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
+  YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
   YASIO__DECL int __builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                    unsigned short port = 0);
 
 private:
-  YASIO__DECL void schedule_timer(deadline_timer*, timer_cb_t&&);
-  YASIO__DECL void remove_timer(deadline_timer*);
+  YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);
+  YASIO__DECL void remove_timer(highp_timer*);
 
-  inline std::vector<timer_impl_t>::iterator find_timer(deadline_timer* key)
+  inline std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
   {
     return std::find_if(timer_queue_.begin(), timer_queue_.end(),
                         [=](const timer_impl_t& timer) { return timer.first == key; });

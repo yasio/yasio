@@ -22,6 +22,7 @@
 ### C++
 ```cpp
 #include "yasio/yasio.hpp"
+#include "yasio/obstream.hpp"
 using namespace yasio;
 using namespace yasio::inet;
 

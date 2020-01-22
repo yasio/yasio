@@ -53,7 +53,7 @@ void yasioMulticastTest()
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n");
 
-          service.schedule(std::chrono::milliseconds(1000), [&, thandle, obs](bool) {
+          service.schedule(std::chrono::milliseconds(1000), [&, thandle, obs]() {
             service.write(thandle, std::move(obs.buffer()));
           });
         }

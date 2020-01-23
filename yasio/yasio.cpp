@@ -241,10 +241,7 @@ void highp_timer::async_wait(timer_cb_t cb) { this->service_.schedule_timer(this
 void highp_timer::cancel()
 {
   if (!expired())
-  {
     this->service_.remove_timer(this);
-    this->service_.interrupt();
-  }
 }
 
 #if defined(YASIO_HAVE_SSL)
@@ -1744,7 +1741,11 @@ void io_service::remove_timer(highp_timer* timer)
   if (iter != timer_queue_.end())
   {
     timer_queue_.erase(iter);
-    sort_timers();
+    if (!timer_queue_.empty())
+    {
+      this->sort_timers();
+      this->interrupt();
+    }
   }
 }
 

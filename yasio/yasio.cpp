@@ -1798,7 +1798,6 @@ void io_service::process_timers()
     if (timer_queue_.back().first->expired())
     {
       auto earliest  = std::move(timer_queue_.back());
-      auto timer_ctl = earliest.first;
       auto& timer_cb = earliest.second;
       timer_queue_.pop_back(); // pop the expired timer from timer queue
       timer_cb();

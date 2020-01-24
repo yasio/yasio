@@ -75,7 +75,7 @@ extern "C" {
   } while (false)
 
 #define YASIO_SLOG(format, ...) YASIO_SLOG_IMPL(options_, format, ##__VA_ARGS__)
-#if !defined(YASIO_VERBOS_LOG)
+#if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_SLOGV(fmt, ...) (void)0
 #else
 #  define YASIO_SLOGV YASIO_SLOG
@@ -410,7 +410,7 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop();
-#if defined(YASIO_VERBOS_LOG)
+#if defined(YASIO_VERBOSE_LOG)
         YASIO_SLOG_IMPL(get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
                         "success, packet size:%d",
@@ -1625,7 +1625,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
                   io_service::strerror(error));
       if (n == -1)
         n = 0;
-#if defined(YASIO_VERBOS_LOG)
+#if defined(YASIO_VERBOSE_LOG)
       if (n > 0)
       {
         YASIO_SLOG("[index: %d] do_read ok, received data len: %d, "

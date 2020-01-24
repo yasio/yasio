@@ -1,6 +1,8 @@
 yasio-3.31.3
   
 1. Optimize API io_service::write, add write raw buf support.
+2. Fix issue: https://github.com/simdsoft/yasio/issues/208
+3. Fix issue: https://github.com/simdsoft/yasio/issues/209
   
   
 yasio-3.31.2

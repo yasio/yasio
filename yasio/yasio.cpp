@@ -1163,7 +1163,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       do_ssl_handshake(ctx);
 
     if (ctx->state_ != YCS_OPENING)
-      ctx->highp_timer_.cancel();
+      ctx->timer_.cancel();
 #endif
   }
 }
@@ -1231,7 +1231,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   auto ctx              = (io_channel*)arg;
   auto& current_service = ctx->get_service();
 
-  ctx->highp_timer_.cancel();
+  ctx->timer_.cancel();
   current_service.ares_work_finished();
 
   if (status == ARES_SUCCESS)
@@ -1953,8 +1953,8 @@ void io_service::start_resolve(io_channel* ctx)
     service = sport;
   }
 
-  ctx->highp_timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
-  ctx->highp_timer_.async_wait([=]() {
+  ctx->timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
+  ctx->timer_.async_wait([=]() {
     ::ares_cancel(this->ares_);
     handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
   });

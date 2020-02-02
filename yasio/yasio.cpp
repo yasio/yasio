@@ -83,8 +83,8 @@ extern "C" {
 
 #define YASIO_ANY_ADDR(flags) (flags) & ipsv_ipv4 ? "0.0.0.0" : "::"
 
-// The multicast explicit peer endpoint index
-#define YASIO_MCAST_EPI 1
+// The udp/multicast explicit peer endpoint index
+#define YASIO_PEER_EPI 1
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -474,8 +474,8 @@ void io_transport_mcast::set_primitives()
 
     if (n > 0)
     { // record explicit peer endpoint
-      ctx_->remote_eps_.resize(YASIO_MCAST_EPI + 1);
-      ctx_->remote_eps_[YASIO_MCAST_EPI] = peer;
+      ctx_->remote_eps_.resize(YASIO_PEER_EPI + 1);
+      ctx_->remote_eps_[YASIO_PEER_EPI] = peer;
     }
     return n;
   };
@@ -485,11 +485,11 @@ int io_transport_mcast::do_read(int& error)
   int n = io_transport_posix::do_read(error);
   if (ctx_->flags_ & YCF_MCAST_HANDSHAKING)
   {
-    if (n > 0 && ctx_->remote_eps_.size() > YASIO_MCAST_EPI)
+    if (n > 0 && ctx_->remote_eps_.size() > YASIO_PEER_EPI)
     {
       // Now the 'peer' is a real host address
       // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
-      if (0 == socket_->connect(ctx_->remote_eps_[YASIO_MCAST_EPI]))
+      if (0 == socket_->connect(ctx_->remote_eps_[YASIO_PEER_EPI]))
       {
         ctx_->flags_ &= ~YCF_MCAST_HANDSHAKING;
         ctx_->leave_multicast_group();

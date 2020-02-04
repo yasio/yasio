@@ -195,7 +195,10 @@ static const char* inet_ntop6(const u_char* src, char* dst, socklen_t size)
     if (words[i] == 0)
     {
       if (cur.base == -1)
-        cur.base = i, cur.len = 1;
+      {  
+        cur.base = i;
+        cur.len = 1;
+      }
       else
         cur.len++;
     }

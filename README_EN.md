@@ -135,8 +135,8 @@ cmake --build . --config Debug
 * support CocosCreator jsb2.0  
 * support Unity3D
 * support multicast
-* support ssl client with openssl
-* support async resolve with c-ares
+* support ssl client with **openssl**
+* support async resolve with **c-ares**
 * Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
   
 ## Core framework

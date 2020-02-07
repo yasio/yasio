@@ -83,8 +83,8 @@ if (APPLE)
            ${YASIO_CORE}
            ${THIRDPART_SRC}
         )
-	
-	macro(set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE XCODE_RELVERSION)
+        
+        macro(set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE XCODE_RELVERSION)
             set(XCODE_RELVERSION_I "${XCODE_RELVERSION}")
             if(XCODE_RELVERSION_I STREQUAL "All")
                 set_property(TARGET ${TARGET} PROPERTY
@@ -94,8 +94,8 @@ if (APPLE)
                XCODE_ATTRIBUTE_${XCODE_PROPERTY}[variant=${XCODE_RELVERSION_I}] "${XCODE_VALUE}")
             endif()
         endmacro(set_xcode_property)
-	
-	set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
+	    
+        set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
     else ()
         set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
         add_library(yasio STATIC

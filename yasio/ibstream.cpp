@@ -40,19 +40,15 @@ SOFTWARE.
 namespace yasio
 {
 
-ibstream_view::ibstream_view() { this->assign("", 0); }
+ibstream_view::ibstream_view() { this->reset("", 0); }
 
-ibstream_view::ibstream_view(const void* data, int size) { this->assign(data, size); }
+ibstream_view::ibstream_view(const void* data, int size) { this->reset(data, size); }
 
-ibstream_view::ibstream_view(const obstream* obs)
-{
-  auto& buffer = obs->buffer();
-  this->assign(!buffer.empty() ? buffer.data() : "", static_cast<int>(buffer.size()));
-}
+ibstream_view::ibstream_view(const obstream* obs) { this->reset(obs->data(), obs->length()); }
 
 ibstream_view::~ibstream_view() {}
 
-void ibstream_view::assign(const void* data, int size)
+void ibstream_view::reset(const void* data, int size)
 {
   first_ = ptr_ = static_cast<const char*>(data);
   last_         = first_ + size;
@@ -88,13 +84,9 @@ int32_t ibstream_view::read_i24()
   value = ntohl(value) >> 8;
 
   if (value >> 23)
-  {
     return -(0x7FFFFF - (value & 0x7FFFFF)) - 1;
-  }
   else
-  {
     return value & 0x7FFFFF;
-  }
 }
 
 uint32_t ibstream_view::read_u24()
@@ -149,25 +141,21 @@ void ibstream_view::read_bytes(std::string& oav, int len)
 void ibstream_view::read_bytes(void* oav, int len)
 {
   if (len > 0)
-  {
     ::memcpy(oav, consume(len), len);
-  }
 }
 
 cxx17::string_view ibstream_view::read_bytes(int len)
 {
   cxx17::string_view sv;
   if (len > 0)
-  {
     sv = cxx17::string_view(consume(len), len);
-  }
   return sv;
 }
 
 const char* ibstream_view::consume(size_t size)
 {
   if (ptr_ >= last_)
-    throw std::logic_error("packet error, data insufficiently!");
+    throw std::out_of_range("ibstream_view::consume out of range!");
 
   auto ptr = ptr_;
   ptr_ += size;
@@ -200,11 +188,11 @@ ptrdiff_t ibstream_view::seek(ptrdiff_t offset, int whence)
 /// --------------------- CLASS ibstream ---------------------
 ibstream::ibstream(std::vector<char> blob) : ibstream_view(), blob_(std::move(blob))
 {
-  this->assign(blob_.data(), static_cast<int>(blob_.size()));
+  this->reset(blob_.data(), static_cast<int>(blob_.size()));
 }
 ibstream::ibstream(const obstream* obs) : ibstream_view(), blob_(obs->buffer())
 {
-  this->assign(blob_.data(), static_cast<int>(blob_.size()));
+  this->reset(blob_.data(), static_cast<int>(blob_.size()));
 }
 
 } // namespace yasio

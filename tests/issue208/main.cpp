@@ -10,7 +10,7 @@ timer_cb_t create_timer_cb();
 
 io_service& get_service() { return *yasio_shared_service(); }
 
-static std::time_t getTimeStamp() { return yasio::highp_clock<yasio::system_clock_t>() / 1000; }
+static yasio::highp_time_t getTimeStamp() { return yasio::highp_clock<yasio::system_clock_t>() / 1000; }
 
 void start_exprie_timer()
 {

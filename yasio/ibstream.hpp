@@ -54,9 +54,9 @@ public:
   YASIO__DECL ibstream_view& operator=(const ibstream_view&) = delete;
   YASIO__DECL ibstream_view& operator=(ibstream_view&&) = delete;
 
-  template <typename _Nty> inline _Nty read_i() { return read_i<_Nty>(consume(sizeof(_Nty))); }
+  template <typename _Nty> inline _Nty read_i() { return sread_i<_Nty>(consume(sizeof(_Nty))); }
 
-  template <typename _Nty> static _Nty read_i(const void* src)
+  template <typename _Nty> static _Nty sread_i(const void* src)
   {
     _Nty value;
     ::memcpy(&value, src, sizeof(value));
@@ -114,14 +114,14 @@ protected:
   const char* ptr_;
 };
 
-template <> inline float ibstream_view::read_i<float>(const void* src)
+template <> inline float ibstream_view::sread_i<float>(const void* src)
 {
   uint32_t nv;
   ::memcpy(&nv, src, sizeof(nv));
   return ntohf(nv);
 }
 
-template <> inline double ibstream_view::read_i<double>(const void* src)
+template <> inline double ibstream_view::sread_i<double>(const void* src)
 {
   uint64_t nv;
   ::memcpy(&nv, src, sizeof(nv));

@@ -39,7 +39,7 @@ namespace yasio
 class obstream
 {
 public:
-  YASIO__DECL obstream(size_t capacity = 256);
+  YASIO__DECL obstream(size_t capacity = 128);
   YASIO__DECL obstream(const obstream& rhs);
   YASIO__DECL obstream(obstream&& rhs);
   YASIO__DECL ~obstream();
@@ -99,11 +99,11 @@ public:
 
   char* wptr(ptrdiff_t offset = 0) { return &buffer_.front() + offset; }
 
-  template <typename _Nty> inline void write_i(ptrdiff_t offset, const _Nty value)
+  template <typename _Nty> inline void pwrite_i(ptrdiff_t offset, const _Nty value)
   {
-    write_i(wptr(offset), value);
+    swrite_i(wptr(offset), value);
   }
-  template <typename _Nty> static void write_i(void* dst, const _Nty value)
+  template <typename _Nty> static void swrite_i(void* dst, const _Nty value)
   {
     auto nv = yasio::endian::htonv(value);
     ::memcpy(dst, &nv, sizeof(nv));

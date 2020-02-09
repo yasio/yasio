@@ -44,23 +44,23 @@ public:
   YASIO__DECL ibstream_view();
   YASIO__DECL ibstream_view(const void* data, int size);
   YASIO__DECL ibstream_view(const obstream*);
-  YASIO__DECL ibstream_view(const ibstream_view& right) = delete;
-  YASIO__DECL ibstream_view(ibstream_view&& right)      = delete;
+  YASIO__DECL ibstream_view(const ibstream_view&) = delete;
+  YASIO__DECL ibstream_view(ibstream_view&&)      = delete;
 
   YASIO__DECL ~ibstream_view();
 
-  YASIO__DECL void assign(const void* data, int size);
+  YASIO__DECL void reset(const void* data, int size);
 
-  YASIO__DECL ibstream_view& operator=(const ibstream_view& right) = delete;
-  YASIO__DECL ibstream_view& operator=(ibstream_view&& right) = delete;
+  YASIO__DECL ibstream_view& operator=(const ibstream_view&) = delete;
+  YASIO__DECL ibstream_view& operator=(ibstream_view&&) = delete;
 
-  template <typename _Nty> inline void read_ix(_Nty& ov);
+  template <typename _Nty> inline _Nty read_i() { return read_i<_Nty>(consume(sizeof(_Nty))); }
 
-  template <typename _Nty> inline _Nty read_i()
+  template <typename _Nty> static _Nty read_i(const void* src)
   {
     _Nty value;
-    read_ix(value);
-    return value;
+    ::memcpy(&value, src, sizeof(value));
+    return yasio::endian::ntohv(value);
   }
 
   YASIO__DECL int read_i7();
@@ -105,7 +105,7 @@ public:
   }
 
 protected:
-  // will throw std::logic_error
+  // will throw std::out_of_range
   YASIO__DECL const char* consume(size_t size);
 
 protected:
@@ -114,29 +114,18 @@ protected:
   const char* ptr_;
 };
 
-template <typename _Nty> inline void ibstream_view::read_ix(_Nty& ov)
-{
-  memcpy(&ov, consume(sizeof(ov)), sizeof(ov));
-  ov = yasio::endian::ntohv(ov);
-}
-
-template <> inline void ibstream_view::read_ix<uint8_t>(uint8_t& ov)
-{
-  memcpy(&ov, consume(sizeof(ov)), sizeof(ov));
-}
-
-template <> inline void ibstream_view::read_ix<float>(float& ov)
+template <> inline float ibstream_view::read_i<float>(const void* src)
 {
   uint32_t nv;
-  memcpy(&nv, consume(sizeof(nv)), sizeof(nv));
-  ov = ntohf(nv);
+  ::memcpy(&nv, src, sizeof(nv));
+  return ntohf(nv);
 }
 
-template <> inline void ibstream_view::read_ix<double>(double& ov)
+template <> inline double ibstream_view::read_i<double>(const void* src)
 {
   uint64_t nv;
-  memcpy(&nv, consume(sizeof(nv)), sizeof(nv));
-  ov = ntohd(nv);
+  ::memcpy(&nv, src, sizeof(nv));
+  return ntohd(nv);
 }
 
 /// --------------------- CLASS ibstream ---------------------

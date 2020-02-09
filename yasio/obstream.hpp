@@ -27,6 +27,7 @@ SOFTWARE.
 */
 #ifndef YASIO__OBSTREAM_HPP
 #define YASIO__OBSTREAM_HPP
+#include <stddef.h>
 #include <string>
 #include "yasio/cxx17/string_view.hpp"
 #include <sstream>

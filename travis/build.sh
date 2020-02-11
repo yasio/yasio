@@ -61,6 +61,8 @@ function build_android()
     exit 0
 }
 
+cmake --version
+
 if [ $BUILD_TARGET == "linux" ]
 then
     build_linux

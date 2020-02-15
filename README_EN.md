@@ -1,7 +1,7 @@
 # yasio - *Y*et *A*nother *S*ocket *IO* service
 [![Build Status](https://travis-ci.com/simdsoft/yasio.svg?branch=master)](https://travis-ci.com/simdsoft/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/stable-v3.31.3-blue.svg)](https://github.com/simdsoft/yasio/releases)
+[![Release](https://img.shields.io/badge/stable-v3.33.0-blue.svg)](https://github.com/simdsoft/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/simdsoft/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/simdsoft/yasio.svg?label=Stars)](https://github.com/simdsoft/yasio)
@@ -9,7 +9,7 @@
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)
 
-**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support win32 & linux & apple & android & wp8 & wp8.1-universal & win10-universal.  
+**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows & linux & apple & android & win10-universal.  
 
 ## Showcase
 * [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.

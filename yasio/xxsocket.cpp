@@ -195,9 +195,9 @@ static const char* inet_ntop6(const u_char* src, char* dst, socklen_t size)
     if (words[i] == 0)
     {
       if (cur.base == -1)
-      {  
+      {
         cur.base = i;
-        cur.len = 1;
+        cur.len  = 1;
       }
       else
         cur.len++;
@@ -1350,6 +1350,26 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
   n += set_optval(s, IPPROTO_TCP, TCP_KEEPCNT, probes);
   return n;
 #endif
+}
+
+void xxsocket::reuse_address(bool reuse)
+{
+  if (reuse)
+  {
+    // All operating systems have 'SO_REUSEADDR'
+    this->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+#if defined(SO_REUSEPORT) // macos,ios,linux,android
+    this->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+#endif
+  }
+  else
+  {
+#if defined(SO_EXCLUSIVEADDRUSE)
+    this->set_optval(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, 1);
+#elif defined(SO_EXCLBIND)
+    this->set_optval(SOL_SOCKET, SO_EXCLBIND, 1);
+#endif
+  }
 }
 
 xxsocket::operator socket_native_type(void) const { return this->fd; }

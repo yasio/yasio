@@ -1,7 +1,7 @@
 # yasio - *Y*et *A*nother *S*ocket *IO* service
 [![Build Status](https://travis-ci.com/simdsoft/yasio.svg?branch=master)](https://travis-ci.com/simdsoft/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/stable-v3.31.3-blue.svg)](https://github.com/simdsoft/yasio/releases)
+[![Release](https://img.shields.io/badge/stable-v3.33.0-blue.svg)](https://github.com/simdsoft/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/simdsoft/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/simdsoft/yasio.svg?label=Stars)](https://github.com/simdsoft/yasio)
@@ -11,7 +11,7 @@
 
 **[English](README_EN.md)**
 
-**yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持win32 & linux & apple & android & win10-universal。  
+**yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持windows & linux & apple & android & win10-universal。  
 
 ## 应用案例
 * [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上百万移动设备上。

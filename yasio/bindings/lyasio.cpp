@@ -166,11 +166,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       },
       "dispatch", &io_service::dispatch, "open", &io_service::open, "is_open",
       sol::overload(
-          static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
+          static_cast<bool (io_service::*)(int) const>(&io_service::is_open),
           static_cast<bool (io_service::*)(transport_handle_t) const>(&io_service::is_open)),
       "close",
       sol::overload(static_cast<void (io_service::*)(transport_handle_t)>(&io_service::close),
-                    static_cast<void (io_service::*)(size_t)>(&io_service::close)),
+                    static_cast<void (io_service::*)(int)>(&io_service::close)),
       "write",
       sol::overload(
           [](io_service* service, transport_handle_t transport, cxx17::string_view s) {
@@ -409,11 +409,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
           .addFunction("dispatch", &io_service::dispatch)
           .addFunction("open", &io_service::open)
           .addOverloadedFunctions(
-              "is_open", static_cast<bool (io_service::*)(size_t) const>(&io_service::is_open),
+              "is_open", static_cast<bool (io_service::*)(int) const>(&io_service::is_open),
               static_cast<bool (io_service::*)(transport_handle_t) const>(&io_service::is_open))
           .addOverloadedFunctions(
               "close", static_cast<void (io_service::*)(transport_handle_t)>(&io_service::close),
-              static_cast<void (io_service::*)(size_t)>(&io_service::close))
+              static_cast<void (io_service::*)(int)>(&io_service::close))
           .addOverloadedFunctions(
               "write",
               [](io_service* service, transport_handle_t transport, cxx17::string_view s) {

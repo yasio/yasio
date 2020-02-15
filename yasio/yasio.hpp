@@ -628,13 +628,13 @@ public:
   YASIO__DECL void close(transport_handle_t);
 
   // close channel
-  YASIO__DECL void close(size_t cindex = 0);
+  YASIO__DECL void close(int cindex);
 
   // check whether the transport is open
   YASIO__DECL bool is_open(transport_handle_t) const;
 
   // check whether the channel is open
-  YASIO__DECL bool is_open(size_t cahnnel_index = 0) const;
+  YASIO__DECL bool is_open(int cindex) const;
 
   YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 

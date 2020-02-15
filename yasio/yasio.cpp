@@ -904,16 +904,16 @@ void io_service::process_channels(fd_set* fds_array)
   }
 }
 
-void io_service::close(size_t cindex)
+void io_service::close(int cindex)
 {
   // Gets channel context
-  if (cindex >= channels_.size())
+  auto channel = cindex_to_handle(cindex);
+  if (!channel)
     return;
-  auto ctx = channels_[cindex];
 
-  if (!(ctx->opmask_ & YOPM_CLOSE_CHANNEL))
+  if (!(channel->opmask_ & YOPM_CLOSE_CHANNEL))
   {
-    if (close_internal(ctx))
+    if (close_internal(channel))
       this->interrupt();
   }
 }
@@ -934,7 +934,7 @@ bool io_service::is_open(transport_handle_t transport) const
   return transport->state_ == YCS_OPENED;
 }
 
-bool io_service::is_open(size_t cindex) const
+bool io_service::is_open(int cindex) const
 {
   auto ctx = cindex_to_handle(cindex);
   return ctx != nullptr && ctx->state_ == YCS_OPENED;

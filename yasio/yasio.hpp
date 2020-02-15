@@ -457,6 +457,8 @@ public:
   io_service& get_service() { return ctx_->get_service(); }
   unsigned int id() { return id_; }
 
+  virtual ~io_transport() {}
+
 private:
   virtual void write(std::vector<char>&&, std::function<void()>&&) = 0;
   virtual int do_read(int& error)                                  = 0;
@@ -469,7 +471,6 @@ private:
 
 protected:
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s);
-  virtual ~io_transport() {}
 
   void invalid() { valid_ = false; }
 

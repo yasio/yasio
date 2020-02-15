@@ -53,6 +53,8 @@ template <typename _T> const _T& clamp(const _T& v, const _T& lo, const _T& hi)
   return v < lo ? lo : hi < v ? hi : v;
 }
 #endif
+
+template <typename _T> inline void invoke_dtor(_T* p) { p->~_T(); }
 } // namespace yasio
 
 #endif

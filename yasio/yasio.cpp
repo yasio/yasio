@@ -1586,7 +1586,7 @@ void io_service::deallocate_transport(transport_handle_t t)
   if (t && t->valid_)
   {
     t->invalid();
-    t->~io_transport();
+    yasio::invoke_dtor(t);
     this->tpool_.push_back(t);
   }
 }

@@ -104,10 +104,6 @@ typedef int socket_native_type;
 #  define MICROSECONDS_PER_SECOND 1000000LL
 #endif
 
-#ifndef SO_REUSEPORT
-#  define SO_REUSEPORT SO_REUSEADDR
-#endif
-
 // redefine socket error code for posix api
 #ifdef _WIN32
 
@@ -865,6 +861,8 @@ public:
   YASIO__DECL int set_keepalive(int flag = 1, int idle = 7200, int interval = 75, int probes = 10);
   YASIO__DECL static int set_keepalive(socket_native_type s, int flag, int idle, int interval,
                                        int probes);
+
+  YASIO__DECL void reuse_address(bool reuse);
 
   /* @brief: Sets the socket option
   ** @params :

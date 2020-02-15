@@ -199,10 +199,22 @@ enum
 // channel flags
 enum
 {
-  YCF_MCAST_LOOPBACK    = 1 << 1,
-  YCF_REUSEPORT         = 1 << 2,
+  /* Whether setsockopt SO_REUSEADDR and SO_REUSEPORT */
+  YCF_REUSEADDR = 1,
+
+  /* For winsock security issue, see:
+     https://docs.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
+  */
+  YCF_EXCLUSIVEADDRUSE = 1 << 1,
+
+  /* Whether multicast loopback, if 1, local machine can recv self multicast packet */
+  YCF_MCAST_LOOPBACK = 1 << 2,
+
+  /* Whether multicast client in handshaking */
   YCF_MCAST_HANDSHAKING = 1 << 3,
-  YCF_SSL_HANDSHAKING   = 1 << 4,
+
+  /* Whether ssl client in handshaking */
+  YCF_SSL_HANDSHAKING = 1 << 4,
 };
 
 // event kinds
@@ -365,8 +377,8 @@ private:
 
   u_short mask_ = 0;
 
-  // For compat reason, we set default flags to YCF_REUSEPORT
-  u_short flags_ = YCF_REUSEPORT;
+  /* !!!since v3.32.0, the default value has modfied from YCF_REUSEADDR to 0 */
+  u_short flags_ = 0;
 
   /*
   ** !!! for tcp/udp client, if not zero, will use it as fixed port.

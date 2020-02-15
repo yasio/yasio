@@ -7,6 +7,7 @@ void run_udp_echo_server(const char *ip, u_short port)
   io_hostent endpoints[] = {{ip, port}};
   io_service udp_server(endpoints, 1);
   udp_server.set_option(YOPT_S_NO_NEW_THREAD, 1);
+  udp_server.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
 
   // !important, because we set YOPT_S_NO_NEW_THREAD, so need a timer to start server
   deadline_timer starter(udp_server);

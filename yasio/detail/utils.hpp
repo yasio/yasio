@@ -38,23 +38,23 @@ typedef long long highp_time_t;
 typedef std::chrono::high_resolution_clock highp_clock_t;
 typedef std::chrono::system_clock system_clock_t;
 // The high precision micro seconds timestamp
-template <typename _T = highp_clock_t> inline long long highp_clock()
+template <typename _Ty = highp_clock_t> inline long long highp_clock()
 {
-  auto duration = _T::now().time_since_epoch();
+  auto duration = _Ty::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 }
 
 #if YASIO__HAS_CXX17
 using std::clamp;
 #else
-template <typename _T> const _T& clamp(const _T& v, const _T& lo, const _T& hi)
+template <typename _Ty> const _Ty& clamp(const _Ty& v, const _Ty& lo, const _Ty& hi)
 {
   ASSERT(!(hi < lo));
   return v < lo ? lo : hi < v ? hi : v;
 }
 #endif
 
-template <typename _T> inline void invoke_dtor(_T* p) { p->~_T(); }
+template <typename _Ty> inline void invoke_dtor(_Ty* p) { p->~_Ty(); }
 } // namespace yasio
 
 #endif

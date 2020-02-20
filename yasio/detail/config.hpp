@@ -80,6 +80,19 @@ SOFTWARE.
 */
 // #define YASIO_HAVE_SSL 1
 
+/*
+** Uncomment or add compiler flag -DYASIO_DISABLE_CONCURRENT_SINGLETON to disable concurrent singleton
+*/
+// #define YASIO_DISABLE_CONCURRENT_SINGLETON 1
+
+/* 
+** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and
+** follow 3 lines code will be removed
+*/
+#if defined(_MSC_VER) && _MSC_VER < 1900 && !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
+  #define YASIO_DISABLE_CONCURRENT_SINGLETON 1
+#endif
+
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
 #else

@@ -8,12 +8,6 @@
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
-#if defined(_WIN32)
-#  include <Shlwapi.h>
-#  pragma comment(lib, "shlwapi.lib")
-#  define strcasestr StrStrIA
-#endif
-
 using namespace yasio;
 using namespace yasio::inet;
 

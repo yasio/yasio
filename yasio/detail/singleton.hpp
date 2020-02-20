@@ -31,7 +31,9 @@ SOFTWARE.
 #include <memory>
 #include <functional>
 
-#if defined(YASIO_ENABLE_CONCURRENT_SINGLETON)
+#include "yasio/detail/config.hpp"
+
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
 #  include <mutex>
 #  include <atomic>
 #endif
@@ -96,7 +98,7 @@ public:
     if (_Myt::__single__)
       return _Myt::__single__;
 
-#if defined(YASIO_ENABLE_CONCURRENT_SINGLETON)
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
     std::lock_guard<std::mutex> lck(__mutex__);
     if (_Myt::__single__)
       return _Myt::__single__;
@@ -110,7 +112,7 @@ public:
     if (_Myt::__single__)
       return _Myt::__single__;
 
-#if defined(YASIO_ENABLE_CONCURRENT_SINGLETON)
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
     std::lock_guard<std::mutex> lck(__mutex__);
     if (_Myt::__single__)
       return _Myt::__single__;
@@ -121,7 +123,7 @@ public:
 
   static void destroy(void)
   {
-#if defined(YASIO_ENABLE_CONCURRENT_SINGLETON)
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
     std::lock_guard<std::mutex> lck(__mutex__);
 #endif
     if (_Myt::__single__)
@@ -132,22 +134,22 @@ public:
   }
 
 private:
-#if !defined(YASIO_ENABLE_CONCURRENT_SINGLETON)
-  static _Ty* __single__;
-#else
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
   static std::atomic<_Ty*> __single__;
   static std::mutex __mutex__;
+#else
+  static _Ty* __single__;
 #endif
 private:
   // disable construct, assign operation, copy construct also not allowed.
   singleton(void) = delete;
 };
 
-#if !defined(YASIO_ENABLE_CONCURRENT_SINGLETON)
-template <typename _Ty> _Ty* singleton<_Ty>::__single__;
-#else
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
 template <typename _Ty> std::atomic<_Ty*> singleton<_Ty>::__single__;
 template <typename _Ty> std::mutex singleton<_Ty>::__mutex__;
+#else
+template <typename _Ty> _Ty* singleton<_Ty>::__single__;
 #endif
 
 } // namespace gc

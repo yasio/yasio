@@ -80,6 +80,11 @@ SOFTWARE.
 */
 // #define YASIO_HAVE_SSL 1
 
+/*
+** Uncomment or add compiler flag -DYASIO_DISABLE_CONCURRENT_SINGLETON to disable concurrent singleton
+*/
+// #define YASIO_DISABLE_CONCURRENT_SINGLETON 1
+
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
 #else

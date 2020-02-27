@@ -35,29 +35,17 @@ int main()
             obs.push32();
             obs.write_bytes("hello world");
             obs.pop32();
-              //000xxxxhelloworld
-            ip::endpoint ep;
-              
-            if (ep.assign("127.0.0.1",12345))
-            {
-                transport->get_context().join_multicast_group(ep, 1);
-                service.write_to(transport, std::move(obs.buffer()),ep);
-            }
-              //transport->leaveMCast();
+            //000xxxxhelloworld
+            ip::endpoint ep{"127.0.0.1",12345};
+            service.write_to(transport, std::move(obs.buffer()),ep);
             
           }
-
-          //transports.push_back(transport);
-          
         if (event->status() != 0)
         {
           if (retry_count++ < 2)
           {
-            // service.schedule(std::chrono::milliseconds (100), [&](bool
-            // cancelled){
             service.set_option(YOPT_C_REMOTE_ENDPOINT, 0, "127.0.0.1", 12345);
             service.open(0, YCM_UDP_CLIENT); // open udp client
-            //});
           }
           else
             exit(-1);

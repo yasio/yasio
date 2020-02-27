@@ -84,7 +84,9 @@ extern "C" {
 #define YASIO_ANY_ADDR(flags) (flags) & ipsv_ipv4 ? "0.0.0.0" : "::"
 
 // The udp/multicast explicit peer endpoint index
-#define YASIO_PEER_EPI 1
+#define YASIO_SND_ADDR_INDEX 1
+#define YASIO_RCV_ADDR_INDEX 2
+#define YASIO_MCAST_ADDR_INDEX 3
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -267,36 +269,69 @@ io_channel::io_channel(io_service& service, int index) : timer_(service)
   decode_len_        = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 
+ip::endpoint io_channel::load_endpoint(size_t eps_index)
+{
+  return remote_eps_.size() > eps_index ? remote_eps_[eps_index] : ip::endpoint{};
+}
+void io_channel::store_endpoint(size_t eps_index, const ip::endpoint& peer)
+{
+  if (remote_eps_.size() < (eps_index + 1))
+    remote_eps_.resize(eps_index + 1);
+  remote_eps_[eps_index] = peer;
+}
+void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
+{
+  flags_ |= YCF_MCAST;
+  if (loopback)
+  {
+    flags_ |= YCF_MCAST_LOOPBACK;
+  }
+  store_endpoint(YASIO_MCAST_ADDR_INDEX, ep);
+}
+
 int io_channel::join_multicast_group()
 {
-  if (socket_ && !this->remote_eps_.empty())
+  if (socket_->is_open())
   {
-    auto& ep = this->remote_eps_[0];
     // loopback
-
-    int loopback = (flags_ & YCF_MCAST_LOOPBACK) != 0;
+    ip::endpoint ep = load_endpoint(YASIO_MCAST_ADDR_INDEX);
+    int lb          = flags_ & YCF_MCAST_LOOPBACK;
     socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                        ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
+                        ep.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, lb);
     // ttl
     socket_->set_optval(ep.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                         ep.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
                         YASIO_DEFAULT_MULTICAST_TTL);
 
-    struct ip_mreq mreq;
-    mreq.imr_interface.s_addr = 0;
-    mreq.imr_multiaddr.s_addr = ep.in4_.sin_addr.s_addr;
-    return socket_->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+    if (ep.af() == AF_INET)
+    { // ipv4
+      struct ip_mreq mreq;
+      mreq.imr_interface.s_addr = 0;
+      mreq.imr_multiaddr = ep.in4_.sin_addr;
+      return socket_->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+    }
+    else
+    { // ipv6
+      struct ipv6_mreq mreq_v6;
+      mreq_v6.ipv6mr_interface = 0;
+      mreq_v6.ipv6mr_multiaddr = ep.in6_.sin6_addr;
+      return socket_->set_optval(IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq_v6, (int)sizeof(mreq_v6));
+    }
   }
   return -1;
 }
 
-void io_channel::leave_multicast_group()
+void io_channel::disable_multicast_group()
 {
-  if (socket_ && !this->remote_eps_.empty())
+  flags_ &= ~YCF_MCAST;
+  flags_ &= ~YCF_MCAST_LOOPBACK;
+
+  if (socket_->is_open())
   {
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
-    mreq.imr_multiaddr.s_addr = this->remote_eps_[0].in4_.sin_addr.s_addr;
+    ip::endpoint ep           = load_endpoint(YASIO_MCAST_ADDR_INDEX);
+    mreq.imr_multiaddr.s_addr = ep.in4_.sin_addr.s_addr;
     socket_->set_optval(IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
 }
@@ -381,18 +416,24 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->ud_.ptr                   = nullptr;
 }
 
-// -------------------- io_transport_posix ---------------------
-void io_transport_posix::write(std::vector<char>&& buffer, std::function<void()>&& handler)
+// -------------------- io_transport_tcp ---------------------
+inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
+    : io_transport(ctx, s)
+{}
+int io_transport_tcp::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
+  int n = static_cast<int>(buffer.size());
   send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
+  get_service().interrupt();
+  return n;
 }
-int io_transport_posix::do_read(int& error)
+int io_transport_tcp::do_read(int& error)
 {
   int n = read_cb_(buffer_ + wpos_, sizeof(buffer_) - wpos_);
   error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
-bool io_transport_posix::do_write(long long& max_wait_duration)
+bool io_transport_tcp::do_write(long long& max_wait_duration)
 {
   bool ret = false;
   do
@@ -450,75 +491,74 @@ bool io_transport_posix::do_write(long long& max_wait_duration)
 
   return ret;
 }
-void io_transport_posix::set_primitives()
+void io_transport_tcp::set_primitives()
 {
+#if !defined(YASIO_HAVE_SSL)
   this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
   this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
-}
-
-// ----------------------- io_transport_mcast ----------------
-io_transport_mcast::io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport_posix(ctx, s)
-{
-  ctx->flags_ |= YCF_MCAST_HANDSHAKING;
-}
-io_transport_mcast::~io_transport_mcast() { ctx_->flags_ &= ~YCF_MCAST_HANDSHAKING; }
-void io_transport_mcast::set_primitives()
-{
-  this->write_cb_ = [=](const void* data, int len) {
-    return socket_->sendto(data, len, ctx_->remote_eps_[0]);
-  };
-  this->read_cb_ = [=](void* data, int len) {
-    ip::endpoint peer;
-    int n = socket_->recvfrom(data, len, peer);
-
-    if (n > 0)
-    { // record explicit peer endpoint
-      ctx_->remote_eps_.resize(YASIO_PEER_EPI + 1);
-      ctx_->remote_eps_[YASIO_PEER_EPI] = peer;
-    }
-    return n;
-  };
-}
-int io_transport_mcast::do_read(int& error)
-{
-  int n = io_transport_posix::do_read(error);
-  if (ctx_->flags_ & YCF_MCAST_HANDSHAKING)
+#else
+  if (!(ctx_->mask_ & YCM_SSL))
   {
-    if (n > 0 && ctx_->remote_eps_.size() > YASIO_PEER_EPI)
-    {
-      // Now the 'peer' is a real host address
-      // So  we can use connect to establish 4 tuple with 'peer' & leave the multicast group.
-      if (0 == socket_->connect(ctx_->remote_eps_[YASIO_PEER_EPI]))
-      {
-        ctx_->flags_ &= ~YCF_MCAST_HANDSHAKING;
-        ctx_->leave_multicast_group();
-        io_transport_posix::set_primitives();
+    ctx->flags_ &= ~YCF_SSL_HANDSHAKING;
+    this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
+    this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
+  }
+  else
+  {
+    this->read_cb_  = [=](void* data, int len) { return ::SSL_read(ssl_, data, len); };
+    this->write_cb_ = [=](const void* data, int len) { return ::SSL_write(ssl_, data, len); };
+  }
+#endif
+}
 
-        YASIO_SLOG_IMPL(get_service().options_,
-                        "[index: %d] the connection #%u [%s] --> [%s] is established through "
-                        "multicast: [%s].",
-                        ctx_->index_, this->id_, socket_->local_endpoint().to_string().c_str(),
-                        socket_->peer_endpoint().to_string().c_str(), ctx_->remote_host_.c_str());
-        return n;
-      }
+// ----------------------- io_transport_udp ----------------
+io_transport_udp::io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
+    : io_transport(ctx, s)
+{
+  connected_ = false;
+}
+io_transport_udp::~io_transport_udp() {}
+int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&&)
+{
+  int n = -1;
+  if (ctx_->remote_eps_.size() > (YASIO_SND_ADDR_INDEX) && !connected_)
+    n = socket_->sendto(buffer.data(), static_cast<int>(buffer.size()),
+                        ctx_->remote_eps_[YASIO_SND_ADDR_INDEX]);
+  else
+    n = socket_->send(buffer.data(), static_cast<int>(buffer.size()));
+  if (n > 0)
+    return n;
+  int error = xxsocket::get_last_errno();
+  if (SHOULD_CLOSE_1(n, error))
+  {
+    if (error != EPERM)
+    { // Fix issue: #126, simply ignore EPERM for UDP
+      set_last_errno(error);
+      // finally, trigger transport close
+      get_service().close(this);
+      return -1; // failed, transport should be close
     }
   }
+
+  return 0; // No error
+} // namespace inet
+int io_transport_udp::do_read(int& error)
+{
+  ip::endpoint peer;
+  int n = socket_->recvfrom(buffer_, sizeof(buffer_), peer);
+  if (n > 0)
+    ctx_->store_endpoint(YASIO_RCV_ADDR_INDEX, peer);
+
+  error = n < 0 ? xxsocket::get_last_errno() : 0;
+
   return n;
 }
-// ----------------------- io_transport_ssl ----------------
-#if defined(YASIO_HAVE_SSL)
-io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport_posix(ctx, s), ssl_(std::move(ctx->ssl_))
+
+bool io_transport_udp::do_write(long long& max_wait_duration)
 {
-  ctx->flags_ &= ~YCF_SSL_HANDSHAKING;
+  return !((opmask_ | ctx_->opmask_) & YOPM_CLOSE_TRANSPORT);
 }
-void io_transport_ssl::set_primitives()
-{
-  this->read_cb_  = [=](void* data, int len) { return ::SSL_read(ssl_, data, len); };
-  this->write_cb_ = [=](const void* data, int len) { return ::SSL_write(ssl_, data, len); };
-}
-#endif
+
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
@@ -533,10 +573,12 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 
-void io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& /*handler*/)
+int io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-  ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
+  int retval = ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
+  get_service().interrupt();
+  return retval;
 }
 int io_transport_kcp::do_read(int& error)
 {
@@ -835,15 +877,17 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
     https://cloud.tencent.com/developer/article/1004555
     So we emulate thus by ourself.
+    since v3.33, the udp not use send_queue, so we only check status instead do write.
   */
 #if defined(_WIN32)
   for (auto iter = dgram_transports_.begin(); iter != dgram_transports_.end();)
   {
     auto transport = iter->second;
-    if (do_write(transport, max_wait_duration))
+    if (transport->do_write(max_wait_duration))
       ++iter;
     else
     {
+      transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
       handle_close(transport);
       iter = dgram_transports_.erase(iter);
     }
@@ -1025,11 +1069,24 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   if (transport && transport->is_open())
   {
     if (!buffer.empty())
+      return transport->write(std::move(buffer), std::move(handler));
+    return 0;
+  }
+  else
+  {
+    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
+    return -1;
+  }
+}
+int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
+                         const ip::endpoint& to)
+{
+  if (transport && transport->is_open())
+  {
+    if (!buffer.empty())
     {
-      auto n = static_cast<int>(buffer.size());
-      transport->write(std::move(buffer), std::move(handler));
-      this->interrupt();
-      return n;
+      transport->ctx_->store_endpoint(YASIO_SND_ADDR_INDEX, to);
+      return transport->write(std::move(buffer), nullptr);
     }
     return 0;
   }
@@ -1067,9 +1124,10 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   auto& ep    = ctx->remote_eps_[0];
   YASIO_SLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(),
              ctx->remote_port_);
-  int ret = -1;
+
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
+    int ret = 0;
     if (ctx->flags_ & YCF_REUSEADDR)
       ctx->socket_->reuse_address(true);
     if (ctx->flags_ & YCF_EXCLUSIVEADDRUSE)
@@ -1080,10 +1138,16 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
       ctx->socket_->bind(ctx->local_host_.c_str(), ctx->local_port_);
 
-    if (!(ctx->mask_ & YCM_MCAST))
+    // tcp connect directly, for udp do not need to connect.
+    if (ctx->mask_ & YCM_TCP)
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
-    else
-      ret = ctx->join_multicast_group();
+
+    // join the multicast group for udp
+    if (ctx->flags_ & YCF_MCAST)
+    {
+      ctx->join_multicast_group();
+    }
+
     if (ret < 0)
     { // setup no blocking connect
       int error = xxsocket::get_last_errno();
@@ -1348,19 +1412,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
 { // channel is server
   cleanup_io(ctx);
 
-  // init ep properly once for bind
-  // for server, local_port_ can't be zero
-  if (ctx->local_host_.empty())
-  {
-    if ((ctx->mask_ & YCM_MCAST) == 0)
-      ctx->local_host_ = ctx->remote_host_;
-    else
-      ctx->local_host_ = YASIO_ANY_ADDR(ipsv_);
-  }
-  if (ctx->local_port_ == 0)
-    ctx->local_port_ = ctx->remote_port_;
-
-  ip::endpoint ep(ctx->local_host_.c_str(), ctx->local_port_);
+  ip::endpoint ep(ctx->remote_host_.c_str(), ctx->remote_port_);
 
   if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
@@ -1386,8 +1438,10 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
 
       if (ctx->mask_ & YCM_UDP)
       {
-        if (ctx->mask_ & YCM_MCAST)
+        if (ctx->flags_ & YCF_MCAST)
+        {
           ctx->join_multicast_group();
+        }
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
@@ -1484,7 +1538,9 @@ transport_handle_t io_service::make_dgram_transport(io_channel* ctx, ip::endpoin
                     : -1;
     if (error == 0)
     {
-      auto transport = allocate_transport(ctx, std::move(client_sock));
+      io_transport_udp* transport =
+          (io_transport_udp*)allocate_transport(ctx, std::move(client_sock));
+      transport->connected_ = true;
 #if !defined(_WIN32)
       handle_connect_succeed(transport);
 #else
@@ -1545,11 +1601,7 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
 
 transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_ptr<xxsocket> socket)
 {
-#if !defined(YASIO_HAVE_SSL)
-  static const int s_transport_max_size = sizeof(io_transport_posix);
-#else
-  static const int s_transport_max_size = sizeof(io_transport_ssl);
-#endif
+  static const int s_transport_max_size = sizeof(io_transport_tcp);
 
   transport_handle_t transport;
   void* vp;
@@ -1561,22 +1613,21 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   else
     vp = operator new(s_transport_max_size);
 
-  if (ctx->mask_ & YCM_POSIX)
-    transport = new (vp) io_transport_posix(ctx, socket);
-  else if (ctx->mask_ & YCM_MCAST)
-    transport = new (vp) io_transport_mcast(ctx, socket);
+  if (ctx->mask_ & YCM_TCP)
+    transport = new (vp) io_transport_tcp(ctx, socket);
+  else if (ctx->mask_ & YCM_UDP)
+    transport = new (vp) io_transport_udp(ctx, socket);
 #if defined(YASIO_HAVE_KCP)
   else if (ctx->mask_ & YCM_KCP)
     transport = new (vp) io_transport_kcp(ctx, socket);
 #endif
-#if defined(YASIO_HAVE_SSL)
-  else if (ctx->mask_ & YCM_SSL)
-    transport = new (vp) io_transport_ssl(ctx, socket);
-#endif
   else
-    transport = new (vp) io_transport_posix(ctx, socket);
+    transport = new (vp) io_transport_tcp(ctx, socket);
 
-  transport->set_primitives();
+  if (ctx->mask_ & YCM_TCP)
+  {
+    static_cast<io_transport_tcp*>(transport)->set_primitives();
+  }
 
   return transport;
 }
@@ -1951,7 +2002,7 @@ void io_service::start_resolve(io_channel* ctx)
   else
     hint.ai_family = AF_INET6;
   char sport[sizeof "65535"] = {'\0'};
-  const char* service = nullptr;
+  const char* service        = nullptr;
   if (ctx->remote_port_ > 0)
   {
     sprintf(sport, "%u", ctx->remote_port_); // It's enough for unsigned short, so use sprintf ok.
@@ -2119,6 +2170,27 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
         channel->setup_remote_host(va_arg(ap, const char*));
         channel->setup_remote_port((u_short)va_arg(ap, int));
       }
+      break;
+    }
+    case YOPT_C_ENABLE_MCAST: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        const char* addr = va_arg(ap, const char*);
+        int loopback     = va_arg(ap, int);
+        channel->enable_multicast_group(ip::endpoint(addr, 0), loopback);
+        if (channel->socket_->is_open())
+        {
+          // client join directly
+          channel->join_multicast_group();
+        }
+      }
+      break;
+    }
+    case YOPT_C_DISABLE_MCAST: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->disable_multicast_group();
       break;
     }
     case YOPT_C_MOD_FLAGS: {

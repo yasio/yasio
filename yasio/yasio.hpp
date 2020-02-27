@@ -66,6 +66,10 @@ typedef struct ares_channeldata* ares_channel;
 typedef struct ares_addrinfo ares_addrinfo;
 #endif
 
+#define YASIO_SND_ADDR_INDEX 1
+#define YASIO_RCV_ADDR_INDEX 2
+#define YASIO_MCAST_ADDR_INDEX 3
+
 namespace yasio
 {
 namespace inet
@@ -160,6 +164,11 @@ enum
   // Sets channl flags
   // params: index:int, flagsToAdd:int, flagsToRemove:int
   YOPT_C_MOD_FLAGS,
+  // Join multi cast mode
+  // params: addr:const char* addr, port:int, loopback:int
+  YOPT_C_ENABLE_MCAST,
+  // Leave multi cast mode
+  YOPT_C_DISABLE_MCAST,
 
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
@@ -169,31 +178,19 @@ enum
 // channel mask, contains transport type: POSIX, MCAST, KCP, SSL
 enum
 {
-  YCM_CLIENT = 1,
-  YCM_SERVER = 1 << 1,
-  YCM_POSIX  = 1 << 2,
-  YCM_TCP    = 1 << 3,
-  YCM_UDP    = 1 << 4,
-  YCM_MCAST  = 1 << 5,
-#if defined(YASIO_HAVE_KCP)
-  YCM_KCP = 1 << 6,
-#endif
-#if defined(YASIO_HAVE_SSL)
-  YCM_SSL = 1 << 7,
-#endif
-  YCM_TCP_CLIENT   = YCM_TCP | YCM_CLIENT | YCM_POSIX,
-  YCM_TCP_SERVER   = YCM_TCP | YCM_SERVER | YCM_POSIX,
-  YCM_UDP_CLIENT   = YCM_UDP | YCM_CLIENT | YCM_POSIX,
-  YCM_UDP_SERVER   = YCM_UDP | YCM_SERVER | YCM_POSIX,
-  YCM_MCAST_CLIENT = YCM_MCAST | YCM_CLIENT | YCM_UDP,
-  YCM_MCAST_SERVER = YCM_MCAST | YCM_SERVER | YCM_UDP | YCM_POSIX,
-#if defined(YASIO_HAVE_KCP)
+  YCM_CLIENT     = 1,
+  YCM_SERVER     = 1 << 1,
+  YCM_TCP        = 1 << 2,
+  YCM_UDP        = 1 << 3,
+  YCM_KCP        = 1 << 5,
+  YCM_SSL        = 1 << 6,
+  YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
+  YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
+  YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
+  YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
   YCM_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
   YCM_KCP_SERVER = YCM_KCP | YCM_SERVER | YCM_UDP,
-#endif
-#if defined(YASIO_HAVE_SSL)
   YCM_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
-#endif
 };
 
 // channel flags
@@ -207,14 +204,15 @@ enum
   */
   YCF_EXCLUSIVEADDRUSE = 1 << 1,
 
-  /* Whether multicast loopback, if 1, local machine can recv self multicast packet */
-  YCF_MCAST_LOOPBACK = 1 << 2,
-
-  /* Whether multicast client in handshaking */
-  YCF_MCAST_HANDSHAKING = 1 << 3,
-
   /* Whether ssl client in handshaking */
-  YCF_SSL_HANDSHAKING = 1 << 4,
+  YCF_SSL_HANDSHAKING = 1 << 2,
+
+  /* whether udp server enable multicast service */
+  YCF_MCAST = 1 << 3,
+
+  /* Whether multicast loopback, if 1, local machine can recv self multicast packet */
+  YCF_MCAST_LOOPBACK = 1 << 4,
+
 };
 
 // event kinds
@@ -231,9 +229,8 @@ class highp_timer;
 class io_event;
 class io_channel;
 class io_transport;
-class io_transport_posix;
-class io_transport_mcast; // for multicast client
-class io_transport_ssl;   // for ssl client
+class io_transport_tcp;
+class io_transport_udp; // for multicast client
 class io_transport_kcp;
 class io_service;
 
@@ -348,14 +345,19 @@ class io_channel : public io_base
 {
   friend class io_service;
   friend class io_transport;
-  friend class io_transport_posix;
-  friend class io_transport_mcast;
-  friend class io_transport_ssl;
+  friend class io_transport_tcp; // tcp client/server, ssl client
+  friend class io_transport_udp; // udp client
 
 public:
   io_service& get_service() { return timer_.service_; }
   inline int index() { return index_; }
   inline u_short local_port() { return local_port_; }
+
+  YASIO__DECL ip::endpoint load_endpoint(size_t eps_index);
+
+  YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
+  YASIO__DECL int join_multicast_group();
+  YASIO__DECL void disable_multicast_group();
 
 private:
   YASIO__DECL io_channel(io_service& service, int index);
@@ -366,18 +368,17 @@ private:
     setup_remote_port(port);
   }
 
-  YASIO__DECL int join_multicast_group();
-  YASIO__DECL void leave_multicast_group();
-
   YASIO__DECL void setup_remote_host(std::string host);
   YASIO__DECL void setup_remote_port(u_short port);
 
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
 
+  YASIO__DECL void store_endpoint(size_t eps_index, const ip::endpoint& ep);
+
   u_short mask_ = 0;
 
-  /* !!!since v3.32.0, the default value has modfied from YCF_REUSEADDR to 0 */
+  /* !!!since v3.33.0, the default value has modfied from YCF_REUSEADDR to 0 */
   u_short flags_ = 0;
 
   /*
@@ -455,19 +456,18 @@ public:
   }
 
   io_service& get_service() { return ctx_->get_service(); }
+  io_channel& get_context() { return *ctx_; }
+
   unsigned int id() { return id_; }
 
   virtual ~io_transport() {}
 
 private:
-  virtual void write(std::vector<char>&&, std::function<void()>&&) = 0;
-  virtual int do_read(int& error)                                  = 0;
+  virtual int write(std::vector<char>&&, std::function<void()>&&) = 0;
+  virtual int do_read(int& error)                                 = 0;
 
   // Try flush pending packet
   virtual bool do_write(long long& max_wait_duration) = 0;
-
-  // Sets the underlying layer socket io primitives.
-  YASIO__DECL virtual void set_primitives() {}
 
 protected:
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s);
@@ -495,47 +495,46 @@ public:
   } ud_;
 };
 
-class io_transport_posix : public io_transport
+class io_transport_tcp : public io_transport
 {
+  friend class io_service;
+
 public:
-  io_transport_posix(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport(ctx, s) {}
+  io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
 
 protected:
-  YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
-  YASIO__DECL void set_primitives() override;
+  // Sets the underlying layer socket io primitives.
+  YASIO__DECL virtual void set_primitives();
 
   std::function<int(const void*, int)> write_cb_;
   std::function<int(void*, int)> read_cb_;
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
-};
-
-class io_transport_mcast : public io_transport_posix
-{
-public:
-  YASIO__DECL io_transport_mcast(io_channel* ctx, std::shared_ptr<xxsocket>& s);
-  YASIO__DECL ~io_transport_mcast();
-
-protected:
-  YASIO__DECL void set_primitives() override;
-  YASIO__DECL int do_read(int& error) override;
-};
 
 #if defined(YASIO_HAVE_SSL)
-class io_transport_ssl : public io_transport_posix
-{
-public:
-  YASIO__DECL io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s);
-  YASIO__DECL void set_primitives() override;
-
-#  if defined(YASIO_HAVE_SSL)
 protected:
   ssl_auto_handle ssl_;
-#  endif
-};
 #endif
+};
+
+class io_transport_udp : public io_transport
+{
+public:
+  YASIO__DECL io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
+  YASIO__DECL ~io_transport_udp();
+
+  bool connected_;
+
+protected:
+  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int do_read(int& error) override;
+
+  // the udp write op not perform in io_service, so check status only
+  YASIO__DECL bool do_write(long long& max_wait_duration) override;
+};
 
 #if defined(YASIO_HAVE_KCP)
 class io_transport_kcp : public io_transport
@@ -546,7 +545,7 @@ public:
   ikcpcb* internal_object() { return kcp_; }
 
 protected:
-  YASIO__DECL void write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
   ikcpcb* kcp_;
@@ -598,9 +597,10 @@ private:
 class io_service // lgtm [cpp/class-many-fields]
 {
   friend class highp_timer;
-  friend class io_transport_posix;
-  friend class io_transport_mcast;
+  friend class io_transport_tcp;
+  friend class io_transport_udp;
   friend class io_transport_kcp;
+  friend class io_channel;
 
 public:
   enum class state
@@ -651,13 +651,20 @@ public:
 
   YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 
+  // < 0: failed
   int write(transport_handle_t thandle, const void* buf, size_t len,
             std::function<void()> handler = nullptr)
   {
     return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(handler));
   }
+
+  // < 0: failed
   YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
                         std::function<void()> = nullptr);
+
+  // < 0: failed
+  YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer,
+                           const ip::endpoint& to);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   highp_timer_ptr schedule(highp_time_t duration, timer_cb_t cb)

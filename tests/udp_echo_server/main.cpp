@@ -23,6 +23,10 @@ void run_udp_echo_server(const char *ip, u_short port)
       case YEK_PACKET:
         udp_server.write(ev->transport(), std::move(ev->packet()));
         break;
+    case YEK_CONNECT_RESPONSE:
+            printf("A client is income, status=%d, %lld, combine 2 packet and send to client!\n",
+                            ev->status(), ev->timestamp());
+            break;
     }
   });
 }

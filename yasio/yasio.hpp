@@ -682,7 +682,7 @@ public:
   **        'handler': send finish callback, only works for TCP transport
   ** @remark:
   **        + TCP: Use queue to store user message, flush at io_service thread
-  **        + UDP: Don't use queue, call low layer sendto directly
+  **        + UDP: Don't use queue, call low layer socket.sendto directly
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
   int write(transport_handle_t thandle, const void* buf, size_t len,
@@ -697,7 +697,7 @@ public:
   ** Summary: Write data to unconnected UDP transport with specified address.
   ** @retval: < 0: failed
   ** @remark: This function only for UDP like transport (UDP or KCP)
-  **        + UDP: Don't use send_queue, call low layer sendto directly
+  **        + UDP: Don't use queue, call low layer socket.sendto directly
   **        + KCP: Use the queue provided by kcp internal
   */
   int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to)

@@ -1750,6 +1750,7 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
         case YOPT_C_REMOTE_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
+        case YOPT_C_ENABLE_MCAST:
         case YOPT_C_REMOTE_ENDPOINT:
           if (args[2].isString())
           {
@@ -1838,6 +1839,62 @@ bool js_yasio_io_service_write(JSContext* ctx, uint32_t argc, jsval* vp)
   return false;
 }
 
+bool js_yasio_io_service_write_to(JSContext* ctx, uint32_t argc, jsval* vp)
+{
+  bool ok          = true;
+  io_service* cobj = nullptr;
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject obj(ctx);
+  obj.set(args.thisv().toObjectOrNull());
+  js_proxy_t* proxy = jsb_get_js_proxy(obj);
+  cobj              = (io_service*)(proxy ? proxy->ptr : nullptr);
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_write_to : Invalid Native Object");
+
+  do
+  {
+    if (argc == 4)
+    {
+      auto arg0 = args.get(0);
+      auto arg1 = args.get(1);
+      yasio_jsb::string_view_adapter ip;
+      ip.set(args.get(2), ctx);
+      if (ip.empty())
+      {
+        JS_ReportError(ctx, "js_yasio_io_service_write_to : the ip can't be empty!");
+        return false;
+      }
+      u_short port = static_cast<u_short>(args.get(3).toInt32());
+
+      auto transport = jsb_yasio_jsval_to_io_transport(ctx, arg0);
+
+      yasio_jsb::string_view_adapter sva;
+      bool unrecognized_object = false;
+      sva.set(arg1, ctx, &unrecognized_object);
+      if (!sva.empty())
+      {
+        cobj->write_to(transport, std::vector<char>(sva.data(), sva.data() + sva.size()),
+                       ip::endpoint{ip.data(), port});
+      }
+      else if (unrecognized_object)
+      {
+        auto obs = jsb_yasio_jsval_to_obstram(ctx, arg1);
+        if (obs != nullptr)
+        {
+          auto& buffer = obs->buffer();
+          if (!buffer.empty())
+            cobj->write_to(transport, obs->buffer(), ip::endpoint{ip.data(), port});
+        }
+      }
+
+      return true;
+    }
+  } while (false);
+
+  JS_ReportError(ctx, "js_yasio_io_service_write_to : wrong number of arguments");
+  return false;
+}
+
 void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
 {
   jsb_io_service_class              = (JSClass*)calloc(1, sizeof(JSClass));
@@ -1865,6 +1922,7 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
       JS_FN("dispatch", js_yasio_io_service_dispatch, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("write", js_yasio_io_service_write, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("write_to", js_yasio_io_service_write_to, 4, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
@@ -1918,6 +1976,7 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
 #if defined(YASIO_HAVE_SSL)
   YASIO_EXPORT_ENUM(YCM_SSL_CLIENT);
 #endif
+
   YASIO_EXPORT_ENUM(YOPT_S_CONNECT_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
@@ -1928,6 +1987,9 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
+  YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
+  YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
+
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);

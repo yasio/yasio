@@ -153,11 +153,12 @@ enum
   // params: index:int, flagsToAdd:int, flagsToRemove:int
   YOPT_C_MOD_FLAGS,
 
-  // Join multi cast mode
-  // params: multi_addr:const char*, loopback:int
+  // Enable channel multicast mode
+  // params: index:int, multi_addr:const char*, loopback:int
   YOPT_C_ENABLE_MCAST,
 
-  // Leave multi cast mode
+  // Disable channel multicast mode
+  // params: index:int
   YOPT_C_DISABLE_MCAST,
 
   // Sets io_base sockopt

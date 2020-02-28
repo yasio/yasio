@@ -5,7 +5,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2012-2020 HALX99
+Copyright (c) 2012-2020 HALX99  
 
 HAL: Hardware Abstraction Layer
 X99: Intel X99 Mainboard Platform
@@ -1609,7 +1609,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
     tpool_.pop_back();
   }
   else
-    vp = operator new(yasio__global_state::s_max_alloc_size);
+    vp = ::operator new(yasio__global_state::s_max_alloc_size);
 #if defined(YASIO_HAVE_SSL)
   if (ctx->mask_ & YCM_SSL)
     transport = new (vp) io_transport_ssl(ctx, socket);

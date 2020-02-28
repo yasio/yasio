@@ -294,13 +294,14 @@ struct io_base
     OPENING,
     OPEN,
   };
+  io_base() : error_(0), state_(state::CLOSED), opmask_(0) {}
   void set_last_errno(int error) { error_ = error; }
 
   std::shared_ptr<xxsocket> socket_;
-  int error_ = 0; // socket error(>= -1), application error(< -1)
+  int error_; // socket error(>= -1), application error(< -1)
 
-  std::atomic<state> state_ = state::CLOSED;
-  u_short opmask_           = 0;
+  std::atomic<state> state_;
+  u_short opmask_;
 };
 
 #if defined(YASIO_HAVE_SSL)

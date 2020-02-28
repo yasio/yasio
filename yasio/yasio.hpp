@@ -133,7 +133,7 @@ enum
   //     initial_bytes_to_strip:int(0)
   YOPT_C_LFBFD_IBTS,
 
-  // Sets channel local port
+  // Sets channel local port for client channel only
   // params: index:int, port:int
   YOPT_C_LOCAL_PORT,
 
@@ -349,7 +349,7 @@ class io_channel : public io_base
 public:
   io_service& get_service() { return timer_.service_; }
   inline int index() { return index_; }
-  inline u_short local_port() { return local_port_; }
+  inline u_short remote_port() { return remote_port_; }
 
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
   YASIO__DECL int join_multicast_group();
@@ -379,14 +379,14 @@ private:
   u_short private_flags_ = 0;
 
   /*
-  ** !!! for tcp/udp client, if not zero, will use it as fixed port.
-  ** !!! for tcp/udp server, local port must be specified.
+  ** !!! tcp/udp client only, if not zero, will use it as fixed port,
+  ** !!! otherwise system will generate a random port for local socket.
   */
   u_short local_port_ = 0;
 
   /*
-  ** !!! for tcp/udp client, remote port must be specified
-  ** !!! for tcp/udp server, remote port == local port
+  ** !!! tcp/udp client, the port to connect
+  ** !!! tcp/udp server, the port to listening
   */
   u_short remote_port_ = 0;
 
@@ -449,7 +449,6 @@ public:
   }
 
   io_service& get_service() { return ctx_->get_service(); }
-  io_channel& get_context() { return *ctx_; }
 
   unsigned int id() { return id_; }
 

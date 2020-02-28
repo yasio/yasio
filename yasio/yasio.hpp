@@ -805,8 +805,8 @@ private:
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
                           int bytes_to_strip, long long& max_wait_duration);
 
-  // The op mask will be cleared, the state will be set CLOSED
-  YASIO__DECL bool cleanup_io(io_base* ctx, bool clear_state = true);
+  // The op mask will be cleared, the state will be set CLOSED when clear_state is 'true'
+  YASIO__DECL bool cleanup_io(io_base* obj, bool clear_state = true);
 
   YASIO__DECL void handle_close(transport_handle_t);
   YASIO__DECL void handle_event(event_ptr event);

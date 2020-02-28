@@ -1325,16 +1325,16 @@ bool js_yasio_io_service_set_option(se::State& s)
       switch (opt)
       {
         case YOPT_C_REMOTE_HOST:
-        case YOPT_C_LOCAL_HOST:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str());
           break;
 #if YASIO_VERSION_NUM >= 0x033100
         case YOPT_C_LFBFD_IBTS:
 #endif
-        case YOPT_C_REMOTE_PORT:
         case YOPT_C_LOCAL_PORT:
+        case YOPT_C_REMOTE_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
+        case YOPT_C_ENABLE_MCAST:
         case YOPT_C_REMOTE_ENDPOINT:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str(),
                               args[3].toInt32());
@@ -1418,6 +1418,50 @@ bool js_yasio_io_service_write(se::State& s)
 }
 SE_BIND_FUNC(js_yasio_io_service_write)
 
+bool js_yasio_io_service_write_to(se::State& s)
+{
+  auto cobj = (io_service*)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto& args = s.args();
+  size_t argc      = args.size();
+
+  do
+  {
+    if (argc == 4)
+    {
+      auto& arg0   = args[0];
+      auto& arg1   = args[1];
+      auto ip      = seval_to_string_view(args[2]);
+      u_short port = args[3].toUint16();
+
+      io_transport* transport = nullptr;
+      seval_to_native_ptr<io_transport*>(arg0, &transport);
+
+      if (transport != nullptr)
+      {
+        bool unrecognized_object = false;
+        auto data                = seval_to_string_view(arg1, &unrecognized_object);
+        if (!data.empty())
+          cobj->write_to(transport, std::vector<char>(data.c_str(), data.c_str() + data.size()),
+                         ip::endpoint{ip.data(), port});
+        else if (unrecognized_object)
+        {
+          yasio::obstream* obs = nullptr;
+          seval_to_native_ptr(arg1, &obs);
+          if (obs)
+            cobj->write_to(transport, obs->buffer(), ip::endpoint{ip.data(), port});
+        }
+      }
+
+      return true;
+    }
+  } while (false);
+
+  SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 2);
+  return false;
+}
+SE_BIND_FUNC(js_yasio_io_service_write_to)
+
 void js_register_yasio_io_service(se::Object* obj)
 {
 #define DEFINE_IO_SERVICE_FUNC(funcName)                                                           \
@@ -1432,6 +1476,7 @@ void js_register_yasio_io_service(se::Object* obj)
   DEFINE_IO_SERVICE_FUNC(is_open);
   DEFINE_IO_SERVICE_FUNC(dispatch);
   DEFINE_IO_SERVICE_FUNC(write);
+  DEFINE_IO_SERVICE_FUNC(write_to);
 
   cls->defineFinalizeFunction(_SE(jsb_yasio_io_service__dtor));
 
@@ -1478,8 +1523,6 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
-  YASIO_EXPORT_ENUM(YCM_MCAST_CLIENT);
-  YASIO_EXPORT_ENUM(YCM_MCAST_SERVER);
 #if defined(YASIO_HAVE_KCP)
   YASIO_EXPORT_ENUM(YCM_KCP_CLIENT);
 #endif
@@ -1487,20 +1530,19 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YCM_SSL_CLIENT);
 #endif
 
-  YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
-
   YASIO_EXPORT_ENUM(YOPT_S_CONNECT_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
-  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
-  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_ENDPOINT);
+  YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
+  YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
+
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);

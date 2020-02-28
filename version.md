@@ -1,3 +1,13 @@
+yasio-3.33.0
+  
+1. Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide write ```io_transport_udp::connect``` to establish 4-tuple with peer.
+2. Remove unused options ```YOPT_C_LOCAL_HOST```, ```YOPT_C_LOCAL_ENDPONIT```
+3. Remove unused channel masks ```YCM_MCAST_CLIENT```, ```YCM_MCAST_SERVER```
+4. Remove unused channel flag ```YCF_MCAST_LOOPBACK```
+5. Add new options ```YOPT_C_ENABLE_MCAST```, ```YOPT_C_DISABLE_MCAST``` for multicast support
+6. Provide ```io_service::write_to``` to write a unbind UDP client.
+  
+  
 yasio-3.31.3
   
 1. Optimize API io_service::write, add write raw buf support.

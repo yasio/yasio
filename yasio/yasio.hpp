@@ -212,9 +212,10 @@ class highp_timer;
 class io_event;
 class io_channel;
 class io_transport;
-class io_transport_tcp;
-class io_transport_udp; // for multicast client
-class io_transport_kcp;
+class io_transport_tcp; // tcp client/server
+class io_transport_ssl; // ssl client
+class io_transport_udp; // udp client/server
+class io_transport_kcp; // kcp client/server
 class io_service;
 
 // recommand user always use transport_handle_t, in the future, it's maybe void* or intptr_t
@@ -287,13 +288,19 @@ public:
 
 struct io_base
 {
+  enum class state : u_short
+  {
+    CLOSED,
+    OPENING,
+    OPEN,
+  };
   void set_last_errno(int error) { error_ = error; }
 
   std::shared_ptr<xxsocket> socket_;
   int error_ = 0; // socket error(>= -1), application error(< -1)
 
-  u_short opmask_ = 0;
-  short state_    = 0;
+  std::atomic<state> state_ = state::CLOSED;
+  u_short opmask_           = 0;
 };
 
 #if defined(YASIO_HAVE_SSL)
@@ -303,7 +310,11 @@ public:
   ssl_auto_handle() : ssl_(nullptr) {}
   ~ssl_auto_handle() { dispose(); }
   ssl_auto_handle(ssl_auto_handle&& rhs) : ssl_(rhs.release()) {}
-  ssl_auto_handle& operator=(ssl_auto_handle&& rhs) { this->reset(rhs.release()); }
+  ssl_auto_handle& operator=(ssl_auto_handle&& rhs)
+  {
+    this->reset(rhs.release());
+    return *this;
+  }
   SSL* release()
   {
     auto tmp = ssl_;
@@ -328,8 +339,10 @@ class io_channel : public io_base
 {
   friend class io_service;
   friend class io_transport;
-  friend class io_transport_tcp; // tcp client/server, ssl client
-  friend class io_transport_udp; // udp client
+  friend class io_transport_tcp;
+  friend class io_transport_ssl;
+  friend class io_transport_udp;
+  friend class io_transport_kcp;
 
 public:
   io_service& get_service() { return timer_.service_; }
@@ -422,7 +435,7 @@ class io_transport : public io_base
   friend class io_service;
 
 public:
-  bool is_open() const { return valid_ && socket_ && socket_->is_open(); }
+  bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   virtual ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
   int cindex() const { return ctx_->index(); }
@@ -440,18 +453,26 @@ public:
 
   virtual ~io_transport() {}
 
-private:
+protected:
+  // Call at user thread
   virtual int write_to(std::vector<char>&&, const ip::endpoint&) { return 0; };
-  virtual int write(std::vector<char>&&, std::function<void()>&&) = 0;
-  virtual int do_read(int& error)                                 = 0;
 
-  // Try flush pending packet
+  // Call at user thread
+  virtual int write(std::vector<char>&&, std::function<void()>&&) = 0;
+
+  // Call at io_service
+  virtual int do_read(int& error) = 0;
+
+  // Call at io_service, try flush pending packet
   virtual bool do_write(long long& max_wait_duration) = 0;
 
-protected:
+  // Sets the underlying layer socket io primitives.
+  YASIO__DECL virtual void set_primitives();
+
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s);
 
-  void invalid() { valid_ = false; }
+  bool is_valid() const { return state_ == io_base::state::OPEN; }
+  void invalid() { state_ = io_base::state::CLOSED; }
 
   unsigned int id_;
 
@@ -463,7 +484,8 @@ protected:
 
   io_channel* ctx_;
 
-  std::atomic_bool valid_;
+  std::function<int(const void*, int)> write_cb_;
+  std::function<int(void*, int)> read_cb_;
 
 public:
   // The user data
@@ -486,19 +508,21 @@ protected:
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
-  // Sets the underlying layer socket io primitives.
-  YASIO__DECL virtual void set_primitives();
-
-  std::function<int(const void*, int)> write_cb_;
-  std::function<int(void*, int)> read_cb_;
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
-
+};
 #if defined(YASIO_HAVE_SSL)
+class io_transport_ssl : public io_transport_tcp
+{
+public:
+  YASIO__DECL io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s);
+  YASIO__DECL void set_primitives() override;
+
+#  if defined(YASIO_HAVE_SSL)
 protected:
   ssl_auto_handle ssl_;
-#endif
+#  endif
 };
-
+#endif
 class io_transport_udp : public io_transport
 {
   friend class io_service;
@@ -507,18 +531,20 @@ public:
   YASIO__DECL io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL ~io_transport_udp();
 
+  YASIO__DECL ip::endpoint peer_endpoint() const override;
+
   // perform connect to establish 4 tuple with peer
+  // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   YASIO__DECL int connect();
 
 protected:
   YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&) override;
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
   YASIO__DECL int do_read(int& error) override;
-
   // the udp write op not perform in io_service, so check status only
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
-  YASIO__DECL ip::endpoint peer_endpoint() const override;
+  YASIO__DECL void set_primitives() override;
 
   // ensure peer valid, if not, assign from ctx_->remote_eps_[0]
   YASIO__DECL const ip::endpoint& ensure_peer() const;
@@ -527,13 +553,10 @@ protected:
   YASIO__DECL int confgure_remote(const ip::endpoint& peer, bool should_connect);
 
   mutable ip::endpoint peer_;
-
-  // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   bool connected_ = false;
 };
-
 #if defined(YASIO_HAVE_KCP)
-class io_transport_kcp : public io_transport
+class io_transport_kcp : public io_transport_udp
 {
 public:
   YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
@@ -647,18 +670,38 @@ public:
 
   YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 
-  // < 0: failed
+  /*
+  ** Summary: Write data to a TCP or connected UDP transport with last peer address
+  ** @retval: < 0: failed
+  ** @params:
+  **        'thandle': the transport to write, could be tcp/udp/kcp
+  **        'buf': the data to write
+  **        'len': the data len
+  **        'handler': send finish callback, only works for TCP transport
+  ** @remark:
+  **        + TCP: Use queue to store user message, flush at io_service thread
+  **        + UDP: Don't use queue, call low layer sendto directly
+  **        + KCP: Use queue provided by kcp internal, flush at io_service thread
+  */
   int write(transport_handle_t thandle, const void* buf, size_t len,
             std::function<void()> handler = nullptr)
   {
     return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(handler));
   }
-
-  // < 0: failed
   YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
                         std::function<void()> = nullptr);
 
-  // < 0: failed
+  /*
+  ** Summary: Write data to unconnected UDP transport with specified address.
+  ** @retval: < 0: failed
+  ** @remark: This function only for UDP like transport (UDP or KCP)
+  **        + UDP: Don't use send_queue, call low layer sendto directly
+  **        + KCP: Use the queue provided by kcp internal
+  */
+  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to)
+  {
+    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to);
+  }
   YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer,
                            const ip::endpoint& to);
 
@@ -761,7 +804,7 @@ private:
                           int bytes_to_strip, long long& max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED
-  YASIO__DECL bool cleanup_io(io_base* ctx);
+  YASIO__DECL bool cleanup_io(io_base* ctx, bool clear_state = true);
 
   YASIO__DECL void handle_close(transport_handle_t);
   YASIO__DECL void handle_event(event_ptr event);
@@ -777,7 +820,7 @@ private:
 
   /*
   ** Summay: Query async resolve state for new endpoint set
-  ** @returns:
+  ** @retval:
   **   YDQS_READY, YDQS_INPRROGRESS, YDQS_FAILED
   ** @remark: will start a async resolv when the state is: YDQS_DIRTY
   */

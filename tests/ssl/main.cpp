@@ -18,7 +18,7 @@ using namespace yasio::inet;
 
 void yasioTest()
 {
-  yasio::inet::io_hostent endpoints[] = {{"www.baidu.com", 443}};
+  yasio::inet::io_hostent endpoints[] = {{"github.com", 443}};
 
   io_service service(endpoints, 1);
 
@@ -55,7 +55,7 @@ void yasioTest()
             obstream obs;
             obs.write_bytes("GET / HTTP/1.1\r\n");
 
-            obs.write_bytes("Host: www.baidu.com\r\n");
+            obs.write_bytes("Host: github.com\r\n");
             
             obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; "
                             "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -76,7 +76,7 @@ void yasioTest()
         if (--max_request_count > 0)
         {
           udpconn_delay.expires_from_now(std::chrono::seconds(1));
-          udpconn_delay.async_wait([&](bool) { service.open(0, YCM_SSL_CLIENT); });
+          udpconn_delay.async_wait([&]() { service.open(0, YCM_SSL_CLIENT); });
         }
         else
           service.stop_service();

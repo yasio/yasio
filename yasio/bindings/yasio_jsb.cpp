@@ -1736,7 +1736,6 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
       auto opt  = arg0.toInt32();
       switch (opt)
       {
-        case YOPT_C_LOCAL_HOST:
         case YOPT_C_REMOTE_HOST:
           if (args[2].isString())
           {
@@ -1751,7 +1750,6 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
         case YOPT_C_REMOTE_PORT:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
-        case YOPT_C_LOCAL_ENDPOINT:
         case YOPT_C_REMOTE_ENDPOINT:
           if (args[2].isString())
           {
@@ -1914,29 +1912,22 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YCM_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCM_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCM_UDP_SERVER);
-  YASIO_EXPORT_ENUM(YCM_MCAST_CLIENT);
-  YASIO_EXPORT_ENUM(YCM_MCAST_SERVER);
 #if defined(YASIO_HAVE_KCP)
   YASIO_EXPORT_ENUM(YCM_KCP_CLIENT);
 #endif
 #if defined(YASIO_HAVE_SSL)
   YASIO_EXPORT_ENUM(YCM_SSL_CLIENT);
 #endif
-
-  YASIO_EXPORT_ENUM(YCF_MCAST_LOOPBACK);
-
   YASIO_EXPORT_ENUM(YOPT_S_CONNECT_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_DNS_CACHE_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
-  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
-  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
-  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_ENDPOINT);
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);
   YASIO_EXPORT_ENUM(YEK_PACKET);

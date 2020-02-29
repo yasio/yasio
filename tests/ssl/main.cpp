@@ -12,7 +12,7 @@ using namespace yasio::inet;
 
 void yasioTest()
 {
-  yasio::inet::io_hostent endpoints[] = {{"github.com", 443}};
+  yasio::inet::io_hostent endpoints[] = {{"baidu.com", 443}};
 
   io_service service(endpoints, 1);
 
@@ -70,7 +70,7 @@ void yasioTest()
         if (--max_request_count > 0)
         {
           udpconn_delay.expires_from_now(std::chrono::seconds(1));
-          udpconn_delay.async_wait([&]() { service.open(0, YCM_SSL_CLIENT); });
+          udpconn_delay.async_wait_once([&]() { service.open(0, YCM_SSL_CLIENT); });
         }
         else
           service.stop_service();

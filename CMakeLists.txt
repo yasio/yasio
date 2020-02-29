@@ -148,8 +148,8 @@ if (YASIO_BUILD_WITH_SSL)
     # target_include_directories
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
 
-    add_subdirectory(openssl)
-    target_link_libraries(yasio crypto ssl)
+    add_subdirectory(external/openssl)
+    target_link_libraries(yasio ext_crypto ext_ssl)
     if(NOT IOS)
         add_subdirectory(tests/ssl)
     endif()
@@ -157,13 +157,15 @@ endif ()
 
 ### c-ares support
 if (YASIO_BUILD_WITH_CARES)
-    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1)
+    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
     set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
-    add_subdirectory(c-ares)
+    add_subdirectory(external/c-ares)
     target_link_libraries(yasio c-ares)
-    include_directories($<TARGET_FILE_DIR:c-ares>)
+
+    # include_directories($<TARGET_FILE_DIR:c-ares>)
+    include_directories(external)
 endif()
 
 if (WIN32 AND YASIO_BUILD_TESTS)

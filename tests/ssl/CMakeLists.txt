@@ -16,3 +16,12 @@ else ()
 endif()
 
 target_link_libraries (ssltest ${SSLTEST_LDLIBS})
+
+if(MSVC)
+    add_custom_command(TARGET ssltest
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${OPENSSL_LIB_PATH}/libcrypto-1_1.dll
+        ${OPENSSL_LIB_PATH}/libssl-1_1.dll
+        $<TARGET_FILE_DIR:ssltest>
+        )
+endif()

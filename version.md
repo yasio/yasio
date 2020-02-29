@@ -6,6 +6,8 @@ yasio-3.33.0
 4. Remove unused channel flag ```YCF_MCAST_LOOPBACK```
 5. Add new options ```YOPT_C_ENABLE_MCAST```, ```YOPT_C_DISABLE_MCAST``` for multicast support
 6. Provide ```io_service::write_to``` to write a unbind UDP client.
+7. Change ```timer_cb_t``` prototype to ```[]()->bool { }```, return ```true``` for once, ```false``` for continue.
+8. Add ```highp_timer::async_wait_once``` to wait timer timeout once.
   
   
 yasio-3.31.3

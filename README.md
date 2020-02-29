@@ -1,5 +1,5 @@
 # yasio - *Y*asio *A*in't *S*ocket *IO*, *Y*et *A*nother *S*ocket *IO* service.
-![Build Status](https://travis-ci.com/simdsoft/yasio.svg?branch=master)](https://travis-ci.com/simdsoft/yasio)
+[![Build Status](https://travis-ci.com/simdsoft/yasio.svg?branch=master)](https://travis-ci.com/simdsoft/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
 [![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/simdsoft/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)

@@ -10,7 +10,10 @@ timer_cb_t create_timer_cb();
 
 io_service& get_service() { return *yasio_shared_service(); }
 
-static yasio::highp_time_t getTimeStamp() { return yasio::highp_clock<yasio::system_clock_t>() / 1000; }
+static yasio::highp_time_t getTimeStamp()
+{
+  return yasio::highp_clock<yasio::system_clock_t>() / 1000;
+}
 
 void start_exprie_timer()
 {
@@ -37,6 +40,7 @@ timer_cb_t create_timer_cb()
     {
       printf("create_timer_cb start_exprie_timer\n");
     }
+    return true;
   };
 }
 
@@ -86,9 +90,10 @@ int main()
 
   std::this_thread::sleep_for(std::chrono::microseconds(1000 * 1000));
   printf("tmp timer call at %lld\n", getTimeStamp());
-  get_service().schedule(
-      std::chrono::milliseconds(1),
-      []() { printf("tmp timer start at %lld\n", getTimeStamp()); });
+  get_service().schedule(std::chrono::milliseconds(1), []() {
+    printf("tmp timer start at %lld\n", getTimeStamp());
+    return true;
+  });
 
   getchar();
 }

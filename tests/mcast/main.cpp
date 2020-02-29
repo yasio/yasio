@@ -66,6 +66,7 @@ void yasioMulticastTest()
             // so we always send to multicast address
             service.write_to(transport, std::move(obs.buffer()), mcast_ep);
 #endif
+            return true;
           });
         }
         break;

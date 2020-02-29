@@ -1756,7 +1756,7 @@ highp_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, 
 {
   auto timer = std::make_shared<highp_timer>(*this);
   timer->expires_from_now(duration);
-  /*!important, hold on by lambda expression */
+  /*!important, hold on `timer` by lambda expression */
 #if YASIO__HAS_CXX17
   timer->async_wait([timer, cb = std::move(cb)]() { return cb(); });
 #else

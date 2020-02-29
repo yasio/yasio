@@ -1,6 +1,6 @@
 # *YASIO* - *A*in't *S*ocket *IO*, *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
-[![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/d6qjfygtw2ewt9pf/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
 [![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)

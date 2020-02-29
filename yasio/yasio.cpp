@@ -1170,7 +1170,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
         ctx->set_last_errno(EINPROGRESS);
         register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
         ctx->timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
-        ctx->timer_.async_wait([this, ctx]() {
+        ctx->timer_.async_wait_once([this, ctx]() {
           if (ctx->state_ != io_base::state::OPEN)
             handle_connect_failed(ctx, ETIMEDOUT);
         });
@@ -1756,7 +1756,12 @@ highp_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, 
 {
   auto timer = std::make_shared<highp_timer>(*this);
   timer->expires_from_now(duration);
-  timer->async_wait([timer /*!important, hold on by lambda expression */, cb]() { cb(); });
+  /*!important, hold on `timer` by lambda expression */
+#if YASIO__HAS_CXX17
+  timer->async_wait([timer, cb = std::move(cb)]() { return cb(); });
+#else
+  timer->async_wait([timer, cb]() { return cb(); });
+#endif
   return timer;
 }
 void io_service::schedule_timer(highp_timer* timer_ctl, timer_cb_t&& timer_cb)
@@ -1839,18 +1844,28 @@ void io_service::process_timers()
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
 
+  int n = 0; // the count expired loop timers
   while (!this->timer_queue_.empty())
   {
-    if (timer_queue_.back().first->expired())
+    auto timer_ctl = timer_queue_.back().first;
+    if (timer_ctl->expired())
     {
-      auto earliest  = std::move(timer_queue_.back());
-      auto& timer_cb = earliest.second;
-      timer_queue_.pop_back(); // pop the expired timer from timer queue
-      timer_cb();
+      // fetch timer
+      auto timer_impl = std::move(timer_queue_.back());
+      timer_queue_.pop_back();
+
+      if (!timer_impl.second())
+      { // reschedule if the timer want wait again
+        timer_ctl->expires_from_now();
+        timer_queue_.push_back(std::move(timer_impl));
+        ++n;
+      }
     }
     else
       break;
   }
+  if (n)
+    sort_timers();
 }
 int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
 {
@@ -1988,7 +2003,7 @@ void io_service::start_resolve(io_channel* ctx)
   }
 
   ctx->timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
-  ctx->timer_.async_wait([=]() {
+  ctx->timer_.async_wait_once([=]() {
     ::ares_cancel(this->ares_);
     handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
   });

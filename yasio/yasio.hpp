@@ -230,7 +230,8 @@ typedef std::shared_ptr<highp_timer> highp_timer_ptr;
 typedef highp_timer deadline_timer;
 typedef highp_timer_ptr deadline_timer_ptr;
 
-typedef std::function<void()> timer_cb_t;
+typedef std::function<void()> light_timer_cb_t;
+typedef std::function<bool()> timer_cb_t;
 typedef std::pair<highp_timer*, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr&&)> io_event_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
@@ -259,13 +260,29 @@ public:
 
   void expires_from_now(const std::chrono::microseconds& duration)
   {
-    this->duration_ = duration;
-    expire_time_    = highp_clock_t::now() + this->duration_;
+    this->duration_    = duration;
+    this->expire_time_ = highp_clock_t::now() + this->duration_;
   }
 
-  void expires_from_now() { expire_time_ = highp_clock_t::now() + this->duration_; }
+  void expires_from_now() { this->expire_time_ = highp_clock_t::now() + this->duration_; }
 
-  // Wait timer timeout or cancelled.
+  // Wait timer timeout once.
+  inline void async_wait_once(light_timer_cb_t cb)
+  {
+#if YASIO__HAS_CXX17
+    this->async_wait([cb = std::move(cb)]() {
+#else
+    this->async_wait([cb]() {
+#endif
+      cb();
+      return true;
+    });
+  }
+
+  // Wait timer timeout
+  // @retval of timer_cb_t:
+  //        true: wait once
+  //        false: wait again after expired
   YASIO__DECL void async_wait(timer_cb_t);
 
   // Cancel the timer
@@ -277,12 +294,11 @@ public:
   // Gets wait duration of timer.
   std::chrono::microseconds wait_duration() const
   {
-    return std::chrono::duration_cast<std::chrono::microseconds>(expire_time_ -
+    return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ -
                                                                  highp_clock_t::now());
   }
 
   io_service& service_;
-
   std::chrono::microseconds duration_;
   std::chrono::time_point<highp_clock_t> expire_time_;
 };

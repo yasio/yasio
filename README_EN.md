@@ -1,13 +1,13 @@
 # *YASIO* - *A*in't *S*ocket *IO*, *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
-[![Build Status](https://travis-ci.com/simdsoft/yasio.svg?branch=master)](https://travis-ci.com/simdsoft/yasio)
+[![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/simdsoft/yasio/releases)
+[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
-[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/simdsoft/yasio/blob/master/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/simdsoft/yasio.svg?label=Stars)](https://github.com/simdsoft/yasio)
-[![GitHub forks](https://img.shields.io/github/forks/simdsoft/yasio.svg?label=Fork)](https://github.com/simdsoft/yasio)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
+[![GitHub forks](https://img.shields.io/github/forks/yasio/yasio.svg?label=Fork)](https://github.com/yasio/yasio)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/yasio/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/yasio/yasio/context:cpp)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/yasio/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/yasio/yasio/alerts/)
 
 **yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows & linux & apple & android & win10-universal.  
 
@@ -140,7 +140,7 @@ cmake --build . --config Debug
 * Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
   
 ## Core framework
-![image](https://github.com/simdsoft/yasio/blob/master/framework.png)  
+![image](https://github.com/yasio/yasio/blob/master/framework.png)  
 
-## For more detail usage: see [wiki](https://github.com/simdsoft/yasio/wiki)
+## For more detail usage: see [wiki](https://github.com/yasio/yasio/wiki)
 

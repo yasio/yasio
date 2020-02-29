@@ -1,13 +1,13 @@
 # *YASIO* - *A*in't *S*ocket *IO*, *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
-[![Build Status](https://travis-ci.com/simdsoft/yasio.svg?branch=master)](https://travis-ci.com/simdsoft/yasio)
+[![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/fnd3fji4dss7ppsd/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/simdsoft/yasio/releases)
+[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
-[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/simdsoft/yasio/blob/master/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/simdsoft/yasio.svg?label=Stars)](https://github.com/simdsoft/yasio)
-[![GitHub forks](https://img.shields.io/github/forks/simdsoft/yasio.svg?label=Fork)](https://github.com/simdsoft/yasio)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/context:cpp)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/simdsoft/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/simdsoft/yasio/alerts/)  
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
+[![GitHub forks](https://img.shields.io/github/forks/yasio/yasio.svg?label=Fork)](https://github.com/yasio/yasio)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/yasio/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/yasio/yasio/context:cpp)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/yasio/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/yasio/yasio/alerts/)  
   
 [![Powered](https://img.shields.io/badge/Powered%20by-c4games-blue.svg)](http://c4games.com)  
   
@@ -144,9 +144,9 @@ cmake --build . --config Debug
 * 支持非阻塞域名解析，基于c-ares。  
   
 ## yasio核心设计，充分利用了多路io复用模型(服务器高并发的基石)，以下是框架图
-![image](https://github.com/simdsoft/yasio/blob/master/framework.png)  
+![image](https://github.com/yasio/yasio/blob/master/framework.png)  
 
 ## 集成指南
-[https://github.com/simdsoft/yasio/wiki/Integrate-Guides](https://github.com/simdsoft/yasio/wiki/Integrate-Guides)
+[https://github.com/yasio/yasio/wiki/Integrate-Guides](https://github.com/yasio/yasio/wiki/Integrate-Guides)
 
-## 更多详细用法，请查看 [文档](https://github.com/simdsoft/yasio/tree/master/docs)
+## 更多详细用法，请查看 [文档](https://github.com/yasio/yasio/tree/master/docs)

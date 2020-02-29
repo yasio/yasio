@@ -11,16 +11,16 @@ yasio-3.33.0
 yasio-3.31.3
   
 1. Optimize API io_service::write, add write raw buf support.
-2. Fix issue: https://github.com/simdsoft/yasio/issues/208
-3. Fix issue: https://github.com/simdsoft/yasio/issues/209
+2. Fix issue: https://github.com/yasio/yasio/issues/208
+3. Fix issue: https://github.com/yasio/yasio/issues/209
   
   
 yasio-3.31.2
   
-1. Optimize singleton implementation, see: https://github.com/simdsoft/yasio/issues/200
+1. Optimize singleton implementation, see: https://github.com/yasio/yasio/issues/200
 2. Fix typo, YASIO_VERBOS_LOG to YASIO_VERBOSE_LOG.
-3. Explicit set socktype for ```getaddrinfo```, see: https://github.com/simdsoft/yasio/issues/201
-4. Improve xxsocket send_n/recv_n implementation and behavior, see: https://github.com/simdsoft/yasio/issues/202
+3. Explicit set socktype for ```getaddrinfo```, see: https://github.com/yasio/yasio/issues/201
+4. Improve xxsocket send_n/recv_n implementation and behavior, see: https://github.com/yasio/yasio/issues/202
   
   
 yasio-3.31.1
@@ -74,7 +74,7 @@ yasio-3.30.3
   
 yasio-3.30.2
   
-1. Fix jsb2.0 bindings issue, see: [#192](https://github.com/simdsoft/yasio/issues/192)
+1. Fix jsb2.0 bindings issue, see: [#192](https://github.com/yasio/yasio/issues/192)
   
   
 yasio-3.30.1

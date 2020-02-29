@@ -119,7 +119,7 @@ g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest
 
 ## 使用CMake编译yasio的测试程序和示例程序
 ```sh
-git clone https://github.com/simdsoft/yasio
+git clone https://github.com/yasio/yasio
 cd yasio
 git submodule update --init --recursive
 cd build

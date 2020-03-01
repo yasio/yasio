@@ -250,7 +250,7 @@ void highp_timer::cancel()
 
 #if defined(YASIO_HAVE_SSL)
 /// ssl_auto_handle
-void ssl_auto_handle::dispose()
+void ssl_auto_handle::destroy()
 {
   if (ssl_)
   {

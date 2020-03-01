@@ -346,7 +346,7 @@ public:
     ssl_ = ssl;
   }
   operator SSL*() { return ssl_; }
-  YASIO__DECL void dispose();
+  YASIO__DECL void destroy();
 
 protected:
   SSL* ssl_ = nullptr;

@@ -406,10 +406,7 @@ void io_transport::set_primitives()
 // -------------------- io_transport_tcp ---------------------
 inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
     : io_transport(ctx, s)
-{
-#if defined(YASIO_HAVE_SSL)
-#endif
-}
+{}
 int io_transport_tcp::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   int n = static_cast<int>(buffer.size());

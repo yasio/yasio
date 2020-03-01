@@ -589,7 +589,7 @@ bool io_transport_udp::do_write(long long& max_wait_duration)
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport_udp(ctx, s), kcp_(nullptr)
+    : io_transport_udp(ctx, s)
 {
   this->kcp_ = ::ikcp_create(0, this);
   ::ikcp_nodelay(this->kcp_, 1, 10 /*MAX_WAIT_DURATION / 1000*/, 2, 1);

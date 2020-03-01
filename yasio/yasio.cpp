@@ -398,6 +398,12 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->socket_                   = s;
   this->ud_.ptr                   = nullptr;
 }
+int io_transport::do_read(int& error)
+{
+  int n = read_cb_(buffer_ + wpos_, sizeof(buffer_) - wpos_);
+  error = n < 0 ? xxsocket::get_last_errno() : 0;
+  return n;
+}
 void io_transport::set_primitives()
 {
   this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
@@ -412,12 +418,6 @@ int io_transport_tcp::write(std::vector<char>&& buffer, std::function<void()>&& 
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
   get_service().interrupt();
-  return n;
-}
-int io_transport_tcp::do_read(int& error)
-{
-  int n = read_cb_(buffer_ + wpos_, sizeof(buffer_) - wpos_);
-  error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
 bool io_transport_tcp::do_write(long long& max_wait_duration)
@@ -562,14 +562,6 @@ int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& 
   }
 
   return 0; // No error
-}
-int io_transport_udp::do_read(int& error)
-{
-  int n = read_cb_(buffer_, sizeof(buffer_));
-
-  error = n < 0 ? xxsocket::get_last_errno() : 0;
-
-  return n;
 }
 void io_transport_udp::set_primitives()
 {

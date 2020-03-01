@@ -478,7 +478,7 @@ protected:
   virtual int write(std::vector<char>&&, std::function<void()>&&) = 0;
 
   // Call at io_service
-  virtual int do_read(int& error) = 0;
+  YASIO__DECL virtual int do_read(int& error);
 
   // Call at io_service, try flush pending packet
   virtual bool do_write(long long& max_wait_duration) = 0;
@@ -522,7 +522,6 @@ public:
 
 protected:
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
-  YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
   concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
@@ -557,7 +556,6 @@ public:
 protected:
   YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&) override;
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
-  YASIO__DECL int do_read(int& error) override;
   // the udp write op not perform in io_service, so check status only
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 

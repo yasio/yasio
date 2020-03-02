@@ -149,7 +149,7 @@ if (YASIO_BUILD_WITH_SSL)
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
 
     add_subdirectory(external/openssl)
-    target_link_libraries(yasio ext_crypto ext_ssl)
+    target_include_directories(yasio PRIVATE "${OPENSSL_INC_DIR}")
     if(NOT IOS)
         add_subdirectory(tests/ssl)
     endif()

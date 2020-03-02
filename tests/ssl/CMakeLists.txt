@@ -9,19 +9,19 @@ include_directories ("${SSLTEST_INC_DIR}")
 
 add_executable (ssltest ${SSLTEST_SRC}) 
 
-if (WIN32)
-    set (SSLTEST_LDLIBS yasio)
+if (MSVC)
+    set (SSLTEST_LDLIBS yasio ext_crypt ext_ssl)
 else ()
-    set (SSLTEST_LDLIBS yasio pthread)
+    set (SSLTEST_LDLIBS yasio pthread ext_crypt ext_ssl dl)
 endif()
 
 target_link_libraries (ssltest ${SSLTEST_LDLIBS})
 
-if(MSVC)
+if (MSVC)
     add_custom_command(TARGET ssltest
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${OPENSSL_LIB_PATH}/libcrypto-1_1.dll
-        ${OPENSSL_LIB_PATH}/libssl-1_1.dll
+        ${OPENSSL_LIB_DIR}/libcrypto-1_1.dll
+        ${OPENSSL_LIB_DIR}/libssl-1_1.dll
         $<TARGET_FILE_DIR:ssltest>
         )
 endif()

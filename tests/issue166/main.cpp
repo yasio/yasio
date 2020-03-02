@@ -45,7 +45,7 @@ int main()
           if (retry_count++ < 2)
           {
             service.set_option(YOPT_C_REMOTE_ENDPOINT, 0, "127.0.0.1", 12345);
-            service.open(0, YCM_UDP_CLIENT); // open udp client
+            service.open(0, YCK_UDP_CLIENT); // open udp client
           }
           else
             exit(-1);
@@ -58,7 +58,7 @@ int main()
   service.set_option(YOPT_C_LFBFD_PARAMS, 0, 65535, 3, 4, 7);
   service.set_option(YOPT_C_LFBFD_IBTS, 0, 7);  // Sets initial bytes to strip
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // disable event queue
-  service.open(0, YCM_UDP_CLIENT);              // open udp client
+  service.open(0, YCK_UDP_CLIENT);              // open udp client
 
   getchar();
   return 0;

@@ -20,9 +20,9 @@ using namespace yasio::inet;
 #define USE_KCP 1
 
 #if USE_KCP
-#  define TRANSFER_PROTOCOL YCM_KCP_CLIENT
+#  define TRANSFER_PROTOCOL YCK_KCP_CLIENT
 #else
-#  define TRANSFER_PROTOCOL YCM_UDP_CLIENT
+#  define TRANSFER_PROTOCOL YCK_UDP_CLIENT
 #endif
 
 static double s_time_elapsed          = 0;
@@ -57,7 +57,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 void start_sender(io_service& service)
 {
   static const int PER_PACKET_SIZE =
-      TRANSFER_PROTOCOL == YCM_KCP_CLIENT ? YASIO_SZ(62, k) : YASIO_SZ(63, k);
+      TRANSFER_PROTOCOL == YCK_KCP_CLIENT ? YASIO_SZ(62, k) : YASIO_SZ(63, k);
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
@@ -73,7 +73,7 @@ void start_sender(io_service& service)
         if (event->status() == 0)
         {
           auto thandle = event->transport();
-          if (TRANSFER_PROTOCOL == YCM_KCP_CLIENT)
+          if (TRANSFER_PROTOCOL == YCK_KCP_CLIENT)
           {
             setup_kcp_transfer(thandle);
             kcp_send_repeat_forever(&service, thandle, &obs);
@@ -133,7 +133,7 @@ void start_receiver(io_service& service)
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
-          if (TRANSFER_PROTOCOL == YCM_KCP_CLIENT)
+          if (TRANSFER_PROTOCOL == YCK_KCP_CLIENT)
             setup_kcp_transfer(event->transport());
           printf("start recive data...\n");
         }

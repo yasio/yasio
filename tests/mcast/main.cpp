@@ -93,10 +93,10 @@ void yasioMulticastTest()
   /// channel 0: enable  multicast
   service.set_option(YOPT_C_MOD_FLAGS, MCAST_SERVER_INDEX, YCF_REUSEADDR, 0);
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, "224.0.0.19", 1);
-  service.open(MCAST_SERVER_INDEX, YCM_UDP_SERVER);
+  service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, "224.0.0.19", 1);
-  service.open(MCAST_CLIENT_INDEX, YCM_UDP_CLIENT);
+  service.open(MCAST_CLIENT_INDEX, YCK_UDP_CLIENT);
 
   time_t duration = 0;
   while (service.is_running())

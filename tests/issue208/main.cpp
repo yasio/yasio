@@ -86,7 +86,7 @@ int main()
     }
   });
   // open channel 0 as tcp client
-  get_service().open(0, YCM_TCP_CLIENT);
+  get_service().open(0, YCK_TCP_CLIENT);
 
   std::this_thread::sleep_for(std::chrono::microseconds(1000 * 1000));
   printf("tmp timer call at %lld\n", getTimeStamp());

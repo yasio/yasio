@@ -135,10 +135,10 @@ enum : u_short
 enum
 {
   /* whether udp server enable multicast service */
-  YCPF_MCAST = 1 << 1,
+  YCPF_MCAST = 1 << 17,
 
   /* Whether multicast loopback, if 1, local machine can recv self multicast packet */
-  YCPF_MCAST_LOOPBACK = 1 << 2,
+  YCPF_MCAST_LOOPBACK = 1 << 18,
 };
 
 #define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
@@ -272,10 +272,10 @@ io_channel::io_channel(io_service& service, int index) : timer_(service)
 }
 void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
 {
-  private_flags_ |= YCPF_MCAST;
+  properties_ |= YCPF_MCAST;
   if (loopback)
   {
-    private_flags_ |= YCPF_MCAST_LOOPBACK;
+    properties_ |= YCPF_MCAST_LOOPBACK;
   }
 
   multiaddr_ = ep;
@@ -284,7 +284,7 @@ int io_channel::join_multicast_group()
 {
   if (socket_->is_open())
   {
-    int loopback = (private_flags_ & YCPF_MCAST_LOOPBACK) ? 1 : 0;
+    int loopback = (properties_ & YCPF_MCAST_LOOPBACK) ? 1 : 0;
     socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                         multiaddr_.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP,
                         loopback);
@@ -299,8 +299,8 @@ int io_channel::join_multicast_group()
 }
 void io_channel::disable_multicast_group()
 {
-  private_flags_ &= ~YCPF_MCAST;
-  private_flags_ &= ~YCPF_MCAST_LOOPBACK;
+  properties_ &= ~YCPF_MCAST;
+  properties_ &= ~YCPF_MCAST_LOOPBACK;
 
   if (socket_->is_open())
     configure_multicast_group(false);
@@ -461,7 +461,7 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
         error = xxsocket::get_last_errno();
         if (SHOULD_CLOSE_1(n, error))
         {
-          if (((ctx_->mask_ & YCM_UDP) == 0) || error != EPERM)
+          if (((ctx_->properties_ & YCM_UDP) == 0) || error != EPERM)
           { // Fix issue: #126, simply ignore EPERM for UDP
             set_last_errno(error);
             break;
@@ -923,7 +923,7 @@ void io_service::process_channels(fd_set* fds_array)
     {
       auto ctx    = *iter;
       bool finish = true;
-      if (ctx->mask_ & YCM_CLIENT)
+      if (ctx->properties_ & YCM_CLIENT)
       { // resolving, opening
         if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
         {
@@ -944,7 +944,7 @@ void io_service::process_channels(fd_set* fds_array)
         }
         finish = ctx->error_ != EINPROGRESS && (ctx->opmask_ & YOPM_OPEN_CHANNEL) == 0;
       }
-      else if (ctx->mask_ & YCM_SERVER)
+      else if (ctx->properties_ & YCM_SERVER)
       {
         auto opmask = ctx->opmask_;
         if (opmask & YOPM_CLOSE_CHANNEL)
@@ -983,7 +983,7 @@ void io_service::close(transport_handle_t transport)
   if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE_TRANSPORT))
   {
     transport->opmask_ |= YOPM_CLOSE_TRANSPORT;
-    if (transport->ctx_->mask_ & YCM_TCP)
+    if (transport->ctx_->properties_ & YCM_TCP)
       transport->socket_->shutdown();
     this->interrupt();
   }
@@ -997,18 +997,20 @@ bool io_service::is_open(int cindex) const
 void io_service::reopen(transport_handle_t transport)
 {
   auto ctx = transport->ctx_;
-  if (ctx->mask_ & YCM_CLIENT) // Only client channel support reopen by transport
+  if (ctx->properties_ & YCM_CLIENT) // Only client channel support reopen by transport
     open_internal(ctx);
 }
-void io_service::open(size_t cindex, int channel_mask)
+void io_service::open(size_t cindex, int kind)
 {
+  ASSERT((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
+
   auto ctx = cindex_to_handle(cindex);
   if (ctx != nullptr)
   {
-    ctx->mask_ = static_cast<u_short>(channel_mask);
-    if (channel_mask & YCM_TCP)
+    ctx->properties_ = ctx->properties_ & (~(uint32_t)0xff) | kind;
+    if (kind & YCM_TCP)
       ctx->protocol_ = SOCK_STREAM;
-    else if (channel_mask & YCM_UDP)
+    else if (kind & YCM_UDP)
       ctx->protocol_ = SOCK_DGRAM;
 
     open_internal(ctx);
@@ -1033,13 +1035,13 @@ void io_service::handle_close(transport_handle_t thandle)
   deallocate_transport(thandle);
 
   // @Update context state for client
-  if (ctx->mask_ & YCM_CLIENT)
+  if (ctx->properties_ & YCM_CLIENT)
   {
     ctx->error_ = 0;
     ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
     ctx->state_ = io_base::state::CLOSED;
-    ctx->private_flags_ = 0;
-  } // server channel, do nothing.
+    ctx->properties_ &= (uint32_t)0xffff; // clear private flags
+  }                                       // server channel, do nothing.
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, thandle)));
@@ -1132,20 +1134,20 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
     int ret = 0;
-    if (ctx->flags_ & YCF_REUSEADDR)
+    if (ctx->properties_ & YCF_REUSEADDR)
       ctx->socket_->reuse_address(true);
-    if (ctx->flags_ & YCF_EXCLUSIVEADDRUSE)
+    if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
       ctx->socket_->reuse_address(false);
 
-    if ((ctx->local_port_ != 0 || ctx->mask_ & YCM_UDP))
+    if ((ctx->local_port_ != 0 || ctx->properties_ & YCM_UDP))
       ctx->socket_->bind(YASIO_ADDR_ANY(ep.af()), ctx->local_port_);
 
     // tcp connect directly, for udp do not need to connect.
-    if (ctx->mask_ & YCM_TCP)
+    if (ctx->properties_ & YCM_TCP)
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
 
     // join the multicast group for udp
-    if (ctx->private_flags_ & YCPF_MCAST)
+    if (ctx->properties_ & YCPF_MCAST)
       ctx->join_multicast_group();
 
     if (ret < 0)
@@ -1178,7 +1180,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
 void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_array)
 {
-  assert((ctx->mask_ & YCM_TCP) && (ctx->mask_ & YCM_CLIENT));
+  assert((ctx->properties_ & YCM_TCP) && (ctx->properties_ & YCM_CLIENT));
   assert(ctx->state_ == io_base::state::OPENING);
 
   if (ctx->state_ == io_base::state::OPENING)
@@ -1216,7 +1218,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
         {
           // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
           unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
-          if ((ctx->mask_ & YCM_SSL) == 0)
+          if ((ctx->properties_ & YCM_SSL) == 0)
             handle_connect_succeed(ctx, ctx->socket_);
           else
             do_ssl_handshake(ctx);
@@ -1414,9 +1416,9 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
   {
     int error = 0;
-    if (ctx->flags_ & YCF_REUSEADDR)
+    if (ctx->properties_ & YCF_REUSEADDR)
       ctx->socket_->reuse_address(true);
-    if (ctx->flags_ & YCF_EXCLUSIVEADDRUSE)
+    if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
       ctx->socket_->reuse_address(false);
     if (ctx->socket_->bind(ep) != 0)
     {
@@ -1428,14 +1430,14 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       return;
     }
 
-    if ((ctx->mask_ & YCM_UDP) || ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
+    if ((ctx->properties_ & YCM_UDP) || ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
     {
       ctx->state_ = io_base::state::OPEN;
       ctx->socket_->set_nonblocking(true);
 
-      if (ctx->mask_ & YCM_UDP)
+      if (ctx->properties_ & YCM_UDP)
       {
-        if (ctx->private_flags_ & YCPF_MCAST)
+        if (ctx->properties_ & YCPF_MCAST)
           ctx->join_multicast_group();
 
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
@@ -1466,7 +1468,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
               0 &&
           error == 0)
       {
-        if (ctx->mask_ & YCM_TCP)
+        if (ctx->properties_ & YCM_TCP)
         {
           socket_native_type sockfd;
           error = ctx->socket_->accept_n(sockfd);
@@ -1523,15 +1525,15 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(peer.af(), SOCK_DGRAM, 0))
   {
-    if (ctx->flags_ & YCF_REUSEADDR)
+    if (ctx->properties_ & YCF_REUSEADDR)
       client_sock->reuse_address(true);
-    if (ctx->flags_ & YCF_EXCLUSIVEADDRUSE)
+    if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
       client_sock->reuse_address(false);
     int error = client_sock->bind(YASIO_ADDR_ANY(peer.af()), 0);
     if (error == 0)
     {
-      io_transport_udp* transport =
-          (io_transport_udp*)allocate_transport(ctx, std::move(client_sock));
+      auto transport =
+          static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(client_sock)));
 
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer, true);
@@ -1559,17 +1561,17 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
   auto ctx = transport->ctx_;
   ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
   auto& connection = transport->socket_;
-  if (ctx->mask_ & YCM_CLIENT)
+  if (ctx->properties_ & YCM_CLIENT)
     ctx->state_ = io_base::state::OPEN;
   else
   { // tcp/udp server, accept a new client session
     connection->set_nonblocking(true);
     register_descriptor(connection->native_handle(), YEM_POLLIN);
   }
-  if (ctx->mask_ & YCM_TCP)
+  if (ctx->properties_ & YCM_TCP)
   {
 #if defined(__APPLE__) || defined(__linux__)
-    if (ctx->mask_ & YCM_TCP)
+    if (ctx->properties_ & YCM_TCP)
       connection->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
 #endif
     // apply tcp keepalive options
@@ -1601,20 +1603,18 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   else
     vp = ::operator new(yasio__global_state::s_max_alloc_size);
 #if defined(YASIO_HAVE_SSL)
-  if (ctx->mask_ & YCM_SSL)
+  if (ctx->properties_ & YCM_SSL)
     transport = new (vp) io_transport_ssl(ctx, socket);
   else
 #endif
-      if (ctx->mask_ & YCM_TCP)
+      if (ctx->properties_ & YCM_TCP)
     transport = new (vp) io_transport_tcp(ctx, socket);
 #if defined(YASIO_HAVE_KCP)
-  else if (ctx->mask_ & YCM_KCP)
+  else if (ctx->properties_ & YCM_KCP)
     transport = new (vp) io_transport_kcp(ctx, socket);
 #endif
-  else if (ctx->mask_ & YCM_UDP)
+  else if (ctx->properties_ & YCM_UDP)
     transport = new (vp) io_transport_udp(ctx, socket);
-  else
-    transport = new (vp) io_transport_tcp(ctx, socket);
 
   transport->set_primitives();
 
@@ -1653,7 +1653,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
       if (!transport->error_) // If no reason, just set reason: local shutdown
-          transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
+        transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
       break;
     }
 
@@ -1816,10 +1816,10 @@ bool io_service::close_internal(io_channel* ctx)
 {
   if (ctx->socket_->is_open())
   {
-    if (ctx->mask_ & YCM_CLIENT)
+    if (ctx->properties_ & YCM_CLIENT)
     {
       ctx->opmask_ |= YOPM_CLOSE_TRANSPORT;
-      if (ctx->mask_ & YCM_TCP)
+      if (ctx->properties_ & YCM_TCP)
         ctx->socket_->shutdown();
     }
     else
@@ -2162,8 +2162,8 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
-        channel->flags_ |= (u_short)va_arg(ap, int);
-        channel->flags_ &= ~(u_short)va_arg(ap, int);
+        channel->properties_ |= (uint32_t)va_arg(ap, int);
+        channel->properties_ &= ~(uint32_t)va_arg(ap, int);
       }
       break;
     }

@@ -166,37 +166,42 @@ enum
   YOPT_I_SOCKOPT = 201,
 };
 
-// channel mask, contains transport type: POSIX, MCAST, KCP, SSL
+// channel masks: only for internal use, not for user
 enum
 {
-  YCM_CLIENT     = 1,
-  YCM_SERVER     = 1 << 1,
-  YCM_TCP        = 1 << 2,
-  YCM_UDP        = 1 << 3,
-  YCM_KCP        = 1 << 4,
-  YCM_SSL        = 1 << 5,
-  YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
-  YCM_TCP_SERVER = YCM_TCP | YCM_SERVER,
-  YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
-  YCM_UDP_SERVER = YCM_UDP | YCM_SERVER,
-  YCM_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
-  YCM_KCP_SERVER = YCM_KCP | YCM_SERVER | YCM_UDP,
-  YCM_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
+  YCM_CLIENT = 1,
+  YCM_SERVER = 1 << 1,
+  YCM_TCP    = 1 << 2,
+  YCM_UDP    = 1 << 3,
+  YCM_KCP    = 1 << 4,
+  YCM_SSL    = 1 << 5,
+};
+
+// channel kinds: for user to call io_service::open
+enum
+{
+  YCK_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
+  YCK_TCP_SERVER = YCM_TCP | YCM_SERVER,
+  YCK_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
+  YCK_UDP_SERVER = YCM_UDP | YCM_SERVER,
+  YCK_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
+  YCK_KCP_SERVER = YCM_KCP | YCM_SERVER | YCM_UDP,
+  YCK_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
 };
 
 // channel flags
 enum
 {
   /* Whether setsockopt SO_REUSEADDR and SO_REUSEPORT */
-  YCF_REUSEADDR = 1,
+  YCF_REUSEADDR = 1 << 9,
 
   /* For winsock security issue, see:
      https://docs.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
   */
-  YCF_EXCLUSIVEADDRUSE = 1 << 1,
+  YCF_EXCLUSIVEADDRUSE = 1 << 10,
 
   /* Whether ssl client in handshaking */
-  YCF_SSL_HANDSHAKING = 1 << 2,
+  YCF_SSL_HANDSHAKING = 1 << 11,
 };
 
 // event kinds
@@ -388,13 +393,12 @@ private:
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
 
-  u_short mask_ = 0;
-
-  /* !!!since v3.33.0, the default value has modfied from YCF_REUSEADDR to 0 */
-  u_short flags_ = 0;
-
-  /* private flags for internal use */
-  u_short private_flags_ = 0;
+  /* Since v3.33.0 mask,kind,flags,private_flags are stored to this field
+  ** bit[1-8] mask & kinds
+  ** bit[9-16] flags
+  ** bit[17-?] private flags
+  */
+  uint32_t properties_ = 0;
 
   /*
   ** !!! tcp/udp client only, if not zero, will use it as fixed port,
@@ -668,8 +672,8 @@ public:
   YASIO__DECL void set_option(int opt, ...);
   YASIO__DECL void set_option_internal(int opt, va_list args);
 
-  // open a channel, default: YCM_TCP_CLIENT
-  YASIO__DECL void open(size_t cindex, int channel_mask = YCM_TCP_CLIENT);
+  // open a channel, default: YCK_TCP_CLIENT
+  YASIO__DECL void open(size_t cindex, int kind = YCK_TCP_CLIENT);
 
   YASIO__DECL void reopen(transport_handle_t);
 

@@ -8,6 +8,7 @@ yasio-3.33.0
 6. Provide ```io_service::write_to``` to write a unbind UDP client.
 7. Change ```timer_cb_t``` prototype to ```[]()->bool { }```, return ```true``` for once, ```false``` for continue.
 8. Add ```highp_timer::async_wait_once``` to wait timer timeout once.
+9. Change ```YCM_XXX_[CLIENT/SERVER]``` to ```YCK_XXX_[CLIENT/SERVER]```.
   
   
 yasio-3.31.3

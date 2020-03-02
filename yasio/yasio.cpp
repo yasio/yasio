@@ -139,6 +139,9 @@ enum
 
   /* Whether multicast loopback, if 1, local machine can recv self multicast packet */
   YCPF_MCAST_LOOPBACK = 1 << 18,
+
+  /* Whether ssl client in handshaking */
+  YCPF_SSL_HANDSHAKING = 1 << 19,
 };
 
 #define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
@@ -484,7 +487,7 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
 io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s)
     : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
 {
-  ctx->flags_ &= ~YCF_SSL_HANDSHAKING;
+  ctx->properties_ &= ~YCPF_SSL_HANDSHAKING;
 }
 void io_transport_ssl::set_primitives()
 {
@@ -1205,7 +1208,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       ctx->timer_.cancel();
     }
 #else
-    if ((ctx->flags_ & YCF_SSL_HANDSHAKING) == 0)
+    if ((ctx->properties_ & YCPF_SSL_HANDSHAKING) == 0)
     {
       int error = -1;
       if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
@@ -1264,7 +1267,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
     auto ssl = ::SSL_new(get_ssl_context());
     ::SSL_set_fd(ssl, ctx->socket_->native_handle());
     ::SSL_set_connect_state(ssl);
-    ctx->flags_ |= YCF_SSL_HANDSHAKING; // start ssl handshake
+    ctx->properties_ |= YCPF_SSL_HANDSHAKING; // start ssl handshake
     ctx->ssl_.reset(ssl);
   }
 
@@ -1633,7 +1636,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
 #if defined(YASIO_HAVE_SSL)
   // Remove tmp flags
-  ctx->flags_ &= ~YCF_SSL_HANDSHAKING;
+  ctx->properties_ &= ~YCPF_SSL_HANDSHAKING;
 #endif
 
   cleanup_io(ctx);

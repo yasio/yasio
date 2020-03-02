@@ -199,9 +199,6 @@ enum
      https://docs.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
   */
   YCF_EXCLUSIVEADDRUSE = 1 << 10,
-
-  /* Whether ssl client in handshaking */
-  YCF_SSL_HANDSHAKING = 1 << 11,
 };
 
 // event kinds

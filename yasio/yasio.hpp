@@ -326,7 +326,7 @@ class ssl_auto_handle
 {
 public:
   ssl_auto_handle() : ssl_(nullptr) {}
-  ~ssl_auto_handle() { dispose(); }
+  ~ssl_auto_handle() { destroy(); }
   ssl_auto_handle(ssl_auto_handle&& rhs) : ssl_(rhs.release()) {}
   ssl_auto_handle& operator=(ssl_auto_handle&& rhs)
   {
@@ -342,7 +342,7 @@ public:
   void reset(SSL* ssl)
   {
     if (ssl_)
-      dispose();
+      destroy();
     ssl_ = ssl;
   }
   operator SSL*() { return ssl_; }
@@ -367,9 +367,11 @@ public:
   inline int index() { return index_; }
   inline u_short remote_port() { return remote_port_; }
 
+protected:
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
   YASIO__DECL int join_multicast_group();
   YASIO__DECL void disable_multicast_group();
+  YASIO__DECL int configure_multicast_group(bool onoff);
 
 private:
   YASIO__DECL io_channel(io_service& service, int index);

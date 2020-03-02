@@ -12,7 +12,7 @@ using namespace yasio::inet;
 
 void yasioTest()
 {
-  yasio::inet::io_hostent endpoints[] = {{"baidu.com", 443}};
+  yasio::inet::io_hostent endpoints[] = {{"github.com", 443}};
 
   io_service service(endpoints, 1);
 

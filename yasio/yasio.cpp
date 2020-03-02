@@ -293,20 +293,7 @@ int io_channel::join_multicast_group()
                         multiaddr_.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
                         YASIO_DEFAULT_MULTICAST_TTL);
 
-    if (multiaddr_.af() == AF_INET)
-    { // ipv4
-      struct ip_mreq mreq;
-      mreq.imr_interface.s_addr = 0;
-      mreq.imr_multiaddr        = multiaddr_.in4_.sin_addr;
-      return socket_->set_optval(IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, (int)sizeof(mreq));
-    }
-    else
-    { // ipv6
-      struct ipv6_mreq mreq_v6;
-      mreq_v6.ipv6mr_interface = 0;
-      mreq_v6.ipv6mr_multiaddr = multiaddr_.in6_.sin6_addr;
-      return socket_->set_optval(IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq_v6, (int)sizeof(mreq_v6));
-    }
+    return configure_multicast_group(true);
   }
   return -1;
 }
@@ -316,11 +303,25 @@ void io_channel::disable_multicast_group()
   private_flags_ &= ~YCPF_MCAST_LOOPBACK;
 
   if (socket_->is_open())
-  {
+    configure_multicast_group(false);
+}
+int io_channel::configure_multicast_group(bool onoff)
+{
+  if (multiaddr_.af() == AF_INET)
+  { // ipv4
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
-    mreq.imr_multiaddr.s_addr = multiaddr_.in4_.sin_addr.s_addr;
-    socket_->set_optval(IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
+    mreq.imr_multiaddr        = multiaddr_.in4_.sin_addr;
+    return socket_->set_optval(IPPROTO_IP, onoff ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP, &mreq,
+                               (int)sizeof(mreq));
+  }
+  else
+  { // ipv6
+    struct ipv6_mreq mreq_v6;
+    mreq_v6.ipv6mr_interface = 0;
+    mreq_v6.ipv6mr_multiaddr = multiaddr_.in6_.sin6_addr;
+    return socket_->set_optval(IPPROTO_IPV6, onoff ? IPV6_JOIN_GROUP : IPV6_LEAVE_GROUP, &mreq_v6,
+                               (int)sizeof(mreq_v6));
   }
 }
 void io_channel::configure_host(std::string host)
@@ -1280,7 +1281,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
       YASIO_LOG("SSL_do_handshake fail with ret=%d,error=%d, errno=%d, detail:%s\n", ret, error,
                 errno, strerror(errno));
 
-      ctx->ssl_.dispose();
+      ctx->ssl_.destroy();
       handle_connect_failed(ctx, YERR_SSL_HANDSHAKE_FAILED);
     }
   }

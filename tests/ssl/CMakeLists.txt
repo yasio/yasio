@@ -10,9 +10,9 @@ include_directories ("${SSLTEST_INC_DIR}")
 add_executable (ssltest ${SSLTEST_SRC}) 
 
 if (MSVC)
-    set (SSLTEST_LDLIBS yasio ext_crypt ext_ssl)
+    set (SSLTEST_LDLIBS yasio ext_crypto ext_ssl)
 else ()
-    set (SSLTEST_LDLIBS yasio pthread ext_crypt ext_ssl dl)
+    set (SSLTEST_LDLIBS yasio pthread ext_crypto ext_ssl dl)
 endif()
 
 target_link_libraries (ssltest ${SSLTEST_LDLIBS})

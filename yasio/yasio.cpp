@@ -1035,10 +1035,10 @@ void io_service::handle_close(transport_handle_t thandle)
   // @Update context state for client
   if (ctx->mask_ & YCM_CLIENT)
   {
-    ctx->state_ = io_base::state::CLOSED;
+    ctx->error_ = 0;
     ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
+    ctx->state_ = io_base::state::CLOSED;
     ctx->private_flags_ = 0;
-    ctx->set_last_errno(0);
   } // server channel, do nothing.
 
   // @Notify connection lost
@@ -1652,7 +1652,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
       break;
     if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
-      transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
+      if (!transport->error_) // If no reason, just set reason: local shutdown
+          transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
       break;
     }
 

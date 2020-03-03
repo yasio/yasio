@@ -1044,7 +1044,7 @@ void io_service::handle_close(transport_handle_t thandle)
     ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
     ctx->state_ = io_base::state::CLOSED;
     ctx->properties_ &= (uint32_t)0xffff; // clear private flags
-  }                                       // server channel, do nothing.
+  }
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, thandle)));

@@ -1616,7 +1616,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   else if (ctx->properties_ & YCM_KCP)
     transport = new (vp) io_transport_kcp(ctx, socket);
 #endif
-  else if (ctx->properties_ & YCM_UDP)
+  else /* it's ok to always regard as UDP transport */
     transport = new (vp) io_transport_udp(ctx, socket);
 
   transport->set_primitives();

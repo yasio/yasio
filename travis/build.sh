@@ -14,8 +14,8 @@ function build_osx()
     
     mkdir -p build_osx
     
-    cmake .. -GXcode -Bbuild_osx
-    cmake --build build_osx --config Release -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON
+    cmake .. -GXcode -Bbuild_osx -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON
+    cmake --build build_osx --config Release
     
     echo "run test issue201 on osx..."
     build_osx/tests/issue201/Release/issue201

@@ -4,6 +4,6 @@ site_description: 'The documentation of yasio'
 
 site_url: https://yasio-docs.rtfd.io/
 
-repo_url: https://github.com/simdsoft/yasio
+repo_url: https://github.com/yasio/yasio
 
 docs_dir: 'docs'

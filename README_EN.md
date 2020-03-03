@@ -64,7 +64,7 @@ int main()
     }
   });
   // open channel 0 as tcp client
-  service.open(0, YCM_TCP_CLIENT);
+  service.open(0, YCK_TCP_CLIENT);
   getchar();
 }
 ```
@@ -97,7 +97,7 @@ service.start_service(function(ev)
         end
     end)
 -- open channel 0 as tcp client
-service.open(0, yasio.YCM_TCP_CLIENT)
+service.open(0, yasio.YCK_TCP_CLIENT)
 
 -- should be call at the thread of lua_State, for game engine, it's should be renderer loop.
 function gDispatchNetworkEvent(...)

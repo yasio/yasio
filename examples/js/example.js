@@ -52,7 +52,7 @@ function yasioTest() {
     4, // lengthFieldLength, 长度字段大小，支持1字节，2字节，3字节，4字节
     0 // lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
   );
-  yserver.open(0, yasio.YCM_TCP_SERVER);
+  yserver.open(0, yasio.YCK_TCP_SERVER);
 
   var yclient = new yasio.io_service({ host: "127.0.0.1", port: 8081 });
 
@@ -108,7 +108,7 @@ function yasioTest() {
     0 // lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
   );
 
-  yclient.open(0, yasio.YCM_TCP_CLIENT);
+  yclient.open(0, yasio.YCK_TCP_CLIENT);
 
   // run the event-loop
   cc.yserverID = yasio.setInterval(function () {

@@ -49,8 +49,8 @@ server:start_service(function(event)
             print("The connection is lost!")
         end
     end)
-server:open(0, yasio.YCM_TCP_SERVER)
-server:open(1, yasio.YCM_TCP_SERVER)
+server:open(0, yasio.YCK_TCP_SERVER)
+server:open(1, yasio.YCK_TCP_SERVER)
 
 hostent.host = "127.0.0.1"
 local client = io_service.new(hostent)
@@ -87,7 +87,7 @@ client:start_service(function(event)
             print("The connection is lost!")
         end
     end)
-client:open(0, yasio.YCM_TCP_CLIENT)
+client:open(0, yasio.YCK_TCP_CLIENT)
 
 -- httpclient 
 local http_client = require 'yasio_lext.http_client'

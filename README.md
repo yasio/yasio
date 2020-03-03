@@ -68,7 +68,7 @@ int main()
     }
   });
   // open channel 0 as tcp client
-  service.open(0, YCM_TCP_CLIENT);
+  service.open(0, YCK_TCP_CLIENT);
   getchar();
 }
 ```
@@ -102,7 +102,7 @@ service.start_service(function(ev)
         end
     end)
 -- 将信道0作为TCP客户端打开，并向服务器发起异步连接，进行TCP三次握手
-service.open(0, yasio.YCM_TCP_CLIENT)
+service.open(0, yasio.YCK_TCP_CLIENT)
 
 -- 由于lua_State和渲染对象，不支持在其他线程操作，因此分派网络事件封装为全局Lua函数，并且以下函数应该在主线程或者游戏引擎渲染线程调用
 function gDispatchNetworkEvent(...)

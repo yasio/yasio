@@ -15,7 +15,7 @@ function build_osx()
     mkdir -p build_osx
     
     cmake .. -GXcode -Bbuild_osx
-    cmake --build build_osx --config Release
+    cmake --build build_osx --config Release -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON
     
     echo "run test issue201 on osx..."
     build_osx/tests/issue201/Release/issue201
@@ -30,7 +30,7 @@ function build_ios()
     
     mkdir -p build_ios
     
-    cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator
+    cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON
     cmake --build build_ios --config Release
     
     exit 0
@@ -55,7 +55,7 @@ function build_android()
     echo "Building android..."
     cd $YASIO_ROOT/build
     mkdir -p build_armv7
-    cmake .. -G "Unix Makefiles" -Bbuild_armv7 -DANDROID_STL=c++_shared -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-$NDK_VER/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+    cmake .. -G "Unix Makefiles" -Bbuild_armv7 -DANDROID_STL=c++_shared -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-$NDK_VER/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON
     cmake --build build_armv7 --target yasio
     
     exit 0

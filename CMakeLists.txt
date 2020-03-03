@@ -130,6 +130,25 @@ else ( )
     )
 endif ( )
 
+macro(ConfigTargetSSL target_name)
+    if (YASIO_BUILD_WITH_SSL)
+        if (UNIX)
+            target_link_libraries (${target_name} ext_ssl ext_crypto dl)
+        else ()
+            target_link_libraries (${target_name} ext_ssl ext_crypto)
+        endif()
+
+        if (WIN32)
+            add_custom_command(TARGET ${target_name}
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${OPENSSL_LIB_DIR}/libcrypto-1_1.dll
+                ${OPENSSL_LIB_DIR}/libssl-1_1.dll
+                $<TARGET_FILE_DIR:${target_name}>
+            )
+        endif()
+    endif()
+endmacro()
+
 if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)
@@ -145,7 +164,6 @@ endif ()
 
 ### SSL support
 if (YASIO_BUILD_WITH_SSL)
-    # target_include_directories
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
 
     add_subdirectory(external/openssl)
@@ -164,7 +182,6 @@ if (YASIO_BUILD_WITH_CARES)
     add_subdirectory(external/c-ares)
     target_link_libraries(yasio c-ares)
 
-    # include_directories($<TARGET_FILE_DIR:c-ares>)
     include_directories(external)
 endif()
 

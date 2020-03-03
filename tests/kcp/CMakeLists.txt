@@ -1,3 +1,5 @@
+set (target_name kcptest)
+
 set (KCPTEST_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set (KCPTEST_SRC 
@@ -10,9 +12,11 @@ set (KCPTEST_INC_DIR ${KCPTEST_SRC_DIR}/../../)
 include_directories ("${KCPTEST_SRC_DIR}")
 include_directories ("${KCPTEST_INC_DIR}")
 
-add_executable (kcptest ${KCPTEST_SRC}) 
+add_executable (${target_name} ${KCPTEST_SRC}) 
 
 if (NOT WIN32)
     set (KCPTEST_LDLIBS pthread)
-    target_link_libraries (kcptest ${KCPTEST_LDLIBS})
+    target_link_libraries (${target_name} ${KCPTEST_LDLIBS})
 endif()
+
+ConfigTargetSSL(${target_name})

@@ -1,3 +1,5 @@
+set(target_name example_lua)
+
 set (EXAMPLE_LUA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(LUA_SRC_PATH ${EXAMPLE_LUA_SRC_DIR}/lua)
@@ -23,7 +25,7 @@ include_directories (
     ${LUA_SRC_PATH}
     )
 
-add_executable (example_lua 
+add_executable (${target_name} 
     ${EXAMPLE_LUA_SRC} 
     ${LUA_SRC_FILES}
 ) 
@@ -34,22 +36,24 @@ else ()
     set (EXAMPLE_LUA_LDLIBS yasio pthread)
 endif()
 
-target_link_libraries (example_lua ${EXAMPLE_LUA_LDLIBS})
+target_link_libraries (${target_name} ${EXAMPLE_LUA_LDLIBS})
 
 if (MSVC)
-    set_target_properties(example_lua PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:example_lua>")
+    set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${target_name}>")
 endif ()
 
-add_custom_command(TARGET example_lua
+add_custom_command(TARGET ${target_name}
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts
-    $<TARGET_FILE_DIR:example_lua>/scripts/
+    $<TARGET_FILE_DIR:${target_name}>/scripts/
     )
 
 if(MSVC)
-    add_custom_command(TARGET example_lua
+    add_custom_command(TARGET ${target_name}
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_CURRENT_SOURCE_DIR}/example_lua.xsxproj
-        $<TARGET_FILE_DIR:example_lua>/example_lua.xsxproj
+        $<TARGET_FILE_DIR:${target_name}>/example_lua.xsxproj
         )
 endif()
+
+ConfigTargetSSL(${target_name})

@@ -1010,7 +1010,7 @@ void io_service::open(size_t cindex, int kind)
   auto ctx = cindex_to_handle(cindex);
   if (ctx != nullptr)
   {
-    ctx->properties_ = ctx->properties_ & (~(uint32_t)0xff) | kind;
+    ctx->properties_ = (ctx->properties_ & (~(uint32_t)0xff)) | kind;
     if (kind & YCM_TCP)
       ctx->protocol_ = SOCK_STREAM;
     else if (kind & YCM_UDP)

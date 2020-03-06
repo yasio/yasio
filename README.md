@@ -1,4 +1,4 @@
-<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="100" src="https://yasio.org/logo.svg" alt="yasio logo"></a></p>
+<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="100" src="https://yasio.org/images/logo.svg" alt="yasio logo"></a></p>
 
 # *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
@@ -13,7 +13,7 @@
 [![Last Commit](https://badgen.net/github/last-commit/yasio/yasio)](https://github.com/yasio/yasio)
 
   
-[![Supported Platforms](https://img.shields.io/badge/platform-ios%20%7C%20osx%20%7C%20android%20%7C%20win32%20%7C%20linux-lightgrey.svg?style=flat-square)](https://github.com/yasio/yasio)
+[![Supported Platforms](https://img.shields.io/badge/platform-ios%20%7C%20osx%20%7C%20android%20%7C%20win32%20%7C%20linux-green.svg?style=flat-square)](https://github.com/yasio/yasio)
 [![Powered](https://img.shields.io/badge/Powered%20by-c4games-blue.svg)](http://c4games.com)  
   
 **[English](README_EN.md)**

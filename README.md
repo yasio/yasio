@@ -1,3 +1,5 @@
+<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="100" src="https://yasio.org/logo.svg" alt="yasio logo"></a></p>
+
 # *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/d6qjfygtw2ewt9pf/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
@@ -147,7 +149,7 @@ cmake --build . --config Debug
 * 支持非阻塞域名解析，基于c-ares。  
   
 ## yasio核心设计，充分利用了多路io复用模型(服务器高并发的基石)，以下是框架图
-![image](https://github.com/yasio/yasio/blob/master/framework.png)  
+![image](https://yasio.org/images/framework.png)  
 
 ## 集成指南
 [https://github.com/yasio/yasio/wiki/Integrate-Guides](https://github.com/yasio/yasio/wiki/Integrate-Guides)

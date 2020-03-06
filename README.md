@@ -1,4 +1,4 @@
-<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="200" src="https://yasio.org/images/logo.png" alt="yasio logo"></a></p>
+<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="160" src="https://yasio.org/images/logo.png" alt="yasio logo"></a></p>
 
 # *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)

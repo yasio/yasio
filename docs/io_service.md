@@ -84,13 +84,13 @@ void open(cindex,cmask)
 功能：打开信道  
 参数说明:  
 cindex: 信道索引，start_service传入的列表  
-cmask: 信道掩码  
-  + yasio.YCM_TCP_CLIENT: 将信道打开为tcp客户端，将会发起远端服务器的tcp连接
-  + yasio.YCM_TCP_SERVER: 将信道打开为tcp服务端, 启动本地tcp服务器
-  + yasio.YCM_UDP_CLIENT: 将信道打开为udp客户端, 和和远端udp建立绑定, 以便进行udp通讯
-  + yasio.YCM_UDP_SERVER: 将信道打开为udp服务端, windows平台不支持此掩码
-  + yasio.YCM_KCP_CLIENT: 将信道打开为kcp客户端, 和和远端kcp建立绑定, 以便进行基于udp的kcp通讯, 仅当C++编译宏YASIO_HAVE_KCP开启时才能用
-  + yasio.YCM_KCP_SERVER: 将信道打开为kcp服务端, 仅当C++编译宏YASIO_HAVE_KCP开启时才能用, windows平台不支持此掩码
+ckind: 信道类型，只是如下值  
+  + yasio.YCK_TCP_CLIENT: 将信道打开为tcp客户端，将会发起远端服务器的tcp连接
+  + yasio.YCK_TCP_SERVER: 将信道打开为tcp服务端, 启动本地tcp服务器
+  + yasio.YCK_UDP_CLIENT: 将信道打开为udp客户端, 和和远端udp建立绑定, 以便进行udp通讯
+  + yasio.YCK_UDP_SERVER: 将信道打开为udp服务端, windows平台不支持此类型
+  + yasio.YCK_KCP_CLIENT: 将信道打开为kcp客户端, 和和远端kcp建立绑定, 以便进行基于udp的kcp通讯, 仅当C++编译宏YASIO_HAVE_KCP开启时才能用
+  + yasio.YCK_KCP_SERVER: 将信道打开为kcp服务端, 仅当C++编译宏YASIO_HAVE_KCP开启时才能用, windows平台不支持此类型
 
 ## close
 void close(cindex)  

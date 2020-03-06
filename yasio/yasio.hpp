@@ -895,9 +895,9 @@ private:
   // options
   struct __unnamed_options
   {
-    highp_time_t connect_timeout_     = 10LL * MICROSECONDS_PER_SECOND;
-    highp_time_t dns_cache_timeout_   = 600LL * MICROSECONDS_PER_SECOND;
-    highp_time_t dns_queries_timeout_ = 10LL * MICROSECONDS_PER_SECOND;
+    highp_time_t connect_timeout_     = 10LL * std::micro::den;
+    highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
+    highp_time_t dns_queries_timeout_ = 10LL * std::micro::den;
 
     bool deferred_event_ = true;
 

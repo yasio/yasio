@@ -100,10 +100,6 @@ typedef int socket_native_type;
 #endif
 #include <fcntl.h> // common platform header
 
-#if !defined(MICROSECONDS_PER_SECOND)
-#  define MICROSECONDS_PER_SECOND 1000000LL
-#endif
-
 // redefine socket error code for posix api
 #ifdef _WIN32
 

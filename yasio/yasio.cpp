@@ -2078,15 +2078,15 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
 #endif
     case YOPT_S_CONNECT_TIMEOUT:
       options_.connect_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
       break;
     case YOPT_S_DNS_CACHE_TIMEOUT:
       options_.dns_cache_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
       break;
     case YOPT_S_DNS_QUERIES_TIMEOUT:
       options_.dns_queries_timeout_ =
-          static_cast<highp_time_t>(va_arg(ap, int)) * MICROSECONDS_PER_SECOND;
+          static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
       break;
     case YOPT_C_LFBFD_PARAMS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));

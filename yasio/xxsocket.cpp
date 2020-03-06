@@ -999,16 +999,16 @@ int xxsocket::connect(socket_native_type s, const endpoint& ep)
 int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
 {
   timeval timeout = {
-      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / MICROSECONDS_PER_SECOND),
-      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % MICROSECONDS_PER_SECOND)};
+      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
+      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
   return connect_n(addr, port, &timeout);
 }
 
 int xxsocket::connect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
   timeval timeout = {
-      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / MICROSECONDS_PER_SECOND),
-      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % MICROSECONDS_PER_SECOND)};
+      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
+      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
   return connect_n(ep, &timeout);
 }
 
@@ -1129,8 +1129,8 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long t
 
         // Wait upto <timeout> for the blocking to subside.
         timeval waitd_tv = {
-            static_cast<decltype(timeval::tv_sec)>(timeout_usec / MICROSECONDS_PER_SECOND),
-            static_cast<decltype(timeval::tv_usec)>(timeout_usec % MICROSECONDS_PER_SECOND)};
+            static_cast<decltype(timeval::tv_sec)>(timeout_usec / std::micro::den),
+            static_cast<decltype(timeval::tv_usec)>(timeout_usec % std::micro::den)};
         auto start    = yasio::highp_clock();
         int const rtn = handle_write_ready(s, &waitd_tv);
         timeout_usec -= (yasio::highp_clock() - start);
@@ -1194,8 +1194,8 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, long long timeout
       {
         // Wait upto <timeout> for the blocking to subside.
         timeval waitd_tv = {
-            static_cast<decltype(timeval::tv_sec)>(timeout_usec / MICROSECONDS_PER_SECOND),
-            static_cast<decltype(timeval::tv_usec)>(timeout_usec % MICROSECONDS_PER_SECOND)};
+            static_cast<decltype(timeval::tv_sec)>(timeout_usec / std::micro::den),
+            static_cast<decltype(timeval::tv_usec)>(timeout_usec % std::micro::den)};
 
         auto start    = yasio::highp_clock();
         int const rtn = handle_read_ready(s, &waitd_tv);
@@ -1294,8 +1294,8 @@ int xxsocket::handle_read_ready(timeval* timeo) const { return handle_read_ready
 int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microseconds& wtimeout)
 {
   timeval timeout = {
-      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / MICROSECONDS_PER_SECOND),
-      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % MICROSECONDS_PER_SECOND)};
+      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
+      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
   return handle_read_ready(s, &timeout);
 }
 

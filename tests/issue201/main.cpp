@@ -15,9 +15,9 @@ int main()
     YASIO_LOG("connect %s failed, the timeout should be approximately equal to 3(s), real: "
            "%lf(s); but when the host network adapter isn't connected, it may be approximately "
            "equal to 0(s)\n",
-           addrip, (yasio::highp_clock() - start) / (double)MICROSECONDS_PER_SECOND);
+           addrip, (yasio::highp_clock() - start) / (double)std::micro::den);
   else
     YASIO_LOG("Aha connect %s succeed, cost: %lf(s)\n", addrip,
-           (yasio::highp_clock() - start) / (double)MICROSECONDS_PER_SECOND);
+           (yasio::highp_clock() - start) / (double)std::micro::den);
   return 0;
 }

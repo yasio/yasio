@@ -163,7 +163,7 @@ enum
 
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
-  YOPT_I_SOCKOPT = 201,
+  YOPT_SOCKOPT = 201,
 };
 
 // channel masks: only for internal use, not for user

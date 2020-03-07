@@ -63,7 +63,7 @@ yasio_shared_service()->set_option(YOPT_C_LFBFD_PARAMS,
     0 -- lengthAdjustment
 );
 yasio_shared_service()->set_option(YOPT_S_DEFERRED_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
-yasio_shared_service()->open(0, YCM_TCP_SERVER);
+yasio_shared_service()->open(0, YCK_TCP_SERVER);
 
 // ********************* client ***********************
 // start process, always try to connect local odbk backend
@@ -105,7 +105,7 @@ yasio_shared_service()->set_option(YOPT_C_LFBFD_PARAMS,
     0 -- lengthAdjustment
 );
 yasio_shared_service()->set_option(YOPT_S_DEFERRED_EVENT, 0); // 禁用事件队列，网络事件直接在服务线程分派
-yasio_shared_service()->open(0, YCM_TCP_CLIENT);
+yasio_shared_service()->open(0, YCK_TCP_CLIENT);
 ```
 
 ## IPV6 ONLY reference

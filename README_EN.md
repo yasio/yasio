@@ -147,7 +147,7 @@ cmake --build . --config Debug
 * Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
   
 ## Core framework
-![image](https://yasio.org/images/framework.png)  
+![image](https://yasio.org/images/framework_en.png)  
 
 ## For more detail usage: see [wiki](https://github.com/yasio/yasio/wiki)
 

@@ -16,6 +16,8 @@
 [![Supported Platforms](https://img.shields.io/badge/platform-ios%20%7C%20osx%20%7C%20android%20%7C%20win32%20%7C%20linux-green.svg?style=flat-square)](https://github.com/yasio/yasio)
 [![Powered](https://img.shields.io/badge/Powered%20by-c4games-blue.svg)](http://c4games.com)  
   
+**[简体中文](README.md)**
+  
 **yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows & linux & apple & android & win10-universal.  
 
 ## Showcase

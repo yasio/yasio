@@ -29,12 +29,20 @@ YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len);
 // #endif
 const string LIBNAME = "yasio-ni";
 
-public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr thandle, IntPtr bytes, int len);
+public delegate void YNIEventDelegate(uint emask, int cidx, IntPtr sid, IntPtr bytes, int len);
 public delegate int YNIResolvDelegate(string host, IntPtr sbuf);
 public delegate void YNIPrintDelegate(string msg);
 
+/// <summary>
+/// Start a low level socket io service
+/// </summary>
+/// <param name="strParam">
+/// format: "ip:port;ip:port;ip:port"
+/// </param>
+/// <param name="d"></param>
+/// <returns></returns>
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern int yasio_start(int channel_count, YNIEventDelegate d);
+public static extern void yasio_start(int channel_count, YNIEventDelegate d);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_open(int cindex, int cmask);
@@ -43,13 +51,13 @@ public static extern void yasio_open(int cindex, int cmask);
 public static extern void yasio_close(int cindex);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_close_handle(IntPtr thandle);
+public static extern void yasio_close_handle(IntPtr sid);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_write(IntPtr thandle, byte[] bytes, int len);
+public static extern void yasio_write(IntPtr sid, byte[] bytes, int len);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-public static extern void yasio_dispatch(int maxEvents);
+public static extern void yasio_dispatch(int count);
 
 [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 public static extern void yasio_set_option(int opt, string strParam);
@@ -77,22 +85,33 @@ public enum YEnums
     #region Channel mask enums, copy from yasio.hpp
     YCM_CLIENT = 1,
     YCM_SERVER = 1 << 1,
-    YCM_POSIX = 1 << 2,
-    YCM_TCP = 1 << 3,
-    YCM_UDP = 1 << 4,
-    YCM_MCAST = 1 << 5,
-    YCM_KCP = 1 << 6,
-    YCM_SSL = 1 << 7,
-    YCM_TCP_CLIENT = YCM_TCP | YCM_CLIENT | YCM_POSIX,
-    YCM_TCP_SERVER = YCM_TCP | YCM_SERVER | YCM_POSIX,
-    YCM_UDP_CLIENT = YCM_UDP | YCM_CLIENT | YCM_POSIX,
-    YCM_UDP_SERVER = YCM_UDP | YCM_SERVER | YCM_POSIX,
+    YCM_TCP = 1 << 2,
+    YCM_UDP = 1 << 3,
+    YCM_KCP = 1 << 4,
+    YCM_SSL = 1 << 5,
+    YCK_TCP_CLIENT = YCM_TCP | YCM_CLIENT,
+    YCK_TCP_SERVER = YCM_TCP | YCM_SERVER,
+    YCK_UDP_CLIENT = YCM_UDP | YCM_CLIENT,
+    YCK_UDP_SERVER = YCM_UDP | YCM_SERVER,
+    YCK_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
+    YCK_KCP_SERVER = YCM_KCP | YCM_SERVER | YCM_UDP,
+    YCK_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
     #endregion
 
     #region Event kind enums, copy from yasio.hpp
     YEK_CONNECT_RESPONSE = 1,
     YEK_CONNECTION_LOST,
     YEK_PACKET,
+    #endregion
+
+    #region Channel flags
+    /* Whether setsockopt SO_REUSEADDR and SO_REUSEPORT */
+    YCF_REUSEADDR = 1 << 9,
+
+    /* For winsock security issue, see:
+       https://docs.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
+    */
+    YCF_EXCLUSIVEADDRUSE = 1 << 10,
     #endregion
 
     #region All supported options by native, copy from yasio.hpp
@@ -155,17 +174,9 @@ public enum YEnums
     //     initial_bytes_to_strip:int(0)
     YOPT_C_LFBFD_IBTS,
 
-    // Sets channel local port
+    // Sets channel local port for client channel only
     // params: index:int, port:int
     YOPT_C_LOCAL_PORT,
-
-    // Sets channel local host, for server only to bind specified ifaddr
-    // params: index:int, ip:const char*
-    YOPT_C_LOCAL_HOST,
-
-    // Sets channel local endpoint
-    // params: index:int, ip:const char*, port:int
-    YOPT_C_LOCAL_ENDPOINT,
 
     // Sets channel remote host
     // params: index:int, ip:const char*
@@ -183,9 +194,17 @@ public enum YEnums
     // params: index:int, flagsToAdd:int, flagsToRemove:int
     YOPT_C_MOD_FLAGS,
 
+    // Enable channel multicast mode
+    // params: index:int, multi_addr:const char*, loopback:int
+    YOPT_C_ENABLE_MCAST,
+
+    // Disable channel multicast mode
+    // params: index:int
+    YOPT_C_DISABLE_MCAST,
+    
     // Sets io_base sockopt
     // params: io_base*,level:int,optname:int,optval:int,optlen:int
-    YOPT_I_SOCKOPT = 201,
+    YOPT_SOCKOPT = 201,
     #endregion
 };
 

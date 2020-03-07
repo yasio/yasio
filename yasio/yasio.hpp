@@ -163,7 +163,7 @@ enum
 
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
-  YOPT_I_SOCKOPT = 201,
+  YOPT_SOCKOPT = 201,
 };
 
 // channel masks: only for internal use, not for user
@@ -895,9 +895,9 @@ private:
   // options
   struct __unnamed_options
   {
-    highp_time_t connect_timeout_     = 10LL * MICROSECONDS_PER_SECOND;
-    highp_time_t dns_cache_timeout_   = 600LL * MICROSECONDS_PER_SECOND;
-    highp_time_t dns_queries_timeout_ = 10LL * MICROSECONDS_PER_SECOND;
+    highp_time_t connect_timeout_     = 10LL * std::micro::den;
+    highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
+    highp_time_t dns_queries_timeout_ = 10LL * std::micro::den;
 
     bool deferred_event_ = true;
 

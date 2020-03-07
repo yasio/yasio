@@ -1,9 +1,0 @@
-site_name: 'yasio-docs'
-
-site_description: 'The documentation of yasio'
-
-site_url: https://yasio-docs.rtfd.io/
-
-repo_url: https://github.com/simdsoft/yasio
-
-docs_dir: 'docs'

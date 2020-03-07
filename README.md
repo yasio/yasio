@@ -148,7 +148,7 @@ cmake --build . --config Debug
 * 支持SSL客户端，基于OpenSSL。  
 * 支持非阻塞域名解析，基于c-ares。  
   
-## yasio核心设计，充分利用了多路io复用模型(服务器高并发的基石)，以下是框架图
+## 框架图
 ![image](https://yasio.org/images/framework.png)  
 
 ## 集成指南

@@ -121,6 +121,9 @@ public:
                 singleton_constructor<_Ty, true>::construct(std::forward<_Args>(args)...));
   }
 
+  // Peek a singleton instance
+  static pointer peek() { return _Myt::__single__; }
+
   static void destroy(void)
   {
 #if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)

@@ -92,7 +92,7 @@ template <typename _Ty> class singleton
   typedef _Ty* pointer;
 
 public:
-  // Return a singleton instance
+  // Return the singleton instance
   template <typename... _Args> static pointer instance(_Args&&... args)
   {
     if (_Myt::__single__)
@@ -106,7 +106,7 @@ public:
     return (_Myt::__single__ = singleton_constructor<_Ty>::construct(std::forward<_Args>(args)...));
   }
 
-  // Return a singleton instance with delayed init func
+  // Return the singleton instance with delayed init func
   template <typename... _Args> static pointer delayed(_Args&&... args)
   {
     if (_Myt::__single__)
@@ -121,7 +121,7 @@ public:
                 singleton_constructor<_Ty, true>::construct(std::forward<_Args>(args)...));
   }
 
-  // Peek a singleton instance
+  // Peek the singleton instance
   static pointer peek() { return _Myt::__single__; }
 
   static void destroy(void)

@@ -4,7 +4,7 @@
 #include "yasio/obstream.hpp"
 
 #ifndef _WIN32
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif
 
 using namespace yasio;
@@ -33,10 +33,9 @@ int main()
   signal(SIGALRM, signal_handler);
   set_timer();
 #endif
-  xxsocket sock;
-  auto wtimeout = std::chrono::milliseconds(5000);
   printf("connecting...\n");
-  if (0 != sock.pconnect_n("www.ip138.com", 80, wtimeout))
+  xxsocket sock;
+  if (0 != sock.pconnect_n("www.ip138.com", 80, std::chrono::milliseconds(5000)))
   {
     printf("connect error!\n");
     return -2;

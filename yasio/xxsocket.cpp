@@ -998,41 +998,16 @@ int xxsocket::connect(socket_native_type s, const endpoint& ep)
 
 int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
 {
-  timeval timeout = {
-      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
-      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
-  return connect_n(addr, port, &timeout);
+  return connect_n(ip::endpoint(addr, port), wtimeout);
 }
 
 int xxsocket::connect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
-  timeval timeout = {
-      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
-      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
-  return connect_n(ep, &timeout);
+  return this->connect_n(this->fd, ep, wtimeout);
 }
 
-int xxsocket::connect_n(const char* addr, u_short port, timeval* timeout)
-{
-  return connect_n(endpoint(addr, port), timeout);
-}
-
-int xxsocket::connect_n(const endpoint& ep, timeval* timeout)
-{
-  if (xxsocket::connect_n(this->fd, ep, timeout) != 0)
-  {
-    this->fd = invalid_socket;
-    return -1;
-  }
-  return 0;
-}
-
-int xxsocket::connect_n(socket_native_type s, const char* addr, u_short port, timeval* timeout)
-{
-  return connect_n(s, endpoint(addr, port), timeout);
-}
-
-int xxsocket::connect_n(socket_native_type s, const endpoint& ep, timeval* timeout)
+int xxsocket::connect_n(socket_native_type s, const endpoint& ep,
+                        const std::chrono::microseconds& wtimeout)
 {
   fd_set rset, wset;
   int n, error = 0;
@@ -1050,30 +1025,19 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep, timeval* timeo
   if (n == 0)
     goto done; /* connect completed immediately */
 
-  FD_ZERO(&rset);
-  FD_SET(s, &rset);
-  wset = rset;
-
-  if ((n = ::select(static_cast<int>(s + 1), &rset, &wset, NULL, timeout)) == 0)
-  {
-    ::closesocket(s); /* timeout */
-    xxsocket::set_last_errno(ETIMEDOUT);
-    return (-1);
-  }
-
-  if (FD_ISSET(s, &rset) || FD_ISSET(s, &wset))
-  {
+  if ((n = xxsocket::select(static_cast<int>(s), &rset, &wset, NULL, wtimeout)) <= 0)
+    error = xxsocket::get_last_errno();
+  else if ((FD_ISSET(s, &rset) || FD_ISSET(s, &wset)))
+  { /* Everythings are ok */
     socklen_t len = sizeof(error);
     if (::getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0)
       return (-1); /* Solaris pending error */
   }
-  else
-    return -1;
+
 done:
   if (error != 0)
   {
     ::closesocket(s); /* just in case */
-    xxsocket::set_last_errno(error);
     return (-1);
   }
 
@@ -1093,16 +1057,11 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
 
 int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)
 {
-  return send_n(this->fd, buf, len, wtimeout.count(), flags);
+  return this->send_n(this->fd, buf, len, wtimeout, flags);
 }
 
-int xxsocket::send_n(const void* buf, int len, long long timeout_usec, int flags)
-{
-  return xxsocket::send_n(this->fd, buf, len, timeout_usec, flags);
-}
-
-int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long timeout_usec,
-                     int flags)
+int xxsocket::send_n(socket_native_type s, const void* buf, int len,
+                     std::chrono::microseconds wtimeout, int flags)
 {
   int bytes_transferred;
   int n;
@@ -1128,17 +1087,14 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long t
       {
 
         // Wait upto <timeout> for the blocking to subside.
-        timeval waitd_tv = {
-            static_cast<decltype(timeval::tv_sec)>(timeout_usec / std::micro::den),
-            static_cast<decltype(timeval::tv_usec)>(timeout_usec % std::micro::den)};
         auto start    = yasio::highp_clock();
-        int const rtn = handle_write_ready(s, &waitd_tv);
-        timeout_usec -= (yasio::highp_clock() - start);
+        int const rtn = handle_write_ready(s, wtimeout);
+        wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
 
         // Did select() succeed?
         if (rtn != -1)
         {
-          if (timeout_usec > 0)
+          if (wtimeout.count() > 0)
           {
             // Blocking subsided in <timeout> period.  Continue
             // data transfer.
@@ -1161,15 +1117,11 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, long long t
 
 int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags) const
 {
-  return recv_n(this->fd, buf, len, wtimeout.count(), flags);
+  return this->recv_n(this->fd, buf, len, wtimeout, flags);
 }
 
-int xxsocket::recv_n(void* buf, int len, long long timeout_usec, int flags) const
-{
-  return recv_n(this->fd, buf, len, timeout_usec, flags);
-}
-
-int xxsocket::recv_n(socket_native_type s, void* buf, int len, long long timeout_usec, int flags)
+int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::microseconds wtimeout,
+                     int flags)
 {
   int bytes_transferred;
   int n;
@@ -1193,19 +1145,14 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, long long timeout
       if (n == -1 && (ec == EAGAIN || ec == EINTR || ec == EWOULDBLOCK || ec == EINPROGRESS))
       {
         // Wait upto <timeout> for the blocking to subside.
-        timeval waitd_tv = {
-            static_cast<decltype(timeval::tv_sec)>(timeout_usec / std::micro::den),
-            static_cast<decltype(timeval::tv_usec)>(timeout_usec % std::micro::den)};
-
         auto start    = yasio::highp_clock();
-        int const rtn = handle_read_ready(s, &waitd_tv);
-
-        timeout_usec -= (yasio::highp_clock() - start);
+        int const rtn = handle_read_ready(s, wtimeout);
+        wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
 
         // Did select() succeed?
         if (rtn != -1)
         {
-          if (timeout_usec > 0)
+          if (wtimeout.count() > 0)
           {
             // Blocking subsided in <timeout> period.  Continue
             // data transfer.
@@ -1258,30 +1205,15 @@ int xxsocket::recvfrom(void* buf, int len, endpoint& from, int flags) const
   return static_cast<int>(::recvfrom(this->fd, (char*)buf, len, flags, &from.sa_, &addrlen));
 }
 
-int xxsocket::handle_write_ready(timeval* timeo) const
+int xxsocket::handle_write_ready(const std::chrono::microseconds& wtimeout) const
 {
-  return handle_write_ready(this->fd, timeo);
+  return handle_write_ready(this->fd, wtimeout);
 }
 
-int xxsocket::handle_write_ready(socket_native_type s, timeval* timeo)
+int xxsocket::handle_write_ready(socket_native_type s, const std::chrono::microseconds& wtimeout)
 {
-  fd_set fds_wr;
-  FD_ZERO(&fds_wr);
-  FD_SET(s, &fds_wr);
-  int ret = ::select(static_cast<int>(s + 1), nullptr, &fds_wr, nullptr, timeo);
-  return ret;
-}
-
-int xxsocket::handle_connect_ready(socket_native_type s, timeval* timeo)
-{
-  fd_set fds_wr;
-  FD_ZERO(&fds_wr);
-  FD_SET(s, &fds_wr);
-
-  if (::select(0, nullptr, &fds_wr, nullptr, timeo) > 0 && FD_ISSET(s, &fds_wr))
-    return 0;
-
-  return -1;
+  fd_set writefds;
+  return xxsocket::select(s, nullptr, &writefds, nullptr, wtimeout);
 }
 
 int xxsocket::handle_read_ready(const std::chrono::microseconds& wtimeout) const
@@ -1289,23 +1221,52 @@ int xxsocket::handle_read_ready(const std::chrono::microseconds& wtimeout) const
   return handle_read_ready(this->fd, wtimeout);
 }
 
-int xxsocket::handle_read_ready(timeval* timeo) const { return handle_read_ready(this->fd, timeo); }
-
 int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microseconds& wtimeout)
 {
-  timeval timeout = {
-      static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
-      static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
-  return handle_read_ready(s, &timeout);
+  fd_set readfds;
+  return xxsocket::select(s, &readfds, nullptr, nullptr, wtimeout);
 }
 
-int xxsocket::handle_read_ready(socket_native_type s, timeval* timeo)
+int xxsocket::select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
+                     std::chrono::microseconds wtimeout)
 {
-  fd_set fds_rd;
-  FD_ZERO(&fds_rd);
-  FD_SET(s, &fds_rd);
-  int ret = ::select(static_cast<int>(s + 1), &fds_rd, nullptr, nullptr, timeo);
-  return ret;
+  int n = 0;
+
+  for (;;)
+  {
+    reregister_descriptor(s, readfds);
+    reregister_descriptor(s, writefds);
+    reregister_descriptor(s, exceptfds);
+
+    timeval waitd_tv = {
+        static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
+        static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
+    long long start = highp_clock();
+    n               = ::select(static_cast<int>(s + 1), readfds, writefds, exceptfds, &waitd_tv);
+    wtimeout -= std::chrono::microseconds(highp_clock() - start);
+
+    if (n < 0 && xxsocket::get_last_errno() == EINTR)
+    {
+      if (wtimeout.count() > 0)
+        continue;
+      n = 0;
+    }
+
+    if (n == 0)
+      xxsocket::set_last_errno(ETIMEDOUT);
+    break;
+  }
+
+  return n;
+}
+
+void xxsocket::reregister_descriptor(int s, fd_set* fds)
+{
+  if (fds)
+  {
+    FD_ZERO(fds);
+    FD_SET(s, fds);
+  }
 }
 
 endpoint xxsocket::local_endpoint(void) const { return local_endpoint(this->fd); }

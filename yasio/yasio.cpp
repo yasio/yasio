@@ -277,9 +277,7 @@ void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
 {
   properties_ |= YCPF_MCAST;
   if (loopback)
-  {
     properties_ |= YCPF_MCAST_LOOPBACK;
-  }
 
   multiaddr_ = ep;
 }
@@ -942,9 +940,8 @@ void io_service::process_channels(fd_set* fds_array)
           }
         }
         else if (ctx->state_ == io_base::state::OPENING)
-        {
           do_nonblocking_connect_completion(ctx, fds_array);
-        }
+
         finish = ctx->error_ != EINPROGRESS && (ctx->opmask_ & YOPM_OPEN_CHANNEL) == 0;
       }
       else if (ctx->properties_ & YCM_SERVER)
@@ -1387,9 +1384,7 @@ void io_service::init_ares_channel()
             break;
           case AF_INET6:
             if (IN6_IS_ADDR_GLOBAL((in6_addr*)&name_server->addr))
-            {
               flags |= ipsv_ipv6;
-            }
             break;
         }
         dns_info << yasio::inet::endpoint::ip(name_server->family, &name_server->addr) << "; ";
@@ -1478,9 +1473,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           socket_native_type sockfd;
           error = ctx->socket_->accept_n(sockfd);
           if (error == 0)
-          {
             handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
-          }
           else // The non blocking tcp accept failed can be ignored.
             YASIO_SLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
                         (int)ctx->socket_->native_handle(), error);

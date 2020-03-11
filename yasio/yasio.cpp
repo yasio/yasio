@@ -1005,7 +1005,7 @@ void io_service::reopen(transport_handle_t transport)
 }
 void io_service::open(size_t cindex, int kind)
 {
-  ASSERT((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
+  assert((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
 
   auto ctx = cindex_to_handle(cindex);
   if (ctx != nullptr)

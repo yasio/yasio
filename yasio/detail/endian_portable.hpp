@@ -30,18 +30,8 @@ SOFTWARE.
 #define YASIO__ENDIAN_PORTABLE_HPP
 
 #include <assert.h>
-
 #include <string.h>
-
 #include <stdint.h>
-
-#if !defined(ASSERT)
-#  if defined(_DEBUG)
-#    define ASSERT(exp) assert(exp)
-#  else
-#    define ASSERT(exp) ((void)0)
-#  endif
-#endif
 
 #ifdef _WIN32
 #  include <WinSock2.h>
@@ -178,7 +168,7 @@ static const unsigned char bits_rmask_table[8] = {
 inline void set_bits_value(void* pByteValue, unsigned int pos, unsigned char bitsValue,
                            unsigned int bits)
 {
-  ASSERT(bits > 0 && bits <= (pos + 1) && pos < 8);
+  assert(bits > 0 && bits <= (pos + 1) && pos < 8);
 
   *((unsigned char*)pByteValue) =
       ((*((unsigned char*)pByteValue) & bits_wmask_table[pos][bits - 1]) |
@@ -187,7 +177,7 @@ inline void set_bits_value(void* pByteValue, unsigned int pos, unsigned char bit
 
 inline unsigned char get_bits_value(unsigned char byteValue, unsigned int pos, unsigned int bits)
 {
-  ASSERT(bits > 0 && bits <= (pos + 1) && pos < 8);
+  assert(bits > 0 && bits <= (pos + 1) && pos < 8);
 
   return ((byteValue & bits_rmask_table[pos]) >> (pos + 1 - bits));
 }

@@ -27,6 +27,7 @@ SOFTWARE.
 */
 #ifndef YASIO__UTILS_HPP
 #define YASIO__UTILS_HPP
+#include <assert.h>
 #include <chrono>
 #include <algorithm>
 #include "yasio/cxx17/feature_test.hpp"
@@ -55,7 +56,7 @@ using std::clamp;
 #else
 template <typename _Ty> const _Ty& clamp(const _Ty& v, const _Ty& lo, const _Ty& hi)
 {
-  ASSERT(!(hi < lo));
+  assert(!(hi < lo));
   return v < lo ? lo : hi < v ? hi : v;
 }
 #endif

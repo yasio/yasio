@@ -1148,6 +1148,8 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     // tcp connect directly, for udp do not need to connect.
     if (ctx->properties_ & YCM_TCP)
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+    else // udp, we should set non-blocking mode manually
+      ctx->socket_->set_nonblocking(true);
 
     // join the multicast group for udp
     if (ctx->properties_ & YCPF_MCAST)

@@ -3,6 +3,10 @@
 #include "yasio/yasio.hpp"
 #include "yasio/obstream.hpp"
 
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
+
 using namespace yasio;
 using namespace yasio::inet;
 
@@ -31,9 +35,10 @@ int main()
 #endif
   xxsocket sock;
   auto wtimeout = std::chrono::milliseconds(5000);
+  printf("connecting...\n");
   if (0 != sock.pconnect_n("www.ip138.com", 80, wtimeout))
   {
-    printf("connect error\n");
+    printf("connect error!\n");
     return -2;
   }
 
@@ -48,12 +53,14 @@ int main()
   obs.write_bytes("Accept: */*;q=0.8\r\n");
   obs.write_bytes("Connection: Close\r\n\r\n");
   auto k = obs.data();
+  printf("sending...\n");
   if (obs.length() != sock.send(obs.data(), obs.length()))
   {
-    printf("send error\n");
+    printf("send error!\n");
     return -4;
   }
 
+  printf("send success.");
   getchar();
 
   return 0;

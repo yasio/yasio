@@ -862,8 +862,10 @@ public:
   ** @examples:
   **       set_optval(SOL_SOCKET, SO_SNDBUF, 4096);
   **       set_optval(SOL_SOCKET, SO_RCVBUF, 4096);
-  **       set_optval(SOL_SOCKET, SO_SNDTIMEO, 10);
-  **       set_optval(SOL_SOCKET, SO_RCVTIMEO, 10);
+  ** @remark: for more detail, please see:
+  **       windows: https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-setsockopt
+  **       linux: https://linux.die.net/man/3/setsockopt
+  **       osx: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getsockopt.2.html
   **
   ** @returns: If no error occurs, set_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned

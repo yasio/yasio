@@ -941,7 +941,7 @@ public:
   ** @params:
   **          s: the socket fd, it's different with system
   **          see MSDN or man page
-  ** @returns: If no error occurs, alive returns true. Otherwise, a value of false is
+  ** @returns: If no error occurs, returns >= 0. Otherwise, a value of -1 is
   *returned
   */
   YASIO__DECL static int select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,

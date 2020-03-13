@@ -10,6 +10,7 @@ yasio-3.33.0
 8. Add ```highp_timer::async_wait_once``` to wait timer timeout once.
 9. Change ```YCM_XXX_[CLIENT/SERVER]``` to ```YCK_XXX_[CLIENT/SERVER]```.
 10. Add ```yasio::xhighp_clock``` to retrive nanoseconds timestamp.
+11. Fix xxsocket APIs connect_n, recv_n doesn't handle signal EINTR.
   
   
 yasio-3.31.3

@@ -722,10 +722,6 @@ public:
                            const ip::endpoint& to);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
-  highp_timer_ptr schedule(highp_time_t duration, timer_cb_t cb)
-  {
-    return schedule(std::chrono::microseconds(duration), std::move(cb));
-  }
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
   YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,

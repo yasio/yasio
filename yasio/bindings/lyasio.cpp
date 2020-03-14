@@ -572,7 +572,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                                   .setConstructors<yasio::ibstream(std::vector<char>),
                                                    yasio::ibstream(const yasio::obstream*)>());
 
-  lyasio.setField("highp_clock", &highp_clock<highp_clock_t>);
+  lyasio.setField("highp_clock", &highp_clock<steady_clock_t>);
   lyasio.setField("highp_time", &highp_clock<system_clock_t>);
 
   // ##-- yasio enums

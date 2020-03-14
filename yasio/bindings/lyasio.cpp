@@ -247,7 +247,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       "seek", &yasio::ibstream_view::seek, "length", &yasio::ibstream_view::length, "to_string",
       [](yasio::ibstream* ibs) { return cxx17::string_view(ibs->data(), ibs->length()); });
 
-  lyasio["highp_clock"] = &highp_clock<highp_clock_t>;
+  lyasio["highp_clock"] = &highp_clock<steady_clock_t>;
   lyasio["highp_time"]  = &highp_clock<system_clock_t>;
 
   // ##-- yasio enums

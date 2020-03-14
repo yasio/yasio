@@ -175,7 +175,7 @@ YASIO_NI_API int yasio_write(intptr_t thandle, const unsigned char* bytes, int l
 YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service()->dispatch(count); }
 YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop_service(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
-YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<highp_clock_t>(); }
+YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
 YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*))
 {
   yasio::inet::print_fn_t custom_print = print_fn;

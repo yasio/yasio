@@ -263,10 +263,10 @@ public:
   void expires_from_now(const std::chrono::microseconds& duration)
   {
     this->duration_    = duration;
-    this->expire_time_ = highp_clock_t::now() + this->duration_;
+    this->expire_time_ = steady_clock_t::now() + this->duration_;
   }
 
-  void expires_from_now() { this->expire_time_ = highp_clock_t::now() + this->duration_; }
+  void expires_from_now() { this->expire_time_ = steady_clock_t::now() + this->duration_; }
 
   // Wait timer timeout once.
   inline void async_wait_once(light_timer_cb_t cb)
@@ -297,12 +297,12 @@ public:
   std::chrono::microseconds wait_duration() const
   {
     return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ -
-                                                                 highp_clock_t::now());
+                                                                 steady_clock_t::now());
   }
 
   io_service& service_;
   std::chrono::microseconds duration_;
-  std::chrono::time_point<highp_clock_t> expire_time_;
+  std::chrono::time_point<steady_clock_t> expire_time_;
 };
 
 struct io_base

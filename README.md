@@ -151,7 +151,4 @@ cmake --build . --config Debug
 ## 框架图
 ![image](https://yasio.org/images/framework.png)  
 
-## 集成指南
-[https://github.com/yasio/yasio/wiki/Integrate-Guides](https://github.com/yasio/yasio/wiki/Integrate-Guides)
-
 ## 更多详细用法，请查看 [文档](https://docs.yasio.org/)

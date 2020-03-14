@@ -154,4 +154,4 @@ cmake --build . --config Debug
 ## 集成指南
 [https://github.com/yasio/yasio/wiki/Integrate-Guides](https://github.com/yasio/yasio/wiki/Integrate-Guides)
 
-## 更多详细用法，请查看 [文档](https://github.com/yasio/yasio/tree/master/docs)
+## 更多详细用法，请查看 [文档](https://docs.yasio.org/)

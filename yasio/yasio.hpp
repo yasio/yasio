@@ -686,8 +686,6 @@ public:
   // check whether the channel is open
   YASIO__DECL bool is_open(int cindex) const;
 
-  YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
-
   /*
   ** Summary: Write data to a TCP or connected UDP transport with last peer address
   ** @retval: < 0: failed
@@ -730,8 +728,10 @@ public:
   }
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
-  YASIO__DECL int __builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                                   unsigned short port = 0);
+  YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
+                                 unsigned short port = 0);
+  // Gets channel object by index
+  YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
 
 private:
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);

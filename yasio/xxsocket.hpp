@@ -862,13 +862,13 @@ public:
   ** @examples:
   **       set_optval(SOL_SOCKET, SO_SNDBUF, 4096);
   **       set_optval(SOL_SOCKET, SO_RCVBUF, 4096);
+  **
   ** @remark: for more detail, please see:
   **       windows: https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-setsockopt
   **       linux: https://linux.die.net/man/3/setsockopt
-  **       osx: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getsockopt.2.html
   **
   ** @returns: If no error occurs, set_optval returns zero. Otherwise, a value of SOCKET_ERROR is
-  *returned
+  **       returned
   */
   template <typename T> inline int set_optval(int level, int optname, const T& optval)
   {
@@ -895,9 +895,9 @@ public:
   **     level: The level at which the option is defined. Example: SOL_SOCKET.
   **   optname: The socket option for which the value is to be retrieved.
   **            Example: SO_ACCEPTCONN. The optname value must be a socket option defined within the
-  *specified level, or behavior is undefined.
+  **            specified level, or behavior is undefined.
   **    optval: A variable to the buffer in which the value for the requested option is to be
-  *returned.
+  **            returned.
   **
   ** @returns: If no error occurs, get_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
@@ -922,7 +922,7 @@ public:
   ** @params :
   **          see MSDN or man page
   ** @returns: If no error occurs, ioctl returns zero. Otherwise, a value of SOCKET_ERROR is
-  *returned
+  **           returned
   **
   **
   **
@@ -942,7 +942,7 @@ public:
   **          s: the socket fd, it's different with system
   **          see MSDN or man page
   ** @returns: If no error occurs, returns >= 0. Otherwise, a value of -1 is
-  *returned
+  **          returned
   */
   YASIO__DECL static int select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
                                 std::chrono::microseconds wtimeout);
@@ -951,7 +951,7 @@ public:
   ** @params :
   **          see MSDN or man page
   ** @returns: If no error occurs, alive returns true. Otherwise, a value of false is
-  *returned
+  **          returned
   */
   YASIO__DECL bool alive(void) const;
 

@@ -735,7 +735,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   this->max_nfds_ = 0;
 
   options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
-    return this->__builtin_resolv(eps, host, port);
+    return this->builtin_resolv(eps, host, port);
   };
 
   register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
@@ -2001,7 +2001,7 @@ void io_service::start_resolve(io_channel* ctx)
                      io_service::ares_getaddrinfo_cb, ctx);
 #endif
 }
-int io_service::__builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
+int io_service::builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                  unsigned short port)
 {
   if (this->ipsv_ & ipsv_ipv4)

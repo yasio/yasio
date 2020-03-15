@@ -370,8 +370,8 @@ class io_channel : public io_base
 
 public:
   io_service& get_service() { return timer_.service_; }
-  inline int index() { return index_; }
-  inline u_short remote_port() { return remote_port_; }
+  inline int index() const { return index_; }
+  inline u_short remote_port() const { return remote_port_; }
 
 protected:
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
@@ -460,8 +460,6 @@ class io_transport : public io_base
   friend class io_service;
 
 public:
-  bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
-
   unsigned int id() const { return id_; }
 
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
@@ -472,6 +470,8 @@ public:
   virtual ~io_transport() {}
 
 protected:
+  bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
+
   inline std::vector<char> fetch_packet()
   {
     expected_size_ = -1;
@@ -616,9 +616,10 @@ public:
   int kind() const { return kind_; }
   int status() const { return status_; }
 
-  transport_handle_t transport() { return transport_; }
-
   std::vector<char>& packet() { return packet_; }
+
+  transport_handle_t transport() const { return transport_; }
+
   long long timestamp() const { return timestamp_; }
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)

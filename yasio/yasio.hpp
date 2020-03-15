@@ -676,6 +676,12 @@ public:
   // open a channel, default: YCK_TCP_CLIENT
   YASIO__DECL void open(size_t cindex, int kind = YCK_TCP_CLIENT);
 
+  // check whether the channel is open
+  YASIO__DECL bool is_open(int cindex) const;
+
+  // check whether the transport is open
+  YASIO__DECL bool is_open(transport_handle_t) const;
+
   YASIO__DECL void reopen(transport_handle_t);
 
   // close transport
@@ -683,12 +689,6 @@ public:
 
   // close channel
   YASIO__DECL void close(int cindex);
-
-  // check whether the transport is open
-  YASIO__DECL bool is_open(transport_handle_t) const;
-
-  // check whether the channel is open
-  YASIO__DECL bool is_open(int cindex) const;
 
   /*
   ** Summary: Write data to a TCP or connected UDP transport with last peer address

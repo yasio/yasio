@@ -138,7 +138,7 @@ cmake --build . --config Debug
 ## 特性: 
 * 支持IPv6_only网络。  
 * 支持处理多个连接的所有网络事件。  
-* 支持计时器。  
+* 支持微秒级定时器。  
 * 支持TCP粘包处理，业务完全不必关心。  
 * 支持Lua绑定。  
 * 支持Cocos2d-x jsb绑定。  
@@ -151,4 +151,4 @@ cmake --build . --config Debug
 ## 框架图
 ![image](https://yasio.org/images/framework.png)  
 
-## 更多详细用法，请查看 [文档](https://docs.yasio.org/)
+## 更多详细用法，请查看文档：https://docs.yasio.org/

@@ -161,6 +161,10 @@ enum
   // params: index:int
   YOPT_C_DISABLE_MCAST,
 
+  // Bind the unconnected UDP transport, once bind, can't be unbind.
+  // params: transport:transport_handle_t
+  YOPT_T_BIND_UDP,
+
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
   YOPT_SOCKOPT = 201,
@@ -457,23 +461,22 @@ class io_transport : public io_base
 
 public:
   bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
+
+  unsigned int id() const { return id_; }
+
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   virtual ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
-  int cindex() const { return ctx_->index(); }
-  int status() const { return error_; }
+
+  io_channel* get_context() const { return ctx_; }
+
+  virtual ~io_transport() {}
+
+protected:
   inline std::vector<char> fetch_packet()
   {
     expected_size_ = -1;
     return std::move(expected_packet_);
   }
-
-  io_service& get_service() { return ctx_->get_service(); }
-
-  unsigned int id() { return id_; }
-
-  virtual ~io_transport() {}
-
-protected:
   // Call at user thread
   virtual int write_to(std::vector<char>&&, const ip::endpoint&) { return 0; };
 
@@ -552,11 +555,11 @@ public:
 
   YASIO__DECL ip::endpoint peer_endpoint() const override;
 
+protected:
   // perform connect to establish 4 tuple with peer
   // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   YASIO__DECL int connect();
 
-protected:
   YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&) override;
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
   // the udp write op not perform in io_service, so check status only

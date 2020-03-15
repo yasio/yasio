@@ -419,7 +419,7 @@ int io_transport_tcp::write(std::vector<char>&& buffer, std::function<void()>&& 
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
-  get_service().interrupt();
+  ctx_->get_service().interrupt();
   return n;
 }
 bool io_transport_tcp::do_write(long long& max_wait_duration)
@@ -441,7 +441,7 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
       { // All pdu bytes sent.
         send_queue_.pop();
 #if defined(YASIO_VERBOSE_LOG)
-        YASIO_SLOG_IMPL(get_service().options_,
+        YASIO_SLOG_IMPL(ctx_->get_service().options_,
                         "[index: %d] do_write ok, A packet sent "
                         "success, packet size:%d",
                         cindex(), static_cast<int>(v->buffer_.size()),
@@ -558,7 +558,7 @@ int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& 
     { // Fix issue: #126, simply ignore EPERM for UDP
       set_last_errno(error);
       // finally, trigger transport close
-      get_service().close(this);
+      ctx_->get_service().close(this);
       return -1; // failed, transport should be close
     }
   }
@@ -606,7 +606,7 @@ int io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& 
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   int retval = ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
-  get_service().interrupt();
+  ctx_->get_service().interrupt();
   return retval;
 }
 int io_transport_kcp::do_read(int& error)
@@ -1500,7 +1500,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             if (transport)
             {
               this->handle_event(event_ptr(new io_event(
-                  transport->cindex(), YEK_PACKET,
+                  transport->ctx_->index(), YEK_PACKET,
                   std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n), transport)));
             }
           }
@@ -1736,7 +1736,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
-        new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
+        new io_event(transport->ctx_->index(), YEK_PACKET, transport->fetch_packet(), transport)));
   }
   else /* all buffer consumed, set wpos to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;
@@ -2002,7 +2002,7 @@ void io_service::start_resolve(io_channel* ctx)
 #endif
 }
 int io_service::builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                                 unsigned short port)
+                               unsigned short port)
 {
   if (this->ipsv_ & ipsv_ipv4)
     return xxsocket::resolve_v4(endpoints, hostname, port);
@@ -2161,6 +2161,12 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
         channel->properties_ &= ~(uint32_t)va_arg(ap, int);
       }
       break;
+    }
+    case YOPT_T_BIND_UDP: {
+      auto transport = va_arg(ap, transport_handle_t);
+      if (transport && transport->is_open() &&
+          (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
+        static_cast<io_transport_udp*>(transport)->connect();
     }
     case YOPT_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);

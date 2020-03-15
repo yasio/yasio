@@ -591,10 +591,10 @@ static bool js_yasio_ibstream_read_v(JSContext* ctx, uint32_t argc, jsval* vp)
   switch (length_field_bits)
   {
     case -1: // variant bits
-      sv = cobj->read_va();
+      sv = cobj->read_v();
       break;
     case 32: // 32bits
-      sv = cobj->read_v();
+      sv = cobj->read_v32();
       break;
     case 16: // 16bits
       sv = cobj->read_v16();
@@ -1115,10 +1115,10 @@ bool js_yasio_obstream_write_v(JSContext* ctx, uint32_t argc, jsval* vp)
   switch (length_field_bits)
   {
     case -1: // variant bits
-      cobj->write_va(sva);
+      cobj->write_v(sva);
       break;
     case 32: // 32bits
-      cobj->write_v(sva);
+      cobj->write_v32(sva);
       break;
     case 16: // 16bits
       cobj->write_v16(sva);

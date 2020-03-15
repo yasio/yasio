@@ -97,13 +97,13 @@ uint32_t ibstream_view::read_u24()
   return ntohl(value) >> 8;
 }
 
-cxx17::string_view ibstream_view::read_va()
+cxx17::string_view ibstream_view::read_v()
 {
   int count = read_i7();
   return read_bytes(count);
 }
 
-void ibstream_view::read_v(std::string& oav)
+void ibstream_view::read_v32(std::string& oav)
 {
   auto sv = read_vx<uint32_t>();
   oav.assign(sv.data(), sv.length());
@@ -121,11 +121,11 @@ void ibstream_view::read_v8(std::string& oav)
   oav.assign(sv.data(), sv.length());
 }
 
-cxx17::string_view ibstream_view::read_v() { return read_vx<uint32_t>(); }
+cxx17::string_view ibstream_view::read_v32() { return read_vx<uint32_t>(); }
 cxx17::string_view ibstream_view::read_v16() { return read_vx<uint16_t>(); }
 cxx17::string_view ibstream_view::read_v8() { return read_vx<uint8_t>(); }
 
-void ibstream_view::read_v(void* oav, int len) { read_vx<uint32_t>().copy((char*)oav, len); }
+void ibstream_view::read_v32(void* oav, int len) { read_vx<uint32_t>().copy((char*)oav, len); }
 void ibstream_view::read_v16(void* oav, int len) { read_vx<uint16_t>().copy((char*)oav, len); }
 void ibstream_view::read_v8(void* oav, int len) { read_vx<uint8_t>().copy((char*)oav, len); }
 

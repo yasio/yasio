@@ -69,19 +69,20 @@ public:
   YASIO__DECL void write_i24(int32_t value);  // highest bit as sign
   YASIO__DECL void write_u24(uint32_t value); // highest byte ignored
 
+  /* write 7bit encoded variant integer value */
   YASIO__DECL void write_i7(int value);
 
-  /* write blob data with variant length of length field. */
-  YASIO__DECL void write_va(cxx17::string_view sv);
+  /* write blob data with '7bit encoded int' length field */
+  YASIO__DECL void write_v(cxx17::string_view sv);
 
   /* 32 bits length field */
-  YASIO__DECL void write_v(cxx17::string_view);
+  YASIO__DECL void write_v32(cxx17::string_view);
   /* 16 bits length field */
   YASIO__DECL void write_v16(cxx17::string_view);
   /* 8 bits length field */
   YASIO__DECL void write_v8(cxx17::string_view);
 
-  YASIO__DECL void write_v(const void* v, int size);
+  YASIO__DECL void write_v32(const void* v, int size);
   YASIO__DECL void write_v16(const void* v, int size);
   YASIO__DECL void write_v8(const void* v, int size);
 

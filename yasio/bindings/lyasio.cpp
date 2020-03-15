@@ -40,9 +40,9 @@ static auto obstream_write_v = [](yasio::obstream* obs, cxx17::string_view val,
   switch (length_field_bits)
   {
     case -1:
-      return obs->write_va(val);
-    case 32:
       return obs->write_v(val);
+    case 32:
+      return obs->write_v32(val);
     case 16:
       return obs->write_v16(val);
     default:
@@ -56,9 +56,9 @@ static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits) {
   switch (length_field_bits)
   {
     case -1:
-      return ibs->read_va();
-    case 32:
       return ibs->read_v();
+    case 32:
+      return ibs->read_v32();
     case 16:
       return ibs->read_v16();
     default:

@@ -659,8 +659,14 @@ public:
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 
-  YASIO__DECL void start_service(io_event_cb_t cb);
-  YASIO__DECL void stop_service();
+  YASIO_OBSOLETE_DEPRECATE(io_service::start)
+  inline void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
+
+  YASIO_OBSOLETE_DEPRECATE(io_service::stop)
+  inline void stop_service() { this->stop(); };
+
+  YASIO__DECL void start(io_event_cb_t cb);
+  YASIO__DECL void stop();
 
   bool is_running() const { return this->state_ == io_service::state::RUNNING; }
 
@@ -754,9 +760,9 @@ private:
   YASIO__DECL void start_resolve(io_channel*);
 
   YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
-  YASIO__DECL void dispose();
+  YASIO__DECL void cleanup();
 
-  YASIO__DECL void on_service_stopped();
+  YASIO__DECL void handle_stop();
 
   /* Call by stop_service, wait io_service thread exit properly & do cleanup */
   YASIO__DECL void join();

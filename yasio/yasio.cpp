@@ -665,9 +665,9 @@ io_service::io_service(const io_hostent* channel_eps, int channel_count)
 io_service::~io_service()
 {
   stop_service();
-  dispose();
+  cleanup();
 }
-void io_service::start_service(io_event_cb_t cb)
+void io_service::start(io_event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
@@ -687,11 +687,11 @@ void io_service::start_service(io_event_cb_t cb)
       this->worker_id_               = std::this_thread::get_id();
       this->options_.deferred_event_ = false;
       run();
-      on_service_stopped();
+      handle_stop();
     }
   }
 }
-void io_service::stop_service()
+void io_service::stop()
 {
   if (this->state_ == io_service::state::RUNNING)
   {
@@ -703,11 +703,6 @@ void io_service::stop_service()
   else if (this->state_ == io_service::state::STOPPING)
     this->join();
 }
-void io_service::on_service_stopped()
-{
-  clear_transports();
-  this->state_ = io_service::state::IDLE;
-}
 void io_service::join()
 {
   if (this->worker_.joinable())
@@ -715,11 +710,16 @@ void io_service::join()
     if (std::this_thread::get_id() != this->worker_id_)
     {
       this->worker_.join();
-      on_service_stopped();
+      handle_stop();
     }
     else
       errno = EAGAIN;
   }
+}
+void io_service::handle_stop()
+{
+  clear_transports();
+  this->state_ = io_service::state::IDLE;
 }
 void io_service::init(const io_hostent* channel_eps, int channel_count)
 {
@@ -745,7 +745,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
 
   this->state_ = io_service::state::IDLE;
 }
-void io_service::dispose()
+void io_service::cleanup()
 {
   if (this->state_ == io_service::state::IDLE)
   {

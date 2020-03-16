@@ -50,8 +50,8 @@ void yasioTest()
   deadline_timer udp_heartbeat(service);
   int total_bytes_transferred = 0;
 
-  int max_request_count = 10;
-
+  int max_request_count = 3;
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start_service([&](event_ptr&& event) {
     switch (event->kind())
     {

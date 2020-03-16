@@ -11,6 +11,7 @@ yasio-3.33.0
 9. Change ```YCM_XXX_[CLIENT/SERVER]``` to ```YCK_XXX_[CLIENT/SERVER]```.
 10. Add ```yasio::xhighp_clock``` to retrive nanoseconds timestamp.
 11. Fix xxsocket APIs connect_n, recv_n doesn't handle signal EINTR.
+12. Tidy obstream/ibstream API, by default ```write_v/read_v``` use ```7bit encoded int``` for length field.
   
   
 yasio-3.31.3

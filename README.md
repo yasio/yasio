@@ -25,97 +25,10 @@
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
 * [xlua集成](https://github.com/c4games/xlua): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
     
-## 用法
-### C++
-```cpp
-#include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
-using namespace yasio;
-using namespace yasio::inet;
+## 文档
+* 简体中文: [https://docs.yasio.org/](https://docs.yasio.org/)
+* 英文: [https://docs.yasio.org/en/latest/](https://docs.yasio.org/en/latest/)
 
-int main()
-{
-  io_service service({"www.ip138.com", 80});
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // 直接在网络线程分派网络事件
-  service.start_service([&](event_ptr&& ev) {
-    switch (ev->kind())
-    {
-      case YEK_PACKET: {
-        auto packet = std::move(ev->packet());
-        fwrite(packet.data(), packet.size(), 1, stdout);
-        fflush(stdout);
-        break;
-      }
-      case YEK_CONNECT_RESPONSE:
-        if (ev->status() == 0)
-        {
-          auto transport = ev->transport();
-          if (ev->cindex() == 0)
-          {
-            obstream obs;
-            obs.write_bytes("GET /index.htm HTTP/1.1\r\n");
-
-            obs.write_bytes("Host: www.ip138.com\r\n");
-
-            obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; "
-                            "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/79.0.3945.117 Safari/537.36\r\n");
-            obs.write_bytes("Accept: */*;q=0.8\r\n");
-            obs.write_bytes("Connection: Close\r\n\r\n");
-
-            service.write(transport, std::move(obs.buffer()));
-          }
-        }
-        break;
-      case YEK_CONNECTION_LOST:
-        printf("The connection is lost.\n");
-        break;
-    }
-  });
-  // open channel 0 as tcp client
-  service.open(0, YCK_TCP_CLIENT);
-  getchar();
-}
-```
-
-### Lua
-```lua
-local ip138 = "www.ip138.com"
-local service = yasio.io_service.new({host=ip138, port=80})
-local respdata = ""
--- 传入网络事件处理函数启动网络服务线程，网络事件有: 消息包，连接响应，连接丢失
-service.start_service(function(ev)
-        local k = ev.kind()
-        if (k == yasio.YEK_PACKET) then
-            respdata = respdata .. ev:packet():to_string()
-        elseif k == yasio.YEK_CONNECT_RESPONSE then
-            if ev:status() == 0 then -- status为0表示连接建立成功
-                local transport = ev:transport()
-                local obs = yasio.obstream.new()
-                obs.write_bytes("GET / HTTP/1.1\r\n")
-
-                obs.write_bytes("Host: " .. ip138 .. "\r\n")
-
-                obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36\r\n")
-                obs.write_bytes("Accept: */*;q=0.8\r\n")
-                obs.write_bytes("Connection: Close\r\n\r\n")
-
-                service.write(transport, obs)
-            end
-        elseif k == yasio.YEK_CONNECTION_LOST then
-            print("request finish, respdata: " ..  respdata)
-        end
-    end)
--- 将信道0作为TCP客户端打开，并向服务器发起异步连接，进行TCP三次握手
-service.open(0, yasio.YCK_TCP_CLIENT)
-
--- 由于lua_State和渲染对象，不支持在其他线程操作，因此分派网络事件封装为全局Lua函数，并且以下函数应该在主线程或者游戏引擎渲染线程调用
-function gDispatchNetworkEvent(...)
-    service.dispatch(128) -- 每帧最多处理128个网络事件
-end
-
-_G.yservice = service -- Store service to global table as a singleton instance
-```
 
 ## 使用g++快速运行tcptest测试程序
 ```sh
@@ -150,5 +63,3 @@ cmake --build . --config Debug
   
 ## 框架图
 ![image](https://yasio.org/images/framework.png)  
-
-## 更多详细用法，请查看文档：https://docs.yasio.org/

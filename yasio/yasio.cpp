@@ -547,23 +547,30 @@ int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& p
 }
 int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& cb)
 {
-  int n = write_cb_(buffer.data(), static_cast<int>(buffer.size()));
-  if (n > 0)
-    return n;
-
-  int error = xxsocket::get_last_errno();
-  if (SHOULD_CLOSE_1(n, error))
+  for (;;)
   {
-    if (error != EPERM)
-    { // Fix issue: #126, simply ignore EPERM for UDP
-      set_last_errno(error);
-      // finally, trigger transport close
-      ctx_->get_service().close(this);
-      return -1; // failed, transport should be close
+    int n = write_cb_(buffer.data(), static_cast<int>(buffer.size()));
+    if (n > 0)
+      return n;
+
+    int error = xxsocket::get_last_errno();
+    if (error == EINTR)
+      continue;
+
+    if (SHOULD_CLOSE_1(n, error))
+    {
+      if (error != EPERM)
+      { // Fix issue: #126, simply ignore EPERM for UDP
+        set_last_errno(error);
+        // finally, trigger transport close
+        ctx_->get_service().close(this);
+        return -1; // failed, transport should be close
+      }
     }
+    break;
   }
 
-  return 0; // No error
+  return 0; // WOULDBLOCK
 }
 void io_transport_udp::set_primitives()
 {

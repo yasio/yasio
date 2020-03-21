@@ -1,6 +1,6 @@
 yasio-3.33.0
   
-1. Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```io_transport_udp::connect``` to establish 4-tuple with peer.
+1. Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT_UDP``` to establish 4-tuple with peer.
 2. Remove unused options ```YOPT_C_LOCAL_HOST```, ```YOPT_C_LOCAL_ENDPONIT```
 3. Remove unused channel masks ```YCM_MCAST_CLIENT```, ```YCM_MCAST_SERVER```
 4. Remove unused channel flag ```YCF_MCAST_LOOPBACK```

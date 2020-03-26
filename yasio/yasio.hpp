@@ -133,10 +133,6 @@ enum
   //     initial_bytes_to_strip:int(0)
   YOPT_C_LFBFD_IBTS,
 
-  // Sets channel local port for client channel only
-  // params: index:int, port:int
-  YOPT_C_LOCAL_PORT,
-
   // Sets channel remote host
   // params: index:int, ip:const char*
   YOPT_C_REMOTE_HOST,
@@ -148,6 +144,18 @@ enum
   // Sets channel remote endpoint
   // params: index:int, ip:const char*, port:int
   YOPT_C_REMOTE_ENDPOINT,
+
+  // Sets local port for client channel only
+  // params: index:int, ip:const char*
+  YOPT_C_LOCAL_HOST,
+
+  // Sets local port for client channel only
+  // params: index:int, port:int
+  YOPT_C_LOCAL_PORT,
+
+  // Sets local host for client channel only
+  // params: index:int, ip:const char*, port:int
+  YOPT_C_LOCAL_ENDPOINT,
 
   // Sets channl flags
   // params: index:int, flagsToAdd:int, flagsToRemove:int
@@ -434,7 +442,13 @@ private:
   decode_len_fn_t decode_len_;
 
   /*
+  !!! for tcp/udp client to bind local specific network adapter, empty for any
+  */
+  std::string local_host_;
+
+  /*
   !!! for tcp/udp client to connect remote host.
+  !!! for tcp/udp server to bind local specific network adapter, empty for any
   !!! for multicast, it's used as multicast address,
       doesn't connect even through recvfrom on packet from remote
   */
@@ -860,6 +874,11 @@ private:
   ** Summary: For udp-server only, make dgram handle to communicate with client
   */
   YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer);
+
+  inline int local_address_family() const
+  {
+    return ((this->ipsv_ & ipsv_ipv4) || this->ipsv_ == 0) ? AF_INET : AF_INET6;
+  }
 
 private:
   state state_ = state::UNINITIALIZED; // The service state

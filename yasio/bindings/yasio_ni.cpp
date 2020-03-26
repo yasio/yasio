@@ -102,6 +102,7 @@ YASIO_NI_API void yasio_set_option(int opt, const char* params)
   auto service          = yasio_shared_service();
   switch (opt)
   {
+    case YOPT_C_LOCAL_ENDPOINT:
     case YOPT_C_REMOTE_ENDPOINT: {
       int cidx = 0;
       std::string ip;

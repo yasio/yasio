@@ -1146,8 +1146,11 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
       ctx->socket_->reuse_address(false);
 
-    if ((ctx->local_port_ != 0 || ctx->properties_ & YCM_UDP))
-      ctx->socket_->bind(YASIO_ADDR_ANY(ep.af()), ctx->local_port_);
+    if ((ctx->local_port_ != 0 || !ctx->local_host_.empty() || ctx->properties_ & YCM_UDP))
+    {
+      auto ifaddr = ctx->local_host_.empty() ? YASIO_ADDR_ANY(ep.af()) : ctx->local_host_.c_str();
+      ctx->socket_->bind(ifaddr, ctx->local_port_);
+    }
 
     // tcp connect directly, for udp do not need to connect.
     if (ctx->properties_ & YCM_TCP)
@@ -1419,8 +1422,10 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   cleanup_io(ctx);
 
   // server: don't need resolve, don't use remote_eps_
-  ip::endpoint ep(ctx->remote_host_.c_str(), ctx->remote_port_);
-  if (ctx->socket_->open(ipsv_ & ipsv_ipv4 ? AF_INET : AF_INET6, ctx->protocol_))
+  auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family())
+                                          : ctx->remote_host_.c_str();
+  ip::endpoint ep(ifaddr, ctx->remote_port_);
+  if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
     int error = 0;
     if (ctx->properties_ & YCF_REUSEADDR)
@@ -1989,7 +1994,7 @@ void io_service::start_resolve(io_channel* ctx)
 #else
   ares_addrinfo_hints hint;
   memset(&hint, 0x0, sizeof(hint));
-  hint.ai_family = (this->ipsv_ & ipsv_ipv4) ? hint.ai_family = AF_INET : AF_INET6;
+  hint.ai_family = local_address_family();
   char sport[sizeof "65535"] = {'\0'};
   const char* service = nullptr;
   if (ctx->remote_port_ > 0)
@@ -2113,10 +2118,25 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
         channel->decode_len_ = *va_arg(ap, decode_len_fn_t*);
       break;
     }
+    case YOPT_C_LOCAL_HOST: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->local_host_ = va_arg(ap, const char*);
+      break;
+    }
     case YOPT_C_LOCAL_PORT: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->local_port_ = (u_short)va_arg(ap, int);
+      break;
+    }
+    case YOPT_C_LOCAL_ENDPOINT: {
+      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        channel->local_host_ = va_arg(ap, const char*);
+        channel->local_port_ = ((u_short)va_arg(ap, int));
+      }
       break;
     }
     case YOPT_C_REMOTE_HOST: {

@@ -1325,6 +1325,7 @@ bool js_yasio_io_service_set_option(se::State& s)
       switch (opt)
       {
         case YOPT_C_REMOTE_HOST:
+        case YOPT_C_LOCAL_HOST:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str());
           break;
 #if YASIO_VERSION_NUM >= 0x033100
@@ -1335,6 +1336,7 @@ bool js_yasio_io_service_set_option(se::State& s)
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_ENABLE_MCAST:
+        case YOPT_C_LOCAL_ENDPOINT:
         case YOPT_C_REMOTE_ENDPOINT:
           service->set_option(opt, args[1].toInt32(), args[2].toString().c_str(),
                               args[3].toInt32());
@@ -1536,9 +1538,11 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
   YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
-  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
+  YASIO_EXPORT_ENUM(YOPT_C_LOCAL_ENDPOINT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_HOST);
+  YASIO_EXPORT_ENUM(YOPT_C_REMOTE_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);

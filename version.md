@@ -1,111 +1,110 @@
 yasio-3.33.0
   
-1. Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```io_transport_udp::connect``` to establish 4-tuple with peer.
-2. Remove unused options ```YOPT_C_LOCAL_HOST```, ```YOPT_C_LOCAL_ENDPONIT```
-3. Remove unused channel masks ```YCM_MCAST_CLIENT```, ```YCM_MCAST_SERVER```
-4. Remove unused channel flag ```YCF_MCAST_LOOPBACK```
-5. Add new options ```YOPT_C_ENABLE_MCAST```, ```YOPT_C_DISABLE_MCAST``` for multicast support
-6. Add ```io_service::write_to``` to write a unbind UDP client.
-7. Change ```timer_cb_t``` prototype to ```[]()->bool { }```, return ```true``` for once, ```false``` for continue.
-8. Add ```highp_timer::async_wait_once``` to wait timer timeout once.
-9. Change ```YCM_XXX_[CLIENT/SERVER]``` to ```YCK_XXX_[CLIENT/SERVER]```.
-10. Add ```yasio::xhighp_clock``` to retrive nanoseconds timestamp.
-11. Fix xxsocket APIs connect_n, recv_n doesn't handle signal EINTR.
-12. Tidy obstream/ibstream API, by default ```write_v/read_v``` use ```7bit encoded int``` for length field.
+* Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT_UDP``` to establish 4-tuple with peer.
+* Remove unused channel masks ```YCM_MCAST_CLIENT```, ```YCM_MCAST_SERVER```
+* Remove unused channel flag ```YCF_MCAST_LOOPBACK```
+* Add new options ```YOPT_C_ENABLE_MCAST```, ```YOPT_C_DISABLE_MCAST``` for multicast support
+* Add ```io_service::write_to``` to write a unbind UDP client.
+* Change ```timer_cb_t``` prototype to ```[]()->bool { }```, return ```true``` for once, ```false``` for continue.
+* Add ```highp_timer::async_wait_once``` to wait timer timeout once.
+* Change ```YCM_XXX_[CLIENT/SERVER]``` to ```YCK_XXX_[CLIENT/SERVER]```.
+* Add ```yasio::xhighp_clock``` to retrive nanoseconds timestamp.
+* Fix xxsocket APIs connect_n, recv_n doesn't handle signal EINTR.
+* Tidy obstream/ibstream API, by default ```write_v/read_v``` use ```7bit encoded int``` for length field.
   
   
 yasio-3.31.3
   
-1. Optimize API io_service::write, add write raw buf support.
-2. Fix issue: https://github.com/yasio/yasio/issues/208
-3. Fix issue: https://github.com/yasio/yasio/issues/209
+* Optimize API io_service::write, add write raw buf support.
+* Fix issue: https://github.com/yasio/yasio/issues/208
+* Fix issue: https://github.com/yasio/yasio/issues/209
   
   
 yasio-3.31.2
   
-1. Optimize singleton implementation, see: https://github.com/yasio/yasio/issues/200
-2. Fix typo, YASIO_VERBOS_LOG to YASIO_VERBOSE_LOG.
-3. Explicit set socktype for ```getaddrinfo```, see: https://github.com/yasio/yasio/issues/201
-4. Improve xxsocket send_n/recv_n implementation and behavior, see: https://github.com/yasio/yasio/issues/202
+* Optimize singleton implementation, see: https://github.com/yasio/yasio/issues/200
+* Fix typo, YASIO_VERBOS_LOG to YASIO_VERBOSE_LOG.
+* Explicit set socktype for ```getaddrinfo```, see: https://github.com/yasio/yasio/issues/201
+* Improve xxsocket send_n/recv_n implementation and behavior, see: https://github.com/yasio/yasio/issues/202
   
   
 yasio-3.31.1
   
-1. Make c-ares works well on android 8 or later.
+* Make c-ares works well on android 8 or later.
   
   
 yasio-3.31.0
   
-1. Add Initial Bytes To Strip support for length field based frame decode, use YOPT_C_LFBFD_IBTS.
-2. Add SSL client support, use YASIO_HAVE_SSL to enable, YCM_SSL_CLIENT to open a channel with ssl client support.
-3. Integrate c-ares support, YASIO_HAVE_CARES to enable, make sure your build system already have c-ares.
-4. Refactor timeout options, use YOPT_S_CONNECT_TIMEOUT, YOPT_S_DNS_CACHE_TIMEOUT, YOPT_S_DNS_QUERIES_TIMEOUT to instead YOPT_S_TIMEOUTS.
-5. Optimize schedule_timer behavior, always replace timer_cb when timer exist.
-6. Remove deprecated functions.
-7. Remove tolua support.
+* Add Initial Bytes To Strip support for length field based frame decode, use YOPT_C_LFBFD_IBTS.
+* Add SSL client support, use YASIO_HAVE_SSL to enable, YCM_SSL_CLIENT to open a channel with ssl client support.
+* Integrate c-ares support, YASIO_HAVE_CARES to enable, make sure your build system already have c-ares.
+* Refactor timeout options, use YOPT_S_CONNECT_TIMEOUT, YOPT_S_DNS_CACHE_TIMEOUT, YOPT_S_DNS_QUERIES_TIMEOUT to instead YOPT_S_TIMEOUTS.
+* Optimize schedule_timer behavior, always replace timer_cb when timer exist.
+* Remove deprecated functions.
+* Remove tolua support.
   
   
 yasio-3.30.8
   
-1. Sync optimizations from v3.31.2.
+* Sync optimizations from v3.31.2.
   
   
 yasio-3.30.7
   
-1. Sync optimizations from v3.31.
+* Sync optimizations from v3.31.
   
   
 yasio-3.30.6
   
-1. Make option enums compatible with v3.31.
-2. Simplify io_service state.
+* Make option enums compatible with v3.31.
+* Simplify io_service state.
   
   
 yasio-3.30.5
   
-1. Fix missing break at set_option for YOPT_C_REMOTE_ENDPOINT.
+* Fix missing break at set_option for YOPT_C_REMOTE_ENDPOINT.
   
   
 yasio-3.30.4
   
-1. Make normal concurrent queue more safe if SPSC queue is disabled.
-2. Make sure udp recv buf enough at kcp transport do_read.
-3. Fix io_service::write always retur 0.
+* Make normal concurrent queue more safe if SPSC queue is disabled.
+* Make sure udp recv buf enough at kcp transport do_read.
+* Fix io_service::write always retur 0.
   
   
 yasio-3.30.3
   
-1. Optimize jsb, jsb2.0 and lua binding.
+* Optimize jsb, jsb2.0 and lua binding.
   
   
 yasio-3.30.2
   
-1. Fix jsb2.0 bindings issue, see: [#192](https://github.com/yasio/yasio/issues/192)
+* Fix jsb2.0 bindings issue, see: [#192](https://github.com/yasio/yasio/issues/192)
   
   
 yasio-3.30.1
   
-1. Add construct channel at io_service constructor, now all options could be set before start_service if you doesn't use the start_service with channel hostents, and mark them deprecated
-2. Use cmake for trvis ci cross-platform build at win32, linux, osx, ios
-3. Sync script bindings
+* Add construct channel at io_service constructor, now all options could be set before start_service if you doesn't use the start_service with channel hostents, and mark them deprecated
+* Use cmake for trvis ci cross-platform build at win32, linux, osx, ios
+* Sync script bindings
   
   
 yasio-3.30.0
   
-1. Tidy option macros.
-2. Add YCF_ enums to control channel to support more features.
-3. Add multicast support.
-4. Add a workaround implementation to support win32 udp-server.
-5. Add io_service::cindex_to_handle.
-6. Add ftp sever example.
-7. Remove loop behavior of deadline_timer, user can schedule again when it's expired.
-8. Add obstream::write_byte.
-9. Add to_strf_v4 for ip::endpoint.
-10. Optimizing for file transfer, avoid high cpu occupation when system kernel send buffer is full.
-11. More safe to check object valid which allocated from pool.
-12. Add send complete callback.
-13. Mark io_service::dispatch_events deprecated, use dispatch to instead.
-14. Add YCF_REUSEPORT to control whether to enable socket can bind same port, default and previous vesion is enabled.
-15. Implement case insensitive starts_with, ends_with at string_view.hpp.
-16. **Ignore SIGPIPE for tcp at non-win32 system.**
-17. **Remove reconnect timeout.**
+* Tidy option macros.
+* Add YCF_ enums to control channel to support more features.
+* Add multicast support.
+* Add a workaround implementation to support win32 udp-server.
+* Add io_service::cindex_to_handle.
+* Add ftp sever example.
+* Remove loop behavior of deadline_timer, user can schedule again when it's expired.
+* Add obstream::write_byte.
+* Add to_strf_v4 for ip::endpoint.
+* Optimizing for file transfer, avoid high cpu occupation when system kernel send buffer is full.
+* More safe to check object valid which allocated from pool.
+* Add send complete callback.
+* Mark io_service::dispatch_events deprecated, use dispatch to instead.
+* Add YCF_REUSEPORT to control whether to enable socket can bind same port, default and previous vesion is enabled.
+* Implement case insensitive starts_with, ends_with at string_view.hpp.
+* **Ignore SIGPIPE for tcp at non-win32 system.**
+* **Remove reconnect timeout.**

@@ -133,10 +133,6 @@ enum
   //     initial_bytes_to_strip:int(0)
   YOPT_C_LFBFD_IBTS,
 
-  // Sets channel local port for client channel only
-  // params: index:int, port:int
-  YOPT_C_LOCAL_PORT,
-
   // Sets channel remote host
   // params: index:int, ip:const char*
   YOPT_C_REMOTE_HOST,
@@ -148,6 +144,18 @@ enum
   // Sets channel remote endpoint
   // params: index:int, ip:const char*, port:int
   YOPT_C_REMOTE_ENDPOINT,
+
+  // Sets local host for client channel only
+  // params: index:int, ip:const char*
+  YOPT_C_LOCAL_HOST,
+
+  // Sets local port for client channel only
+  // params: index:int, port:int
+  YOPT_C_LOCAL_PORT,
+
+  // Sets local endpoint for client channel only
+  // params: index:int, ip:const char*, port:int
+  YOPT_C_LOCAL_ENDPOINT,
 
   // Sets channl flags
   // params: index:int, flagsToAdd:int, flagsToRemove:int
@@ -273,7 +281,7 @@ public:
   void expires_from_now() { this->expire_time_ = steady_clock_t::now() + this->duration_; }
 
   // Wait timer timeout once.
-  inline void async_wait_once(light_timer_cb_t cb)
+  void async_wait_once(light_timer_cb_t cb)
   {
 #if YASIO__HAS_CXX17
     this->async_wait([cb = std::move(cb)]() {
@@ -370,8 +378,8 @@ class io_channel : public io_base
 
 public:
   io_service& get_service() { return timer_.service_; }
-  inline int index() const { return index_; }
-  inline u_short remote_port() const { return remote_port_; }
+  int index() const { return index_; }
+  u_short remote_port() const { return remote_port_; }
 
 protected:
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
@@ -382,7 +390,7 @@ protected:
 private:
   YASIO__DECL io_channel(io_service& service, int index);
 
-  inline void configure_address(std::string host, u_short port)
+  void configure_address(std::string host, u_short port)
   {
     configure_host(host);
     configure_port(port);
@@ -434,7 +442,13 @@ private:
   decode_len_fn_t decode_len_;
 
   /*
+  !!! for tcp/udp client to bind local specific network adapter, empty for any
+  */
+  std::string local_host_;
+
+  /*
   !!! for tcp/udp client to connect remote host.
+  !!! for tcp/udp server to bind local specific network adapter, empty for any
   !!! for multicast, it's used as multicast address,
       doesn't connect even through recvfrom on packet from remote
   */
@@ -472,7 +486,7 @@ public:
 protected:
   bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
 
-  inline std::vector<char> fetch_packet()
+  std::vector<char> fetch_packet()
   {
     expected_size_ = -1;
     return std::move(expected_packet_);
@@ -660,10 +674,10 @@ public:
   YASIO__DECL ~io_service();
 
   YASIO_OBSOLETE_DEPRECATE(io_service::start)
-  inline void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
+  void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
 
   YASIO_OBSOLETE_DEPRECATE(io_service::stop)
-  inline void stop_service() { this->stop(); };
+  void stop_service() { this->stop(); };
 
   YASIO__DECL void start(io_event_cb_t cb);
   YASIO__DECL void stop();
@@ -743,12 +757,12 @@ private:
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);
   YASIO__DECL void remove_timer(highp_timer*);
 
-  inline std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
+  std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
   {
     return std::find_if(timer_queue_.begin(), timer_queue_.end(),
                         [=](const timer_impl_t& timer) { return timer.first == key; });
   }
-  inline void sort_timers()
+  void sort_timers()
   {
     std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
               [](const timer_impl_t& lhs, const timer_impl_t& rhs) {
@@ -802,7 +816,7 @@ private:
   YASIO__DECL void cleanup_ares_channel();
 #endif
 
-  inline void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
+  void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
   {
     handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
   }
@@ -860,6 +874,8 @@ private:
   ** Summary: For udp-server only, make dgram handle to communicate with client
   */
   YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer);
+
+  int local_address_family() const { return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6; }
 
 private:
   state state_ = state::UNINITIALIZED; // The service state

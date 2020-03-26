@@ -38,10 +38,6 @@ SOFTWARE.
 
 #include "yasio/detail/utils.hpp"
 
-#if !defined(_WIN32)
-#  include "yasio/detail/ifaddrs.hpp"
-#endif
-
 // For apple bsd socket implemention
 #if !defined(TCP_KEEPIDLE)
 #  define TCP_KEEPIDLE TCP_KEEPALIVE
@@ -462,117 +458,6 @@ static int inet_pton6(const char* src, u_char* dst)
 } // namespace inet
 } // namespace yasio
 
-static int getipsv_internal(void)
-{
-  int flags = 0;
-  int count = 0;
-  /* Only windows support use getaddrinfo to get local ip address(not loopback or linklocal),
-    Because nullptr same as "localhost": always return loopback address and at unix/linux the
-    gethostname always return "localhost"
-    */
-#if defined(_WIN32)
-  char hostname[256] = {0};
-  gethostname(hostname, sizeof(hostname));
-
-  // ipv4 & ipv6
-  addrinfo hint, *ailist = nullptr;
-  memset(&hint, 0x0, sizeof(hint));
-
-  endpoint ep;
-#  if defined(_DEBUG)
-  YASIO_LOG("getipsv_internal: localhost=%s", hostname);
-#  endif
-  int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
-
-  const char* errmsg = nullptr;
-  if (ailist != nullptr)
-  {
-    for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
-    {
-      memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
-
-      auto straddr = ep.to_string();
-      YASIO_LOGV("getipsv_internal: endpoint=%s", straddr.c_str());
-      ++count;
-      switch (ep.af())
-      {
-        case AF_INET:
-          if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
-            flags |= ipsv_ipv4;
-          break;
-        case AF_INET6:
-          if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-            flags |= ipsv_ipv6;
-          break;
-      }
-      if (flags == ipsv_dual_stack)
-        break;
-    }
-    freeaddrinfo(ailist);
-  }
-  else
-  {
-    errmsg = xxsocket::gai_strerror(iret);
-  }
-#else // __APPLE__ or linux with <ifaddrs.h>
-  struct ifaddrs *ifaddr, *ifa;
-  /*
-  The value of ifa->ifa_name:
-   Android:
-    wifi: "w"
-    cellular: "r"
-   iOS:
-    wifi: "en0"
-    cellular: "pdp_ip0"
-  */
-
-  if (getifaddrs(&ifaddr) == -1)
-  {
-    YASIO_LOG("getipsv_internal: getifaddrs fail!");
-    return ipsv_ipv4;
-  }
-
-  endpoint ep;
-  /* Walk through linked list*/
-  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
-  {
-    if (ifa->ifa_addr == NULL)
-      continue;
-
-    ep.assign(ifa->ifa_addr);
-
-    auto straddr = ep.to_string();
-    if (!straddr.empty())
-    {
-      ++count;
-      YASIO_LOGV("getipsv_internal: endpoint=%s", straddr.c_str());
-    }
-
-    switch (ep.af())
-    {
-      case AF_INET:
-        if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
-          flags |= ipsv_ipv4;
-        break;
-      case AF_INET6:
-        if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-          flags |= ipsv_ipv6;
-        break;
-    }
-    if (flags == ipsv_dual_stack)
-      break;
-  }
-
-  freeifaddrs(ifaddr);
-#endif
-
-  YASIO_LOG("getipsv_internal: flags=%d, ifa_count=%d", flags, count);
-
-  return flags;
-}
-
-int xxsocket::getipsv(void) { return getipsv_internal(); }
-
 int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
 {
   auto flags = getipsv();
@@ -777,6 +662,25 @@ int xxsocket::resolve_tov6(std::vector<endpoint>& endpoints, const char* hostnam
         return false;
       },
       hostname, port, AF_INET6, AI_ALL | AI_V4MAPPED, socktype);
+}
+
+int xxsocket::getipsv(void)
+{
+  int flags = 0;
+  xxsocket::traverse_local_address([&](ip::endpoint& ep) -> bool {
+    switch (ep.af())
+    {
+      case AF_INET:
+        flags |= ipsv_ipv4;
+        break;
+      case AF_INET6:
+        flags |= ipsv_ipv6;
+        break;
+    }
+    return (flags == ipsv_dual_stack);
+  });
+  YASIO_LOG("xxsocket::getipsv: flags=%d", flags);
+  return flags;
 }
 
 xxsocket::xxsocket(void) : fd(invalid_socket) {}

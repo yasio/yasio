@@ -77,6 +77,7 @@ typedef int socklen_t;
 #  include <netinet/tcp.h>
 #  include <net/if.h>
 #  include <arpa/inet.h>
+#  include "yasio/detail/ifaddrs.hpp"
 #  if !defined(SD_RECEIVE)
 #    define SD_RECEIVE SHUT_RD
 #  endif
@@ -555,22 +556,6 @@ using namespace yasio::inet::ip;
 */
 class xxsocket
 {
-public:
-  /*
-  summary: Gets supported internet protocol versions of localhost
-  return:
-    ipsv_unavailable: The network unavailable.
-    ipsv_ipv4: Support ipv4 only.
-    ipsv_ipv6: Support ipv6 only.
-    ipsv_dual_stack:
-      Support ipv4 or ipv6, but for multi network adapters device, you should always
-      use ipv4 preferred, such as smart phone with wifi & cellular network. The smart phone's os
-      will choose wifi when it is available to avoid consume user's cash, when the cellular support
-      ipv6/ipv4 but the wifi only support ipv4, then use ipv6 will cause network issue.
-      For more detail, see: https://github.com/halx99/yasio/issues/130
-  */
-  YASIO__DECL static int getipsv(void);
-
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
   // for support ipv6 ONLY network.
@@ -1051,6 +1036,125 @@ public:
     freeaddrinfo(answerlist);
 
     return error;
+  }
+
+  /*
+  ** @brief:: Gets supported internet protocol versions of localhost
+  ** @returns:
+  **  ipsv_unavailable: The network unavailable.
+  **  ipsv_ipv4: Support ipv4 only.
+  **  ipsv_ipv6: Support ipv6 only.
+  **  ipsv_dual_stack:
+  **    Support ipv4 or ipv6, but for multi network adapters device, you should always
+  **    use ipv4 preferred, such as smart phone with wifi & cellular network. The smart phone's os
+  **    will choose wifi when it is available to avoid consume user's cash, when the cellular
+  *support
+  **    ipv6/ipv4 but the wifi only support ipv4, then use ipv6 will cause network issue.
+  **    For more detail, see: https://github.com/halx99/yasio/issues/130
+  */
+  YASIO__DECL static int getipsv(void);
+
+  /*
+  ** @brief: Traverse local device network adapter address with valid ip
+  ** @params:
+  **  handler: prototype is [](const ip::endpoint& ep)->bool
+  */
+  template <typename _Fty> inline static void traverse_local_address(const _Fty& handler)
+  {
+    bool done = false;
+    /* Only windows support use getaddrinfo to get local ip address(not loopback or linklocal),
+      Because nullptr same as "localhost": always return loopback address and at unix/linux the
+      gethostname always return "localhost"
+      */
+#if defined(_WIN32)
+    char hostname[256] = {0};
+    ::gethostname(hostname, sizeof(hostname));
+
+    // ipv4 & ipv6
+    addrinfo hint, *ailist = nullptr;
+    ::memset(&hint, 0x0, sizeof(hint));
+
+    endpoint ep;
+#  if defined(_DEBUG)
+    YASIO_LOG("xxsocket::traverse_local_address: localhost=%s", hostname);
+#  endif
+    int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
+
+    const char* errmsg = nullptr;
+    if (ailist != nullptr)
+    {
+      for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
+      {
+        ::memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
+
+        YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
+        switch (ep.af())
+        {
+          case AF_INET:
+            if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) &&
+                !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
+              done = handler(ep);
+            break;
+          case AF_INET6:
+            if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
+              done = handler(ep);
+            break;
+        }
+        if (done)
+          break;
+      }
+      freeaddrinfo(ailist);
+    }
+    else
+    {
+      errmsg = xxsocket::gai_strerror(iret);
+    }
+#else // __APPLE__ or linux with <ifaddrs.h>
+    struct ifaddrs *ifaddr, *ifa;
+    /*
+    The value of ifa->ifa_name:
+     Android:
+      wifi: "w"
+      cellular: "r"
+     iOS:
+      wifi: "en0"
+      cellular: "pdp_ip0"
+    */
+
+    if (::getifaddrs(&ifaddr) == -1)
+    {
+      YASIO_LOG("xxsocket::traverse_local_address: getifaddrs fail!");
+      return ipsv_ipv4;
+    }
+
+    endpoint ep;
+    /* Walk through linked list*/
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+    {
+      if (ifa->ifa_addr == NULL)
+        continue;
+
+      ep.assign(ifa->ifa_addr);
+
+      YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
+
+      switch (ep.af())
+      {
+        case AF_INET:
+          if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
+            done = handler(ep);
+          break;
+        case AF_INET6:
+          if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
+            done = handler(ep);
+          break;
+      }
+      if (done)
+        break;
+    }
+
+    ::freeifaddrs(ifaddr);
+#endif
   }
 
 protected:

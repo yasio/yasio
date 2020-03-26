@@ -37,6 +37,7 @@ SOFTWARE.
 #include <sstream>
 #include <vector>
 #include <chrono>
+#include <functional>
 #include "yasio/detail/config.hpp"
 
 #if defined(_MSC_VER)
@@ -1059,103 +1060,7 @@ public:
   ** @params:
   **  handler: prototype is [](const ip::endpoint& ep)->bool
   */
-  template <typename _Fty> inline static void traverse_local_address(const _Fty& handler)
-  {
-    bool done = false;
-    /* Only windows support use getaddrinfo to get local ip address(not loopback or linklocal),
-      Because nullptr same as "localhost": always return loopback address and at unix/linux the
-      gethostname always return "localhost"
-      */
-#if defined(_WIN32)
-    char hostname[256] = {0};
-    ::gethostname(hostname, sizeof(hostname));
-
-    // ipv4 & ipv6
-    addrinfo hint, *ailist = nullptr;
-    ::memset(&hint, 0x0, sizeof(hint));
-
-    endpoint ep;
-#  if defined(_DEBUG)
-    YASIO_LOG("xxsocket::traverse_local_address: localhost=%s", hostname);
-#  endif
-    int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
-
-    const char* errmsg = nullptr;
-    if (ailist != nullptr)
-    {
-      for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
-      {
-        ::memcpy(&ep, aip->ai_addr, aip->ai_addrlen);
-
-        YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
-        switch (ep.af())
-        {
-          case AF_INET:
-            if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) &&
-                !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
-              done = handler(ep);
-            break;
-          case AF_INET6:
-            if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-              done = handler(ep);
-            break;
-        }
-        if (done)
-          break;
-      }
-      freeaddrinfo(ailist);
-    }
-    else
-    {
-      errmsg = xxsocket::gai_strerror(iret);
-    }
-#else // __APPLE__ or linux with <ifaddrs.h>
-    struct ifaddrs *ifaddr, *ifa;
-    /*
-    The value of ifa->ifa_name:
-     Android:
-      wifi: "w"
-      cellular: "r"
-     iOS:
-      wifi: "en0"
-      cellular: "pdp_ip0"
-    */
-
-    if (::getifaddrs(&ifaddr) == -1)
-    {
-      YASIO_LOG("xxsocket::traverse_local_address: getifaddrs fail!");
-      return ipsv_ipv4;
-    }
-
-    endpoint ep;
-    /* Walk through linked list*/
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
-    {
-      if (ifa->ifa_addr == NULL)
-        continue;
-
-      ep.assign(ifa->ifa_addr);
-
-      YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
-
-      switch (ep.af())
-      {
-        case AF_INET:
-          if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
-            done = handler(ep);
-          break;
-        case AF_INET6:
-          if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-            done = handler(ep);
-          break;
-      }
-      if (done)
-        break;
-    }
-
-    ::freeifaddrs(ifaddr);
-#endif
-  }
+  YASIO__DECL static void traverse_local_address(std::function<bool(const ip::endpoint&)> handler);
 
 protected:
   YASIO__DECL static void reregister_descriptor(int s, fd_set* fds);

@@ -747,7 +747,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
   if (::getifaddrs(&ifaddr) == -1)
   {
     YASIO_LOG("xxsocket::traverse_local_address: getifaddrs fail!");
-    return ipsv_ipv4;
+    return;
   }
 
   endpoint ep;

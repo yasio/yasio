@@ -671,8 +671,8 @@ io_service::io_service(const io_hostent* channel_eps, int channel_count)
 }
 io_service::~io_service()
 {
-  stop_service();
-  cleanup();
+  this->stop();
+  this->cleanup();
 }
 void io_service::start(io_event_cb_t cb)
 {

@@ -281,7 +281,7 @@ public:
   void expires_from_now() { this->expire_time_ = steady_clock_t::now() + this->duration_; }
 
   // Wait timer timeout once.
-  inline void async_wait_once(light_timer_cb_t cb)
+  void async_wait_once(light_timer_cb_t cb)
   {
 #if YASIO__HAS_CXX17
     this->async_wait([cb = std::move(cb)]() {
@@ -378,8 +378,8 @@ class io_channel : public io_base
 
 public:
   io_service& get_service() { return timer_.service_; }
-  inline int index() const { return index_; }
-  inline u_short remote_port() const { return remote_port_; }
+  int index() const { return index_; }
+  u_short remote_port() const { return remote_port_; }
 
 protected:
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
@@ -390,7 +390,7 @@ protected:
 private:
   YASIO__DECL io_channel(io_service& service, int index);
 
-  inline void configure_address(std::string host, u_short port)
+  void configure_address(std::string host, u_short port)
   {
     configure_host(host);
     configure_port(port);
@@ -486,7 +486,7 @@ public:
 protected:
   bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
 
-  inline std::vector<char> fetch_packet()
+  std::vector<char> fetch_packet()
   {
     expected_size_ = -1;
     return std::move(expected_packet_);
@@ -674,10 +674,10 @@ public:
   YASIO__DECL ~io_service();
 
   YASIO_OBSOLETE_DEPRECATE(io_service::start)
-  inline void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
+  void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
 
   YASIO_OBSOLETE_DEPRECATE(io_service::stop)
-  inline void stop_service() { this->stop(); };
+  void stop_service() { this->stop(); };
 
   YASIO__DECL void start(io_event_cb_t cb);
   YASIO__DECL void stop();
@@ -757,12 +757,12 @@ private:
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);
   YASIO__DECL void remove_timer(highp_timer*);
 
-  inline std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
+  std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
   {
     return std::find_if(timer_queue_.begin(), timer_queue_.end(),
                         [=](const timer_impl_t& timer) { return timer.first == key; });
   }
-  inline void sort_timers()
+  void sort_timers()
   {
     std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
               [](const timer_impl_t& lhs, const timer_impl_t& rhs) {
@@ -816,7 +816,7 @@ private:
   YASIO__DECL void cleanup_ares_channel();
 #endif
 
-  inline void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
+  void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
   {
     handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
   }
@@ -875,10 +875,7 @@ private:
   */
   YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer);
 
-  inline int local_address_family() const
-  {
-    return ((this->ipsv_ & ipsv_ipv4) || this->ipsv_ == 0) ? AF_INET : AF_INET6;
-  }
+  int local_address_family() const { return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6; }
 
 private:
   state state_ = state::UNINITIALIZED; // The service state

@@ -145,7 +145,7 @@ enum
   // params: index:int, ip:const char*, port:int
   YOPT_C_REMOTE_ENDPOINT,
 
-  // Sets local port for client channel only
+  // Sets local host for client channel only
   // params: index:int, ip:const char*
   YOPT_C_LOCAL_HOST,
 
@@ -153,7 +153,7 @@ enum
   // params: index:int, port:int
   YOPT_C_LOCAL_PORT,
 
-  // Sets local host for client channel only
+  // Sets local endpoint for client channel only
   // params: index:int, ip:const char*, port:int
   YOPT_C_LOCAL_ENDPOINT,
 

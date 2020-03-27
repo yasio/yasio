@@ -36,7 +36,7 @@ SOFTWARE.
 namespace yasio
 {
 /*--- This is a C++ universal sprintf in the future.
- **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
+ **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/later is
  *different
  **      VS2013 or Unix-Like System will return -1 when buffer not enough, but
  *VS2015 or later will return the actural needed length for buffer at this station

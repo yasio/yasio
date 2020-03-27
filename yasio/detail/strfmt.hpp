@@ -39,7 +39,7 @@ namespace yasio
  **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/2017 is
  *different
  **      VS2013 or Unix-Like System will return -1 when buffer not enough, but
- *VS2015/2017 will return the actural needed length for buffer at this station
+ *VS2015 or later will return the actural needed length for buffer at this station
  **      The _vsnprintf behavior is compatible API which always return -1 when
  *buffer isn't enough at VS2013/2015/2017
  **      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later,
@@ -62,7 +62,7 @@ inline std::string strfmt(size_t n, const char* format, ...)
       buffer.resize(nret);
     }
     else if ((unsigned int)nret > buffer.length())
-    { // VS2015/2017 or later Visual Studio Version
+    { // VS2015 or later Visual Studio Version
       buffer.resize(nret);
 
       va_start(args, format);

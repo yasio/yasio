@@ -56,13 +56,17 @@ SOFTWARE.
 #  define YASIO__HAS_CXX17 0
 #endif
 
-// Feature: inline namespace
+// Workaround for compiler without fully c++11 support, such as vs2013
 #if YASIO__HAS_FULL_CXX11
 #  define YASIO__HAS_NS_INLINE 1
 #  define YASIO__NS_INLINE inline
 #else
 #  define YASIO__HAS_NS_INLINE 0
 #  define YASIO__NS_INLINE
+#  if defined(constexpr)
+#    undef constexpr
+#  endif
+#  define constexpr const
 #endif
 
 #endif

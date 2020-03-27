@@ -30,7 +30,7 @@ SOFTWARE.
 #include <assert.h>
 #include <chrono>
 #include <algorithm>
-#include "yasio/cxx17/feature_test.hpp"
+#include "yasio/compiler/feature_test.hpp"
 
 namespace yasio
 {

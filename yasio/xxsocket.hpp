@@ -548,7 +548,7 @@ YASIO__NS_INLINE namespace ip
   };
 } // namespace ip
 
-#if !YASIO__HAVE_NS_INLINE
+#if !YASIO__HAS_NS_INLINE
 using namespace yasio::inet::ip;
 #endif
 

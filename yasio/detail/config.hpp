@@ -27,6 +27,7 @@ SOFTWARE.
 */
 #ifndef YASIO__CONFIG_HPP
 #define YASIO__CONFIG_HPP
+#include "yasio/compiler/feature_test.hpp"
 
 /*
 ** Uncomment or add compiler flag -DYASIO_HEADER_ONLY to enable yasio core implementation header
@@ -81,30 +82,23 @@ SOFTWARE.
 // #define YASIO_HAVE_SSL 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_DISABLE_CONCURRENT_SINGLETON to disable concurrent singleton
+** Uncomment or add compiler flag -DYASIO_DISABLE_CONCURRENT_SINGLETON to disable concurrent
+*singleton
 */
 // #define YASIO_DISABLE_CONCURRENT_SINGLETON 1
 
-/* 
+/*
 ** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and
 ** follow 3 lines code will be removed
 */
-#if defined(_MSC_VER) && _MSC_VER < 1900 && !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
-  #define YASIO_DISABLE_CONCURRENT_SINGLETON 1
+#if !YASIO__HAS_FULL_CXX11 && !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
+#  define YASIO_DISABLE_CONCURRENT_SINGLETON 1
 #endif
 
 #if defined(YASIO_HEADER_ONLY)
 #  define YASIO__DECL inline
 #else
 #  define YASIO__DECL
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER <= 1800
-#  define YASIO__HAVE_NS_INLINE 0
-#  define YASIO__NS_INLINE
-#else
-#  define YASIO__HAVE_NS_INLINE 1
-#  define YASIO__NS_INLINE inline
 #endif
 
 #if defined(_WIN32)

@@ -27,10 +27,22 @@ SOFTWARE.
 */
 #ifndef YASIO__FEATURE_TEST_HPP
 #define YASIO__FEATURE_TEST_HPP
-#if defined(_MSC_VER) && _MSC_VER > 1900
-#  include <vcruntime.h>
+
+// Tests whether compiler has fully c++11 support
+#if defined(_MSC_VER)
+#  if _MSC_VER < 1900
+#    define YASIO__HAS_FULL_CXX11 0
+#  else
+#    define YASIO__HAS_FULL_CXX11 1
+#    if _MSC_VER > 1900 // VS2017 or later
+#      include <vcruntime.h>
+#    endif
+#  endif
+#else
+#  define YASIO__HAS_FULL_CXX11 1
 #endif
 
+// Tests whether compiler has fully c++17 support
 #if (defined(__cplusplus) && __cplusplus == 201703L) ||                                            \
     (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                       \
      ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                  \
@@ -42,6 +54,15 @@ SOFTWARE.
 
 #if !defined(YASIO__HAS_CXX17)
 #  define YASIO__HAS_CXX17 0
+#endif
+
+// Feature: inline namespace
+#if YASIO__HAS_FULL_CXX11
+#  define YASIO__HAS_NS_INLINE 1
+#  define YASIO__NS_INLINE inline
+#else
+#  define YASIO__HAS_NS_INLINE 0
+#  define YASIO__NS_INLINE
 #endif
 
 #endif

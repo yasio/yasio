@@ -32,6 +32,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
+#include "yasio/compiler/feature_test.hpp"
 
 namespace yasio
 {

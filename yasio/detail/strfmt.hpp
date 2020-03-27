@@ -35,6 +35,24 @@ SOFTWARE.
 
 namespace yasio
 {
+template <typename _Elem> struct format_traits
+{};
+template <> struct format_traits<char>
+{
+  static int format(char* const _Buffer, size_t const _BufferCount, char const* const _Format,
+                    va_list _ArgList)
+  {
+    return vsnprintf(_Buffer, _BufferCount, _Format, _ArgList);
+  }
+};
+template <> struct format_traits<wchar_t>
+{
+  static int format(wchar_t* const _Buffer, size_t const _BufferCount, wchar_t const* const _Format,
+                    va_list _ArgList)
+  {
+    return vswprintf(_Buffer, _BufferCount, _Format, _ArgList);
+  }
+};
 /*--- This is a C++ universal sprintf in the future.
  **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/later is
  *different
@@ -46,13 +64,15 @@ namespace yasio
  *AND it's also standard-compliant, see reference:
  *http://www.cplusplus.com/reference/cstdio/vsnprintf/
  */
-inline std::string strfmt(size_t n, const char* format, ...)
+template <class _Elem, class _Traits = std::char_traits<_Elem>,
+          class _Alloc = std::allocator<_Elem>>
+inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* format, ...)
 {
   va_list args;
-  std::string buffer(n, '\0');
+  std::basic_string<_Elem, _Traits, _Alloc> buffer(n, 0);
 
   va_start(args, format);
-  int nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
+  int nret = format_traits<_Elem>::format(&buffer.front(), buffer.length() + 1, format, args);
   va_end(args);
 
   if (nret >= 0)
@@ -66,7 +86,7 @@ inline std::string strfmt(size_t n, const char* format, ...)
       buffer.resize(nret);
 
       va_start(args, format);
-      nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
+      nret = format_traits<_Elem>::format(&buffer.front(), buffer.length() + 1, format, args);
       va_end(args);
     }
     // else equals, do nothing.
@@ -78,7 +98,7 @@ inline std::string strfmt(size_t n, const char* format, ...)
       buffer.resize(buffer.length() * 3 / 2);
 
       va_start(args, format);
-      nret = vsnprintf(&buffer.front(), buffer.length() + 1, format, args);
+      nret = format_traits<_Elem>::format(&buffer.front(), buffer.length() + 1, format, args);
       va_end(args);
 
     } while (nret < 0);
@@ -88,6 +108,9 @@ inline std::string strfmt(size_t n, const char* format, ...)
 
   return buffer;
 }
+
+static auto constexpr strfmt = _strfmt<char>;
+static auto constexpr wcsfmt = _strfmt<wchar_t>;
 
 } // namespace yasio
 

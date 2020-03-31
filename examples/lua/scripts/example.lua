@@ -1,4 +1,4 @@
--- yasio 3.31 demo
+-- yasio 3.33 demo
 require 'protocol_base'
 require 'protocol_enc'
 require 'protocol_dec'
@@ -90,7 +90,7 @@ client:start_service(function(event)
 client:open(0, yasio.YCK_TCP_CLIENT)
 
 -- httpclient 
-local http_client = require 'yasio_lext.http_client'
+local http_client = require 'http_client'
 http_client:sendHttpGetRequest('http://ip138.com/index.htm', function(respData)
     print(respData)
 end)

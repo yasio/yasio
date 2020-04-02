@@ -81,8 +81,6 @@ extern "C" {
 #  define YASIO_SLOGV YASIO_SLOG
 #endif
 
-#define YASIO_ADDR_ANY(af) (af == AF_INET ? "0.0.0.0" : "::")
-
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -460,7 +458,7 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
       else
       { // n <= 0
         error = xxsocket::get_last_errno();
-        if (SHOULD_CLOSE_1(n, error))
+        if (YASIO_SHOULD_CLOSE_1(n, error))
         {
           if (((ctx_->properties_ & YCM_UDP) == 0) || error != EPERM)
           { // Fix issue: #126, simply ignore EPERM for UDP
@@ -557,7 +555,7 @@ int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& 
     if (error == EINTR)
       continue;
 
-    if (SHOULD_CLOSE_1(n, error))
+    if (YASIO_SHOULD_CLOSE_1(n, error))
     {
       if (error != EPERM)
       { // Fix issue: #126, simply ignore EPERM for UDP
@@ -1519,7 +1517,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           else
           {
             error = xxsocket::get_last_errno();
-            if (SHOULD_CLOSE_0(n, error))
+            if (YASIO_SHOULD_CLOSE_0(n, error))
             {
               YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
               close(ctx->index_);
@@ -1672,7 +1670,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     {
       n = transport->do_read(error);
     }
-    if (n > 0 || !SHOULD_CLOSE_0(n, error))
+    if (n > 0 || !YASIO_SHOULD_CLOSE_0(n, error))
     {
       YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
                   io_service::strerror(error));

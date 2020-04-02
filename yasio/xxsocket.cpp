@@ -564,7 +564,7 @@ int xxsocket::pconnect(const endpoint& ep, u_short local_port)
   if (this->reopen(ep.af()))
   {
     if (local_port != 0)
-      this->bind("0.0.0.0", local_port);
+      this->bind(YASIO_ADDR_ANY(ep.af()), local_port);
     return this->connect(ep);
   }
   return -1;
@@ -576,7 +576,7 @@ int xxsocket::pconnect_n(const endpoint& ep, const std::chrono::microseconds& wt
   if (this->reopen(ep.af()))
   {
     if (local_port != 0)
-      this->bind("0.0.0.0", local_port);
+      this->bind(YASIO_ADDR_ANY(ep.af()), local_port);
     return this->connect_n(ep, wtimeout);
   }
   return -1;
@@ -587,7 +587,7 @@ int xxsocket::pconnect_n(const endpoint& ep, u_short local_port)
   if (this->reopen(ep.af()))
   {
     if (local_port != 0)
-      this->bind("0.0.0.0", local_port);
+      this->bind(YASIO_ADDR_ANY(ep.af()), local_port);
     return xxsocket::connect_n(this->fd, ep);
   }
   return -1;

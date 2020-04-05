@@ -238,7 +238,7 @@ public:
   size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
-  bool perform(io_transport* transport, int& error)
+  bool perform(io_transport* transport, int& error, int& internal_error)
   {
     int n =
         this->send(transport, buffer_.data() + offset_, static_cast<int>(buffer_.size() - offset_));
@@ -255,9 +255,9 @@ public:
     }
     else if (n < 0)
     {
-      int ec = xxsocket::get_last_errno();
-      if (YASIO_SHOULD_CLOSE_1(ec))
-        error = ec;
+      internal_error = xxsocket::get_last_errno();
+      if (YASIO_SHOULD_CLOSE_1(internal_error))
+        error = internal_error;
     }
     return false;
   }
@@ -487,14 +487,14 @@ bool io_transport::do_write(long long& max_wait_duration)
     if (!socket_->is_open())
       break;
 
-    int error = 0;
+    int error = 0, internal_error = 0;
     auto wrap = send_queue_.peek();
     if (wrap)
     {
       auto v = *wrap;
-      if (v->perform(this, error))
+      if (v->perform(this, error, internal_error))
         send_queue_.pop();
-      else if (error > 0)
+      else if (error != 0)
       {
         set_last_errno(error);
         break;
@@ -503,7 +503,7 @@ bool io_transport::do_write(long long& max_wait_duration)
 
     // If still have work to do.
     if (!send_queue_.empty())
-      max_wait_duration = error != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
+      max_wait_duration = internal_error != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
 
     ret = true;
   } while (false);
@@ -632,25 +632,24 @@ int io_transport_kcp::do_read(int& error)
   char sbuf[YASIO_INET_BUFFER_SIZE];
   int n = read_cb_(sbuf, sizeof(sbuf));
   if (n > 0)
-  { // ikcp in event always in service thread, so no need to lock, TODO: confirm.
-    // 0: ok, -1: again, -3: error
+  { // ikcp in event always in service thread, so no need to lock
     if (0 == ::ikcp_input(kcp_, sbuf, n))
     {
       n = ::ikcp_recv(kcp_, buffer_ + wpos_, sizeof(buffer_) - wpos_);
       if (n < 0) // EAGAIN/EWOULDBLOCK
-      {
-        n     = -1;
-        error = EWOULDBLOCK;
-      }
+        n = 0;
     }
-    else
-    { // current, simply regards -1,-3 as error and trigger connection lost event.
-      n     = 0;
+    else // simply regards -1,-2,-3 as error and trigger connection lost event.
       error = yasio::inet::error::invalid_packet;
-    }
   }
-  else
-    error = xxsocket::get_last_errno();
+  else if (n < 0)
+  {
+    int ec = xxsocket::get_last_errno();
+    if (!YASIO_SHOULD_CLOSE_0(ec))
+      n = 0;
+    else
+      error = ec;
+  }
   return n;
 }
 bool io_transport_kcp::do_write(long long& max_wait_duration)

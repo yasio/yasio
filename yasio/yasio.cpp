@@ -225,19 +225,45 @@ public:
 int yasio__global_state::s_max_alloc_size;
 } // namespace
 
-class a_pdu
+class io_send_op
 {
 public:
-  a_pdu(std::vector<char>&& buffer, std::function<void()>&& handler)
+  io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
       : rpos_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
   {}
 
   size_t rpos_;              // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
+
+  int outstanding_bytes() const { return static_cast<int>(buffer_.size() - rpos_); }
+
+  virtual int perform(std::shared_ptr<xxsocket>& s, const void* buf, int n)
+  {
+    return s->send(buf, n);
+  }
+
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
-  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(a_pdu, 512)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
 #endif
+};
+
+class io_sendto_op : public io_send_op
+{
+public:
+  io_sendto_op(std::vector<char>&& buffer, std::function<void()>&& handler,
+               const ip::endpoint destination)
+      : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
+  {}
+
+  int perform(std::shared_ptr<xxsocket>& s, const void* buf, int n) override
+  {
+    return s->sendto(buf, n, destination_);
+  }
+#if !defined(YASIO_DISABLE_OBJECT_POOL)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
+#endif
+  ip::endpoint destination_;
 };
 
 /// highp_timer
@@ -404,23 +430,22 @@ int io_transport::do_read(int& error)
   error = n < 0 ? xxsocket::get_last_errno() : 0;
   return n;
 }
-void io_transport::set_primitives()
-{
-  this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
-  this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
-}
-// -------------------- io_transport_tcp ---------------------
-inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport(ctx, s)
-{}
-int io_transport_tcp::write(std::vector<char>&& buffer, std::function<void()>&& handler)
+int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   int n = static_cast<int>(buffer.size());
-  send_queue_.emplace(std::make_shared<a_pdu>(std::move(buffer), std::move(handler)));
+  send_queue_.emplace(std::make_shared<io_send_op>(std::move(buffer), std::move(handler)));
   ctx_->get_service().interrupt();
   return n;
 }
-bool io_transport_tcp::do_write(long long& max_wait_duration)
+int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& peer,
+                           std::function<void()>&& handler)
+{
+  int n = static_cast<int>(buffer.size());
+  send_queue_.emplace(std::make_shared<io_sendto_op>(std::move(buffer), std::move(handler), peer));
+  ctx_->get_service().interrupt();
+  return n;
+}
+bool io_transport::do_write(long long& max_wait_duration)
 {
   bool ret = false;
   do
@@ -434,7 +459,7 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
     {
       auto v                 = *wrap;
       auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->rpos_);
-      int n                  = write_cb_(v->buffer_.data() + v->rpos_, outstanding_bytes);
+      int n                  = v->perform(socket_, v->buffer_.data() + v->rpos_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop();
@@ -453,9 +478,8 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
       {
         // #performance: change offset only, remain data will be send next loop.
         v->rpos_ += n;
-        outstanding_bytes = static_cast<int>(v->buffer_.size() - v->rpos_);
       }
-      else
+      else if (n < 0)
       { // n <= 0
         error = xxsocket::get_last_errno();
         if (YASIO_SHOULD_CLOSE_1(n, error))
@@ -478,6 +502,15 @@ bool io_transport_tcp::do_write(long long& max_wait_duration)
 
   return ret;
 }
+void io_transport::set_primitives()
+{
+  this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
+  this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
+}
+// -------------------- io_transport_tcp ---------------------
+inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
+    : io_transport(ctx, s)
+{}
 // ----------------------- io_transport_ssl ----------------
 #if defined(YASIO_HAVE_SSL)
 io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s)
@@ -538,38 +571,14 @@ int io_transport_udp::connect()
   set_primitives();
   return retval;
 }
-int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& peer)
+int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
-  this->confgure_remote(peer, false);
-  return this->write(std::move(buffer), nullptr);
+  if (connected_)
+    return io_transport::write(std::move(buffer), std::move(handler));
+  else
+    return write_to(std::move(buffer), ensure_peer(), std::move(handler));
 }
-int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& cb)
-{
-  for (;;)
-  {
-    int n = write_cb_(buffer.data(), static_cast<int>(buffer.size()));
-    if (n > 0)
-      return n;
 
-    int error = xxsocket::get_last_errno();
-    if (error == EINTR)
-      continue;
-
-    if (YASIO_SHOULD_CLOSE_1(n, error))
-    {
-      if (error != EPERM)
-      { // Fix issue: #126, simply ignore EPERM for UDP
-        set_last_errno(error);
-        // finally, trigger transport close
-        ctx_->get_service().close(this);
-        return -1; // failed, transport should be close
-      }
-    }
-    break;
-  }
-
-  return 0; // WOULDBLOCK
-}
 void io_transport_udp::set_primitives()
 {
   if (connected_)
@@ -588,10 +597,6 @@ void io_transport_udp::set_primitives()
     };
   }
 }
-bool io_transport_udp::do_write(long long& max_wait_duration)
-{
-  return !((opmask_ | ctx_->opmask_) & YOPM_CLOSE_TRANSPORT);
-}
 
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
@@ -602,7 +607,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
   ::ikcp_nodelay(this->kcp_, 1, 10 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
-    return t->write_cb_(buf, len);
+    return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
   });
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
@@ -654,6 +659,9 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 
   if (max_wait_duration > wait_duration)
     max_wait_duration = wait_duration;
+
+  // Call super do_write to perform low layer socket.send
+  io_transport::do_write(max_wait_duration);
 
   return true;
 }
@@ -1077,12 +1085,12 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 int io_service::write(transport_handle_t transport, std::vector<char> buffer,
-                      std::function<void()> handler)
+                      std::function<void()> completion_handler)
 {
   if (transport && transport->is_open())
   {
     if (!buffer.empty())
-      return transport->write(std::move(buffer), std::move(handler));
+      return transport->write(std::move(buffer), std::move(completion_handler));
 
     return 0;
   }
@@ -1093,13 +1101,12 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   }
 }
 int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
-                         const ip::endpoint& to)
+                         const ip::endpoint& to, std::function<void()> completion_handler)
 {
   if (transport && transport->is_open())
   {
     if (!buffer.empty())
-      return transport->write_to(std::move(buffer), to);
-
+      return transport->write_to(std::move(buffer), to, std::move(completion_handler));
     return 0;
   }
   else

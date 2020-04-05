@@ -236,9 +236,9 @@ public:
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
 
-  virtual int perform(std::shared_ptr<xxsocket>& s, const void* buf, int n)
+  virtual int perform(io_transport* transport, const void* buf, int n)
   {
-    return s->send(buf, n);
+    return transport->write_cb_(buf, n);
   }
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
@@ -250,13 +250,13 @@ class io_sendto_op : public io_send_op
 {
 public:
   io_sendto_op(std::vector<char>&& buffer, std::function<void()>&& handler,
-               const ip::endpoint destination)
+               const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
-  int perform(std::shared_ptr<xxsocket>& s, const void* buf, int n) override
+  int perform(io_transport* transport, const void* buf, int n) override
   {
-    return s->sendto(buf, n, destination_);
+    return transport->socket_->sendto(buf, n, destination_);
   }
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
@@ -457,7 +457,7 @@ bool io_transport::do_write(long long& max_wait_duration)
     {
       auto v                 = *wrap;
       auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->rpos_);
-      int n                  = v->perform(socket_, v->buffer_.data() + v->rpos_, outstanding_bytes);
+      int n                  = v->perform(this, v->buffer_.data() + v->rpos_, outstanding_bytes);
       if (n == outstanding_bytes)
       { // All pdu bytes sent.
         send_queue_.pop();

@@ -471,11 +471,11 @@ int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& hand
   ctx_->get_service().interrupt();
   return n;
 }
-int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& peer,
+int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
                            std::function<void()>&& handler)
 {
   int n = static_cast<int>(buffer.size());
-  send_queue_.emplace(std::make_shared<io_sendto_op>(std::move(buffer), std::move(handler), peer));
+  send_queue_.emplace(std::make_shared<io_sendto_op>(std::move(buffer), std::move(handler), to));
   ctx_->get_service().interrupt();
   return n;
 }

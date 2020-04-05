@@ -236,8 +236,6 @@ public:
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
 
-  int outstanding_bytes() const { return static_cast<int>(buffer_.size() - rpos_); }
-
   virtual int perform(std::shared_ptr<xxsocket>& s, const void* buf, int n)
   {
     return s->send(buf, n);

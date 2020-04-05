@@ -661,9 +661,7 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
     max_wait_duration = wait_duration;
 
   // Call super do_write to perform low layer socket.send
-  io_transport::do_write(max_wait_duration);
-
-  return true;
+  return io_transport_udp::do_write(max_wait_duration);
 }
 #endif
 

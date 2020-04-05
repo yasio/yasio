@@ -93,16 +93,19 @@ namespace inet
 namespace
 {
 // error code
+namespace error
+{
 enum
 {
-  YERR_OK                   = 0,    // NO ERROR.
-  YERR_INVALID_PACKET       = -500, // Invalid packet.
-  YERR_DPL_ILLEGAL_PDU      = -499, // Decode pdu length error.
-  YERR_RESOLV_HOST_FAILED   = -498, // Resolve host failed.
-  YERR_NO_AVAIL_ADDR        = -497, // No available address to connect.
-  YERR_LOCAL_SHUTDOWN       = -496, // Local shutdown the connection.
-  YERR_SSL_HANDSHAKE_FAILED = -495, // SSL handshake fail
+  no_error               = 0,   // NO ERROR.
+  invalid_packet         = -30, // Invalid packet.
+  resolve_host_failed    = -29, // Resolve host failed.
+  no_available_address   = -28, // No available address to connect.
+  shutdown_by_localhost  = -27, // Local shutdown the connection.
+  ssl_handeshake_failure = -26, // SSL handshake fail
+  eof                    = -25, // end of file
 };
+}
 
 // event mask
 enum
@@ -229,14 +232,37 @@ class io_send_op
 {
 public:
   io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
-      : rpos_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
+      : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
   {}
 
-  size_t rpos_;              // read pos from sending buffer
+  size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
+  bool perform(io_transport* transport, int& error)
+  {
+    int n =
+        this->send(transport, buffer_.data() + offset_, static_cast<int>(buffer_.size() - offset_));
+    if (n > 0)
+    {
+      // #performance: change offset only, remain data will be send at next frame.
+      offset_ += n;
+      if (offset_ == buffer_.size())
+      { // finished
+        if (handler_)
+          handler_();
+        return true;
+      }
+    }
+    else if (n < 0)
+    {
+      int ec = xxsocket::get_last_errno();
+      if (YASIO_SHOULD_CLOSE_1(ec))
+        error = ec;
+    }
+    return false;
+  }
 
-  virtual int perform(io_transport* transport, const void* buf, int n)
+  virtual int send(io_transport* transport, const void* buf, int n)
   {
     return transport->write_cb_(buf, n);
   }
@@ -254,7 +280,7 @@ public:
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
-  int perform(io_transport* transport, const void* buf, int n) override
+  int send(io_transport* transport, const void* buf, int n) override
   {
     return transport->socket_->sendto(buf, n, destination_);
   }
@@ -425,7 +451,17 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
 int io_transport::do_read(int& error)
 {
   int n = read_cb_(buffer_ + wpos_, sizeof(buffer_) - wpos_);
-  error = n < 0 ? xxsocket::get_last_errno() : 0;
+  if (n < 0)
+  {
+    int ec = xxsocket::get_last_errno();
+    if (!YASIO_SHOULD_CLOSE_0(ec)) // status ok
+      n = 0;
+    else
+      error = ec;
+  }
+  else if (n == 0 && (ctx_->properties_ & YCM_TCP))
+    error = yasio::inet::error::eof;
+
   return n;
 }
 int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& handler)
@@ -451,43 +487,17 @@ bool io_transport::do_write(long long& max_wait_duration)
     if (!socket_->is_open())
       break;
 
-    int error = -1;
+    int error = 0;
     auto wrap = send_queue_.peek();
     if (wrap)
     {
-      auto v                 = *wrap;
-      auto outstanding_bytes = static_cast<int>(v->buffer_.size() - v->rpos_);
-      int n                  = v->perform(this, v->buffer_.data() + v->rpos_, outstanding_bytes);
-      if (n == outstanding_bytes)
-      { // All pdu bytes sent.
+      auto v = *wrap;
+      if (v->perform(this, error))
         send_queue_.pop();
-#if defined(YASIO_VERBOSE_LOG)
-        YASIO_SLOG_IMPL(ctx_->get_service().options_,
-                        "[index: %d] do_write ok, A packet sent "
-                        "success, packet size:%d",
-                        cindex(), static_cast<int>(v->buffer_.size()),
-                        socket_->local_endpoint().to_string().c_str(),
-                        socket_->peer_endpoint().to_string().c_str());
-#endif
-        if (v->handler_)
-          v->handler_();
-      }
-      else if (n > 0)
+      else if (error > 0)
       {
-        // #performance: change offset only, remain data will be send next loop.
-        v->rpos_ += n;
-      }
-      else if (n < 0)
-      { // n <= 0
-        error = xxsocket::get_last_errno();
-        if (YASIO_SHOULD_CLOSE_1(n, error))
-        {
-          if (((ctx_->properties_ & YCM_UDP) == 0) || error != EPERM)
-          { // Fix issue: #126, simply ignore EPERM for UDP
-            set_last_errno(error);
-            break;
-          }
-        }
+        set_last_errno(error);
+        break;
       }
     }
 
@@ -636,7 +646,7 @@ int io_transport_kcp::do_read(int& error)
     else
     { // current, simply regards -1,-3 as error and trigger connection lost event.
       n     = 0;
-      error = YERR_INVALID_PACKET;
+      error = yasio::inet::error::invalid_packet;
     }
   }
   else
@@ -916,7 +926,7 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
       ++iter;
     else
     {
-      transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
+      transport->set_last_errno(error::shutdown_by_localhost);
       handle_close(transport);
       iter = dgram_clients_.erase(iter);
     }
@@ -943,7 +953,7 @@ void io_service::process_channels(fd_set* fds_array)
               do_nonblocking_connect(ctx);
               break;
             case YDQS_FAILED:
-              handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
+              handle_connect_failed(ctx, error::resolve_host_failed);
               break;
             default:; // YDQS_INPRROGRESS
           }
@@ -1130,7 +1140,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   if (ctx->remote_eps_.empty())
   {
-    this->handle_connect_failed(ctx, YERR_NO_AVAIL_ADDR);
+    this->handle_connect_failed(ctx, yasio::inet::error::no_available_address);
     return;
   }
 
@@ -1297,7 +1307,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
                 errno, strerror(errno));
 
       ctx->ssl_.destroy();
-      handle_connect_failed(ctx, YERR_SSL_HANDSHAKE_FAILED);
+      handle_connect_failed(ctx, yasio::inet::error::ssl_handeshake_failure);
     }
   }
   else
@@ -1517,10 +1527,10 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
                   std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n), transport)));
             }
           }
-          else
+          else if (n < 0)
           {
             error = xxsocket::get_last_errno();
-            if (YASIO_SHOULD_CLOSE_0(n, error))
+            if (YASIO_SHOULD_CLOSE_0(error))
             {
               YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
               close(ctx->index_);
@@ -1664,21 +1674,18 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
       if (!transport->error_) // If no reason, just set reason: local shutdown
-        transport->set_last_errno(YERR_LOCAL_SHUTDOWN);
+        transport->set_last_errno(yasio::inet::error::shutdown_by_localhost);
       break;
     }
 
-    int n = -1, error = EWOULDBLOCK;
+    int n = 0, error = 0;
     if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
-    {
       n = transport->do_read(error);
-    }
-    if (n > 0 || !YASIO_SHOULD_CLOSE_0(n, error))
+
+    if (error == 0)
     {
       YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
                   io_service::strerror(error));
-      if (n == -1)
-        n = 0;
 #if defined(YASIO_VERBOSE_LOG)
       if (n > 0)
       {
@@ -1705,7 +1712,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
           transport->wpos_ += n;
         else
         {
-          transport->set_last_errno(YERR_DPL_ILLEGAL_PDU);
+          transport->set_last_errno(yasio::inet::error::invalid_packet);
           break;
         }
       }
@@ -2032,18 +2039,18 @@ const char* io_service::strerror(int error)
   {
     case 0:
       return "No error.";
-    case YERR_DPL_ILLEGAL_PDU:
-      return "Decode frame length failed!";
-    case YERR_RESOLV_HOST_FAILED:
+    case yasio::inet::error::resolve_host_failed:
       return "Resolve host failed!";
-    case YERR_NO_AVAIL_ADDR:
+    case yasio::inet::error::no_available_address:
       return "No available address!";
-    case YERR_LOCAL_SHUTDOWN:
+    case yasio::inet::error::shutdown_by_localhost:
       return "An existing connection was shutdown by local host!";
-    case YERR_INVALID_PACKET:
+    case yasio::inet::error::invalid_packet:
       return "Invalid packet!";
-    case YERR_SSL_HANDSHAKE_FAILED:
+    case yasio::inet::error::ssl_handeshake_failure:
       return "SSL handeshake failed!";
+    case yasio::inet::error::eof:
+      return "End of file.";
     case -1:
       return "Unknown error!";
     default:

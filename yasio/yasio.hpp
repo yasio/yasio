@@ -474,6 +474,7 @@ class io_transport : public io_base
 {
   friend class io_service;
   friend class io_send_op;
+
 public:
   unsigned int id() const { return id_; }
 

@@ -1537,7 +1537,7 @@ static bool jsb_yasio_io_service__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
   return false;
 }
 
-bool js_yasio_io_service_start_service(JSContext* ctx, uint32_t argc, jsval* vp)
+bool js_yasio_io_service_start(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   bool ok          = true;
   io_service* cobj = nullptr;
@@ -1547,7 +1547,7 @@ bool js_yasio_io_service_start_service(JSContext* ctx, uint32_t argc, jsval* vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t* proxy = jsb_get_js_proxy(obj);
   cobj              = (io_service*)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_start_service : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_start : Invalid Native Object");
 
   do
   {
@@ -1569,18 +1569,18 @@ bool js_yasio_io_service_start_service(JSContext* ctx, uint32_t argc, jsval* vp)
         }
       };
 
-      cobj->start_service(std::move(fnwrap));
+      cobj->start(std::move(fnwrap));
 
       args.rval().setUndefined();
       return true;
     }
   } while (0);
 
-  JS_ReportError(ctx, "js_yasio_io_service_start_service : wrong number of arguments");
+  JS_ReportError(ctx, "js_yasio_io_service_start : wrong number of arguments");
   return false;
 }
 
-bool js_yasio_io_service_stop_service(JSContext* ctx, uint32_t argc, jsval* vp)
+bool js_yasio_io_service_stop(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   bool ok          = true;
   io_service* cobj = nullptr;
@@ -1590,9 +1590,9 @@ bool js_yasio_io_service_stop_service(JSContext* ctx, uint32_t argc, jsval* vp)
   obj.set(args.thisv().toObjectOrNull());
   js_proxy_t* proxy = jsb_get_js_proxy(obj);
   cobj              = (io_service*)(proxy ? proxy->ptr : nullptr);
-  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_stop_service : Invalid Native Object");
+  JSB_PRECONDITION2(cobj, ctx, false, "js_yasio_io_service_stop : Invalid Native Object");
 
-  cobj->stop_service();
+  cobj->stop();
   return true;
 }
 
@@ -1914,10 +1914,8 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
   static JSPropertySpec properties[] = {JS_PS_END};
 
   static JSFunctionSpec funcs[] = {
-      JS_FN("start_service", js_yasio_io_service_start_service, 2,
-            JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("stop_service", js_yasio_io_service_stop_service, 2,
-            JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("start", js_yasio_io_service_start, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+      JS_FN("stop", js_yasio_io_service_stop, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
       JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),

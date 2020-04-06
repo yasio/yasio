@@ -34,7 +34,7 @@ void yasioTest()
 
   int max_request_count = 10;
 
-  service.start_service([&](event_ptr&& event) {
+  service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

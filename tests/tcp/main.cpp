@@ -52,7 +52,7 @@ void yasioTest()
 
   int max_request_count = 3;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
-  service.start_service([&](event_ptr&& event) {
+  service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {
@@ -97,7 +97,7 @@ void yasioTest()
           });
         }
         else
-          service.stop_service();
+          service.stop();
         break;
     }
   });

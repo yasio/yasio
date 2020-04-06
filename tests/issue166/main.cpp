@@ -13,7 +13,7 @@ int main()
   io_service service(endpoints, 1);
   int retry_count = 0;
   int total_bytes_transferred = 0;
-  service.start_service([&](event_ptr event) {
+  service.start([&](event_ptr event) {
     switch (event->kind())
     {
         case YEK_PACKET: {

@@ -18,7 +18,7 @@ void run_echo_server(const char *ip, u_short port, int channel_kind)
     udp_server.open(0, channel_kind);
   });
 
-  udp_server.start_service([&](event_ptr ev) {
+  udp_server.start([&](event_ptr ev) {
     switch (ev->kind())
     {
       case YEK_PACKET:

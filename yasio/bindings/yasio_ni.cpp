@@ -76,7 +76,7 @@ YASIO_NI_API void yasio_start(int channel_count,
                               void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,
                                                intptr_t bytes, int len))
 {
-  yasio_shared_service(channel_count)->start_service([=](event_ptr e) {
+  yasio_shared_service(channel_count)->start([=](event_ptr e) {
     uint32_t emask = ((e->kind() << 16) & 0xffff0000) | (e->status() & 0xffff);
     event_cb(emask, e->cindex(), reinterpret_cast<intptr_t>(e->transport()),
              reinterpret_cast<intptr_t>(!e->packet().empty() ? e->packet().data() : nullptr),
@@ -174,7 +174,7 @@ YASIO_NI_API int yasio_write(intptr_t thandle, const unsigned char* bytes, int l
   return yasio_shared_service()->write(p, std::move(buf));
 }
 YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service()->dispatch(count); }
-YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop_service(); }
+YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
 YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*))

@@ -680,12 +680,6 @@ public:
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 
-  YASIO_OBSOLETE_DEPRECATE(io_service::start)
-  void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
-
-  YASIO_OBSOLETE_DEPRECATE(io_service::stop)
-  void stop_service() { this->stop(); };
-
   YASIO__DECL void start(io_event_cb_t cb);
   YASIO__DECL void stop();
 

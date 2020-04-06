@@ -118,12 +118,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                            (std::max)(static_cast<int>(hosts.size()), 1));
           }),
       sol::meta_function::garbage_collect,
-      sol::destructor([](io_service& memory_from_lua) { memory_from_lua.~io_service(); }),
-      "start_service",
+      sol::destructor([](io_service& memory_from_lua) { memory_from_lua.~io_service(); }), "start",
       [](io_service* service, sol::function cb) {
-        service->start_service([=](event_ptr ev) { cb(std::move(ev)); });
+        service->start([=](event_ptr ev) { cb(std::move(ev)); });
       },
-      "stop_service", &io_service::stop_service, "set_option",
+      "stop", &io_service::stop, "set_option",
       [](io_service* service, int opt, sol::variadic_args va) {
         switch (opt)
         {
@@ -410,14 +409,14 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                 return new io_service(!hosts.empty() ? &hosts.front() : nullptr,
                                       (std::max)(static_cast<int>(hosts.size()), 1));
               })
-          .addStaticFunction("start_service",
+          .addStaticFunction("start",
                              [](io_service* service, kaguya::LuaFunction cb) {
                                io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void {
                                  cb(e.get());
                                };
-                               service->start_service(std::move(fnwrap));
+                               service->start(std::move(fnwrap));
                              })
-          .addFunction("stop_service", &io_service::stop_service)
+          .addFunction("stop", &io_service::stop)
           .addFunction("dispatch", &io_service::dispatch)
           .addFunction("open", &io_service::open)
           .addOverloadedFunctions(

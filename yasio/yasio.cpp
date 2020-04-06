@@ -238,7 +238,7 @@ public:
   size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
-  bool perform(io_transport* transport, int& error, int& internal_error)
+  bool perform(io_transport* transport, int& error, int& internal_ec)
   {
     int n =
         this->send(transport, buffer_.data() + offset_, static_cast<int>(buffer_.size() - offset_));
@@ -255,9 +255,9 @@ public:
     }
     else if (n < 0)
     {
-      internal_error = xxsocket::get_last_errno();
-      if (YASIO_SHOULD_CLOSE_1(internal_error))
-        error = internal_error;
+      internal_ec = xxsocket::get_last_errno();
+      if (YASIO_SHOULD_CLOSE_1(internal_ec))
+        error = internal_ec;
     }
     return false;
   }
@@ -493,12 +493,12 @@ bool io_transport::do_write(long long& max_wait_duration)
     if (!socket_->is_open())
       break;
 
-    int error = 0, internal_error = 0;
+    int error = 0, internal_ec = 0;
     auto wrap = send_queue_.peek();
     if (wrap)
     {
       auto v = *wrap;
-      if (v->perform(this, error, internal_error))
+      if (v->perform(this, error, internal_ec))
         send_queue_.pop();
       else if (error != 0)
       {
@@ -509,7 +509,7 @@ bool io_transport::do_write(long long& max_wait_duration)
 
     // If still have work to do.
     if (!send_queue_.empty())
-      max_wait_duration = internal_error != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
+      max_wait_duration = internal_ec != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
 
     ret = true;
   } while (false);

@@ -423,10 +423,6 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->socket_                   = s;
   this->ud_.ptr                   = nullptr;
 }
-int io_transport::do_read(int& error)
-{
-  return this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error);
-}
 int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   int n = static_cast<int>(buffer.size());
@@ -441,6 +437,10 @@ int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
   send_queue_.emplace(std::make_shared<io_sendto_op>(std::move(buffer), std::move(handler), to));
   ctx_->get_service().interrupt();
   return n;
+}
+int io_transport::do_read(int& error)
+{
+  return this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error);
 }
 bool io_transport::do_write(long long& max_wait_duration)
 {

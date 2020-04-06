@@ -1026,7 +1026,7 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep,
   if (n == 0)
     goto done; /* connect completed immediately */
 
-  if ((n = xxsocket::select(static_cast<int>(s), &rset, &wset, NULL, wtimeout)) <= 0)
+  if ((n = xxsocket::select(s, &rset, &wset, NULL, wtimeout)) <= 0)
     error = xxsocket::get_last_errno();
   else if ((FD_ISSET(s, &rset) || FD_ISSET(s, &wset)))
   { /* Everythings are ok */
@@ -1228,7 +1228,7 @@ int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microse
   return xxsocket::select(s, &readfds, nullptr, nullptr, wtimeout);
 }
 
-int xxsocket::select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
+int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
                      std::chrono::microseconds wtimeout)
 {
   int n = 0;

@@ -38,6 +38,10 @@ SOFTWARE.
 
 #include "yasio/detail/utils.hpp"
 
+#if !defined(_WIN32)
+#  include "yasio/detail/ifaddrs.hpp"
+#endif
+
 // For apple bsd socket implemention
 #if !defined(TCP_KEEPIDLE)
 #  define TCP_KEEPIDLE TCP_KEEPALIVE
@@ -744,7 +748,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
     cellular: "pdp_ip0"
   */
 
-  if (::getifaddrs(&ifaddr) == -1)
+  if (yasio::getifaddrs(&ifaddr) == -1)
   {
     YASIO_LOG("xxsocket::traverse_local_address: getifaddrs fail!");
     return;
@@ -776,7 +780,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
       break;
   }
 
-  ::freeifaddrs(ifaddr);
+  yasio::freeifaddrs(ifaddr);
 #endif
 }
 

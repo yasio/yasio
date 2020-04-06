@@ -78,7 +78,6 @@ typedef int socklen_t;
 #  include <netinet/tcp.h>
 #  include <net/if.h>
 #  include <arpa/inet.h>
-#  include "yasio/detail/ifaddrs.hpp"
 #  if !defined(SD_RECEIVE)
 #    define SD_RECEIVE SHUT_RD
 #  endif
@@ -221,7 +220,6 @@ inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
 
 namespace yasio
 {
-
 namespace inet
 {
 

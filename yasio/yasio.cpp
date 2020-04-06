@@ -97,13 +97,13 @@ namespace error
 {
 enum
 {
-  no_error               = 0,   // NO ERROR.
-  invalid_packet         = -30, // Invalid packet.
-  resolve_host_failed    = -29, // Resolve host failed.
-  no_available_address   = -28, // No available address to connect.
-  shutdown_by_localhost  = -27, // Local shutdown the connection.
-  ssl_handeshake_failure = -26, // SSL handshake fail
-  eof                    = -25, // end of file
+  no_error              = 0,   // NO ERROR.
+  invalid_packet        = -30, // Invalid packet.
+  resolve_host_failed   = -29, // Resolve host failed.
+  no_available_address  = -28, // No available address to connect.
+  shutdown_by_localhost = -27, // Local shutdown the connection.
+  ssl_handeshake_failed = -26, // SSL handshake failed.
+  eof                   = -25, // end of file.
 };
 }
 
@@ -1306,7 +1306,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
                 errno, strerror(errno));
 
       ctx->ssl_.destroy();
-      handle_connect_failed(ctx, yasio::inet::error::ssl_handeshake_failure);
+      handle_connect_failed(ctx, yasio::inet::error::ssl_handeshake_failed);
     }
   }
   else
@@ -1350,7 +1350,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   }
   else
   {
-    ctx->set_last_errno(YERR_RESOLV_HOST_FAILED);
+    ctx->set_last_errno(yasio::inet::error::resolve_host_failed);
     YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     YASIO_SLOG_IMPL(current_service.options_,
                     "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
@@ -2013,7 +2013,7 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
   ctx->timer_.async_wait_once([=]() {
     ::ares_cancel(this->ares_);
-    handle_connect_failed(ctx, YERR_RESOLV_HOST_FAILED);
+    handle_connect_failed(ctx, yasio::inet::error::resolve_host_failed);
   });
   ares_work_started();
   ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
@@ -2046,7 +2046,7 @@ const char* io_service::strerror(int error)
       return "An existing connection was shutdown by local host!";
     case yasio::inet::error::invalid_packet:
       return "Invalid packet!";
-    case yasio::inet::error::ssl_handeshake_failure:
+    case yasio::inet::error::ssl_handeshake_failed:
       return "SSL handeshake failed!";
     case yasio::inet::error::eof:
       return "End of file.";

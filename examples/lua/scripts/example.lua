@@ -17,7 +17,7 @@ local server = io_service.new(hostents)
 
 local transport1 = nil
 local data_partial2 = nil
-server:start_service(function(event)
+server:start(function(event)
         local t = event:kind()
         if t == yasio.YEK_PACKET then
         elseif(t == yasio.YEK_CONNECT_RESPONSE) then -- connect responseType
@@ -64,7 +64,7 @@ client:set_option(yasio.YOPT_C_LFBFD_PARAMS,
     0 -- lengthAdjustment：如果长度字段字节大小包含包头，则为0， 否则，这里=包头大小
 )
 
-client:start_service(function(event)
+client:start(function(event)
         local t = event:kind()
         if t == yasio.YEK_PACKET then
             local ibs = event:packet()

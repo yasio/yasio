@@ -74,7 +74,7 @@ function _M:ctor(count)
     self.requests = {}
     
     local service = yasio.io_service.new(count)
-    service:start_service(function(ev)
+    service:start(function(ev)
             local t = ev:kind()
             local cindex = ev:cindex()
             local requestItem = self.requests[cindex]

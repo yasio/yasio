@@ -31,6 +31,7 @@ SOFTWARE.
 */
 #if !defined(_WIN32) || defined(_WINDLL)
 
+#  include <array>
 #  include <string.h>
 #  include "yasio/yasio.hpp"
 
@@ -56,16 +57,19 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
   auto _End   = s + slen;
   while ((_Ptr = strchr(_Ptr, delim)))
   {
-    if (_Start <= _Ptr)
-      func(_Start, _Ptr);
+    if (_Start < _Ptr)
+      if (func(_Start, _Ptr))
+        return;
     _Start = _Ptr + 1;
     ++_Ptr;
   }
-  if (_Start <= _End)
+  if (_Start < _End)
   {
     func(_Start, _End);
   }
 }
+inline int svtoi(cxx17::string_view& sv) { return !sv.empty() ? atoi(sv.data()) : 0; }
+inline const char* svtoa(cxx17::string_view& sv) { return !sv.empty() ? sv.data() : ""; }
 } // namespace
 
 extern "C" {
@@ -96,56 +100,66 @@ YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t s
   };
   yasio_shared_service()->set_option(YOPT_S_RESOLV_FN, &fn);
 }
-YASIO_NI_API void yasio_set_option(int opt, const char* params)
+/*
+  Because, unity c# Marshal call C language vardic paremeter function will crash,
+  so we provide this API.
+  @params:
+    opt: the opt value
+    pszArgs: split by ';'
+  */
+YASIO_NI_API void yasio_set_option(int opt, const char* pszArgs)
 {
-  std::string strParams = params;
-  auto service          = yasio_shared_service();
+  auto service = yasio_shared_service();
+
+  // process one arg
   switch (opt)
   {
-    case YOPT_C_LOCAL_ENDPOINT:
-    case YOPT_C_REMOTE_ENDPOINT: {
-      int cidx = 0;
-      std::string ip;
-      int port = 0;
-      int idx  = 0;
-      fast_split(&strParams.front(), strParams.length(), ';', [&](char* s, char* e) {
-        auto ch = *e;
-        *e      = '\0';
-        if (idx == 0)
-          cidx = atoi(s);
-        else if (idx == 1)
-          ip.assign(s, e);
-        else if (idx == 2)
-          port = atoi(s);
-        ++idx;
-        *e = ch;
-      });
-      service->set_option(opt, cidx, ip.c_str(), port);
-      break;
-    }
-    case YOPT_C_LFBFD_PARAMS: {
-      int args[YASIO_MAX_OPTION_ARGC];
-      int idx    = 0;
-      int limits = opt == YOPT_C_LFBFD_PARAMS ? 5 : 2;
-      fast_split(&strParams.front(), strParams.length(), ';', [&](char* s, char* e) {
-        auto ch = *e;
-        *e      = '\0';
-        if (idx < limits)
-          args[idx] = atoi(s);
-        ++idx;
-        *e = ch;
-      });
-      if (opt == YOPT_C_LFBFD_PARAMS)
-        service->set_option(opt, args[0], args[1], args[2], args[3], args[4]);
-      else
-        service->set_option(opt, args[0], args[1]);
-      break;
-    }
+    case YOPT_C_DISABLE_MCAST:
     case YOPT_S_CONNECT_TIMEOUT:
     case YOPT_S_DNS_CACHE_TIMEOUT:
     case YOPT_S_DNS_QUERIES_TIMEOUT:
-      service->set_option(opt, atoi(params));
+      service->set_option(opt, atoi(pszArgs));
+      return;
+  }
+
+  // split args
+  std::string strArgs = pszArgs;
+  std::array<cxx17::string_view, YASIO_MAX_OPTION_ARGC> args;
+  int argc = 0;
+  fast_split(&strArgs.front(), strArgs.length(), ';', [&](char* s, char* e) {
+    *e         = '\0'; // to c style string
+    args[argc] = cxx17::string_view(s, e - s);
+    return (++argc == YASIO_MAX_OPTION_ARGC);
+  });
+
+  switch (opt)
+  {
+    case YOPT_C_REMOTE_HOST:
+    case YOPT_C_LOCAL_HOST:
+      service->set_option(opt, svtoi(args[0]), svtoa(args[1]));
       break;
+    case YOPT_C_LFBFD_IBTS:
+    case YOPT_C_LOCAL_PORT:
+    case YOPT_C_REMOTE_PORT:
+      service->set_option(opt, svtoi(args[0]), svtoi(args[1]));
+      break;
+    case YOPT_C_ENABLE_MCAST:
+    case YOPT_C_LOCAL_ENDPOINT:
+    case YOPT_C_REMOTE_ENDPOINT:
+      service->set_option(opt, svtoi(args[0]), svtoa(args[1]), svtoi(args[2]));
+      break;
+    case YOPT_C_MOD_FLAGS:
+      service->set_option(opt, svtoi(args[0]), svtoi(args[1]), svtoi(args[2]));
+      break;
+    case YOPT_S_TCP_KEEPALIVE:
+      service->set_option(opt, svtoi(args[0]), svtoi(args[1]), svtoi(args[2]), svtoi(args[3]));
+      break;
+    case YOPT_C_LFBFD_PARAMS:
+      service->set_option(opt, svtoi(args[0]), svtoi(args[1]), svtoi(args[2]), svtoi(args[3]),
+                          svtoi(args[4]));
+      break;
+    default:
+      YASIO_LOG("The option: %d unsupported by yasio_set_option!", opt);
   }
 }
 YASIO_NI_API void yasio_set_option_vp(int opt, ...)

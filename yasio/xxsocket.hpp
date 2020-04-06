@@ -210,14 +210,12 @@ inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
 }
 #endif
 
-// shoulde close connection condition when retval of recv <= 0
-#define YASIO_SHOULD_CLOSE_0(n, errcode)                                                                 \
-  (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK && (errcode) != EINTR))
+// shoulde close connection condition when retval of recv < 0
+#define YASIO_SHOULD_CLOSE_0(ec) ((ec) != EAGAIN && (ec) != EWOULDBLOCK && (ec) != EINTR)
 
-// shoulde close connection condition when retval of send <= 0
-#define YASIO_SHOULD_CLOSE_1(n, errcode)                                                                 \
-  (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK &&                    \
-                  (errcode) != EINTR && (errcode) != ENOBUFS))
+// shoulde close connection condition when retval of send < 0
+#define YASIO_SHOULD_CLOSE_1(ec)                                                                   \
+  ((ec) != EAGAIN && (ec) != EWOULDBLOCK && (ec) != EINTR && (ec) != ENOBUFS && (ec) != EPERM)
 
 #define YASIO_ADDR_ANY(af) (af == AF_INET ? "0.0.0.0" : "::")
 

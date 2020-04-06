@@ -222,8 +222,9 @@ enum
 };
 
 // class fwds
-class a_pdu; // application layer protocol data unit.
 class highp_timer;
+class io_send_op; // application layer protocol data unit.
+class io_sendto_op;
 class io_event;
 class io_channel;
 class io_transport;
@@ -237,7 +238,7 @@ class io_service;
 typedef io_transport* transport_handle_t;
 
 // typedefs
-typedef std::shared_ptr<a_pdu> a_pdu_ptr;
+typedef std::shared_ptr<io_send_op> io_send_op_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<highp_timer> highp_timer_ptr;
 
@@ -472,6 +473,7 @@ private:
 class io_transport : public io_base
 {
   friend class io_service;
+  friend class io_send_op;
 
 public:
   unsigned int id() const { return id_; }
@@ -491,17 +493,21 @@ protected:
     expected_size_ = -1;
     return std::move(expected_packet_);
   }
-  // Call at user thread
-  virtual int write_to(std::vector<char>&&, const ip::endpoint&) { return 0; };
 
   // Call at user thread
-  virtual int write(std::vector<char>&&, std::function<void()>&&) = 0;
+  virtual int write(std::vector<char>&&, std::function<void()>&&);
+
+  // Call at user thread
+  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&);
+
+  YASIO__DECL int call_read(void* data, int size, int& error);
+  YASIO__DECL int call_write(io_send_op*, int& error, int& internal_ec);
 
   // Call at io_service
   YASIO__DECL virtual int do_read(int& error);
 
   // Call at io_service, try flush pending packet
-  virtual bool do_write(long long& max_wait_duration) = 0;
+  virtual bool do_write(long long& max_wait_duration);
 
   // Sets the underlying layer socket io primitives.
   YASIO__DECL virtual void set_primitives();
@@ -524,6 +530,8 @@ protected:
   std::function<int(const void*, int)> write_cb_;
   std::function<int(void*, int)> read_cb_;
 
+  concurrency::concurrent_queue<io_send_op_ptr> send_queue_;
+
 public:
   // The user data
   union
@@ -541,10 +549,11 @@ public:
   io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
 
 protected:
-  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
-  YASIO__DECL bool do_write(long long& max_wait_duration) override;
-
-  concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
+  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&)
+  {
+    YASIO_LOG("[warning] io_transport_tcp doesn't support 'write_to' operation!");
+    return 0;
+  }
 };
 #if defined(YASIO_HAVE_SSL)
 class io_transport_ssl : public io_transport_tcp
@@ -574,10 +583,7 @@ protected:
   // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   YASIO__DECL int connect();
 
-  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&) override;
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
-  // the udp write op not perform in io_service, so check status only
-  YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
   YASIO__DECL void set_primitives() override;
 
@@ -652,6 +658,7 @@ private:
 class io_service // lgtm [cpp/class-many-fields]
 {
   friend class highp_timer;
+  friend class io_transport;
   friend class io_transport_tcp;
   friend class io_transport_udp;
   friend class io_transport_kcp;
@@ -724,12 +731,13 @@ public:
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
   int write(transport_handle_t thandle, const void* buf, size_t len,
-            std::function<void()> handler = nullptr)
+            std::function<void()> completion_handler = nullptr)
   {
-    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(handler));
+    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len),
+                 std::move(completion_handler));
   }
   YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
-                        std::function<void()> = nullptr);
+                        std::function<void()> completion_handler = nullptr);
 
   /*
   ** Summary: Write data to unconnected UDP transport with specified address.
@@ -738,12 +746,15 @@ public:
   **        + UDP: Don't use queue, call low layer socket.sendto directly
   **        + KCP: Use the queue provided by kcp internal
   */
-  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to)
+  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to,
+               std::function<void()> completion_handler = nullptr)
   {
-    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to);
+    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to,
+                    std::move(completion_handler));
   }
   YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer,
-                           const ip::endpoint& to);
+                           const ip::endpoint& to,
+                           std::function<void()> completion_handler = nullptr);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);

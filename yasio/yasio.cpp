@@ -236,31 +236,8 @@ public:
   size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
   std::function<void()> handler_;
-  bool perform(io_transport* transport, int& error, int& internal_ec)
-  {
-    int n =
-        this->send(transport, buffer_.data() + offset_, static_cast<int>(buffer_.size() - offset_));
-    if (n > 0)
-    {
-      // #performance: change offset only, remain data will be send at next frame.
-      offset_ += n;
-      if (offset_ == buffer_.size())
-      { // finished
-        if (handler_)
-          handler_();
-        return true;
-      }
-    }
-    else if (n < 0)
-    {
-      internal_ec = xxsocket::get_last_errno();
-      if (YASIO_SHOULD_CLOSE_1(internal_ec))
-        error = internal_ec;
-    }
-    return false;
-  }
 
-  virtual int send(io_transport* transport, const void* buf, int n)
+  virtual int perform(io_transport* transport, const void* buf, int n)
   {
     return transport->write_cb_(buf, n);
   }
@@ -278,7 +255,7 @@ public:
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
-  int send(io_transport* transport, const void* buf, int n) override
+  int perform(io_transport* transport, const void* buf, int n) override
   {
     return transport->socket_->sendto(buf, n, destination_);
   }
@@ -465,6 +442,37 @@ int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
   ctx_->get_service().interrupt();
   return n;
 }
+bool io_transport::do_write(long long& max_wait_duration)
+{
+  bool ret = false;
+  do
+  {
+    if (!socket_->is_open())
+      break;
+
+    int error = 0, internal_ec = 0;
+    auto wrap = send_queue_.peek();
+    if (wrap)
+    {
+      auto v = *wrap;
+      if (call_write(v.get(), error, internal_ec))
+        send_queue_.pop();
+      else if (error != 0)
+      {
+        set_last_errno(error);
+        break;
+      }
+    }
+
+    // If still have work to do.
+    if (!send_queue_.empty())
+      max_wait_duration = internal_ec != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
+
+    ret = true;
+  } while (false);
+
+  return ret;
+}
 int io_transport::call_read(void* data, int size, int& error)
 {
   int n = read_cb_(data, size);
@@ -483,36 +491,28 @@ int io_transport::call_read(void* data, int size, int& error)
   }
   return n;
 }
-bool io_transport::do_write(long long& max_wait_duration)
+int io_transport::call_write(io_send_op* op, int& error, int& internal_ec)
 {
-  bool ret = false;
-  do
+  int n = op->perform(this, op->buffer_.data() + op->offset_,
+                      static_cast<int>(op->buffer_.size() - op->offset_));
+  if (n > 0)
   {
-    if (!socket_->is_open())
-      break;
-
-    int error = 0, internal_ec = 0;
-    auto wrap = send_queue_.peek();
-    if (wrap)
-    {
-      auto v = *wrap;
-      if (v->perform(this, error, internal_ec))
-        send_queue_.pop();
-      else if (error != 0)
-      {
-        set_last_errno(error);
-        break;
-      }
+    // #performance: change offset only, remain data will be send at next frame.
+    op->offset_ += n;
+    if (op->offset_ == op->buffer_.size())
+    { // finished
+      if (op->handler_)
+        op->handler_();
+      return true;
     }
-
-    // If still have work to do.
-    if (!send_queue_.empty())
-      max_wait_duration = internal_ec != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
-
-    ret = true;
-  } while (false);
-
-  return ret;
+  }
+  else if (n < 0)
+  {
+    internal_ec = xxsocket::get_last_errno();
+    if (YASIO_SHOULD_CLOSE_1(internal_ec))
+      error = internal_ec;
+  }
+  return false;
 }
 void io_transport::set_primitives()
 {

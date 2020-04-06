@@ -450,19 +450,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
 }
 int io_transport::do_read(int& error)
 {
-  int n = read_cb_(buffer_ + wpos_, sizeof(buffer_) - wpos_);
-  if (n < 0)
-  {
-    int ec = xxsocket::get_last_errno();
-    if (!YASIO_SHOULD_CLOSE_0(ec)) // status ok
-      n = 0;
-    else
-      error = ec;
-  }
-  else if (n == 0 && (ctx_->properties_ & YCM_TCP))
-    error = yasio::inet::error::eof;
-
-  return n;
+  return this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error);
 }
 int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
@@ -477,6 +465,24 @@ int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(std::make_shared<io_sendto_op>(std::move(buffer), std::move(handler), to));
   ctx_->get_service().interrupt();
+  return n;
+}
+int io_transport::call_read(void* data, int size, int& error)
+{
+  int n = read_cb_(data, size);
+  if (n < 0)
+  {
+    int ec = xxsocket::get_last_errno();
+    if (!YASIO_SHOULD_CLOSE_0(ec)) // status ok
+      n = 0;
+    else
+      error = ec;
+  }
+  else if (n == 0 && (ctx_->properties_ & YCM_TCP))
+  {
+    n     = -1;
+    error = yasio::inet::error::eof;
+  }
   return n;
 }
 bool io_transport::do_write(long long& max_wait_duration)
@@ -630,7 +636,7 @@ int io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& 
 int io_transport_kcp::do_read(int& error)
 {
   char sbuf[YASIO_INET_BUFFER_SIZE];
-  int n = read_cb_(sbuf, sizeof(sbuf));
+  int n = this->call_read(sbuf, sizeof(sbuf), error);
   if (n > 0)
   { // ikcp in event always in service thread, so no need to lock
     if (0 == ::ikcp_input(kcp_, sbuf, n))
@@ -639,16 +645,11 @@ int io_transport_kcp::do_read(int& error)
       if (n < 0) // EAGAIN/EWOULDBLOCK
         n = 0;
     }
-    else // simply regards -1,-2,-3 as error and trigger connection lost event.
-      error = yasio::inet::error::invalid_packet;
-  }
-  else if (n < 0)
-  {
-    int ec = xxsocket::get_last_errno();
-    if (!YASIO_SHOULD_CLOSE_0(ec))
-      n = 0;
     else
-      error = ec;
+    { // simply regards -1,-2,-3 as error and trigger connection lost event.
+      n     = -1;
+      error = yasio::inet::error::invalid_packet;
+    }
   }
   return n;
 }
@@ -1681,7 +1682,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))
       n = transport->do_read(error);
 
-    if (error == 0)
+    if (n >= 0)
     {
       YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
                   io_service::strerror(error));

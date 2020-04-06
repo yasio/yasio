@@ -500,6 +500,8 @@ protected:
   // Call at user thread
   virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&);
 
+  YASIO__DECL int call_read(void* data, int size, int& ec);
+
   // Call at io_service
   YASIO__DECL virtual int do_read(int& error);
 

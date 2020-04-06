@@ -930,8 +930,8 @@ public:
   ** @returns: If no error occurs, returns >= 0. Otherwise, a value of -1 is
   **          returned
   */
-  YASIO__DECL static int select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
-                                std::chrono::microseconds wtimeout);
+  YASIO__DECL static int select(socket_native_type s, fd_set* readfds, fd_set* writefds,
+                                fd_set* exceptfds, std::chrono::microseconds wtimeout);
 
   /* @brief: check is a client socket alive
   ** @params :
@@ -1063,7 +1063,7 @@ public:
   YASIO__DECL static void traverse_local_address(std::function<bool(const ip::endpoint&)> handler);
 
 protected:
-  YASIO__DECL static void reregister_descriptor(int s, fd_set* fds);
+  YASIO__DECL static void reregister_descriptor(socket_native_type s, fd_set* fds);
 
 private:
   socket_native_type fd;

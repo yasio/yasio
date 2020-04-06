@@ -1261,7 +1261,7 @@ int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd
   return n;
 }
 
-void xxsocket::reregister_descriptor(int s, fd_set* fds)
+void xxsocket::reregister_descriptor(socket_native_type s, fd_set* fds)
 {
   if (fds)
   {

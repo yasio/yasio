@@ -88,25 +88,23 @@ extern "C" {
 
 namespace yasio
 {
-namespace inet
-{
-namespace
-{
-// error code
 namespace error
 {
 enum
 {
-  no_error              = 0,   // NO ERROR.
-  invalid_packet        = -30, // Invalid packet.
-  resolve_host_failed   = -29, // Resolve host failed.
-  no_available_address  = -28, // No available address to connect.
-  shutdown_by_localhost = -27, // Local shutdown the connection.
-  ssl_handeshake_failed = -26, // SSL handshake failed.
-  eof                   = -25, // end of file.
+  no_error              = 0,   // No error.
+  invalid_packet        = -27, // Invalid packet.
+  resolve_host_failed   = -26, // Resolve host failed.
+  no_available_address  = -25, // No available address to connect.
+  shutdown_by_localhost = -24, // Local shutdown the connection.
+  ssl_handeshake_failed = -23, // SSL handshake failed.
+  eof                   = -22, // end of file.
 };
 }
-
+namespace inet
+{
+namespace
+{
 // event mask
 enum
 {
@@ -481,7 +479,7 @@ int io_transport::call_read(void* data, int size, int& error)
   else if (n == 0 && (ctx_->properties_ & YCM_TCP))
   {
     n     = -1;
-    error = yasio::inet::error::eof;
+    error = yasio::error::eof;
   }
   return n;
 }
@@ -648,7 +646,7 @@ int io_transport_kcp::do_read(int& error)
     else
     { // simply regards -1,-2,-3 as error and trigger connection lost event.
       n     = -1;
-      error = yasio::inet::error::invalid_packet;
+      error = yasio::error::invalid_packet;
     }
   }
   return n;
@@ -926,7 +924,7 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
       ++iter;
     else
     {
-      transport->set_last_errno(error::shutdown_by_localhost);
+      transport->set_last_errno(yasio::error::shutdown_by_localhost);
       handle_close(transport);
       iter = dgram_clients_.erase(iter);
     }
@@ -953,7 +951,7 @@ void io_service::process_channels(fd_set* fds_array)
               do_nonblocking_connect(ctx);
               break;
             case YDQS_FAILED:
-              handle_connect_failed(ctx, error::resolve_host_failed);
+              handle_connect_failed(ctx, yasio::error::resolve_host_failed);
               break;
             default:; // YDQS_INPRROGRESS
           }
@@ -1140,7 +1138,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   if (ctx->remote_eps_.empty())
   {
-    this->handle_connect_failed(ctx, yasio::inet::error::no_available_address);
+    this->handle_connect_failed(ctx, yasio::error::no_available_address);
     return;
   }
 
@@ -1307,7 +1305,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
                 errno, strerror(errno));
 
       ctx->ssl_.destroy();
-      handle_connect_failed(ctx, yasio::inet::error::ssl_handeshake_failed);
+      handle_connect_failed(ctx, yasio::error::ssl_handeshake_failed);
     }
   }
   else
@@ -1351,7 +1349,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   }
   else
   {
-    ctx->set_last_errno(yasio::inet::error::resolve_host_failed);
+    ctx->set_last_errno(yasio::error::resolve_host_failed);
     YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     YASIO_SLOG_IMPL(current_service.options_,
                     "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
@@ -1674,7 +1672,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
       if (!transport->error_) // If no reason, just set reason: local shutdown
-        transport->set_last_errno(yasio::inet::error::shutdown_by_localhost);
+        transport->set_last_errno(yasio::error::shutdown_by_localhost);
       break;
     }
 
@@ -1712,7 +1710,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
           transport->wpos_ += n;
         else
         {
-          transport->set_last_errno(yasio::inet::error::invalid_packet);
+          transport->set_last_errno(yasio::error::invalid_packet);
           break;
         }
       }
@@ -2014,7 +2012,7 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
   ctx->timer_.async_wait_once([=]() {
     ::ares_cancel(this->ares_);
-    handle_connect_failed(ctx, yasio::inet::error::resolve_host_failed);
+    handle_connect_failed(ctx, yasio::error::resolve_host_failed);
   });
   ares_work_started();
   ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
@@ -2039,17 +2037,17 @@ const char* io_service::strerror(int error)
   {
     case 0:
       return "No error.";
-    case yasio::inet::error::resolve_host_failed:
+    case yasio::error::resolve_host_failed:
       return "Resolve host failed!";
-    case yasio::inet::error::no_available_address:
+    case yasio::error::no_available_address:
       return "No available address!";
-    case yasio::inet::error::shutdown_by_localhost:
+    case yasio::error::shutdown_by_localhost:
       return "An existing connection was shutdown by local host!";
-    case yasio::inet::error::invalid_packet:
+    case yasio::error::invalid_packet:
       return "Invalid packet!";
-    case yasio::inet::error::ssl_handeshake_failed:
+    case yasio::error::ssl_handeshake_failed:
       return "SSL handeshake failed!";
-    case yasio::inet::error::eof:
+    case yasio::error::eof:
       return "End of file.";
     case -1:
       return "Unknown error!";

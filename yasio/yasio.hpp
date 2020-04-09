@@ -116,7 +116,10 @@ enum
   //         a. only works when have c-ares
   //         b. this option must be set before 'io_service::start'
   //         c. since v3.33.0 it's milliseconds, previous is seconds.
-  //         d. for more detail, please see: https://c-ares.haxx.se/ares_init_options.html
+  //         d. the timeout algorithm of c-ares is complicated, usually, by default, dns queries will
+  //         failed with timeout after more than 75 seconds.
+  //         e. for more detail, please see:
+  //         https://c-ares.haxx.se/ares_init_options.html
   YOPT_S_DNS_QUERIES_TIMEOUT,
 
   // Sets channel length field based frame decode function, native C++ ONLY

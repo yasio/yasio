@@ -174,10 +174,10 @@ static void yasio__set_thread_name(const char* threadName)
   {}
 #  endif
 }
-#elif defined(__linux__)
-#  define yasio__set_thread_name(name) pthread_setname_np(pthread_self(), name)
 #elif defined(__APPLE__)
 #  define yasio__set_thread_name(name) pthread_setname_np(name)
+#elif defined(__linux__) && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
+#  define yasio__set_thread_name(name) pthread_setname_np(pthread_self(), name)
 #else
 #  define yasio__set_thread_name(name)
 #endif

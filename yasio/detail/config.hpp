@@ -41,15 +41,12 @@ SOFTWARE.
 // #define YASIO_VERBOSE_LOG 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_DISABLE_SPSC_QUEUE to disable SPSC queue in io_service
-** Remark: Most of time, this library may used in game engines:
-**      1. send message: post send request at renderer thread, and perform send at `io_service`
-**         thread.
-**      2. receive message: unpack message at `io_service` thread, consume message at renderer
-**         thread.
-**      3. If you want use this library in other situation, you may need uncomment it.
+** Uncomment or add compiler flag -DYASIO_USE_SPSC_QUEUE to use SPSC queue in io_service
+** Remark: By default, yasio use std's queue + mutex to ensure thread safe, If you want 
+**         more fast messege queue and only have one thread to call io_service write APIs, 
+**         you may need uncomment it.
 */
-// #define YASIO_DISABLE_SPSC_QUEUE 1
+// #define YASIO_USE_SPSC_QUEUE 1
 
 /*
 ** Uncomment or add compiler flag -DYASIO_DISABLE_OBJECT_POOL to disable object_pool for allocating

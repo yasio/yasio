@@ -1381,7 +1381,7 @@ void io_service::process_ares_requests(fd_set* fds_array)
 void io_service::init_ares_channel()
 {
   auto status = ::ares_init(&ares_);
-  if (::ares_init(&ares_) == ARES_SUCCESS)
+  if (status == ARES_SUCCESS)
   {
     YASIO_LOG("init c-ares channel succeed");
 

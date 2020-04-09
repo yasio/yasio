@@ -110,8 +110,13 @@ enum
   // params: dns_cache_timeout : int(600),
   YOPT_S_DNS_CACHE_TIMEOUT,
 
-  // Set dns queries timeout in seconds, only works when have c-ares
-  // params: dns_queries_timeout : int(10)
+  // Set dns queries timeout in milliseconds, default is: 5000
+  // params: dns_queries_timeout : int(5000)
+  // remark:
+  //         a. only works when have c-ares
+  //         b. this option must be set before 'io_service::start'
+  //         c. since v3.33.0 it's milliseconds, previous is seconds.
+  //         d. for more detail, please see: https://c-ares.haxx.se/ares_init_options.html
   YOPT_S_DNS_QUERIES_TIMEOUT,
 
   // Sets channel length field based frame decode function, native C++ ONLY
@@ -924,7 +929,7 @@ private:
   {
     highp_time_t connect_timeout_     = 10LL * std::micro::den;
     highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
-    highp_time_t dns_queries_timeout_ = 10LL * std::micro::den;
+    highp_time_t dns_queries_timeout_ = 5LL * std::micro::den;
 
     bool deferred_event_ = true;
 

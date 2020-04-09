@@ -63,18 +63,19 @@ extern "C" {
 }
 #endif
 
-#define YASIO_SLOG_IMPL(options, format, ...)                                                      \
+#define YASIO_SLOG_OPTIONS(options, format, ...)                                                   \
   do                                                                                               \
   {                                                                                                \
     if (options.print_)                                                                            \
       options.print_(::yasio::strfmt(127, "[yasio][%lld]" format "\n",                             \
-                                     highp_clock<system_clock_t>(), ##__VA_ARGS__)                 \
+                                     highp_clock<system_clock_t>() / std::milli::den,              \
+                                     ##__VA_ARGS__)                                                \
                          .c_str());                                                                \
     else                                                                                           \
-      YASIO_LOG("[%lld]" format, highp_clock<system_clock_t>(), ##__VA_ARGS__);                    \
+      YASIO_LOG("[%lld]" format, highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__);  \
   } while (false)
 
-#define YASIO_SLOG(format, ...) YASIO_SLOG_IMPL(options_, format, ##__VA_ARGS__)
+#define YASIO_SLOG(format, ...) YASIO_SLOG_OPTIONS(options_, format, ##__VA_ARGS__)
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_SLOGV(fmt, ...) (void)0
 #else
@@ -1321,17 +1322,14 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   ctx->timer_.cancel();
   current_service.ares_work_finished();
 
-  if (status == ARES_SUCCESS)
+  if (status == ARES_SUCCESS && answerlist != nullptr)
   {
-    if (answerlist != nullptr)
+    for (auto ai = answerlist->nodes; ai != nullptr; ai = ai->ai_next)
     {
-      for (auto ai = answerlist->nodes; ai != nullptr; ai = ai->ai_next)
+      if (ai->ai_family == AF_INET6 || ai->ai_family == AF_INET)
       {
-        if (ai->ai_family == AF_INET6 || ai->ai_family == AF_INET)
-        {
-          ctx->remote_eps_.push_back(ip::endpoint(ai->ai_addr));
-          break;
-        }
+        ctx->remote_eps_.push_back(ip::endpoint(ai->ai_addr));
+        break;
       }
     }
   }
@@ -1341,19 +1339,19 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     ctx->dns_queries_state_     = YDQS_READY;
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-    YASIO_SLOG_IMPL(current_service.options_,
-                    "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)", ctx->index_,
-                    ctx->remote_host_.c_str(),
-                    (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+    YASIO_SLOG_OPTIONS(current_service.options_,
+                       "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)",
+                       ctx->index_, ctx->remote_host_.c_str(),
+                       (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
   }
   else
   {
     ctx->set_last_errno(yasio::error::resolve_host_failed);
     YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
-    YASIO_SLOG_IMPL(current_service.options_,
-                    "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
-                    ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
+    YASIO_SLOG_OPTIONS(current_service.options_,
+                       "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
+                       ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
   }
 
   current_service.interrupt();
@@ -1380,7 +1378,9 @@ void io_service::process_ares_requests(fd_set* fds_array)
 }
 void io_service::init_ares_channel()
 {
-  auto status = ::ares_init(&ares_);
+  ares_options options = {};
+  options.timeout      = this->options_.dns_queries_timeout_ / std::milli::den;
+  auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS);
   if (status == ARES_SUCCESS)
   {
     YASIO_LOG("init c-ares channel succeed");
@@ -1421,6 +1421,7 @@ void io_service::cleanup_ares_channel()
 {
   if (ares_ != nullptr)
   {
+    ::ares_cancel(this->ares_);
     ::ares_destroy(this->ares_);
     this->ares_ = nullptr;
   }
@@ -2009,11 +2010,6 @@ void io_service::start_resolve(io_channel* ctx)
     service = sport;
   }
 
-  ctx->timer_.expires_from_now(std::chrono::microseconds(options_.dns_queries_timeout_));
-  ctx->timer_.async_wait_once([=]() {
-    ::ares_cancel(this->ares_);
-    handle_connect_failed(ctx, yasio::error::resolve_host_failed);
-  });
   ares_work_started();
   ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
                      io_service::ares_getaddrinfo_cb, ctx);
@@ -2096,7 +2092,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       options_.dns_cache_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
       break;
     case YOPT_S_DNS_QUERIES_TIMEOUT:
-      options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
+      options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::milli::den;
       break;
     case YOPT_C_LFBFD_PARAMS: {
       auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));

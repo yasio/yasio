@@ -116,8 +116,8 @@ enum
   //         a. only works when have c-ares
   //         b. this option must be set before 'io_service::start'
   //         c. since v3.33.0 it's milliseconds, previous is seconds.
-  //         d. the timeout algorithm of c-ares is complicated, usually, by default, dns queries will
-  //         failed with timeout after more than 75 seconds.
+  //         d. the timeout algorithm of c-ares is complicated, usually, by default, dns queries
+  //         will failed with timeout after more than 75 seconds.
   //         e. for more detail, please see:
   //         https://c-ares.haxx.se/ares_init_options.html
   YOPT_S_DNS_QUERIES_TIMEOUT,
@@ -687,6 +687,12 @@ public:
   YASIO__DECL io_service(const io_hostent& channel_eps);
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
+
+  YASIO_OBSOLETE_DEPRECATE(io_service::start)
+  void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
+
+  YASIO_OBSOLETE_DEPRECATE(io_service::stop)
+  void stop_service() { this->stop(); };
 
   YASIO__DECL void start(io_event_cb_t cb);
   YASIO__DECL void stop();

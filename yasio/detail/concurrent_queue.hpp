@@ -30,7 +30,7 @@ SOFTWARE.
 #define YASIO__CONCURRENT_QUEUE_HPP
 
 #include "yasio/detail/config.hpp"
-#if !defined(YASIO_DISABLE_SPSC_QUEUE)
+#if !defined(YASIO_USE_SPSC_QUEUE)
 #  include "yasio/moodycamel/readerwriterqueue.h"
 #else
 #  include <queue>
@@ -47,7 +47,7 @@ namespace concurrency
 {
 template <typename _T, bool _Dual = false> class concurrent_queue;
 
-#if !defined(YASIO_DISABLE_SPSC_QUEUE)
+#if !defined(YASIO_USE_SPSC_QUEUE)
 template <typename _T, bool _Dual> class concurrent_queue : public moodycamel::ReaderWriterQueue<_T>
 {
 public:
@@ -60,6 +60,7 @@ public:
   }
   void clear() { clear_queue(static_cast<moodycamel::ReaderWriterQueue<_T>&>(*this)); }
 };
+
 #else
 
 template <typename _T> class concurrent_queue_primitive

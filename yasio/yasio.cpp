@@ -1319,7 +1319,6 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   auto ctx              = (io_channel*)arg;
   auto& current_service = ctx->get_service();
 
-  ctx->timer_.cancel();
   current_service.ares_work_finished();
 
   if (status == ARES_SUCCESS && answerlist != nullptr)

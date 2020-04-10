@@ -264,7 +264,7 @@ void ssl_auto_handle::destroy()
 /// io_channel
 io_channel::io_channel(io_service& service, int index) : timer_(service)
 {
-  socket_.reset(new xxsocket());
+  socket_            = std::make_shared<xxsocket>();
   state_             = io_base::state::CLOSED;
   dns_queries_state_ = YDQS_FAILED;
   index_             = index;

@@ -227,46 +227,6 @@ public:
 int yasio__global_state::s_max_alloc_size;
 } // namespace
 
-class io_send_op
-{
-public:
-  io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
-      : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
-  {}
-  virtual ~io_send_op() {}
-
-  size_t offset_;            // read pos from sending buffer
-  std::vector<char> buffer_; // sending data buffer
-  std::function<void()> handler_;
-
-  virtual int perform(io_transport* transport, const void* buf, int n)
-  {
-    return transport->write_cb_(buf, n);
-  }
-
-#if !defined(YASIO_DISABLE_OBJECT_POOL)
-  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
-#endif
-};
-
-class io_sendto_op : public io_send_op
-{
-public:
-  io_sendto_op(std::vector<char>&& buffer, std::function<void()>&& handler,
-               const ip::endpoint& destination)
-      : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
-  {}
-
-  int perform(io_transport* transport, const void* buf, int n) override
-  {
-    return transport->socket_->sendto(buf, n, destination_);
-  }
-#if !defined(YASIO_DISABLE_OBJECT_POOL)
-  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
-#endif
-  ip::endpoint destination_;
-};
-
 /// highp_timer
 void highp_timer::async_wait(timer_cb_t cb) { this->service_.schedule_timer(this, std::move(cb)); }
 
@@ -274,6 +234,18 @@ void highp_timer::cancel()
 {
   if (!expired())
     this->service_.remove_timer(this);
+}
+
+/// io_send_op
+int io_send_op::perform(io_transport* transport, const void* buf, int n)
+{
+  return transport->write_cb_(buf, n);
+}
+
+/// io_sendto_op
+int io_sendto_op::perform(io_transport* transport, const void* buf, int n)
+{
+  return transport->socket_->sendto(buf, n, destination_);
 }
 
 #if defined(YASIO_HAVE_SSL)

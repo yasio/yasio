@@ -479,6 +479,40 @@ private:
 #endif
 };
 
+class io_send_op
+{
+public:
+  io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
+      : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
+  {}
+  virtual ~io_send_op() {}
+
+  size_t offset_;            // read pos from sending buffer
+  std::vector<char> buffer_; // sending data buffer
+  std::function<void()> handler_;
+
+  YASIO__DECL virtual int perform(io_transport* transport, const void* buf, int n);
+
+#if !defined(YASIO_DISABLE_OBJECT_POOL)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
+#endif
+};
+
+class io_sendto_op : public io_send_op
+{
+public:
+  io_sendto_op(std::vector<char>&& buffer, std::function<void()>&& handler,
+               const ip::endpoint& destination)
+      : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
+  {}
+
+  YASIO__DECL int perform(io_transport* transport, const void* buf, int n) override;
+#if !defined(YASIO_DISABLE_OBJECT_POOL)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
+#endif
+  ip::endpoint destination_;
+};
+
 class io_transport : public io_base
 {
   friend class io_service;

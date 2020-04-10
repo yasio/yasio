@@ -233,6 +233,7 @@ public:
   io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
       : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
   {}
+  virtual ~io_send_op() {}
 
   size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
@@ -427,7 +428,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
 int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& handler)
 {
   int n = static_cast<int>(buffer.size());
-  send_queue_.emplace(std::make_shared<io_send_op>(std::move(buffer), std::move(handler)));
+  send_queue_.emplace(std::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
   ctx_->get_service().interrupt();
   return n;
 }
@@ -435,7 +436,7 @@ int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
                            std::function<void()>&& handler)
 {
   int n = static_cast<int>(buffer.size());
-  send_queue_.emplace(std::make_shared<io_sendto_op>(std::move(buffer), std::move(handler), to));
+  send_queue_.emplace(std::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
   ctx_->get_service().interrupt();
   return n;
 }
@@ -455,7 +456,7 @@ bool io_transport::do_write(long long& max_wait_duration)
     auto wrap = send_queue_.peek();
     if (wrap)
     {
-      auto v = *wrap;
+      auto& v = *wrap;
       if (call_write(v.get(), error, internal_ec))
         send_queue_.pop();
       else if (error != 0)

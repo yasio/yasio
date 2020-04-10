@@ -246,7 +246,7 @@ class io_service;
 typedef io_transport* transport_handle_t;
 
 // typedefs
-typedef std::shared_ptr<io_send_op> io_send_op_ptr;
+typedef std::unique_ptr<io_send_op> io_send_op_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<highp_timer> highp_timer_ptr;
 

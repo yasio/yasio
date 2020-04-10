@@ -38,11 +38,13 @@ using std::make_unique;
 } // namespace cxx17
 
 #else
-
+namespace cxx17
+{
 template <typename _Ty, typename... _Args> std::unique_ptr<_Ty> make_unique(_Args&&... args)
 {
   return std::unique_ptr<_Ty>(new _Ty(std::forward<_Args>(args)...));
 }
+} // namespace cxx17
 #endif
 
 #endif

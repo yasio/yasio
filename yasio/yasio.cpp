@@ -1355,15 +1355,15 @@ void io_service::init_ares_channel()
   auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS);
   if (status == ARES_SUCCESS)
   {
-    YASIO_LOG("init c-ares channel succeed");
+    YASIO_LOG("[c-ares] init channel succeed");
 
     // list all dns servers for resov problem diagnosis
     ares_addr_node* name_servers = nullptr;
-    if (::ares_get_servers(ares_, &name_servers) == ARES_SUCCESS)
+    int ares_ec                  = 0;
+    if ((ares_ec = ::ares_get_servers(ares_, &name_servers)) == ARES_SUCCESS)
     {
-      std::stringstream dns_info;
-      dns_info << "the c-ares name servers are:";
-      int flags = 0;
+      std::string strdns;
+      int valid_flags = 0;
       for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
       {
         switch (name_server->family)
@@ -1371,23 +1371,33 @@ void io_service::init_ares_channel()
           case AF_INET:
             if (!IN4_IS_ADDR_LOOPBACK((in_addr*)&name_server->addr) &&
                 !IN4_IS_ADDR_LINKLOCAL((in_addr*)&name_server->addr))
-              flags |= ipsv_ipv4;
+              valid_flags |= ipsv_ipv4;
             break;
           case AF_INET6:
             if (IN6_IS_ADDR_GLOBAL((in6_addr*)&name_server->addr))
-              flags |= ipsv_ipv6;
+              valid_flags |= ipsv_ipv6;
             break;
         }
-        dns_info << yasio::inet::endpoint::ip(name_server->family, &name_server->addr) << "; ";
+        strdns += yasio::inet::endpoint::ip(name_server->family, &name_server->addr);
+        strdns.push_back(',');
       }
-      if (flags == 0) // if no valid name server, use predefined fallback dns
-        ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
-      YASIO_LOG("%s", dns_info.str().c_str());
+      if (valid_flags) // if no valid name server, use predefined fallback dns
+        YASIO_LOG("[c-ares] use system dns: %s", strdns.c_str());
+      else
+      {
+        ares_ec = ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
+        if (ares_ec == 0)
+          YASIO_LOG("[c-ares] get system dns failed, set fallback dns: '%s' succeed",
+                    YASIO_CARES_FALLBACK_DNS);
+        else
+          YASIO_LOG("[c-ares] get system dns failed, set fallback dns: '%s' failed, detail: %s",
+                    YASIO_CARES_FALLBACK_DNS, ::ares_strerror(ares_ec));
+      }
       ::ares_free_data(name_servers);
     }
   }
   else
-    YASIO_LOG("init c-ares channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
+    YASIO_LOG("[c-ares] init channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
 }
 void io_service::cleanup_ares_channel()
 {

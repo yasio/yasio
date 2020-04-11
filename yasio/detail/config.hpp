@@ -165,7 +165,7 @@ SOFTWARE.
 // please see:
 //   https://github.com/c-ares/c-ares/issues/276
 //   https://github.com/c-ares/c-ares/pull/148
-#define YASIO_CARES_FALLBACK_DNS "8.8.8.8;223.5.5.5;114.114.114.114"
+#define YASIO_CARES_FALLBACK_DNS "8.8.8.8,223.5.5.5,114.114.114.114"
 
 #include "strfmt.hpp"
 

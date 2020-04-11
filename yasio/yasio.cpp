@@ -1380,8 +1380,8 @@ void io_service::init_ares_channel()
         }
         dns_info << yasio::inet::endpoint::ip(name_server->family, &name_server->addr) << "; ";
       }
-      if (flags == 0) // if no valid name server, set to 8.8.8.8 as workaround
-        ::ares_set_servers_csv(ares_, "8.8.8.8");
+      if (flags == 0) // if no valid name server, use predefined fallback dns
+        ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
       YASIO_LOG("%s", dns_info.str().c_str());
       ::ares_free_data(name_servers);
     }

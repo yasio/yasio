@@ -42,8 +42,8 @@ SOFTWARE.
 
 /*
 ** Uncomment or add compiler flag -DYASIO_USE_SPSC_QUEUE to use SPSC queue in io_service
-** Remark: By default, yasio use std's queue + mutex to ensure thread safe, If you want 
-**         more fast messege queue and only have one thread to call io_service write APIs, 
+** Remark: By default, yasio use std's queue + mutex to ensure thread safe, If you want
+**         more fast messege queue and only have one thread to call io_service write APIs,
 **         you may need uncomment it.
 */
 // #define YASIO_USE_SPSC_QUEUE 1
@@ -159,6 +159,13 @@ SOFTWARE.
 
 // The max Initial Bytes To Strip for length field based frame decode mechanism
 #define YASIO_MAX_IBTS 32
+
+// The fallback name servers when c-ares can't get name servers from system config,
+// For Android 8 or later, will always use the fallback name servers, for detail,
+// please see:
+//   https://github.com/c-ares/c-ares/issues/276
+//   https://github.com/c-ares/c-ares/pull/148
+#define YASIO_CARES_FALLBACK_DNS "8.8.8.8;223.5.5.5;114.114.114.114"
 
 #include "strfmt.hpp"
 

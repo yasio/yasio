@@ -769,8 +769,7 @@ public:
   **        'len': the data len
   **        'handler': send finish callback, only works for TCP transport
   ** @remark:
-  **        + TCP: Use queue to store user message, flush at io_service thread
-  **        + UDP: Don't use queue, call low layer socket.sendto directly
+  **        + TCP/UDP: Use queue to store user message, flush at io_service thread
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
   int write(transport_handle_t thandle, const void* buf, size_t len,
@@ -786,8 +785,8 @@ public:
   ** Summary: Write data to unconnected UDP transport with specified address.
   ** @retval: < 0: failed
   ** @remark: This function only for UDP like transport (UDP or KCP)
-  **        + UDP: Don't use queue, call low layer socket.sendto directly
-  **        + KCP: Use the queue provided by kcp internal
+  **        + UDP: Use queue to store user message, flush at io_service thread
+  **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
   */
   int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to,
                std::function<void()> completion_handler = nullptr)
@@ -804,14 +803,11 @@ public:
 
   YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                  unsigned short port = 0);
-  
-  // Gets channel by index
-  YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
-  io_channel* cindex_to_handle(size_t cindex) const
-  {
-    return channel_at(cindex);
-  }
 
+  YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
+  io_channel* cindex_to_handle(size_t cindex) const { return channel_at(cindex); }
+
+  // Gets channel by index
   YASIO__DECL io_channel* channel_at(size_t cindex) const;
 
 private:

@@ -959,7 +959,7 @@ void io_service::process_channels(fd_set* fds_array)
 void io_service::close(int cindex)
 {
   // Gets channel context
-  auto channel = cindex_to_handle(cindex);
+  auto channel = channel_at(cindex);
   if (!channel)
     return;
 
@@ -982,7 +982,7 @@ void io_service::close(transport_handle_t transport)
 bool io_service::is_open(transport_handle_t transport) const { return transport->is_open(); }
 bool io_service::is_open(int cindex) const
 {
-  auto ctx = cindex_to_handle(cindex);
+  auto ctx = channel_at(cindex);
   return ctx != nullptr && ctx->state_ == io_base::state::OPEN;
 }
 void io_service::reopen(transport_handle_t transport)
@@ -995,7 +995,7 @@ void io_service::open(size_t cindex, int kind)
 {
   assert((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
 
-  auto ctx = cindex_to_handle(cindex);
+  auto ctx = channel_at(cindex);
   if (ctx != nullptr)
   {
     ctx->properties_ = (ctx->properties_ & (~(uint32_t)0xff)) | kind;
@@ -1007,7 +1007,7 @@ void io_service::open(size_t cindex, int kind)
     open_internal(ctx);
   }
 }
-io_channel* io_service::cindex_to_handle(size_t cindex) const
+io_channel* io_service::channel_at(size_t cindex) const
 {
   if (cindex < channels_.size())
     return channels_[cindex];
@@ -2078,7 +2078,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::milli::den;
       break;
     case YOPT_C_LFBFD_PARAMS: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
         channel->lfb_.max_frame_length    = va_arg(ap, int);
@@ -2089,7 +2089,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     }
     case YOPT_C_LFBFD_IBTS: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->lfb_.initial_bytes_to_strip = ::yasio::clamp(va_arg(ap, int), 0, YASIO_MAX_IBTS);
       break;
@@ -2098,25 +2098,25 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       options_.on_event_ = *va_arg(ap, io_event_cb_t*);
       break;
     case YOPT_C_LFBFD_FN: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->decode_len_ = *va_arg(ap, decode_len_fn_t*);
       break;
     }
     case YOPT_C_LOCAL_HOST: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->local_host_ = va_arg(ap, const char*);
       break;
     }
     case YOPT_C_LOCAL_PORT: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->local_port_ = (u_short)va_arg(ap, int);
       break;
     }
     case YOPT_C_LOCAL_ENDPOINT: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
         channel->local_host_ = va_arg(ap, const char*);
@@ -2125,19 +2125,19 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     }
     case YOPT_C_REMOTE_HOST: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->configure_host(va_arg(ap, const char*));
       break;
     }
     case YOPT_C_REMOTE_PORT: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->configure_port((u_short)va_arg(ap, int));
       break;
     }
     case YOPT_C_REMOTE_ENDPOINT: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
         channel->configure_host(va_arg(ap, const char*));
@@ -2146,7 +2146,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     }
     case YOPT_C_ENABLE_MCAST: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
         const char* addr = va_arg(ap, const char*);
@@ -2160,13 +2160,13 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     }
     case YOPT_C_DISABLE_MCAST: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->disable_multicast_group();
       break;
     }
     case YOPT_C_MOD_FLAGS: {
-      auto channel = cindex_to_handle(static_cast<size_t>(va_arg(ap, int)));
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
         channel->properties_ |= (uint32_t)va_arg(ap, int);

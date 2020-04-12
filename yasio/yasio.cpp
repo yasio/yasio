@@ -465,7 +465,7 @@ int io_transport::call_read(void* data, int size, int& error)
   }
   return n;
 }
-int io_transport::call_write(io_send_op* op, int& error, int& internal_ec)
+bool io_transport::call_write(io_send_op* op, int& error, int& internal_ec)
 {
   int n = op->perform(this, op->buffer_.data() + op->offset_,
                       static_cast<int>(op->buffer_.size() - op->offset_));
@@ -1397,7 +1397,8 @@ void io_service::init_ares_channel()
     }
   }
   else
-    YASIO_LOG("[c-ares] init channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
+    YASIO_LOG("[c-ares] init channel failed, status=%d, detail:%s", status,
+              ::ares_strerror(status));
 }
 void io_service::cleanup_ares_channel()
 {

@@ -1352,7 +1352,7 @@ void io_service::init_ares_channel()
 {
   ares_options options = {};
   options.timeout      = this->options_.dns_queries_timeout_ / std::milli::den;
-  options.tries        = this->options_.dns_queries_tries;
+  options.tries        = this->options_.dns_queries_tries_;
   auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
   if (status == ARES_SUCCESS)
   {

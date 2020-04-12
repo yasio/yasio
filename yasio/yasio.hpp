@@ -804,8 +804,15 @@ public:
 
   YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                  unsigned short port = 0);
-  // Gets channel object by index
-  YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
+  
+  // Gets channel by index
+  YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
+  io_channel* cindex_to_handle(size_t cindex) const
+  {
+    return channel_at(cindex);
+  }
+
+  YASIO__DECL io_channel* channel_at(size_t cindex) const;
 
 private:
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);

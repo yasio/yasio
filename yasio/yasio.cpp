@@ -1352,7 +1352,8 @@ void io_service::init_ares_channel()
 {
   ares_options options = {};
   options.timeout      = this->options_.dns_queries_timeout_ / std::milli::den;
-  auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS);
+  options.tries        = this->options_.dns_queries_tries;
+  auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
   if (status == ARES_SUCCESS)
   {
     YASIO_LOG("[c-ares] init channel succeed");
@@ -2076,6 +2077,9 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_DNS_QUERIES_TIMEOUT:
       options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::milli::den;
+      break;
+    case YOPT_S_DNS_QUERIES_TRIES:
+      options_.dns_queries_tries_ = va_arg(ap, int);
       break;
     case YOPT_C_LFBFD_PARAMS: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));

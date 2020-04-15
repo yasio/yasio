@@ -111,8 +111,8 @@ enum
   // params: dns_cache_timeout : int(600),
   YOPT_S_DNS_CACHE_TIMEOUT,
 
-  // Set dns queries timeout in milliseconds, default is: 5000
-  // params: dns_queries_timeout : int(5000)
+  // Set dns queries timeout in seconds, default is: 5
+  // params: dns_queries_timeout : int(5)
   // remark:
   //         a. this option must be set before 'io_service::start'
   //         b. only works when have c-ares
@@ -122,6 +122,10 @@ enum
   //         e. for more detail, please see:
   //         https://c-ares.haxx.se/ares_init_options.html
   YOPT_S_DNS_QUERIES_TIMEOUT,
+
+  // Set dns queries timeout in milliseconds, default is: 5000
+  // remark: same with YOPT_S_DNS_QUERIES_TIMEOUT, but in mmilliseconds
+  YOPT_S_DNS_QUERIES_TIMEOUTMS,
 
   // Set dns queries tries when timeout reached, default is: 5
   // params: dns_queries_tries : int(5)
@@ -239,7 +243,7 @@ enum
 
 // class fwds
 class highp_timer;
-class io_send_op; // application layer protocol data unit.
+class io_send_op;
 class io_sendto_op;
 class io_event;
 class io_channel;

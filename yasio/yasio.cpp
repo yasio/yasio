@@ -1351,7 +1351,7 @@ void io_service::process_ares_requests(fd_set* fds_array)
 void io_service::init_ares_channel()
 {
   ares_options options = {};
-  options.timeout      = this->options_.dns_queries_timeout_ / std::milli::den;
+  options.timeout      = this->options_.dns_queries_timeout_ / std::micro::den;
   options.tries        = this->options_.dns_queries_tries_;
   auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
   if (status == ARES_SUCCESS)
@@ -2076,6 +2076,9 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       options_.dns_cache_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
       break;
     case YOPT_S_DNS_QUERIES_TIMEOUT:
+      options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
+      break;
+    case YOPT_S_DNS_QUERIES_TIMEOUTMS:
       options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::milli::den;
       break;
     case YOPT_S_DNS_QUERIES_TRIES:

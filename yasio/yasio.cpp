@@ -404,14 +404,6 @@ int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& hand
   ctx_->get_service().interrupt();
   return n;
 }
-int io_transport::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
-                           std::function<void()>&& handler)
-{
-  int n = static_cast<int>(buffer.size());
-  send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
-  ctx_->get_service().interrupt();
-  return n;
-}
 int io_transport::do_read(int& error)
 {
   return this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error);
@@ -564,7 +556,14 @@ int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& 
   else
     return write_to(std::move(buffer), ensure_peer(), std::move(handler));
 }
-
+int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
+                               std::function<void()>&& handler)
+{
+  int n = static_cast<int>(buffer.size());
+  send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
+  ctx_->get_service().interrupt();
+  return n;
+}
 void io_transport_udp::set_primitives()
 {
   if (connected_)
@@ -1351,7 +1350,7 @@ void io_service::process_ares_requests(fd_set* fds_array)
 void io_service::init_ares_channel()
 {
   ares_options options = {};
-  options.timeout      = this->options_.dns_queries_timeout_ / std::micro::den;
+  options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::micro::den);
   options.tries        = this->options_.dns_queries_tries_;
   auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
   if (status == ARES_SUCCESS)

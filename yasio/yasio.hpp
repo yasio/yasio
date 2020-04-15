@@ -552,7 +552,11 @@ protected:
   virtual int write(std::vector<char>&&, std::function<void()>&&);
 
   // Call at user thread
-  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&);
+  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&)
+  {
+    YASIO_LOG("[warning] io_transport doesn't support 'write_to' operation!");
+    return 0;
+  }
 
   YASIO__DECL int call_read(void* data, int size, int& error);
   YASIO__DECL bool call_write(io_send_op*, int& error, int& internal_ec);
@@ -601,13 +605,6 @@ class io_transport_tcp : public io_transport
 
 public:
   io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
-
-protected:
-  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&)
-  {
-    YASIO_LOG("[warning] io_transport_tcp doesn't support 'write_to' operation!");
-    return 0;
-  }
 };
 #if defined(YASIO_HAVE_SSL)
 class io_transport_ssl : public io_transport_tcp
@@ -638,6 +635,8 @@ protected:
   YASIO__DECL int connect();
 
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&,
+                           std::function<void()>&&) override;
 
   YASIO__DECL void set_primitives() override;
 

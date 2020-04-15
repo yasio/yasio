@@ -63,7 +63,7 @@ void start_sender(io_service& service)
   obs.write_bytes(buffer, PER_PACKET_SIZE);
   deadline_timer timer(service);
 
-  service.start_service([&](event_ptr event) {
+  service.start([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET: {
@@ -101,7 +101,7 @@ void start_receiver(io_service& service)
   static long long time_start   = yasio::highp_clock<>();
   static double last_print_time = 0;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
-  service.start_service([&](event_ptr event) {
+  service.start([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET: {

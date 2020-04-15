@@ -78,7 +78,6 @@ typedef int socklen_t;
 #  include <netinet/tcp.h>
 #  include <net/if.h>
 #  include <arpa/inet.h>
-#  include "yasio/detail/ifaddrs.hpp"
 #  if !defined(SD_RECEIVE)
 #    define SD_RECEIVE SHUT_RD
 #  endif
@@ -210,18 +209,18 @@ inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
 }
 #endif
 
-// shoulde close connection condition when retval of recv <= 0
-#define SHOULD_CLOSE_0(n, errcode)                                                                 \
-  (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK && (errcode) != EINTR))
+// should close connection condition when retval of recv < 0
+#define YASIO_SHOULD_CLOSE_0(ec) ((ec) != EAGAIN && (ec) != EWOULDBLOCK && (ec) != EINTR)
 
-// shoulde close connection condition when retval of send <= 0
-#define SHOULD_CLOSE_1(n, errcode)                                                                 \
-  (((n) == 0) || ((n) < 0 && (errcode) != EAGAIN && (errcode) != EWOULDBLOCK &&                    \
-                  (errcode) != EINTR && (errcode) != ENOBUFS))
+// should close connection condition when retval of send < 0
+// remark: EPERM, see issue #126, simply ignore EPERM for UDP
+#define YASIO_SHOULD_CLOSE_1(ec)                                                                   \
+  ((ec) != EAGAIN && (ec) != EWOULDBLOCK && (ec) != EINTR && (ec) != ENOBUFS && (ec) != EPERM)
+
+#define YASIO_ADDR_ANY(af) (af == AF_INET ? "0.0.0.0" : "::")
 
 namespace yasio
 {
-
 namespace inet
 {
 
@@ -930,8 +929,8 @@ public:
   ** @returns: If no error occurs, returns >= 0. Otherwise, a value of -1 is
   **          returned
   */
-  YASIO__DECL static int select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
-                                std::chrono::microseconds wtimeout);
+  YASIO__DECL static int select(socket_native_type s, fd_set* readfds, fd_set* writefds,
+                                fd_set* exceptfds, std::chrono::microseconds wtimeout);
 
   /* @brief: check is a client socket alive
   ** @params :
@@ -1063,7 +1062,7 @@ public:
   YASIO__DECL static void traverse_local_address(std::function<bool(const ip::endpoint&)> handler);
 
 protected:
-  YASIO__DECL static void reregister_descriptor(int s, fd_set* fds);
+  YASIO__DECL static void reregister_descriptor(socket_native_type s, fd_set* fds);
 
 private:
   socket_native_type fd;

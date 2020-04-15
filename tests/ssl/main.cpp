@@ -30,7 +30,7 @@ void yasioTest()
 
   int max_request_count = 10;
 
-  service.start_service([&](event_ptr&& event) {
+  service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {
@@ -73,7 +73,7 @@ void yasioTest()
           udpconn_delay.async_wait_once([&]() { service.open(0, YCK_SSL_CLIENT); });
         }
         else
-          service.stop_service();
+          service.stop();
         break;
     }
   });

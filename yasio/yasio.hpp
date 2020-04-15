@@ -49,6 +49,7 @@ SOFTWARE.
 #include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/concurrent_queue.hpp"
 #include "yasio/detail/utils.hpp"
+#include "yasio/cxx17/memory.hpp"
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
@@ -110,9 +111,28 @@ enum
   // params: dns_cache_timeout : int(600),
   YOPT_S_DNS_CACHE_TIMEOUT,
 
-  // Set dns queries timeout in seconds, only works when have c-ares
-  // params: dns_queries_timeout : int(10)
+  // Set dns queries timeout in seconds, default is: 5
+  // params: dns_queries_timeout : int(5)
+  // remark:
+  //         a. this option must be set before 'io_service::start'
+  //         b. only works when have c-ares
+  //         c. since v3.33.0 it's milliseconds, previous is seconds.
+  //         d. the timeout algorithm of c-ares is complicated, usually, by default, dns queries
+  //         will failed with timeout after more than 75 seconds.
+  //         e. for more detail, please see:
+  //         https://c-ares.haxx.se/ares_init_options.html
   YOPT_S_DNS_QUERIES_TIMEOUT,
+
+  // Set dns queries timeout in milliseconds, default is: 5000
+  // remark: same with YOPT_S_DNS_QUERIES_TIMEOUT, but in mmilliseconds
+  YOPT_S_DNS_QUERIES_TIMEOUTMS,
+
+  // Set dns queries tries when timeout reached, default is: 5
+  // params: dns_queries_tries : int(5)
+  // remark:
+  //        a. this option must be set before 'io_service::start'
+  //        b. relative option: YOPT_S_DNS_QUERIES_TIMEOUT
+  YOPT_S_DNS_QUERIES_TRIES,
 
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
@@ -222,8 +242,8 @@ enum
 };
 
 // class fwds
-class a_pdu; // application layer protocol data unit.
 class highp_timer;
+class io_send_op;
 class io_event;
 class io_channel;
 class io_transport;
@@ -237,7 +257,7 @@ class io_service;
 typedef io_transport* transport_handle_t;
 
 // typedefs
-typedef std::shared_ptr<a_pdu> a_pdu_ptr;
+typedef std::unique_ptr<io_send_op> io_send_op_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<highp_timer> highp_timer_ptr;
 
@@ -469,9 +489,28 @@ private:
 #endif
 };
 
+class io_send_op
+{
+public:
+  io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
+      : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
+  {}
+  virtual ~io_send_op() {}
+
+  size_t offset_;            // read pos from sending buffer
+  std::vector<char> buffer_; // sending data buffer
+  std::function<void()> handler_;
+
+  YASIO__DECL virtual int perform(io_transport* transport, const void* buf, int n);
+
+#if !defined(YASIO_DISABLE_OBJECT_POOL)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
+#endif
+};
 class io_transport : public io_base
 {
   friend class io_service;
+  friend class io_send_op;
 
 public:
   unsigned int id() const { return id_; }
@@ -491,17 +530,25 @@ protected:
     expected_size_ = -1;
     return std::move(expected_packet_);
   }
-  // Call at user thread
-  virtual int write_to(std::vector<char>&&, const ip::endpoint&) { return 0; };
 
   // Call at user thread
-  virtual int write(std::vector<char>&&, std::function<void()>&&) = 0;
+  virtual int write(std::vector<char>&&, std::function<void()>&&);
+
+  // Call at user thread
+  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&)
+  {
+    YASIO_LOG("[warning] io_transport doesn't support 'write_to' operation!");
+    return 0;
+  }
+
+  YASIO__DECL int call_read(void* data, int size, int& error);
+  YASIO__DECL bool call_write(io_send_op*, int& error, int& internal_ec);
 
   // Call at io_service
   YASIO__DECL virtual int do_read(int& error);
 
   // Call at io_service, try flush pending packet
-  virtual bool do_write(long long& max_wait_duration) = 0;
+  virtual bool do_write(long long& max_wait_duration);
 
   // Sets the underlying layer socket io primitives.
   YASIO__DECL virtual void set_primitives();
@@ -524,6 +571,8 @@ protected:
   std::function<int(const void*, int)> write_cb_;
   std::function<int(void*, int)> read_cb_;
 
+  concurrency::concurrent_queue<io_send_op_ptr> send_queue_;
+
 public:
   // The user data
   union
@@ -539,12 +588,6 @@ class io_transport_tcp : public io_transport
 
 public:
   io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
-
-protected:
-  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
-  YASIO__DECL bool do_write(long long& max_wait_duration) override;
-
-  concurrency::concurrent_queue<a_pdu_ptr> send_queue_;
 };
 #if defined(YASIO_HAVE_SSL)
 class io_transport_ssl : public io_transport_tcp
@@ -574,8 +617,10 @@ protected:
   // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   YASIO__DECL int connect();
 
-  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&) override;
   YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&,
+                           std::function<void()>&&) override;
+
   // the udp write op not perform in io_service, so check status only
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
@@ -652,6 +697,7 @@ private:
 class io_service // lgtm [cpp/class-many-fields]
 {
   friend class highp_timer;
+  friend class io_transport;
   friend class io_transport_tcp;
   friend class io_transport_udp;
   friend class io_transport_kcp;
@@ -719,39 +765,46 @@ public:
   **        'len': the data len
   **        'handler': send finish callback, only works for TCP transport
   ** @remark:
-  **        + TCP: Use queue to store user message, flush at io_service thread
-  **        + UDP: Don't use queue, call low layer socket.sendto directly
+  **        + TCP/UDP: Use queue to store user message, flush at io_service thread
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
   int write(transport_handle_t thandle, const void* buf, size_t len,
-            std::function<void()> handler = nullptr)
+            std::function<void()> completion_handler = nullptr)
   {
-    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(handler));
+    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len),
+                 std::move(completion_handler));
   }
   YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
-                        std::function<void()> = nullptr);
+                        std::function<void()> completion_handler = nullptr);
 
   /*
   ** Summary: Write data to unconnected UDP transport with specified address.
   ** @retval: < 0: failed
   ** @remark: This function only for UDP like transport (UDP or KCP)
-  **        + UDP: Don't use queue, call low layer socket.sendto directly
-  **        + KCP: Use the queue provided by kcp internal
+  **        + UDP: Use queue to store user message, flush at io_service thread
+  **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
   */
-  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to)
+  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to,
+               std::function<void()> completion_handler = nullptr)
   {
-    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to);
+    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to,
+                    std::move(completion_handler));
   }
   YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer,
-                           const ip::endpoint& to);
+                           const ip::endpoint& to,
+                           std::function<void()> completion_handler = nullptr);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
   YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                  unsigned short port = 0);
-  // Gets channel object by index
-  YASIO__DECL io_channel* cindex_to_handle(size_t cindex) const;
+
+  YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
+  io_channel* cindex_to_handle(size_t cindex) const { return channel_at(cindex); }
+
+  // Gets channel by index
+  YASIO__DECL io_channel* channel_at(size_t cindex) const;
 
 private:
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);
@@ -919,7 +972,8 @@ private:
   {
     highp_time_t connect_timeout_     = 10LL * std::micro::den;
     highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
-    highp_time_t dns_queries_timeout_ = 10LL * std::micro::den;
+    highp_time_t dns_queries_timeout_ = 5LL * std::micro::den;
+    int dns_queries_tries_            = 5;
 
     bool deferred_event_ = true;
 

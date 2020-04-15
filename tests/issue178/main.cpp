@@ -12,7 +12,7 @@ int main()
   };
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
   deadline_timer delay_timer(service);
-  service.start_service([&](event_ptr event) {
+  service.start([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET:

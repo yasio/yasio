@@ -38,6 +38,10 @@ SOFTWARE.
 
 #include "yasio/detail/utils.hpp"
 
+#if !defined(_WIN32)
+#  include "yasio/detail/ifaddrs.hpp"
+#endif
+
 // For apple bsd socket implemention
 #if !defined(TCP_KEEPIDLE)
 #  define TCP_KEEPIDLE TCP_KEEPALIVE
@@ -564,7 +568,7 @@ int xxsocket::pconnect(const endpoint& ep, u_short local_port)
   if (this->reopen(ep.af()))
   {
     if (local_port != 0)
-      this->bind("0.0.0.0", local_port);
+      this->bind(YASIO_ADDR_ANY(ep.af()), local_port);
     return this->connect(ep);
   }
   return -1;
@@ -576,7 +580,7 @@ int xxsocket::pconnect_n(const endpoint& ep, const std::chrono::microseconds& wt
   if (this->reopen(ep.af()))
   {
     if (local_port != 0)
-      this->bind("0.0.0.0", local_port);
+      this->bind(YASIO_ADDR_ANY(ep.af()), local_port);
     return this->connect_n(ep, wtimeout);
   }
   return -1;
@@ -587,7 +591,7 @@ int xxsocket::pconnect_n(const endpoint& ep, u_short local_port)
   if (this->reopen(ep.af()))
   {
     if (local_port != 0)
-      this->bind("0.0.0.0", local_port);
+      this->bind(YASIO_ADDR_ANY(ep.af()), local_port);
     return xxsocket::connect_n(this->fd, ep);
   }
   return -1;
@@ -744,7 +748,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
     cellular: "pdp_ip0"
   */
 
-  if (::getifaddrs(&ifaddr) == -1)
+  if (yasio::getifaddrs(&ifaddr) == -1)
   {
     YASIO_LOG("xxsocket::traverse_local_address: getifaddrs fail!");
     return;
@@ -776,7 +780,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
       break;
   }
 
-  ::freeifaddrs(ifaddr);
+  yasio::freeifaddrs(ifaddr);
 #endif
 }
 
@@ -1026,7 +1030,7 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep,
   if (n == 0)
     goto done; /* connect completed immediately */
 
-  if ((n = xxsocket::select(static_cast<int>(s), &rset, &wset, NULL, wtimeout)) <= 0)
+  if ((n = xxsocket::select(s, &rset, &wset, NULL, wtimeout)) <= 0)
     error = xxsocket::get_last_errno();
   else if ((FD_ISSET(s, &rset) || FD_ISSET(s, &wset)))
   { /* Everythings are ok */
@@ -1228,7 +1232,7 @@ int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microse
   return xxsocket::select(s, &readfds, nullptr, nullptr, wtimeout);
 }
 
-int xxsocket::select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
+int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
                      std::chrono::microseconds wtimeout)
 {
   int n = 0;
@@ -1261,7 +1265,7 @@ int xxsocket::select(int s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds
   return n;
 }
 
-void xxsocket::reregister_descriptor(int s, fd_set* fds)
+void xxsocket::reregister_descriptor(socket_native_type s, fd_set* fds)
 {
   if (fds)
   {

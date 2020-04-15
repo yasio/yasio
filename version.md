@@ -11,6 +11,9 @@ yasio-3.33.0
 * Add ```yasio::xhighp_clock``` to retrive nanoseconds timestamp.
 * Fix xxsocket APIs connect_n, recv_n doesn't handle signal EINTR.
 * Tidy obstream/ibstream API, by default ```write_v/read_v``` use ```7bit encoded int``` for length field.
+* Rename io_service ```start_service/stop_service``` to ```start/stop```.
+* Fix c-ares timeout behavior.
+* Improve c-ares cleanup behavior, now destruct io_service more stable with c-ares enabled.
   
   
 yasio-3.31.3

@@ -31,10 +31,15 @@ https://github.com/xamarin/xamarin-android/blob/master/src/monodroid/jni/xamarin
 #ifndef YASIO__IFADDRS_HPP
 #define YASIO__IFADDRS_HPP
 
-#include "config.hpp"
+#include "yasio/detail/config.hpp"
 
 #if !(defined(ANDROID) || defined(__ANDROID__)) || __ANDROID_API__ >= 24
 #  include <ifaddrs.h>
+namespace yasio
+{
+using ::freeifaddrs;
+using ::getifaddrs;
+} // namespace yasio
 #else
 
 /* We're implementing getifaddrs behavior, this is the structure we use. It is exactly the same as
@@ -69,10 +74,12 @@ struct ifaddrs
   void* ifa_data; /* Address-specific data (may be unused).  */
 };
 
-YASIO__DECL int getifaddrs(struct ifaddrs** ifap);
-YASIO__DECL void freeifaddrs(struct ifaddrs* ifa);
-
-#  include "ifaddrs.ipp"
+namespace yasio
+{
+inline int getifaddrs(struct ifaddrs** ifap);
+inline void freeifaddrs(struct ifaddrs* ifa);
+} // namespace yasio
+#  include "yasio/detail/ifaddrs.ipp"
 
 #endif
 

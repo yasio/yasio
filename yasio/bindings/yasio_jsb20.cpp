@@ -1150,7 +1150,7 @@ static auto jsb_yasio_io_service__dtor = jsb_yasio__dtor<io_service>;
 SE_BIND_FINALIZE_FUNC(jsb_yasio_io_service__dtor)
 SE_BIND_CTOR(jsb_yasio_io_service__ctor, __jsb_yasio_io_service_class, jsb_yasio_io_service__dtor)
 
-bool js_yasio_io_service_start_service(se::State& s)
+bool js_yasio_io_service_start(se::State& s)
 {
   auto cobj = (io_service*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -1179,7 +1179,7 @@ bool js_yasio_io_service_start_service(se::State& s)
         }
       };
 
-      cobj->start_service(std::move(fnwrap));
+      cobj->start(std::move(fnwrap));
 
       s.rval().setUndefined();
       return true;
@@ -1189,17 +1189,17 @@ bool js_yasio_io_service_start_service(se::State& s)
   SE_REPORT_ERROR("wrong number of arguments: %d, was expecting %d", (int)argc, 2);
   return false;
 }
-SE_BIND_FUNC(js_yasio_io_service_start_service)
+SE_BIND_FUNC(js_yasio_io_service_start)
 
-bool js_yasio_io_service_stop_service(se::State& s)
+bool js_yasio_io_service_stop(se::State& s)
 {
   auto cobj = (io_service*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
 
-  cobj->stop_service();
+  cobj->stop();
   return true;
 }
-SE_BIND_FUNC(js_yasio_io_service_stop_service)
+SE_BIND_FUNC(js_yasio_io_service_stop)
 
 bool js_yasio_io_service_open(se::State& s)
 {
@@ -1471,8 +1471,8 @@ void js_register_yasio_io_service(se::Object* obj)
   auto cls = se::Class::create("io_service", obj, nullptr, _SE(jsb_yasio_io_service__ctor));
 
   DEFINE_IO_SERVICE_FUNC(set_option);
-  DEFINE_IO_SERVICE_FUNC(start_service);
-  DEFINE_IO_SERVICE_FUNC(stop_service);
+  DEFINE_IO_SERVICE_FUNC(start);
+  DEFINE_IO_SERVICE_FUNC(stop);
   DEFINE_IO_SERVICE_FUNC(open);
   DEFINE_IO_SERVICE_FUNC(close);
   DEFINE_IO_SERVICE_FUNC(is_open);

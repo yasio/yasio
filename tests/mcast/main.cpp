@@ -26,7 +26,7 @@ void yasioMulticastTest()
   static ip::endpoint mcast_ep{"224.0.0.19", 22016};
 
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
-  service.start_service([&](event_ptr&& event) {
+  service.start([&](event_ptr&& event) {
     auto thandle = event->transport();
 
     switch (event->kind())

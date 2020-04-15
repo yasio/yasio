@@ -36,10 +36,18 @@ SOFTWARE.
 
 namespace yasio
 {
+// yasio::format_traits: the vsnprintf/vswprintf wrapper
+// !!! if '_BufferCount' had been sufficiently large, not counting the terminating null character.
 template <typename _Elem> struct format_traits
 {};
 template <> struct format_traits<char>
 {
+  /* @pitfall: The behavior of vsnprintf are different at different standard implemetations
+   **      VS2013/glibc-2.0: returns -1 when buffer insufficient
+   **      VS2015+/glbc-2.1: returns the actural needed length when buffer insufficient
+   ** see reference:
+   **      http://www.cplusplus.com/reference/cstdio/vsnprintf/
+   */
   static int format(char* const _Buffer, size_t const _BufferCount, char const* const _Format,
                     va_list _ArgList)
   {
@@ -48,22 +56,16 @@ template <> struct format_traits<char>
 };
 template <> struct format_traits<wchar_t>
 {
+  /* see: http://www.cplusplus.com/reference/cwchar/vswprintf/ */
   static int format(wchar_t* const _Buffer, size_t const _BufferCount, wchar_t const* const _Format,
                     va_list _ArgList)
   {
     return vswprintf(_Buffer, _BufferCount, _Format, _ArgList);
   }
 };
-/*--- This is a C++ universal sprintf in the future.
- **  @pitfall: The behavior of vsnprintf between VS2013 and VS2015/later is
- *different
- **      VS2013 or Unix-Like System will return -1 when buffer not enough, but
- *VS2015 or later will return the actural needed length for buffer at this station
- **      The _vsnprintf behavior is compatible API which always return -1 when
- *buffer isn't enough at VS2013/2015/2017
- **      Yes, The vsnprintf is more efficient implemented by MSVC 19.0 or later,
- *AND it's also standard-compliant, see reference:
- *http://www.cplusplus.com/reference/cstdio/vsnprintf/
+
+/*
+ * --- This is a C++ universal sprintf in the future, works correct at all compilers.
  */
 template <class _Elem, class _Traits = std::char_traits<_Elem>,
           class _Alloc = std::allocator<_Elem>>
@@ -83,7 +85,7 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* 
       buffer.resize(nret);
     }
     else if ((unsigned int)nret > buffer.length())
-    { // VS2015 or later Visual Studio Version
+    { // handle return required length when buffer insufficient
       buffer.resize(nret);
 
       va_start(args, format);
@@ -93,7 +95,7 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* 
     // else equals, do nothing.
   }
   else
-  { // less or equal VS2013 and Unix System glibc implement.
+  { // handle return -1 when buffer insufficient
     do
     {
       buffer.resize(buffer.length() * 3 / 2);

@@ -299,7 +299,9 @@ static std::mutex _getifaddrs_init_lock;
 
 static void getifaddrs_init() { get_ifaddrs_impl(&getifaddrs_impl, &freeifaddrs_impl); }
 
-YASIO__DECL int getifaddrs(struct ifaddrs** ifap)
+namespace yasio
+{
+inline int getifaddrs(struct ifaddrs** ifap)
 {
   if (!_getifaddrs_initialized)
   {
@@ -353,8 +355,7 @@ cleanup:
 
   return ret;
 }
-
-YASIO__DECL void freeifaddrs(struct ifaddrs* ifa)
+inline void freeifaddrs(struct ifaddrs* ifa)
 {
   struct ifaddrs *cur, *next;
 
@@ -375,6 +376,7 @@ YASIO__DECL void freeifaddrs(struct ifaddrs* ifa)
     cur = next;
   }
 }
+} // namespace yasio
 
 static void get_ifaddrs_impl(int (**getifaddrs_impl)(struct ifaddrs** ifap),
                              void (**freeifaddrs_impl)(struct ifaddrs* ifa))
@@ -699,12 +701,13 @@ static int fill_ll_address(struct sockaddr_ll_extended** sa, struct ifinfomsg* n
   /* The assert can only fail for Iniband links, which are quite unlikely to be found
    * in any mobile devices
    */
-  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X", static_cast<int>(rta_payload_length),
-             static_cast<int>(sizeof((*sa)->sll_addr)), net_interface->ifi_type);
+  YASIO_LOGV("rta_payload_length == %d; sizeof sll_addr == %d; hw type == 0x%X",
+             static_cast<int>(rta_payload_length), static_cast<int>(sizeof((*sa)->sll_addr)),
+             net_interface->ifi_type);
   if (rta_payload_length > sizeof((*sa)->sll_addr))
   {
-    YASIO_LOG("Address is too long to place in sockaddr_ll (%d > %d)", static_cast<int>(rta_payload_length),
-              static_cast<int>(sizeof((*sa)->sll_addr)));
+    YASIO_LOG("Address is too long to place in sockaddr_ll (%d > %d)",
+              static_cast<int>(rta_payload_length), static_cast<int>(sizeof((*sa)->sll_addr)));
     free(*sa);
     *sa = NULL;
     return -1;

@@ -42,13 +42,13 @@ namespace yasio
 
 ibstream_view::ibstream_view() { this->reset("", 0); }
 
-ibstream_view::ibstream_view(const void* data, int size) { this->reset(data, size); }
+ibstream_view::ibstream_view(const void* data, size_t size) { this->reset(data, size); }
 
 ibstream_view::ibstream_view(const obstream* obs) { this->reset(obs->data(), obs->length()); }
 
 ibstream_view::~ibstream_view() {}
 
-void ibstream_view::reset(const void* data, int size)
+void ibstream_view::reset(const void* data, size_t size)
 {
   first_ = ptr_ = static_cast<const char*>(data);
   last_         = first_ + size;

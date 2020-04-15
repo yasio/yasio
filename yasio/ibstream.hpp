@@ -42,14 +42,14 @@ class ibstream_view
 {
 public:
   YASIO__DECL ibstream_view();
-  YASIO__DECL ibstream_view(const void* data, int size);
+  YASIO__DECL ibstream_view(const void* data, size_t size);
   YASIO__DECL ibstream_view(const obstream*);
   YASIO__DECL ibstream_view(const ibstream_view&) = delete;
   YASIO__DECL ibstream_view(ibstream_view&&)      = delete;
 
   YASIO__DECL ~ibstream_view();
 
-  YASIO__DECL void reset(const void* data, int size);
+  YASIO__DECL void reset(const void* data, size_t size);
 
   YASIO__DECL ibstream_view& operator=(const ibstream_view&) = delete;
   YASIO__DECL ibstream_view& operator=(ibstream_view&&) = delete;

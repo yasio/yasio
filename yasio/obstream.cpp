@@ -192,7 +192,7 @@ void obstream::write_bytes(const void* v, int vl)
 }
 void obstream::write_bytes(std::streamoff offset, const void* v, int vl)
 {
-  if ((offset + vl) < buffer_.size())
+  if ((offset + vl) < static_cast<std::streamoff>(buffer_.size()))
     ::memcpy(buffer_.data() + offset, v, vl);
 }
 

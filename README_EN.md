@@ -3,7 +3,7 @@
 # *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/d6qjfygtw2ewt9pf/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/dev-v3.34.0-blue.svg)](https://github.com/yasio/yasio/releases)
+[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
@@ -25,96 +25,9 @@
 * [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
 * [xlua](https://github.com/c4games/xlua): Integrate yasio to xlua, make the unity3d game project based on xlua can use yasio lua bindings APIs.
 
-## Usage
-### C++
-```cpp
-#include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
-using namespace yasio;
-using namespace yasio::inet;
-
-int main()
-{
-  io_service service({"www.ip138.com", 80});
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch event at netwrok thread
-  service.start_service([&](event_ptr&& ev) {
-    switch (ev->kind())
-    {
-      case YEK_PACKET: {
-        auto packet = std::move(ev->packet());
-        fwrite(packet.data(), packet.size(), 1, stdout);
-        fflush(stdout);
-        break;
-      }
-      case YEK_CONNECT_RESPONSE:
-        if (ev->status() == 0)
-        {
-          auto transport = ev->transport();
-          if (ev->cindex() == 0)
-          {
-            obstream obs;
-            obs.write_bytes("GET /index.htm HTTP/1.1\r\n");
-
-            obs.write_bytes("Host: www.ip138.com\r\n");
-
-            obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; "
-                            "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/79.0.3945.117 Safari/537.36\r\n");
-            obs.write_bytes("Accept: */*;q=0.8\r\n");
-            obs.write_bytes("Connection: Close\r\n\r\n");
-
-            service.write(transport, std::move(obs.buffer()));
-          }
-        }
-        break;
-      case YEK_CONNECTION_LOST:
-        printf("The connection is lost.\n");
-        break;
-    }
-  });
-  // open channel 0 as tcp client
-  service.open(0, YCK_TCP_CLIENT);
-  getchar();
-}
-```
-
-### Lua
-```lua
-local ip138 = "www.ip138.com"
-local service = yasio.io_service.new({host=ip138, port=80})
-local respdata = ""
-service.start_service(function(ev)
-        local k = ev.kind()
-        if (k == yasio.YEK_PACKET) then
-            respdata = respdata .. ev:packet():to_string()
-        elseif k == yasio.YEK_CONNECT_RESPONSE then
-            if ev:status() == 0 then
-                local transport = ev:transport()
-                local obs = yasio.obstream.new()
-                obs.write_bytes("GET / HTTP/1.1\r\n")
-
-                obs.write_bytes("Host: " .. ip138 .. "\r\n")
-
-                obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36\r\n")
-                obs.write_bytes("Accept: */*;q=0.8\r\n")
-                obs.write_bytes("Connection: Close\r\n\r\n")
-
-                service.write(transport, obs)
-            end
-        elseif k == yasio.YEK_CONNECTION_LOST then
-            print("request finish, respdata: " ..  respdata)
-        end
-    end)
--- open channel 0 as tcp client
-service.open(0, yasio.YCK_TCP_CLIENT)
-
--- should be call at the thread of lua_State, for game engine, it's should be renderer loop.
-function gDispatchNetworkEvent(...)
-    service.dispatch(128) -- dispatch max event is 128 per frame
-end
-
-_G.yservice = service -- Store service to global table as a singleton instance
-```
+## Docomentation
+* Simplified Chinese: [https://docs.yasio.org/](https://docs.yasio.org/)
+* English: [https://docs.yasio.org/en/latest/](https://docs.yasio.org/en/latest/)
 
 ## Simple run tcptest with g++
 ```sh

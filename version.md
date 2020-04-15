@@ -1,8 +1,3 @@
-yasio-3.34.0
-  
-* Use queue to handle UDP signal properly.
-  
-
 yasio-3.33.0
   
 * Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT_UDP``` to establish 4-tuple with peer.

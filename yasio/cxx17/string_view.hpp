@@ -1383,22 +1383,25 @@ inline size_t _FNV1a_hash(const void* _First, size_t _Count)
 
   return (_Val);
 }
-template <class _Elem> struct ::std::hash<cxx17::basic_string_view<_Elem>>
+} // namespace cxx17
+namespace std
+{
+template <class _Elem> struct hash<cxx17::basic_string_view<_Elem>>
 { // hash functor for basic_string
   typedef cxx17::basic_string_view<_Elem> _Kty;
 
   size_t operator()(const _Kty& _Keyval) const
   { // hash _Keyval to size_t value by pseudorandomizing transform
 #  if defined(__APPLE__)
-    return std::__do_string_hash(_Keyval.data(), _Keyval.data() + _Keyval.size());
+    return ::std::__do_string_hash(_Keyval.data(), _Keyval.data() + _Keyval.size());
 #  elif defined(__linux__)
-    return std::_Hash_impl::hash(_Keyval.data(), _Keyval.size() << (sizeof(_Elem) >> 1));
+    return ::std::_Hash_impl::hash(_Keyval.data(), _Keyval.size() << (sizeof(_Elem) >> 1));
 #  else
     return ::cxx17::_FNV1a_hash(_Keyval.data(), _Keyval.size() << (sizeof(_Elem) >> 1));
 #  endif
   }
 };
-} // namespace cxx17
+} // namespace std
 #endif
 
 namespace cxx17

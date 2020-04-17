@@ -1792,9 +1792,9 @@ void io_service::remove_timer(highp_timer* timer)
     }
   }
 }
-void io_service::open_internal(io_channel* ctx, bool ignore_state)
+void io_service::open_internal(io_channel* ctx)
 {
-  if (ctx->state_ == io_base::state::OPENING && !ignore_state)
+  if (ctx->state_ == io_base::state::OPENING)
   { // in-opening, do nothing
     YASIO_SLOG("[index: %d] the channel is in opening!", ctx->index_);
     return;

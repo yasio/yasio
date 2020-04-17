@@ -848,7 +848,7 @@ private:
   /* Call by stop_service, wait io_service thread exit properly & do cleanup */
   YASIO__DECL void join();
 
-  YASIO__DECL void open_internal(io_channel*, bool ignore_state = false);
+  YASIO__DECL void open_internal(io_channel*);
 
   YASIO__DECL void process_transports(fd_set* fds_array, long long& max_wait_duration);
   YASIO__DECL void process_channels(fd_set* fds_array);

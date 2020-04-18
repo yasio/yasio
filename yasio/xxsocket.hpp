@@ -854,14 +854,14 @@ public:
   ** @returns: If no error occurs, set_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   **       returned
   */
-  template <typename T> inline int set_optval(int level, int optname, const T& optval)
+  template <typename _Ty> inline int set_optval(int level, int optname, const _Ty& optval)
   {
     return set_optval(this->fd, level, optname, optval);
   }
-  template <typename T>
-  inline static int set_optval(socket_native_type sockfd, int level, int optname, const T& optval)
+  template <typename _Ty>
+  inline static int set_optval(socket_native_type sockfd, int level, int optname, const _Ty& optval)
   {
-    return set_optval(sockfd, level, optname, &optval, static_cast<socklen_t>(sizeof(T)));
+    return set_optval(sockfd, level, optname, &optval, static_cast<socklen_t>(sizeof(_Ty)));
   }
 
   int set_optval(int level, int optname, const void* optval, socklen_t optlen)
@@ -886,14 +886,20 @@ public:
   ** @returns: If no error occurs, get_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   */
-  template <typename T> inline int get_optval(int level, int optname, T& optval) const
+  template <typename _Ty> inline _Ty get_optval(int level, int optname) const
+  {
+    _Ty optval = {};
+    get_optval(this->fd, level, optname, optval);
+    return optval;
+  }
+  template <typename _Ty> inline int get_optval(int level, int optname, _Ty& optval) const
   {
     return get_optval(this->fd, level, optname, optval);
   }
-  template <typename T>
-  inline static int get_optval(socket_native_type sockfd, int level, int optname, T& optval)
+  template <typename _Ty>
+  inline static int get_optval(socket_native_type sockfd, int level, int optname, _Ty& optval)
   {
-    socklen_t optlen = static_cast<socklen_t>(sizeof(T));
+    socklen_t optlen = static_cast<socklen_t>(sizeof(_Ty));
     return get_optval(sockfd, level, optname, &optval, &optlen);
   }
   static int get_optval(socket_native_type sockfd, int level, int optname, void* optval,
@@ -911,11 +917,11 @@ public:
   **
   **
   */
-  template <typename _T> inline int ioctl(long cmd, const _T& value) const
+  template <typename _Ty> inline int ioctl(long cmd, const _Ty& value) const
   {
     return xxsocket::ioctl(this->fd, cmd, value);
   }
-  template <typename _T> inline static int ioctl(socket_native_type s, long cmd, const _T& value)
+  template <typename _Ty> inline static int ioctl(socket_native_type s, long cmd, const _Ty& value)
   {
     u_long argp = static_cast<u_long>(value);
     return ::ioctlsocket(s, cmd, &argp);

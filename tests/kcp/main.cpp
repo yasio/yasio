@@ -73,6 +73,8 @@ void start_sender(io_service& service)
         if (event->status() == 0)
         {
           auto thandle = event->transport();
+          // because some system's default sndbuf of udp is less than 64k, such as macOS.
+          service.set_option(YOPT_SOCKOPT, thandle, SOL_SOCKET, SO_SNDBUF, 65536, sizeof(int));
           if (TRANSFER_PROTOCOL == YCK_KCP_CLIENT)
           {
             setup_kcp_transfer(thandle);

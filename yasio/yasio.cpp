@@ -1589,9 +1589,13 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
 {
   auto ctx = transport->ctx_;
 
+  auto& s = transport->socket_;
+  YASIO_LOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_,
+             s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
+
   YASIO_SLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
-             transport->id_, transport->local_endpoint().to_string().c_str(),
-             transport->peer_endpoint().to_string().c_str());
+             transport->id_, s->local_endpoint().to_string().c_str(),
+             s->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }
 transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_ptr<xxsocket> socket)

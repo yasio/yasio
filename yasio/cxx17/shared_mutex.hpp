@@ -182,7 +182,7 @@ public:
   { // try to unlock the mutex
     if (!_Pmtx || !_Owns)
     {
-      _Throw_system_error(errc::operation_not_permitted);
+      throw std::system_error(std::errc::operation_not_permitted);
     }
 
     _Pmtx->unlock_shared();

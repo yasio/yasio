@@ -713,10 +713,9 @@ void io_service::handle_stop()
 }
 void io_service::init(const io_hostent* channel_eps, int channel_count)
 {
-  if (this->state_ != io_service::state::UNINITIALIZED)
-    return;
-  if (channel_count <= 0)
-    return;
+  // at least one channl
+  if (channel_count < 1)
+    channel_count = 1;
 
   FD_ZERO(&fds_array_[read_op]);
   FD_ZERO(&fds_array_[write_op]);
@@ -733,12 +732,21 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   // Create channels
   create_channels(channel_eps, channel_count);
 
+#if !defined(YASIO_HAVE_CARES)
+  life_mutex_ = std::make_shared<std::recursive_mutex>();
+  life_token_ = std::make_shared<life_token>();
+#endif
+
   this->state_ = io_service::state::IDLE;
 }
 void io_service::cleanup()
 {
   if (this->state_ == io_service::state::IDLE)
   {
+#if !defined(YASIO_HAVE_CARES)
+    std::unique_lock<std::recursive_mutex> lck(*life_mutex_);
+    life_token_.reset();
+#endif
     clear_channels();
     this->events_.clear();
     this->timer_queue_.clear();
@@ -1952,10 +1960,34 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->ares_start_time_ = highp_clock();
 #endif
 #if !defined(YASIO_HAVE_CARES)
+  // init async resolve state
+
+  std::string resolving_host                     = ctx->remote_host_;
+  u_short resolving_port                         = ctx->remote_port_;
+  std::weak_ptr<std::recursive_mutex> weak_mutex = life_mutex_;
+  std::weak_ptr<life_token> life_token           = life_token_;
   std::thread async_resolv_thread([=] {
-    int error = options_.resolv_(ctx->remote_eps_, ctx->remote_host_.c_str(), ctx->remote_port_);
+    // check life token
+    if (life_token.use_count() < 1)
+      return;
+
+    // preform blocking resolving safe
+    std::vector<ip::endpoint> remote_eps;
+    int error = options_.resolv_(remote_eps, resolving_host.c_str(), resolving_port);
+
+    // lock perform non blocking code
+    auto locked_mtx = weak_mutex.lock();
+    if (!locked_mtx)
+      return;
+    std::unique_lock<std::recursive_mutex> lck(*locked_mtx);
+
+    // check life token again, when io_service cleanup done, life_token's use_count will be 0,
+    // otherwise, we can safe to do follow assignments.
+    if (life_token.use_count() < 1)
+      return;
     if (error == 0)
     {
+      ctx->remote_eps_            = std::move(remote_eps);
       ctx->dns_queries_state_     = YDQS_READY;
       ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)

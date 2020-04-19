@@ -1023,6 +1023,12 @@ private:
 #if defined(YASIO_HAVE_CARES)
   ares_channel ares_         = nullptr; // the ares handle for non blocking io dns resolve support
   int ares_outstanding_work_ = 0;
+#else
+  // we need life_token + life_mutex
+  struct life_token
+  {};
+  std::shared_ptr<life_token> life_token_;
+  std::shared_ptr<std::recursive_mutex> life_mutex_;
 #endif
 }; // io_service
 } // namespace inet

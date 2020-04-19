@@ -713,7 +713,7 @@ void io_service::handle_stop()
 }
 void io_service::init(const io_hostent* channel_eps, int channel_count)
 {
-  // at least one channl
+  // at least one channel
   if (channel_count < 1)
     channel_count = 1;
 

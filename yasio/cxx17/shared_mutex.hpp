@@ -73,45 +73,45 @@ class shared_mutex
 public:
   typedef yasio__smtx_t* native_handle_type;
 
-  shared_mutex() noexcept // strengthened
+  shared_mutex() // strengthened
   {
     yasio__smtx_init(&this->_Myhandle, nullptr);
   }
 
-  ~shared_mutex() noexcept { yasio__smtx_destroy(&this->_Myhandle); }
+  ~shared_mutex() { yasio__smtx_destroy(&this->_Myhandle); }
 
-  void lock() noexcept /* strengthened */
-  {                    // lock exclusive
+  void lock() /* strengthened */
+  {           // lock exclusive
     yasio__smtx_lock_exclusive(&this->_Myhandle);
   }
 
-  bool try_lock() noexcept /* strengthened */
-  {                        // try to lock exclusive
+  bool try_lock() /* strengthened */
+  {               // try to lock exclusive
     return yasio__smtx_trylock_exclusive(&this->_Myhandle);
   }
 
-  void unlock() noexcept /* strengthened */
-  {                      // unlock exclusive
+  void unlock() /* strengthened */
+  {             // unlock exclusive
     yasio__smtx_unlock_exclusive(&this->_Myhandle);
   }
 
-  void lock_shared() noexcept /* strengthened */
-  {                           // lock non-exclusive
+  void lock_shared() /* strengthened */
+  {                  // lock non-exclusive
     yasio__smtx_lock_shared(&this->_Myhandle);
   }
 
-  bool try_lock_shared() noexcept /* strengthened */
-  {                               // try to lock non-exclusive
+  bool try_lock_shared() /* strengthened */
+  {                      // try to lock non-exclusive
     return yasio__smtx_trylock_shared(&this->_Myhandle);
   }
 
-  void unlock_shared() noexcept /* strengthened */
-  {                             // unlock non-exclusive
+  void unlock_shared() /* strengthened */
+  {                    // unlock non-exclusive
     yasio__smtx_unlock_shared(&this->_Myhandle);
   }
 
-  native_handle_type native_handle() noexcept /* strengthened */
-  {                                           // get native handle
+  native_handle_type native_handle() /* strengthened */
+  {                                  // get native handle
     return &_Myhandle;
   }
 
@@ -127,14 +127,14 @@ template <class _Mutex> class shared_lock
 public:
   using mutex_type = _Mutex;
 
-  shared_lock() noexcept : _Pmtx(nullptr), _Owns(false) {}
+  shared_lock() : _Pmtx(nullptr), _Owns(false) {}
 
   explicit shared_lock(mutex_type& _Mtx) : _Pmtx(YASIO__STD addressof(_Mtx)), _Owns(true)
   { // construct with mutex and lock shared
     _Mtx.lock_shared();
   }
 
-  ~shared_lock() noexcept
+  ~shared_lock()
   {
     if (_Owns)
     {
@@ -142,13 +142,13 @@ public:
     }
   }
 
-  shared_lock(shared_lock&& _Other) noexcept : _Pmtx(_Other._Pmtx), _Owns(_Other._Owns)
+  shared_lock(shared_lock&& _Other) : _Pmtx(_Other._Pmtx), _Owns(_Other._Owns)
   {
     _Other._Pmtx = nullptr;
     _Other._Owns = false;
   }
 
-  shared_lock& operator=(shared_lock&& _Right) noexcept
+  shared_lock& operator=(shared_lock&& _Right)
   {
     if (_Owns)
     {
@@ -182,22 +182,20 @@ public:
   void unlock()
   { // try to unlock the mutex
     if (!_Pmtx || !_Owns)
-    {
-      throw std::system_error(std::errc::operation_not_permitted);
-    }
+      throw std::system_error(std::errc::operation_not_permitted, "");
 
     _Pmtx->unlock_shared();
     _Owns = false;
   }
 
   // MUTATE
-  void swap(shared_lock& _Right) noexcept
+  void swap(shared_lock& _Right)
   {
     YASIO__STD swap(_Pmtx, _Right._Pmtx);
     YASIO__STD swap(_Owns, _Right._Owns);
   }
 
-  mutex_type* release() noexcept
+  mutex_type* release()
   {
     _Mutex* _Res = _Pmtx;
     _Pmtx        = nullptr;
@@ -206,11 +204,11 @@ public:
   }
 
   // OBSERVE
-  bool owns_lock() const noexcept { return _Owns; }
+  bool owns_lock() const { return _Owns; }
 
-  explicit operator bool() const noexcept { return _Owns; }
+  explicit operator bool() const { return _Owns; }
 
-  mutex_type* mutex() const noexcept { return _Pmtx; }
+  mutex_type* mutex() const { return _Pmtx; }
 
 private:
   _Mutex* _Pmtx;
@@ -219,14 +217,10 @@ private:
   void _Validate() const
   { // check if the mutex can be locked
     if (!_Pmtx)
-    {
-      throw std::system_error(std::errc::operation_not_permitted);
-    }
+      throw std::system_error(std::errc::operation_not_permitted, "");
 
     if (_Owns)
-    {
-      throw std::system_error(std::errc::resource_deadlock_would_occur);
-    }
+      throw std::system_error(std::errc::resource_deadlock_would_occur, "");
   }
 };
 } // namespace cxx17

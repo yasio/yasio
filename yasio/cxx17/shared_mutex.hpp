@@ -26,7 +26,7 @@ SOFTWARE.
 
 #ifndef YASIO__SHARED_MUTEX_HPP
 #define YASIO__SHARED_MUTEX_HPP
-#include <memory>
+
 
 #include "yasio/compiler/feature_test.hpp"
 
@@ -41,6 +41,7 @@ using std::shared_mutex;
 } // namespace cxx17
 
 #else
+#  include <system_error>
 #  if defined(_WIN32)
 #    include <Windows.h>
 #    define yasio__smtx_t SRWLOCK

@@ -65,7 +65,7 @@ using std::shared_mutex;
 #    define yasio__smtx_unlock_shared(rwlock) pthread_rwlock_unlock(rwlock)
 #    define yasio__smtx_unlock_exclusive(rwlock) pthread_rwlock_unlock(rwlock)
 #  endif
-#  define yaso__throw_error(ec) throw std::system_error(ec, "")
+#  define yaso__throw_error(e) throw std::system_error(std::make_error_code(e), "")
 
 // CLASS TEMPLATE shared_lock
 namespace cxx17

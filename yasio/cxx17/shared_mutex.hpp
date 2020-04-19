@@ -65,6 +65,8 @@ using std::shared_mutex;
 #    define yasio__smtx_unlock_shared(rwlock) pthread_rwlock_unlock(rwlock)
 #    define yasio__smtx_unlock_exclusive(rwlock) pthread_rwlock_unlock(rwlock)
 #  endif
+#  define yaso__throw_error(ec) throw std::system_error(ec, std::system_category{}, "")
+
 // CLASS TEMPLATE shared_lock
 namespace cxx17
 {
@@ -182,7 +184,7 @@ public:
   void unlock()
   { // try to unlock the mutex
     if (!_Pmtx || !_Owns)
-      throw std::system_error(std::errc::operation_not_permitted, "");
+      yaso__throw_error(std::errc::operation_not_permitted);
 
     _Pmtx->unlock_shared();
     _Owns = false;
@@ -217,10 +219,10 @@ private:
   void _Validate() const
   { // check if the mutex can be locked
     if (!_Pmtx)
-      throw std::system_error(std::errc::operation_not_permitted, "");
+      yaso__throw_error(std::errc::operation_not_permitted);
 
     if (_Owns)
-      throw std::system_error(std::errc::resource_deadlock_would_occur, "");
+      yaso__throw_error(std::errc::resource_deadlock_would_occur);
   }
 };
 } // namespace cxx17

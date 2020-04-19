@@ -41,8 +41,8 @@ using std::shared_mutex;
 } // namespace cxx17
 
 #else
-#  include <Windows.h>
 #  if defined(_WIN32)
+#    include <Windows.h>
 #    define yasio__smtx_t SRWLOCK
 #    define yasio__smtx_init(rwlock, attr) InitializeSRWLock(rwlock)
 #    define yasio__smtx_destroy(rwlock)

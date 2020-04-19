@@ -77,4 +77,6 @@ SOFTWARE.
 #  define YASIO__64BITS 0
 #endif
 
+#define YASIO__STD ::std::
+
 #endif

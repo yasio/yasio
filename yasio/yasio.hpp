@@ -53,6 +53,10 @@ SOFTWARE.
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
+#if !defined(YASIO_HAVE_CARES)
+#  include "yasio/cxx17/shared_mutex.hpp"
+#endif
+
 #if defined(YASIO_HAVE_KCP)
 typedef struct IKCPCB ikcpcb;
 #endif
@@ -1028,7 +1032,7 @@ private:
   struct life_token
   {};
   std::shared_ptr<life_token> life_token_;
-  std::shared_ptr<std::recursive_mutex> life_mutex_;
+  std::shared_ptr<cxx17::shared_mutex> life_mutex_;
 #endif
 }; // io_service
 } // namespace inet

@@ -733,7 +733,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   create_channels(channel_eps, channel_count);
 
 #if !defined(YASIO_HAVE_CARES)
-  life_mutex_ = std::make_shared<std::recursive_mutex>();
+  life_mutex_ = std::make_shared<cxx17::shared_mutex>();
   life_token_ = std::make_shared<life_token>();
 #endif
 
@@ -744,9 +744,10 @@ void io_service::cleanup()
   if (this->state_ == io_service::state::IDLE)
   {
 #if !defined(YASIO_HAVE_CARES)
-    std::unique_lock<std::recursive_mutex> lck(*life_mutex_);
+    std::unique_lock<cxx17::shared_mutex> lck(*life_mutex_);
     life_token_.reset();
 #endif
+
     clear_channels();
     this->events_.clear();
     this->timer_queue_.clear();
@@ -1962,10 +1963,10 @@ void io_service::start_resolve(io_channel* ctx)
 #if !defined(YASIO_HAVE_CARES)
   // init async resolve state
 
-  std::string resolving_host                     = ctx->remote_host_;
-  u_short resolving_port                         = ctx->remote_port_;
-  std::weak_ptr<std::recursive_mutex> weak_mutex = life_mutex_;
-  std::weak_ptr<life_token> life_token           = life_token_;
+  std::string resolving_host                    = ctx->remote_host_;
+  u_short resolving_port                        = ctx->remote_port_;
+  std::weak_ptr<cxx17::shared_mutex> weak_mutex = life_mutex_;
+  std::weak_ptr<life_token> life_token          = life_token_;
   std::thread async_resolv_thread([=] {
     // check life token
     if (life_token.use_count() < 1)
@@ -1979,7 +1980,7 @@ void io_service::start_resolve(io_channel* ctx)
     auto locked_mtx = weak_mutex.lock();
     if (!locked_mtx)
       return;
-    std::unique_lock<std::recursive_mutex> lck(*locked_mtx);
+    cxx17::shared_lock<cxx17::shared_mutex> lck(*locked_mtx);
 
     // check life token again, when io_service cleanup done, life_token's use_count will be 0,
     // otherwise, we can safe to do follow assignments.

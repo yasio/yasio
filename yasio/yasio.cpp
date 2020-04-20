@@ -1961,8 +1961,7 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->ares_start_time_ = highp_clock();
 #endif
 #if !defined(YASIO_HAVE_CARES)
-  // init async resolve state
-
+  // init async resolve thread state
   std::string resolving_host                    = ctx->remote_host_;
   u_short resolving_port                        = ctx->remote_port_;
   std::weak_ptr<cxx17::shared_mutex> weak_mutex = life_mutex_;
@@ -1977,10 +1976,10 @@ void io_service::start_resolve(io_channel* ctx)
     int error = options_.resolv_(remote_eps, resolving_host.c_str(), resolving_port);
 
     // lock perform non blocking code
-    auto locked_mtx = weak_mutex.lock();
-    if (!locked_mtx)
+    auto pmtx = weak_mutex.lock();
+    if (!pmtx)
       return;
-    cxx17::shared_lock<cxx17::shared_mutex> lck(*locked_mtx);
+    cxx17::shared_lock<cxx17::shared_mutex> lck(*pmtx);
 
     // check life token again, when io_service cleanup done, life_token's use_count will be 0,
     // otherwise, we can safe to do follow assignments.

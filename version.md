@@ -14,8 +14,8 @@ yasio-3.33.0
 * Rename io_service ```start_service/stop_service``` to ```start/stop```.
 * Fix c-ares timeout behavior.
 * Improve c-ares cleanup behavior, now destruct io_service more stable with c-ares enabled.
-* Make cxx17::string_view support unordered set/map on compilers which only support c++11 standard.
-* Use shared_ptr + shared_mutex to ensure destruct io_service safe without side affect for concurrency of name resolving.
+* Make ```cxx17::string_view``` support unordered set/map on compilers which only support c++11 standard.
+* Use ```shared_ptr + shared_mutex``` to ensure destruct io_service safe without side affect for concurrency of name resolving.
   
   
 yasio-3.31.3

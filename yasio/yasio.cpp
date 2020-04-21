@@ -882,32 +882,6 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
       iter = transports_.erase(iter);
     }
   }
-
-  /*
-    Because Bind() the client socket to the socket address of the listening socket.  On Linux this
-    essentially passes the responsibility for receiving data for the client session from the
-    well-known listening socket, to the newly allocated client socket.  It is important to note
-    that this behavior is not the same on other platforms, like Windows (unfortunately), detail
-    see:
-    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
-    https://cloud.tencent.com/developer/article/1004555
-    So we emulate thus by ourself.
-    since v3.33, the udp not use send_queue, so we only check status instead do write.
-  */
-#if defined(_WIN32)
-  for (auto iter = dgram_clients_.begin(); iter != dgram_clients_.end();)
-  {
-    auto transport = iter->second;
-    if (transport->do_write(max_wait_duration))
-      ++iter;
-    else
-    {
-      transport->set_last_errno(yasio::errc::shutdown_by_localhost);
-      handle_close(transport);
-      iter = dgram_clients_.erase(iter);
-    }
-  }
-#endif
 }
 void io_service::process_channels(fd_set* fds_array)
 {
@@ -1493,11 +1467,27 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
 #if !defined(_WIN32)
             auto transport = do_dgram_accept(ctx, peer);
 #else
-            // for win32, we manage dgram clients by ourself, and perfrom write operation only in
-            // dgram_transports, the read operation still dispatch by channel.
-            auto it = this->dgram_clients_.find(peer);
-            auto transport =
-                it != this->dgram_clients_.end() ? it->second : do_dgram_accept(ctx, peer);
+            /*
+             Because Bind() the client socket to the socket address of the listening socket.  On
+             Linux this essentially passes the responsibility for receiving data for the client
+             session from the well-known listening socket, to the newly allocated client socket.  It
+             is important to note that this behavior is not the same on other platforms, like
+             Windows (unfortunately), detail see:
+             https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+             https://cloud.tencent.com/developer/article/1004555
+             So we emulate thus by ourself, don't care the performance, just a workaround
+             implementation.
+           */
+            // for win32, we check exists udp clients by ourself, and only write operation can be
+            // perform on transports, the read operation still dispatch by channel.
+            auto it = std::find_if(
+                this->transports_.begin(), this->transports_.end(),
+                [&peer](const io_transport* transport) {
+                  using namespace std;
+                  return (transport->ctx_->properties_ & YCM_UDP) &&
+                         static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
+                });
+            auto transport = it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer);
 #endif
             if (transport)
             {
@@ -1541,7 +1531,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       handle_connect_succeed(transport);
 #else
       notify_connect_succeed(transport);
-      this->dgram_clients_.emplace(peer, transport);
+      this->transports_.push_back(transport);
 #endif
       return transport;
     }

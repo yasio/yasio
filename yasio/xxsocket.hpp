@@ -1087,6 +1087,10 @@ inline bool operator<(const yasio::inet::ip::endpoint& lhs, const yasio::inet::i
            (static_cast<uint64_t>(rhs.in4_.sin_addr.s_addr) + rhs.in4_.sin_port);
   return ::memcmp(&lhs, &rhs, sizeof(rhs)) < 0;
 }
+inline bool operator==(const yasio::inet::ip::endpoint& lhs, const yasio::inet::ip::endpoint& rhs)
+{ // apply operator == to operands
+  return !(lhs < rhs) && !(rhs < lhs);
+}
 } // namespace std
 
 #if defined(_MSC_VER)

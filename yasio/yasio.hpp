@@ -963,10 +963,6 @@ private:
   std::vector<transport_handle_t> transports_;
   std::vector<transport_handle_t> tpool_;
 
-#if defined(_WIN32)
-  std::map<ip::endpoint, transport_handle_t> dgram_clients_;
-#endif
-
   // select interrupter
   select_interrupter interrupter_;
 

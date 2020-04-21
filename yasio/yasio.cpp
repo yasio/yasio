@@ -117,9 +117,8 @@ enum
 // op mask
 enum
 {
-  YOPM_OPEN_CHANNEL    = 1,
-  YOPM_CLOSE_CHANNEL   = 1 << 1,
-  YOPM_CLOSE_TRANSPORT = 1 << 2
+  YOPM_OPEN  = 1,
+  YOPM_CLOSE = 1 << 1,
 };
 
 // dns queries state
@@ -879,7 +878,7 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
-      if ((opm & YOPM_CLOSE_TRANSPORT) == 0)
+      if ((opm & YOPM_CLOSE) == 0)
       {
         ++iter;
         continue;
@@ -904,7 +903,7 @@ void io_service::process_channels(fd_set* fds_array)
       bool finish = true;
       if (ctx->properties_ & YCM_CLIENT)
       { // resolving, opening
-        if (ctx->opmask_ & YOPM_OPEN_CHANNEL)
+        if (ctx->opmask_ & YOPM_OPEN)
         {
           switch (this->query_ares_state(ctx))
           {
@@ -920,15 +919,15 @@ void io_service::process_channels(fd_set* fds_array)
         else if (ctx->state_ == io_base::state::OPENING)
           do_nonblocking_connect_completion(ctx, fds_array);
 
-        finish = ctx->error_ != EINPROGRESS && (ctx->opmask_ & YOPM_OPEN_CHANNEL) == 0;
+        finish = ctx->error_ != EINPROGRESS && (ctx->opmask_ & YOPM_OPEN) == 0;
       }
       else if (ctx->properties_ & YCM_SERVER)
       {
         auto opmask = ctx->opmask_;
-        if (opmask & YOPM_CLOSE_CHANNEL)
+        if (opmask & YOPM_CLOSE)
           cleanup_io(ctx);
 
-        if (opmask & YOPM_OPEN_CHANNEL)
+        if (opmask & YOPM_OPEN)
           do_nonblocking_accept(ctx);
 
         finish = (ctx->state_ != io_base::state::OPEN);
@@ -950,7 +949,7 @@ void io_service::close(int cindex)
   if (!channel)
     return;
 
-  if (!(channel->opmask_ & YOPM_CLOSE_CHANNEL))
+  if (!(channel->opmask_ & YOPM_CLOSE))
   {
     if (close_internal(channel))
       this->interrupt();
@@ -958,9 +957,9 @@ void io_service::close(int cindex)
 }
 void io_service::close(transport_handle_t transport)
 {
-  if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE_TRANSPORT))
+  if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE))
   {
-    transport->opmask_ |= YOPM_CLOSE_TRANSPORT;
+    transport->opmask_ |= YOPM_CLOSE;
     if (transport->ctx_->properties_ & YCM_TCP)
       transport->socket_->shutdown();
     this->interrupt();
@@ -1016,7 +1015,7 @@ void io_service::handle_close(transport_handle_t thandle)
   if (ctx->properties_ & YCM_CLIENT)
   {
     ctx->error_ = 0;
-    ctx->opmask_ &= ~YOPM_CLOSE_TRANSPORT;
+    ctx->opmask_ &= ~YOPM_CLOSE;
     ctx->state_ = io_base::state::CLOSED;
     ctx->properties_ &= (uint32_t)0xffff; // clear private flags
   }
@@ -1095,7 +1094,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   if (ctx->socket_->is_open())
     cleanup_io(ctx);
 
-  ctx->opmask_ &= ~YOPM_OPEN_CHANNEL;
+  ctx->opmask_ &= ~YOPM_OPEN;
 
   if (ctx->remote_eps_.empty())
   {
@@ -1796,7 +1795,7 @@ void io_service::open_internal(io_channel* ctx)
 
   close_internal(ctx);
 
-  ctx->opmask_ |= YOPM_OPEN_CHANNEL;
+  ctx->opmask_ |= YOPM_OPEN;
 
   this->channel_ops_mtx_.lock();
   if (std::find(this->channel_ops_.begin(), this->channel_ops_.end(), ctx) ==
@@ -1810,14 +1809,12 @@ bool io_service::close_internal(io_channel* ctx)
 {
   if (ctx->socket_->is_open())
   {
+    ctx->opmask_ |= YOPM_CLOSE;
     if (ctx->properties_ & YCM_CLIENT)
     {
-      ctx->opmask_ |= YOPM_CLOSE_TRANSPORT;
       if (ctx->properties_ & YCM_TCP)
         ctx->socket_->shutdown();
     }
-    else
-      ctx->opmask_ |= YOPM_CLOSE_CHANNEL;
     return true;
   }
   return false;

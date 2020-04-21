@@ -1445,73 +1445,68 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
   if (ctx->state_ == io_base::state::OPEN)
   {
     int error = -1;
-    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]) &&
+        ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
     {
-      socklen_t len = sizeof(error);
-      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >=
-              0 &&
-          error == 0)
+      if (ctx->properties_ & YCM_TCP)
       {
-        if (ctx->properties_ & YCM_TCP)
+        socket_native_type sockfd;
+        error = ctx->socket_->accept_n(sockfd);
+        if (error == 0)
+          handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
+        else // The non blocking tcp accept failed can be ignored.
+          YASIO_SLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
+                      (int)ctx->socket_->native_handle(), error);
+      }
+      else // YCM_UDP
+      {
+        ip::endpoint peer;
+        int n = ctx->socket_->recvfrom(&ctx->buffer_.front(), static_cast<int>(ctx->buffer_.size()),
+                                       peer);
+        if (n > 0)
         {
-          socket_native_type sockfd;
-          error = ctx->socket_->accept_n(sockfd);
-          if (error == 0)
-            handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
-          else // The non blocking tcp accept failed can be ignored.
-            YASIO_SLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
-                        (int)ctx->socket_->native_handle(), error);
-        }
-        else // YCM_UDP
-        {
-          ip::endpoint peer;
-          int n = ctx->socket_->recvfrom(&ctx->buffer_.front(),
-                                         static_cast<int>(ctx->buffer_.size()), peer);
-          if (n > 0)
-          {
-            YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
+          YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
 
-            /* make a transport local --> peer udp session, just like tcp accept */
+          /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
-            auto transport = do_dgram_accept(ctx, peer);
+          auto transport = do_dgram_accept(ctx, peer);
 #else
-            /*
-             Because Bind() the client socket to the socket address of the listening socket.  On
-             Linux this essentially passes the responsibility for receiving data for the client
-             session from the well-known listening socket, to the newly allocated client socket.  It
-             is important to note that this behavior is not the same on other platforms, like
-             Windows (unfortunately), detail see:
-             https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
-             https://cloud.tencent.com/developer/article/1004555
-             So we emulate thus by ourself, don't care the performance, just a workaround
-             implementation.
-           */
-            // for win32, we check exists udp clients by ourself, and only write operation can be
-            // perform on transports, the read operation still dispatch by channel.
-            auto it = std::find_if(
-                this->transports_.begin(), this->transports_.end(),
-                [&peer](const io_transport* transport) {
-                  using namespace std;
-                  return (transport->ctx_->properties_ & YCM_UDP) &&
-                         static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
-                });
-            auto transport = it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer);
+          /*
+           Because Bind() the client socket to the socket address of the listening socket.  On
+           Linux this essentially passes the responsibility for receiving data for the client
+           session from the well-known listening socket, to the newly allocated client socket.  It
+           is important to note that this behavior is not the same on other platforms, like
+           Windows (unfortunately), detail see:
+           https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+           https://cloud.tencent.com/developer/article/1004555
+           So we emulate thus by ourself, don't care the performance, just a workaround
+           implementation.
+         */
+          // for win32, we check exists udp clients by ourself, and only write operation can be
+          // perform on transports, the read operation still dispatch by channel.
+          auto it = std::find_if(
+              this->transports_.begin(), this->transports_.end(),
+              [&peer](const io_transport* transport) {
+                using namespace std;
+                return (transport->ctx_->properties_ & YCM_UDP) &&
+                       static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
+              });
+          auto transport = it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer);
 #endif
-            if (transport)
-            {
-              this->handle_event(event_ptr(new io_event(
-                  transport->ctx_->index(), YEK_PACKET,
-                  std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n), transport)));
-            }
-          }
-          else if (n < 0)
+          if (transport)
           {
-            error = xxsocket::get_last_errno();
-            if (YASIO_SHOULD_CLOSE_0(error))
-            {
-              YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
-              close(ctx->index_);
-            }
+            this->handle_event(event_ptr(new io_event(
+                transport->ctx_->index(), YEK_PACKET,
+                std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n), transport)));
+          }
+        }
+        else if (n < 0)
+        {
+          error = xxsocket::get_last_errno();
+          if (YASIO_SHOULD_CLOSE_0(error))
+          {
+            YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
+            close(ctx->index_);
           }
         }
       }

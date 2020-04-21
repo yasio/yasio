@@ -874,13 +874,22 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    if (do_read(transport, fds_array, max_wait_duration) && do_write(transport, max_wait_duration))
-      ++iter;
-    else
+    bool ok        = (do_read(transport, fds_array, max_wait_duration) &&
+               do_write(transport, max_wait_duration));
+    if (ok)
     {
-      handle_close(transport);
-      iter = transports_.erase(iter);
+      int opm = transport->opmask_ | transport->ctx_->opmask_;
+      if ((opm & YOPM_CLOSE_TRANSPORT) == 0)
+      {
+        ++iter;
+        continue;
+      }
+      else if (!transport->error_) // If no reason, just set reason: local shutdown
+        transport->set_last_errno(yasio::errc::shutdown_by_localhost);
     }
+
+    handle_close(transport);
+    iter = transports_.erase(iter);
   }
 }
 void io_service::process_channels(fd_set* fds_array)
@@ -1644,12 +1653,6 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
   {
     if (!transport->socket_->is_open())
       break;
-    if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
-    {
-      if (!transport->error_) // If no reason, just set reason: local shutdown
-        transport->set_last_errno(yasio::errc::shutdown_by_localhost);
-      break;
-    }
 
     int n = 0, error = 0;
     if (FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op])))

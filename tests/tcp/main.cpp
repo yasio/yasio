@@ -8,23 +8,12 @@
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
-#include <unordered_set>
-
 using namespace yasio;
 using namespace yasio::inet;
 
 void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}};
-
-  std::unordered_set<cxx17::string_view> views;
-
-  views.emplace("hello");
-  views.emplace("world");
-  views.emplace("goods");
-
-
-  auto test = views.find("goods");
 
   yasio::obstream obstest;
   obstest.push24();
@@ -125,11 +114,6 @@ void yasioTest()
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
   service.open(0); // open http client
-  service.close(0);
-  service.open(0); // open http client
-  service.close(0);
-  service.open(0); // open http client
-  service.stop();
   time_t duration = 0;
   while (service.is_running())
   {

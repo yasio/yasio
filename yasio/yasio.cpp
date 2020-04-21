@@ -89,7 +89,7 @@ extern "C" {
 
 namespace yasio
 {
-namespace error
+namespace errc
 {
 enum
 {
@@ -416,14 +416,12 @@ bool io_transport::do_write(long long& max_wait_duration)
     if (!socket_->is_open())
       break;
 
-    int error = 0, internal_ec = 0;
+    int error = 0;
     auto wrap = send_queue_.peek();
     if (wrap)
     {
       auto& v = *wrap;
-      if (call_write(v.get(), error, internal_ec))
-        send_queue_.pop();
-      else if (error != 0)
+      if (call_write(v.get(), error) < 0)
       {
         set_last_errno(error);
         break;
@@ -432,7 +430,7 @@ bool io_transport::do_write(long long& max_wait_duration)
 
     // If still have work to do.
     if (!send_queue_.empty())
-      max_wait_duration = internal_ec != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
+      max_wait_duration = error != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
 
     ret = true;
   } while (false);
@@ -444,20 +442,18 @@ int io_transport::call_read(void* data, int size, int& error)
   int n = read_cb_(data, size);
   if (n < 0)
   {
-    int ec = xxsocket::get_last_errno();
-    if (!YASIO_SHOULD_CLOSE_0(ec)) // status ok
+    error = xxsocket::get_last_errno();
+    if (!YASIO_SHOULD_CLOSE_0(error)) // status ok
       n = 0;
-    else
-      error = ec;
   }
   else if (n == 0 && (ctx_->properties_ & YCM_TCP))
   {
     n     = -1;
-    error = yasio::error::eof;
+    error = yasio::errc::eof;
   }
   return n;
 }
-bool io_transport::call_write(io_send_op* op, int& error, int& internal_ec)
+int io_transport::call_write(io_send_op* op, int& error)
 {
   int n = op->perform(this, op->buffer_.data() + op->offset_,
                       static_cast<int>(op->buffer_.size() - op->offset_));
@@ -469,16 +465,16 @@ bool io_transport::call_write(io_send_op* op, int& error, int& internal_ec)
     { // finished
       if (op->handler_)
         op->handler_();
-      return true;
+      send_queue_.pop();
     }
   }
   else if (n < 0)
   {
-    internal_ec = xxsocket::get_last_errno();
-    if (YASIO_SHOULD_CLOSE_1(internal_ec))
-      error = internal_ec;
+    error = xxsocket::get_last_errno();
+    if (!YASIO_SHOULD_CLOSE_1(error))
+      n = 0;
   }
-  return false;
+  return n;
 }
 void io_transport::set_primitives()
 {
@@ -619,7 +615,7 @@ int io_transport_kcp::do_read(int& error)
     else
     { // simply regards -1,-2,-3 as error and trigger connection lost event.
       n     = -1;
-      error = yasio::error::invalid_packet;
+      error = yasio::errc::invalid_packet;
     }
   }
   return n;
@@ -906,7 +902,7 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
       ++iter;
     else
     {
-      transport->set_last_errno(yasio::error::shutdown_by_localhost);
+      transport->set_last_errno(yasio::errc::shutdown_by_localhost);
       handle_close(transport);
       iter = dgram_clients_.erase(iter);
     }
@@ -933,7 +929,7 @@ void io_service::process_channels(fd_set* fds_array)
               do_nonblocking_connect(ctx);
               break;
             case YDQS_FAILED:
-              handle_connect_failed(ctx, yasio::error::resolve_host_failed);
+              handle_connect_failed(ctx, yasio::errc::resolve_host_failed);
               break;
             default:; // YDQS_INPRROGRESS
           }
@@ -1120,7 +1116,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   if (ctx->remote_eps_.empty())
   {
-    this->handle_connect_failed(ctx, yasio::error::no_available_address);
+    this->handle_connect_failed(ctx, yasio::errc::no_available_address);
     return;
   }
 
@@ -1157,9 +1153,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     { // setup no blocking connect
       int error = xxsocket::get_last_errno();
       if (error != EINPROGRESS && error != EWOULDBLOCK)
-      {
         this->handle_connect_failed(ctx, error);
-      }
       else
       {
         ctx->set_last_errno(EINPROGRESS);
@@ -1193,10 +1187,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
     if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
         FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
     {
-      socklen_t len = sizeof(error);
-      if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error, &len) >=
-              0 &&
-          error == 0)
+      if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
       {
         // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
         unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
@@ -1214,10 +1205,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
           FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
       {
-        socklen_t len = sizeof(error);
-        if (::getsockopt(ctx->socket_->native_handle(), SOL_SOCKET, SO_ERROR, (char*)&error,
-                         &len) >= 0 &&
-            error == 0)
+        if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
         {
           // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
           unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
@@ -1287,7 +1275,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
                 errno, strerror(errno));
 
       ctx->ssl_.destroy();
-      handle_connect_failed(ctx, yasio::error::ssl_handeshake_failed);
+      handle_connect_failed(ctx, yasio::errc::ssl_handeshake_failed);
     }
   }
   else
@@ -1327,7 +1315,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   }
   else
   {
-    ctx->set_last_errno(yasio::error::resolve_host_failed);
+    ctx->set_last_errno(yasio::errc::resolve_host_failed);
     YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
     YASIO_SLOG_OPTIONS(current_service.options_,
                        "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
@@ -1669,7 +1657,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     if ((transport->opmask_ | transport->ctx_->opmask_) & YOPM_CLOSE_TRANSPORT)
     {
       if (!transport->error_) // If no reason, just set reason: local shutdown
-        transport->set_last_errno(yasio::error::shutdown_by_localhost);
+        transport->set_last_errno(yasio::errc::shutdown_by_localhost);
       break;
     }
 
@@ -1707,7 +1695,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
           transport->wpos_ += n;
         else
         {
-          transport->set_last_errno(yasio::error::invalid_packet);
+          transport->set_last_errno(yasio::errc::invalid_packet);
           break;
         }
       }
@@ -1719,7 +1707,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
       }
     }
     else
-    { // n == 0: The return value will be 0 when the peer has performed an orderly shutdown.
+    { // n < 0, regard as connection should close
       transport->set_last_errno(error);
       break;
     }
@@ -2052,17 +2040,17 @@ const char* io_service::strerror(int error)
   {
     case 0:
       return "No error.";
-    case yasio::error::resolve_host_failed:
+    case yasio::errc::resolve_host_failed:
       return "Resolve host failed!";
-    case yasio::error::no_available_address:
+    case yasio::errc::no_available_address:
       return "No available address!";
-    case yasio::error::shutdown_by_localhost:
+    case yasio::errc::shutdown_by_localhost:
       return "An existing connection was shutdown by local host!";
-    case yasio::error::invalid_packet:
+    case yasio::errc::invalid_packet:
       return "Invalid packet!";
-    case yasio::error::ssl_handeshake_failed:
+    case yasio::errc::ssl_handeshake_failed:
       return "SSL handeshake failed!";
-    case yasio::error::eof:
+    case yasio::errc::eof:
       return "End of file.";
     case -1:
       return "Unknown error!";

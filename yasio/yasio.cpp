@@ -82,6 +82,10 @@ extern "C" {
 #  define YASIO_SLOGV YASIO_SLOG
 #endif
 
+#define yasio__setbits(x, m) ((x) |= (m))
+#define yasio__clearbits(x, m) ((x) &= ~(m))
+#define yasio__testbits(x, m) ((x) & (m))
+
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -201,12 +205,12 @@ public:
 #if defined(YASIO_HAVE_SSL)
     s_max_alloc_size = (std::max)(s_max_alloc_size, static_cast<int>(sizeof(io_transport_ssl)));
     if (OPENSSL_init_ssl(0, NULL) == 1)
-      this->init_flags |= INITF_SSL;
+      yasio__setbits(this->init_flags, INITF_SSL);
 #endif
 #if defined(YASIO_HAVE_CARES)
     int ares_status = ::ares_library_init(ARES_LIB_INIT_ALL);
     if (ares_status == 0)
-      this->init_flags |= INITF_CARES;
+      yasio__setbits(init_flags, INITF_CARES);
     else
       YASIO_LOG("init c-ares library failed, status=%d, detail:%s", ares_status,
                 ::ares_strerror(ares_status));
@@ -215,7 +219,7 @@ public:
   ~yasio__global_state()
   {
 #if defined(YASIO_HAVE_CARES)
-    if (this->init_flags & INITF_CARES)
+    if (yasio__testbits(this->init_flags, INITF_CARES))
       ::ares_library_cleanup();
 #endif
   }
@@ -271,9 +275,9 @@ io_channel::io_channel(io_service& service, int index) : timer_(service)
 }
 void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
 {
-  properties_ |= YCPF_MCAST;
+  yasio__setbits(properties_, YCPF_MCAST);
   if (loopback)
-    properties_ |= YCPF_MCAST_LOOPBACK;
+    yasio__setbits(properties_, YCPF_MCAST_LOOPBACK);
 
   multiaddr_ = ep;
 }
@@ -281,7 +285,7 @@ int io_channel::join_multicast_group()
 {
   if (socket_->is_open())
   {
-    int loopback = (properties_ & YCPF_MCAST_LOOPBACK) ? 1 : 0;
+    int loopback = yasio__testbits(properties_, YCPF_MCAST_LOOPBACK) ? 1 : 0;
     socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
                         multiaddr_.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP,
                         loopback);
@@ -296,8 +300,8 @@ int io_channel::join_multicast_group()
 }
 void io_channel::disable_multicast_group()
 {
-  properties_ &= ~YCPF_MCAST;
-  properties_ &= ~YCPF_MCAST_LOOPBACK;
+  yasio__clearbits(properties_, YCPF_MCAST);
+  yasio__clearbits(properties_, YCPF_MCAST_LOOPBACK);
 
   if (socket_->is_open())
     configure_multicast_group(false);
@@ -445,7 +449,7 @@ int io_transport::call_read(void* data, int size, int& error)
     if (!YASIO_SHOULD_CLOSE_0(error)) // status ok
       n = 0;
   }
-  else if (n == 0 && (ctx_->properties_ & YCM_TCP))
+  else if (n == 0 && yasio__testbits(ctx_->properties_, YCM_TCP))
   {
     n     = -1;
     error = yasio::errc::eof;
@@ -489,7 +493,7 @@ inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsoc
 io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s)
     : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
 {
-  ctx->properties_ &= ~YCPF_SSL_HANDSHAKING;
+  yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
 }
 void io_transport_ssl::set_primitives()
 {
@@ -878,7 +882,7 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
-      if ((opm & YOPM_CLOSE) == 0)
+      if (!yasio__testbits(opm, YOPM_CLOSE))
       {
         ++iter;
         continue;
@@ -901,9 +905,9 @@ void io_service::process_channels(fd_set* fds_array)
     {
       auto ctx    = *iter;
       bool finish = true;
-      if (ctx->properties_ & YCM_CLIENT)
+      if (yasio__testbits(ctx->properties_, YCM_CLIENT))
       { // resolving, opening
-        if (ctx->opmask_ & YOPM_OPEN)
+        if (yasio__testbits(ctx->opmask_, YOPM_OPEN))
         {
           switch (this->query_ares_state(ctx))
           {
@@ -919,15 +923,15 @@ void io_service::process_channels(fd_set* fds_array)
         else if (ctx->state_ == io_base::state::OPENING)
           do_nonblocking_connect_completion(ctx, fds_array);
 
-        finish = ctx->error_ != EINPROGRESS && (ctx->opmask_ & YOPM_OPEN) == 0;
+        finish = ctx->error_ != EINPROGRESS && !yasio__testbits(ctx->opmask_, YOPM_OPEN);
       }
-      else if (ctx->properties_ & YCM_SERVER)
+      else if (yasio__testbits(ctx->properties_, YCM_SERVER))
       {
         auto opmask = ctx->opmask_;
-        if (opmask & YOPM_CLOSE)
+        if (yasio__testbits(opmask, YOPM_CLOSE))
           cleanup_io(ctx);
 
-        if (opmask & YOPM_OPEN)
+        if (yasio__testbits(opmask, YOPM_OPEN))
           do_nonblocking_accept(ctx);
 
         finish = (ctx->state_ != io_base::state::OPEN);
@@ -949,7 +953,7 @@ void io_service::close(int cindex)
   if (!channel)
     return;
 
-  if (!(channel->opmask_ & YOPM_CLOSE))
+  if (!yasio__testbits(channel->opmask_, YOPM_CLOSE))
   {
     if (close_internal(channel))
       this->interrupt();
@@ -957,11 +961,9 @@ void io_service::close(int cindex)
 }
 void io_service::close(transport_handle_t transport)
 {
-  if (transport->is_open() && !(transport->opmask_ & YOPM_CLOSE))
+  if (!yasio__testbits(transport->opmask_, YOPM_CLOSE))
   {
-    transport->opmask_ |= YOPM_CLOSE;
-    if (transport->ctx_->properties_ & YCM_TCP)
-      transport->socket_->shutdown();
+    yasio__setbits(transport->opmask_, YOPM_CLOSE);
     this->interrupt();
   }
 }
@@ -974,7 +976,8 @@ bool io_service::is_open(int cindex) const
 void io_service::reopen(transport_handle_t transport)
 {
   auto ctx = transport->ctx_;
-  if (ctx->properties_ & YCM_CLIENT) // Only client channel support reopen by transport
+  // Only client channel support reopen by transport
+  if (yasio__testbits(ctx->properties_, YCM_CLIENT))
     open_internal(ctx);
 }
 void io_service::open(size_t cindex, int kind)
@@ -985,9 +988,9 @@ void io_service::open(size_t cindex, int kind)
   if (ctx != nullptr)
   {
     ctx->properties_ = (ctx->properties_ & (~(uint32_t)0xff)) | kind;
-    if (kind & YCM_TCP)
+    if (yasio__testbits(kind, YCM_TCP))
       ctx->protocol_ = SOCK_STREAM;
-    else if (kind & YCM_UDP)
+    else if (yasio__testbits(kind, YCM_UDP))
       ctx->protocol_ = SOCK_DGRAM;
 
     open_internal(ctx);
@@ -1012,10 +1015,10 @@ void io_service::handle_close(transport_handle_t thandle)
   deallocate_transport(thandle);
 
   // @Update context state for client
-  if (ctx->properties_ & YCM_CLIENT)
+  if (yasio__testbits(ctx->properties_, YCM_CLIENT))
   {
     ctx->error_ = 0;
-    ctx->opmask_ &= ~YOPM_CLOSE;
+    yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
     ctx->state_ = io_base::state::CLOSED;
     ctx->properties_ &= (uint32_t)0xffff; // clear private flags
   }
@@ -1025,13 +1028,13 @@ void io_service::handle_close(transport_handle_t thandle)
 }
 void io_service::register_descriptor(const socket_native_type fd, int flags)
 {
-  if ((flags & YEM_POLLIN) != 0)
+  if (yasio__testbits(flags, YEM_POLLIN))
     FD_SET(fd, &(fds_array_[read_op]));
 
-  if ((flags & YEM_POLLOUT) != 0)
+  if (yasio__testbits(flags, YEM_POLLOUT))
     FD_SET(fd, &(fds_array_[write_op]));
 
-  if ((flags & YEM_POLLERR) != 0)
+  if (yasio__testbits(flags, YEM_POLLERR))
     FD_SET(fd, &(fds_array_[except_op]));
 
   if (max_nfds_ < static_cast<int>(fd) + 1)
@@ -1039,13 +1042,13 @@ void io_service::register_descriptor(const socket_native_type fd, int flags)
 }
 void io_service::unregister_descriptor(const socket_native_type fd, int flags)
 {
-  if ((flags & YEM_POLLIN) != 0)
+  if (yasio__testbits(flags, YEM_POLLIN))
     FD_CLR(fd, &(fds_array_[read_op]));
 
-  if ((flags & YEM_POLLOUT) != 0)
+  if (yasio__testbits(flags, YEM_POLLOUT))
     FD_CLR(fd, &(fds_array_[write_op]));
 
-  if ((flags & YEM_POLLERR) != 0)
+  if (yasio__testbits(flags, YEM_POLLERR))
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 int io_service::write(transport_handle_t transport, std::vector<char> buffer,
@@ -1094,7 +1097,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   if (ctx->socket_->is_open())
     cleanup_io(ctx);
 
-  ctx->opmask_ &= ~YOPM_OPEN;
+  yasio__clearbits(ctx->opmask_, YOPM_OPEN);
 
   if (ctx->remote_eps_.empty())
   {
@@ -1110,25 +1113,26 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
     int ret = 0;
-    if (ctx->properties_ & YCF_REUSEADDR)
+    if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       ctx->socket_->reuse_address(true);
-    if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
+    if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       ctx->socket_->reuse_address(false);
 
-    if ((ctx->local_port_ != 0 || !ctx->local_host_.empty() || ctx->properties_ & YCM_UDP))
+    if (ctx->local_port_ != 0 || !ctx->local_host_.empty() ||
+        yasio__testbits(ctx->properties_, YCM_UDP))
     {
       auto ifaddr = ctx->local_host_.empty() ? YASIO_ADDR_ANY(ep.af()) : ctx->local_host_.c_str();
       ctx->socket_->bind(ifaddr, ctx->local_port_);
     }
 
     // tcp connect directly, for udp do not need to connect.
-    if (ctx->properties_ & YCM_TCP)
+    if (yasio__testbits(ctx->properties_, YCM_TCP))
       ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
     else // udp, we should set non-blocking mode manually
       ctx->socket_->set_nonblocking(true);
 
     // join the multicast group for udp
-    if (ctx->properties_ & YCPF_MCAST)
+    if (yasio__testbits(ctx->properties_, YCPF_MCAST))
       ctx->join_multicast_group();
 
     if (ret < 0)
@@ -1159,7 +1163,8 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
 void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_array)
 {
-  assert((ctx->properties_ & YCM_TCP) && (ctx->properties_ & YCM_CLIENT));
+  assert(yasio__testbits(ctx->properties_, YCM_TCP) &&
+         yasio__testbits(ctx->properties_, YCM_CLIENT));
   assert(ctx->state_ == io_base::state::OPENING);
 
   if (ctx->state_ == io_base::state::OPENING)
@@ -1181,7 +1186,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       ctx->timer_.cancel();
     }
 #else
-    if ((ctx->properties_ & YCPF_SSL_HANDSHAKING) == 0)
+    if (!yasio__testbits(ctx->properties_, YCPF_SSL_HANDSHAKING))
     {
       int error = -1;
       if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
@@ -1191,7 +1196,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
         {
           // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
           unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
-          if ((ctx->properties_ & YCM_SSL) == 0)
+          if (!yasio__testbits(ctx->properties_, YCM_SSL))
             handle_connect_succeed(ctx, ctx->socket_);
           else
             do_ssl_handshake(ctx);
@@ -1237,7 +1242,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
     auto ssl = ::SSL_new(get_ssl_context());
     ::SSL_set_fd(ssl, ctx->socket_->native_handle());
     ::SSL_set_connect_state(ssl);
-    ctx->properties_ |= YCPF_SSL_HANDSHAKING; // start ssl handshake
+    yasio__setbits(ctx->properties_, YCPF_SSL_HANDSHAKING); // start ssl handshake
     ctx->ssl_.reset(ssl);
   }
 
@@ -1350,11 +1355,11 @@ void io_service::init_ares_channel()
           case AF_INET:
             if (!IN4_IS_ADDR_LOOPBACK((in_addr*)&name_server->addr) &&
                 !IN4_IS_ADDR_LINKLOCAL((in_addr*)&name_server->addr))
-              valid_flags |= ipsv_ipv4;
+              yasio__setbits(valid_flags, ipsv_ipv4);
             break;
           case AF_INET6:
             if (IN6_IS_ADDR_GLOBAL((in6_addr*)&name_server->addr))
-              valid_flags |= ipsv_ipv6;
+              yasio__setbits(valid_flags, ipsv_ipv6);
             break;
         }
         strdns += yasio::inet::endpoint::ip(name_server->family, &name_server->addr);
@@ -1400,9 +1405,9 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
   {
     int error = 0;
-    if (ctx->properties_ & YCF_REUSEADDR)
+    if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       ctx->socket_->reuse_address(true);
-    if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
+    if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       ctx->socket_->reuse_address(false);
     if (ctx->socket_->bind(ep) != 0)
     {
@@ -1414,14 +1419,14 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       return;
     }
 
-    if ((ctx->properties_ & YCM_UDP) || ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
+    if (yasio__testbits(ctx->properties_, YCM_UDP) || ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
     {
       ctx->state_ = io_base::state::OPEN;
       ctx->socket_->set_nonblocking(true);
 
-      if (ctx->properties_ & YCM_UDP)
+      if (yasio__testbits(ctx->properties_, YCM_UDP))
       {
-        if (ctx->properties_ & YCPF_MCAST)
+        if (yasio__testbits(ctx->properties_, YCPF_MCAST))
           ctx->join_multicast_group();
 
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
@@ -1448,7 +1453,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
     if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]) &&
         ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
     {
-      if (ctx->properties_ & YCM_TCP)
+      if (yasio__testbits(ctx->properties_, YCM_TCP))
       {
         socket_native_type sockfd;
         error = ctx->socket_->accept_n(sockfd);
@@ -1488,7 +1493,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
               this->transports_.begin(), this->transports_.end(),
               [&peer](const io_transport* transport) {
                 using namespace std;
-                return (transport->ctx_->properties_ & YCM_UDP) &&
+                return yasio__testbits(transport->ctx_->properties_, YCM_UDP) &&
                        static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
               });
           auto transport = it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer);
@@ -1518,9 +1523,9 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(peer.af(), SOCK_DGRAM, 0))
   {
-    if (ctx->properties_ & YCF_REUSEADDR)
+    if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       client_sock->reuse_address(true);
-    if (ctx->properties_ & YCF_EXCLUSIVEADDRUSE)
+    if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       client_sock->reuse_address(false);
     int error = client_sock->bind(YASIO_ADDR_ANY(peer.af()), 0);
     if (error == 0)
@@ -1554,17 +1559,17 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
   auto ctx = transport->ctx_;
   ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
   auto& connection = transport->socket_;
-  if (ctx->properties_ & YCM_CLIENT)
+  if (yasio__testbits(ctx->properties_, YCM_CLIENT))
     ctx->state_ = io_base::state::OPEN;
   else
   { // tcp/udp server, accept a new client session
     connection->set_nonblocking(true);
     register_descriptor(connection->native_handle(), YEM_POLLIN);
   }
-  if (ctx->properties_ & YCM_TCP)
+  if (yasio__testbits(ctx->properties_, YCM_TCP))
   {
 #if defined(__APPLE__) || defined(__linux__)
-    if (ctx->properties_ & YCM_TCP)
+    if (yasio__testbits(ctx->properties_, YCM_TCP))
       connection->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
 #endif
     // apply tcp keepalive options
@@ -1600,14 +1605,14 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   else
     vp = ::operator new(yasio__global_state::s_max_alloc_size);
 #if defined(YASIO_HAVE_SSL)
-  if (ctx->properties_ & YCM_SSL)
+  if (yasio__testbits(ctx->properties_, YCM_SSL))
     transport = new (vp) io_transport_ssl(ctx, socket);
   else
 #endif
-      if (ctx->properties_ & YCM_TCP)
+      if (yasio__testbits(ctx->properties_, YCM_TCP))
     transport = new (vp) io_transport_tcp(ctx, socket);
 #if defined(YASIO_HAVE_KCP)
-  else if (ctx->properties_ & YCM_KCP)
+  else if (yasio__testbits(ctx->properties_, YCM_KCP))
     transport = new (vp) io_transport_kcp(ctx, socket);
 #endif
   else /* it's ok to always regard as UDP transport */
@@ -1630,7 +1635,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
 #if defined(YASIO_HAVE_SSL)
   // Remove tmp flags
-  ctx->properties_ &= ~YCPF_SSL_HANDSHAKING;
+  yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
 #endif
 
   cleanup_io(ctx);
@@ -1790,7 +1795,7 @@ void io_service::open_internal(io_channel* ctx)
 
   close_internal(ctx);
 
-  ctx->opmask_ |= YOPM_OPEN;
+  yasio__setbits(ctx->opmask_, YOPM_OPEN);
 
   this->channel_ops_mtx_.lock();
   if (std::find(this->channel_ops_.begin(), this->channel_ops_.end(), ctx) ==
@@ -1802,14 +1807,10 @@ void io_service::open_internal(io_channel* ctx)
 }
 bool io_service::close_internal(io_channel* ctx)
 {
+  yasio__clearbits(ctx->opmask_, YOPM_OPEN);
   if (ctx->socket_->is_open())
   {
-    ctx->opmask_ |= YOPM_CLOSE;
-    if (ctx->properties_ & YCM_CLIENT)
-    {
-      if (ctx->properties_ & YCM_TCP)
-        ctx->socket_->shutdown();
-    }
+    yasio__setbits(ctx->opmask_, YOPM_CLOSE);
     return true;
   }
   return false;
@@ -1906,7 +1907,7 @@ bool io_service::cleanup_io(io_base* obj, bool clear_state)
 }
 u_short io_service::query_ares_state(io_channel* ctx)
 {
-  if ((ctx->dns_queries_state_ & YDQSF_QUERIES_NEEDED) &&
+  if (yasio__testbits(ctx->dns_queries_state_, YDQSF_QUERIES_NEEDED) &&
       !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
   {
     auto diff = (highp_clock() - ctx->dns_queries_timestamp_);
@@ -2010,9 +2011,9 @@ void io_service::start_resolve(io_channel* ctx)
 int io_service::builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
                                unsigned short port)
 {
-  if (this->ipsv_ & ipsv_ipv4)
+  if (yasio__testbits(this->ipsv_, ipsv_ipv4))
     return xxsocket::resolve_v4(endpoints, hostname, port);
-  else if (this->ipsv_ & ipsv_ipv6) // localhost is IPv6_only network
+  else if (yasio__testbits(this->ipsv_, ipsv_ipv6)) // localhost is IPv6_only network
     return xxsocket::resolve_v6(endpoints, hostname, port) != 0
                ? xxsocket::resolve_v4to6(endpoints, hostname, port)
                : 0;
@@ -2184,8 +2185,8 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
-        channel->properties_ |= (uint32_t)va_arg(ap, int);
-        channel->properties_ &= ~(uint32_t)va_arg(ap, int);
+        yasio__setbits(channel->properties_, (uint32_t)va_arg(ap, int));
+        yasio__clearbits(channel->properties_, (uint32_t)va_arg(ap, int));
       }
       break;
     }

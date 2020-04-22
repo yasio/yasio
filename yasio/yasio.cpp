@@ -1304,7 +1304,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
 
   if (!ctx->remote_eps_.empty())
   {
-    ctx->dns_queries_state_     = YDQS_READY;
+    yasio__setlobyte(ctx->dns_queries_state_, YDQS_READY);
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
     YASIO_SLOG_OPTIONS(current_service.options_,
@@ -1977,8 +1977,8 @@ void io_service::start_resolve(io_channel* ctx)
       return;
     if (error == 0)
     {
+      yasio__setlobyte(ctx->dns_queries_state_, YDQS_READY);
       ctx->remote_eps_            = std::move(remote_eps);
-      ctx->dns_queries_state_     = YDQS_READY;
       ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
       YASIO_SLOG("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_,
@@ -1988,9 +1988,9 @@ void io_service::start_resolve(io_channel* ctx)
     }
     else
     {
+      yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
       YASIO_SLOG("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_,
                  ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
-      yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
     }
     /*
     The getaddrinfo behavior at win32 is strange:

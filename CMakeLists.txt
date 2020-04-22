@@ -45,91 +45,6 @@ include_directories(
     ${THIRDPART_INC}
 )
 
-set ( YASIO_CORE
-    yasio/xxsocket.hpp
-    yasio/yasio.hpp
-    yasio/ibstream.hpp
-    yasio/obstream.hpp
-    yasio/xxsocket.cpp
-    yasio/yasio.cpp
-    yasio/ibstream.cpp
-    yasio/obstream.cpp
-    yasio/bindings/yasio_ni.cpp
-)
-
-macro(source_group_by_dir proj_dir source_files)
-    if(MSVC OR APPLE)
-        get_filename_component(sgbd_cur_dir ${proj_dir} ABSOLUTE)
-        foreach(sgbd_file ${${source_files}})
-			get_filename_component(sgbd_abs_file ${sgbd_file} ABSOLUTE)
-            file(RELATIVE_PATH sgbd_fpath ${sgbd_cur_dir} ${sgbd_abs_file})
-            string(REGEX REPLACE "\(.*\)/.*" \\1 sgbd_group_name ${sgbd_fpath})
-            string(COMPARE EQUAL ${sgbd_fpath} ${sgbd_group_name} sgbd_nogroup)
-            string(REPLACE "/" "\\" sgbd_group_name ${sgbd_group_name})
-            if(sgbd_nogroup)
-                set(sgbd_group_name "\\")
-            endif(sgbd_nogroup)
-            source_group(${sgbd_group_name} FILES ${sgbd_file})
-        endforeach(sgbd_file)
-    endif(MSVC OR APPLE)
-endmacro(source_group_by_dir)
-
-source_group_by_dir(${CMAKE_CURRENT_SOURCE_DIR} YASIO_CORE)
-
-if (APPLE)
-    if (IOS)
-        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
-        add_library(yasio STATIC
-           ${YASIO_CORE}
-           ${THIRDPART_SRC}
-        )
-        
-        macro(set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE XCODE_RELVERSION)
-            set(XCODE_RELVERSION_I "${XCODE_RELVERSION}")
-            if(XCODE_RELVERSION_I STREQUAL "All")
-                set_property(TARGET ${TARGET} PROPERTY
-                XCODE_ATTRIBUTE_${XCODE_PROPERTY} "${XCODE_VALUE}")
-            else()
-               set_property(TARGET ${TARGET} PROPERTY
-               XCODE_ATTRIBUTE_${XCODE_PROPERTY}[variant=${XCODE_RELVERSION_I}] "${XCODE_VALUE}")
-            endif()
-        endmacro(set_xcode_property)
-	    
-        set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
-    else ()
-        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
-        add_library(yasio STATIC
-            ${YASIO_CORE}
-            ${THIRDPART_SRC}
-        )
-        # set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
-    endif ()
-elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
-    add_library(yasio STATIC
-        ${YASIO_CORE}
-        ${THIRDPART_SRC}
-    )
-    target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
-else ( )
-    add_library(yasio STATIC
-        ${YASIO_CORE}
-        ${THIRDPART_SRC}
-    )
-endif ( )
-	
-if ( WIN32 AND NOT CYGWIN )
-    target_link_libraries(yasio
-        ws2_32
-        ${THIRDPART_LIB} 
-    )
-    target_compile_features(yasio PUBLIC cxx_std_17)
-else ( )
-    target_link_libraries(yasio
-        m
-        ${THIRDPART_LIB} 
-    )
-endif ( )
-
 macro(ConfigTargetSSL target_name)
     if (YASIO_BUILD_WITH_SSL)
         if (UNIX)
@@ -141,13 +56,37 @@ macro(ConfigTargetSSL target_name)
         if (WIN32)
             add_custom_command(TARGET ${target_name}
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${OPENSSL_LIB_DIR}/libcrypto-1_1.dll
-                ${OPENSSL_LIB_DIR}/libssl-1_1.dll
+                ${OPENSSL_LIBRARY_DIR}/libcrypto-1_1.dll
+                ${OPENSSL_LIBRARY_DIR}/libssl-1_1.dll
                 $<TARGET_FILE_DIR:${target_name}>
             )
         endif()
     endif()
 endmacro()
+
+
+######### The yasio optional dependencies
+
+### openssl support
+if (YASIO_BUILD_WITH_SSL)
+   add_subdirectory(external/openssl)
+endif()
+
+### c-ares support
+if (YASIO_BUILD_WITH_CARES)
+    set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
+    set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
+    set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
+    add_subdirectory(external/c-ares)
+    set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external" CACHE INTERNAL "c-ares Include Directory" )
+endif()
+
+set(YAISO_BUILD_NI ON CACHE BOOL "Build with yasio-ni APIs support" FORCE)
+add_subdirectory(yasio)
+
+if ( WIN32 AND NOT CYGWIN )
+    target_compile_features(yasio PUBLIC cxx_std_17)
+endif()
 
 if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
@@ -163,31 +102,13 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/echo_client)
     add_subdirectory(examples/lua)
     add_subdirectory(examples/ftp_server)
-endif ()
 
-### SSL support
-if (YASIO_BUILD_WITH_SSL)
-    target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
-
-    add_subdirectory(external/openssl)
-    target_include_directories(yasio PRIVATE "${OPENSSL_INC_DIR}")
-    if(NOT IOS)
+    if(YASIO_BUILD_WITH_SSL)
         add_subdirectory(tests/ssl)
     endif()
 endif ()
 
-### c-ares support
-if (YASIO_BUILD_WITH_CARES)
-    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
-    set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
-    set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
-    set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
-    add_subdirectory(external/c-ares)
-    target_link_libraries(yasio c-ares)
-
-    include_directories(external)
-endif()
-
-if (WIN32 AND YASIO_BUILD_TESTS)
-    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
-endif ()
+### Sets startup project for vs .sln
+# if (WIN32 AND YASIO_BUILD_TESTS)
+#     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
+# endif ()

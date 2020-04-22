@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef KAGUYA_LUABINDING_HPP_INCLUDED
 #define KAGUYA_LUABINDING_HPP_INCLUDED
 // Copyright satoren

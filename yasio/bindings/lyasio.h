@@ -25,8 +25,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 #pragma once
+#ifndef YASIO__LUA_HPP
+#define YASIO__LUA_HPP
 
 #if defined(_WINDLL)
 #  if defined(LUA_LIB)
@@ -45,4 +46,6 @@ struct lua_State;
 YASIO_LUA_API int luaopen_yasio(lua_State* L);
 #if defined(__cplusplus)
 }
+#endif
+
 #endif

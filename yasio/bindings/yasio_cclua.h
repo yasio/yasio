@@ -25,24 +25,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 #pragma once
-
-#if defined(YASIO_BUILD_AS_DLL)
-#  if defined(YASIO_LIB)
-#    define YASIO_API __declspec(dllexport)
-#  else
-#    define YASIO_API __declspec(dllimport)
-#  endif
-#else
-#  define YASIO_API
-#endif
+#ifndef YASIO__CCLUA_HPP
+#define YASIO__CCLUA_HPP
+#include "lyasio.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-struct lua_State;
-YASIO_API int luaopen_yasio_cclua(lua_State* L);
+YASIO_LUA_API int luaopen_yasio_cclua(lua_State* L);
 #if defined(__cplusplus)
 }
 
@@ -52,8 +43,10 @@ namespace stimer
 {
 // !IMPORTANT: You should call function this when you want restart script Virtual Machine for some
 // purpose.
-YASIO_API void clear();
+YASIO_LUA_API void clear();
 } // namespace stimer
 } // namespace lyasio
+
+#endif
 
 #endif

@@ -120,7 +120,7 @@ static void kill(TIMER_ID timerId)
   std::string key = StringUtils::format("STMR#%p", timerId);
   Director::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
-YASIO_API void clear()
+YASIO_LUA_API void clear()
 {
   Director::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
 }
@@ -133,7 +133,7 @@ YASIO_API void clear()
 
 extern "C" {
 struct lua_State;
-YASIO_API int luaopen_yasio_cclua(lua_State* L)
+YASIO_LUA_API int luaopen_yasio_cclua(lua_State* L)
 {
   int n = luaopen_yasio(L);
   sol::stack_table yasio(L, n);
@@ -151,7 +151,7 @@ YASIO_API int luaopen_yasio_cclua(lua_State* L)
 
 extern "C" {
 struct lua_State;
-YASIO_API int luaopen_yasio_cclua(lua_State* L)
+YASIO_LUA_API int luaopen_yasio_cclua(lua_State* L)
 {
   luaopen_yasio(L);
 

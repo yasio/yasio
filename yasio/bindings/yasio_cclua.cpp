@@ -27,8 +27,8 @@ SOFTWARE.
 */
 
 #include "yasio/bindings/yasio_cclua.h"
-#include "yasio/lyasio.h"
-#include "yasio/detail/object_pool.h"
+#include "yasio/bindings/lyasio.h"
+#include "yasio/detail/object_pool.hpp"
 #include "yasio/detail/ref_ptr.hpp"
 #include "yasio/cxx17/string_view.hpp"
 

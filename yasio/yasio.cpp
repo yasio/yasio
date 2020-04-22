@@ -1804,8 +1804,7 @@ void io_service::open_internal(io_channel* ctx)
     return;
   }
 
-  if (yasio__testbits(ctx->opmask_, YOPM_CLOSE))
-    yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
+  yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
   yasio__setbits(ctx->opmask_, YOPM_OPEN);
 
   this->channel_ops_mtx_.lock();

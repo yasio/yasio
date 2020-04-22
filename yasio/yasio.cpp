@@ -86,6 +86,12 @@ extern "C" {
 #define yasio__clearbits(x, m) ((x) &= ~(m))
 #define yasio__testbits(x, m) ((x) & (m))
 
+#define yasio__testlobyte(x, v) (((x) & (uint16_t)0x00ff) == (v))
+#define yasio__setlobyte(x, v) ((x) = ((x) & ~((decltype(x))0xff)) | (v))
+#define yasio__lobyte(x) ((x) & (uint16_t)0x00ff)
+
+#define yasio__clearhiword(x) ((x) &= 0xffff)
+
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -146,10 +152,6 @@ enum
   /* Whether ssl client in handshaking */
   YCPF_SSL_HANDSHAKING = 1 << 19,
 };
-
-#define YDQS_CHECK_STATE(what, value) ((what & 0x00ff) == value)
-#define YDQS_SET_STATE(what, value) (what = (what & 0xff00) | value)
-#define YDQS_GET_STATE(what) (what & 0x00ff)
 
 #if defined(_WIN32)
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
@@ -882,13 +884,11 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
-      if (!yasio__testbits(opm, YOPM_CLOSE))
+      if (!yasio__testbits(opm, YOPM_CLOSE) || shutdown_internal(transport))
       {
         ++iter;
         continue;
       }
-      else if (!transport->error_) // If no reason, just set reason: local shutdown
-        transport->set_last_errno(yasio::errc::shutdown_by_localhost);
     }
 
     handle_close(transport);
@@ -928,11 +928,11 @@ void io_service::process_channels(fd_set* fds_array)
       else if (yasio__testbits(ctx->properties_, YCM_SERVER))
       {
         auto opmask = ctx->opmask_;
-        if (yasio__testbits(opmask, YOPM_CLOSE))
-          cleanup_io(ctx);
 
         if (yasio__testbits(opmask, YOPM_OPEN))
           do_nonblocking_accept(ctx);
+        else if (yasio__testbits(opmask, YOPM_CLOSE))
+          cleanup_io(ctx);
 
         finish = (ctx->state_ != io_base::state::OPEN);
         if (!finish)
@@ -955,8 +955,12 @@ void io_service::close(int cindex)
 
   if (!yasio__testbits(channel->opmask_, YOPM_CLOSE))
   {
-    if (close_internal(channel))
+    yasio__clearbits(channel->opmask_, YOPM_OPEN);
+    if (channel->socket_->is_open())
+    {
+      yasio__setbits(channel->opmask_, YOPM_CLOSE);
       this->interrupt();
+    }
   }
 }
 void io_service::close(transport_handle_t transport)
@@ -975,10 +979,18 @@ bool io_service::is_open(int cindex) const
 }
 void io_service::reopen(transport_handle_t transport)
 {
+  if (!transport->is_open())
+  {
+    YASIO_LOG("can't reopen transport:%p, the state of it is invalid!", transport);
+    return;
+  }
   auto ctx = transport->ctx_;
   // Only client channel support reopen by transport
   if (yasio__testbits(ctx->properties_, YCM_CLIENT))
+  {
+    cleanup_io(ctx); // will close socket directly
     open_internal(ctx);
+  }
 }
 void io_service::open(size_t cindex, int kind)
 {
@@ -987,7 +999,7 @@ void io_service::open(size_t cindex, int kind)
   auto ctx = channel_at(cindex);
   if (ctx != nullptr)
   {
-    ctx->properties_ = (ctx->properties_ & (~(uint32_t)0xff)) | kind;
+    yasio__setlobyte(ctx->properties_, kind & 0xff);
     if (yasio__testbits(kind, YCM_TCP))
       ctx->protocol_ = SOCK_STREAM;
     else if (yasio__testbits(kind, YCM_UDP))
@@ -1006,6 +1018,7 @@ void io_service::handle_close(transport_handle_t thandle)
 {
   auto ctx = thandle->ctx_;
   auto ec  = thandle->error_;
+
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
   YASIO_SLOG("[index: %d] the connection #%u is lost, ec=%d, detail:%s", ctx->index_, thandle->id_,
              ec, io_service::strerror(ec));
@@ -1020,7 +1033,7 @@ void io_service::handle_close(transport_handle_t thandle)
     ctx->error_ = 0;
     yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
     ctx->state_ = io_base::state::CLOSED;
-    ctx->properties_ &= (uint32_t)0xffff; // clear private flags
+    yasio__clearhiword(ctx->properties_); // clear private flags
   }
 
   // @Notify connection lost
@@ -1091,7 +1104,7 @@ void io_service::handle_event(event_ptr event)
 }
 void io_service::do_nonblocking_connect(io_channel* ctx)
 {
-  assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY));
+  assert(yasio__testlobyte(ctx->dns_queries_state_, YDQS_READY));
   if (this->ipsv_ == 0)
     this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
   if (ctx->socket_->is_open())
@@ -1303,7 +1316,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   else
   {
     ctx->set_last_errno(yasio::errc::resolve_host_failed);
-    YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
+    yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
     YASIO_SLOG_OPTIONS(current_service.options_,
                        "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
                        ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
@@ -1489,13 +1502,11 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
          */
           // for win32, we check exists udp clients by ourself, and only write operation can be
           // perform on transports, the read operation still dispatch by channel.
-          auto it = std::find_if(
-              this->transports_.begin(), this->transports_.end(),
-              [&peer](const io_transport* transport) {
-                using namespace std;
-                return yasio__testbits(transport->ctx_->properties_, YCM_UDP) &&
-                       static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
-              });
+          auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
+            using namespace std;
+            return yasio__testbits(transport->ctx_->properties_, YCM_UDP) &&
+                   static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
+          });
           auto transport = it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer);
 #endif
           if (transport)
@@ -1793,17 +1804,23 @@ void io_service::open_internal(io_channel* ctx)
     return;
   }
 
-  close_internal(ctx);
-
+  if (yasio__testbits(ctx->opmask_, YOPM_CLOSE))
+    yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
   yasio__setbits(ctx->opmask_, YOPM_OPEN);
 
   this->channel_ops_mtx_.lock();
-  if (std::find(this->channel_ops_.begin(), this->channel_ops_.end(), ctx) ==
-      this->channel_ops_.end())
+  if (yasio__find(this->channel_ops_, ctx) == this->channel_ops_.end())
     this->channel_ops_.push_back(ctx);
   this->channel_ops_mtx_.unlock();
 
   this->interrupt();
+}
+bool io_service::shutdown_internal(transport_handle_t transport)
+{
+  transport->error_ = yasio::errc::shutdown_by_localhost;
+  if (yasio__testbits(transport->ctx_->properties_, YCM_TCP))
+    return transport->socket_->shutdown() == 0;
+  return false;
 }
 bool io_service::close_internal(io_channel* ctx)
 {
@@ -1908,25 +1925,25 @@ bool io_service::cleanup_io(io_base* obj, bool clear_state)
 u_short io_service::query_ares_state(io_channel* ctx)
 {
   if (yasio__testbits(ctx->dns_queries_state_, YDQSF_QUERIES_NEEDED) &&
-      !YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS))
+      !yasio__testlobyte(ctx->dns_queries_state_, YDQS_INPRROGRESS))
   {
     auto diff = (highp_clock() - ctx->dns_queries_timestamp_);
-    if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_READY) &&
+    if (yasio__testlobyte(ctx->dns_queries_state_, YDQS_READY) &&
         diff >= options_.dns_cache_timeout_)
-      YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_DIRTY);
+      yasio__setlobyte(ctx->dns_queries_state_, YDQS_DIRTY);
 
-    if (YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY))
+    if (yasio__testlobyte(ctx->dns_queries_state_, YDQS_DIRTY))
       start_resolve(ctx);
   }
 
-  return YDQS_GET_STATE(ctx->dns_queries_state_);
+  return yasio__lobyte(ctx->dns_queries_state_);
 }
 void io_service::start_resolve(io_channel* ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
-  assert(YDQS_CHECK_STATE(ctx->dns_queries_state_, YDQS_DIRTY));
+  assert(yasio__testlobyte(ctx->dns_queries_state_, YDQS_DIRTY));
   ctx->set_last_errno(EINPROGRESS);
-  YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_INPRROGRESS);
+  yasio__setlobyte(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
   YASIO_SLOG("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();
@@ -1974,7 +1991,7 @@ void io_service::start_resolve(io_channel* ctx)
     {
       YASIO_SLOG("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_,
                  ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
-      YDQS_SET_STATE(ctx->dns_queries_state_, YDQS_FAILED);
+      yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
     }
     /*
     The getaddrinfo behavior at win32 is strange:

@@ -71,6 +71,9 @@ typedef struct ares_channeldata* ares_channel;
 typedef struct ares_addrinfo ares_addrinfo;
 #endif
 
+#define yasio__find(cont, v) ::std::find(cont.begin(), cont.end(), v)
+#define yasio__find_if(cont, pred) ::std::find_if(cont.begin(), cont.end(), pred)
+
 namespace yasio
 {
 namespace inet
@@ -830,8 +833,8 @@ private:
 
   std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
   {
-    return std::find_if(timer_queue_.begin(), timer_queue_.end(),
-                        [=](const timer_impl_t& timer) { return timer.first == key; });
+    return yasio__find_if(timer_queue_,
+                          [=](const timer_impl_t& timer) { return timer.first == key; });
   }
   void sort_timers()
   {
@@ -926,6 +929,9 @@ private:
   YASIO__DECL void clear_channels();   // destroy all channels
   YASIO__DECL void clear_transports(); // destroy all transports
   YASIO__DECL bool close_internal(io_channel*);
+
+  // shutdown a tcp-connection if possible
+  YASIO__DECL bool shutdown_internal(transport_handle_t);
 
   /*
   ** Summay: Query async resolve state for new endpoint set

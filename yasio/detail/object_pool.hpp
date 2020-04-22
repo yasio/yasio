@@ -26,7 +26,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 // object_pool.hpp: a simple & high-performance object pool implementation v1.3.1
-#pragma once
 #ifndef YASIO__OBJECT_POOL_HPP
 #define YASIO__OBJECT_POOL_HPP
 

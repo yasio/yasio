@@ -27,7 +27,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 See: https://github.com/bitwizeshift/string_view-standalone
 */
-#pragma once
 #ifndef YASIO__STRING_VIEW_HPP
 #define YASIO__STRING_VIEW_HPP
 #include <ctype.h>

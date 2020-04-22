@@ -28,7 +28,6 @@ SOFTWARE.
 Copy of
 https://github.com/xamarin/xamarin-android/blob/master/src/monodroid/jni/xamarin_getifaddrs.h
 */
-#pragma once
 #ifndef YASIO__IFADDRS_HPP
 #define YASIO__IFADDRS_HPP
 

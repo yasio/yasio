@@ -104,7 +104,6 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* 
     */
 #if (defined(__linux__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 1)))) ||    \
     defined(_MSC_VER)
-
     enum : size_t
     {
       enlarge_limits = (2 * 1024 * 1024) * 2 / 3, // limits the buffer cost memory less than 2MB

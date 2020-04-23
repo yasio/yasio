@@ -17,6 +17,7 @@ yasio-3.33.0
 * Make ```cxx17::string_view``` support unordered set/map on compilers which only support c++11 standard.
 * Use ```shared_ptr + shared_mutex``` to ensure destruct io_service safe without side affect for concurrency of name resolving.
 * Fix dns cache timeout mechanism doesn't work.
+* Simplify c-ares dns-server setup on android, only when use yasio as static library, you need call ```yasio__jni_onload``` at ```JNI_OnLoad```.
   
   
 yasio-3.31.3

@@ -138,6 +138,7 @@ else ( )
             ${YASIO_CORE}
             ${THIRDPART_SRC}
         )
+        target_compile_definitions(yasio PUBLIC YASIO_BUILD_AS_SHARED=1)
     else()
         add_library(yasio STATIC
             ${YASIO_CORE}

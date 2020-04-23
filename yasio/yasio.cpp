@@ -60,6 +60,9 @@ SOFTWARE.
 #if defined(YASIO_HAVE_CARES)
 extern "C" {
 #  include "c-ares/ares.h"
+#  if defined(__ANDROID__)
+extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_jni.cpp'
+#  endif
 }
 #endif
 
@@ -214,8 +217,14 @@ public:
     if (ares_status == 0)
       yasio__setbits(init_flags, INITF_CARES);
     else
-      YASIO_LOG("init c-ares library failed, status=%d, detail:%s", ares_status,
+      YASIO_LOG("[c-ares] init library failed, status=%d, detail:%s", ares_status,
                 ::ares_strerror(ares_status));
+#  if defined(__ANDROID__)
+    ares_status = ::yasio__ares_init_android();
+    if (ares_status != 0)
+      YASIO_LOG("[c-ares] init android failed, status=%d, detail:%s", ares_status,
+                ::ares_strerror(ares_status));
+#  endif
 #endif
   }
   ~yasio__global_state()

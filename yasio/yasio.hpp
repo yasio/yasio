@@ -547,8 +547,8 @@ public:
   virtual ~io_transport() {}
 
 protected:
+  io_service& get_service() const { return ctx_->get_service(); }
   bool is_open() const { return is_valid() && socket_ && socket_->is_open(); }
-
   std::vector<char> fetch_packet()
   {
     expected_size_ = -1;

@@ -417,7 +417,7 @@ int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& hand
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
-  ctx_->get_service().interrupt();
+  get_service().interrupt();
   return n;
 }
 int io_transport::do_read(int& error)
@@ -451,13 +451,13 @@ bool io_transport::do_write(long long& max_wait_duration)
       if (pollout_registerred_)
       {
         pollout_registerred_ = false;
-        ctx_->get_service().unregister_descriptor(socket_->native_handle(), YEM_POLLOUT);
+        get_service().unregister_descriptor(socket_->native_handle(), YEM_POLLOUT);
       }
     }
     else if (!pollout_registerred_)
     {
       pollout_registerred_ = true;
-      ctx_->get_service().register_descriptor(socket_->native_handle(), YEM_POLLOUT);
+      get_service().register_descriptor(socket_->native_handle(), YEM_POLLOUT);
     }
     ret = true;
   } while (false);
@@ -587,7 +587,7 @@ int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& t
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
-  ctx_->get_service().interrupt();
+  get_service().interrupt();
   return n;
 }
 void io_transport_udp::set_primitives()
@@ -629,7 +629,7 @@ int io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& 
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
   int retval = ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
-  ctx_->get_service().interrupt();
+  get_service().interrupt();
   return retval;
 }
 int io_transport_kcp::do_read(int& error)

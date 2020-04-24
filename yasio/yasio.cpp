@@ -444,10 +444,21 @@ bool io_transport::do_write(long long& max_wait_duration)
       }
     }
 
-    // If still have work to do.
-    if (!send_queue_.empty())
-      max_wait_duration = error != EWOULDBLOCK ? 0 : YASIO_WOULDBLOCK_WAIT_DURATION;
-
+    if (error != EWOULDBLOCK && error != EAGAIN)
+    { // If still have work to do and kernel buffer not full
+      if (!send_queue_.empty())
+        max_wait_duration = 0;
+      if (pollout_registerred_)
+      {
+        pollout_registerred_ = false;
+        ctx_->get_service().unregister_descriptor(socket_->native_handle(), YEM_POLLOUT);
+      }
+    }
+    else if (!pollout_registerred_)
+    {
+      pollout_registerred_ = true;
+      ctx_->get_service().register_descriptor(socket_->native_handle(), YEM_POLLOUT);
+    }
     ret = true;
   } while (false);
 

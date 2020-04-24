@@ -145,9 +145,6 @@ SOFTWARE.
 // The max wait duration in macroseconds when io_service nothing to do.
 #define YASIO_MAX_WAIT_DURATION 5 * 60 * 1000 * 1000
 
-// The the min wait duration in macroseconds when kernel send buffer is full.
-#define YASIO_WOULDBLOCK_WAIT_DURATION 16667
-
 // The default ttl of multicast
 #define YASIO_DEFAULT_MULTICAST_TTL (int)128
 

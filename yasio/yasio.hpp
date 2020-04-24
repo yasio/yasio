@@ -597,6 +597,9 @@ protected:
 
   concurrency::concurrent_queue<io_send_op_ptr> send_queue_;
 
+  // mark whether pollout event registerred.
+  bool pollout_registerred_ = false;
+
 public:
   // The user data
   union
@@ -653,7 +656,7 @@ protected:
   // configure remote with specific endpoint
   YASIO__DECL int confgure_remote(const ip::endpoint& peer);
 
-  ip::endpoint peer_;        // for recv only
+  ip::endpoint peer_;                // for recv only
   mutable ip::endpoint destination_; // for sendto only
   bool connected_ = false;
 };

@@ -653,7 +653,7 @@ protected:
   // configure remote with specific endpoint
   YASIO__DECL int confgure_remote(const ip::endpoint& peer);
 
-  mutable ip::endpoint peer_;        // for recv only
+  ip::endpoint peer_;        // for recv only
   mutable ip::endpoint destination_; // for sendto only
   bool connected_ = false;
 };

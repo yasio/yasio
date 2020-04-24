@@ -74,7 +74,12 @@ void start_sender(io_service& service)
         {
           auto thandle = event->transport();
           // because some system's default sndbuf of udp is less than 64k, such as macOS.
-          service.set_option(YOPT_SOCKOPT, thandle, SOL_SOCKET, SO_SNDBUF, 65536, sizeof(int));
+          int sndbuf = 65536;
+          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int));
+          int ec = xxsocket::get_last_errno();
+          if (ec != 0)
+            YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
+
           if (TRANSFER_PROTOCOL == YCK_KCP_CLIENT)
           {
             setup_kcp_transfer(thandle);
@@ -135,6 +140,13 @@ void start_receiver(io_service& service)
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
+          int sndbuf = 65536;
+          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET, SO_SNDBUF,
+                             &sndbuf, sizeof(int));
+          int ec = xxsocket::get_last_errno();
+          if (ec != 0)
+            YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
+
           if (TRANSFER_PROTOCOL == YCK_KCP_CLIENT)
             setup_kcp_transfer(event->transport());
           printf("start recive data...\n");

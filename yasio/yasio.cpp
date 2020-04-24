@@ -485,7 +485,6 @@ int io_transport::call_write(io_send_op* op, int& error)
   int n = op->perform(this, op->buffer_.data() + op->offset_,
                       static_cast<int>(op->buffer_.size() - op->offset_));
 
-  bool finished = false;
   if (n > 0)
   {
     // #performance: change offset only, remain data will be send at next frame.

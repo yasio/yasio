@@ -19,6 +19,7 @@ yasio-3.33.0
 * Fix dns cache timeout mechanism doesn't work.
 * Simplify c-ares dns-server setup on android, when use yasio as static library, you need call ```yasio__jni_onload``` at ```JNI_OnLoad```.
 * Fix ```yasio::_strfmt``` may crash on some incorrect use, now it's more stable on all platforms.
+* Improve behavior when kernel send buffer is full, don't sleep a fixed time, just drived by ```select```.
   
   
 yasio-3.31.3

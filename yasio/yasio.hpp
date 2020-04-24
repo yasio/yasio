@@ -140,6 +140,10 @@ enum
   //        b. relative option: YOPT_S_DNS_QUERIES_TIMEOUT
   YOPT_S_DNS_QUERIES_TRIES,
 
+  // Set whether ignore udp error, by default is 1: don't trigger handle_close,
+  // params: ignored : int(1)
+  YOPT_S_IGNORE_UDP_ERROR,
+
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
   YOPT_C_LFBFD_FN = 101,
@@ -275,6 +279,7 @@ typedef std::function<void()> light_timer_cb_t;
 typedef std::function<bool()> timer_cb_t;
 typedef std::pair<highp_timer*, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr&&)> io_event_cb_t;
+typedef std::function<void(size_t)> io_completion_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
@@ -499,14 +504,14 @@ private:
 class io_send_op
 {
 public:
-  io_send_op(std::vector<char>&& buffer, std::function<void()>&& handler)
+  io_send_op(std::vector<char>&& buffer, std::function<void(size_t)>&& handler)
       : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
   {}
   virtual ~io_send_op() {}
 
   size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
-  std::function<void()> handler_;
+  io_completion_cb_t handler_;
 
   YASIO__DECL virtual int perform(io_transport* transport, const void* buf, int n);
 
@@ -518,7 +523,7 @@ public:
 class io_sendto_op : public io_send_op
 {
 public:
-  io_sendto_op(std::vector<char>&& buffer, std::function<void()>&& handler,
+  io_sendto_op(std::vector<char>&& buffer, std::function<void(size_t)>&& handler,
                const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
@@ -556,10 +561,10 @@ protected:
   }
 
   // Call at user thread
-  virtual int write(std::vector<char>&&, std::function<void()>&&);
+  virtual int write(std::vector<char>&&, io_completion_cb_t&&);
 
   // Call at user thread
-  virtual int write_to(std::vector<char>&&, const ip::endpoint&, std::function<void()>&&)
+  virtual int write_to(std::vector<char>&&, const ip::endpoint&, io_completion_cb_t&&)
   {
     YASIO_LOG("[warning] io_transport doesn't support 'write_to' operation!");
     return 0;
@@ -567,6 +572,7 @@ protected:
 
   YASIO__DECL int call_read(void* data, int size, int& error);
   YASIO__DECL int call_write(io_send_op*, int& error);
+  YASIO__DECL int complete_op(io_send_op*, size_t bytes_transferred);
 
   // Call at io_service
   YASIO__DECL virtual int do_read(int& error);
@@ -644,9 +650,9 @@ protected:
   // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   YASIO__DECL int connect();
 
-  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
   YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&,
-                           std::function<void()>&&) override;
+                           std::function<void(size_t)>&&) override;
 
   YASIO__DECL void set_primitives() override;
 
@@ -669,7 +675,7 @@ public:
   ikcpcb* internal_object() { return kcp_; }
 
 protected:
-  YASIO__DECL int write(std::vector<char>&&, std::function<void()>&&) override;
+  YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
   ikcpcb* kcp_;
@@ -794,13 +800,13 @@ public:
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
   int write(transport_handle_t thandle, const void* buf, size_t len,
-            std::function<void()> completion_handler = nullptr)
+            io_completion_cb_t completion_handler = nullptr)
   {
     return write(thandle, std::vector<char>((char*)buf, (char*)buf + len),
                  std::move(completion_handler));
   }
   YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
-                        std::function<void()> completion_handler = nullptr);
+                        io_completion_cb_t completion_handler = nullptr);
 
   /*
   ** Summary: Write data to unconnected UDP transport with specified address.
@@ -810,14 +816,13 @@ public:
   **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
   */
   int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to,
-               std::function<void()> completion_handler = nullptr)
+               io_completion_cb_t completion_handler = nullptr)
   {
     return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to,
                     std::move(completion_handler));
   }
   YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer,
-                           const ip::endpoint& to,
-                           std::function<void()> completion_handler = nullptr);
+                           const ip::endpoint& to, io_completion_cb_t completion_handler = nullptr);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
@@ -1010,7 +1015,8 @@ private:
       int probs    = 10;
     } tcp_keepalive_;
 
-    bool no_new_thread_ = false;
+    bool no_new_thread_    = false;
+    bool ignore_udp_error_ = true;
 
     // The resolve function
     resolv_fn_t resolv_;

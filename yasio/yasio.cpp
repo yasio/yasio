@@ -413,7 +413,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->socket_                   = s;
   this->ud_.ptr                   = nullptr;
 }
-int io_transport::write(std::vector<char>&& buffer, std::function<void()>&& handler)
+int io_transport::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
@@ -444,7 +444,7 @@ bool io_transport::do_write(long long& max_wait_duration)
       }
     }
 
-    if (error != EWOULDBLOCK && error != EAGAIN)
+    if (error != EWOULDBLOCK && error != EAGAIN && error != ENOBUFS)
     { // If still have work to do and kernel buffer not full
       if (!send_queue_.empty())
         max_wait_duration = 0;
@@ -484,15 +484,15 @@ int io_transport::call_write(io_send_op* op, int& error)
 {
   int n = op->perform(this, op->buffer_.data() + op->offset_,
                       static_cast<int>(op->buffer_.size() - op->offset_));
+
+  bool finished = false;
   if (n > 0)
   {
     // #performance: change offset only, remain data will be send at next frame.
     op->offset_ += n;
     if (op->offset_ == op->buffer_.size())
     { // finished
-      if (op->handler_)
-        op->handler_();
-      send_queue_.pop();
+      this->complete_op(op, n);
     }
   }
   else if (n < 0)
@@ -500,8 +500,22 @@ int io_transport::call_write(io_send_op* op, int& error)
     error = xxsocket::get_last_errno();
     if (!YASIO_SHOULD_CLOSE_1(error))
       n = 0;
+    else if (yasio__testbits(ctx_->properties_, YCM_UDP) &&
+             get_service().options_.ignore_udp_error_)
+    { // UDP: don't cause handle_close, simply drop the op
+      YASIO_LOG("warning: write udp socket failed, ec=%d, detail:%s", error,
+                io_service::strerror(error));
+      n = this->complete_op(op, 0);
+    }
   }
   return n;
+}
+int io_transport::complete_op(io_send_op* op, size_t bytes_transferred)
+{
+  if (op->handler_)
+    op->handler_(bytes_transferred);
+  send_queue_.pop();
+  return 0;
 }
 void io_transport::set_primitives()
 {
@@ -575,7 +589,7 @@ int io_transport_udp::connect()
   set_primitives();
   return retval;
 }
-int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& handler)
+int io_transport_udp::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
 {
   if (connected_)
     return io_transport::write(std::move(buffer), std::move(handler));
@@ -583,7 +597,7 @@ int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& 
     return write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
 int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
-                               std::function<void()>&& handler)
+                               std::function<void(size_t)>&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -624,7 +638,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 
-int io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& /*handler*/)
+int io_transport_kcp::write(std::vector<char>&& buffer, io_completion_cb_t&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
@@ -731,7 +745,7 @@ void io_service::join()
       handle_stop();
     }
     else
-      errno = EAGAIN;
+      xxsocket::set_last_errno(EAGAIN);
   }
 }
 void io_service::handle_stop()
@@ -1092,7 +1106,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 int io_service::write(transport_handle_t transport, std::vector<char> buffer,
-                      std::function<void()> completion_handler)
+                      std::function<void(size_t)> completion_handler)
 {
   if (transport && transport->is_open())
   {
@@ -1108,7 +1122,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   }
 }
 int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
-                         const ip::endpoint& to, std::function<void()> completion_handler)
+                         const ip::endpoint& to, std::function<void(size_t)> completion_handler)
 {
   if (transport && transport->is_open())
   {
@@ -2115,6 +2129,9 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
+      break;
+    case YOPT_S_IGNORE_UDP_ERROR:
+      this->options_.ignore_udp_error_ = !!va_arg(ap, int);
       break;
 #if defined(YASIO_HAVE_SSL)
     case YOPT_S_SSL_CACERT:

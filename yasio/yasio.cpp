@@ -255,13 +255,13 @@ void highp_timer::cancel()
 /// io_send_op
 int io_send_op::perform(io_transport* transport, const void* buf, int n)
 {
-  return transport->write_cb_(buf, n);
+  return transport->write_cb_(buf, n, nullptr);
 }
 
 /// io_sendto_op
 int io_sendto_op::perform(io_transport* transport, const void* buf, int n)
 {
-  return transport->socket_->sendto(buf, n, destination_);
+  return transport->write_cb_(buf, n, &destination_);
 }
 
 #if defined(YASIO_HAVE_SSL)
@@ -494,8 +494,10 @@ int io_transport::call_write(io_send_op* op, int& error)
 }
 void io_transport::set_primitives()
 {
-  this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
-  this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
+  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
+    return socket_->send(data, len);
+  };
+  this->read_cb_ = [=](void* data, int len) { return socket_->recv(data, len, 0); };
 }
 // -------------------- io_transport_tcp ---------------------
 inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
@@ -511,7 +513,9 @@ io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s
 void io_transport_ssl::set_primitives()
 {
   this->read_cb_  = [=](void* data, int len) { return ::SSL_read(ssl_, data, len); };
-  this->write_cb_ = [=](const void* data, int len) { return ::SSL_write(ssl_, data, len); };
+  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
+    return ::SSL_write(ssl_, data, len);
+  };
 }
 #endif
 // ----------------------- io_transport_udp ----------------
@@ -519,29 +523,28 @@ io_transport_udp::io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s
     : io_transport(ctx, s)
 {}
 io_transport_udp::~io_transport_udp() {}
-ip::endpoint io_transport_udp::peer_endpoint() const
+ip::endpoint io_transport_udp::remote_endpoint() const
 {
-  ensure_peer();
-
   if (!connected_)
     return this->peer_;
   else
     return socket_->peer_endpoint();
 }
-const ip::endpoint& io_transport_udp::ensure_peer() const
+const ip::endpoint& io_transport_udp::ensure_destination() const
 {
-  if (this->peer_.af() == AF_UNSPEC && !ctx_->remote_eps_.empty())
-    this->peer_ = ctx_->remote_eps_[0];
-  return this->peer_;
+  if (this->destination_.af() != AF_UNSPEC)
+    return this->destination_;
+
+  if (!ctx_->remote_eps_.empty())
+    this->destination_ = ctx_->remote_eps_[0];
+  return this->destination_;
 }
-int io_transport_udp::confgure_remote(const ip::endpoint& peer, bool should_connect)
+int io_transport_udp::confgure_remote(const ip::endpoint& peer)
 {
   if (connected_) // connected, update peer is pointless and useless
     return -1;
   this->peer_ = peer;
-  if (should_connect)
-    return this->connect();
-  return 0;
+  return this->connect();
 }
 int io_transport_udp::connect()
 {
@@ -566,7 +569,7 @@ int io_transport_udp::write(std::vector<char>&& buffer, std::function<void()>&& 
   if (connected_)
     return io_transport::write(std::move(buffer), std::move(handler));
   else
-    return write_to(std::move(buffer), ensure_peer(), std::move(handler));
+    return write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
 int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
                                std::function<void()>&& handler)
@@ -582,8 +585,9 @@ void io_transport_udp::set_primitives()
     io_transport::set_primitives();
   else
   {
-    this->write_cb_ = [=](const void* data, int len) {
-      return socket_->sendto(data, len, ensure_peer());
+    this->write_cb_ = [=](const void* data, int len, const ip::endpoint* destination) {
+      assert(destination != nullptr);
+      return socket_->sendto(data, len, *destination);
     };
     this->read_cb_ = [=](void* data, int len) {
       ip::endpoint peer;
@@ -612,6 +616,7 @@ io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 int io_transport_kcp::write(std::vector<char>&& buffer, std::function<void()>&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
+
   int retval = ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
   ctx_->get_service().interrupt();
   return retval;
@@ -1516,7 +1521,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
             using namespace std;
             return yasio__testbits(transport->ctx_->properties_, YCM_UDP) &&
-                   static_cast<const io_transport_udp*>(transport)->peer_endpoint() == peer;
+                   static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
           });
           auto transport = it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer);
 #endif
@@ -1556,7 +1561,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
           static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(client_sock)));
 
       // We always establish 4 tuple with clients
-      transport->confgure_remote(peer, true);
+      transport->confgure_remote(peer);
 #if !defined(_WIN32)
       handle_connect_succeed(transport);
 #else

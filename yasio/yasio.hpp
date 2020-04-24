@@ -534,12 +534,13 @@ class io_transport : public io_base
 {
   friend class io_service;
   friend class io_send_op;
+  friend class io_sendto_op;
 
 public:
   unsigned int id() const { return id_; }
 
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
-  virtual ip::endpoint peer_endpoint() const { return socket_->peer_endpoint(); }
+  virtual ip::endpoint remote_endpoint() const { return socket_->peer_endpoint(); }
 
   io_channel* get_context() const { return ctx_; }
 
@@ -591,7 +592,7 @@ protected:
 
   io_channel* ctx_;
 
-  std::function<int(const void*, int)> write_cb_;
+  std::function<int(const void*, int, const ip::endpoint*)> write_cb_;
   std::function<int(void*, int)> read_cb_;
 
   concurrency::concurrent_queue<io_send_op_ptr> send_queue_;
@@ -633,7 +634,7 @@ public:
   YASIO__DECL io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL ~io_transport_udp();
 
-  YASIO__DECL ip::endpoint peer_endpoint() const override;
+  YASIO__DECL ip::endpoint remote_endpoint() const override;
 
 protected:
   // perform connect to establish 4 tuple with peer
@@ -646,13 +647,14 @@ protected:
 
   YASIO__DECL void set_primitives() override;
 
-  // ensure peer valid, if not, assign from ctx_->remote_eps_[0]
-  YASIO__DECL const ip::endpoint& ensure_peer() const;
+  // ensure destination for sendto valid, if not, assign from ctx_->remote_eps_[0]
+  YASIO__DECL const ip::endpoint& ensure_destination() const;
 
   // configure remote with specific endpoint
-  YASIO__DECL int confgure_remote(const ip::endpoint& peer, bool should_connect);
+  YASIO__DECL int confgure_remote(const ip::endpoint& peer);
 
-  mutable ip::endpoint peer_;
+  mutable ip::endpoint peer_;        // for recv only
+  mutable ip::endpoint destination_; // for sendto only
   bool connected_ = false;
 };
 #if defined(YASIO_HAVE_KCP)

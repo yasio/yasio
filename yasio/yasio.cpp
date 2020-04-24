@@ -597,7 +597,7 @@ int io_transport_udp::write(std::vector<char>&& buffer, io_completion_cb_t&& han
     return write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
 int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
-                               std::function<void(size_t)>&& handler)
+                               io_completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -1106,7 +1106,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 int io_service::write(transport_handle_t transport, std::vector<char> buffer,
-                      std::function<void(size_t)> completion_handler)
+                      io_completion_cb_t completion_handler)
 {
   if (transport && transport->is_open())
   {
@@ -1122,7 +1122,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   }
 }
 int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
-                         const ip::endpoint& to, std::function<void(size_t)> completion_handler)
+                         const ip::endpoint& to, io_completion_cb_t completion_handler)
 {
   if (transport && transport->is_open())
   {

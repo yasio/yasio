@@ -504,7 +504,7 @@ private:
 class io_send_op
 {
 public:
-  io_send_op(std::vector<char>&& buffer, std::function<void(size_t)>&& handler)
+  io_send_op(std::vector<char>&& buffer, io_completion_cb_t&& handler)
       : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
   {}
   virtual ~io_send_op() {}
@@ -523,7 +523,7 @@ public:
 class io_sendto_op : public io_send_op
 {
 public:
-  io_sendto_op(std::vector<char>&& buffer, std::function<void(size_t)>&& handler,
+  io_sendto_op(std::vector<char>&& buffer, io_completion_cb_t&& handler,
                const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
@@ -651,8 +651,7 @@ protected:
   YASIO__DECL int connect();
 
   YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
-  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&,
-                           std::function<void(size_t)>&&) override;
+  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&, io_completion_cb_t&&) override;
 
   YASIO__DECL void set_primitives() override;
 

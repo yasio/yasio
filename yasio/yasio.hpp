@@ -358,6 +358,7 @@ struct io_base
     OPEN,
   };
   io_base() : error_(0), state_(state::CLOSED), opmask_(0) {}
+  virtual ~io_base() {}
   void set_last_errno(int error) { error_ = error; }
 
   std::shared_ptr<xxsocket> socket_;

@@ -38,7 +38,7 @@ void setup_kcp_transfer(transport_handle_t handle)
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  auto cb = [=](size_t) { udp_send_repeat_forever(service, thandle, obs); };
+  auto cb = [=](int,size_t) { udp_send_repeat_forever(service, thandle, obs); };
 
   service->write(thandle, obs->buffer(), cb);
 }

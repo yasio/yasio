@@ -279,7 +279,7 @@ typedef std::function<void()> light_timer_cb_t;
 typedef std::function<bool()> timer_cb_t;
 typedef std::pair<highp_timer*, timer_cb_t> timer_impl_t;
 typedef std::function<void(event_ptr&&)> io_event_cb_t;
-typedef std::function<void(size_t)> io_completion_cb_t;
+typedef std::function<void(int, size_t)> io_completion_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
@@ -573,7 +573,7 @@ protected:
 
   YASIO__DECL int call_read(void* data, int size, int& error);
   YASIO__DECL int call_write(io_send_op*, int& error);
-  YASIO__DECL int complete_op(io_send_op*, size_t bytes_transferred);
+  YASIO__DECL int complete_op(io_send_op*, int error, size_t bytes_transferred);
 
   // Call at io_service
   YASIO__DECL virtual int do_read(int& error);
@@ -809,12 +809,12 @@ public:
                         io_completion_cb_t completion_handler = nullptr);
 
   /*
-  ** Summary: Write data to unconnected UDP transport with specified address.
-  ** @retval: < 0: failed
-  ** @remark: This function only for UDP like transport (UDP or KCP)
-  **        + UDP: Use queue to store user message, flush at io_service thread
-  **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
-  */
+   ** Summary: Write data to unconnected UDP transport with specified address.
+   ** @retval: < 0: failed
+   ** @remark: This function only for UDP like transport (UDP or KCP)
+   **        + UDP: Use queue to store user message, flush at io_service thread
+   **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
+   */
   int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to,
                io_completion_cb_t completion_handler = nullptr)
   {

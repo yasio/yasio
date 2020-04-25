@@ -21,7 +21,7 @@ yasio-3.33.0
 * Fix ```yasio::_strfmt``` may crash on some incorrect use, now it's more stable on all platforms.
 * Improve behavior when kernel send buffer is full, don't sleep a fixed time, just drived by ```select```.
 * Optimize udp transport close behavior, by default, udp transport will never close except user request, still can use io_service's option YOPT_S_IGNORE_UDP_ERROR to change this behavior.
-  
+* Change write completion handler prototype to: ```std::function<void(int ec, size_t bytes_transferred)>```.
   
 yasio-3.31.3
   

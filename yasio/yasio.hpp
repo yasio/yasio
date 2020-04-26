@@ -579,7 +579,7 @@ protected:
   YASIO__DECL virtual int do_read(int& error);
 
   // Call at io_service, try flush pending packet
-  virtual bool do_write(long long& max_wait_duration);
+  YASIO__DECL virtual bool do_write(long long& max_wait_duration);
 
   // Sets the underlying layer socket io primitives.
   YASIO__DECL virtual void set_primitives();

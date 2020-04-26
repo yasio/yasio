@@ -23,7 +23,7 @@
 ## 应用案例
 * [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
-* [xlua集成](https://github.com/c4games/xlua): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
+* [xlua集成](https://github.com/yasio/empty3d): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
     
 ## 文档
 * 简体中文: [https://docs.yasio.org/](https://docs.yasio.org/)

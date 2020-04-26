@@ -562,7 +562,7 @@ protected:
   }
 
   // Call at user thread
-  virtual int write(std::vector<char>&&, io_completion_cb_t&&);
+  YASIO__DECL virtual int write(std::vector<char>&&, io_completion_cb_t&&);
 
   // Call at user thread
   virtual int write_to(std::vector<char>&&, const ip::endpoint&, io_completion_cb_t&&)

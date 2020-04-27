@@ -77,8 +77,7 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
       YASIO_LOG("[%lld]" format, highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__);  \
   } while (false)
 
-#define YASIO_KLOG(format, ...)                                                                    \
-  YASIO_KLOG_GP(yasio__shared_globals().global_print, format, ##__VA_ARGS__)
+#define YASIO_KLOG(format, ...) YASIO_KLOG_GP(yasio__shared_globals().dprint, format, ##__VA_ARGS__)
 
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_KLOGV(fmt, ...) (void)0
@@ -96,7 +95,7 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
 
 #define yasio__clearhiword(x) ((x) &= 0xffff)
 
-#define yasio__set_print_fn(print_fn) yasio__shared_globals(print_fn).global_print = print_fn
+#define yasio__set_global_print(print_fn) yasio__shared_globals(print_fn).dprint = print_fn
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -229,7 +228,6 @@ struct yasio__global_state
                     ::ares_strerror(ares_status));
 #  endif
 #endif
-
     // print version & transport alloc size
     YASIO_KLOG_GP(
         global_print,
@@ -248,9 +246,9 @@ struct yasio__global_state
 
   int init_flags = 0;
   int max_alloc_size;
-  print_fn_t global_print;
+  print_fn_t dprint = nullptr;
 };
-static yasio__global_state& yasio__shared_globals(const print_fn_t& global_print = {})
+static yasio__global_state& yasio__shared_globals(const print_fn_t& global_print = nullptr)
 {
   static yasio__global_state __global_state(global_print);
   return __global_state;
@@ -1360,19 +1358,17 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     yasio__setlobyte(ctx->dns_queries_state_, YDQS_READY);
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-    YASIO_KLOG_OPTIONS(current_service.options_,
-                       "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)",
-                       ctx->index_, ctx->remote_host_.c_str(),
-                       (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+    YASIO_KLOG("[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)", ctx->index_,
+               ctx->remote_host_.c_str(),
+               (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
   }
   else
   {
     ctx->set_last_errno(yasio::errc::resolve_host_failed);
     yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
-    YASIO_KLOG_OPTIONS(current_service.options_,
-                       "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
-                       ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
+    YASIO_KLOG("[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
+               ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
   }
 
   current_service.interrupt();
@@ -2138,7 +2134,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_PRINT_FN: {
       print_fn_t& print_fn = *va_arg(ap, print_fn_t*);
-      yasio__set_print_fn(print_fn);
+      yasio__set_global_print(print_fn);
     }
     break;
     case YOPT_S_NO_NEW_THREAD:

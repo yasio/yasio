@@ -66,23 +66,24 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
 }
 #endif
 
-#define YASIO_SLOG_OPTIONS(options, format, ...)                                                   \
+#define YASIO_KLOG_GP(global_print, format, ...)                                                   \
   do                                                                                               \
   {                                                                                                \
-    if (options.print_)                                                                            \
-      options.print_(::yasio::strfmt(127, "[yasio][%lld]" format "\n",                             \
-                                     highp_clock<system_clock_t>() / std::milli::den,              \
-                                     ##__VA_ARGS__)                                                \
-                         .c_str());                                                                \
+    if (global_print)                                                                              \
+      global_print(::yasio::strfmt(127, "[yasio][%lld]" format "\n",                               \
+                                   highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__) \
+                       .c_str());                                                                  \
     else                                                                                           \
       YASIO_LOG("[%lld]" format, highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__);  \
   } while (false)
 
-#define YASIO_SLOG(format, ...) YASIO_SLOG_OPTIONS(options_, format, ##__VA_ARGS__)
+#define YASIO_KLOG(format, ...)                                                                    \
+  YASIO_KLOG_GP(yasio__shared_globals().global_print, format, ##__VA_ARGS__)
+
 #if !defined(YASIO_VERBOSE_LOG)
-#  define YASIO_SLOGV(fmt, ...) (void)0
+#  define YASIO_KLOGV(fmt, ...) (void)0
 #else
-#  define YASIO_SLOGV YASIO_SLOG
+#  define YASIO_KLOGV YASIO_KLOG
 #endif
 
 #define yasio__setbits(x, m) ((x) |= (m))
@@ -94,6 +95,8 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
 #define yasio__lobyte(x) ((x) & (uint16_t)0x00ff)
 
 #define yasio__clearhiword(x) ((x) &= 0xffff)
+
+#define yasio__set_print_fn(print_fn) yasio__shared_globals(print_fn).global_print = print_fn
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -200,17 +203,15 @@ struct yasio__global_state
     INITF_SSL   = 1,
     INITF_CARES = 2,
   };
-
-public:
-  yasio__global_state()
+  yasio__global_state(const print_fn_t& global_print)
   {
-    s_max_alloc_size =
+    max_alloc_size =
         static_cast<int>((std::max)(sizeof(io_transport_tcp), sizeof(io_transport_udp)));
 #if defined(YASIO_HAVE_KCP)
-    s_max_alloc_size = (std::max)(s_max_alloc_size, static_cast<int>(sizeof(io_transport_kcp)));
+    max_alloc_size = (std::max)(max_alloc_size, static_cast<int>(sizeof(io_transport_kcp)));
 #endif
 #if defined(YASIO_HAVE_SSL)
-    s_max_alloc_size = (std::max)(s_max_alloc_size, static_cast<int>(sizeof(io_transport_ssl)));
+    max_alloc_size = (std::max)(max_alloc_size, static_cast<int>(sizeof(io_transport_ssl)));
     if (OPENSSL_init_ssl(0, NULL) == 1)
       yasio__setbits(this->init_flags, INITF_SSL);
 #endif
@@ -219,21 +220,23 @@ public:
     if (ares_status == 0)
       yasio__setbits(init_flags, INITF_CARES);
     else
-      YASIO_LOG("[c-ares] init library failed, status=%d, detail:%s", ares_status,
-                ::ares_strerror(ares_status));
+      YASIO_KLOG_GP(global_print, "[c-ares] init library failed, status=%d, detail:%s", ares_status,
+                    ::ares_strerror(ares_status));
 #  if defined(__ANDROID__)
     ares_status = ::yasio__ares_init_android();
     if (ares_status != 0)
-      YASIO_LOG("[c-ares] init android failed, status=%d, detail:%s", ares_status,
-                ::ares_strerror(ares_status));
+      YASIO_KLOG_GP(global_print, "[c-ares] init android failed, status=%d, detail:%s", ares_status,
+                    ::ares_strerror(ares_status));
 #  endif
 #endif
 
     // print version & transport alloc size
-    YASIO_LOG("the yasio-%x.%x.%x is initialized, the size of per transport is %d when object_pool "
-              "enabled.",
-              (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff,
-              YASIO_VERSION_NUM & 0xff, s_max_alloc_size);
+    YASIO_KLOG_GP(
+        global_print,
+        "the yasio-%x.%x.%x is initialized, the size of per transport is %d when object_pool "
+        "enabled.",
+        (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff, YASIO_VERSION_NUM & 0xff,
+        max_alloc_size);
   }
   ~yasio__global_state()
   {
@@ -244,9 +247,14 @@ public:
   }
 
   int init_flags = 0;
-  static int s_max_alloc_size;
+  int max_alloc_size;
+  print_fn_t global_print;
 };
-int yasio__global_state::s_max_alloc_size;
+static yasio__global_state& yasio__shared_globals(const print_fn_t& global_print = {})
+{
+  static yasio__global_state __global_state(global_print);
+  return __global_state;
+}
 } // namespace
 
 /// highp_timer
@@ -508,8 +516,8 @@ int io_transport::call_write(io_send_op* op, int& error)
     else if (yasio__testbits(ctx_->properties_, YCM_UDP) &&
              get_service().options_.ignore_udp_error_)
     { // UDP: don't cause handle_close, simply drop the op
-      YASIO_LOG("warning: write udp socket failed, ec=%d, detail:%s", error,
-                io_service::strerror(error));
+      YASIO_KLOG("warning: write udp socket failed, ec=%d, detail:%s", error,
+                 io_service::strerror(error));
       n = this->complete_op(op, error, op->offset_);
     }
   }
@@ -708,7 +716,7 @@ void io_service::start(io_event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
-    static yasio__global_state __global_state;
+    yasio__shared_globals();
 
     if (cb)
       options_.on_event_ = std::move(cb);
@@ -803,7 +811,6 @@ void io_service::cleanup()
 
     options_.on_event_ = nullptr;
     options_.resolv_   = nullptr;
-    options_.print_    = nullptr;
 
     /// purge transport pool memory
     for (auto o : tpool_)
@@ -878,14 +885,14 @@ void io_service::run()
     if (retval == -1)
     {
       int ec = xxsocket::get_last_errno();
-      YASIO_SLOG("do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
+      YASIO_KLOG("do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
         goto _L_end;
       continue; // just continue.
     }
 
     if (retval == 0)
-      YASIO_SLOGV("%s", "do_select is timeout, process_timers()");
+      YASIO_KLOGV("%s", "do_select is timeout, process_timers()");
 
     // Reset the interrupter.
     else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
@@ -1027,7 +1034,7 @@ void io_service::reopen(transport_handle_t transport)
 {
   if (!transport->is_open())
   {
-    YASIO_LOG("can't reopen transport:%p, the state of it is invalid!", transport);
+    YASIO_KLOG("can't reopen transport:%p, the state of it is invalid!", transport);
     return;
   }
   auto ctx = transport->ctx_;
@@ -1066,7 +1073,7 @@ void io_service::handle_close(transport_handle_t thandle)
   auto ec  = thandle->error_;
 
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_SLOG("[index: %d] the connection #%u is lost, ec=%d, detail:%s", ctx->index_, thandle->id_,
+  YASIO_KLOG("[index: %d] the connection #%u is lost, ec=%d, detail:%s", ctx->index_, thandle->id_,
              ec, io_service::strerror(ec));
 
   cleanup_io(thandle, false);
@@ -1122,7 +1129,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   }
   else
   {
-    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
+    YASIO_KLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
     return -1;
   }
 }
@@ -1137,7 +1144,7 @@ int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
   }
   else
   {
-    YASIO_SLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
+    YASIO_KLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
     return -1;
   }
 }
@@ -1166,7 +1173,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   ctx->state_ = io_base::state::OPENING;
   auto& ep    = ctx->remote_eps_[0];
-  YASIO_SLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(),
+  YASIO_KLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(),
              ctx->remote_port_);
 
   if (ctx->socket_->open(ep.af(), ctx->protocol_))
@@ -1281,7 +1288,7 @@ void io_service::init_ssl_context()
   {
     ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
     if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.capath_.c_str(), nullptr) != 1)
-      YASIO_LOG("load ca certifaction file failed!");
+      YASIO_KLOG("load ca certifaction file failed!");
   }
   SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
 }
@@ -1317,8 +1324,8 @@ void io_service::do_ssl_handshake(io_channel* ctx)
       ; // Nothing need to do
     else
     {
-      YASIO_LOG("SSL_do_handshake fail with ret=%d,error=%d, errno=%d, detail:%s\n", ret, error,
-                errno, strerror(errno));
+      YASIO_KLOG("SSL_do_handshake fail with ret=%d,error=%d, errno=%d, detail:%s\n", ret, error,
+                 errno, strerror(errno));
 
       ctx->ssl_.destroy();
       handle_connect_failed(ctx, yasio::errc::ssl_handeshake_failed);
@@ -1353,7 +1360,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     yasio__setlobyte(ctx->dns_queries_state_, YDQS_READY);
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-    YASIO_SLOG_OPTIONS(current_service.options_,
+    YASIO_KLOG_OPTIONS(current_service.options_,
                        "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)",
                        ctx->index_, ctx->remote_host_.c_str(),
                        (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
@@ -1363,7 +1370,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
   {
     ctx->set_last_errno(yasio::errc::resolve_host_failed);
     yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
-    YASIO_SLOG_OPTIONS(current_service.options_,
+    YASIO_KLOG_OPTIONS(current_service.options_,
                        "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
                        ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
   }
@@ -1398,7 +1405,7 @@ void io_service::init_ares_channel()
   auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
   if (status == ARES_SUCCESS)
   {
-    YASIO_LOG("[c-ares] init channel succeed");
+    YASIO_KLOG("[c-ares] init channel succeed");
 
     // list all dns servers for resov problem diagnosis
     ares_addr_node* name_servers = nullptr;
@@ -1425,23 +1432,23 @@ void io_service::init_ares_channel()
         strdns.push_back(',');
       }
       if (valid_flags) // if no valid name server, use predefined fallback dns
-        YASIO_LOG("[c-ares] use system dns: %s", strdns.c_str());
+        YASIO_KLOG("[c-ares] use system dns: %s", strdns.c_str());
       else
       {
         ares_ec = ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
         if (ares_ec == 0)
-          YASIO_LOG("[c-ares] get system dns failed, set fallback dns: '%s' succeed",
-                    YASIO_CARES_FALLBACK_DNS);
+          YASIO_KLOG("[c-ares] get system dns failed, set fallback dns: '%s' succeed",
+                     YASIO_CARES_FALLBACK_DNS);
         else
-          YASIO_LOG("[c-ares] get system dns failed, set fallback dns: '%s' failed, detail: %s",
-                    YASIO_CARES_FALLBACK_DNS, ::ares_strerror(ares_ec));
+          YASIO_KLOG("[c-ares] get system dns failed, set fallback dns: '%s' failed, detail: %s",
+                     YASIO_CARES_FALLBACK_DNS, ::ares_strerror(ares_ec));
       }
       ::ares_free_data(name_servers);
     }
   }
   else
-    YASIO_LOG("[c-ares] init channel failed, status=%d, detail:%s", status,
-              ::ares_strerror(status));
+    YASIO_KLOG("[c-ares] init channel failed, status=%d, detail:%s", status,
+               ::ares_strerror(status));
 }
 void io_service::cleanup_ares_channel()
 {
@@ -1471,7 +1478,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
-      YASIO_SLOG("[index: %d] bind failed, ec=%d, detail:%s", ctx->index_, error,
+      YASIO_KLOG("[index: %d] bind failed, ec=%d, detail:%s", ctx->index_, error,
                  io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = io_base::state::CLOSED;
@@ -1491,13 +1498,13 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-      YASIO_SLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
+      YASIO_KLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
                  (int)ctx->socket_->native_handle(), ep.to_string().c_str());
     }
     else
     {
       error = xxsocket::get_last_errno();
-      YASIO_SLOG("[index: %d] socket.fd=%d listening failed, ec=%d, detail:%s", ctx->index_,
+      YASIO_KLOG("[index: %d] socket.fd=%d listening failed, ec=%d, detail:%s", ctx->index_,
                  (int)ctx->socket_->native_handle(), error, io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = io_base::state::CLOSED;
@@ -1519,7 +1526,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         if (error == 0)
           handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
         else // The non blocking tcp accept failed can be ignored.
-          YASIO_SLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
+          YASIO_KLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
                       (int)ctx->socket_->native_handle(), error);
       }
       else // YCM_UDP
@@ -1529,7 +1536,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
                                        peer);
         if (n > 0)
         {
-          YASIO_SLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
+          YASIO_KLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
 
           /* make a transport local --> peer udp session, just like tcp accept */
 #if !defined(_WIN32)
@@ -1567,7 +1574,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           error = xxsocket::get_last_errno();
           if (YASIO_SHOULD_CLOSE_0(error))
           {
-            YASIO_SLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
+            YASIO_KLOG("[index: %d] recvfrom failed, ec=%d", ctx->index_, error);
             close(ctx->index_);
           }
         }
@@ -1603,7 +1610,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
     else
     {
       error = xxsocket::get_last_errno();
-      YASIO_SLOG("udp-server: bind address failed, ec=%d, detail:%s", error,
+      YASIO_KLOG("udp-server: bind address failed, ec=%d, detail:%s", error,
                  xxsocket::strerror(error));
     }
   }
@@ -1642,10 +1649,10 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
   auto ctx = transport->ctx_;
 
   auto& s = transport->socket_;
-  YASIO_LOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_,
-             s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
+  YASIO_KLOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_,
+              s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
 
-  YASIO_SLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
+  YASIO_KLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
              transport->id_, s->local_endpoint().to_string().c_str(),
              s->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
@@ -1660,7 +1667,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
     tpool_.pop_back();
   }
   else
-    vp = ::operator new(yasio__global_state::s_max_alloc_size);
+    vp = ::operator new(yasio__shared_globals().max_alloc_size);
 #if defined(YASIO_HAVE_SSL)
   if (yasio__testbits(ctx->properties_, YCM_SSL))
     transport = new (vp) io_transport_ssl(ctx, socket);
@@ -1697,7 +1704,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 
   cleanup_io(ctx);
 
-  YASIO_SLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
+  YASIO_KLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
              ctx->remote_host_.c_str(), ctx->remote_port_, error, io_service::strerror(error));
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
 }
@@ -1716,12 +1723,12 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
 
     if (n >= 0)
     {
-      YASIO_SLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
+      YASIO_KLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
                   io_service::strerror(error));
 #if defined(YASIO_VERBOSE_LOG)
       if (n > 0)
       {
-        YASIO_SLOG("[index: %d] do_read ok, received data len: %d, "
+        YASIO_KLOG("[index: %d] do_read ok, received data len: %d, "
                    "buffer data "
                    "len: %d",
                    transport->cindex(), n, n + transport->offset_);
@@ -1784,7 +1791,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
       max_wait_duration = 0;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve it.
-    YASIO_SLOGV("[index: %d] received a properly packet from peer, "
+    YASIO_KLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
@@ -1846,7 +1853,7 @@ void io_service::open_internal(io_channel* ctx)
 {
   if (ctx->state_ == io_base::state::OPENING)
   { // in-opening, do nothing
-    YASIO_SLOG("[index: %d] the channel is in opening!", ctx->index_);
+    YASIO_KLOG("[index: %d] the channel is in opening!", ctx->index_);
     return;
   }
 
@@ -1930,10 +1937,10 @@ int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
     }
 #endif
 
-    YASIO_SLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
+    YASIO_KLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
                 waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
     retval = ::select(this->max_nfds_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
-    YASIO_SLOGV("socket.select waked up, retval=%d", retval);
+    YASIO_KLOGV("socket.select waked up, retval=%d", retval);
   }
 
   return retval;
@@ -1990,7 +1997,7 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->set_last_errno(EINPROGRESS);
   yasio__setlobyte(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  YASIO_SLOG("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
+  YASIO_KLOG("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();
 
 #if defined(YASIO_ENABLE_ARES_PROFILER)
@@ -2027,7 +2034,7 @@ void io_service::start_resolve(io_channel* ctx)
       ctx->remote_eps_            = std::move(remote_eps);
       ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-      YASIO_SLOG("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_,
+      YASIO_KLOG("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_,
                  ctx->remote_host_.c_str(),
                  (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
@@ -2035,7 +2042,7 @@ void io_service::start_resolve(io_channel* ctx)
     else
     {
       yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
-      YASIO_SLOG("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_,
+      YASIO_KLOG("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_,
                  ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
     }
     /*
@@ -2129,9 +2136,11 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_RESOLV_FN:
       options_.resolv_ = *va_arg(ap, resolv_fn_t*);
       break;
-    case YOPT_S_PRINT_FN:
-      this->options_.print_ = *va_arg(ap, print_fn_t*);
-      break;
+    case YOPT_S_PRINT_FN: {
+      print_fn_t& print_fn = *va_arg(ap, print_fn_t*);
+      yasio__set_print_fn(print_fn);
+    }
+    break;
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;

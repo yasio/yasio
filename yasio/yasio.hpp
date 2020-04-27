@@ -1022,8 +1022,7 @@ private:
     resolv_fn_t resolv_;
     // the event callback
     io_event_cb_t on_event_;
-    // The custom debug print function
-    print_fn_t print_;
+
 #if defined(YASIO_HAVE_SSL)
     // The full path cacert(.pem) file for ssl verifaction
     std::string capath_;

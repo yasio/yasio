@@ -66,7 +66,7 @@ int ibstream_view::read_i7()
     // Check for a corrupted stream.  Read a max of 5 bytes.
     // In a future version, add a DataFormatException.
     if (shift == 5 * 7) // 5 bytes max per Int32, shift += 7
-      throw std::logic_error("Format_Bad7BitInt32");
+      YASIO__THROW(std::logic_error("Format_Bad7BitInt32"), 0);
 
     // ReadByte handles end of stream cases for us.
     b = read_i<uint8_t>();
@@ -157,7 +157,7 @@ cxx17::string_view ibstream_view::read_bytes(int len)
 const char* ibstream_view::consume(size_t size)
 {
   if (ptr_ >= last_)
-    throw std::out_of_range("ibstream_view::consume out of range!");
+    YASIO__THROW(std::out_of_range("ibstream_view::consume out of range!"), nullptr);
 
   auto ptr = ptr_;
   ptr_ += size;

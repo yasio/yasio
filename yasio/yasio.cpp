@@ -228,6 +228,12 @@ public:
                 ::ares_strerror(ares_status));
 #  endif
 #endif
+
+    // print version & transport alloc size
+    YASIO_LOG("the yasio-%x.%x.%x is initialized, the size of per transport is %d when object_pool "
+              "enabled.",
+              (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff,
+              YASIO_VERSION_NUM & 0xff, s_max_alloc_size);
   }
   ~yasio__global_state()
   {

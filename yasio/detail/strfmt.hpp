@@ -119,8 +119,10 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* 
       va_end(args);
 
     } while (nret < 0 && buffer.size() <= enlarge_limits);
-
-    buffer.resize(nret);
+    if(nret > 0)
+      buffer.resize(nret);
+    else
+      buffer = format_traits<_Elem>::report_error();
 #else
     /* other standard implementation
     see: http://www.cplusplus.com/reference/cstdio/vsnprintf/

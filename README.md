@@ -3,7 +3,7 @@
 # *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/d6qjfygtw2ewt9pf/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
+[![Release](https://img.shields.io/badge/release-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
@@ -23,7 +23,11 @@
 ## 应用案例
 * [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
-* [xlua集成](https://github.com/yasio/empty3d): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
+
+## 集成Demos
+* [xlua](https://github.com/yasio/DemoU3D): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
+* [Unreal Engine 4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4, 未来会完善Lua, 可能基于Tencent的UnLua.
+
     
 ## 文档
 * 简体中文: [https://docs.yasio.org/](https://docs.yasio.org/)

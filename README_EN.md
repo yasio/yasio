@@ -3,7 +3,7 @@
 # *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/d6qjfygtw2ewt9pf/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
-[![Release](https://img.shields.io/badge/dev-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
+[![Release](https://img.shields.io/badge/release-v3.33.0-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
@@ -23,7 +23,10 @@
 ## Showcase
 * [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.
 * [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
-* [xlua](https://github.com/yasio/empty3d): Integrate yasio to xlua, make the unity3d game project based on xlua can use yasio lua bindings APIs.
+
+## Integration Demos
+* [xlua](https://github.com/yasio/DemoU3D): Integrate yasio to xlua, make the unity3d game project based on xlua can use yasio lua bindings APIs.
+* [ue4](https://github.com/yasio/DemoUE4): Integrate yasio to unreal engine 4, make the ue4 game project yasio, lua will complete in the future, may based on Tencent's UnLua.
 
 ## Docomentation
 * Simplified Chinese: [https://docs.yasio.org/](https://docs.yasio.org/)

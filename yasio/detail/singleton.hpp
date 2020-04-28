@@ -131,7 +131,7 @@ public:
 #endif
     if (_Myt::__single__)
     {
-      delete _Myt::__single__;
+      delete static_cast<_Ty*>(_Myt::__single__);
       _Myt::__single__ = nullptr;
     }
   }

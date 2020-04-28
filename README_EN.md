@@ -30,7 +30,7 @@
 
 ## Docomentation
 * Simplified Chinese: [https://docs.yasio.org/](https://docs.yasio.org/)
-* English: [https://docs.yasio.org/en/latest/](https://docs.yasio.org/en/latest/)
+* English: [https://docs.yasio.org/en/latest/](https://docs.yasio.org/en/latest/) (Building)
 
 ## Simple run tcptest with g++
 ```sh

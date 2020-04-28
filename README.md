@@ -66,7 +66,7 @@ cmake --build . --config Debug
 * 支持非阻塞域名解析，基于c-ares。  
 
 ## 发送延迟
-yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快210倍以上
+yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快210倍以上  
 |网络实现         | 实际执行发送操作延迟 |
 | ------------- |:----------------:|
 |yasio	| ```0.6 ~ 0.1(ms)``` |

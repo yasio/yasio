@@ -26,7 +26,7 @@
 
 ## Integration Demos
 * [xlua](https://github.com/yasio/DemoU3D): Integrate yasio to xlua, make the unity3d game project based on xlua can use yasio lua bindings APIs.
-* [ue4](https://github.com/yasio/DemoUE4): Integrate yasio to unreal engine 4, make the ue4 game project yasio, lua will complete in the future, may based on Tencent's UnLua.
+* [Unreal Engine 4](https://github.com/yasio/DemoUE4): Integrate yasio to unreal engine 4, make the ue4 game project yasio, lua will complete in the future, may based on Tencent's UnLua.
 
 ## Docomentation
 * Simplified Chinese: [https://docs.yasio.org/](https://docs.yasio.org/)
@@ -67,6 +67,4 @@ cmake --build . --config Debug
   
 ## Core framework
 ![image](https://yasio.org/images/framework_en.png)  
-
-## For more detail usage: see [wiki](https://github.com/yasio/yasio/wiki)
 

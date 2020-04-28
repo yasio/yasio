@@ -20,14 +20,6 @@
   
 **yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持windows & linux & apple & android & win10-universal。  
 
-## 消息发送延迟
-yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快210倍以上
-|网络实现         | 实际执行发送操作延迟 |
-| ------------- |:----------------:|
-|yasio	| ```0.6 ~ 0.1(ms)``` |
-|Cocos2d-X WebSocket	|```> 21(ms)``` |
-参考: [Cocos2d-X WebSocket.cpp](https://github.com/cocos2d/cocos2d-x/blob/v4/cocos/network/WebSocket.cpp)
-
 ## 应用案例
 * [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
@@ -72,6 +64,15 @@ cmake --build . --config Debug
 * 支持组播。  
 * 支持SSL客户端，基于OpenSSL。  
 * 支持非阻塞域名解析，基于c-ares。  
-  
+
+## 发送延迟
+yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快210倍以上
+|网络实现         | 实际执行发送操作延迟 |
+| ------------- |:----------------:|
+|yasio	| ```0.6 ~ 0.1(ms)``` |
+|Cocos2d-X WebSocket	|```> 21(ms)``` |
+
+参考: [Cocos2d-X WebSocket.cpp](https://github.com/cocos2d/cocos2d-x/blob/v4/cocos/network/WebSocket.cpp)
+
 ## 框架图
 ![image](https://yasio.org/images/framework.png)  

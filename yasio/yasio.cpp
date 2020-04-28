@@ -202,7 +202,7 @@ struct yasio__global_state
     INITF_SSL   = 1,
     INITF_CARES = 2,
   };
-  yasio__global_state(const print_fn_t& global_print)
+  yasio__global_state(const print_fn_t& print_fn) : dprint(print_fn)
   {
     max_alloc_size =
         static_cast<int>((std::max)(sizeof(io_transport_tcp), sizeof(io_transport_udp)));
@@ -219,18 +219,18 @@ struct yasio__global_state
     if (ares_status == 0)
       yasio__setbits(init_flags, INITF_CARES);
     else
-      YASIO_KLOG_GP(global_print, "[c-ares] init library failed, status=%d, detail:%s", ares_status,
+      YASIO_KLOG_GP(this->dprint, "[c-ares] init library failed, status=%d, detail:%s", ares_status,
                     ::ares_strerror(ares_status));
 #  if defined(__ANDROID__)
     ares_status = ::yasio__ares_init_android();
     if (ares_status != 0)
-      YASIO_KLOG_GP(global_print, "[c-ares] init android failed, status=%d, detail:%s", ares_status,
+      YASIO_KLOG_GP(this->dprint, "[c-ares] init android failed, status=%d, detail:%s", ares_status,
                     ::ares_strerror(ares_status));
 #  endif
 #endif
     // print version & transport alloc size
     YASIO_KLOG_GP(
-        global_print,
+        this->dprint,
         "the yasio-%x.%x.%x is initialized, the size of per transport is %d when object_pool "
         "enabled.",
         (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff, YASIO_VERSION_NUM & 0xff,
@@ -243,14 +243,13 @@ struct yasio__global_state
       ::ares_library_cleanup();
 #endif
   }
-
+  print_fn_t dprint;
   int init_flags = 0;
   int max_alloc_size;
-  print_fn_t dprint = nullptr;
 };
-static yasio__global_state& yasio__shared_globals(const print_fn_t& global_print = nullptr)
+static yasio__global_state& yasio__shared_globals(const print_fn_t& prt = nullptr)
 {
-  static yasio__global_state __global_state(global_print);
+  static yasio__global_state __global_state(prt);
   return __global_state;
 }
 } // namespace
@@ -698,6 +697,8 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 #endif
 
 // ------------------------ io_service ------------------------
+void io_service::init_globals(const yasio::inet::print_fn_t& prt) { yasio__shared_globals(prt); }
+void io_service::cleanup_globals() { yasio__shared_globals().dprint = nullptr; }
 io_service::io_service() { this->init(nullptr, 1); }
 io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
 io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }
@@ -2134,7 +2135,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_PRINT_FN: {
       print_fn_t& print_fn = *va_arg(ap, print_fn_t*);
-      yasio__set_global_print(print_fn);
+      io_service::init_globals(print_fn);
     }
     break;
     case YOPT_S_NO_NEW_THREAD:

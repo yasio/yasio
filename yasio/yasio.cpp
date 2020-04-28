@@ -219,22 +219,23 @@ struct yasio__global_state
     if (ares_status == 0)
       yasio__setbits(init_flags, INITF_CARES);
     else
-      YASIO_KLOG_GP(this->dprint, "[c-ares] init library failed, status=%d, detail:%s", ares_status,
-                    ::ares_strerror(ares_status));
+      YASIO_KLOG_GP(this->dprint, "[global] c-ares library init failed, status=%d, detail:%s",
+                    ares_status, ::ares_strerror(ares_status));
 #  if defined(__ANDROID__)
     ares_status = ::yasio__ares_init_android();
     if (ares_status != 0)
-      YASIO_KLOG_GP(this->dprint, "[c-ares] init android failed, status=%d, detail:%s", ares_status,
-                    ::ares_strerror(ares_status));
+      YASIO_KLOG_GP(this->dprint,
+                    "[global] c-ares library init android failed, status=%d, detail:%s",
+                    ares_status, ::ares_strerror(ares_status));
 #  endif
 #endif
     // print version & transport alloc size
-    YASIO_KLOG_GP(
-        this->dprint,
-        "the yasio-%x.%x.%x is initialized, the size of per transport is %d when object_pool "
-        "enabled.",
-        (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff, YASIO_VERSION_NUM & 0xff,
-        max_alloc_size);
+    YASIO_KLOG_GP(this->dprint,
+                  "[global] the yasio-%x.%x.%x is initialized, the size of per transport is %d "
+                  "when object_pool "
+                  "enabled.",
+                  (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff,
+                  YASIO_VERSION_NUM & 0xff, max_alloc_size);
   }
   ~yasio__global_state()
   {

@@ -23,6 +23,7 @@ yasio-3.33.0
 * Optimize udp transport close behavior, by default, udp transport will never close except user request, still can use io_service's option YOPT_S_IGNORE_UDP_ERROR to change this behavior.
 * Change write completion handler prototype to: ```std::function<void(int ec, size_t bytes_transferred)>```.
 * Implement literals for ```cxx17::string_view```.
+* Other code quality & stable improvements.
   
 yasio-3.31.3
   

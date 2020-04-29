@@ -767,7 +767,7 @@ basic_string_view<_CharT, _Traits>::data() const
 
 template <typename _CharT, typename _Traits>
 inline typename basic_string_view<_CharT, _Traits>::const_reference
-    basic_string_view<_CharT, _Traits>::operator[](size_t pos) const
+basic_string_view<_CharT, _Traits>::operator[](size_t pos) const
 {
   return m_str[pos];
 }
@@ -1357,39 +1357,6 @@ inline bool operator>=(const basic_string_view<_CharT, _Traits>& lhs,
   return lhs >= basic_string_view<_CharT, _Traits>(rhs);
 }
 //-----------------------------------------------------------------
-#  if YASIO__HAS_FULL_CXX11
-// basic_string_view LITERALS
-#    if defined(_MSC_VER)
-#      pragma warning(push)
-#      pragma warning(disable : 4455)
-#    endif
-inline namespace literals
-{
-inline namespace string_view_literals
-{
-inline cxx17::string_view operator"" sv(const char* _Str, size_t _Len)
-{
-  return cxx17::string_view(_Str, _Len);
-}
-inline cxx17::wstring_view operator"" sv(const wchar_t* _Str, size_t _Len)
-{
-  return cxx17::wstring_view(_Str, _Len);
-}
-inline cxx17::u16string_view operator"" sv(const char16_t* _Str, size_t _Len)
-{
-  return cxx17::u16string_view(_Str, _Len);
-}
-inline cxx17::u32string_view operator"" sv(const char32_t* _Str, size_t _Len)
-{
-  return cxx17::u32string_view(_Str, _Len);
-}
-} // namespace string_view_literals
-} // namespace literals
-#    if defined(_MSC_VER)
-#      pragma warning(pop)
-#    endif
-#  endif
-//-----------------------------------------------------------------
 // FNV1a hash from msvc++
 #  if YASIO__64BITS
 static constexpr size_t _FNV_offset_basis = 14695981039346656037ULL;
@@ -1428,6 +1395,35 @@ template <class _Elem> struct hash<cxx17::basic_string_view<_Elem>>
   }
 };
 } // namespace std
+#endif
+
+#if YASIO__HAS_FULL_CXX11
+namespace cxx17
+{
+// basic_string_view LITERALS
+inline namespace literals
+{
+inline namespace string_view_literals
+{
+inline cxx17::string_view operator"" _sv(const char* _Str, size_t _Len)
+{
+  return cxx17::string_view(_Str, _Len);
+}
+inline cxx17::wstring_view operator"" _sv(const wchar_t* _Str, size_t _Len)
+{
+  return cxx17::wstring_view(_Str, _Len);
+}
+inline cxx17::u16string_view operator"" _sv(const char16_t* _Str, size_t _Len)
+{
+  return cxx17::u16string_view(_Str, _Len);
+}
+inline cxx17::u32string_view operator"" _sv(const char32_t* _Str, size_t _Len)
+{
+  return cxx17::u32string_view(_Str, _Len);
+}
+} // namespace string_view_literals
+} // namespace literals
+} // namespace cxx17
 #endif
 
 namespace cxx17

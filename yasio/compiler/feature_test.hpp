@@ -29,7 +29,7 @@ SOFTWARE.
 #define YASIO__FEATURE_TEST_HPP
 
 // Tests whether compiler has fully c++11 support
-// About preprocessor '_MSC_VER', please see: 
+// About preprocessor '_MSC_VER', please see:
 // https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
 #if defined(_MSC_VER)
 #  if _MSC_VER < 1900
@@ -80,5 +80,12 @@ SOFTWARE.
 #endif
 
 #define YASIO__STD ::std::
+
+#if YASIO__HAS_CXX17
+namespace cxx17
+{
+using namespace std;
+};
+#endif
 
 #endif

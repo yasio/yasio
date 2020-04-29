@@ -67,12 +67,6 @@ inline int wcsncasecmp(wchar_t const* const lhs, wchar_t const* const rhs, size_
 #  if __has_include(<string_view>)
 #    include <string_view>
 #  endif
-namespace cxx17
-{
-using std::basic_string_view;
-using std::string_view;
-using std::wstring_view;
-} // namespace cxx17
 #else
 #  include <algorithm>
 #  include <exception>
@@ -1362,6 +1356,40 @@ inline bool operator>=(const basic_string_view<_CharT, _Traits>& lhs,
 {
   return lhs >= basic_string_view<_CharT, _Traits>(rhs);
 }
+//-----------------------------------------------------------------
+#  if YASIO__HAS_FULL_CXX11
+// basic_string_view LITERALS
+#    if defined(_MSC_VER)
+#      pragma warning(push)
+#      pragma warning(disable : 4455)
+#    endif
+inline namespace literals
+{
+inline namespace string_view_literals
+{
+inline cxx17::string_view operator"" sv(const char* _Str, size_t _Len)
+{
+  return cxx17::string_view(_Str, _Len);
+}
+inline cxx17::wstring_view operator"" sv(const wchar_t* _Str, size_t _Len)
+{
+  return cxx17::wstring_view(_Str, _Len);
+}
+inline cxx17::u16string_view operator"" sv(const char16_t* _Str, size_t _Len)
+{
+  return cxx17::u16string_view(_Str, _Len);
+}
+inline cxx17::u32string_view operator"" sv(const char32_t* _Str, size_t _Len)
+{
+  return cxx17::u32string_view(_Str, _Len);
+}
+} // namespace string_view_literals
+} // namespace literals
+#    if defined(_MSC_VER)
+#      pragma warning(pop)
+#    endif
+#  endif
+//-----------------------------------------------------------------
 // FNV1a hash from msvc++
 #  if YASIO__64BITS
 static constexpr size_t _FNV_offset_basis = 14695981039346656037ULL;

@@ -33,13 +33,6 @@ SOFTWARE.
 /// The shared_mutex workaround on c++11
 #if YASIO__HAS_CXX17
 #  include <shared_mutex>
-
-namespace cxx17
-{
-using std::shared_lock;
-using std::shared_mutex;
-} // namespace cxx17
-
 #else
 #  include <system_error>
 #  if defined(_WIN32)

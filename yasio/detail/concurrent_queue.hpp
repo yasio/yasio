@@ -42,7 +42,7 @@ template <typename _T> inline void clear_queue(_T& queue)
   _T tmp;
   std::swap(tmp, queue);
 }
-namespace concurrency
+namespace privacy
 {
 template <typename _T, bool _Dual = false> class concurrent_queue;
 
@@ -153,7 +153,7 @@ private:
   std::queue<_T> deal_;
 };
 #endif
-} // namespace concurrency
+} // namespace privacy
 } // namespace yasio
 
 #endif

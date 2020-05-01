@@ -605,7 +605,7 @@ protected:
   std::function<int(const void*, int, const ip::endpoint*)> write_cb_;
   std::function<int(void*, int)> read_cb_;
 
-  concurrency::concurrent_queue<io_send_op_ptr> send_queue_;
+  privacy::concurrent_queue<io_send_op_ptr> send_queue_;
 
   // mark whether pollout event registerred.
   bool pollout_registerred_ = false;
@@ -989,7 +989,7 @@ private:
   std::thread worker_;
   std::thread::id worker_id_;
 
-  concurrency::concurrent_queue<event_ptr, true> events_;
+  privacy::concurrent_queue<event_ptr, true> events_;
 
   std::vector<io_channel*> channels_;
 

@@ -29,7 +29,7 @@ SOFTWARE.
 
 #include "yasio/compiler/feature_test.hpp"
 
-/// string_view workaround on c++11
+/// The make_unique workaround on c++11
 #if !YASIO__HAS_CXX17
 namespace cxx17
 {

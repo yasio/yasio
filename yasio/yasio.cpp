@@ -1379,7 +1379,10 @@ void io_service::do_ssl_handshake(io_channel* ctx)
     auto ssl = ::SSL_new(get_ssl_context());
     ::SSL_set_fd(ssl, ctx->socket_->native_handle());
     ::SSL_set_connect_state(ssl);
+
+    // !important, fix issue: https://github.com/yasio/yasio/issues/273
     ::SSL_set_tlsext_host_name(ssl, ctx->remote_host_.c_str());
+
     yasio__setbits(ctx->properties_, YCPF_SSL_HANDSHAKING); // start ssl handshake
     ctx->ssl_.reset(ssl);
   }

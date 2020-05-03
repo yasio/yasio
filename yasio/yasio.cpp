@@ -51,6 +51,9 @@ SOFTWARE.
 #  include <openssl/bio.h>
 #  include <openssl/ssl.h>
 #  include <openssl/err.h>
+#  if OPENSSL_VERSION_NUMBER >= 0x10101000L
+#    define YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH
+#  endif
 #endif
 
 #if defined(YASIO_HAVE_KCP)
@@ -114,7 +117,9 @@ enum
   no_available_address  = -25, // No available address to connect.
   shutdown_by_localhost = -24, // Local shutdown the connection.
   ssl_handeshake_failed = -23, // SSL handshake failed.
-  eof                   = -22, // end of file.
+  ssl_write_failed      = -22, // SSL write failed.
+  ssl_read_failed       = -21, // SSL read failed.
+  eof                   = -20, // end of file.
 };
 }
 namespace inet
@@ -548,9 +553,50 @@ io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s
 }
 void io_transport_ssl::set_primitives()
 {
-  this->read_cb_  = [=](void* data, int len) { return ::SSL_read(ssl_, data, len); };
+  this->read_cb_ = [=](void* data, int len) {
+    ERR_clear_error();
+    int n = ::SSL_read(ssl_, data, len);
+    if (n > 0)
+      return n;
+    int error = SSL_get_error(ssl_, n);
+    switch (error)
+    {
+      case SSL_ERROR_ZERO_RETURN: // n=0, the upper caller will regards as eof
+        break;
+      case SSL_ERROR_WANT_READ:
+      case SSL_ERROR_WANT_WRITE:
+        /* The operation did not complete; the same TLS/SSL I/O function
+           should be called again later. This is basically an EWOULDBLOCK
+           equivalent. */
+        if (xxsocket::get_last_errno() != EWOULDBLOCK)
+          xxsocket::set_last_errno(EWOULDBLOCK);
+        break;
+      default:
+        xxsocket::set_last_errno(yasio::errc::ssl_read_failed);
+    }
+    return n;
+  };
   this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
-    return ::SSL_write(ssl_, data, len);
+    ERR_clear_error();
+    int n = ::SSL_write(ssl_, data, len);
+    if (n > 0)
+      return n;
+
+    int error = SSL_get_error(ssl_, n);
+    switch (error)
+    {
+      case SSL_ERROR_WANT_READ:
+      case SSL_ERROR_WANT_WRITE:
+        /* The operation did not complete; the same TLS/SSL I/O function
+           should be called again later. This is basically an EWOULDBLOCK
+           equivalent. */
+        if (xxsocket::get_last_errno() != EWOULDBLOCK)
+          xxsocket::set_last_errno(EWOULDBLOCK);
+        break;
+      default:
+        xxsocket::set_last_errno(yasio::errc::ssl_write_failed);
+    }
+    return -1;
   };
 }
 #endif
@@ -1282,15 +1328,40 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
 #if defined(YASIO_HAVE_SSL)
 void io_service::init_ssl_context()
 {
-  ssl_ctx_ = ::SSL_CTX_new(SSLv23_client_method());
+#  if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+  auto req_method = ::TLS_client_method();
+#  else
+  auto req_method = ::SSLv23_client_method();
+#  endif
+  ssl_ctx_ = ::SSL_CTX_new(req_method);
+
+#  ifdef SSL_MODE_RELEASE_BUFFERS
+  ::SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_RELEASE_BUFFERS);
+#  endif
+
+  ::SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
 
   if (!this->options_.capath_.empty())
   {
-    ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
-    if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.capath_.c_str(), nullptr) != 1)
+    if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.capath_.c_str(), nullptr) == 1)
+    {
+      ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
+#  if defined(YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH)
+      ::SSL_CTX_set_post_handshake_auth(ssl_ctx_, 1);
+#  endif
+#  ifdef X509_V_FLAG_PARTIAL_CHAIN
+      /* Have intermediate certificates in the trust store be treated as
+         trust-anchors, in the same way as self-signed root CA certificates
+         are. This allows users to verify servers using the intermediate cert
+         only, instead of needing the whole chain. */
+      X509_STORE_set_flags(SSL_CTX_get_cert_store(ssl_ctx_), X509_V_FLAG_PARTIAL_CHAIN);
+#  endif
+    }
+    else
       YASIO_KLOG("load ca certifaction file failed!");
   }
-  SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
+  else
+    SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
 }
 SSL_CTX* io_service::get_ssl_context() { return ssl_ctx_; }
 void io_service::cleanup_ssl_context()
@@ -1308,6 +1379,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
     auto ssl = ::SSL_new(get_ssl_context());
     ::SSL_set_fd(ssl, ctx->socket_->native_handle());
     ::SSL_set_connect_state(ssl);
+    ::SSL_set_tlsext_host_name(ssl, ctx->remote_host_.c_str());
     yasio__setbits(ctx->properties_, YCPF_SSL_HANDSHAKING); // start ssl handshake
     ctx->ssl_.reset(ssl);
   }
@@ -1315,18 +1387,29 @@ void io_service::do_ssl_handshake(io_channel* ctx)
   int ret = ::SSL_do_handshake(ctx->ssl_);
   if (ret != 1)
   {
-    int error = ::SSL_get_error(ctx->ssl_, ret);
+    int status = ::SSL_get_error(ctx->ssl_, ret);
     /*
     When using a non-blocking socket, nothing is to be done, but select() can be used to check for
     the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
     */
-    if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+    if (status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE ||
+        status == SSL_ERROR_WANT_ASYNC)
       ; // Nothing need to do
     else
     {
-      YASIO_KLOG("SSL_do_handshake fail with ret=%d,error=%d, errno=%d, detail:%s\n", ret, error,
-                 errno, strerror(errno));
-
+      int error = ERR_get_error();
+      if (error)
+      {
+        char errstring[256] = {0};
+        ERR_error_string_n(error, errstring, sizeof(errstring));
+        YASIO_KLOG("SSL_do_handshake fail with ret=%d,error=%X, detail:%s", ret, error, errstring);
+      }
+      else
+      {
+        error = xxsocket::get_last_errno();
+        YASIO_KLOG("SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ret, status,
+                   error, xxsocket::strerror(error));
+      }
       ctx->ssl_.destroy();
       handle_connect_failed(ctx, yasio::errc::ssl_handeshake_failed);
     }
@@ -1400,7 +1483,8 @@ void io_service::init_ares_channel()
   ares_options options = {};
   options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::micro::den);
   options.tries        = this->options_.dns_queries_tries_;
-  auto status          = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES);
+  auto status          = ::ares_init_options(&ares_, &options,
+                                    ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/);
   if (status == ARES_SUCCESS)
   {
     YASIO_KLOG("[c-ares] init channel succeed");
@@ -2103,6 +2187,10 @@ const char* io_service::strerror(int error)
       return "Invalid packet!";
     case yasio::errc::ssl_handeshake_failed:
       return "SSL handeshake failed!";
+    case yasio::errc::ssl_write_failed:
+      return "SSL write failed!";
+    case yasio::errc::ssl_read_failed:
+      return "SSL read failed!";
     case yasio::errc::eof:
       return "End of file.";
     case -1:

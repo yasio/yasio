@@ -1335,7 +1335,7 @@ void io_service::init_ssl_context()
 #  endif
   ssl_ctx_ = ::SSL_CTX_new(req_method);
 
-#  ifdef SSL_MODE_RELEASE_BUFFERS
+#  if defined(SSL_MODE_RELEASE_BUFFERS)
   ::SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_RELEASE_BUFFERS);
 #  endif
 
@@ -1349,7 +1349,7 @@ void io_service::init_ssl_context()
 #  if defined(YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH)
       ::SSL_CTX_set_post_handshake_auth(ssl_ctx_, 1);
 #  endif
-#  ifdef X509_V_FLAG_PARTIAL_CHAIN
+#  if defined(X509_V_FLAG_PARTIAL_CHAIN)
       /* Have intermediate certificates in the trust store be treated as
          trust-anchors, in the same way as self-signed root CA certificates
          are. This allows users to verify servers using the intermediate cert

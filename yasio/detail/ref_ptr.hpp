@@ -36,7 +36,7 @@ namespace yasio
 namespace gc
 {
 
-// TEMPLATE CLASS, equals to cocos2d-x-3.x cocos2d::RefPtr
+// TEMPLATE CLASS ref_ptr, allow any time with functions 'retain' and 'release'
 template <typename _Ty> class ref_ptr;
 
 template <typename _Ty> class ref_ptr

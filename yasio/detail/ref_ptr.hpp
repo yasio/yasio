@@ -5,15 +5,10 @@
 #define YASIO__REF_PTR_HPP
 #include <iostream>
 
-#define __SAFE_RELEASE(p)                                                                          \
-  do                                                                                               \
-  {                                                                                                \
-    if (p)                                                                                         \
-    {                                                                                              \
-      (p)->release();                                                                              \
-    }                                                                                              \
-  } while (0)
-#define __SAFE_RELEASE_NULL(p)                                                                     \
+#define YASIO__SAFE_RELEASE(p)                                                                     \
+  if (p)                                                                                           \
+    (p)->release()
+#define YASIO__SAFE_RELEASE_NULL(p)                                                                \
   do                                                                                               \
   {                                                                                                \
     if (p)                                                                                         \
@@ -22,14 +17,9 @@
       (p) = nullptr;                                                                               \
     }                                                                                              \
   } while (0)
-#define __SAFE_RETAIN(p)                                                                           \
-  do                                                                                               \
-  {                                                                                                \
-    if (p)                                                                                         \
-    {                                                                                              \
-      (p)->retain();                                                                               \
-    }                                                                                              \
-  } while (0)
+#define YASIO__SAFE_RETAIN(p)                                                                      \
+  if (p)                                                                                           \
+    (p)->retain()
 
 namespace yasio
 {
@@ -53,28 +43,28 @@ public:
 
   ref_ptr(const _Myt& _Right) throw()
   { // construct by assuming pointer from _Right ref_ptr
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     ptr_ = _Right.get();
   }
 
   template <typename _Other> ref_ptr(const ref_ptr<_Other>& _Right) throw()
   { // construct by assuming pointer from _Right
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     ptr_ = (_Ty*)_Right.get();
   }
 
   ref_ptr(_Myt&& _Right) throw()
   {
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     ptr_ = (_Ty*)_Right.get();
   }
 
   template <typename _Other> ref_ptr(ref_ptr<_Other>&& _Right) throw()
   { // construct by assuming pointer from _Right
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     ptr_ = (_Ty*)_Right.get();
   }
@@ -84,7 +74,7 @@ public:
     if (this == &_Right)
       return *this;
 
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     reset(_Right.get());
     return (*this);
@@ -93,7 +83,7 @@ public:
   _Myt& operator=(_Myt&& _Right) throw()
   { // assign compatible _Right (assume pointer)
 
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     reset(_Right.get());
     return (*this);
@@ -104,7 +94,7 @@ public:
     if (this == &_Right)
       return *this;
 
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     reset((_Ty*)_Right.get());
     return (*this);
@@ -112,7 +102,7 @@ public:
 
   template <typename _Other> _Myt& operator=(ref_ptr<_Other>&& _Right) throw()
   { // assign compatible _Right (assume pointer)
-    __SAFE_RETAIN(_Right.get());
+    YASIO__SAFE_RETAIN(_Right.get());
 
     reset((_Ty*)_Right.get());
     return (*this);
@@ -126,7 +116,7 @@ public:
 
   ~ref_ptr()
   { // release the object
-    __SAFE_RELEASE(ptr_);
+    YASIO__SAFE_RELEASE(ptr_);
   }
 
   _Ty& operator*() const throw()
@@ -169,7 +159,7 @@ public:
       if (ptr_ != nullptr)
       {
         if (ptr_ != _Ptr) // release old
-          __SAFE_RELEASE(ptr_);
+          YASIO__SAFE_RELEASE(ptr_);
       }
 
       ptr_ = _Ptr;

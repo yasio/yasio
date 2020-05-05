@@ -25,7 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-// object_pool.hpp: a simple & high-performance object pool implementation v1.3.1
+// object_pool.hpp: a simple & high-performance object pool implementation v1.3.2
 #ifndef YASIO__OBJECT_POOL_HPP
 #define YASIO__OBJECT_POOL_HPP
 
@@ -239,9 +239,9 @@ public:
       : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
   {}
 
-  template <typename... _Args> _Ty* construct(const _Args&... args)
+  template <typename... _Types> _Ty* construct(_Types&&... args)
   {
-    return new (allocate()) _Ty(args...);
+    return new (allocate()) _Ty(std::forward<_Types>(args)...);
   }
 
   void destroy(void* _Ptr)
@@ -275,9 +275,9 @@ public:
       : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
   {}
 
-  template <typename... _Args> _Ty* construct(const _Args&... args)
+  template <typename... _Types> _Ty* construct(_Types&&... args)
   {
-    return new (allocate()) _Ty(args...);
+    return new (allocate()) _Ty(std::forward<_Types>(args)...);
   }
 
   void destroy(void* _Ptr)
@@ -293,7 +293,7 @@ public:
 
 //////////////////////// allocator /////////////////
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector, DO NOT use at non-msvc compiler.
-template <class _Ty, size_t _ElemCount = 8192 / sizeof(_Ty)> class object_pool_allocator
+template <class _Ty, size_t _ElemCount = 512, class _Mutex = void> class object_pool_allocator
 { // generic allocator for objects of class _Ty
 public:
   typedef _Ty value_type;
@@ -345,14 +345,14 @@ public:
 
   void deallocate(pointer _Ptr, size_type)
   { // deallocate object at _Ptr, ignore size
-    _Mempool.release(_Ptr);
+    _Spool().release(_Ptr);
   }
 
   pointer allocate(size_type count)
   { // allocate array of _Count elements
     assert(count == 1);
     (void)count;
-    return static_cast<pointer>(_Mempool.get());
+    return static_cast<pointer>(_Spool().get());
   }
 
   pointer allocate(size_type count, const void*)
@@ -396,8 +396,11 @@ public:
     return (0 < _Count ? _Count : 1);
   }
 
-  // private:
-  static object_pool<_Ty, void> _Mempool;
+  static object_pool<_Ty, _Mutex>& _Spool()
+  {
+    static object_pool<_Ty, _Mutex> s_pool(_ElemCount);
+    return s_pool;
+  }
 };
 
 template <class _Ty, class _Other>
@@ -413,9 +416,6 @@ inline bool operator!=(const object_pool_allocator<_Ty>& _Left,
 { // test for allocator inequality
   return (!(_Left == _Right));
 }
-
-template <class _Ty, size_t _ElemCount>
-object_pool<_Ty, void> object_pool_allocator<_Ty, _ElemCount>::_Mempool(_ElemCount);
 
 } // namespace gc
 } // namespace yasio

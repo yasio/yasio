@@ -5,9 +5,24 @@
 #define YASIO__REF_PTR_HPP
 #include <iostream>
 
+#define YASIO__DEFINE_REFERENCE_CLASS                                                              \
+private:                                                                                           \
+  unsigned int __strong_refs = 1;                                                                  \
+                                                                                                   \
+public:                                                                                            \
+  void retain() { ++__strong_refs; }                                                               \
+  void release()                                                                                   \
+  {                                                                                                \
+    --__strong_refs;                                                                               \
+    if (__strong_refs == 0)                                                                        \
+      delete this;                                                                                 \
+  }                                                                                                \
+                                                                                                   \
+private:
+
 #define YASIO__SAFE_RELEASE(p)                                                                     \
   if (p)                                                                                           \
-    (p)->release()
+  (p)->release()
 #define YASIO__SAFE_RELEASE_NULL(p)                                                                \
   do                                                                                               \
   {                                                                                                \
@@ -19,7 +34,7 @@
   } while (0)
 #define YASIO__SAFE_RETAIN(p)                                                                      \
   if (p)                                                                                           \
-    (p)->retain()
+  (p)->retain()
 
 namespace yasio
 {

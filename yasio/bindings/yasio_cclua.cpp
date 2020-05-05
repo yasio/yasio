@@ -37,20 +37,6 @@ using namespace cocos2d;
 
 namespace lyasio
 {
-#define YASIO_DEFINE_REFERENCE_CLASS                                                               \
-private:                                                                                           \
-  unsigned int referenceCount_;                                                                    \
-                                                                                                   \
-public:                                                                                            \
-  void retain() { ++referenceCount_; }                                                             \
-  void release()                                                                                   \
-  {                                                                                                \
-    --referenceCount_;                                                                             \
-    if (referenceCount_ == 0)                                                                      \
-      delete this;                                                                                 \
-  }                                                                                                \
-                                                                                                   \
-private:
 
 namespace stimer
 {
@@ -63,13 +49,13 @@ typedef std::function<void()> vcallback_t;
 
 struct TimerObject
 {
-  TimerObject(vcallback_t&& callback) : callback_(std::move(callback)), referenceCount_(1) {}
+  TimerObject(vcallback_t&& callback) : callback_(std::move(callback)) {}
 
   vcallback_t callback_;
   static uintptr_t s_timerId;
 
   DEFINE_OBJECT_POOL_ALLOCATION(TimerObject, 128)
-  YASIO_DEFINE_REFERENCE_CLASS
+  YASIO__DEFINE_REFERENCE_CLASS
 };
 uintptr_t TimerObject::s_timerId = 0;
 
@@ -81,7 +67,7 @@ static TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("STMR#%p", timerId);
+    std::string key = StringUtils::format("LSTMR#%p", timerId);
 
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
@@ -95,14 +81,14 @@ static TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
   return nullptr;
 }
 
-TIMER_ID delay(float delay, vcallback_t callback)
+static TIMER_ID delay(float delay, vcallback_t callback)
 {
   if (delay > 0)
   {
     yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("STMR#%p", timerId);
+    std::string key = StringUtils::format("LSTMR#%p", timerId);
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
@@ -117,7 +103,7 @@ TIMER_ID delay(float delay, vcallback_t callback)
 
 static void kill(TIMER_ID timerId)
 {
-  std::string key = StringUtils::format("STMR#%p", timerId);
+  std::string key = StringUtils::format("LSTMR#%p", timerId);
   Director::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
 YASIO_LUA_API void clear()

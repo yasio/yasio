@@ -116,7 +116,7 @@ enum
   resolve_host_failed   = -26, // Resolve host failed.
   no_available_address  = -25, // No available address to connect.
   shutdown_by_localhost = -24, // Local shutdown the connection.
-  ssl_handeshake_failed = -23, // SSL handshake failed.
+  ssl_handshake_failed  = -23, // SSL handshake failed.
   ssl_write_failed      = -22, // SSL write failed.
   ssl_read_failed       = -21, // SSL read failed.
   eof                   = -20, // end of file.
@@ -1414,7 +1414,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
                    error, xxsocket::strerror(error));
       }
       ctx->ssl_.destroy();
-      handle_connect_failed(ctx, yasio::errc::ssl_handeshake_failed);
+      handle_connect_failed(ctx, yasio::errc::ssl_handshake_failed);
     }
   }
   else
@@ -2188,8 +2188,8 @@ const char* io_service::strerror(int error)
       return "An existing connection was shutdown by local host!";
     case yasio::errc::invalid_packet:
       return "Invalid packet!";
-    case yasio::errc::ssl_handeshake_failed:
-      return "SSL handeshake failed!";
+    case yasio::errc::ssl_handshake_failed:
+      return "SSL handshake failed!";
     case yasio::errc::ssl_write_failed:
       return "SSL write failed!";
     case yasio::errc::ssl_read_failed:

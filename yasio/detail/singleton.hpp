@@ -45,28 +45,28 @@ namespace gc
 template <typename _Ty, bool delay = false> class singleton_constructor
 {
 public:
-  template <typename... _Args> static _Ty* construct(_Args&&... args)
+  template <typename... _Types> static _Ty* construct(_Types&&... args)
   {
-    return new (std::nothrow) _Ty(std::forward<_Args>(args)...);
+    return new (std::nothrow) _Ty(std::forward<_Types>(args)...);
   }
 };
 
 template <typename _Ty> class singleton_constructor<_Ty, true>
 {
 public:
-  template <typename... _Args> static _Ty* construct(_Args&&... args)
+  template <typename... _Types> static _Ty* construct(_Types&&... args)
   {
     auto inst = new (std::nothrow) _Ty();
     if (inst)
-      delay_init(inst, std::forward<_Args>(args)...);
+      delay_init(inst, std::forward<_Types>(args)...);
     return inst;
   }
 
 private:
-  template <typename _Fty, typename... _Args>
-  static void delay_init(_Ty* inst, _Fty&& memf, _Args&&... args)
+  template <typename _Fty, typename... _Types>
+  static void delay_init(_Ty* inst, _Fty&& memf, _Types&&... args)
   { // init use specific member func with more than 1 args
-    std::mem_fn(memf)(inst, std::forward<_Args>(args)...);
+    std::mem_fn(memf)(inst, std::forward<_Types>(args)...);
   }
 
   template <typename _Fty, typename _Arg> static void delay_init(_Ty* inst, _Fty&& memf, _Arg&& arg)
@@ -93,21 +93,7 @@ template <typename _Ty> class singleton
 
 public:
   // Return the singleton instance
-  template <typename... _Args> static pointer instance(_Args&&... args)
-  {
-    if (_Myt::__single__)
-      return _Myt::__single__;
-
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
-    std::lock_guard<std::mutex> lck(__mutex__);
-    if (_Myt::__single__)
-      return _Myt::__single__;
-#endif
-    return (_Myt::__single__ = singleton_constructor<_Ty>::construct(std::forward<_Args>(args)...));
-  }
-
-  // Return the singleton instance with delayed init func
-  template <typename... _Args> static pointer delayed(_Args&&... args)
+  template <typename... _Types> static pointer instance(_Types&&... args)
   {
     if (_Myt::__single__)
       return _Myt::__single__;
@@ -118,7 +104,22 @@ public:
       return _Myt::__single__;
 #endif
     return (_Myt::__single__ =
-                singleton_constructor<_Ty, true>::construct(std::forward<_Args>(args)...));
+                singleton_constructor<_Ty>::construct(std::forward<_Types>(args)...));
+  }
+
+  // Return the singleton instance with delayed init func
+  template <typename... _Types> static pointer delayed(_Types&&... args)
+  {
+    if (_Myt::__single__)
+      return _Myt::__single__;
+
+#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
+    std::lock_guard<std::mutex> lck(__mutex__);
+    if (_Myt::__single__)
+      return _Myt::__single__;
+#endif
+    return (_Myt::__single__ =
+                singleton_constructor<_Ty, true>::construct(std::forward<_Types>(args)...));
   }
 
   // Peek the singleton instance

@@ -334,7 +334,6 @@ YASIO__NS_INLINE namespace ip
     unsigned short checksum; // 16bit check sum
     unsigned short id;       // identifier: usually use process id
     unsigned short seqno;    // message sequence NO.
-    unsigned int timestamp;  // timestamp
   };
 
   struct eth_header

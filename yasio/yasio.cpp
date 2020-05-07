@@ -1100,9 +1100,9 @@ void io_service::open(size_t cindex, int kind)
   {
     yasio__setlobyte(ctx->properties_, kind & 0xff);
     if (yasio__testbits(kind, YCM_TCP))
-      ctx->protocol_ = SOCK_STREAM;
+      ctx->socktype_ = SOCK_STREAM;
     else if (yasio__testbits(kind, YCM_UDP))
-      ctx->protocol_ = SOCK_DGRAM;
+      ctx->socktype_ = SOCK_DGRAM;
 
     open_internal(ctx);
   }
@@ -1222,7 +1222,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
   YASIO_KLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(),
              ctx->remote_port_);
 
-  if (ctx->socket_->open(ep.af(), ctx->protocol_))
+  if (ctx->socket_->open(ep.af(), ctx->socktype_))
   {
     int ret = 0;
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
@@ -1553,7 +1553,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family())
                                           : ctx->remote_host_.c_str();
   ip::endpoint ep(ifaddr, ctx->remote_port_);
-  if (ctx->socket_->open(ep.af(), ctx->protocol_))
+  if (ctx->socket_->open(ep.af(), ctx->socktype_))
   {
     int error = 0;
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
@@ -1670,7 +1670,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
 transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoint& peer)
 {
   auto client_sock = std::make_shared<xxsocket>();
-  if (client_sock->open(peer.af(), SOCK_DGRAM, 0))
+  if (client_sock->open(peer.af(), SOCK_DGRAM))
   {
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       client_sock->reuse_address(true);

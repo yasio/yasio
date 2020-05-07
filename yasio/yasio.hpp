@@ -462,7 +462,7 @@ private:
   highp_time_t dns_queries_timestamp_ = 0;
 
   int index_;
-  int protocol_ = 0;
+  int socktype_ = 0;
 
   // The timer for check resolve & connect timeout
   highp_timer timer_;

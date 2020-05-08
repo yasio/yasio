@@ -1,14 +1,15 @@
-osx_image: xcode11
 language: cpp
 matrix:
   include:
     - os: osx
+      osx_image: xcode11
       env: 
         - BUILD_TARGET=osx
     - os: linux
       env: 
         - BUILD_TARGET=linux
     - os: osx
+      osx_image: xcode11
       env: 
         - BUILD_TARGET=ios
     - os: linux

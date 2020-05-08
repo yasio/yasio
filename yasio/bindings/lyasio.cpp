@@ -348,7 +348,7 @@ template <> struct lua_type_traits<yasio::inet::transport_handle_t>
   {
     return lua_type(l, index) == LUA_TLIGHTUSERDATA;
   }
-  static bool checkType(lua_State* l, int index) { return lua_isstring(l, index) != 0; }
+  static bool checkType(lua_State* l, int index) { return lua_islightuserdata(l, index) != 0; }
   static get_type get(lua_State* l, int index)
   {
     return reinterpret_cast<get_type>(lua_touserdata(l, index));
@@ -356,6 +356,40 @@ template <> struct lua_type_traits<yasio::inet::transport_handle_t>
   static int push(lua_State* l, push_type s)
   {
     lua_pushlightuserdata(l, s);
+    return 1;
+  }
+};
+
+template <> struct lua_type_traits<std::vector<yasio::inet::io_hostent>>
+{
+  typedef std::vector<yasio::inet::io_hostent> get_type;
+  typedef std::vector<yasio::inet::io_hostent> push_type;
+
+  static bool strictCheckType(lua_State* l, int index) { return lua_type(l, index) == LUA_TTABLE; }
+  static bool checkType(lua_State* l, int index) { return lua_istable(l, index) != 0; }
+  static get_type get(lua_State* l, int index)
+  {
+    lua_pushvalue(l, index);
+
+    kaguya::LuaTable channel_eps(l, kaguya::StackTop{});
+    std::vector<yasio::inet::io_hostent> hosts;
+    auto host = channel_eps["host"];
+    if (host)
+      hosts.push_back(yasio::inet::io_hostent(host, channel_eps["port"]));
+    else
+    {
+      channel_eps.foreach_table<int, kaguya::LuaTable>([&](int, kaguya::LuaTable ep) {
+        hosts.push_back(yasio::inet::io_hostent(ep["host"], ep["port"]));
+      });
+    }
+
+    lua_pop(l, 1);
+
+    return hosts;
+  }
+  static int push(lua_State* l, push_type s)
+  { // don't need push yasio::inet::io_hostent to lua
+    assert(false);
     return 1;
   }
 };
@@ -391,24 +425,8 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
   lyasio["io_service"].setClass(
       kaguya::UserdataMetatable<io_service>()
-          .addOverloadedFunctions(
-              "new", []() { return new io_service(); },
-              [](int channel_count) { return new io_service(channel_count); },
-              [](kaguya::LuaTable channel_eps) {
-                std::vector<io_hostent> hosts;
-                auto host = channel_eps["host"];
-                if (host)
-                  hosts.push_back(io_hostent(host, channel_eps["port"]));
-                else
-                {
-                  channel_eps.foreach_table<int, kaguya::LuaTable>([&](int, kaguya::LuaTable ep) {
-                    hosts.push_back(io_hostent(ep["host"], ep["port"]));
-                  });
-                }
-
-                return new io_service(!hosts.empty() ? &hosts.front() : nullptr,
-                                      (std::max)(static_cast<int>(hosts.size()), 1));
-              })
+          .setConstructors<io_service(), io_service(int),
+                           io_service(const std::vector<io_hostent>&)>()
           .addStaticFunction("start",
                              [](io_service* service, kaguya::LuaFunction cb) {
                                io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void {

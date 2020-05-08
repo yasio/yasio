@@ -749,6 +749,10 @@ void io_service::cleanup_globals() { yasio__shared_globals().dprint = nullptr; }
 io_service::io_service() { this->init(nullptr, 1); }
 io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
 io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }
+io_service::io_service(const std::vector<io_hostent>& channel_eps)
+{
+  this->init(!channel_eps.empty() ? channel_eps.data() : nullptr, channel_eps.size());
+}
 io_service::io_service(const io_hostent* channel_eps, int channel_count)
 {
   this->init(channel_eps, channel_count);

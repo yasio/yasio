@@ -769,6 +769,7 @@ public:
   YASIO__DECL io_service();
   YASIO__DECL io_service(int channel_count);
   YASIO__DECL io_service(const io_hostent& channel_eps);
+  YASIO__DECL io_service(const std::vector<io_hostent>& channel_eps);
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 

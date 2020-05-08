@@ -39,7 +39,7 @@ server:start(function(event)
                 local data_partial1 = data:sub(1, #data - 10)
                 server:write(transport, data_partial1)
 
-                print('The remain data will be sent after 6 seconds...')
+                print('The remain data will be sent after 3 seconds...')
                 transport1 = transport
                 data_partial2 = data:sub(#data - 10 + 1, #data)
             else
@@ -93,10 +93,7 @@ client:open(0, yasio.YCK_TCP_CLIENT)
 local http_client = require 'http_client'
 http_client:sendHttpGetRequest('http://ip138.com/index.htm', function(respData)
     print(respData)
-end)
-
-http_client:sendHttpGetRequest('http://ip138.com/index.htm', function(respData)
-    print(respData)
+    stopFlag = stopFlag + 1
 end)
 
 local elapsedTime = 0
@@ -107,7 +104,7 @@ local function yasio_update(dt)
     client:dispatch(128)
     http_client:update()
     elapsedTime = elapsedTime + dt
-    if elapsedTime > 6 and not partial2Sent then
+    if elapsedTime > 3 and not partial2Sent then
         partial2Sent = true
         if transport1 then
             server:write(transport1, data_partial2)

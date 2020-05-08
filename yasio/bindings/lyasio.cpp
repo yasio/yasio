@@ -103,7 +103,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
           [](io_service& uninitialized_memory, sol::table channel_eps) {
             std::vector<io_hostent> hosts;
             auto host = channel_eps["host"];
-            if (host != sol::nil)
+            if (host.valid())
               hosts.push_back(io_hostent(host, channel_eps["port"]));
             else
             {

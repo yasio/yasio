@@ -57,7 +57,7 @@ cmake --build . --config Debug
 * 支持处理多个连接的所有网络事件。  
 * 支持微秒级定时器。  
 * 支持TCP粘包处理，业务完全不必关心。  
-* 支持Lua绑定。  
+* 支持Lua绑定（若使用，强烈建议开启C++17启用SOL2）。  
 * 支持Cocos2d-x jsb绑定。  
 * 支持CocosCreator jsb2.0绑定。  
 * 支持Unity3D C#绑定。  

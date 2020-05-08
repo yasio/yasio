@@ -24,6 +24,7 @@ yasio-3.33.0
 * Change write completion handler prototype to: ```std::function<void(int ec, size_t bytes_transferred)>```.
 * Implement literals for ```cxx17::string_view```.
 * Fix ssl handshake failed with certificate verify failed when cacert file provided and flag ```SSL_VERIFY_PEER``` was set.
+* Fix doesn't call io_service destructor when use lua binding library ```kaguya``` on compiler without c++17 support.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

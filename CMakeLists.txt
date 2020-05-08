@@ -28,24 +28,6 @@ option(YASIO_BUILD_WITH_CXX17 "Build yasio with c++17 standard" ON)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
-if (NOT WIN32 OR CYGWIN)
-    if (YASIO_BUILD_WITH_CXX17)
-        if(NOT ANDROID)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-        else()
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-        endif()
-        if ( IOS )
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -faligned-allocation")
-        endif()
-        message("building yasio with c++17 support")
-    else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-        message("building yasio with c++11 support")
-    endif()
-endif()
-
 if (ANDROID)
     if (NOT THIRDPART_LIB)
         set(THIRDPART_LIB "-llog")
@@ -59,6 +41,123 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${THIRDPART_INC}
 )
+
+set (YASIO_CORE
+    yasio/xxsocket.hpp
+    yasio/yasio.hpp
+    yasio/ibstream.hpp
+    yasio/obstream.hpp
+    yasio/xxsocket.cpp
+    yasio/yasio.cpp
+    yasio/ibstream.cpp
+    yasio/obstream.cpp
+)
+
+if (YAISO_BUILD_NI)
+  set(YASIO_CORE ${YASIO_CORE} 
+    yasio/bindings/yasio_ni.cpp
+  )
+endif()
+
+if (YASIO_BUILD_LUA)
+  set(YASIO_CORE ${YASIO_CORE} 
+    yasio/bindings/lyasio.cpp
+  )
+endif()
+
+if(YASIO_BUILD_CCLUA)
+  set(YASIO_CORE ${YASIO_CORE} 
+    yasio/bindings/yasio_cclua.cpp
+  )
+endif()
+
+if(ANDROID AND CARES_INCLUDE_DIR)
+  set(YASIO_CORE ${YASIO_CORE} 
+    yasio/bindings/yasio_jni.cpp
+  )
+endif()
+
+macro(source_group_by_dir proj_dir source_files)
+    if(MSVC OR APPLE)
+        get_filename_component(sgbd_cur_dir ${proj_dir} ABSOLUTE)
+        foreach(sgbd_file ${${source_files}})
+			get_filename_component(sgbd_abs_file ${sgbd_file} ABSOLUTE)
+            file(RELATIVE_PATH sgbd_fpath ${sgbd_cur_dir} ${sgbd_abs_file})
+            string(REGEX REPLACE "\(.*\)/.*" \\1 sgbd_group_name ${sgbd_fpath})
+            string(COMPARE EQUAL ${sgbd_fpath} ${sgbd_group_name} sgbd_nogroup)
+            string(REPLACE "/" "\\" sgbd_group_name ${sgbd_group_name})
+            if(sgbd_nogroup)
+                set(sgbd_group_name "\\")
+            endif(sgbd_nogroup)
+            source_group(${sgbd_group_name} FILES ${sgbd_file})
+        endforeach(sgbd_file)
+    endif(MSVC OR APPLE)
+endmacro(source_group_by_dir)
+
+source_group_by_dir(${CMAKE_CURRENT_SOURCE_DIR} YASIO_CORE)
+
+# --- add yasio core lib project
+if (APPLE)
+    if (IOS)
+        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
+        add_library(yasio STATIC
+           ${YASIO_CORE}
+           ${THIRDPART_SRC}
+        )
+        
+        macro(set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE XCODE_RELVERSION)
+            set(XCODE_RELVERSION_I "${XCODE_RELVERSION}")
+            if(XCODE_RELVERSION_I STREQUAL "All")
+                set_property(TARGET ${TARGET} PROPERTY
+                XCODE_ATTRIBUTE_${XCODE_PROPERTY} "${XCODE_VALUE}")
+            else()
+               set_property(TARGET ${TARGET} PROPERTY
+               XCODE_ATTRIBUTE_${XCODE_PROPERTY}[variant=${XCODE_RELVERSION_I}] "${XCODE_VALUE}")
+            endif()
+        endmacro(set_xcode_property)
+	    
+        set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
+    else ()
+        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
+        add_library(yasio STATIC
+            ${YASIO_CORE}
+            ${THIRDPART_SRC}
+        )
+        # set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
+    endif ()
+elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
+    add_library(yasio STATIC
+        ${YASIO_CORE}
+        ${THIRDPART_SRC}
+    )
+    target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
+else ( )
+    if(ANDROID AND YASIO_BUILD_AS_SHARED)
+        add_library(yasio SHARED
+            ${YASIO_CORE}
+            ${THIRDPART_SRC}
+        )
+        target_compile_definitions(yasio PUBLIC YASIO_BUILD_AS_SHARED=1)
+    else()
+        add_library(yasio STATIC
+            ${YASIO_CORE}
+            ${THIRDPART_SRC}
+        )
+    endif()
+endif ( )
+	
+if ( WIN32 AND NOT CYGWIN )
+    target_link_libraries(yasio
+        ws2_32
+        ${THIRDPART_LIB} 
+    )
+    target_compile_features(yasio PUBLIC cxx_std_17)
+else ( )
+    target_link_libraries(yasio
+        m
+        ${THIRDPART_LIB} 
+    )
+endif ( )
 
 macro(ConfigTargetSSL target_name)
     if (YASIO_BUILD_WITH_SSL)
@@ -79,8 +178,27 @@ macro(ConfigTargetSSL target_name)
     endif()
 endmacro()
 
+# --- c++ standard 
+if (NOT WIN32 OR CYGWIN)
+    if (YASIO_BUILD_WITH_CXX17)
 
-######### The yasio optional dependencies
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
+
+        if ( IOS )
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -faligned-allocation")
+        endif()
+        message("building yasio with c++17 support")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+        message("building yasio with c++11 support")
+    endif()
+else()
+    target_compile_features(yasio PUBLIC cxx_std_17)
+endif()
+
+
+# --- The yasio optional dependencies
 
 ### openssl support
 if (YASIO_BUILD_WITH_SSL)
@@ -96,11 +214,17 @@ if (YASIO_BUILD_WITH_CARES)
     set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external" CACHE INTERNAL "c-ares Include Directory" )
 endif()
 
-set(YAISO_BUILD_NI ON CACHE BOOL "Build with yasio-ni APIs support" FORCE)
-add_subdirectory(yasio)
+# checking build system have openssl
+if(OPENSSL_INCLUDE_DIR)
+   target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
+   target_include_directories(yasio PRIVATE "${OPENSSL_INCLUDE_DIR}")
+endif()
 
-if ( WIN32 AND NOT CYGWIN )
-    target_compile_features(yasio PUBLIC cxx_std_17)
+# checking build system have c-ares
+if(CARES_INCLUDE_DIR)
+   target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
+   target_include_directories(yasio PRIVATE "${CARES_INCLUDE_DIR}")
+   target_link_libraries(yasio c-ares)
 endif()
 
 if(NOT IOS AND YASIO_BUILD_TESTS)
@@ -124,6 +248,6 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
 endif ()
 
 ### Sets startup project for vs .sln
-# if (WIN32 AND YASIO_BUILD_TESTS)
-#     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
-# endif ()
+if (WIN32 AND YASIO_BUILD_TESTS)
+    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
+endif ()

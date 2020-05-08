@@ -76,6 +76,11 @@ extern "C" {
 
 typedef int (*YASIO_PFNRESOLV)(const char* host, intptr_t sbuf);
 typedef void (*YASIO_PFNPRINT)(const char*);
+YASIO_NI_API void yasio_init_globals(void (*print_fn)(const char*))
+{
+  yasio::inet::print_fn_t custom_print = print_fn;
+  io_service::init_globals(custom_print);
+}
 YASIO_NI_API void yasio_start(int channel_count,
                               void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,
                                                intptr_t bytes, int len))
@@ -192,9 +197,8 @@ YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
 YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*))
-{
-  yasio::inet::print_fn_t custom_print = print_fn;
-  yasio_shared_service()->set_option(YOPT_S_PRINT_FN, &custom_print);
+{ // [DEPRECATED] use yasio_init_globals instead.
+  yasio_init_globals(print_fn);
 }
 YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {

@@ -1385,10 +1385,10 @@ template <class _Elem> struct hash<cxx17::basic_string_view<_Elem>>
 
   size_t operator()(const _Kty& _Keyval) const
   { // hash _Keyval to size_t value by pseudorandomizing transform
-#  if defined(__GNUC__)
-    return ::std::_Hash_impl::hash(_Keyval.data(), _Keyval.size() * sizeof(_Elem));
-#  elif defined(__clang__)
-    return ::std::__do_string_hash(_Keyval.data(), _Keyval.data() + _Keyval.size());
+#  if defined(__clang__)
+    __do_string_hash(_Keyval.data(), _Keyval.data() + _Keyval.size());
+#  elif defined(__GNUC__)
+    return _Hash_impl::hash(_Keyval.data(), _Keyval.size() * sizeof(_Elem));
 #  else // msvc++ or other compiler without stable hash bytes function exists
     return ::cxx17::_FNV1a_hash(_Keyval.data(), _Keyval.size() * sizeof(_Elem));
 #  endif

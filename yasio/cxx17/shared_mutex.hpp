@@ -31,7 +31,7 @@ SOFTWARE.
 #include "yasio/compiler/feature_test.hpp"
 
 /// The shared_mutex workaround on c++11
-#if YASIO__HAS_CXX17
+#if YASIO__HAS_CXX17 && !defined(__APPLE__)
 #  include <shared_mutex>
 #else
 #  include <system_error>

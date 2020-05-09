@@ -197,8 +197,9 @@ YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
 YASIO_NI_API void yasio_set_print_fn(void (*print_fn)(const char*))
-{ // [DEPRECATED] use yasio_init_globals instead.
-  yasio_init_globals(print_fn);
+{
+  yasio::inet::print_fn_t custom_print = print_fn;
+  yasio_shared_service()->set_option(YOPT_S_PRINT_FN, &print_fn);
 }
 YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {

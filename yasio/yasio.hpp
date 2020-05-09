@@ -91,9 +91,7 @@ enum
 
   // Set custom print function, native C++ ONLY, you must ensure thread safe of it.
   // remark:
-  // parmas: func:print_fn_t,
-  //   a. [deprecated] use io_service::init_globals instead.
-  //   b. since v3.33.0, it's stored to global state, and only works once.
+  // parmas: func:print_fn_t
   YOPT_S_PRINT_FN,
 
   // Set custom print function
@@ -749,21 +747,11 @@ public:
   /*
   ** Summary: init global state with custom print function, you must ensure thread safe of it.
   ** @remark:
-  **   a. this function is not required, if you don't want set custom print function.
+  **   a. this function is not required, if you don't want print init log to custom console.
   **   b.this function only works once
   **   c. you should call once before call any 'io_servic::start'
   */
   YASIO__DECL static void init_globals(const yasio::inet::print_fn_t&);
-
-  /*
-  ** Summary: cleanup necessary global state data, such custom print function.
-  ** @remark:
-  **   a. this function is not required, if you don't call 'io_servic::init_globals'.
-  **   b. you should call this function before unloading module which contains the
-  **      custom print function.
-  **   c. you should ensure there no any io_service running whe call this function
-  */
-  YASIO__DECL static void cleanup_globals();
 
 public:
   YASIO__DECL io_service();
@@ -1045,6 +1033,8 @@ private:
     resolv_fn_t resolv_;
     // the event callback
     io_event_cb_t on_event_;
+    // The custom debug print function
+    print_fn_t print_;
 
 #if defined(YASIO_HAVE_SSL)
     // The full path cacert(.pem) file for ssl verifaction

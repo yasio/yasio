@@ -33,7 +33,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <memory>
 #include <mutex>
-#include "sz.hpp"
+#include <type_traits>
 
 #define OBJECT_POOL_DECL inline
 
@@ -46,7 +46,9 @@ namespace yasio
 {
 namespace gc
 {
-#define YASIO_POOL_ESTIMATE_SIZE(element_type) YASIO_SZ_ALIGN(sizeof(element_type), sizeof(void*))
+#define YASIO_POOL_ALIGN_TYPE(element_type)                                                        \
+  sizeof(std::aligned_storage<sizeof(element_type), std::alignment_of<element_type>::value>::type)
+
 #define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
 #define YASIO_POOL_PREALLOCATE 1
 
@@ -190,7 +192,7 @@ public:                                                                         
                                                                                                    \
   static yasio::gc::detail::object_pool& get_pool()                                                \
   {                                                                                                \
-    static yasio::gc::detail::object_pool s_pool(YASIO_POOL_ESTIMATE_SIZE(ELEMENT_TYPE),           \
+    static yasio::gc::detail::object_pool s_pool(YASIO_POOL_ALIGN_TYPE(ELEMENT_TYPE),              \
                                                  ELEMENT_COUNT);                                   \
     return s_pool;                                                                                 \
   }
@@ -226,7 +228,7 @@ public:                                                                         
                                                                                                    \
   yasio::gc::detail::object_pool& ELEMENT_TYPE::get_pool()                                         \
   {                                                                                                \
-    static yasio::gc::detail::object_pool s_pool(YASIO_POOL_ESTIMATE_SIZE(ELEMENT_TYPE),           \
+    static yasio::gc::detail::object_pool s_pool(YASIO_POOL_ALIGN_TYPE(ELEMENT_TYPE),              \
                                                  ELEMENT_COUNT);                                   \
     return s_pool;                                                                                 \
   }
@@ -235,8 +237,7 @@ public:                                                                         
 template <typename _Ty, typename _Mutex = std::mutex> class object_pool : public detail::object_pool
 {
 public:
-  object_pool(size_t _ElemCount = 512)
-      : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+  object_pool(size_t _ElemCount = 512) : detail::object_pool(YASIO_POOL_ALIGN_TYPE(_Ty), _ElemCount)
   {}
 
   template <typename... _Types> _Ty* construct(_Types&&... args)
@@ -271,8 +272,7 @@ template <typename _Ty> class object_pool<_Ty, void> : public detail::object_poo
   void operator=(const object_pool&) = delete;
 
 public:
-  object_pool(size_t _ElemCount = 512)
-      : detail::object_pool(YASIO_POOL_ESTIMATE_SIZE(_Ty), _ElemCount)
+  object_pool(size_t _ElemCount = 512) : detail::object_pool(YASIO_POOL_ALIGN_TYPE(_Ty), _ElemCount)
   {}
 
   template <typename... _Types> _Ty* construct(_Types&&... args)

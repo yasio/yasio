@@ -98,8 +98,6 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
 
 #define yasio__clearhiword(x) ((x) &= 0xffff)
 
-#define yasio__set_global_print(print_fn) yasio__shared_globals(print_fn).dprint = print_fn
-
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -229,7 +227,7 @@ struct yasio__global_state
 #  if defined(__ANDROID__)
     ares_status = ::yasio__ares_init_android();
     if (ares_status != 0)
-      YASIO_KLOG_GP(this->dprint,
+      YASIO_KLOG_GP(custom_print,
                     "[global] c-ares library init android failed, status=%d, detail:%s",
                     ares_status, ::ares_strerror(ares_status));
 #  endif

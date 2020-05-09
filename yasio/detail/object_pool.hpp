@@ -47,7 +47,8 @@ namespace yasio
 namespace gc
 {
 #define YASIO_POOL_ALIGN_TYPE(element_type)                                                        \
-  sizeof(std::aligned_storage<sizeof(element_type), std::alignment_of<element_type>::value>::type)
+  sizeof(typename std::aligned_storage<sizeof(element_type),                                       \
+                                       std::alignment_of<element_type>::value>::type)
 
 #define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
 #define YASIO_POOL_PREALLOCATE 1

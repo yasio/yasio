@@ -178,15 +178,16 @@ macro(ConfigTargetSSL target_name)
     endif()
 endmacro()
 
-# --- c++ standard 
+# --- The compiler flags
 if (NOT WIN32 OR CYGWIN)
     if (YASIO_BUILD_WITH_CXX17)
-
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-
         if ( IOS )
+            # Aligned deallocation function of type 'void (void *, std::align_val_t) noexcept' is only available on iOS 11 or newer
+            # most of time, low level malloc will alloc a aligned address for new operator,
+            # so it's ok to add -faligned-allocation, certainly, still need find a ios9.0 device
+            # to test does it works well?
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -faligned-allocation")
         endif()
         message("building yasio with c++17 support")
     else()
@@ -194,7 +195,9 @@ if (NOT WIN32 OR CYGWIN)
         message("building yasio with c++11 support")
     endif()
 else()
-    target_compile_features(yasio PUBLIC cxx_std_17)
+    if(YASIO_BUILD_WITH_CXX17)
+        target_compile_features(yasio PUBLIC cxx_std_17)
+    endif()
 endif()
 
 

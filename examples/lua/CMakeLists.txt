@@ -38,6 +38,9 @@ endif()
 
 target_link_libraries (${target_name} ${EXAMPLE_LUA_LDLIBS})
 
+# fix default lua_newuserdata can't return aligned pointer properly
+target_compile_definitions (${target_name} PUBLIC LUAI_USER_ALIGNMENT_T=max_align_t)
+
 if (MSVC)
     set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${target_name}>")
 endif ()

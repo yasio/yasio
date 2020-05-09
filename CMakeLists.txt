@@ -24,7 +24,7 @@ endif ()
 option(YASIO_BUILD_WITH_SSL "Build with internal ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build with internal c-ares support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
-option(YASIO_BUILD_WITH_CXX17 "Build yasio with c++17 standard" ON)
+option(YASIO_BUILD_WITH_CXX17 "Build yasio with c++17 standard" OFF)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 

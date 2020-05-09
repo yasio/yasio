@@ -25,6 +25,7 @@ yasio-3.33.0
 * Implement literals for ```cxx17::string_view```.
 * Fix ssl handshake failed with certificate verify failed when cacert file provided and flag ```SSL_VERIFY_PEER``` was set.
 * Fix doesn't call io_service destructor when use lua binding library ```kaguya``` on compiler without c++17 support.
+* Add ```io_service::init_globals(const print_fn_t&)``` to support redirect initialization log to custom file(U3D/UE4 Console).
 * Other code quality & stable improvements.
   
 yasio-3.31.3

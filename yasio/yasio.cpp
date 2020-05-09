@@ -227,7 +227,7 @@ struct yasio__global_state
 #  if defined(__ANDROID__)
     ares_status = ::yasio__ares_init_android();
     if (ares_status != 0)
-      YASIO_KLOG_GP(custom_print,
+      YASIO_KLOG_CP(custom_print,
                     "[global] c-ares library init android failed, status=%d, detail:%s",
                     ares_status, ::ares_strerror(ares_status));
 #  endif

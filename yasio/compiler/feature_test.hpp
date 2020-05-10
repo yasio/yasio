@@ -75,8 +75,8 @@ SOFTWARE.
       (defined(_MSVC_LANG) && (_MSVC_LANG > 201703L))))
 #  ifndef YASIO__HAS_CXX20
 #    define YASIO__HAS_CXX20 1
-#  endif // C++17 features macro
-#endif   // C++17 features check
+#  endif // C++20 features macro
+#endif   // C++20 features check
 #if !defined(YASIO__HAS_CXX20)
 #  define YASIO__HAS_CXX20 0
 #endif

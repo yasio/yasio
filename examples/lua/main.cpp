@@ -13,7 +13,7 @@
 
 int main(int argc, char** argv)
 {
-#if YASIO__HAS_CXX17
+#if YASIO__HAS_CXX14
   sol::state s;
   s.open_libraries();
   luaopen_yasio(s.lua_state());

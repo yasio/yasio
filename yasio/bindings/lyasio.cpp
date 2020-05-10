@@ -71,7 +71,11 @@ static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits) {
 
 #if YASIO__HAS_CXX14
 
-#  include "yasio/sol/sol.hpp"
+#  if !YASIO__HAS_CXX20
+#    include "yasio/sol/sol.hpp"
+#  else
+#    include "yasio/sol3/sol.hpp"
+#  endif
 
 #  if !YASIO__HAS_CXX17
 namespace sol

@@ -1,8 +1,12 @@
 #include <thread>
 #include "yasio/bindings/lyasio.h"
 #include "yasio/cxx17/string_view.hpp"
-#if YASIO__HAS_CXX17
-#  include "yasio/sol/sol.hpp"
+#if YASIO__HAS_CXX14
+#  if !YASIO__HAS_CXX20
+#    include "yasio/sol/sol.hpp"
+#  else
+#    include "yasio/sol3/sol.hpp"
+#  endif
 #else
 #  include "yasio/kaguya/kaguya.hpp"
 #endif

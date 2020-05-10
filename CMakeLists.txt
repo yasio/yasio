@@ -15,16 +15,11 @@ endif ()
 
 project(yasio)
 
-if ( IOS )
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
-endif ()
-
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 option(YASIO_BUILD_WITH_SSL "Build with internal ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build with internal c-ares support" OFF)
-option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
-option(YASIO_BUILD_WITH_CXX17 "Build yasio with c++17 standard" OFF)
+option(YASIO_BUILD_TESTS "Build yasio t ests and examples" ON)                                                                                                                               
+option(YASIO_BUILD_CXX_STD "Build yasio with c++ standard" 11)
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 
@@ -151,7 +146,7 @@ if ( WIN32 AND NOT CYGWIN )
         ws2_32
         ${THIRDPART_LIB} 
     )
-    target_compile_features(yasio PUBLIC cxx_std_17)
+    target_compile_features(yasio PUBLIC cxx_std_14)
 else ( )
     target_link_libraries(yasio
         m
@@ -179,8 +174,19 @@ macro(ConfigTargetSSL target_name)
 endmacro()
 
 # --- The compiler flags
+if (YASIO_BUILD_CXX_STD EQUAL 17)
+    message("Building yasio with c++17 support")
+elseif(YASIO_BUILD_CXX_STD EQUAL 14)
+    message("Building yasio with c++14 support")
+else()
+    message("Building yasio with c++11 support")
+endif()
+if ( IOS )
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
+endif ()
 if (NOT WIN32 OR CYGWIN)
-    if (YASIO_BUILD_WITH_CXX17)
+    if (YASIO_BUILD_CXX_STD EQUAL 17)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
         if ( IOS )
             # Aligned deallocation function of type 'void (void *, std::align_val_t) noexcept' is only available on iOS 11 or newer
@@ -189,17 +195,20 @@ if (NOT WIN32 OR CYGWIN)
             # to test does it works well?
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
         endif()
-        message("building yasio with c++17 support")
+    elseif(YASIO_BUILD_CXX_STD EQUAL 14)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
     else()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-        message("building yasio with c++11 support")
     endif()
 else()
-    if(YASIO_BUILD_WITH_CXX17)
-        target_compile_features(yasio PUBLIC cxx_std_17)
+    if(YASIO_BUILD_CXX_STD EQUAL 17)
+        # target_compile_features(yasio PUBLIC cxx_std_17) works
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
+    elseif(YASIO_BUILD_CXX_STD EQUAL 14)
+        # target_compile_features(yasio PUBLIC cxx_std_14) not works
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++14")
     endif()
 endif()
-
 
 # --- The yasio optional dependencies
 

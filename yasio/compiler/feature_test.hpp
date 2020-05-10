@@ -44,7 +44,7 @@ SOFTWARE.
 #  define YASIO__HAS_FULL_CXX11 1
 #endif
 
-// Tests whether compiler has fully c++14 support
+// Tests whether compiler has c++14 support
 #if (defined(__cplusplus) && __cplusplus >= 201402L) ||                                            \
     (defined(_MSC_VER) && _MSC_VER >= 1900 && (defined(_MSVC_LANG) && (_MSVC_LANG >= 201402L)))
 #  ifndef YASIO_HAS_CXX14
@@ -55,7 +55,7 @@ SOFTWARE.
 #  define YASIO__HAS_CXX14 0
 #endif
 
-// Tests whether compiler has fully c++17 support
+// Tests whether compiler has c++17 support
 #if (defined(__cplusplus) && __cplusplus >= 201703L) ||                                            \
     (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                       \
      ((defined(_HAS_CXX17) && _HAS_CXX17 == 1) ||                                                  \
@@ -68,7 +68,7 @@ SOFTWARE.
 #  define YASIO__HAS_CXX17 0
 #endif
 
-// Tests whether compiler has fully c++20 support
+// Tests whether compiler has c++20 support
 #if (defined(__cplusplus) && __cplusplus > 201703L) ||                                             \
     (defined(_MSC_VER) && _MSC_VER > 1900 &&                                                       \
      ((defined(_HAS_CXX20) && _HAS_CXX20 == 1) ||                                                  \

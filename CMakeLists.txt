@@ -18,8 +18,11 @@ project(yasio)
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 option(YASIO_BUILD_WITH_SSL "Build with internal ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build with internal c-ares support" OFF)
-option(YASIO_BUILD_TESTS "Build yasio t ests and examples" ON)                                                                                                                               
-option(YASIO_BUILD_CXX_STD "Build yasio with c++ standard" 11)
+option(YASIO_BUILD_TESTS "Build yasio t ests and examples" ON)    
+
+if (NOT YASIO_BUILD_CXX_STD)
+    set(YASIO_BUILD_CXX_STD 11)
+endif()
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
 

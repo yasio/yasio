@@ -77,3 +77,7 @@ yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息�
 
 ## 框架图
 ![image](https://yasio.org/images/framework.png)  
+
+## QQ交流群
+点击加入：[829884294](https://jq.qq.com/?_wv=1027&k=5LDEiNv)
+

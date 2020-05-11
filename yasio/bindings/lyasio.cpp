@@ -677,12 +677,12 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 #endif /* YASIO__HAS_CXX17 */
 
 extern "C" {
-YASIO_LUA_API void lyasio_set_print_fn(void* inst, void (*print_fn)(const char*))
+YASIO_LUA_API void lyasio_set_print_fn(void* inst, void (*pfn)(const char*))
 {
   if (inst)
   {
     auto service            = (io_service*)inst;
-    print_fn_t custom_print = print_fn;
+    print_fn_t custom_print = pfn;
     service->set_option(YOPT_S_PRINT_FN, &custom_print);
   }
 }

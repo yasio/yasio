@@ -70,7 +70,7 @@ public:
         return true;
       if (bytes_read == 0)
         return false;
-      int ec = errno();
+      int ec = errno;
       if (ec == EINTR)
         continue;
       return (ec == EWOULDBLOCK || ec == EAGAIN);

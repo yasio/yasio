@@ -481,18 +481,21 @@ bool io_transport::do_write(long long& max_wait_duration)
 int io_transport::call_read(void* data, int size, int& error)
 {
   int n = read_cb_(data, size);
+  if (n > 0)
+    return n;
   if (n < 0)
   {
     error = xxsocket::get_last_errno();
     if (!YASIO_SHOULD_CLOSE_0(error)) // status ok
-      n = 0;
+      return 0;
+    return n;
   }
-  else if (n == 0 && yasio__testbits(ctx_->properties_, YCM_TCP))
+  if (yasio__testbits(ctx_->properties_, YCM_TCP))
   {
-    n     = -1;
     error = yasio::errc::eof;
+    return -1;
   }
-  return n;
+  return 0;
 }
 int io_transport::call_write(io_send_op* op, int& error)
 {
@@ -947,7 +950,8 @@ void io_service::run()
     // Reset the interrupter.
     else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
-      interrupter_.reset();
+      if(!interrupter_.reset())
+        interrupter_.recreate();
       --retval;
     }
 

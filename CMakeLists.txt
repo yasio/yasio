@@ -16,8 +16,9 @@ endif ()
 project(yasio)
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-option(YASIO_BUILD_WITH_SSL "Build with internal ssl support" OFF)
-option(YASIO_BUILD_WITH_CARES "Build with internal c-ares support" OFF)
+option(YASIO_BUILD_WITH_SSL "Build yasio with ssl support" OFF)
+option(YASIO_BUILD_WITH_CARES "Build yasio with c-ares support" OFF)
+option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" ON)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 
@@ -68,6 +69,12 @@ set (YASIO_CORE
     yasio/ibstream.cpp
     yasio/obstream.cpp
 )
+
+if (YASIO_BUILD_WITH_KCP)
+  set(YASIO_CORE ${YASIO_CORE} 
+    yasio/kcp/ikcp.c
+  )
+endif()
 
 if (YAISO_BUILD_NI)
   set(YASIO_CORE ${YASIO_CORE} 
@@ -248,6 +255,11 @@ if(CARES_INCLUDE_DIR)
    endif()
 endif()
 
+# checking build system have kcp
+if(YASIO_BUILD_WITH_KCP)
+    target_compile_definitions(yasio PUBLIC YASIO_HAVE_KCP=1)
+endif()
+
 if (ANDROID AND ANDROID_STRIP_TOOL)
     add_custom_command(TARGET yasio POST_BUILD
         COMMAND ${ANDROID_STRIP_TOOL} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/libyasio.so
@@ -258,7 +270,9 @@ endif()
 if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)
-    add_subdirectory(tests/kcp)
+    if(YASIO_BUILD_WITH_KCP)
+        add_subdirectory(tests/kcp)
+    endif()
     add_subdirectory(tests/issue166)
     add_subdirectory(tests/issue178)
     add_subdirectory(tests/issue201)

@@ -6,10 +6,13 @@
 // detail/select_interrupter.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2016-2020 halx99 (halx99 at live dot com)
+// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// see also: https://github.com/chriskohlhoff/asio
 //
 #ifndef YASIO__SELECT_INTERRUPTER_HPP
 #define YASIO__SELECT_INTERRUPTER_HPP

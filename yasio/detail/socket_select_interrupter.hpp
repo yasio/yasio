@@ -2,35 +2,19 @@
 // A cross platform socket APIs, support ios & android & wp8 & window store universal app
 //
 //////////////////////////////////////////////////////////////////////////////////////////
-/*
-The MIT License (MIT)
-
-Copyright (c) 2012-2020 HALX99
-
-Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-Copyright (c) 2008 Roelof Naude (roelof.naude at gmail dot com)
-
-Distributed under the Boost Software License, Version 1.0. (See accompanying
-file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+//
+// detail/socket_select_interrupter.hpp
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+// Copyright (c) 2016-2020 halx99 (halx99 at live dot com)
+// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2008 Roelof Naude (roelof.naude at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// see also: https://github.com/chriskohlhoff/asio
+//
 #ifndef YASIO__SOCKET_SELECT_INTERRUPTER_HPP
 #define YASIO__SOCKET_SELECT_INTERRUPTER_HPP
 #include "yasio/xxsocket.hpp"
@@ -62,15 +46,25 @@ public:
   // Interrupt the select call.
   inline void interrupt() { xxsocket::send(write_descriptor_, "\0", 1); }
 
-  // Reset the select interrupt. Returns true if the call was interrupted.
+  // Reset the select interrupter. Returns true if the reset was successful.
   inline bool reset()
   {
-    char buffer[1024];
-    int bytes_read       = xxsocket::recv(read_descriptor_, buffer, sizeof(buffer), 0);
-    bool was_interrupted = (bytes_read > 0);
-    while (bytes_read == sizeof(buffer))
-      bytes_read = xxsocket::recv(read_descriptor_, buffer, sizeof(buffer), 0);
-    return was_interrupted;
+    for (;;)
+    {
+      // Clear all data from the pipe.
+      char data[1024];
+      int bytes_read = xxsocket::recv(read_descriptor_, data, sizeof(data), 0);
+      if (bytes_read == sizeof(data))
+        continue;
+      if (bytes_read > 0)
+        return true;
+      if (bytes_read == 0)
+        return false;
+      int ec = xxsocket::get_last_errno();
+      if (ec == EINTR)
+        continue;
+      return (ec == EWOULDBLOCK || ec == EAGAIN);
+    }
   }
 
   // Get the read descriptor to be passed to select.

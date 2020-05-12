@@ -4,12 +4,16 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // detail/pipe_select_interrupter.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2016-2020 halx99 (halx99 at live dot com)
+// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2008 Roelof Naude (roelof.naude at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// see also: https://github.com/chriskohlhoff/asio
 //
 #ifndef YASIO__PIPE_SELECT_INTERRUPTER_HPP
 #define YASIO__PIPE_SELECT_INTERRUPTER_HPP
@@ -52,19 +56,24 @@ public:
     (void)result;
   }
 
-  // Reset the select interrupt. Returns true if the call was interrupted.
+  // Reset the select interrupter. Returns true if the reset was successful.
   inline bool reset()
   {
     for (;;)
     {
+      // Clear all data from the pipe.
       char data[1024];
-      auto bytes_read = ::read(read_descriptor_, data, sizeof(data));
-      if (bytes_read < 0 && errno == EINTR)
+      int bytes_read = ::read(read_descriptor_, data, sizeof(data));
+      if (bytes_read == sizeof(data))
         continue;
-      bool was_interrupted = (bytes_read > 0);
-      while (bytes_read == sizeof(data))
-        bytes_read = ::read(read_descriptor_, data, sizeof(data));
-      return was_interrupted;
+      if (bytes_read > 0)
+        return true;
+      if (bytes_read == 0)
+        return false;
+      int ec = errno();
+      if (ec == EINTR)
+        continue;
+      return (ec == EWOULDBLOCK || ec == EAGAIN);
     }
   }
 

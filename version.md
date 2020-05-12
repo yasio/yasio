@@ -28,6 +28,7 @@ yasio-3.33.0
 * Add ```io_service::init_globals(const print_fn_t&)``` to support redirect initialization log to custom file(U3D/UE4 Console).
 * Improve compiler support, now support c++14 and c++17.
 * Auto choose library ```sol2``` for lua binding when ```cxx_std >= 14```, older require ```cxx_std >= 17```.
+* Recreate the socket_select_interrupter's sockets on error. 
 * Other code quality & stable improvements.
   
 yasio-3.31.3

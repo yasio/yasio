@@ -186,7 +186,7 @@ int yasio__jni_onload(void* vm, void* reserved)
   return JNI_VERSION_1_6;
 }
 #  if defined(YASIO_BUILD_AS_SHARED)
-jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) { yasio__jni_onload(vm, reserved); }
+jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) { return yasio__jni_onload(vm, reserved); }
 #  endif
 }
 #endif

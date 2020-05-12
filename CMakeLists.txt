@@ -41,6 +41,23 @@ include_directories(
     ${THIRDPART_INC}
 )
 
+# --- The yasio optional dependencies
+
+### openssl support
+if (YASIO_BUILD_WITH_SSL)
+   add_subdirectory(external/openssl)
+endif()
+
+### c-ares support
+if (YASIO_BUILD_WITH_CARES)
+    set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
+    set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
+    set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
+    add_subdirectory(external/c-ares)
+    set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external" CACHE INTERNAL "c-ares Include Directory" )
+endif()
+
+### The yasio core library project
 set (YASIO_CORE
     yasio/xxsocket.hpp
     yasio/yasio.hpp
@@ -211,26 +228,13 @@ else()
     endif()
 endif()
 
-# --- The yasio optional dependencies
-
-### openssl support
-if (YASIO_BUILD_WITH_SSL)
-   add_subdirectory(external/openssl)
-endif()
-
-### c-ares support
-if (YASIO_BUILD_WITH_CARES)
-    set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
-    set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
-    set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
-    add_subdirectory(external/c-ares)
-    set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external" CACHE INTERNAL "c-ares Include Directory" )
-endif()
-
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR)
    target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
    target_include_directories(yasio PRIVATE "${OPENSSL_INCLUDE_DIR}")
+   if(YASIO_BUILD_AS_SHARED AND (ANDROID OR LINUX))
+       target_link_libraries (yasio ext_ssl ext_crypto)
+   endif()
 endif()
 
 # checking build system have c-ares
@@ -244,6 +248,13 @@ if(CARES_INCLUDE_DIR)
    endif()
 endif()
 
+if (ANDROID AND ANDROID_STRIP_TOOL)
+    add_custom_command(TARGET yasio POST_BUILD
+        COMMAND ${ANDROID_STRIP_TOOL} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/libyasio.so
+    )
+endif()
+
+# The tests & examples
 if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)

@@ -130,12 +130,12 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
         ${THIRDPART_SRC}
     )
     target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
-else ( WIN32 AND NOT CYGWIN )
+elseif ( WIN32 AND NOT CYGWIN )
     add_library(yasio STATIC
             ${YASIO_CORE}
             ${THIRDPART_SRC}
         )
-else ( )
+else ( ) # linux system
     if(YASIO_BUILD_AS_SHARED)
         add_library(yasio SHARED
             ${YASIO_CORE}

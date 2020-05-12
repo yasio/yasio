@@ -18,7 +18,8 @@ project(yasio)
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 option(YASIO_BUILD_WITH_SSL "Build with internal ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build with internal c-ares support" OFF)
-option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)    
+option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
+option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 
 if (NOT YASIO_BUILD_CXX_STD)
     set(YASIO_BUILD_CXX_STD 11)
@@ -129,13 +130,17 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
         ${THIRDPART_SRC}
     )
     target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
+else ( WIN32 AND NOT CYGWIN )
+    add_library(yasio STATIC
+            ${YASIO_CORE}
+            ${THIRDPART_SRC}
+        )
 else ( )
-    if(ANDROID AND YASIO_BUILD_AS_SHARED)
+    if(YASIO_BUILD_AS_SHARED)
         add_library(yasio SHARED
             ${YASIO_CORE}
             ${THIRDPART_SRC}
         )
-        target_compile_definitions(yasio PUBLIC YASIO_BUILD_AS_SHARED=1)
     else()
         add_library(yasio STATIC
             ${YASIO_CORE}
@@ -230,9 +235,13 @@ endif()
 
 # checking build system have c-ares
 if(CARES_INCLUDE_DIR)
-   target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
    target_include_directories(yasio PRIVATE "${CARES_INCLUDE_DIR}")
    target_link_libraries(yasio c-ares)
+   target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
+
+   if(ANDROID AND YASIO_BUILD_AS_SHARED)
+       target_compile_definitions(yasio PRIVATE YASIO_BUILD_AS_SHARED=1)
+   endif()
 endif()
 
 if(NOT IOS AND YASIO_BUILD_TESTS)

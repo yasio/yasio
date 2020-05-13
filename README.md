@@ -53,19 +53,19 @@ cmake --build . --config Debug
 ```
 
 ## 特性: 
-* 支持IPv6_only网络。  
-* 支持处理多个连接的所有网络事件。  
-* 支持微秒级定时器。  
-* 支持TCP粘包处理，业务完全不必关心。  
-* 支持Lua绑定。  
-* 支持Cocos2d-x jsb绑定。  
-* 支持CocosCreator jsb2.0绑定。  
-* 支持Unity3D C#绑定。  
+* 支持IPv6_only网络。
+* 支持处理多个连接的所有网络事件。
+* 支持微秒级定时器。
+* 支持TCP粘包处理，业务完全不必关心。
+* 支持Lua绑定。
+* 支持Cocos2d-x jsb绑定。
+* 支持CocosCreator jsb2.0绑定。
+* 支持[Unity3D](https://github.com/yasio/DemoU3D)。
 * 支持[虚幻4](https://github.com/yasio/DemoUE4)。
-* 支持组播。 
+* 支持组播。
 * 支持KCP。
-* 支持SSL客户端，基于OpenSSL。  
-* 支持非阻塞域名解析，基于c-ares。  
+* 支持SSL客户端，基于OpenSSL。
+* 支持非阻塞域名解析，基于c-ares。
 
 ## 发送延迟
 yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快**30倍**以上:  

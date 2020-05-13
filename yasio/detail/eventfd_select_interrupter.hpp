@@ -75,8 +75,7 @@ public:
         int bytes_read = ::read(read_descriptor_, &counter, sizeof(uint64_t));
         if (bytes_read < 0 && errno == EINTR)
           continue;
-        bool was_interrupted = (bytes_read > 0);
-        return was_interrupted;
+        return true;
       }
     }
     else

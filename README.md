@@ -61,7 +61,9 @@ cmake --build . --config Debug
 * 支持Cocos2d-x jsb绑定。  
 * 支持CocosCreator jsb2.0绑定。  
 * 支持Unity3D C#绑定。  
-* 支持组播。  
+* 支持[虚幻4](https://github.com/yasio/DemoUE4)。
+* 支持组播。 
+* 支持KCP。
 * 支持SSL客户端，基于OpenSSL。  
 * 支持非阻塞域名解析，基于c-ares。  
 

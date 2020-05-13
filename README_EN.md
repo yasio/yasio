@@ -52,14 +52,15 @@ cmake --build . --config Debug
 ```
 
 ## Features: 
-* support IPv6-only network.  
-* support multi-connections at one thread.  
-* support deadline timer.  
-* support unpack tcp packet internal, user do not need to care it.  
+* support IPv6-only network
+* support multi-connections at one thread
+* support high-resolution deadline timer
+* support unpack tcp packet internal, user do not need to care it
 * support lua bindings  
 * support cocos2d-x jsb  
 * support CocosCreator jsb2.0  
 * support Unity3D
+* support UE4
 * support multicast
 * support ssl client with openssl
 * support async resolve with c-ares

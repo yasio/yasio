@@ -29,6 +29,7 @@ yasio-3.33.0
 * Improve compiler support, now support c++14 and c++17.
 * Auto choose library ```sol2``` for lua binding when ```cxx_std >= 14```, older require ```cxx_std >= 17```.
 * Recreate the socket_select_interrupter's sockets on error. 
+* Update kcp to v1.7, the kcp older version may cause SIGBUS on mobile ARM.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

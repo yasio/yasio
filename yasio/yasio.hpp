@@ -775,7 +775,7 @@ public:
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
-  YASIO__DECL void dispatch(int count = 512);
+  YASIO__DECL void dispatch(int max_count = 128);
 
   // set option, see enum YOPT_XXX
   YASIO__DECL void set_option(int opt, ...);

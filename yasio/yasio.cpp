@@ -904,10 +904,10 @@ void io_service::clear_transports()
   }
   transports_.clear();
 }
-void io_service::dispatch(int count)
+void io_service::dispatch(int max_count)
 {
   if (options_.on_event_)
-    this->events_.consume(count, options_.on_event_);
+    this->events_.consume(max_count, options_.on_event_);
 }
 void io_service::run()
 {

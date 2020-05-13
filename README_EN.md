@@ -60,7 +60,7 @@ cmake --build . --config Debug
 * Support cocos2d-x jsb
 * Support CocosCreator jsb2.0
 * Support [Unity3D](https://github.com/yasio/DemoU3D)
-* Support [UE4](https://github.com/yasio/DemoUE4)
+* Support [Unreal Engine 4](https://github.com/yasio/DemoUE4)
 * Support multicast
 * Support ssl client with openssl
 * Support async resolve with c-ares

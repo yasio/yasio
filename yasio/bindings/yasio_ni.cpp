@@ -29,19 +29,23 @@ SOFTWARE.
 /*
 ** yasio_ni.cpp: The yasio native interface for interop.
 */
-#if !defined(_WIN32) || defined(_WINDLL)
+#include <array>
+#include <string.h>
+#include "yasio/yasio.hpp"
 
-#  include <array>
-#  include <string.h>
-#  include "yasio/yasio.hpp"
+#if defined(_WINDLL)
+#  define YASIO_NI_API __declspec(dllexport)
+#else
+#  define YASIO_NI_API
+#endif
 
-#  if defined(_WINDLL)
-#    define YASIO_NI_API __declspec(dllexport)
-#  else
-#    define YASIO_NI_API
-#  endif
+#if !defined(_WIN32) || YASIO__64BITS
+#  define YASIO_INTEROP_DECL
+#else
+#  define YASIO_INTEROP_DECL __stdcall
+#endif
 
-#  define YASIO_MAX_OPTION_ARGC 5
+#define YASIO_MAX_OPTION_ARGC 5
 
 using namespace yasio;
 using namespace yasio::inet;
@@ -74,16 +78,15 @@ inline const char* svtoa(cxx17::string_view& sv) { return !sv.empty() ? sv.data(
 
 extern "C" {
 
-typedef int (*YASIO_PFNRESOLV)(const char* host, intptr_t sbuf);
-typedef void (*YASIO_PFNPRINT)(const char*);
-YASIO_NI_API void yasio_init_globals(void (*pfn)(const char*))
+YASIO_NI_API void yasio_init_globals(void(YASIO_INTEROP_DECL* pfn)(const char*))
 {
   yasio::inet::print_fn_t custom_print = pfn;
   io_service::init_globals(custom_print);
 }
 YASIO_NI_API void yasio_start(int channel_count,
-                              void (*event_cb)(uint32_t emask, int cidx, intptr_t sid,
-                                               intptr_t bytes, int len))
+                              void(YASIO_INTEROP_DECL* event_cb)(uint32_t emask, int cidx,
+                                                                 intptr_t sid, intptr_t bytes,
+                                                                 int len))
 {
   yasio_shared_service(channel_count)->start([=](event_ptr e) {
     uint32_t emask = ((e->kind() << 16) & 0xffff0000) | (e->status() & 0xffff);
@@ -92,7 +95,8 @@ YASIO_NI_API void yasio_start(int channel_count,
              static_cast<int>(e->packet().size()));
   });
 }
-YASIO_NI_API void yasio_set_resolv_fn(int (*resolv)(const char* host, intptr_t sbuf))
+YASIO_NI_API void yasio_set_resolv_fn(int(YASIO_INTEROP_DECL* resolv)(const char* host,
+                                                                      intptr_t sbuf))
 {
   resolv_fn_t fn = [resolv](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
     char buffer[128] = {0};
@@ -196,7 +200,7 @@ YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service()->dispatch(c
 YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
-YASIO_NI_API void yasio_set_print_fn(void (*pfn)(const char*))
+YASIO_NI_API void yasio_set_print_fn(void(YASIO_INTEROP_DECL* pfn)(const char*))
 {
   yasio::inet::print_fn_t custom_print = pfn;
   yasio_shared_service()->set_option(YOPT_S_PRINT_FN, &custom_print);
@@ -206,5 +210,3 @@ YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
   ::memcpy(dst, src, len);
 }
 }
-
-#endif

@@ -52,7 +52,7 @@ cmake --build . --config Debug
 ```
 
 ## Features: 
-* Support IPv6-only network
+* Support IPv4/IPv6 network
 * Support multi-connections at one thread
 * Support high-resolution deadline timer
 * Support unpack tcp packet internal, user do not need to care it

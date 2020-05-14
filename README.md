@@ -53,7 +53,7 @@ cmake --build . --config Debug
 ```
 
 ## 特性: 
-* 支持IPv6_only网络。
+* 支持IPv4/IPv6或者苹果IPv6_only网络。
 * 支持处理多个连接的所有网络事件。
 * 支持微秒级定时器。
 * 支持TCP粘包处理，业务完全不必关心。

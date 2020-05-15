@@ -73,27 +73,28 @@ template <> struct format_traits<wchar_t>
  */
 template <class _Elem, class _Traits = std::char_traits<_Elem>,
           class _Alloc = std::allocator<_Elem>>
-inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* format, ...)
+inline std::basic_string<_Elem, _Traits, _Alloc> _vstrfmt(size_t n, const _Elem* format,
+                                                          va_list initialized_args)
 {
   va_list args;
-  std::basic_string<_Elem, _Traits, _Alloc> buffer(n, 0);
+  std::basic_string<_Elem, _Traits, _Alloc> buf(n, 0);
 
-  va_start(args, format);
-  int nret = format_traits<_Elem>::format(&buffer.front(), buffer.length() + 1, format, args);
+  va_copy(args, initialized_args);
+  int nret = format_traits<_Elem>::format(&buf.front(), buf.length() + 1, format, args);
   va_end(args);
 
   if (nret >= 0)
   {
-    if ((unsigned int)nret < buffer.length())
+    if ((unsigned int)nret < buf.length())
     {
-      buffer.resize(nret);
+      buf.resize(nret);
     }
-    else if ((unsigned int)nret > buffer.length())
+    else if ((unsigned int)nret > buf.length())
     { // handle return required length when buffer insufficient
-      buffer.resize(nret);
+      buf.resize(nret);
 
-      va_start(args, format);
-      nret = format_traits<_Elem>::format(&buffer.front(), buffer.length() + 1, format, args);
+      va_copy(args, initialized_args);
+      nret = format_traits<_Elem>::format(&buf.front(), buf.length() + 1, format, args);
       va_end(args);
     }
     // else equals, do nothing.
@@ -112,30 +113,43 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _strfmt(size_t n, const _Elem* 
     };
     do
     {
-      buffer.resize(buffer.length() << 1);
+      buf.resize(buf.length() << 1);
 
-      va_start(args, format);
-      nret = format_traits<_Elem>::format(&buffer.front(), buffer.length() + 1, format, args);
+      va_copy(args, initialized_args);
+      nret = format_traits<_Elem>::format(&buf.front(), buf.length() + 1, format, args);
       va_end(args);
 
-    } while (nret < 0 && buffer.size() <= enlarge_limits);
+    } while (nret < 0 && buf.size() <= enlarge_limits);
     if (nret > 0)
-      buffer.resize(nret);
+      buf.resize(nret);
     else
-      buffer = format_traits<_Elem>::report_error();
+      buf = format_traits<_Elem>::report_error();
 #else
     /* other standard implementation
     see: http://www.cplusplus.com/reference/cstdio/vsnprintf/
     */
-    buffer = format_traits<_Elem>::report_error();
+    buf = format_traits<_Elem>::report_error();
 #endif
   }
 
-  return buffer;
+  return buf;
 }
 
-static auto constexpr strfmt = _strfmt<char>;
-static auto constexpr wcsfmt = _strfmt<wchar_t>;
+template <class _Elem, class _Traits = std::char_traits<_Elem>,
+          class _Alloc = std::allocator<_Elem>>
+inline std::basic_string<_Elem, _Traits, _Alloc> basic_strfmt(size_t n, const _Elem* format, ...)
+{
+  va_list initialized_args;
+
+  va_start(initialized_args, format);
+  auto buf = _vstrfmt(n, format, initialized_args);
+  va_end(initialized_args);
+
+  return buf;
+}
+
+static auto constexpr strfmt = basic_strfmt<char>;
+static auto constexpr wcsfmt = basic_strfmt<wchar_t>;
 
 } // namespace yasio
 

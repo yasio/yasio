@@ -9,16 +9,21 @@
 # files.                                                                                 #
 ##########################################################################################
 path_classifiers:
-  test: tests
+  test: 
+    - tests
+    - examples
   library:
-    - exclude: yasio/kcp/*.c
+    - yasio/kcp
+    - yasio/sol
+    - yasio/sol3
+    - yasio/moodycamel
+    - yasio/kaguya
 
 #########################################################################################
 # Use the `queries` block to change the default display of query results.               #
 #########################################################################################
 queries:
   # Start by hiding the results of all queries.
-  - include: "*"
   - exclude: "yasio/kcp"
 
 #########################################################################################

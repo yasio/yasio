@@ -42,12 +42,6 @@ template <typename _Ty> inline void clear_queue(_Ty& queue)
   _Ty tmp;
   std::swap(tmp, queue);
 }
-template <typename _Ty> inline static _Ty* release_pointer(_Ty*& pointer)
-{
-  auto tmp = pointer;
-  pointer  = nullptr;
-  return tmp;
-}
 namespace privacy
 {
 template <typename _Ty, bool _Dual = false> class concurrent_queue;
@@ -68,7 +62,12 @@ public:
 };
 
 #else
-
+template <typename _Ty> inline _Ty* release_pointer(_Ty*& pointer)
+{
+  auto tmp = pointer;
+  pointer  = nullptr;
+  return tmp;
+}
 template <typename _Ty> class concurrent_queue_primitive
 {
   struct concurrent_item

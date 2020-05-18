@@ -37,38 +37,50 @@ SOFTWARE.
 
 namespace yasio
 {
-template <typename _T> inline void clear_queue(_T& queue)
+template <typename _Ty> inline void clear_queue(_Ty& queue)
 {
-  _T tmp;
+  _Ty tmp;
   std::swap(tmp, queue);
+}
+template <typename _Ty> inline static _Ty* release_pointer(_Ty*& pointer)
+{
+  auto tmp = pointer;
+  pointer  = nullptr;
+  return tmp;
 }
 namespace privacy
 {
-template <typename _T, bool _Dual = false> class concurrent_queue;
+template <typename _Ty, bool _Dual = false> class concurrent_queue;
 
 #if defined(YASIO_USE_SPSC_QUEUE)
-template <typename _T, bool _Dual> class concurrent_queue : public moodycamel::ReaderWriterQueue<_T>
+template <typename _Ty, bool _Dual>
+class concurrent_queue : public moodycamel::ReaderWriterQueue<_Ty>
 {
 public:
   bool empty() const { return this->peek() == nullptr; }
-  void consume(int count, const std::function<void(_T&&)>& func)
+  void consume(int count, const std::function<void(_Ty&&)>& func)
   {
-    _T event;
+    _Ty event;
     while (count-- > 0 && this->try_dequeue(event))
       func(std::move(event));
   }
-  void clear() { clear_queue(static_cast<moodycamel::ReaderWriterQueue<_T>&>(*this)); }
+  void clear() { clear_queue(static_cast<moodycamel::ReaderWriterQueue<_Ty>&>(*this)); }
 };
 
 #else
 
-template <typename _T> class concurrent_queue_primitive
+template <typename _Ty> class concurrent_queue_primitive
 {
   struct concurrent_item
   {
+
   public:
     concurrent_item() : pitem_(nullptr), pmtx_(nullptr) {}
-    concurrent_item(_T* pitem, std::recursive_mutex* pmtx) : pitem_(pitem), pmtx_(pmtx) {}
+    concurrent_item(_Ty* pitem, std::recursive_mutex* pmtx) : pitem_(pitem), pmtx_(pmtx) {}
+    concurrent_item(const concurrent_item&) = delete;
+    concurrent_item(concurrent_item&& rhs)
+        : pitem_(release_pointer(rhs.pitem_)), pmtx_(release_pointer(rhs.pmtx_))
+    {}
     ~concurrent_item()
     {
       if (pmtx_ != nullptr)
@@ -77,18 +89,18 @@ template <typename _T> class concurrent_queue_primitive
 
     explicit operator bool() { return pitem_ != nullptr; }
 
-    _T& operator*() { return *pitem_; }
+    _Ty& operator*() { return *pitem_; }
 
   private:
-    _T* pitem_; // the locked item
+    _Ty* pitem_; // the locked item
     std::recursive_mutex* pmtx_;
   };
 
 public:
-  template <typename... _Valty> void emplace(_Valty&&... _Val)
+  template <typename... _Types> void emplace(_Types&&... values)
   {
     std::lock_guard<std::recursive_mutex> lck(this->mtx_);
-    queue_.emplace(std::forward<_Valty>(_Val)...);
+    queue_.emplace(std::forward<_Types>(values)...);
   }
 
   void pop() { queue_.pop(); }
@@ -113,15 +125,15 @@ public:
   }
 
 protected:
-  std::queue<_T> queue_;
+  std::queue<_Ty> queue_;
   std::recursive_mutex mtx_;
 };
-template <typename _T> class concurrent_queue<_T, false> : public concurrent_queue_primitive<_T>
+template <typename _Ty> class concurrent_queue<_Ty, false> : public concurrent_queue_primitive<_Ty>
 {};
-template <typename _T> class concurrent_queue<_T, true> : public concurrent_queue_primitive<_T>
+template <typename _Ty> class concurrent_queue<_Ty, true> : public concurrent_queue_primitive<_Ty>
 {
 public:
-  void consume(int count, const std::function<void(_T&&)>& func)
+  void consume(int count, const std::function<void(_Ty&&)>& func)
   {
     if (this->deal_.empty())
     {
@@ -145,12 +157,12 @@ public:
 
   void clear()
   {
-    concurrent_queue_primitive<_T>::clear();
+    concurrent_queue_primitive<_Ty>::clear();
     clear_queue(deal_);
   }
 
 private:
-  std::queue<_T> deal_;
+  std::queue<_Ty> deal_;
 };
 #endif
 } // namespace privacy

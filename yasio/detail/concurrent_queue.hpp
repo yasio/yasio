@@ -116,7 +116,7 @@ public:
     if (!empty())
     {
       mtx_.lock();
-      if (!queue_.empty())
+      if (!empty())
         return concurrent_item{&queue_.front(), &mtx_};
       mtx_.unlock();
     }

@@ -67,35 +67,21 @@ template <typename _T> class concurrent_queue_primitive
   struct concurrent_item
   {
   public:
-    concurrent_item(std::recursive_mutex& mtx, std::queue<_T>& queue)
-        : mtx_(mtx), queue_(queue), pitem_(nullptr)
-    {}
+    concurrent_item() : pitem_(nullptr), pmtx_(nullptr) {}
+    concurrent_item(_T* pitem, std::recursive_mutex* pmtx) : pitem_(pitem), pmtx_(pmtx) {}
     ~concurrent_item()
     {
-      if (pitem_ != nullptr)
-        mtx_.unlock();
+      if (pmtx_ != nullptr)
+        pmtx_->unlock();
     }
 
-    explicit operator bool()
-    {
-      if (!queue_.empty())
-      {
-        mtx_.lock();
-        if (!queue_.empty())
-          pitem_ = &queue_.front();
-        else
-          mtx_.unlock();
-        return pitem_ != nullptr;
-      }
-      return false;
-    }
+    explicit operator bool() { return pitem_ != nullptr; }
 
     _T& operator*() { return *pitem_; }
 
   private:
-    std::recursive_mutex& mtx_;
-    std::queue<_T>& queue_;
-    _T* pitem_;
+    _T* pitem_; // the locked item
+    std::recursive_mutex* pmtx_;
   };
 
 public:
@@ -107,10 +93,24 @@ public:
 
   void pop() { queue_.pop(); }
   bool empty() const { return this->queue_.empty(); }
-  void clear() { clear_queue(this->queue_); }
+  void clear()
+  {
+    std::lock_guard<std::recursive_mutex> lck(this->mtx_);
+    clear_queue(this->queue_);
+  }
 
   // peek item to read/write thread safe
-  concurrent_item peek() { return concurrent_item{mtx_, queue_}; }
+  concurrent_item peek()
+  {
+    if (!empty())
+    {
+      mtx_.lock();
+      if (!queue_.empty())
+        return concurrent_item{&queue_.front(), &mtx_};
+      mtx_.unlock();
+    }
+    return concurrent_item{};
+  }
 
 protected:
   std::queue<_T> queue_;

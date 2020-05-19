@@ -551,7 +551,7 @@ public:
 
   io_channel* get_context() const { return ctx_; }
 
-  virtual ~io_transport() {}
+  virtual ~io_transport() { send_queue_.clear(); }
 
 protected:
   io_service& get_service() const { return ctx_->get_service(); }

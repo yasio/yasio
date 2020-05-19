@@ -950,7 +950,7 @@ void io_service::run()
     // Reset the interrupter.
     else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
     {
-      if(!interrupter_.reset())
+      if (!interrupter_.reset())
         interrupter_.recreate();
       --retval;
     }
@@ -991,11 +991,12 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
-      if (!yasio__testbits(opm, YOPM_CLOSE) || shutdown_internal(transport))
-      {
+      if (0 == opm)
+      { // no open/close operations request
         ++iter;
         continue;
       }
+      shutdown_internal(transport);
     }
 
     handle_close(transport);
@@ -1083,21 +1084,6 @@ bool io_service::is_open(int cindex) const
 {
   auto ctx = channel_at(cindex);
   return ctx != nullptr && ctx->state_ == io_base::state::OPEN;
-}
-void io_service::reopen(transport_handle_t transport)
-{
-  if (!transport->is_open())
-  {
-    YASIO_KLOG("can't reopen transport:%p, the state of it is invalid!", transport);
-    return;
-  }
-  auto ctx = transport->ctx_;
-  // Only client channel support reopen by transport
-  if (yasio__testbits(ctx->properties_, YCM_CLIENT))
-  {
-    cleanup_io(ctx); // will close socket directly
-    open_internal(ctx);
-  }
 }
 void io_service::open(size_t cindex, int kind)
 {

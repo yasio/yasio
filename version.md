@@ -30,6 +30,7 @@ yasio-3.33.0
 * Auto choose library ```sol2``` for lua binding when ```cxx_std >= 14```, older require ```cxx_std >= 17```.
 * Recreate the socket_select_interrupter's sockets on error. 
 * Update kcp to v1.7, the kcp older version may cause SIGBUS on mobile ARM.
+* Simplify API, remove unnecessary API ```io_service::reopen```, please use ```io_service::open``` instead.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

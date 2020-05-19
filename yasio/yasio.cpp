@@ -508,7 +508,7 @@ int io_transport::call_write(io_send_op* op, int& error)
     op->offset_ += n;
     if (op->offset_ == op->buffer_.size())
     { // finished
-      this->complete_op(op, 0, op->offset_);
+      this->complete_op(op, 0);
     }
   }
   else if (n < 0)
@@ -523,18 +523,18 @@ int io_transport::call_write(io_send_op* op, int& error)
       {
         YASIO_KLOG_CP(options.print_, "warning: write udp socket failed, ec=%d, detail:%s", error,
                       io_service::strerror(error));
-        n = this->complete_op(op, error, op->offset_);
+        this->complete_op(op, error);
+        n = 0;
       }
     }
   }
   return n;
 }
-int io_transport::complete_op(io_send_op* op, int error, size_t bytes_transferred)
+void io_transport::complete_op(io_send_op* op, int error)
 {
   if (op->handler_)
-    op->handler_(error, bytes_transferred);
+    op->handler_(error, op->offset_);
   send_queue_.pop();
-  return 0;
 }
 void io_transport::set_primitives()
 {

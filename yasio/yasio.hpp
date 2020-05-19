@@ -574,7 +574,7 @@ protected:
 
   YASIO__DECL int call_read(void* data, int size, int& error);
   YASIO__DECL int call_write(io_send_op*, int& error);
-  YASIO__DECL int complete_op(io_send_op*, int error, size_t bytes_transferred);
+  YASIO__DECL void complete_op(io_send_op*, int error);
 
   // Call at io_service
   YASIO__DECL virtual int do_read(int& error);

@@ -783,14 +783,14 @@ public:
 
   // open a channel, default: YCK_TCP_CLIENT
   YASIO__DECL void open(size_t cindex, int kind = YCK_TCP_CLIENT);
+
   // check whether the channel is open
   YASIO__DECL bool is_open(int cindex) const;
-
   // check whether the transport is open
   YASIO__DECL bool is_open(transport_handle_t) const;
+
   // close transport
   YASIO__DECL void close(transport_handle_t);
-
   // close channel
   YASIO__DECL void close(int cindex);
 

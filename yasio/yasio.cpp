@@ -1113,8 +1113,8 @@ void io_service::handle_close(transport_handle_t thandle)
   auto ec  = thandle->error_;
 
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_KLOG("[index: %d] the connection #%u is lost, ec=%d, detail:%s", ctx->index_, thandle->id_,
-             ec, io_service::strerror(ec));
+  YASIO_KLOG("[index: %d] the connection #%u(%p) is lost, ec=%d, detail:%s", ctx->index_,
+             thandle->id_, thandle, ec, io_service::strerror(ec));
 
   cleanup_io(thandle, false);
 
@@ -1732,8 +1732,8 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
   YASIO_KLOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_,
               s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
 
-  YASIO_KLOG("[index: %d] the connection #%u [%s] --> [%s] is established.", ctx->index_,
-             transport->id_, s->local_endpoint().to_string().c_str(),
+  YASIO_KLOG("[index: %d] the connection #%u(%p) [%s] --> [%s] is established.", ctx->index_,
+             transport->id_, transport, s->local_endpoint().to_string().c_str(),
              s->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }

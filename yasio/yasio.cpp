@@ -77,15 +77,18 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
     if (custom_print)                                                                              \
       custom_print(msg.c_str());                                                                   \
     else                                                                                           \
-      YASIO_TLOG("", "%s", msg.c_str());                                                           \
+      YASIO_LOG_TAG("", "%s", msg.c_str());                                                        \
   } while (false)
 
 #define YASIO_KLOG(format, ...) YASIO_KLOG_CP(options_.print_, format, ##__VA_ARGS__)
+#define YASIO_ILOG(format, ...) YASIO_KLOG_CP(get_service().options_.print_, format, ##__VA_ARGS__)
 
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_KLOGV(fmt, ...) (void)0
+#  define YASIO_ILOGV(fmt, ...) (void)0
 #else
 #  define YASIO_KLOGV YASIO_KLOG
+#  define YASIO_ILOGV YASIO_ILOG
 #endif
 
 #define yasio__setbits(x, m) ((x) |= (m))
@@ -454,8 +457,9 @@ bool io_transport::do_write(long long& max_wait_duration)
       if (call_write(v.get(), error) < 0)
       {
         set_last_errno(error);
-        YASIO_LOGV("[index: %d] call write failed at the connection #%u, ec=%d, detail:%s",
-                   this->cindex(), this->id_, error, io_service::strerror(error));
+        YASIO_ILOGV(
+            "[index: %d] the connection #%u will lost due to write failed, ec=%d, detail:%s",
+            this->cindex(), this->id_, error, io_service::strerror(error));
         break;
       }
     }
@@ -490,9 +494,6 @@ int io_transport::call_read(void* data, int size, int& error)
     error = xxsocket::get_last_errno();
     if (!YASIO_SHOULD_CLOSE_0(error)) // status ok
       return 0;
-
-    YASIO_LOGV("[index: %d] call read failed at the connection #%u, ec=%d, detail:%s",
-               this->cindex(), this->id_, error, io_service::strerror(error));
     return n;
   }
   if (yasio__testbits(ctx_->properties_, YCM_TCP))
@@ -537,6 +538,8 @@ int io_transport::call_write(io_send_op* op, int& error)
 }
 void io_transport::complete_op(io_send_op* op, int error)
 {
+  YASIO_ILOGV("[index: %d] write complete, bytes transferred: %d/%d", this->cindex(),
+              static_cast<int>(op->offset_), static_cast<int>(op->buffer_.size()));
   if (op->handler_)
     op->handler_(error, op->offset_);
   send_queue_.pop();
@@ -1667,7 +1670,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       client_sock->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       client_sock->reuse_address(false);
-    int error = client_sock->bind(YASIO_ADDR_ANY(peer.af()), 0);
+    int error = client_sock->bind(YASIO_ADDR_ANY(peer.af()), ctx->remote_port_);
     if (error == 0)
     {
       auto transport =
@@ -1799,17 +1802,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
 
     if (n >= 0)
     {
-      YASIO_KLOGV("[index: %d] do_read status ok, ec=%d, detail:%s", transport->cindex(), error,
-                  io_service::strerror(error));
-#if defined(YASIO_VERBOSE_LOG)
-      if (n > 0)
-      {
-        YASIO_KLOG("[index: %d] do_read ok, received data len: %d, "
-                   "buffer data "
-                   "len: %d",
-                   transport->cindex(), n, n + transport->wpos_);
-      }
-#endif
+      YASIO_KLOGV("[index: %d] do_read status ok, bytes transferred: %d, buffer used: %d",
+                  transport->cindex(), n, n + transport->wpos_);
       if (transport->expected_size_ == -1)
       { // decode length
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->wpos_ + n);
@@ -1841,6 +1835,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     else
     { // n < 0, regard as connection should close
       transport->set_last_errno(error);
+      YASIO_KLOGV("[index: %d] the connection #%u will lost due to read failed, ec=%d, detail:%s",
+                  transport->cindex(), transport->id_, error, io_service::strerror(error));
       break;
     }
 

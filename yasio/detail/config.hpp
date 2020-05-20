@@ -104,18 +104,18 @@ SOFTWARE.
 #endif
 
 #if defined(_WIN32)
-#  define YASIO_TLOG(tag, format, ...)                                                             \
+#  define YASIO_LOG_TAG(tag, format, ...)                                                          \
     OutputDebugStringA(::yasio::strfmt(127, (tag format "\n"), ##__VA_ARGS__).c_str())
 #elif defined(ANDROID) || defined(__ANDROID__)
 #  include <android/log.h>
 #  include <jni.h>
-#  define YASIO_TLOG(tag, format, ...)                                                             \
+#  define YASIO_LOG_TAG(tag, format, ...)                                                          \
     __android_log_print(ANDROID_LOG_INFO, "yasio", (tag format), ##__VA_ARGS__)
 #else
-#  define YASIO_TLOG(tag, format, ...) printf((tag format "\n"), ##__VA_ARGS__)
+#  define YASIO_LOG_TAG(tag, format, ...) printf((tag format "\n"), ##__VA_ARGS__)
 #endif
 
-#define YASIO_LOG(format, ...) YASIO_TLOG("[yasio]", format, ##__VA_ARGS__)
+#define YASIO_LOG(format, ...) YASIO_LOG_TAG("[yasio]", format, ##__VA_ARGS__)
 
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_LOGV(fmt, ...) (void)0

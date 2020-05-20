@@ -369,6 +369,17 @@ YASIO__NS_INLINE namespace ip
   YASIO__DECL int inet_pton(int af, const char* src, void* dst);
   } // namespace compat
 
+  // the saddr to string helper function
+  inline static std::string saddr_to_string(int af, const void* saddr)
+  {
+    std::string ipstring(64, '\0');
+
+    auto str = compat::inet_ntop(af, saddr, &ipstring.front(), 64);
+    ipstring.resize(str ? strlen(str) : 0);
+
+    return ipstring;
+  }
+
   union endpoint
   {
   public:
@@ -475,17 +486,8 @@ YASIO__NS_INLINE namespace ip
     }
     std::string ip() const
     {
-      return ipstring_from_saddr(sa_.sa_family, sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr
+      return saddr_to_string(sa_.sa_family, sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr
                                                                          : (void*)&in6_.sin6_addr);
-    }
-    static std::string ipstring_from_saddr(int af, const void* saddr)
-    {
-      std::string ipstring(64, '\0');
-
-      auto str = compat::inet_ntop(af, saddr, &ipstring.front(), 64);
-      ipstring.resize(str ? strlen(str) : 0);
-
-      return ipstring;
     }
     /*
      %N: s_net

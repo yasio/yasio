@@ -1507,7 +1507,7 @@ void io_service::init_ares_channel()
               yasio__setbits(valid_flags, ipsv_ipv6);
             break;
         }
-        strdns += yasio::inet::endpoint::ip(name_server->family, &name_server->addr);
+        strdns += yasio::inet::saddr_to_string(name_server->family, &name_server->addr);
         strdns.push_back(',');
       }
       if (valid_flags) // if no valid name server, use predefined fallback dns
@@ -1573,7 +1573,6 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       {
         if (yasio__testbits(ctx->properties_, YCPF_MCAST))
           ctx->join_multicast_group();
-
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);

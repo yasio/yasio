@@ -8,17 +8,49 @@
 
 #include "yasio/kcp/ikcp.h"
 
+#if defined(_MSC_VER)
+#  pragma comment(lib, "Winmm.lib")
+#endif
+
 using namespace yasio;
 using namespace yasio::inet;
 
-// KCP speed: 1.3MB/s(windows), 1.8MB/s(linux)
-// UDP speed: 1.3GB/s(windows), 2.2GB/s(linux)
+/*
+Devices:
+  - Windows: Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz / Windows 10(10.0.19041.264)
+  - Linux: Intel(R) Xeon(R) Platinum 8163 CPU @ 2.50GHz / Ubuntu 20.04
+
+Architecture: X64
+
+Compiling:
+  - Windows: VS2019 MSVC 14.25.28610
+    Optimize Flag: /O2
+    Commands:
+      - mkdir build/build_w64
+      - cd build/build_w64
+      - cmake ../../
+      - cmake --build . --config Release --target speedtest
+  - Linux: gcc version 9.3.0 (Ubuntu 9.3.0-10ubuntu2)
+    Optimize Flag: /O3
+    Commands:
+      - mkdir -p build/build_linux
+      - cd build/build_linux
+      - cmake ../../ -DCMAKE_BUILD_TYPE=Release
+      - cmake --build . --config Release --target speedtest
+
+Total Time: 10(s)
+
+Results:
+  - TCP speed: 2.8GB/s(Windows), 2.3GB/s(Linux)
+  - UDP speed: 2.8GB/s(windows), 2.6GB/s(Linux)
+  - KCP speed: 29MB/s(Windows), 16~46MB/s(linux)
+*/
 
 #define YPROTO_TCP 1
 #define YPROTO_UDP 2
 #define YPROTO_KCP 3
 
-#define TRANSFER_PROTOCOL YPROTO_TCP
+#define TRANSFER_PROTOCOL YPROTO_KCP
 
 #if TRANSFER_PROTOCOL == YPROTO_KCP
 #  define RECEIVER_CHANNEL_KIND YCK_KCP_CLIENT
@@ -69,8 +101,11 @@ static void sbtoa(double speedInBytes, char* buf)
 
 static void print_speed_detail(double interval, double time_elapsed)
 {
-  static double last_print_time = 0;
-  if ((time_elapsed - last_print_time) > interval)
+  static double last_print_time     = 0;
+  static long long send_total_bytes = 0;
+  static long long recv_total_bytes = 0;
+  if (((time_elapsed - last_print_time) > interval) &&
+      (send_total_bytes != s_send_total_bytes || recv_total_bytes != s_recv_total_bytes))
   {
     char str_send_speed[128], str_recv_speed[128];
     sbtoa(s_send_speed, str_send_speed);
@@ -79,7 +114,9 @@ static void print_speed_detail(double interval, double time_elapsed)
     printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n",
            str_send_speed, str_recv_speed, time_elapsed, s_send_total_bytes, s_recv_total_bytes);
 
-    last_print_time = time_elapsed;
+    send_total_bytes = s_send_total_bytes;
+    recv_total_bytes = s_recv_total_bytes;
+    last_print_time  = time_elapsed;
   }
 }
 
@@ -97,9 +134,9 @@ void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
-  s_send_total_bytes += obs->length();
   auto cb = [=](int, size_t bytes_transferred) {
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    s_send_total_bytes += bytes_transferred;
     s_send_speed = s_send_total_bytes / time_elapsed;
     udp_send_repeat_forever(service, thandle, obs);
   };
@@ -114,6 +151,20 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
+#if defined(_MSC_VER)
+  ///////////////////////////////////////////////////////////////////////////
+  /////////////// changing timer resolution
+  ///////////////////////////////////////////////////////////////////////////
+  UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
+  TIMECAPS tc;
+  UINT wTimerRes = 0;
+  if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
+  {
+    wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
+    timeBeginPeriod(wTimerRes);
+  }
+#endif
+
   while (time_elapsed < s_send_limit_time)
   {
     s_send_total_bytes += service->write(thandle, obs->buffer());
@@ -121,10 +172,18 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
     s_send_speed = s_send_total_bytes / time_elapsed;
     print_speed_detail(0.5, time_elapsed);
 
-#if !defined(_WIN32)
-    std::this_thread::sleep_for(std::chrono::microseconds(3000));
-#endif
+    std::this_thread::sleep_for(std::chrono::microseconds(1000));
   }
+  
+#if defined(_MSC_VER)
+  ///////////////////////////////////////////////////////////////////////////
+  /////////////// restoring timer resolution
+  ///////////////////////////////////////////////////////////////////////////
+  if (wTimerRes != 0)
+  {
+    timeEndPeriod(wTimerRes);
+  }
+#endif
 }
 
 void start_sender(io_service& service)
@@ -170,7 +229,7 @@ void start_sender(io_service& service)
     }
   });
 
-  printf("start trasnfer test via %s after 170ms...\n", proto_name(TRANSFER_PROTOCOL));
+  printf("Start trasnfer test via %s after 170ms...\n", proto_name(TRANSFER_PROTOCOL));
   std::this_thread::sleep_for(std::chrono::milliseconds(170));
 #if TRANSFER_PROTOCOL != YPROTO_TCP
   service.set_option(YOPT_C_LOCAL_PORT, 0, RECEIVER_PORT);
@@ -206,7 +265,7 @@ void start_receiver(io_service& service)
 
           if (TRANSFER_PROTOCOL == YPROTO_KCP)
             setup_kcp_transfer(event->transport());
-          printf("start recive data...\n");
+          printf("The sender connected...\n");
         }
         break;
       case YEK_CONNECTION_LOST:

@@ -21,7 +21,10 @@ using namespace yasio::inet;
 #  define TRANSFER_PROTOCOL YCK_UDP_CLIENT
 #endif
 
-static const double s_send_limit_time = 20; // max send time in seconds
+static const double s_send_limit_time = 10; // max send time in seconds
+
+static long long s_send_total_bytes = 0;
+static long long s_recv_total_bytes = 0;
 
 static double s_send_speed = 0; // bytes/s
 static double s_recv_speed = 0;
@@ -38,7 +41,7 @@ static void sbtoa(double speedInBytes, char* buf)
     sprintf(buf, "%.1lfGB", speedInBytes / 1024 / 1024 / 1024);
 }
 
-static void print_speed_detail(double interval, double time_elapsed, long long total_bytes)
+static void print_speed_detail(double interval, double time_elapsed)
 {
   static double last_print_time = 0;
   if ((time_elapsed - last_print_time) > interval)
@@ -47,8 +50,8 @@ static void print_speed_detail(double interval, double time_elapsed, long long t
     sbtoa(s_send_speed, str_send_speed);
     sbtoa(s_recv_speed, str_recv_speed);
 
-    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: %lld\n", str_send_speed,
-           str_recv_speed, time_elapsed, total_bytes);
+    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n",
+           str_send_speed, str_recv_speed, time_elapsed, s_send_total_bytes, s_recv_total_bytes);
 
     last_print_time = time_elapsed;
   }
@@ -64,25 +67,33 @@ void setup_kcp_transfer(transport_handle_t handle)
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  auto cb = [=](int, size_t) { udp_send_repeat_forever(service, thandle, obs); };
+  static long long time_start   = yasio::highp_clock<>();
+  static double time_elapsed    = 0;
+  static double last_print_time = 0;
 
-  service->write(thandle, obs->buffer(), cb);
+  s_send_total_bytes += obs->length();
+  auto cb                       = [=](int, size_t bytes_transferred) {
+    time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    s_send_speed = s_send_total_bytes / time_elapsed;
+    udp_send_repeat_forever(service, thandle, obs);
+  };
+
+  if (time_elapsed < s_send_limit_time)
+     service->write(thandle, obs->buffer(), cb);
 }
 
 void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  static long long total_bytes  = 0;
   static long long time_start   = yasio::highp_clock<>();
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
   while (time_elapsed < s_send_limit_time)
   {
-    total_bytes += service->write(thandle, obs->buffer());
-    auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
-    s_send_speed      = total_bytes / time_elapsed;
-
-    print_speed_detail(0.5, time_elapsed, total_bytes);
+    s_send_total_bytes += service->write(thandle, obs->buffer());
+    time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    s_send_speed = s_send_total_bytes / time_elapsed;
+    print_speed_detail(0.5, time_elapsed);
 
 #if !defined(_WIN32)
     std::this_thread::sleep_for(std::chrono::microseconds(3000));
@@ -142,7 +153,6 @@ void start_sender(io_service& service)
 static io_service* s_sender;
 void start_receiver(io_service& service)
 {
-  static long long total_bytes  = 0;
   static long long time_start   = yasio::highp_clock<>();
   static double last_print_time = 0;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
@@ -150,10 +160,9 @@ void start_receiver(io_service& service)
     switch (event->kind())
     {
       case YEK_PACKET: {
-        auto packet = std::move(event->packet());
-        total_bytes += packet.size();
+        s_recv_total_bytes += event->packet().size();
         auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
-        s_recv_speed      = total_bytes / time_elapsed;
+        s_recv_speed      = s_recv_total_bytes / time_elapsed;
         break;
       }
       case YEK_CONNECT_RESPONSE:
@@ -191,10 +200,14 @@ int main(int, char**)
   start_receiver(receiver);
   start_sender(sender);
 
+  static long long time_start = yasio::highp_clock<>();
   while (true)
-  {
+  { // main thread, print speed only
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     sender.dispatch();
+
+    auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    print_speed_detail(0.5, time_elapsed);
   }
   return 0;
 }

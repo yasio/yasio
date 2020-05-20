@@ -1158,15 +1158,10 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
     FD_CLR(fd, &(fds_array_[except_op]));
 }
 int io_service::write(transport_handle_t transport, std::vector<char> buffer,
-                      io_completion_cb_t completion_handler)
+                      io_completion_cb_t handler)
 {
   if (transport && transport->is_open())
-  {
-    if (!buffer.empty())
-      return transport->write(std::move(buffer), std::move(completion_handler));
-
-    return 0;
-  }
+    return !buffer.empty() ? transport->write(std::move(buffer), std::move(handler)) : 0;
   else
   {
     YASIO_KLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
@@ -1174,14 +1169,10 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer,
   }
 }
 int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
-                         const ip::endpoint& to, io_completion_cb_t completion_handler)
+                         const ip::endpoint& to, io_completion_cb_t handler)
 {
   if (transport && transport->is_open())
-  {
-    if (!buffer.empty())
-      return transport->write_to(std::move(buffer), to, std::move(completion_handler));
-    return 0;
-  }
+    return !buffer.empty() ? transport->write_to(std::move(buffer), to, std::move(handler)) : 0;
   else
   {
     YASIO_KLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);

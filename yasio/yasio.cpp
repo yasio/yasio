@@ -454,6 +454,8 @@ bool io_transport::do_write(long long& max_wait_duration)
       if (call_write(v.get(), error) < 0)
       {
         set_last_errno(error);
+        YASIO_LOGV("[index: %d] call write failed at the connection #%u, ec=%d, detail:%s",
+                   this->cindex(), this->id_, error, io_service::strerror(error));
         break;
       }
     }
@@ -488,6 +490,9 @@ int io_transport::call_read(void* data, int size, int& error)
     error = xxsocket::get_last_errno();
     if (!YASIO_SHOULD_CLOSE_0(error)) // status ok
       return 0;
+
+    YASIO_LOGV("[index: %d] call read failed at the connection #%u, ec=%d, detail:%s",
+               this->cindex(), this->id_, error, io_service::strerror(error));
     return n;
   }
   if (yasio__testbits(ctx_->properties_, YCM_TCP))
@@ -1054,10 +1059,10 @@ void io_service::process_channels(fd_set* fds_array)
     }
   }
 }
-void io_service::close(int cindex)
+void io_service::close(int channel_index)
 {
   // Gets channel context
-  auto channel = channel_at(cindex);
+  auto channel = channel_at(channel_index);
   if (!channel)
     return;
 
@@ -1080,16 +1085,16 @@ void io_service::close(transport_handle_t transport)
   }
 }
 bool io_service::is_open(transport_handle_t transport) const { return transport->is_open(); }
-bool io_service::is_open(int cindex) const
+bool io_service::is_open(int channel_index) const
 {
-  auto ctx = channel_at(cindex);
+  auto ctx = channel_at(channel_index);
   return ctx != nullptr && ctx->state_ == io_base::state::OPEN;
 }
-void io_service::open(size_t cindex, int kind)
+void io_service::open(size_t channel_index, int kind)
 {
   assert((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
 
-  auto ctx = channel_at(cindex);
+  auto ctx = channel_at(channel_index);
   if (ctx != nullptr)
   {
     yasio__setlobyte(ctx->properties_, kind & 0xff);
@@ -1101,10 +1106,10 @@ void io_service::open(size_t cindex, int kind)
     open_internal(ctx);
   }
 }
-io_channel* io_service::channel_at(size_t cindex) const
+io_channel* io_service::channel_at(size_t channel_index) const
 {
-  if (cindex < channels_.size())
-    return channels_[cindex];
+  if (channel_index < channels_.size())
+    return channels_[channel_index];
   return nullptr;
 }
 void io_service::handle_close(transport_handle_t thandle)
@@ -1597,7 +1602,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         if (error == 0)
           handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
         else // The non blocking tcp accept failed can be ignored.
-          YASIO_KLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index(),
+          YASIO_KLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index_,
                       (int)ctx->socket_->native_handle(), error);
       }
       else // YCM_UDP
@@ -1636,7 +1641,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
           if (transport)
           {
             this->handle_event(event_ptr(new io_event(
-                transport->ctx_->index(), YEK_PACKET,
+                transport->cindex(), YEK_PACKET,
                 std::vector<char>(&ctx->buffer_.front(), &ctx->buffer_.front() + n), transport)));
           }
         }
@@ -1802,7 +1807,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
         YASIO_KLOG("[index: %d] do_read ok, received data len: %d, "
                    "buffer data "
                    "len: %d",
-                   transport->cindex(), n, n + transport->offset_);
+                   transport->cindex(), n, n + transport->wpos_);
       }
 #endif
       if (transport->expected_size_ == -1)
@@ -1866,7 +1871,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
-        new io_event(transport->ctx_->index(), YEK_PACKET, transport->fetch_packet(), transport)));
+        new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
   }
   else /* all buffer consumed, set wpos to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;
@@ -2008,7 +2013,7 @@ int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
     }
 #endif
 
-    YASIO_KLOGV("socket.select maxfdp:%d waiting... %ld milliseconds", maxfdp_,
+    YASIO_KLOGV("socket.select max_nfds_:%d waiting... %ld milliseconds", max_nfds_,
                 waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
     retval = ::select(this->max_nfds_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
     YASIO_KLOGV("socket.select waked up, retval=%d", retval);

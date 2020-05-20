@@ -701,10 +701,10 @@ io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 int io_transport_kcp::write(std::vector<char>&& buffer, io_completion_cb_t&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-
-  int retval = ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
+  int len    = static_cast<int>(buffer.size());
+  int retval = ::ikcp_send(kcp_, buffer.data(), len);
   get_service().interrupt();
-  return retval;
+  return retval == 0 ? len : retval;
 }
 int io_transport_kcp::do_read(int& error)
 {

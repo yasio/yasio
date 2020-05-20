@@ -21,8 +21,38 @@ using namespace yasio::inet;
 #  define TRANSFER_PROTOCOL YCK_UDP_CLIENT
 #endif
 
-static double s_time_elapsed          = 0;
 static const double s_send_limit_time = 20; // max send time in seconds
+
+static double s_send_speed = 0; // bytes/s
+static double s_recv_speed = 0;
+
+static void sbtoa(double speedInBytes, char* buf)
+{
+  if (speedInBytes < 1024)
+    sprintf(buf, "%gB", speedInBytes);
+  else if (speedInBytes < 1024 * 1024)
+    sprintf(buf, "%.1lfKB", speedInBytes / 1024);
+  else if (speedInBytes < 1024 * 1024 * 1024)
+    sprintf(buf, "%.1lfMB", speedInBytes / 1024 / 1024);
+  else
+    sprintf(buf, "%.1lfGB", speedInBytes / 1024 / 1024 / 1024);
+}
+
+static void print_speed_detail(double interval, double time_elapsed, long long total_bytes)
+{
+  static double last_print_time = 0;
+  if ((time_elapsed - last_print_time) > interval)
+  {
+    char str_send_speed[128], str_recv_speed[128];
+    sbtoa(s_send_speed, str_send_speed);
+    sbtoa(s_recv_speed, str_recv_speed);
+
+    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: %lld\n", str_send_speed,
+           str_recv_speed, time_elapsed, total_bytes);
+
+    last_print_time = time_elapsed;
+  }
+}
 
 void setup_kcp_transfer(transport_handle_t handle)
 {
@@ -34,18 +64,28 @@ void setup_kcp_transfer(transport_handle_t handle)
 
 void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  auto cb = [=](int,size_t) { udp_send_repeat_forever(service, thandle, obs); };
+  auto cb = [=](int, size_t) { udp_send_repeat_forever(service, thandle, obs); };
 
   service->write(thandle, obs->buffer(), cb);
 }
 
 void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  while (s_time_elapsed < s_send_limit_time)
+  static long long total_bytes  = 0;
+  static long long time_start   = yasio::highp_clock<>();
+  static double time_elapsed    = 0;
+  static double last_print_time = 0;
+
+  while (time_elapsed < s_send_limit_time)
   {
-    service->write(thandle, obs->buffer());
+    total_bytes += service->write(thandle, obs->buffer());
+    auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    s_send_speed      = total_bytes / time_elapsed;
+
+    print_speed_detail(0.5, time_elapsed, total_bytes);
+
 #if !defined(_WIN32)
-    std::this_thread::sleep_for(std::chrono::microseconds(10000));
+    std::this_thread::sleep_for(std::chrono::microseconds(3000));
 #endif
   }
 }
@@ -72,7 +112,8 @@ void start_sender(io_service& service)
           // because some system's default sndbuf of udp is less than 64k, such as macOS.
           int sndbuf = 65536;
           xxsocket::set_last_errno(0);
-          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int));
+          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF,
+                             &sndbuf, sizeof(int));
           int ec = xxsocket::get_last_errno();
           if (ec != 0)
             YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
@@ -112,26 +153,7 @@ void start_receiver(io_service& service)
         auto packet = std::move(event->packet());
         total_bytes += packet.size();
         auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
-        auto speed        = total_bytes / time_elapsed;
-        if ((time_elapsed - last_print_time) > 0.5)
-        {
-          if (speed < 1024)
-            printf("Speed: %gB/s, Total Time: %g(s), Total Bytes: %lld\n", speed, time_elapsed,
-                   total_bytes);
-          else if (speed < 1024 * 1024)
-            printf("Speed: %.1lfKB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024,
-                   time_elapsed, total_bytes);
-          else if (speed < 1024 * 1024 * 1024)
-            printf("Speed: %.1lfMB/s, Total Time: %g(s), Total Bytes: %lld\n", speed / 1024 / 1024,
-                   time_elapsed, total_bytes);
-          else
-            printf("Speed: %.1lfGB/s, Total Time: %g(s), Total Bytes: %lld\n",
-                   speed / 1024 / 1024 / 1024, time_elapsed, total_bytes);
-          last_print_time = time_elapsed;
-        }
-
-        s_time_elapsed = time_elapsed;
-
+        s_recv_speed      = total_bytes / time_elapsed;
         break;
       }
       case YEK_CONNECT_RESPONSE:
@@ -139,8 +161,8 @@ void start_receiver(io_service& service)
         {
           int sndbuf = 65536;
           xxsocket::set_last_errno(0);
-          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET, SO_SNDBUF,
-                             &sndbuf, sizeof(int));
+          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET,
+                             SO_SNDBUF, &sndbuf, sizeof(int));
           int ec = xxsocket::get_last_errno();
           if (ec != 0)
             YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));

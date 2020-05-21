@@ -20,18 +20,18 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
   server.start([&, channel_kind](event_ptr ev) {
     switch (ev->kind())
     {
+      case YEK_CONNECT_RESPONSE:
+        printf("[%lld] A client is income, status=%d\n", ev->timestamp(), ev->status());
       case YEK_PACKET:
-        server.write(ev->transport(), std::move(ev->packet()));
+        if (!ev->packet().empty())
+          server.write(ev->transport(), std::move(ev->packet()));
+
         // kick out after 3(s) if no new packet income
-        { 
+        {
           timer.expires_from_now(std::chrono::seconds(3));
           auto transport = ev->transport();
           timer.async_wait_once([&, transport]() { server.close(transport); });
         }
-        break;
-      case YEK_CONNECT_RESPONSE:
-        printf("A client is income, status=%d, %lld!\n",
-               ev->status(), ev->timestamp());
         break;
     }
   });

@@ -22,16 +22,15 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
     {
       case YEK_PACKET:
         server.write(ev->transport(), std::move(ev->packet()));
-
-        if (channel_kind & YCM_UDP)
-        { // udp & kcp, close after 500ms
-          timer.expires_from_now(std::chrono::milliseconds(500));
+        // kick out after 3(s) if no new packet income
+        { 
+          timer.expires_from_now(std::chrono::seconds(3));
           auto transport = ev->transport();
           timer.async_wait_once([&, transport]() { server.close(transport); });
         }
         break;
       case YEK_CONNECT_RESPONSE:
-        printf("A client is income, status=%d, %lld, combine 2 packet and send to client!\n",
+        printf("A client is income, status=%d, %lld!\n",
                ev->status(), ev->timestamp());
         break;
     }

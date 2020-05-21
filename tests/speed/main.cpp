@@ -46,31 +46,45 @@ Results:
   - KCP speed: 29MB/s(Windows), 16~46MB/s(linux)
 */
 
-#define YPROTO_TCP 1
-#define YPROTO_UDP 2
-#define YPROTO_KCP 3
+#define SPEEDTEST_PROTO_TCP 1
+#define SPEEDTEST_PROTO_UDP 2
+#define SPEEDTEST_PROTO_KCP 3
 
-#define TRANSFER_PROTOCOL YPROTO_KCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
 
-#if TRANSFER_PROTOCOL == YPROTO_KCP
-#  define RECEIVER_CHANNEL_KIND YCK_KCP_CLIENT
-#  define SENDER_CHANNEL_KIND YCK_KCP_CLIENT
-#elif TRANSFER_PROTOCOL == YPROTO_UDP
-#  define RECEIVER_CHANNEL_KIND YCK_UDP_CLIENT
-#  define SENDER_CHANNEL_KIND YCK_UDP_CLIENT
-#elif TRANSFER_PROTOCOL == YPROTO_TCP
-#  define RECEIVER_CHANNEL_KIND YCK_TCP_SERVER
-#  define SENDER_CHANNEL_KIND YCK_TCP_CLIENT
+#if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
+#  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT
+#elif SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_UDP
+#  define SPEEDTEST_DEFAULT_KIND YCK_UDP_CLIENT
+#elif SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP
+#  define SPEEDTEST_DEFAULT_KIND YCK_KCP_CLIENT
 #else
-#  error "please define TRANSFER_PROTOCOL to one of YPROTO_TCP, YPROTO_UDP, YPROTO_KCP"
+#  error                                                                                           \
+      "please define SPEEDTEST_TRANSFER_PROTOCOL to one of SPEEDTEST_PROTO_TCP, SPEEDTEST_PROTO_UDP, SPEEDTEST_PROTO_KCP"
 #endif
 
-#if TRANSFER_PROTOCOL == YPROTO_TCP
-#  define RECEIVER_PORT 3001
-#  define SENDER_PORT 3001
+#if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
+namespace speedtest
+{
+enum
+{
+  RECEIVER_PORT         = 3001,
+  SENDER_PORT           = RECEIVER_PORT,
+  RECEIVER_CHANNEL_KIND = YCK_TCP_SERVER,
+  SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND,
+};
+}
 #else
-#  define RECEIVER_PORT 3001
-#  define SENDER_PORT 3002
+namespace speedtest
+{
+enum
+{
+  RECEIVER_PORT         = 3001,
+  SENDER_PORT           = 3002,
+  RECEIVER_CHANNEL_KIND = SPEEDTEST_DEFAULT_KIND,
+  SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND,
+};
+}
 #endif
 
 static const double s_send_limit_time = 10; // max send time in seconds
@@ -128,7 +142,8 @@ void setup_kcp_transfer(transport_handle_t handle)
   kcp_handle->interval = 0;
 }
 
-void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
+// The transport rely on low level proto UDP/TCP
+void ll_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
 {
   static long long time_start   = yasio::highp_clock<>();
   static double time_elapsed    = 0;
@@ -138,7 +153,7 @@ void udp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     s_send_total_bytes += bytes_transferred;
     s_send_speed = s_send_total_bytes / time_elapsed;
-    udp_send_repeat_forever(service, thandle, obs);
+    ll_send_repeat_forever(service, thandle, obs);
   };
 
   if (time_elapsed < s_send_limit_time)
@@ -174,7 +189,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
     std::this_thread::sleep_for(std::chrono::microseconds(1000));
   }
-  
+
 #if defined(_MSC_VER)
   ///////////////////////////////////////////////////////////////////////////
   /////////////// restoring timer resolution
@@ -188,8 +203,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
 void start_sender(io_service& service)
 {
-  static const int PER_PACKET_SIZE =
-      TRANSFER_PROTOCOL == YPROTO_KCP ? YASIO_SZ(62, k) : YASIO_SZ(63, k);
+  static const int PER_PACKET_SIZE = YASIO_SZ(62, k);
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
@@ -205,22 +219,25 @@ void start_sender(io_service& service)
         if (event->status() == 0)
         {
           auto thandle = event->transport();
-          // because some system's default sndbuf of udp is less than 64k, such as macOS.
-          int sndbuf = 65536;
-          xxsocket::set_last_errno(0);
-          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF,
-                             &sndbuf, sizeof(int));
-          int ec = xxsocket::get_last_errno();
-          if (ec != 0)
-            YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
 
-          if (TRANSFER_PROTOCOL == YPROTO_KCP)
+          if (SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP)
+          {
+            // because some system's default sndbuf of udp is less than 64k, such as macOS.
+            int sndbuf = 65536;
+            xxsocket::set_last_errno(0);
+            service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF,
+                               &sndbuf, sizeof(int));
+            int ec = xxsocket::get_last_errno();
+            if (ec != 0)
+              YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
+          }
+          if (SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP)
           {
             setup_kcp_transfer(thandle);
             kcp_send_repeat_forever(&service, thandle, &obs);
           }
           else
-            udp_send_repeat_forever(&service, thandle, &obs);
+            ll_send_repeat_forever(&service, thandle, &obs);
         }
         break;
       case YEK_CONNECTION_LOST:
@@ -229,12 +246,12 @@ void start_sender(io_service& service)
     }
   });
 
-  printf("Start trasnfer test via %s after 170ms...\n", proto_name(TRANSFER_PROTOCOL));
+  printf("Start trasnfer test via %s after 170ms...\n", proto_name(SPEEDTEST_TRANSFER_PROTOCOL));
   std::this_thread::sleep_for(std::chrono::milliseconds(170));
-#if TRANSFER_PROTOCOL != YPROTO_TCP
-  service.set_option(YOPT_C_LOCAL_PORT, 0, RECEIVER_PORT);
+#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP
+  service.set_option(YOPT_C_LOCAL_PORT, 0, speedtest::RECEIVER_PORT);
 #endif
-  service.open(0, SENDER_CHANNEL_KIND);
+  service.open(0, speedtest::SENDER_CHANNEL_KIND);
 }
 
 static io_service* s_sender;
@@ -255,15 +272,17 @@ void start_receiver(io_service& service)
       case YEK_CONNECT_RESPONSE:
         if (event->status() == 0)
         {
-          int sndbuf = 65536;
-          xxsocket::set_last_errno(0);
-          service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET,
-                             SO_SNDBUF, &sndbuf, sizeof(int));
-          int ec = xxsocket::get_last_errno();
-          if (ec != 0)
-            YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
-
-          if (TRANSFER_PROTOCOL == YPROTO_KCP)
+          if (SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP)
+          {
+            int sndbuf = 65536;
+            xxsocket::set_last_errno(0);
+            service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET,
+                               SO_SNDBUF, &sndbuf, sizeof(int));
+            int ec = xxsocket::get_last_errno();
+            if (ec != 0)
+              YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
+          }
+          if (SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP)
             setup_kcp_transfer(event->transport());
           printf("The sender connected...\n");
         }
@@ -274,15 +293,16 @@ void start_receiver(io_service& service)
     }
   });
 
-#if TRANSFER_PROTOCOL != YPROTO_TCP
-  service.set_option(YOPT_C_LOCAL_PORT, 0, SENDER_PORT);
+#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP
+  service.set_option(YOPT_C_LOCAL_PORT, 0, speedtest::SENDER_PORT);
 #endif
-  service.open(0, RECEIVER_CHANNEL_KIND);
+  service.open(0, speedtest::RECEIVER_CHANNEL_KIND);
 }
 
 int main(int, char**)
 {
-  io_hostent receiver_ep("127.0.0.1", RECEIVER_PORT), sender_ep("127.0.0.1", SENDER_PORT);
+  io_hostent receiver_ep("127.0.0.1", speedtest::RECEIVER_PORT),
+      sender_ep("127.0.0.1", speedtest::SENDER_PORT);
   io_service receiver(&receiver_ep, 1), sender(&sender_ep, 1);
 
   s_sender = &sender;

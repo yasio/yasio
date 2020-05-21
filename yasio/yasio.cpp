@@ -1775,7 +1775,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
 
   return transport;
 }
-transport_handle_t io_service::deallocate_transport(transport_handle_t t)
+void io_service::deallocate_transport(transport_handle_t t)
 {
   if (t && t->is_valid())
   {
@@ -1783,7 +1783,6 @@ transport_handle_t io_service::deallocate_transport(transport_handle_t t)
     yasio::invoke_dtor(t);
     this->tpool_.push_back(t);
   }
-  return nullptr;
 }
 void io_service::handle_connect_failed(io_channel* ctx, int error)
 {

@@ -924,7 +924,7 @@ private:
   YASIO__DECL void notify_connect_succeed(transport_handle_t);
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, std::shared_ptr<xxsocket>);
-  YASIO__DECL transport_handle_t deallocate_transport(transport_handle_t);
+  YASIO__DECL void deallocate_transport(transport_handle_t);
 
   YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);
   YASIO__DECL void unregister_descriptor(const socket_native_type fd, int flags);

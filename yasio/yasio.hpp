@@ -664,6 +664,9 @@ protected:
   // configure remote with specific endpoint
   YASIO__DECL int confgure_remote(const ip::endpoint& peer);
 
+  // process received data from low level
+  YASIO__DECL virtual int handle_read(const char* buf, int bytes_transferred, int& error);
+
   ip::endpoint peer_;                // for recv only
   mutable ip::endpoint destination_; // for sendto only
   bool connected_ = false;
@@ -678,8 +681,13 @@ public:
 
 protected:
   YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
+
   YASIO__DECL int do_read(int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
+
+  YASIO__DECL int handle_read(const char* buf, int len, int& error) override;
+
+  std::vector<char> rawbuf_; // the low level raw buffer
   ikcpcb* kcp_;
   std::recursive_mutex send_mtx_;
 };
@@ -916,7 +924,7 @@ private:
   YASIO__DECL void notify_connect_succeed(transport_handle_t);
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, std::shared_ptr<xxsocket>);
-  YASIO__DECL void deallocate_transport(transport_handle_t);
+  YASIO__DECL transport_handle_t deallocate_transport(transport_handle_t);
 
   YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);
   YASIO__DECL void unregister_descriptor(const socket_native_type fd, int flags);
@@ -967,7 +975,7 @@ private:
   /*
   ** Summary: For udp-server only, make dgram handle to communicate with client
   */
-  YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer);
+  YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer, int& error);
 
   int local_address_family() const { return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6; }
 

@@ -1,6 +1,6 @@
 yasio-3.33.0
   
-* Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT_UDP``` to establish 4-tuple with peer.
+* Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT``` and ```YPOT_T_DISCONNECT``` to change association.
 * Remove unused channel masks ```YCM_MCAST_CLIENT```, ```YCM_MCAST_SERVER```
 * Remove unused channel flag ```YCF_MCAST_LOOPBACK```
 * Add new options ```YOPT_C_ENABLE_MCAST```, ```YOPT_C_DISABLE_MCAST``` for multicast support
@@ -26,7 +26,7 @@ yasio-3.33.0
 * Fix ssl handshake failed with certificate verify failed when cacert file provided and flag ```SSL_VERIFY_PEER``` was set.
 * Fix doesn't call io_service destructor when use lua binding library ```kaguya``` on compiler without c++14 support.
 * Add ```io_service::init_globals(const print_fn_t&)``` to support redirect initialization log to custom file(U3D/UE4 Console).
-* Improve compiler support, now support c++14 and c++17.
+* Improve compiler support, now support c++14, c++17, c++20.
 * Auto choose library ```sol2``` for lua binding when ```cxx_std >= 14```, older require ```cxx_std >= 17```.
 * Recreate the socket_select_interrupter's sockets on error. 
 * Update kcp to v1.7, the kcp older version may cause SIGBUS on mobile ARM.
@@ -34,6 +34,9 @@ yasio-3.33.0
 * Fix crash at yasio::inet::ip::endpoint::ip() when af=0.
 * Make io_service::write to a kcp return value same as other channel.
 * Fix kcp server doesn't decode packet header.
+* Add xxsocket::disconnect to dissolve the 4-tuple association.
+* Rename option ```YOPT_I_SOCKOPT``` to ```YOPT_B_SOCKOPT```.
+* Improve udp write_to behavior, now still can use ```io_service::write_to``` to write data at both unconnected or connected udp transport.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

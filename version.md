@@ -36,7 +36,7 @@ yasio-3.33.0
 * Fix kcp server doesn't decode packet header.
 * Add xxsocket::disconnect to dissolve the 4-tuple association.
 * Rename option ```YOPT_I_SOCKOPT``` to ```YOPT_B_SOCKOPT```.
-* Improve udp write_to behavior, now still can use ```io_service::write_to``` to write data at both unconnected or connected udp transport.
+* Improve udp write_to behavior, now still can use ```io_service::write_to``` to write data at both unconnected and connected udp transport.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

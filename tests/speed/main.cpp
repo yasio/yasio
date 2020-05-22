@@ -225,7 +225,7 @@ void start_sender(io_service& service)
             // because some system's default sndbuf of udp is less than 64k, such as macOS.
             int sndbuf = 65536;
             xxsocket::set_last_errno(0);
-            service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF,
+            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF,
                                &sndbuf, sizeof(int));
             int ec = xxsocket::get_last_errno();
             if (ec != 0)
@@ -276,7 +276,8 @@ void start_receiver(io_service& service)
           {
             int sndbuf = 65536;
             xxsocket::set_last_errno(0);
-            service.set_option(YOPT_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET,
+            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(event->transport()),
+                               SOL_SOCKET,
                                SO_SNDBUF, &sndbuf, sizeof(int));
             int ec = xxsocket::get_last_errno();
             if (ec != 0)

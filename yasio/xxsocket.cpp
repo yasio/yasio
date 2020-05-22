@@ -1060,6 +1060,14 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
   return xxsocket::connect(s, ep);
 }
 
+int xxsocket::disconnect() { return xxsocket::disconnect(this->fd); }
+int xxsocket::disconnect(socket_native_type s)
+{
+  sockaddr addr_unspec  = {0};
+  addr_unspec.sa_family = AF_UNSPEC;
+  return ::connect(s, &addr_unspec, sizeof(addr_unspec));
+}
+
 int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)
 {
   return this->send_n(this->fd, buf, len, wtimeout, flags);

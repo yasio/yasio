@@ -487,7 +487,7 @@ YASIO__NS_INLINE namespace ip
     std::string ip() const
     {
       return saddr_to_string(sa_.sa_family, sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr
-                                                                         : (void*)&in6_.sin6_addr);
+                                                                     : (void*)&in6_.sin6_addr);
     }
     /*
      %N: s_net
@@ -728,6 +728,12 @@ public:
   */
   YASIO__DECL int connect_n(const endpoint& ep);
   YASIO__DECL static int connect_n(socket_native_type s, const endpoint& ep);
+
+  /* @brief: Disconnect a connectionless socket (such as SOCK_DGRAM)
+  **
+  */
+  YASIO__DECL int disconnect();
+  YASIO__DECL static int disconnect(socket_native_type s);
 
   /* @brief: nonblock send
    ** @params: omit

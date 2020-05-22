@@ -272,13 +272,13 @@ void highp_timer::cancel()
 /// io_send_op
 int io_send_op::perform(io_transport* transport, const void* buf, int n)
 {
-  return transport->write_cb_(buf, n, nullptr);
+  return transport->write_cb_(buf, n);
 }
 
 /// io_sendto_op
 int io_sendto_op::perform(io_transport* transport, const void* buf, int n)
 {
-  return transport->write_cb_(buf, n, &destination_);
+  return transport->socket_->sendto(buf, n, destination_);
 }
 
 #if defined(YASIO_HAVE_SSL)
@@ -546,10 +546,8 @@ void io_transport::complete_op(io_send_op* op, int error)
 }
 void io_transport::set_primitives()
 {
-  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
-    return socket_->send(data, len);
-  };
-  this->read_cb_ = [=](void* data, int len) { return socket_->recv(data, len, 0); };
+  this->write_cb_ = [=](const void* data, int len) { return socket_->send(data, len); };
+  this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
 }
 // -------------------- io_transport_tcp ---------------------
 inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
@@ -657,6 +655,16 @@ int io_transport_udp::connect()
   set_primitives();
   return retval;
 }
+int io_transport_udp::disconnect()
+{
+  const int retval = this->socket_->disconnect();
+  if (retval == 0)
+  {
+    connected_ = false;
+    set_primitives();
+  }
+  return retval;
+}
 int io_transport_udp::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
 {
   if (connected_)
@@ -678,9 +686,10 @@ void io_transport_udp::set_primitives()
     io_transport::set_primitives();
   else
   {
-    this->write_cb_ = [=](const void* data, int len, const ip::endpoint* destination) {
-      assert(destination != nullptr);
-      return socket_->sendto(data, len, *destination);
+    // set write_cb_ to dummy, a unconnected udp always perform by operation: io_sendto_op
+    this->write_cb_ = [=](const void* data, int len) {
+      assert(false);
+      return 0;
     };
     this->read_cb_ = [=](void* data, int len) {
       ip::endpoint peer;
@@ -2349,13 +2358,21 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       }
       break;
     }
-    case YOPT_T_BIND_UDP: {
+    case YOPT_T_CONNECT: {
       auto transport = va_arg(ap, transport_handle_t);
       if (transport && transport->is_open() &&
           (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
         static_cast<io_transport_udp*>(transport)->connect();
+      break;
     }
-    case YOPT_SOCKOPT: {
+    case YOPT_T_DISCONNECT: {
+      auto transport = va_arg(ap, transport_handle_t);
+      if (transport && transport->is_open() &&
+          (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
+        static_cast<io_transport_udp*>(transport)->disconnect();
+      break;
+    }
+    case YOPT_B_SOCKOPT: {
       auto obj = va_arg(ap, io_base*);
       if (obj && obj->socket_ && obj->socket_->is_open())
       {

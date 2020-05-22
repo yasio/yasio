@@ -200,13 +200,19 @@ enum
   // params: index:int
   YOPT_C_DISABLE_MCAST,
 
-  // Bind the unconnected UDP transport, once bind, can't be unbind.
+  // Change 4-tuple association for io_transport_udp
   // params: transport:transport_handle_t
-  YOPT_T_BIND_UDP,
+  // remark: only works for udp client transport
+  YOPT_T_CONNECT,
+
+  // Dissolve 4-tuple association for io_transport_udp
+  // params: transport:transport_handle_t
+  // remark: only works for udp client transport
+  YOPT_T_DISCONNECT,
 
   // Sets io_base sockopt
   // params: io_base*,level:int,optname:int,optval:int,optlen:int
-  YOPT_SOCKOPT = 201,
+  YOPT_B_SOCKOPT = 201,
 };
 
 // channel masks: only for internal use, not for user
@@ -515,7 +521,7 @@ public:
   std::vector<char> buffer_; // sending data buffer
   io_completion_cb_t handler_;
 
-  YASIO__DECL virtual int perform(io_transport* transport, const void* buf, int n);
+  YASIO__DECL virtual int perform(transport_handle_t transport, const void* buf, int n);
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
@@ -530,7 +536,7 @@ public:
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
-  YASIO__DECL int perform(io_transport* transport, const void* buf, int n) override;
+  YASIO__DECL int perform(transport_handle_t transport, const void* buf, int n) override;
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
 #endif
@@ -601,7 +607,7 @@ protected:
 
   io_channel* ctx_;
 
-  std::function<int(const void*, int, const ip::endpoint*)> write_cb_;
+  std::function<int(const void*, int)> write_cb_;
   std::function<int(void*, int)> read_cb_;
 
   privacy::concurrent_queue<io_send_op_ptr> send_queue_;
@@ -649,9 +655,8 @@ public:
   YASIO__DECL ip::endpoint remote_endpoint() const override;
 
 protected:
-  // perform connect to establish 4 tuple with peer
-  // BSD UDP socket, once bind 4-tuple with 'connect', can't be unbind
   YASIO__DECL int connect();
+  YASIO__DECL int disconnect();
 
   YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
   YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&, io_completion_cb_t&&) override;

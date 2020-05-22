@@ -1,10 +1,10 @@
 yasio-3.33.0
   
 * Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT``` and ```YPOT_T_DISCONNECT``` to change association.
+* Add ```io_service::write_to``` for ```unconnected/connected``` UDP transport.
 * Remove unused channel masks ```YCM_MCAST_CLIENT```, ```YCM_MCAST_SERVER```
 * Remove unused channel flag ```YCF_MCAST_LOOPBACK```
 * Add new options ```YOPT_C_ENABLE_MCAST```, ```YOPT_C_DISABLE_MCAST``` for multicast support
-* Add ```io_service::write_to``` to write a unbind UDP client.
 * Change ```timer_cb_t``` prototype to ```[]()->bool { }```, return ```true``` for once, ```false``` for continue.
 * Add ```highp_timer::async_wait_once``` to wait timer timeout once.
 * Change ```YCM_XXX_[CLIENT/SERVER]``` to ```YCK_XXX_[CLIENT/SERVER]```.
@@ -36,7 +36,6 @@ yasio-3.33.0
 * Fix kcp server doesn't decode packet header.
 * Add xxsocket::disconnect to dissolve the 4-tuple association.
 * Rename option ```YOPT_I_SOCKOPT``` to ```YOPT_B_SOCKOPT```.
-* Improve udp write_to behavior, now still can use ```io_service::write_to``` to write data at both unconnected and connected udp transport.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

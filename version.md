@@ -31,6 +31,9 @@ yasio-3.33.0
 * Recreate the socket_select_interrupter's sockets on error. 
 * Update kcp to v1.7, the kcp older version may cause SIGBUS on mobile ARM.
 * Simplify API, remove unnecessary API ```io_service::reopen```, please use ```io_service::open``` instead.
+* Fix crash at yasio::inet::ip::endpoint::ip() when af=0.
+* Make io_service::write to a kcp return value same as other channel.
+* Fix kcp server doesn't decode packet header.
 * Other code quality & stable improvements.
   
 yasio-3.31.3

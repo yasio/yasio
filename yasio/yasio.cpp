@@ -585,7 +585,7 @@ void io_transport_ssl::set_primitives()
     }
     return n;
   };
-  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
+  this->write_cb_ = [=](const void* data, int len) {
     ERR_clear_error();
     int n = ::SSL_write(ssl_, data, len);
     if (n > 0)

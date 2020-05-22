@@ -796,17 +796,17 @@ public:
   YASIO__DECL void set_option_internal(int opt, va_list args);
 
   // open a channel, default: YCK_TCP_CLIENT
-  YASIO__DECL void open(size_t channel_index, int kind = YCK_TCP_CLIENT);
+  YASIO__DECL void open(size_t index, int kind = YCK_TCP_CLIENT);
 
   // check whether the channel is open
-  YASIO__DECL bool is_open(int channel_index) const;
+  YASIO__DECL bool is_open(int index) const;
   // check whether the transport is open
   YASIO__DECL bool is_open(transport_handle_t) const;
 
   // close transport
   YASIO__DECL void close(transport_handle_t);
   // close channel
-  YASIO__DECL void close(int channel_index);
+  YASIO__DECL void close(int index);
 
   /*
   ** Summary: Write data to a TCP or connected UDP transport with last peer address
@@ -852,10 +852,10 @@ public:
                                  unsigned short port = 0);
 
   YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
-  io_channel* cindex_to_handle(size_t channel_index) const { return channel_at(channel_index); }
+  io_channel* cindex_to_handle(size_t index) const { return channel_at(index); }
 
   // Gets channel by index
-  YASIO__DECL io_channel* channel_at(size_t channel_index) const;
+  YASIO__DECL io_channel* channel_at(size_t index) const;
 
 private:
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);

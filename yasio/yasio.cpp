@@ -1079,10 +1079,10 @@ void io_service::process_channels(fd_set* fds_array)
     }
   }
 }
-void io_service::close(int channel_index)
+void io_service::close(int index)
 {
   // Gets channel context
-  auto channel = channel_at(channel_index);
+  auto channel = channel_at(index);
   if (!channel)
     return;
 
@@ -1105,16 +1105,16 @@ void io_service::close(transport_handle_t transport)
   }
 }
 bool io_service::is_open(transport_handle_t transport) const { return transport->is_open(); }
-bool io_service::is_open(int channel_index) const
+bool io_service::is_open(int index) const
 {
-  auto ctx = channel_at(channel_index);
+  auto ctx = channel_at(index);
   return ctx != nullptr && ctx->state_ == io_base::state::OPEN;
 }
-void io_service::open(size_t channel_index, int kind)
+void io_service::open(size_t index, int kind)
 {
   assert((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
 
-  auto ctx = channel_at(channel_index);
+  auto ctx = channel_at(index);
   if (ctx != nullptr)
   {
     yasio__setlobyte(ctx->properties_, kind & 0xff);
@@ -1126,10 +1126,10 @@ void io_service::open(size_t channel_index, int kind)
     open_internal(ctx);
   }
 }
-io_channel* io_service::channel_at(size_t channel_index) const
+io_channel* io_service::channel_at(size_t index) const
 {
-  if (channel_index < channels_.size())
-    return channels_[channel_index];
+  if (index < channels_.size())
+    return channels_[index];
   return nullptr;
 }
 void io_service::handle_close(transport_handle_t thandle)

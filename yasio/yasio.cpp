@@ -687,7 +687,7 @@ void io_transport_udp::set_primitives()
   else
   {
     // set write_cb_ to dummy, a unconnected udp always perform by operation: io_sendto_op
-    this->write_cb_ = [=](const void* data, int len) {
+    this->write_cb_ = [=](const void* /*data*/, int /*len*/) {
       assert(false);
       return 0;
     };

@@ -53,7 +53,9 @@ SOFTWARE.
 #    include <Mstcpip.h>
 #  endif
 #  include <Ws2tcpip.h>
-#  include <Wspiapi.h>
+#  if defined(YASIO_NT_COMPAT_GAI)
+#    include <Wspiapi.h>
+#  endif
 typedef SOCKET socket_native_type;
 typedef int socklen_t;
 #  define poll WSAPoll

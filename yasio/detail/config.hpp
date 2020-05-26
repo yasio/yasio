@@ -93,6 +93,12 @@ SOFTWARE.
 #endif
 
 /*
+** Uncomment or add compiler flag -DYASIO_NT_COMPAT_GAI for earlier versions of Windows XP
+** see: https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo
+*/
+// #define YASIO_NT_COMPAT_GAI 1
+
+/*
 ** Uncomment or add compiler flag -DYASIO_NO_EXCEPTIONS to disable exceptions
 */
 // #define YASIO_NO_EXCEPTIONS 1

@@ -95,6 +95,8 @@ static long long s_recv_total_bytes = 0;
 static double s_send_speed = 0; // bytes/s
 static double s_recv_speed = 0;
 
+static const long long s_kcp_send_interval = 1000; // (us) in microseconds
+
 static const char* proto_name(int myproto)
 {
   static const char* protos[] = {"null", "TCP", "UDP", "KCP"};
@@ -187,7 +189,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
     s_send_speed = s_send_total_bytes / time_elapsed;
     print_speed_detail(0.5, time_elapsed);
 
-    std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    std::this_thread::sleep_for(std::chrono::microseconds(s_kcp_send_interval));
   }
 
 #if defined(_MSC_VER)

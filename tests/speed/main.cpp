@@ -50,7 +50,7 @@ Results:
 #define SPEEDTEST_PROTO_UDP 2
 #define SPEEDTEST_PROTO_KCP 3
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_TCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT
@@ -105,14 +105,15 @@ static const char* proto_name(int myproto)
 
 static void sbtoa(double speedInBytes, char* buf)
 {
-  if (speedInBytes < 1024)
-    sprintf(buf, "%gB", speedInBytes);
-  else if (speedInBytes < 1024 * 1024)
-    sprintf(buf, "%.1lfKB", speedInBytes / 1024);
-  else if (speedInBytes < 1024 * 1024 * 1024)
-    sprintf(buf, "%.1lfMB", speedInBytes / 1024 / 1024);
+  double speedInBits = speedInBytes * 8;
+  if (speedInBits < 1024)
+    sprintf(buf, "%gbits", speedInBits);
+  else if (speedInBits < 1024 * 1024)
+    sprintf(buf, "%.1lfKbits", speedInBits / 1024);
+  else if (speedInBits < 1024 * 1024 * 1024)
+    sprintf(buf, "%.1lfMbits", speedInBits / 1024 / 1024);
   else
-    sprintf(buf, "%.1lfGB", speedInBytes / 1024 / 1024 / 1024);
+    sprintf(buf, "%.1lfGbits", speedInBits / 1024 / 1024 / 1024);
 }
 
 static void print_speed_detail(double interval, double time_elapsed)
@@ -123,12 +124,13 @@ static void print_speed_detail(double interval, double time_elapsed)
   if (((time_elapsed - last_print_time) > interval) &&
       (send_total_bytes != s_send_total_bytes || recv_total_bytes != s_recv_total_bytes))
   {
-    char str_send_speed[128], str_recv_speed[128];
+    char str_send_speed[128], str_recv_speed[128], str_send_bits[128], str_recv_bits[128];
     sbtoa(s_send_speed, str_send_speed);
     sbtoa(s_recv_speed, str_recv_speed);
-
-    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n",
-           str_send_speed, str_recv_speed, time_elapsed, s_send_total_bytes, s_recv_total_bytes);
+    sbtoa(s_send_total_bytes, str_send_bits);
+    sbtoa(s_recv_total_bytes, str_recv_bits);
+    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%s recv=%s\n",
+           str_send_speed, str_recv_speed, time_elapsed, str_send_bits, str_recv_bits);
 
     send_total_bytes = s_send_total_bytes;
     recv_total_bytes = s_recv_total_bytes;
@@ -205,7 +207,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
 void start_sender(io_service& service)
 {
-  static const int PER_PACKET_SIZE = YASIO_SZ(62, k);
+  static const int PER_PACKET_SIZE = YASIO_SZ(63, k);
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
@@ -227,8 +229,8 @@ void start_sender(io_service& service)
             // because some system's default sndbuf of udp is less than 64k, such as macOS.
             int sndbuf = 65536;
             xxsocket::set_last_errno(0);
-            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF,
-                               &sndbuf, sizeof(int));
+            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET,
+                               SO_SNDBUF, &sndbuf, sizeof(int));
             int ec = xxsocket::get_last_errno();
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
@@ -279,8 +281,7 @@ void start_receiver(io_service& service)
             int sndbuf = 65536;
             xxsocket::set_last_errno(0);
             service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(event->transport()),
-                               SOL_SOCKET,
-                               SO_SNDBUF, &sndbuf, sizeof(int));
+                               SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int));
             int ec = xxsocket::get_last_errno();
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));

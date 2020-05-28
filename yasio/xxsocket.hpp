@@ -26,28 +26,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #ifndef YASIO__XXSOCKET_HPP
-#  define YASIO__XXSOCKET_HPP
+#define YASIO__XXSOCKET_HPP
 
-#  include <errno.h>
-#  include <string.h>
-#  include <stdio.h>
-#  include <stdint.h>
-#  include <sstream>
-#  include <vector>
-#  include <chrono>
-#  include <functional>
-#  include "yasio/detail/config.hpp"
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <sstream>
+#include <vector>
+#include <chrono>
+#include <functional>
+#include "yasio/detail/config.hpp"
 
-#  if defined(_MSC_VER)
-#    pragma warning(push)
-#    pragma warning(disable : 4996)
-#  endif
+#if defined(_MSC_VER)
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#endif
 
-#  ifdef _WIN32
-#    !defined(WIN32_LEAN_AND_MEAN)
+#ifdef _WIN32
+#  if !defined(WIN32_LEAN_AND_MEAN)
 #    define WIN32_LEAN_AND_MEAN
 #  endif
-
 #  include <WinSock2.h>
 #  include <Windows.h>
 #  if defined(_WIN32) && !defined(_WINSTORE)

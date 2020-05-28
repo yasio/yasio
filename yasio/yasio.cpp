@@ -1258,7 +1258,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
       ctx->join_multicast_group();
 
     if (ret < 0)
-    { // setup no blocking connect
+    { // setup non-blocking connect
       int error = xxsocket::get_last_errno();
       if (error != EINPROGRESS && error != EWOULDBLOCK)
         this->handle_connect_failed(ctx, error);
@@ -1620,7 +1620,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         error = ctx->socket_->accept_n(sockfd);
         if (error == 0)
           handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
-        else // The non blocking tcp accept failed can be ignored.
+        else // The non-blocking tcp accept failed can be ignored.
           YASIO_KLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index_,
                       (int)ctx->socket_->native_handle(), error);
       }
@@ -2110,7 +2110,7 @@ void io_service::start_resolve(io_channel* ctx)
     std::vector<ip::endpoint> remote_eps;
     int error = options_.resolv_(remote_eps, resolving_host.c_str(), resolving_port);
 
-    // lock perform non blocking code
+    // lock perform update dns state of the channel
     auto pmtx = weak_mutex.lock();
     if (!pmtx)
       return;

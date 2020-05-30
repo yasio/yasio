@@ -518,8 +518,8 @@ YASIO__NS_INLINE namespace ip
     unsigned short port(void) const { return ntohs(in4_.sin_port); }
     void port(unsigned short value) { in4_.sin_port = htons(value); }
 
-    void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = ::htonl(addr); }
-    uint32_t addr_v4() const { return ::ntohl(in4_.sin_addr.s_addr); }
+    void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = htonl(addr); }
+    uint32_t addr_v4() const { return ntohl(in4_.sin_addr.s_addr); }
 
     /*
      %N: s_net   127

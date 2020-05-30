@@ -387,19 +387,25 @@ YASIO__NS_INLINE namespace ip
   {
   public:
     endpoint(void) { this->zeroset(); }
-    endpoint(const endpoint& rhs) { this->assign(&rhs.sa_); }
+    endpoint(const endpoint& rhs) { this->assign(rhs); }
     explicit endpoint(const addrinfo* info) { assign(info); }
     explicit endpoint(const sockaddr* info) { assign(info); }
-    endpoint(const char* addr, unsigned short port) { assign(addr, port); }
+    explicit endpoint(const char* addr, unsigned short port = 0) { assign(addr, port); }
+    explicit endpoint(uint32_t addr, unsigned short port = 0) { assign(addr, port); }
 
-    void assign(const addrinfo* info) { this->assign(info->ai_addr, info->ai_addrlen); }
-
-    void assign(const void* ai_addr, size_t ai_addrlen)
+    endpoint& operator=(const endpoint& rhs)
     {
-      this->zeroset();
-      ::memcpy(this, ai_addr, ai_addrlen);
+      this->assign(rhs);
+      return *this;
     }
 
+    bool assign(const endpoint& rhs)
+    {
+      this->zeroset();
+      memcpy(this, &rhs, sizeof(rhs));
+      return true;
+    }
+    void assign(const addrinfo* info) { this->assign_raw(info->ai_addr, info->ai_addrlen); }
     void assign(const sockaddr* addr)
     {
       this->zeroset();
@@ -413,7 +419,6 @@ YASIO__NS_INLINE namespace ip
           break;
       }
     }
-
     bool assign(const char* addr, unsigned short port)
     {
       this->zeroset();
@@ -442,8 +447,27 @@ YASIO__NS_INLINE namespace ip
 
       return false;
     }
+    bool assign(uint32_t addr, u_short port)
+    {
+      this->zeroset();
+
+      this->af(AF_INET);
+      this->addr_v4(addr);
+      this->port(port);
+
+      return true;
+    }
+
+    void assign_raw(const void* ai_addr, size_t ai_addrlen)
+    {
+      this->zeroset();
+      ::memcpy(this, ai_addr, ai_addrlen);
+    }
 
     void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
+
+    void af(int v) { sa_.sa_family = v; }
+    int af() const { return sa_.sa_family; }
 
     void ip(const char* addr)
     {
@@ -461,8 +485,11 @@ YASIO__NS_INLINE namespace ip
         compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
       }
     }
-
-    int af() const { return sa_.sa_family; }
+    std::string ip() const
+    {
+      return saddr_to_string(sa_.sa_family, sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr
+                                                                     : (void*)&in6_.sin6_addr);
+    }
     std::string to_string() const
     {
       std::string addr(64, '[');
@@ -487,20 +514,22 @@ YASIO__NS_INLINE namespace ip
 
       return addr;
     }
-    std::string ip() const
-    {
-      return saddr_to_string(sa_.sa_family, sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr
-                                                                     : (void*)&in6_.sin6_addr);
-    }
+
+    unsigned short port(void) const { return ntohs(in4_.sin_port); }
+    void port(unsigned short value) { in4_.sin_port = htons(value); }
+
+    void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = ::htonl(addr); }
+    uint32_t addr_v4() const { return ::ntohl(in4_.sin_addr.s_addr); }
+
     /*
-     %N: s_net
-     %H: s_host
-     %L: s_lh
-     %M: s_impno
+     %N: s_net   127
+     %H: s_host  0
+     %L: s_lh    0
+     %M: s_impno 1
      %l: low byte of port
      %h: high byte of port
     */
-    std::string to_strf_v4(const char* foramt)
+    std::string format_v4(const char* foramt)
     {
       static const char* const fmts[] = {"%N", "%H", "%L", "%M", "%l", "%h"};
 
@@ -524,14 +553,9 @@ YASIO__NS_INLINE namespace ip
 
       return s;
     }
-    unsigned short port(void) const { return ntohs(in4_.sin_port); }
-    void port(unsigned short value) { in4_.sin_port = htons(value); }
 
-    endpoint& operator=(const endpoint& rhs)
-    {
-      this->assign(&rhs.sa_);
-      return *this;
-    }
+    YASIO_OBSOLETE_DEPRECATE(endpoint::format_v4)
+    std::string to_strf_v4(const char* format) { return format_v4(format); }
 
     sockaddr sa_;
     sockaddr_in in4_;

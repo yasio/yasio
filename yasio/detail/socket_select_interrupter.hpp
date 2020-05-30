@@ -78,15 +78,15 @@ private:
     acceptor.set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
     int error = 0;
-    ip::endpoint ep("127.0.0.1", 0);
+    ip::endpoint ep(INADDR_LOOPBACK);
 
     error = acceptor.bind(ep);
     ep    = acceptor.local_endpoint();
     // Some broken firewalls on Windows will intermittently cause getsockname to
     // return 0.0.0.0 when the socket is actually bound to 127.0.0.1. We
     // explicitly specify the target address here to work around this problem.
-    // addr.sin_addr.s_addr = socket_ops::host_to_network_long(INADDR_LOOPBACK);
-    ep.ip("127.0.0.1");
+    if (INADDR_ANY == ep.addr_v4())
+      ep.addr_v4(INADDR_LOOPBACK);
     error = acceptor.listen();
 
     xxsocket client(AF_INET, SOCK_STREAM, IPPROTO_TCP);

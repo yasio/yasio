@@ -531,23 +531,23 @@ YASIO__NS_INLINE namespace ip
     */
     std::string format_v4(const char* foramt)
     {
-      static const char* const fmts[] = {"%N", "%H", "%L", "%M", "%l", "%h"};
+      static const char* const _SIN_FORMATS[] = {"%N", "%H", "%L", "%M", "%l", "%h"};
 
-      unsigned char addr_bin[sizeof(in4_.sin_addr.s_addr) + sizeof(u_short)];
-      memcpy(addr_bin, &in4_.sin_addr.s_addr, sizeof(in4_.sin_addr.s_addr));
-      memcpy(addr_bin + sizeof(in4_.sin_addr.s_addr), &in4_.sin_port, sizeof(in4_.sin_port));
+      unsigned char addr_bytes[sizeof(in4_.sin_addr.s_addr) + sizeof(u_short)];
+      memcpy(addr_bytes, &in4_.sin_addr.s_addr, sizeof(in4_.sin_addr.s_addr));
+      memcpy(addr_bytes + sizeof(in4_.sin_addr.s_addr), &in4_.sin_port, sizeof(in4_.sin_port));
 
-      char strVal[sizeof("255")] = {0};
-      const size_t _N0           = sizeof("%N") - 1;
-      std::string s              = foramt;
-      for (size_t idx = 0; idx < YASIO_ARRAYSIZE(fmts); ++idx)
+      char snum[sizeof("255")] = {0};
+      const size_t _N0         = sizeof("%N") - 1;
+      std::string s            = foramt;
+      for (size_t idx = 0; idx < YASIO_ARRAYSIZE(_SIN_FORMATS); ++idx)
       {
-        auto fmt   = fmts[idx];
+        auto fmt   = _SIN_FORMATS[idx];
         auto offst = s.find(fmt);
         if (offst != std::string::npos)
         {
-          sprintf(strVal, "%u", addr_bin[idx]);
-          s.replace(offst, _N0, strVal);
+          sprintf(snum, "%u", addr_bytes[idx]);
+          s.replace(offst, _N0, snum);
         }
       }
 

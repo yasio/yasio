@@ -207,7 +207,7 @@ void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, ob
 
 void start_sender(io_service& service)
 {
-  static const int PER_PACKET_SIZE = YASIO_SZ(63, k);
+  static const int PER_PACKET_SIZE = YASIO_SZ(62, k);
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);

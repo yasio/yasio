@@ -74,7 +74,7 @@ extraction:
     configure:
       command:
         - cd $LGTM_SRC/build
-        - cmake ..
+        - cmake .. -DYASIO_BUILD_WITH_KCP=OFF
     # The `index` step builds the code and extracts information during the build
     # process.
     index:

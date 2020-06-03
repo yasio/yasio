@@ -77,7 +77,7 @@ void yasioTest()
               obstream obs;
               obs.write_bytes("[KCP] Hello\r\n");
               service.write(transport, std::move(obs.buffer()));
-              return true;
+              return false;
             });
           }
 

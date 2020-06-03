@@ -584,7 +584,7 @@ protected:
   YASIO__DECL void complete_op(io_send_op*, int error);
 
   // Call at io_service
-  YASIO__DECL virtual int do_read(int& error);
+  YASIO__DECL virtual int do_read(int revent, int& error);
 
   // Call at io_service, try flush pending packet
   YASIO__DECL virtual bool do_write(long long& max_wait_duration);
@@ -687,7 +687,7 @@ public:
 protected:
   YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
 
-  YASIO__DECL int do_read(int& error) override;
+  YASIO__DECL int do_read(int revent, int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
 
   YASIO__DECL int handle_read(const char* buf, int len, int& error) override;

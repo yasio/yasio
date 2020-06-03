@@ -50,7 +50,7 @@ Results:
 #define SPEEDTEST_PROTO_UDP 2
 #define SPEEDTEST_PROTO_KCP 3
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_TCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT
@@ -124,13 +124,11 @@ static void print_speed_detail(double interval, double time_elapsed)
   if (((time_elapsed - last_print_time) > interval) &&
       (send_total_bytes != s_send_total_bytes || recv_total_bytes != s_recv_total_bytes))
   {
-    char str_send_speed[128], str_recv_speed[128], str_send_bits[128], str_recv_bits[128];
+    char str_send_speed[128], str_recv_speed[128];
     sbtoa(s_send_speed, str_send_speed);
     sbtoa(s_recv_speed, str_recv_speed);
-    sbtoa(s_send_total_bytes, str_send_bits);
-    sbtoa(s_recv_total_bytes, str_recv_bits);
-    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%s recv=%s\n",
-           str_send_speed, str_recv_speed, time_elapsed, str_send_bits, str_recv_bits);
+    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n",
+           str_send_speed, str_recv_speed, time_elapsed, s_send_total_bytes, s_recv_total_bytes);
 
     send_total_bytes = s_send_total_bytes;
     recv_total_bytes = s_recv_total_bytes;

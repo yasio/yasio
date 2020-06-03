@@ -14,8 +14,9 @@ using namespace yasio::inet;
 void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {
-      {"ftp.x-studio.net", 50002}, // tcp client
-      {"ftp.x-studio.net", 50003}  // udp client, a unreachable endpoint
+      {"test.yasio.org", 50001}, // tcp client
+      {"test.yasio.org", 50002},  // udp client
+      {"test.yasio.org", 50003},  // kcp client
   };
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
@@ -28,11 +29,12 @@ void yasioTest()
 
   std::vector<transport_handle_t> transports;
 
-  deadline_timer tcp_heartbeat(service);
-  deadline_timer udp_heartbeat(service);
+  deadline_timer tcp_send_timer(service);
+  deadline_timer udp_send_timer(service);
+  deadline_timer kcp_send_timer(service);
   int total_bytes_transferred = 0;
 
-  int max_request_count = 10;
+  int max_request_count = 2;
 
   service.start([&](event_ptr&& event) {
     switch (event->kind())
@@ -50,8 +52,8 @@ void yasioTest()
           auto transport = event->transport();
           if (event->cindex() == 0)
           {
-            tcp_heartbeat.expires_from_now(std::chrono::seconds(2));
-            tcp_heartbeat.async_wait([&service, transport]() -> bool {
+            tcp_send_timer.expires_from_now(std::chrono::seconds(2));
+            tcp_send_timer.async_wait([&service, transport]() -> bool {
               obstream obs;
               obs.write_bytes("[TCP] Hello\r\n");
               service.write(transport, std::move(obs.buffer()));
@@ -60,12 +62,22 @@ void yasioTest()
           }
           else if (event->cindex() == 1)
           {
-            udp_heartbeat.expires_from_now(std::chrono::seconds(2));
-            udp_heartbeat.async_wait([&service, transport]() -> bool {
+            udp_send_timer.expires_from_now(std::chrono::seconds(2));
+            udp_send_timer.async_wait([&service, transport]() -> bool {
               obstream obs;
               obs.write_bytes("[UDP] Hello\r\n");
               service.write(transport, std::move(obs.buffer()));
               return false;
+            });
+          }
+          else if (event->cindex() == 2)
+          {
+            kcp_send_timer.expires_from_now(std::chrono::seconds(2));
+            kcp_send_timer.async_wait([&service, transport, &max_request_count]() -> bool {
+              obstream obs;
+              obs.write_bytes("[KCP] Hello\r\n");
+              service.write(transport, std::move(obs.buffer()));
+              return true;
             });
           }
 
@@ -89,6 +101,7 @@ void yasioTest()
   std::this_thread::sleep_for(std::chrono::seconds(1));
   service.open(0, YCK_TCP_CLIENT); // open channel 0 as TCP client
   service.open(1, YCK_UDP_CLIENT); // open channel 1 as UDP client
+  service.open(2, YCK_KCP_CLIENT); // open channel 2 as KCP client
 
   time_t duration = 0;
   while (service.is_running())

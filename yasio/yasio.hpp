@@ -706,20 +706,21 @@ class io_event final
 public:
   io_event(int cindex, int kind, int error)
       : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
-        transport_(nullptr), transport_ud_(nullptr), transport_id_(-1)
+        transport_(nullptr), transport_udata_(nullptr), transport_id_(-1)
   {}
   io_event(int cindex, int kind, int error, transport_handle_t transport)
       : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
-        transport_(transport), transport_ud_(transport->ud_.ptr), transport_id_(transport->id_)
+        transport_(transport), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
   {}
   io_event(int cindex, int kind, transport_handle_t transport, std::vector<char> packet)
       : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(0), transport_(transport),
-        transport_ud_(transport->ud_.ptr), transport_id_(transport->id_), packet_(std::move(packet))
+        transport_udata_(transport->ud_.ptr), transport_id_(transport->id_),
+        packet_(std::move(packet))
   {}
   io_event(io_event&& rhs)
       : timestamp_(rhs.timestamp_), cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
         packet_(std::move(rhs.packet_)), transport_(rhs.transport_),
-        transport_ud_(rhs.transport_ud_), transport_id_(rhs.transport_id_)
+        transport_udata_(rhs.transport_udata_), transport_id_(rhs.transport_id_)
   {}
 
   ~io_event() {}
@@ -734,15 +735,15 @@ public:
   transport_handle_t transport() const { return transport_; }
 
   /* Gets to transport user data when process this event */
-  template <typename _Uty = void*> _Uty transport_ud() const
+  template <typename _Uty = void*> _Uty transport_udata() const
   {
-    return (_Uty)(uintptr_t)transport_ud_;
+    return (_Uty)(uintptr_t)transport_udata_;
   }
 
   /* Sets trasnport user data when process this event */
-  template <typename _Uty = void*> void transport_ud(_Uty uval)
+  template <typename _Uty = void*> void transport_udata(_Uty uval)
   {
-    transport_ud_ = (void*)uval;
+    transport_udata_ = (void*)uval;
     if (transport_)
       transport_->ud_.ptr = (void*)uval;
   }
@@ -761,7 +762,7 @@ private:
   int kind_;
   int status_;
   transport_handle_t transport_;
-  void* transport_ud_;
+  void* transport_udata_;
   unsigned int transport_id_;
   std::vector<char> packet_;
 };

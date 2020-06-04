@@ -2170,8 +2170,8 @@ void io_service::start_resolve(io_channel* ctx)
                      io_service::ares_getaddrinfo_cb, ctx);
 #endif
 }
-int io_service::builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                               unsigned short port)
+int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname,
+                        unsigned short port)
 {
   if (yasio__testbits(this->ipsv_, ipsv_ipv4))
     return xxsocket::resolve_v4(endpoints, hostname, port);

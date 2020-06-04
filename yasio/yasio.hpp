@@ -874,8 +874,15 @@ public:
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
+  YASIO_OBSOLETE_DEPRECATE(io_service::resolve)
   YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                                 unsigned short port = 0);
+                                 unsigned short port = 0)
+  {
+    return this->resolve(endpoints, hostname, port);
+  }
+
+  YASIO__DECL int resolve(std::vector<ip::endpoint>& endpoints, const char* hostname,
+                          unsigned short port = 0);
 
   YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
   io_channel* cindex_to_handle(size_t index) const { return channel_at(index); }

@@ -712,10 +712,9 @@ public:
       : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
         transport_(transport), transport_ud_(transport->ud_.ptr), transport_id_(transport->id_)
   {}
-  io_event(int cindex, int kind, std::vector<char> packet, transport_handle_t transport)
-      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(0),
-        packet_(std::move(packet)), transport_(transport), transport_ud_(transport->ud_.ptr),
-        transport_id_(transport->id_)
+  io_event(int cindex, int kind, transport_handle_t transport, std::vector<char> packet)
+      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(0), transport_(transport),
+        transport_ud_(transport->ud_.ptr), transport_id_(transport->id_), packet_(std::move(packet))
   {}
   io_event(io_event&& rhs)
       : timestamp_(rhs.timestamp_), cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),

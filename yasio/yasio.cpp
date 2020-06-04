@@ -703,7 +703,7 @@ void io_transport_udp::set_primitives()
 int io_transport_udp::handle_read(const char* buf, int bytes_transferred, int& /*error*/)
 { // pure udp, dispatch to upper layer directly
   get_service().handle_event(event_ptr(
-      new io_event(cindex(), YEK_PACKET, std::vector<char>(buf, buf + bytes_transferred), this)));
+      new io_event(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred))));
   return bytes_transferred;
 }
 
@@ -1887,7 +1887,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
     this->handle_event(event_ptr(
-        new io_event(transport->cindex(), YEK_PACKET, transport->fetch_packet(), transport)));
+        new io_event(transport->cindex(), YEK_PACKET, transport, transport->fetch_packet())));
   }
   else /* all buffer consumed, set wpos to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;

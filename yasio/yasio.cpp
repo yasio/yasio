@@ -1806,7 +1806,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 
   YASIO_KLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
              ctx->remote_host_.c_str(), ctx->remote_port_, error, io_service::strerror(error));
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error, nullptr)));
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error)));
 }
 bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
                          long long& max_wait_duration)

@@ -704,18 +704,23 @@ protected:
 class io_event final
 {
 public:
+  io_event(int cindex, int kind, int error)
+      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
+        transport_(nullptr), transport_ud_(nullptr), transport_id_(-1)
+  {}
   io_event(int cindex, int kind, int error, transport_handle_t transport)
       : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
-        transport_(transport), transport_ud_(transport->ud_.ptr)
+        transport_(transport), transport_ud_(transport->ud_.ptr), transport_id_(transport->id_)
   {}
-  io_event(int cindex, int type, std::vector<char> packet, transport_handle_t transport)
-      : timestamp_(highp_clock()), cindex_(cindex), kind_(type), status_(0),
-        packet_(std::move(packet)), transport_(transport), transport_ud_(transport->ud_.ptr)
+  io_event(int cindex, int kind, std::vector<char> packet, transport_handle_t transport)
+      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(0),
+        packet_(std::move(packet)), transport_(transport), transport_ud_(transport->ud_.ptr),
+        transport_id_(transport->id_)
   {}
   io_event(io_event&& rhs)
       : timestamp_(rhs.timestamp_), cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
         packet_(std::move(rhs.packet_)), transport_(rhs.transport_),
-        transport_ud_(rhs.transport_ud_)
+        transport_ud_(rhs.transport_ud_), transport_id_(rhs.transport_id_)
   {}
 
   ~io_event() {}
@@ -730,17 +735,17 @@ public:
   transport_handle_t transport() const { return transport_; }
 
   /* Gets to transport user data when process this event */
-  template <typename _Uty = void*> _Uty transport_ud() const
-  {
-    return reinterpret_cast<_Uty>(transport_ud_);
-  }
+  template <typename _Uty = void*> _Uty transport_ud() const { return (_Uty)transport_ud_; }
 
   /* Sets trasnport user data when process this event */
   template <typename _Uty = void*> void transport_ud(_Uty uval)
   {
+    transport_ud_ = (void*)uval;
     if (transport_)
-      transport_->ud_.ptr = reinterpret_cast<void*>(uval);
+      transport_->ud_.ptr = (void*)uval;
   }
+
+  unsigned int transport_id() const { return transport_id_; }
 
   long long timestamp() const { return timestamp_; }
 
@@ -755,6 +760,7 @@ private:
   int status_;
   transport_handle_t transport_;
   void* transport_ud_;
+  unsigned int transport_id_;
   std::vector<char> packet_;
 };
 

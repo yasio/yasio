@@ -1,3 +1,13 @@
+yaiso-3.33.1
+  
+  
+* Reduce the size of the Windows header files.
+* Improve yasio::inet::ip::endpoint code style.
+* Explicit socket_select_interrupter workaround code logic for borken firewalls on Windows.
+* Sets and pass user data of transport through event.
+* Fix KCP do_read may can't dispatch upper data to user.
+  
+  
 yasio-3.33.0
   
 * Refactor UDP like transport, UDP client don't establish 4-tuple with peer, and provide  ```YPOT_T_CONNECT``` and ```YPOT_T_DISCONNECT``` to change association.

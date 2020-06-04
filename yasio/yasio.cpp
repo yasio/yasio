@@ -428,7 +428,9 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->state_                    = io_base::state::OPEN;
   this->id_                       = ++s_object_id;
   this->socket_                   = s;
-  this->ud_.ptr                   = nullptr;
+#if !defined(YASIO_MINIFY_EVENT)
+  this->ud_.ptr = nullptr;
+#endif
 }
 int io_transport::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
 {

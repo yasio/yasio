@@ -99,6 +99,11 @@ SOFTWARE.
 // #define YASIO_NT_COMPAT_GAI 1
 
 /*
+** Uncomment or add compiler flag -DYASIO_MINIFY_EVENT to minfy size of io_event 
+*/
+// #define YASIO_MINIFY_EVENT 1
+
+/*
 ** Uncomment or add compiler flag -DYASIO_NO_EXCEPTIONS to disable exceptions
 */
 // #define YASIO_NO_EXCEPTIONS 1

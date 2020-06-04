@@ -617,7 +617,7 @@ protected:
 
   // mark whether pollout event registerred.
   bool pollout_registerred_ = false;
-
+#if !defined(YASIO_MINIFY_EVENT)
 private:
   // The user data
   union
@@ -625,6 +625,7 @@ private:
     void* ptr;
     int ival;
   } ud_;
+#endif
 };
 
 class io_transport_tcp : public io_transport
@@ -705,22 +706,36 @@ class io_event final
 {
 public:
   io_event(int cindex, int kind, int error)
-      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
-        transport_(nullptr), transport_udata_(nullptr), transport_id_(-1)
+      : cindex_(cindex), kind_(kind), status_(error), transport_(nullptr), packet_({})
+#if !defined(YASIO_MINIFY_EVENT)
+        ,
+        timestamp_(highp_clock()), transport_udata_(nullptr), transport_id_(-1)
+#endif
   {}
   io_event(int cindex, int kind, int error, transport_handle_t transport)
-      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
-        transport_(transport), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
+      : cindex_(cindex), kind_(kind), status_(error), transport_(transport), packet_({})
+#if !defined(YASIO_MINIFY_EVENT)
+        ,
+        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr),
+        transport_id_(transport->id_)
+#endif
   {}
   io_event(int cindex, int kind, transport_handle_t transport, std::vector<char> packet)
-      : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(0), transport_(transport),
-        transport_udata_(transport->ud_.ptr), transport_id_(transport->id_),
-        packet_(std::move(packet))
+      : cindex_(cindex), kind_(kind), status_(0), transport_(transport), packet_(std::move(packet))
+#if !defined(YASIO_MINIFY_EVENT)
+        ,
+        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr),
+        transport_id_(transport->id_)
+#endif
   {}
   io_event(io_event&& rhs)
-      : timestamp_(rhs.timestamp_), cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
-        packet_(std::move(rhs.packet_)), transport_(rhs.transport_),
-        transport_udata_(rhs.transport_udata_), transport_id_(rhs.transport_id_)
+      : cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_), transport_(rhs.transport_),
+        packet_(std::move(rhs.packet_))
+#if !defined(YASIO_MINIFY_EVENT)
+        ,
+        timestamp_(rhs.timestamp_), transport_udata_(rhs.transport_udata_),
+        transport_id_(rhs.transport_id_)
+#endif
   {}
 
   ~io_event() {}
@@ -734,6 +749,7 @@ public:
 
   transport_handle_t transport() const { return transport_; }
 
+#if !defined(YASIO_MINIFY_EVENT)
   /* Gets to transport user data when process this event */
   template <typename _Uty = void*> _Uty transport_udata() const
   {
@@ -751,20 +767,23 @@ public:
   unsigned int transport_id() const { return transport_id_; }
 
   long long timestamp() const { return timestamp_; }
+#endif
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 
 private:
-  long long timestamp_;
   int cindex_;
   int kind_;
   int status_;
   transport_handle_t transport_;
+  std::vector<char> packet_;
+#if !defined(YASIO_MINIFY_EVENT)
+  long long timestamp_;
   void* transport_udata_;
   unsigned int transport_id_;
-  std::vector<char> packet_;
+#endif
 };
 
 class io_service // lgtm [cpp/class-many-fields]

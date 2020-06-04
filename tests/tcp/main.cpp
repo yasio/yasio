@@ -46,6 +46,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   {
     icmp_echo       = 8,
     icmp_echo_reply = 0,
+    icmp_min_len    = 14,
   };
 
   std::vector<ip::endpoint> endpoints;
@@ -75,8 +76,11 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   static uint16_t s_seqno     = 0;
   static const int s_icmp_mtu = 1472;
   std::vector<char> icmp_request;
+
+  cxx17::string_view userdata = "yasio-3.33.1";
+
 #if !defined(_WIN32)
-  int nud = (std::max)(ICMP_MINLEN, (std::min)((int)userdata.size(), s_icmp_mtu));
+  int nud = (std::max)((int)icmp_min_len, (std::min)((int)userdata.size(), s_icmp_mtu));
 #else
   int nud      = 32; // win32 must be 32 bytes
 #endif
@@ -86,7 +90,6 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   hdr->type        = icmp_echo;
   hdr->seqno       = s_seqno++;
 
-  cxx17::string_view userdata = "yasio-3.33.1";
   memcpy(&icmp_request.front() + sizeof(icmp_header), (const char*)userdata.data(),
          (std::min)(userdata.size(), icmp_request.size() - sizeof(icmp_header)));
   hdr->checksum = ip_chksum((uint16_t*)icmp_request.data(), icmp_request.size());
@@ -175,7 +178,7 @@ void yasioTest()
   deadline_timer udp_heartbeat(service);
   int total_bytes_transferred = 0;
 
-  int max_request_count = 1;
+  int max_request_count = 5;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start([&](event_ptr&& event) {
     switch (event->kind())

@@ -11,9 +11,134 @@
 using namespace yasio;
 using namespace yasio::inet;
 
+static uint16_t ip_chksum(uint16_t* addr, int len)
+{
+  int nleft       = len;
+  uint32_t sum    = 0;
+  uint16_t* w     = addr;
+  uint16_t answer = 0;
+
+  // Adding 16 bits sequentially in sum
+  while (nleft > 1)
+  {
+    sum += *w;
+    nleft -= 2;
+    w++;
+  }
+
+  // If an odd byte is left
+  if (nleft == 1)
+  {
+    *(unsigned char*)(&answer) = *(unsigned char*)w;
+    sum += answer;
+  }
+
+  sum = (sum >> 16) + (sum & 0xffff);
+  sum += (sum >> 16);
+  answer = ~sum;
+
+  return answer;
+}
+
+static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeout)
+{
+  enum
+  {
+    icmp_echo       = 8,
+    icmp_echo_reply = 0,
+  };
+
+  std::vector<ip::endpoint> endpoints;
+  xxsocket::resolve(endpoints, host, 0);
+  if (endpoints.empty())
+  {
+    YASIO_LOG("resolv host: %s failed!", host);
+    return false;
+  }
+
+  xxsocket s;
+#if defined(_WIN32)
+  int socktype = SOCK_RAW;
+#else
+  int socktype = SOCK_DGRAM;
+#endif
+  if (!s.open(AF_INET, socktype, IPPROTO_ICMP))
+  {
+    int ec = xxsocket::get_last_errno();
+    YASIO_LOG("create socket failed, ec=%d, %s failed!", ec, xxsocket::strerror(ec));
+    return false;
+  }
+
+  s.set_nonblocking(true);
+
+  u_short id                  = std::rand() % (std::numeric_limits<unsigned short>::max)();
+  static uint16_t s_seqno     = 0;
+  static const int s_icmp_mtu = 1472;
+  std::vector<char> icmp_request;
+#if !defined(_WIN32)
+  int nud = (std::max)(ICMP_MINLEN, (std::min)((int)userdata.size(), s_icmp_mtu));
+#else
+  int nud      = 32; // win32 must be 32 bytes
+#endif
+  icmp_request.resize(sizeof(icmp_header) + YASIO_SZ_ALIGN(nud, 2));
+  icmp_header* hdr = (icmp_header*)&icmp_request.front();
+  hdr->id          = id;
+  hdr->type        = icmp_echo;
+  hdr->seqno       = s_seqno++;
+
+  cxx17::string_view userdata = "yasio-3.33.1";
+  memcpy(&icmp_request.front() + sizeof(icmp_header), (const char*)userdata.data(),
+         (std::min)(userdata.size(), icmp_request.size() - sizeof(icmp_header)));
+  hdr->checksum = ip_chksum((uint16_t*)icmp_request.data(), icmp_request.size());
+
+  s.sendto(icmp_request.data(), icmp_request.size(), endpoints[0]);
+
+  fd_set readfds;
+  if (xxsocket::select(s, &readfds, nullptr, nullptr, wtimeout) > 0)
+  {
+    char buf[128];
+    ip::endpoint from;
+    int n = s.recvfrom(buf, sizeof(buf), from);
+
+    if (n > sizeof(ip_header) + sizeof(icmp_header))
+    {
+      const char* icmp_raw = (buf + sizeof(ip_header));
+      icmp_header* hdr     = (icmp_header*)icmp_raw;
+      u_short sum          = ip_chksum((uint16_t*)icmp_raw, n - sizeof(ip_header));
+      if (sum != 0)
+        return false; // checksum failed
+
+      if (hdr->type != icmp_echo_reply)
+      {
+        YASIO_LOG("not echo reply packet!");
+        return false; // not echo reply
+      }
+      if (hdr->id != id)
+      {
+        YASIO_LOG("id incorrect!");
+        return false; // id not equals
+      }
+      return true;
+    }
+    YASIO_LOG("invalid packet!");
+    return false; // ip packet incorrect
+  }
+
+  YASIO_LOG("timeout!");
+  return false; // timeout
+}
+
 void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}};
+
+  for (int i = 0; i < 4; ++i)
+  {
+    if (icmp_ping("www.ip138.com", std::chrono::seconds(3)))
+      printf("ping www.ip138.com succeed, times=%d\n", i + 1);
+    else
+      printf("ping www.ip138.com failed, times=%d\n", i + 1);
+  }
 
   yasio::obstream obstest;
   obstest.push24();
@@ -94,9 +219,7 @@ void yasioTest()
         if (--max_request_count > 0)
         {
           udpconn_delay.expires_from_now(std::chrono::seconds(1));
-          udpconn_delay.async_wait_once([&]() {
-            service.open(0);
-          });
+          udpconn_delay.async_wait_once([&]() { service.open(0); });
         }
         else
           service.stop();

@@ -734,7 +734,10 @@ public:
   transport_handle_t transport() const { return transport_; }
 
   /* Gets to transport user data when process this event */
-  template <typename _Uty = void*> _Uty transport_ud() const { return (_Uty)transport_ud_; }
+  template <typename _Uty = void*> _Uty transport_ud() const
+  {
+    return (_Uty)(uint64_t)transport_ud_;
+  }
 
   /* Sets trasnport user data when process this event */
   template <typename _Uty = void*> void transport_ud(_Uty uval)

@@ -548,6 +548,9 @@ class io_transport : public io_base
   friend class io_service;
   friend class io_send_op;
   friend class io_sendto_op;
+  friend class io_event;
+
+  io_transport(const io_transport&) = delete;
 
 public:
   unsigned int id() const { return id_; }
@@ -615,7 +618,7 @@ protected:
   // mark whether pollout event registerred.
   bool pollout_registerred_ = false;
 
-public:
+private:
   // The user data
   union
   {
@@ -703,15 +706,16 @@ class io_event final
 public:
   io_event(int cindex, int kind, int error, transport_handle_t transport)
       : timestamp_(highp_clock()), cindex_(cindex), kind_(kind), status_(error),
-        transport_(std::move(transport))
+        transport_(transport), transport_ud_(transport->ud_.ptr)
   {}
   io_event(int cindex, int type, std::vector<char> packet, transport_handle_t transport)
       : timestamp_(highp_clock()), cindex_(cindex), kind_(type), status_(0),
-        transport_(std::move(transport)), packet_(std::move(packet))
+        packet_(std::move(packet)), transport_(transport), transport_ud_(transport->ud_.ptr)
   {}
   io_event(io_event&& rhs)
       : timestamp_(rhs.timestamp_), cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_),
-        transport_(std::move(rhs.transport_)), packet_(std::move(rhs.packet_))
+        packet_(std::move(rhs.packet_)), transport_(rhs.transport_),
+        transport_ud_(rhs.transport_ud_)
   {}
 
   ~io_event() {}
@@ -725,6 +729,19 @@ public:
 
   transport_handle_t transport() const { return transport_; }
 
+  /* Gets to transport user data when process this event */
+  template <typename _Uty = void*> _Uty transport_ud() const
+  {
+    return reinterpret_cast<_Uty>(transport_ud_);
+  }
+
+  /* Sets trasnport user data when process this event */
+  template <typename _Uty = void*> void transport_ud(_Uty uval)
+  {
+    if (transport_)
+      transport_->ud_.ptr = reinterpret_cast<void*>(uval);
+  }
+
   long long timestamp() const { return timestamp_; }
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
@@ -737,6 +754,7 @@ private:
   int kind_;
   int status_;
   transport_handle_t transport_;
+  void* transport_ud_;
   std::vector<char> packet_;
 };
 

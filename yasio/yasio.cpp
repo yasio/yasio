@@ -1143,6 +1143,9 @@ void io_service::handle_close(transport_handle_t thandle)
   YASIO_KLOG("[index: %d] the connection #%u(%p) is lost, ec=%d, detail:%s", ctx->index_,
              thandle->id_, thandle, ec, io_service::strerror(ec));
 
+  // @Notify connection lost
+  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, thandle)));
+
   cleanup_io(thandle, false);
 
   deallocate_transport(thandle);
@@ -1155,9 +1158,6 @@ void io_service::handle_close(transport_handle_t thandle)
     ctx->state_ = io_base::state::CLOSED;
     yasio__clearhiword(ctx->properties_); // clear private flags
   }
-
-  // @Notify connection lost
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, thandle)));
 }
 void io_service::register_descriptor(const socket_native_type fd, int flags)
 {

@@ -736,7 +736,7 @@ public:
   /* Gets to transport user data when process this event */
   template <typename _Uty = void*> _Uty transport_ud() const
   {
-    return (_Uty)(uint64_t)transport_ud_;
+    return (_Uty)(uintptr_t)transport_ud_;
   }
 
   /* Sets trasnport user data when process this event */

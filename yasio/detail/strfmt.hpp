@@ -106,7 +106,7 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _vstrfmt(size_t n, const _Elem*
     see: http://man7.org/linux/man-pages/man3/vsnprintf.3.html
     */
 #if (defined(__linux__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 1)))) ||    \
-    (defined(_MSC_VER) && _MSC_VER < 1900)
+    defined(_MSC_VER)
     enum : size_t
     {
       enlarge_limits = (1 << 20), // limits the buffer cost memory less than 2MB

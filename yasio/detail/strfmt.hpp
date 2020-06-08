@@ -42,12 +42,6 @@ template <typename _Elem> struct format_traits
 {};
 template <> struct format_traits<char>
 {
-  /* @pitfall: The behavior of vsnprintf are different at different standard implemetations
-   **      VS2013/glibc-2.0: returns -1 when buffer insufficient
-   **      VS2015+/glbc-2.1: returns the actural needed length when buffer insufficient
-   ** see reference:
-   **      http://www.cplusplus.com/reference/cstdio/vsnprintf/
-   */
   static int format(char* const _Buffer, size_t const _BufferCount, char const* const _Format,
                     va_list _ArgList)
   {
@@ -57,7 +51,6 @@ template <> struct format_traits<char>
 };
 template <> struct format_traits<wchar_t>
 {
-  /* see: http://www.cplusplus.com/reference/cwchar/vswprintf/ */
   static int format(wchar_t* const _Buffer, size_t const _BufferCount, wchar_t const* const _Format,
                     va_list _ArgList)
   {
@@ -66,11 +59,6 @@ template <> struct format_traits<wchar_t>
   static const wchar_t* report_error() { return L"yasio::_strfmt: an error is encountered!"; }
 };
 
-/*
- * --- This is a C++ universal sprintf in the future, works correct at all compilers.
- * Notes: should call v_start/va_end every time when call vsnprintf,
- *  see: https://github.com/cocos2d/cocos2d-x/pull/18426
- */
 template <class _Elem, class _Traits = std::char_traits<_Elem>,
           class _Alloc = std::allocator<_Elem>>
 inline std::basic_string<_Elem, _Traits, _Alloc> _vstrfmt(size_t n, const _Elem* format,
@@ -102,11 +90,17 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _vstrfmt(size_t n, const _Elem*
   else
   { // handle return -1 when buffer insufficient
     /*
-    vs2013/older & glibc <= 2.0.6, they would return -1 when the output was truncated.
-    see: http://man7.org/linux/man-pages/man3/vsnprintf.3.html
+    return -1 when the output was truncated:
+      - vsnprintf: vs2013/older & glibc <= 2.0.6
+      - vswprintf: all standard implemetations
+    references:
+      - https://man7.org/linux/man-pages/man3/vsnprintf.3.html
+      - https://www.cplusplus.com/reference/cstdio/vsnprintf/
+      - https://www.cplusplus.com/reference/cwchar/vswprintf/
+      - https://stackoverflow.com/questions/51134188/why-vsnwprintf-missing
+      - https://stackoverflow.com/questions/10446754/vsnwprintf-alternative-on-linux
+
     */
-#if (defined(__linux__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 1)))) ||    \
-    defined(_MSC_VER)
     enum : size_t
     {
       enlarge_limits = (1 << 20), // limits the buffer cost memory less than 2MB
@@ -124,12 +118,6 @@ inline std::basic_string<_Elem, _Traits, _Alloc> _vstrfmt(size_t n, const _Elem*
       buf.resize(nret);
     else
       buf = format_traits<_Elem>::report_error();
-#else
-    /* other standard implementation
-    see: http://www.cplusplus.com/reference/cstdio/vsnprintf/
-    */
-    buf = format_traits<_Elem>::report_error();
-#endif
   }
 
   return buf;

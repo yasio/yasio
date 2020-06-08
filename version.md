@@ -6,6 +6,7 @@ yaiso-3.33.1
 * Explicit socket_select_interrupter workaround code logic for borken firewalls on Windows.
 * Sets and pass user data of transport through event.
 * Fix KCP do_read may can't dispatch upper data to user.
+* Fix behavior of yasio::wcsfmt.
   
   
 yasio-3.33.0

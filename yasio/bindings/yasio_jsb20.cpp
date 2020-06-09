@@ -26,6 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #define YASIO_HEADER_ONLY 1
+#define YASIO_HAVE_KCP 1
 
 #include "yasio/bindings/yasio_jsb20.h"
 #include "yasio/yasio.hpp"
@@ -547,6 +548,17 @@ static bool js_yasio_ibstream_seek(se::State& s)
 }
 SE_BIND_FUNC(js_yasio_ibstream_seek)
 
+static bool js_yasio_ibstream_to_string(se::State& s)
+{
+  yasio::ibstream* cobj = (yasio::ibstream*)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+
+  s.rval().setString(std::string(cobj->data(), cobj->length()));
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_ibstream_to_string)
+
 void js_register_yasio_ibstream(se::Object* obj)
 {
   auto cls = se::Class::create("ibstream", obj, nullptr, nullptr);
@@ -570,6 +582,7 @@ void js_register_yasio_ibstream(se::Object* obj)
   DEFINE_IBSTREAM_FUNC(read_bytes);
   DEFINE_IBSTREAM_FUNC(length);
   DEFINE_IBSTREAM_FUNC(seek);
+  DEFINE_IBSTREAM_FUNC(to_string);
   cls->defineFinalizeFunction(_SE(js_yasio_ibstream__dtor));
   cls->install();
   JSBClassType::registerClass<yasio::ibstream>(cls);

@@ -70,6 +70,7 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
 #  if defined(__APPLE__)
 #    include <TargetConditionals.h>
 #    if TARGET_OS_IPHONE == 1
+#      include <arpa/nameser.h>
 #      include <resolv.h>
 #    endif
 #  endif
@@ -1524,7 +1525,7 @@ void io_service::init_ares_channel()
     if (status == 0)
     {
       union res_sockaddr_union nsaddrs[MAXNS];
-      int nscnt = ::res_getservers(res, nsaddrs, MAXNS);
+      int nscnt = ::res_getservers(&res, nsaddrs, MAXNS);
       for (unsigned int i = 0; i < nscnt; ++i)
       {
         auto paddr = &nsaddrs[i].sin.sin_addr;

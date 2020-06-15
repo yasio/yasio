@@ -1420,7 +1420,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
       ; // Nothing need to do
     else
     {
-      int error = ERR_get_error();
+      int error = static_cast<int>(ERR_get_error());
       if (error)
       {
         char errstring[256] = {0};

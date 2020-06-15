@@ -61,12 +61,6 @@ SOFTWARE.
 #endif
 
 #if defined(YASIO_HAVE_CARES)
-extern "C" {
-#  include "c-ares/ares.h"
-#  if defined(__ANDROID__)
-extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_jni.cpp'
-#  endif
-}
 #  if defined(__APPLE__)
 #    include <TargetConditionals.h>
 #    if TARGET_OS_IPHONE == 1
@@ -74,6 +68,13 @@ extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_j
 #      include <resolv.h>
 #    endif
 #  endif
+extern "C" {
+#  include "ares_config.h"
+#  include "c-ares/ares.h"
+#  if defined(__ANDROID__)
+extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_jni.cpp'
+#  endif
+}
 #endif
 
 #define YASIO_KLOG_CP(custom_print, format, ...)                                                   \

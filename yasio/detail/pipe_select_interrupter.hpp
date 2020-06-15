@@ -63,7 +63,7 @@ public:
     {
       // Clear all data from the pipe.
       char data[1024];
-      int bytes_read = ::read(read_descriptor_, data, sizeof(data));
+      int bytes_read = static_cast<int>(::read(read_descriptor_, data, sizeof(data)));
       if (bytes_read == sizeof(data))
         continue;
       if (bytes_read > 0)

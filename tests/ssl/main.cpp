@@ -16,12 +16,6 @@ void yasioTest()
 
   io_service service(endpoints, 1);
 
-  resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname,
-                           unsigned short port) {
-    return service.builtin_resolv(endpoints, hostname, port);
-  };
-  service.set_option(YOPT_S_RESOLV_FN, &resolv);
-
   std::vector<transport_handle_t> transports;
 
   deadline_timer udpconn_delay(service);

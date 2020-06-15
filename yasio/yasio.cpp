@@ -868,7 +868,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
   this->max_nfds_ = 0;
 
   options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
-    return this->builtin_resolv(eps, host, port);
+    return this->resolve(eps, host, port);
   };
 
   register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);

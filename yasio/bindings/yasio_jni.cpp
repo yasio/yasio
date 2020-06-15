@@ -161,28 +161,33 @@ int yasio__ares_init_android()
   return ret;
 }
 
-int yasio__jni_onload(void* vm, void* reserved)
+void yasio__jni_init(void* vm, void* env)
 {
   yasio__jvm = (JavaVM*)vm;
-
-  JNIEnv* env = nullptr;
-  jint res    = yasio__jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
-  if (res == JNI_OK)
-  {
+  JNIEnv* jenv = (JNIEnv*)env;
+  if(jenv != nullptr) {
     // must find class at here,
     // see: https://developer.android.com/training/articles/perf-jni#faq_FindClass
-    jclass obj_cls = env->FindClass("org/yasio/AppGlobals");
+    jclass obj_cls = jenv->FindClass("org/yasio/AppGlobals");
     if (obj_cls != nullptr)
     {
-      yasio__appglobals_cls = (jclass)env->NewGlobalRef(obj_cls);
-      env->DeleteLocalRef(obj_cls);
+      yasio__appglobals_cls = (jclass)jenv->NewGlobalRef(obj_cls);
+      jenv->DeleteLocalRef(obj_cls);
     }
+
+    if (jenv->ExceptionOccurred())
+      jenv->ExceptionClear();
   }
-
-  if (env != nullptr && env->ExceptionOccurred())
-    env->ExceptionClear();
-
   ::ares_library_init_jvm(yasio__jvm);
+}
+
+int yasio__jni_onload(void* vm, void* /*reserved*/)
+{
+  JNIEnv* env = nullptr;
+  jint res    = ((JavaVM*)vm)->GetEnv((void**)&env, JNI_VERSION_1_6);
+  if (res == JNI_OK)
+    yasio__jni_init(vm, env);
+
   return JNI_VERSION_1_6;
 }
 #  if defined(YASIO_BUILD_AS_SHARED)

@@ -123,8 +123,12 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
         return std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(ev->packet()))
                                                       : new yasio::ibstream(ev->packet()));
       },
-      "cindex", &io_event::cindex, "transport", &io_event::transport, "timestamp",
-      &io_event::timestamp);
+      "cindex", &io_event::cindex, "transport",
+      &io_event::transport
+#  if !defined(YASIO_MINIFY_EVENT)
+      , "timestamp", &io_event::timestamp
+#  endif
+  );
 
   lyasio.new_usertype<io_service>(
       "io_service", "new",

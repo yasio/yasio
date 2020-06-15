@@ -1427,6 +1427,7 @@ bool js_yasio_io_event_transport(JSContext* ctx, uint32_t argc, jsval* vp)
   return true;
 }
 
+#if !defined(YASIO_MINIFY_EVENT)
 bool js_yasio_io_event_timestamp(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   bool ok        = true;
@@ -1443,6 +1444,7 @@ bool js_yasio_io_event_timestamp(JSContext* ctx, uint32_t argc, jsval* vp)
 
   return true;
 }
+#endif
 
 void js_register_yasio_io_event(JSContext* ctx, JS::HandleObject global)
 {
@@ -1461,13 +1463,16 @@ void js_register_yasio_io_event(JSContext* ctx, JS::HandleObject global)
   static JSPropertySpec properties[] = {JS_PS_END};
 
   static JSFunctionSpec funcs[] = {
-      JS_FN("kind", js_yasio_io_event_kind, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("status", js_yasio_io_event_status, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("packet", js_yasio_io_event_packet, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("cindex", js_yasio_io_event_cindex, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("transport", js_yasio_io_event_transport, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("timestamp", js_yasio_io_event_timestamp, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FS_END};
+    JS_FN("kind", js_yasio_io_event_kind, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+    JS_FN("status", js_yasio_io_event_status, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+    JS_FN("packet", js_yasio_io_event_packet, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+    JS_FN("cindex", js_yasio_io_event_cindex, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+    JS_FN("transport", js_yasio_io_event_transport, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+#if !defined(YASIO_MINIFY_EVENT)
+    JS_FN("timestamp", js_yasio_io_event_timestamp, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+#endif
+    JS_FS_END
+  };
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 

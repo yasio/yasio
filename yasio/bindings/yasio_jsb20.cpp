@@ -1083,6 +1083,7 @@ bool js_yasio_io_event_cindex(se::State& s)
 }
 SE_BIND_FUNC(js_yasio_io_event_cindex)
 
+#if !defined(YASIO_MINIFY_EVENT)
 bool js_yasio_io_event_timestamp(se::State& s)
 {
   auto cobj = (io_event*)s.nativeThisObject();
@@ -1091,6 +1092,7 @@ bool js_yasio_io_event_timestamp(se::State& s)
   return true;
 }
 SE_BIND_FUNC(js_yasio_io_event_timestamp)
+#endif
 
 void js_register_yasio_io_event(se::Object* obj)
 {
@@ -1104,8 +1106,9 @@ void js_register_yasio_io_event(se::Object* obj)
   DEFINE_IO_EVENT_FUNC(packet);
   DEFINE_IO_EVENT_FUNC(cindex);
   DEFINE_IO_EVENT_FUNC(transport);
+#if !defined(YASIO_MINIFY_EVENT)
   DEFINE_IO_EVENT_FUNC(timestamp);
-
+#endif
   cls->defineFinalizeFunction(_SE(jsb_yasio_io_event__dtor));
   cls->install();
   JSBClassType::registerClass<io_event>(cls);

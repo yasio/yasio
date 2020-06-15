@@ -759,9 +759,9 @@ public:
   /* Sets trasnport user data when process this event */
   template <typename _Uty = void*> void transport_udata(_Uty uval)
   {
-    transport_udata_ = (void*)uval;
+    transport_udata_ = (void*)(uintptr_t)uval;
     if (transport_)
-      transport_->ud_.ptr = (void*)uval;
+      transport_->ud_.ptr = (void*)(uintptr_t)uval;
   }
 
   unsigned int transport_id() const { return transport_id_; }

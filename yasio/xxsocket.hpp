@@ -374,6 +374,12 @@ YASIO__NS_INLINE namespace ip
   YASIO__DECL int inet_pton(int af, const char* src, void* dst);
   } // namespace compat
 
+  inline bool is_global_in4_addr(const in_addr* addr)
+  {
+    return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr);
+  };
+  inline bool is_global_in6_addr(const in6_addr* addr) { return IN6_IS_ADDR_GLOBAL(addr); };
+
   union endpoint
   {
   public:
@@ -499,11 +505,14 @@ YASIO__NS_INLINE namespace ip
     {
       std::string ipstring(IN_MAX_ADDRSTRLEN - 1, '\0');
 
-      auto str = to_ptrstring(&ipstring.front());
-      ipstring.resize(str ? strlen(str) : 0);
+      auto str = inaddr_to_string(
+          &ipstring.front(), [](const in_addr*) { return true; },
+          [](const in6_addr*) { return true; });
 
+      ipstring.resize(str ? strlen(str) : 0);
       return ipstring;
     }
+    // to_string with port, can simply add prefix "http::" or "https://" for url
     std::string to_string() const
     {
       std::string addr(IN_MAX_ADDRSTRLEN + sizeof("65535") + 2, '[');
@@ -571,57 +580,47 @@ YASIO__NS_INLINE namespace ip
     YASIO_OBSOLETE_DEPRECATE(endpoint::format_v4)
     std::string to_strf_v4(const char* format) { return format_v4(format); }
 
-    const char* to_ptrstring(char* str /*[IN_MAX_ADDRSTRLEN]*/) const
+    // in_addr(ip) to string with pred
+    template <typename _Pred4, typename _Pred6>
+    const char* inaddr_to_string(char* str /*[IN_MAX_ADDRSTRLEN]*/, _Pred4&& pred4,
+                                 _Pred6&& pred6) const
     {
       switch (af())
       {
         case AF_INET:
-          return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
-        case AF_INET6:
-          return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
-      }
-      return nullptr;
-    }
-
-    const char* to_ptrstring_nl(char* str /*[IN_MAX_ADDRSTRLEN]*/) const
-    {
-      switch (af())
-      {
-        case AF_INET:
-          if (!IN4_IS_ADDR_LOOPBACK(&in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&in4_.sin_addr))
+          if (pred4(&in4_.sin_addr))
             return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
           break;
         case AF_INET6:
-          if (IN6_IS_ADDR_GLOBAL(&in6_.sin6_addr))
+          if (pred6(&in6_.sin6_addr))
             return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
           break;
       }
       return nullptr;
     }
 
-    void to_csv_nl(std::string& csv)
+    // in_addr(ip) to csv without loopback or linklocal address
+    void inaddr_to_csv_nl(std::string& csv)
     {
       char str[INET6_ADDRSTRLEN] = {0};
-      if (to_ptrstring_nl(str))
+      if (inaddr_to_string(str, is_global_in4_addr, is_global_in6_addr))
       {
         csv += str;
         csv += ',';
       }
     }
 
-    // the sockaddr to string helper function
-    static std::string saddr_to_string(const sockaddr* addr) { endpoint(addr).ip(); }
-
-    // the sockaddr csv string helper function without loopback or linklocal address
-    static void saddr_to_csv_nl(const sockaddr* addr, std::string& csv)
+    // the in_addr(from sockaddr) to csv string helper function without loopback or linklocal
+    // address
+    static void inaddr_to_csv_nl(const sockaddr* addr, std::string& csv)
     {
-      endpoint(addr).to_csv_nl(csv);
+      endpoint(addr).inaddr_to_csv_nl(csv);
     }
 
     // the in_addr/in6_addr to csv string helper function without loopback or linklocal address
     static void inaddr_to_csv_nl(int family, const in_addr* inaddr, std::string& csv)
     {
-      endpoint(family, inaddr).to_csv_nl(csv);
+      endpoint(family, inaddr).inaddr_to_csv_nl(csv);
     }
 
     sockaddr sa_;

@@ -1,3 +1,8 @@
+yaiso-3.33.2
+  
+* Fix c-ares doesn't get system dns for ios.
+  
+  
 yaiso-3.33.1
   
   

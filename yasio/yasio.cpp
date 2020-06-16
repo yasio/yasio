@@ -1526,7 +1526,7 @@ void io_service::init_ares_channel()
       union res_sockaddr_union nsaddrs[MAXNS];
       int nscnt = ::res_getservers(&res, nsaddrs, MAXNS);
       for (unsigned int i = 0; i < nscnt; ++i)
-        endpoint::saddr_to_csv_nl((sockaddr*)&nsaddrs[i].sin, nscsv);
+        endpoint::inaddr_to_csv_nl((sockaddr*)&nsaddrs[i].sin, nscsv);
     }
     ::res_nclose(&res);
     if (!nscsv.empty())

@@ -188,6 +188,8 @@ typedef int socket_native_type;
 #  define EAGAIN WSATRY_AGAIN
 #endif
 
+#define IN_MAX_ADDRSTRLEN INET6_ADDRSTRLEN
+
 #if !defined(_WS2IPDEF_)
 inline bool IN4_IS_ADDR_LOOPBACK(const in_addr* a)
 {
@@ -372,17 +374,6 @@ YASIO__NS_INLINE namespace ip
   YASIO__DECL int inet_pton(int af, const char* src, void* dst);
   } // namespace compat
 
-  // the saddr to string helper function
-  inline static std::string saddr_to_string(int af, const void* saddr)
-  {
-    std::string ipstring(64, '\0');
-
-    auto str = compat::inet_ntop(af, saddr, &ipstring.front(), 64);
-    ipstring.resize(str ? strlen(str) : 0);
-
-    return ipstring;
-  }
-
   union endpoint
   {
   public:
@@ -392,6 +383,10 @@ YASIO__NS_INLINE namespace ip
     explicit endpoint(const sockaddr* info) { assign(info); }
     explicit endpoint(const char* addr, unsigned short port = 0) { assign(addr, port); }
     explicit endpoint(uint32_t addr, unsigned short port = 0) { assign(addr, port); }
+    endpoint(int family, const in_addr* addr, unsigned short port = 0)
+    {
+      assign(family, addr, port);
+    }
 
     endpoint& operator=(const endpoint& rhs)
     {
@@ -416,6 +411,21 @@ YASIO__NS_INLINE namespace ip
           break;
         case AF_INET6:
           ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
+          break;
+      }
+    }
+    void assign(int family, const in_addr* addr, u_short port)
+    {
+      this->zeroset();
+      this->af(family);
+      this->port(port);
+      switch (family)
+      {
+        case AF_INET:
+          ::memcpy(&in4_.sin_addr, addr, sizeof(in_addr));
+          break;
+        case AF_INET6:
+          ::memcpy(&in6_.sin6_addr, addr, sizeof(in6_addr));
           break;
       }
     }
@@ -487,12 +497,16 @@ YASIO__NS_INLINE namespace ip
     }
     std::string ip() const
     {
-      return saddr_to_string(sa_.sa_family, sa_.sa_family == AF_INET ? (void*)&in4_.sin_addr
-                                                                     : (void*)&in6_.sin6_addr);
+      std::string ipstring(IN_MAX_ADDRSTRLEN - 1, '\0');
+
+      auto str = to_ptrstring(&ipstring.front());
+      ipstring.resize(str ? strlen(str) : 0);
+
+      return ipstring;
     }
     std::string to_string() const
     {
-      std::string addr(64, '[');
+      std::string addr(IN_MAX_ADDRSTRLEN + sizeof("65535") + 2, '[');
 
       size_t n = 0;
 
@@ -557,6 +571,59 @@ YASIO__NS_INLINE namespace ip
     YASIO_OBSOLETE_DEPRECATE(endpoint::format_v4)
     std::string to_strf_v4(const char* format) { return format_v4(format); }
 
+    const char* to_ptrstring(char* str /*[IN_MAX_ADDRSTRLEN]*/) const
+    {
+      switch (af())
+      {
+        case AF_INET:
+          return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
+        case AF_INET6:
+          return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
+      }
+      return nullptr;
+    }
+
+    const char* to_ptrstring_nl(char* str /*[IN_MAX_ADDRSTRLEN]*/) const
+    {
+      switch (af())
+      {
+        case AF_INET:
+          if (!IN4_IS_ADDR_LOOPBACK(&in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&in4_.sin_addr))
+            return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
+          break;
+        case AF_INET6:
+          if (IN6_IS_ADDR_GLOBAL(&in6_.sin6_addr))
+            return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
+          break;
+      }
+      return nullptr;
+    }
+
+    void to_csv_nl(std::string& csv)
+    {
+      char str[INET6_ADDRSTRLEN] = {0};
+      if (to_ptrstring_nl(str))
+      {
+        csv += str;
+        csv += ',';
+      }
+    }
+
+    // the sockaddr to string helper function
+    static std::string saddr_to_string(const sockaddr* addr) { endpoint(addr).ip(); }
+
+    // the sockaddr csv string helper function without loopback or linklocal address
+    static void saddr_to_csv_nl(const sockaddr* addr, std::string& csv)
+    {
+      endpoint(addr).to_csv_nl(csv);
+    }
+
+    // the in_addr/in6_addr to csv string helper function without loopback or linklocal address
+    static void inaddr_to_csv_nl(int family, const in_addr* inaddr, std::string& csv)
+    {
+      endpoint(family, inaddr).to_csv_nl(csv);
+    }
+
     sockaddr sa_;
     sockaddr_in in4_;
     sockaddr_in6 in6_;
@@ -609,12 +676,15 @@ public:
 
   // Construct with a exist socket handle
   YASIO__DECL xxsocket(socket_native_type handle);
+  // Disable copy constructor
   YASIO__DECL xxsocket(const xxsocket&) = delete;
-  YASIO__DECL xxsocket(xxsocket&&); // Construct with a exist socket, it will replace the source
+  // Construct with a exist socket, it will replace the source
+  YASIO__DECL xxsocket(xxsocket&&);
 
   YASIO__DECL xxsocket& operator=(socket_native_type handle);
-  YASIO__DECL xxsocket&
-  operator=(const xxsocket&) = delete; // Construct with a exist socket, it will replace the source
+  // Disable copy assign operator
+  YASIO__DECL xxsocket& operator=(const xxsocket&) = delete;
+  // Construct with a exist socket, it will replace the source
   YASIO__DECL xxsocket& operator=(xxsocket&&);
 
   // See also as function: open

@@ -1515,45 +1515,24 @@ void io_service::init_ares_channel()
   {
     YASIO_KLOG("[c-ares] init channel succeed");
 
-    std::string strdns;
-    char addr_buf[INET6_ADDRSTRLEN];
+    std::string nscsv;
 
 #  if TARGET_OS_IPHONE == 1
     struct __res_state res;
     status = ::res_ninit(&res);
     YASIO_KLOG("[c-ares] res_ninit status=%d, res.nscount=%d", status, res.nscount);
-
     if (status == 0)
     {
       union res_sockaddr_union nsaddrs[MAXNS];
       int nscnt = ::res_getservers(&res, nsaddrs, MAXNS);
       for (unsigned int i = 0; i < nscnt; ++i)
-      {
-        auto paddr = &nsaddrs[i].sin.sin_addr;
-        ::memset(addr_buf, 0x0, sizeof(addr_buf));
-        switch (nsaddrs[i].sin.sin_family)
-        {
-          case AF_INET:
-            if (!IN4_IS_ADDR_LOOPBACK(paddr) && !IN4_IS_ADDR_LINKLOCAL(paddr))
-              ::inet_ntop(AF_INET, paddr, addr_buf, INET_ADDRSTRLEN);
-            break;
-          case AF_INET6:
-            if (IN6_IS_ADDR_GLOBAL((in6_addr*)paddr))
-              ::inet_ntop(AF_INET6, paddr, addr_buf, INET6_ADDRSTRLEN);
-            break;
-        }
-        if (addr_buf[0])
-        {
-          strdns += addr_buf;
-          strdns.push_back(',');
-        }
-      }
+        endpoint::saddr_to_csv_nl((sockaddr*)&nsaddrs[i].sin, nscsv);
     }
     ::res_nclose(&res);
-    if (!strdns.empty())
+    if (!nscsv.empty())
     {
-      ::ares_set_servers_csv(ares_, strdns.c_str());
-      strdns.clear();
+      ::ares_set_servers_csv(ares_, nscsv.c_str());
+      nscsv.clear();
     }
 #  endif
 
@@ -1562,45 +1541,19 @@ void io_service::init_ares_channel()
     status                       = ::ares_get_servers(ares_, &name_servers);
     if (status == ARES_SUCCESS)
     {
-      int valid_flags = 0;
       for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
-      {
-        ::memset(addr_buf, 0x0, sizeof(addr_buf));
-        auto paddr = (in_addr*)&name_server->addr;
-        switch (name_server->family)
-        {
-          case AF_INET:
-            if (!IN4_IS_ADDR_LOOPBACK(paddr) && !IN4_IS_ADDR_LINKLOCAL(paddr))
-            {
-              ::inet_ntop(AF_INET, paddr, addr_buf, INET_ADDRSTRLEN);
-              yasio__setbits(valid_flags, ipsv_ipv4);
-            }
-            break;
-          case AF_INET6:
-            if (IN6_IS_ADDR_GLOBAL((in6_addr*)paddr))
-            {
-              yasio__setbits(valid_flags, ipsv_ipv6);
-              ::inet_ntop(AF_INET6, paddr, addr_buf, INET6_ADDRSTRLEN);
-            }
-            break;
-        }
-        if (addr_buf[0])
-        {
-          strdns += addr_buf;
-          strdns.push_back(',');
-        }
-      }
-      if (valid_flags) // if no valid name server, use predefined fallback dns
-        YASIO_KLOG("[c-ares] use system dns: %s", strdns.c_str());
+        endpoint::inaddr_to_csv_nl(name_server->family, (in_addr*)&name_server->addr, nscsv);
+
+      if (!nscsv.empty()) // if no valid name server, use predefined fallback dns
+        YASIO_KLOG("[c-ares] use system dns: %s", nscsv.c_str());
       else
       {
         status = ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
         if (status == 0)
-          YASIO_KLOG("[c-ares] get system dns failed, set fallback dns: '%s' succeed",
-                     YASIO_CARES_FALLBACK_DNS);
+          YASIO_KLOG("[c-ares] set fallback dns: '%s' succeed", YASIO_CARES_FALLBACK_DNS);
         else
-          YASIO_KLOG("[c-ares] get system dns failed, set fallback dns: '%s' failed, detail: %s",
-                     YASIO_CARES_FALLBACK_DNS, ::ares_strerror(status));
+          YASIO_KLOG("[c-ares] set fallback dns: '%s' failed, detail: %s", YASIO_CARES_FALLBACK_DNS,
+                     ::ares_strerror(status));
       }
       ::ares_free_data(name_servers);
     }

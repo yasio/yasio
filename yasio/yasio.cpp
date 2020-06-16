@@ -1542,7 +1542,7 @@ void io_service::init_ares_channel()
     if (status == ARES_SUCCESS)
     {
       for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
-        endpoint::inaddr_to_csv_nl(name_server->family, (in_addr*)&name_server->addr, nscsv);
+        endpoint::inaddr_to_csv_nl(name_server->family, &name_server->addr, nscsv);
 
       if (!nscsv.empty()) // if no valid name server, use predefined fallback dns
         YASIO_KLOG("[c-ares] use system dns: %s", nscsv.c_str());

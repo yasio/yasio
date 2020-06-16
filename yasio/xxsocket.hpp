@@ -389,10 +389,7 @@ YASIO__NS_INLINE namespace ip
     explicit endpoint(const sockaddr* info) { assign(info); }
     explicit endpoint(const char* addr, unsigned short port = 0) { assign(addr, port); }
     explicit endpoint(uint32_t addr, unsigned short port = 0) { assign(addr, port); }
-    endpoint(int family, const in_addr* addr, unsigned short port = 0)
-    {
-      assign(family, addr, port);
-    }
+    endpoint(int family, const void* addr, unsigned short port = 0) { assign(family, addr, port); }
 
     endpoint& operator=(const endpoint& rhs)
     {
@@ -420,7 +417,7 @@ YASIO__NS_INLINE namespace ip
           break;
       }
     }
-    void assign(int family, const in_addr* addr, u_short port)
+    void assign(int family, const void* addr, u_short port)
     {
       this->zeroset();
       this->af(family);
@@ -618,7 +615,9 @@ YASIO__NS_INLINE namespace ip
     }
 
     // the in_addr/in6_addr to csv string helper function without loopback or linklocal address
-    static void inaddr_to_csv_nl(int family, const in_addr* inaddr, std::string& csv)
+    // the inaddr should be union of in_addr,in6_addr or ensure it's memory enough when
+    // family=AF_INET6
+    static void inaddr_to_csv_nl(int family, const void* inaddr, std::string& csv)
     {
       endpoint(family, inaddr).inaddr_to_csv_nl(csv);
     }

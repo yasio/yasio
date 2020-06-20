@@ -1530,6 +1530,7 @@ void io_service::init_ares_channel()
 bool io_service::config_ares_name_servers(bool dirty)
 {
   std::string nscsv;
+  int status = 0;
   if (dirty)
   {
 #  if defined(__APPLE__)
@@ -1549,7 +1550,7 @@ bool io_service::config_ares_name_servers(bool dirty)
     auto dns_servers   = ::ares_get_android_server_list(MAXNS, &num_servers);
     if (dns_servers != nullptr)
     {
-      for (i = 0; i < num_servers; ++i)
+      for (int i = 0; i < num_servers; ++i)
       {
         nscsv += dns_servers[i];
         nscsv += ',';
@@ -1568,7 +1569,7 @@ bool io_service::config_ares_name_servers(bool dirty)
 
   // list all dns servers for resov problem diagnosis
   ares_addr_node* name_servers = nullptr;
-  int status                   = ::ares_get_servers(ares_, &name_servers);
+  status                       = ::ares_get_servers(ares_, &name_servers);
   if (status == ARES_SUCCESS)
   {
     for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)

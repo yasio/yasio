@@ -48,12 +48,7 @@ SOFTWARE.
 #include <fcntl.h>
 
 #if defined(YASIO_HAVE_SSL)
-#  include <openssl/bio.h>
-#  include <openssl/ssl.h>
-#  include <openssl/err.h>
-#  if OPENSSL_VERSION_NUMBER >= 0x10101000L
-#    define YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH
-#  endif
+#  include "yasio/detail/ssl.hpp"
 #endif
 
 #if defined(YASIO_HAVE_KCP)
@@ -61,22 +56,7 @@ SOFTWARE.
 #endif
 
 #if defined(YASIO_HAVE_CARES)
-extern "C" {
-#  include "ares_config.h"
-#  include "c-ares/ares.h"
-#  include "c-ares/ares_android.h"
-}
-
-#  if defined(__ANDROID__)
-#    include "yasio/platform/yasio_jni.hpp"
-#  elif defined(__APPLE__)
-#    include <TargetConditionals.h>
-#    if TARGET_OS_IPHONE == 1
-#      include <arpa/nameser.h>
-#      include <resolv.h>
-#    endif
-#  endif
-
+#  include "yasio/detail/ares.hpp"
 #endif
 
 #define YASIO_KLOG_CP(custom_print, format, ...)                                                   \
@@ -1559,7 +1539,7 @@ bool io_service::config_ares_name_servers(bool dirty)
       ::ares_free(dns_servers);
     }
 #  endif
-
+    ::ares_free(0);
     if (!nscsv.empty())
     {
       ::ares_set_servers_csv(ares_, nscsv.c_str());

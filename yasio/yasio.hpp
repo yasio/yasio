@@ -142,7 +142,7 @@ enum
   YOPT_S_DNS_QUERIES_TRIES,
 
   // Set dns server dirty
-  // params: @NA
+  // params: reserved : int(1)
   // remark:
   //        a. this option only works with c-ares enabled
   //        b. you should set this option after your mobile network changed

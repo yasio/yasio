@@ -1539,7 +1539,6 @@ bool io_service::config_ares_name_servers(bool dirty)
       ::ares_free(dns_servers);
     }
 #  endif
-    ::ares_free(0);
     if (!nscsv.empty())
     {
       ::ares_set_servers_csv(ares_, nscsv.c_str());

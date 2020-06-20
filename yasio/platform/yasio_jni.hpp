@@ -27,4 +27,6 @@ SOFTWARE.
 extern "C" void yasio__jni_init(void* vm, void* env);
 extern "C" int yasio__jni_onload(void* vm, void* reserved);
 
+extern "C" int yasio__ares_init_android();
+
 #endif

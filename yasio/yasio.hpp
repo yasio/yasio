@@ -141,6 +141,13 @@ enum
   //        b. relative option: YOPT_S_DNS_QUERIES_TIMEOUT
   YOPT_S_DNS_QUERIES_TRIES,
 
+  // Set dns server dirty
+  // params: @NA
+  // remark:
+  //        a. this option only works with c-ares enabled
+  //        b. you should set this option after your mobile network changed
+  YOPT_S_DNS_DIRTY,
+
   // Set whether ignore udp error, by default is 1: don't trigger handle_close,
   // params: ignored : int(1)
   YOPT_S_IGNORE_UDP_ERROR,
@@ -970,6 +977,7 @@ private:
   }
   YASIO__DECL void process_ares_requests(fd_set* fds_array);
   YASIO__DECL void init_ares_channel();
+  YASIO__DECL bool config_ares_name_servers(bool dirty);
   YASIO__DECL void cleanup_ares_channel();
 #endif
 
@@ -1077,6 +1085,7 @@ private:
     highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
     highp_time_t dns_queries_timeout_ = 5LL * std::micro::den;
     int dns_queries_tries_            = 5;
+    bool dns_dirty_                   = false;
 
     bool deferred_event_ = true;
 

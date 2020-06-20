@@ -64,17 +64,19 @@ SOFTWARE.
 extern "C" {
 #  include "ares_config.h"
 #  include "c-ares/ares.h"
-#  if defined(__ANDROID__)
-extern int yasio__ares_init_android(); // implemented at 'yasio/bindings/yasio_jni.cpp'
-#  endif
+#  include "c-ares/ares_android.h"
 }
-#  if defined(__APPLE__)
+
+#  if defined(__ANDROID__)
+#    include "yasio/platform/yasio_jni.hpp"
+#  elif defined(__APPLE__)
 #    include <TargetConditionals.h>
 #    if TARGET_OS_IPHONE == 1
 #      include <arpa/nameser.h>
 #      include <resolv.h>
 #    endif
 #  endif
+
 #endif
 
 #define YASIO_KLOG_CP(custom_print, format, ...)                                                   \
@@ -258,6 +260,7 @@ struct yasio__global_state
       ::ares_library_cleanup();
 #endif
   }
+
   int init_flags = 0;
   int max_alloc_size;
 };
@@ -1514,10 +1517,22 @@ void io_service::init_ares_channel()
   if (status == ARES_SUCCESS)
   {
     YASIO_KLOG("[c-ares] init channel succeed");
-
-    std::string nscsv;
-
-#  if TARGET_OS_IPHONE == 1
+#  if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1
+    config_ares_name_servers(true);
+#  else
+    config_ares_name_servers(false);
+#  endif
+  }
+  else
+    YASIO_KLOG("[c-ares] init channel failed, status=%d, detail:%s", status,
+               ::ares_strerror(status));
+}
+bool io_service::config_ares_name_servers(bool dirty)
+{
+  std::string nscsv;
+  if (dirty)
+  {
+#  if defined(__APPLE__)
     struct __res_state res;
     status = ::res_ninit(&res);
     YASIO_KLOG("[c-ares] res_ninit status=%d, res.nscount=%d", status, res.nscount);
@@ -1529,38 +1544,50 @@ void io_service::init_ares_channel()
         endpoint::inaddr_to_csv_nl((sockaddr*)&nsaddrs[i].sin, nscsv);
     }
     ::res_nclose(&res);
+#  elif defined(__ANDROID__)
+    size_t num_servers = 0;
+    auto dns_servers   = ::ares_get_android_server_list(MAXNS, &num_servers);
+    if (dns_servers != nullptr)
+    {
+      for (i = 0; i < num_servers; ++i)
+      {
+        nscsv += dns_servers[i];
+        nscsv += ',';
+        ::ares_free(dns_servers[i]);
+      }
+      ::ares_free(dns_servers);
+    }
+#  endif
+
     if (!nscsv.empty())
     {
       ::ares_set_servers_csv(ares_, nscsv.c_str());
       nscsv.clear();
     }
-#  endif
-
-    // list all dns servers for resov problem diagnosis
-    ares_addr_node* name_servers = nullptr;
-    status                       = ::ares_get_servers(ares_, &name_servers);
-    if (status == ARES_SUCCESS)
-    {
-      for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
-        endpoint::inaddr_to_csv_nl(name_server->family, &name_server->addr, nscsv);
-
-      if (!nscsv.empty()) // if no valid name server, use predefined fallback dns
-        YASIO_KLOG("[c-ares] use system dns: %s", nscsv.c_str());
-      else
-      {
-        status = ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
-        if (status == 0)
-          YASIO_KLOG("[c-ares] set fallback dns: '%s' succeed", YASIO_CARES_FALLBACK_DNS);
-        else
-          YASIO_KLOG("[c-ares] set fallback dns: '%s' failed, detail: %s", YASIO_CARES_FALLBACK_DNS,
-                     ::ares_strerror(status));
-      }
-      ::ares_free_data(name_servers);
-    }
   }
-  else
-    YASIO_KLOG("[c-ares] init channel failed, status=%d, detail:%s", status,
-               ::ares_strerror(status));
+
+  // list all dns servers for resov problem diagnosis
+  ares_addr_node* name_servers = nullptr;
+  int status                   = ::ares_get_servers(ares_, &name_servers);
+  if (status == ARES_SUCCESS)
+  {
+    for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
+      endpoint::inaddr_to_csv_nl(name_server->family, &name_server->addr, nscsv);
+
+    if (!nscsv.empty()) // if no valid name server, use predefined fallback dns
+      YASIO_KLOG("[c-ares] use system dns: %s", nscsv.c_str());
+    else
+    {
+      status = ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
+      if (status == 0)
+        YASIO_KLOG("[c-ares] set fallback dns: '%s' succeed", YASIO_CARES_FALLBACK_DNS);
+      else
+        YASIO_KLOG("[c-ares] set fallback dns: '%s' failed, detail: %s", YASIO_CARES_FALLBACK_DNS,
+                   ::ares_strerror(status));
+    }
+    ::ares_free_data(name_servers);
+  }
+  return true;
 }
 void io_service::cleanup_ares_channel()
 {
@@ -2168,6 +2195,10 @@ void io_service::start_resolve(io_channel* ctx)
   });
   async_resolv_thread.detach();
 #else
+
+  if (this->options_.dns_dirty_)
+    this->options_.dns_dirty_ = !config_ares_name_servers(true);
+
   ares_addrinfo_hints hint;
   memset(&hint, 0x0, sizeof(hint));
   hint.ai_family = local_address_family();
@@ -2275,6 +2306,9 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_DNS_QUERIES_TRIES:
       options_.dns_queries_tries_ = va_arg(ap, int);
+      break;
+    case YOPT_S_DNS_DIRTY:
+      options_.dns_dirty_ = true;
       break;
     case YOPT_C_LFBFD_PARAMS: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));

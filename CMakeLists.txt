@@ -96,7 +96,7 @@ endif()
 
 if(ANDROID AND CARES_INCLUDE_DIR)
   set(YASIO_CORE ${YASIO_CORE} 
-    yasio/bindings/yasio_jni.cpp
+    yasio/platform/yasio_jni.cpp
   )
 endif()
 

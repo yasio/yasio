@@ -83,19 +83,19 @@ namespace compat
 /*
  * Define constants based on RFC 883, RFC 1034, RFC 1035
  */
-#define NS_PACKETSZ 512   /*%< default UDP packet size */
-#define NS_MAXDNAME 1025  /*%< maximum domain name */
-#define NS_MAXMSG 65535   /*%< maximum message size */
-#define NS_MAXCDNAME 255  /*%< maximum compressed domain name */
-#define NS_MAXLABEL 63    /*%< maximum length of domain label */
-#define NS_HFIXEDSZ 12    /*%< #/bytes of fixed data in header */
-#define NS_QFIXEDSZ 4     /*%< #/bytes of fixed data in query */
-#define NS_RRFIXEDSZ 10   /*%< #/bytes of fixed data in r record */
-#define NS_INT32SZ 4      /*%< #/bytes of data in a u_int32_t */
-#define NS_INT16SZ 2      /*%< #/bytes of data in a u_int16_t */
-#define NS_INT8SZ 1       /*%< #/bytes of data in a u_int8_t */
-#define NS_INADDRSZ 4     /*%< IPv4 T_A */
-#define NS_IN6ADDRSZ 16   /*%< IPv6 T_AAAA */
+#define NS_PACKETSZ 512 /*%< default UDP packet size */
+#define NS_MAXDNAME 1025 /*%< maximum domain name */
+#define NS_MAXMSG 65535 /*%< maximum message size */
+#define NS_MAXCDNAME 255 /*%< maximum compressed domain name */
+#define NS_MAXLABEL 63 /*%< maximum length of domain label */
+#define NS_HFIXEDSZ 12 /*%< #/bytes of fixed data in header */
+#define NS_QFIXEDSZ 4 /*%< #/bytes of fixed data in query */
+#define NS_RRFIXEDSZ 10 /*%< #/bytes of fixed data in r record */
+#define NS_INT32SZ 4 /*%< #/bytes of data in a u_int32_t */
+#define NS_INT16SZ 2 /*%< #/bytes of data in a u_int16_t */
+#define NS_INT8SZ 1 /*%< #/bytes of data in a u_int8_t */
+#define NS_INADDRSZ 4 /*%< IPv4 T_A */
+#define NS_IN6ADDRSZ 16 /*%< IPv6 T_AAAA */
 #define NS_CMPRSFLGS 0xc0 /*%< Flag bits indicating name compression. */
 #define NS_DEFAULTPORT 53 /*%< For both TCP and UDP. */
 

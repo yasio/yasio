@@ -1,18 +1,22 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A cross platform socket APIs, support ios & android & wp8 & window store
-// universal app
+// A cross platform socket APIs, support ios & android & wp8 & window store universal app
+//
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
+
 Copyright (c) 2012-2020 HALX99
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,10 +25,22 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__JNI_HPP
-#define YASIO__JNI_HPP
+#ifndef YASIO__ARES_HPP
+#define YASIO__ARES_HPP
 
-extern "C" void yasio__jni_init(void* vm, void* env);
-extern "C" int yasio__jni_onload(void* vm, void* reserved);
+extern "C" {
+#include "ares_config.h"
+#include "c-ares/ares.h"
+#include "c-ares/ares_android.h"
+extern void (*ares_free)(void* ptr);
+}
+
+#if defined(__ANDROID__)
+#  include "yasio/platform/yasio_jni.hpp"
+#elif defined(__APPLE__)
+#  include <TargetConditionals.h>
+#  include <arpa/nameser.h>
+#  include <resolv.h>
+#endif
 
 #endif

@@ -188,6 +188,10 @@ typedef int socket_native_type;
 #  define EAGAIN WSATRY_AGAIN
 #endif
 
+#if !defined(MAXNS)
+#  define MAXNS 3
+#endif
+
 #define IN_MAX_ADDRSTRLEN INET6_ADDRSTRLEN
 
 #if !defined(_WS2IPDEF_)

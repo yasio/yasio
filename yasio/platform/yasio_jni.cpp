@@ -163,9 +163,10 @@ int yasio__ares_init_android()
 
 void yasio__jni_init(void* vm, void* env)
 {
-  yasio__jvm = (JavaVM*)vm;
+  yasio__jvm   = (JavaVM*)vm;
   JNIEnv* jenv = (JNIEnv*)env;
-  if(jenv != nullptr) {
+  if (jenv != nullptr)
+  {
     // must find class at here,
     // see: https://developer.android.com/training/articles/perf-jni#faq_FindClass
     jclass obj_cls = jenv->FindClass("org/yasio/AppGlobals");

@@ -1,6 +1,7 @@
 yaiso-3.33.2
   
 * Fix c-ares doesn't get system dns for ios.
+* Add option ```YOPT_S_DNS_DIRTY``` for user to change system name servers after mobile network changed when c-ares enabled.
   
   
 yaiso-3.33.1

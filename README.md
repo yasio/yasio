@@ -53,13 +53,14 @@ cmake --build . --config Debug
 ```
 
 ## 特性: 
+* 提供相同的API来管理TCP, UDP, KCP传输。
 * 支持IPv4/IPv6或者苹果IPv6_only网络。
 * 支持处理多个连接的所有网络事件。
 * 支持微秒级定时器。
 * 支持TCP粘包处理，业务完全不必关心。
 * 支持Lua绑定。
 * 支持Cocos2d-x jsb绑定。
-* 支持CocosCreator jsb2.0绑定。
+* 支持[CocosCreator jsb2.0绑定](https://github.com/yasio/inettester)。
 * 支持[Unity3D](https://github.com/yasio/DemoU3D)。
 * 支持[虚幻4](https://github.com/yasio/DemoUE4)。
 * 支持组播。

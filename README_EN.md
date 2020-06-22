@@ -52,19 +52,21 @@ cmake --build . --config Debug
 ```
 
 ## Features: 
+* Same API to manipulate transport with TCP, UDP, KCP.
 * Support IPv4/IPv6 network
 * Support multi-connections at one thread
 * Support high-resolution deadline timer
 * Support unpack tcp packet internal, user do not need to care it
 * Support lua bindings
 * Support cocos2d-x jsb
-* Support CocosCreator jsb2.0
+* Support [CocosCreator jsb2.0](https://github.com/yasio/inettester)
 * Support [Unity3D](https://github.com/yasio/DemoU3D)
 * Support [Unreal Engine 4](https://github.com/yasio/DemoUE4)
 * Support multicast
 * Support ssl client with openssl
 * Support async resolve with c-ares
 * Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
+
   
 ## Core framework
 ![image](https://yasio.org/images/framework_en.png)  

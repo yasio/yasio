@@ -457,20 +457,27 @@ bool io_transport::do_write(long long& max_wait_duration)
       }
     }
 
-    if (error != EWOULDBLOCK && error != EAGAIN && error != ENOBUFS)
-    { // If still have work to do and kernel buffer not full
-      if (!send_queue_.empty())
-        max_wait_duration = 0;
-      if (pollout_registerred_)
-      {
-        pollout_registerred_ = false;
-        get_service().unregister_descriptor(socket_->native_handle(), YEM_POLLOUT);
+    bool no_wevent = send_queue_.empty();
+    if (no_wevent)
+      ; // do nothing
+    else
+    { // still have work to do
+      no_wevent = (error != EWOULDBLOCK && error != EAGAIN && error != ENOBUFS);
+      if (!no_wevent)
+      { // system kernel buffer full
+        if (!pollout_registerred_)
+        {
+          get_service().register_descriptor(socket_->native_handle(), YEM_POLLOUT);
+          pollout_registerred_ = true;
+        }
       }
+      else
+        max_wait_duration = 0;
     }
-    else if (!pollout_registerred_)
+    if (no_wevent && pollout_registerred_)
     {
-      pollout_registerred_ = true;
-      get_service().register_descriptor(socket_->native_handle(), YEM_POLLOUT);
+      get_service().unregister_descriptor(socket_->native_handle(), YEM_POLLOUT);
+      pollout_registerred_ = false;
     }
     ret = true;
   } while (false);

@@ -1761,8 +1761,7 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
   if (yasio__testbits(ctx->properties_, YCM_TCP))
   {
 #if defined(__APPLE__) || defined(__linux__)
-    if (yasio__testbits(ctx->properties_, YCM_TCP))
-      connection->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
+    connection->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
 #endif
     // apply tcp keepalive options
     if (options_.tcp_keepalive_.onoff)

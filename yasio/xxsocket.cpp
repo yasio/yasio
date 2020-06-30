@@ -1379,11 +1379,16 @@ uint32_t xxsocket::tcp_rtt(socket_native_type s)
   if (status == 0)
     return info.RttUs;
 #  endif
-#else
+#elif defined(__linux__)
   struct tcp_info info;
   int length = sizeof(struct tcp_info);
-  if (0 == xxsocket::get_optval(s, SOL_TCP, TCP_INFO, info))
+  if (0 == xxsocket::get_optval(s, IPPROTO_TCP, TCP_INFO, info))
     return info.tcpi_rtt;
+#elif defined(__APPLE__)
+  struct tcp_connection_info info;
+  int length = sizeof(struct tcp_connection_info);
+  if (0 == xxsocket::get_optval(s, IPPROTO_TCP, TCP_CONNECTION_INFO, info))
+    return info.tcpi_srtt; /* average RTT in ms, most recent RTT in ms field 'tcpi_rttcur' */
 #endif
   return (std::numeric_limits<uint32_t>::max)();
 }

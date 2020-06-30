@@ -1398,7 +1398,7 @@ uint32_t xxsocket::tcp_rtt(socket_native_type s)
   if (0 == xxsocket::get_optval(s, IPPROTO_TCP, TCP_CONNECTION_INFO, info))
     return info.tcpi_srtt * std::milli::den;
 #endif
-  return (std::numeric_limits<uint32_t>::max)();
+  return 0;
 }
 
 void xxsocket::init_ws32_lib(void) {}

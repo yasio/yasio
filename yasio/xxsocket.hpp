@@ -1065,7 +1065,7 @@ public:
    */
   YASIO__DECL void close(void);
 
-  /* @brief: Retrive tcp socket rtt
+  /* @brief: Retrive tcp socket rtt in microseconds
    ** @params:
    **        non
    **

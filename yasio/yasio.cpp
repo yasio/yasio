@@ -1132,7 +1132,7 @@ uint32_t io_service::tcp_rtt(transport_handle_t transport)
 {
   if (transport->is_open())
     return transport->socket_->tcp_rtt();
-  return static_cast<uint32_t>(-1);
+  return 0;
 }
 io_channel* io_service::channel_at(size_t index) const
 {

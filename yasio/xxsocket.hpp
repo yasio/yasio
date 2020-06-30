@@ -1065,6 +1065,15 @@ public:
    */
   YASIO__DECL void close(void);
 
+  /* @brief: Retrive tcp socket rtt
+   ** @params:
+   **        non
+   **
+   ** @returns: [0] succeed, otherwise, a value of SOCKET_ERROR is returned.
+   */
+  YASIO__DECL uint32_t tcp_rtt() const;
+  YASIO__DECL static uint32_t tcp_rtt(socket_native_type s);
+
   YASIO__DECL operator socket_native_type(void) const;
 
   /// <summary>

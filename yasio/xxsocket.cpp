@@ -83,19 +83,19 @@ namespace compat
 /*
  * Define constants based on RFC 883, RFC 1034, RFC 1035
  */
-#define NS_PACKETSZ 512 /*%< default UDP packet size */
-#define NS_MAXDNAME 1025 /*%< maximum domain name */
-#define NS_MAXMSG 65535 /*%< maximum message size */
-#define NS_MAXCDNAME 255 /*%< maximum compressed domain name */
-#define NS_MAXLABEL 63 /*%< maximum length of domain label */
-#define NS_HFIXEDSZ 12 /*%< #/bytes of fixed data in header */
-#define NS_QFIXEDSZ 4 /*%< #/bytes of fixed data in query */
-#define NS_RRFIXEDSZ 10 /*%< #/bytes of fixed data in r record */
-#define NS_INT32SZ 4 /*%< #/bytes of data in a u_int32_t */
-#define NS_INT16SZ 2 /*%< #/bytes of data in a u_int16_t */
-#define NS_INT8SZ 1 /*%< #/bytes of data in a u_int8_t */
-#define NS_INADDRSZ 4 /*%< IPv4 T_A */
-#define NS_IN6ADDRSZ 16 /*%< IPv6 T_AAAA */
+#define NS_PACKETSZ 512   /*%< default UDP packet size */
+#define NS_MAXDNAME 1025  /*%< maximum domain name */
+#define NS_MAXMSG 65535   /*%< maximum message size */
+#define NS_MAXCDNAME 255  /*%< maximum compressed domain name */
+#define NS_MAXLABEL 63    /*%< maximum length of domain label */
+#define NS_HFIXEDSZ 12    /*%< #/bytes of fixed data in header */
+#define NS_QFIXEDSZ 4     /*%< #/bytes of fixed data in query */
+#define NS_RRFIXEDSZ 10   /*%< #/bytes of fixed data in r record */
+#define NS_INT32SZ 4      /*%< #/bytes of data in a u_int32_t */
+#define NS_INT16SZ 2      /*%< #/bytes of data in a u_int16_t */
+#define NS_INT8SZ 1       /*%< #/bytes of data in a u_int8_t */
+#define NS_INADDRSZ 4     /*%< IPv4 T_A */
+#define NS_IN6ADDRSZ 16   /*%< IPv6 T_AAAA */
 #define NS_CMPRSFLGS 0xc0 /*%< Flag bits indicating name compression. */
 #define NS_DEFAULTPORT 53 /*%< For both TCP and UDP. */
 
@@ -1359,6 +1359,31 @@ void xxsocket::close(void)
     ::closesocket(this->fd);
     this->fd = invalid_socket;
   }
+}
+
+uint32_t xxsocket::tcp_rtt() const { return xxsocket::tcp_rtt(this->fd); }
+uint32_t xxsocket::tcp_rtt(socket_native_type s)
+{
+#if defined(_WIN32)
+  TCP_INFO_v0 info;
+  DWORD tcpi_ver = 0, bytes_transferred = 0;
+  int status = WSAIoctl(s, SIO_TCP_INFO,
+                        (LPVOID)&tcpi_ver, // lpvInBuffer pointer to a DWORD, version of tcp info
+                        (DWORD)sizeof(tcpi_ver),     // size, in bytes, of the input buffer
+                        (LPVOID)&info,               // pointer to a TCP_INFO_v0 structure
+                        (DWORD)sizeof(info),         // size of the output buffer
+                        (LPDWORD)&bytes_transferred, // number of bytes returned
+                        (LPWSAOVERLAPPED) nullptr,   // OVERLAPPED structure
+                        (LPWSAOVERLAPPED_COMPLETION_ROUTINE) nullptr);
+  if (status == 0)
+    return info.RttUs;
+#else
+  struct tcp_info info;
+  int length = sizeof(struct tcp_info);
+  if (0 == xxsocket::get_optval(s, SOL_TCP, TCP_INFO, info))
+    return info.tcpi_rtt;
+#endif
+  return (std::numeric_limits<uint32_t>::max)();
 }
 
 void xxsocket::init_ws32_lib(void) {}

@@ -1365,6 +1365,7 @@ uint32_t xxsocket::tcp_rtt() const { return xxsocket::tcp_rtt(this->fd); }
 uint32_t xxsocket::tcp_rtt(socket_native_type s)
 {
 #if defined(_WIN32)
+#  if NTDDI_VERSION >= NTDDI_WIN10_RS2
   TCP_INFO_v0 info;
   DWORD tcpi_ver = 0, bytes_transferred = 0;
   int status = WSAIoctl(s, SIO_TCP_INFO,
@@ -1377,6 +1378,7 @@ uint32_t xxsocket::tcp_rtt(socket_native_type s)
                         (LPWSAOVERLAPPED_COMPLETION_ROUTINE) nullptr);
   if (status == 0)
     return info.RttUs;
+#  endif
 #else
   struct tcp_info info;
   int length = sizeof(struct tcp_info);

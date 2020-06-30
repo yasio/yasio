@@ -382,7 +382,7 @@ YASIO__NS_INLINE namespace ip
   {
     return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr);
   };
-  inline bool is_global_in6_addr(const in6_addr* addr) { return IN6_IS_ADDR_GLOBAL(addr); };
+  inline bool is_global_in6_addr(const in6_addr* addr) { return !!IN6_IS_ADDR_GLOBAL(addr); };
 
   union endpoint
   {

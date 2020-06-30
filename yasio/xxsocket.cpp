@@ -1365,7 +1365,7 @@ uint32_t xxsocket::tcp_rtt() const { return xxsocket::tcp_rtt(this->fd); }
 uint32_t xxsocket::tcp_rtt(socket_native_type s)
 {
 #if defined(_WIN32)
-#  if NTDDI_VERSION >= NTDDI_WIN10_RS2
+#  if defined(NTDDI_WIN10_RS2) && NTDDI_VERSION >= NTDDI_WIN10_RS2
   TCP_INFO_v0 info;
   DWORD tcpi_ver = 0, bytes_transferred = 0;
   int status = WSAIoctl(s, SIO_TCP_INFO,
@@ -1376,6 +1376,10 @@ uint32_t xxsocket::tcp_rtt(socket_native_type s)
                         (LPDWORD)&bytes_transferred, // number of bytes returned
                         (LPWSAOVERLAPPED) nullptr,   // OVERLAPPED structure
                         (LPWSAOVERLAPPED_COMPLETION_ROUTINE) nullptr);
+  /*
+  info.RttUs: The current estimated round-trip time for the connection, in microseconds.
+  info.MinRttUs: The minimum sampled round trip time, in microseconds.
+  */
   if (status == 0)
     return info.RttUs;
 #  endif
@@ -1387,8 +1391,12 @@ uint32_t xxsocket::tcp_rtt(socket_native_type s)
 #elif defined(__APPLE__)
   struct tcp_connection_info info;
   int length = sizeof(struct tcp_connection_info);
+  /*
+  info.tcpi_srtt: average RTT in ms
+  info.tcpi_rttcur: most recent RTT in ms
+  */
   if (0 == xxsocket::get_optval(s, IPPROTO_TCP, TCP_CONNECTION_INFO, info))
-    return info.tcpi_srtt; /* average RTT in ms, most recent RTT in ms field 'tcpi_rttcur' */
+    return info.tcpi_srtt * std::milli::den;
 #endif
   return (std::numeric_limits<uint32_t>::max)();
 }

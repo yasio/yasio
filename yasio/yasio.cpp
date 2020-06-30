@@ -1128,6 +1128,12 @@ void io_service::open(size_t index, int kind)
     open_internal(ctx);
   }
 }
+uint32_t io_service::tcp_rtt(transport_handle_t transport)
+{
+  if (transport->is_open())
+    return transport->socket_->tcp_rtt();
+  return static_cast<uint32_t>(-1);
+}
 io_channel* io_service::channel_at(size_t index) const
 {
   if (index < channels_.size())

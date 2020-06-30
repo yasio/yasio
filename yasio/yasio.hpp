@@ -861,6 +861,9 @@ public:
   // close channel
   YASIO__DECL void close(int index);
 
+  // the additional API to get rtt of tcp transport
+  YASIO__DECL static uint32_t tcp_rtt(transport_handle_t);
+
   /*
   ** Summary: Write data to a TCP or connected UDP transport with last peer address
   ** @retval: < 0: failed

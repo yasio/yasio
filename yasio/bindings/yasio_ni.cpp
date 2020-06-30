@@ -197,7 +197,7 @@ YASIO_NI_API int yasio_write(intptr_t thandle, const unsigned char* bytes, int l
   auto p = reinterpret_cast<transport_handle_t>(thandle);
   return yasio_shared_service()->write(p, std::move(buf));
 }
-YASIO_NI_API int yasio_tcp_rtt(intptr_t thandle)
+YASIO_NI_API uint32_t yasio_tcp_rtt(intptr_t thandle)
 {
   auto p = reinterpret_cast<transport_handle_t>(thandle);
   return io_service::tcp_rtt(p);

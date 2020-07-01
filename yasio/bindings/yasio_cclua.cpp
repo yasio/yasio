@@ -113,7 +113,7 @@ YASIO_LUA_API void clear()
 } // namespace stimer
 } // namespace lyasio
 
-#if YASIO__HAS_CXX17
+#if YASIO__HAS_CXX14
 
 #  include "yasio/sol/sol.hpp"
 

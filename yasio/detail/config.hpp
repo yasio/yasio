@@ -182,10 +182,12 @@ SOFTWARE.
 #define YASIO_MAX_IBTS 32
 
 // The fallback name servers when c-ares can't get name servers from system config,
-// For Android 8 or later, will always use the fallback name servers, for detail,
+// For Android 8 or later, yasio will try to retrive through jni automitically,
+// For iOS, c-ares doesn't retrive system dns, yasio will try through API 'res_getservers' provided by libresov
 // please see:
 //   https://github.com/c-ares/c-ares/issues/276
 //   https://github.com/c-ares/c-ares/pull/148
+//   https://github.com/c-ares/c-ares/pull/29
 #define YASIO_CARES_FALLBACK_DNS "8.8.8.8,223.5.5.5,114.114.114.114"
 
 #include "strfmt.hpp"

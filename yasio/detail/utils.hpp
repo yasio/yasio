@@ -55,9 +55,10 @@ template <typename _Ty = steady_clock_t> inline highp_time_t clock()
 {
   return xhighp_clock<_Ty>() / std::micro::den;
 }
-// The time now in seconds since epoch, recommand use this api replace the c runtime 'time(NULL)' on
-// win32
-inline highp_time_t time_now() { return xhighp_clock<system_clock_t>() / std::nano::den; }
+// The time now in seconds since epoch, better performance than chrono on win32
+// see: win10 sdk ucrt/time/time.cpp:common_time
+// https://docs.microsoft.com/en-us/windows/desktop/sysinfo/acquiring-high-resolution-time-stamps
+inline highp_time_t time_now() { return ::time(nullptr); }
 
 #if YASIO__HAS_CXX17
 using std::clamp;

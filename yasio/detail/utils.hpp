@@ -39,17 +39,25 @@ typedef long long highp_time_t;
 typedef std::chrono::high_resolution_clock steady_clock_t;
 typedef std::chrono::system_clock system_clock_t;
 
-// The high precision nano seconds timestamp
-template <typename _Ty = steady_clock_t> inline long long xhighp_clock()
+// The high precision nano seconds timestamp since epoch
+template <typename _Ty = steady_clock_t> inline highp_time_t xhighp_clock()
 {
   auto duration = _Ty::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
 }
-// The high precision micro seconds timestamp
-template <typename _Ty = steady_clock_t> inline long long highp_clock()
+// The high precision micro seconds timestamp since epoch
+template <typename _Ty = steady_clock_t> inline highp_time_t highp_clock()
 {
-  return xhighp_clock<_Ty>() / 1000LL;
+  return xhighp_clock<_Ty>() / std::milli::den;
 }
+// The normal precision milli seconds timestamp since epoch
+template <typename _Ty = steady_clock_t> inline highp_time_t clock()
+{
+  return xhighp_clock<_Ty>() / std::micro::den;
+}
+// The time now in seconds since epoch, recommand use this api replace the c runtime 'time(NULL)' on
+// win32
+inline highp_time_t time_now() { return xhighp_clock<system_clock_t>() / std::nano::den; }
 
 #if YASIO__HAS_CXX17
 using std::clamp;

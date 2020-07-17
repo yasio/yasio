@@ -179,7 +179,7 @@ void obstream::write_v32(const void* v, int size) { write_vx<uint32_t>(v, size);
 void obstream::write_v16(const void* v, int size) { write_vx<uint16_t>(v, size); }
 void obstream::write_v8(const void* v, int size) { write_vx<uint8_t>(v, size); }
 
-void obstream::write_byte(char v) { buffer_.push_back(v); }
+void obstream::write_byte(uint8_t v) { buffer_.push_back(v); }
 
 void obstream::write_bytes(cxx17::string_view v)
 {

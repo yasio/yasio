@@ -80,7 +80,7 @@ public:
   YASIO__DECL void read_v16(void*, int);
   YASIO__DECL void read_v8(void*, int);
 
-  YASIO__DECL char read_byte();
+  YASIO__DECL uint8_t read_byte();
 
   YASIO__DECL void read_bytes(std::string& oav, int len);
   YASIO__DECL void read_bytes(void* oav, int len);

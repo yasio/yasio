@@ -129,7 +129,7 @@ void ibstream_view::read_v32(void* oav, int len) { read_vx<uint32_t>().copy((cha
 void ibstream_view::read_v16(void* oav, int len) { read_vx<uint16_t>().copy((char*)oav, len); }
 void ibstream_view::read_v8(void* oav, int len) { read_vx<uint8_t>().copy((char*)oav, len); }
 
-char ibstream_view::read_byte() { return *consume(1); }
+uint8_t ibstream_view::read_byte() { return *consume(1); }
 
 void ibstream_view::read_bytes(std::string& oav, int len)
 {

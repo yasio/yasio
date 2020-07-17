@@ -86,7 +86,7 @@ public:
   YASIO__DECL void write_v16(const void* v, int size);
   YASIO__DECL void write_v8(const void* v, int size);
 
-  YASIO__DECL void write_byte(char v);
+  YASIO__DECL void write_byte(uint8_t v);
 
   YASIO__DECL void write_bytes(cxx17::string_view);
   YASIO__DECL void write_bytes(const void* v, int vl);

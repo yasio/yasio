@@ -142,7 +142,7 @@ void obstream::write_u24(uint32_t value)
   write_bytes(&value, 3);
 }
 
-void obstream::write_i7(int value)
+void obstream::write_7b(int value)
 {
   // Write out an int 7 bits at a time.  The high bit of the byte,
   // when on, tells reader to continue reading more bytes.
@@ -158,7 +158,7 @@ void obstream::write_i7(int value)
 void obstream::write_v(cxx17::string_view sv)
 {
   int len = static_cast<int>(sv.length());
-  write_i7(len);
+  write_7b(len);
   write_bytes(sv.data(), len);
 }
 

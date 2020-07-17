@@ -63,8 +63,11 @@ public:
     return yasio::endian::ntohv(value);
   }
 
-  /* write 7bit encoded variant integer value */
-  YASIO__DECL int read_i7();
+  /* write 7bit encoded variant integer value
+  ** @.net BinaryReader.Read7BitEncodedInt
+  */
+  YASIO__DECL int read_7b();
+  int read_i7() { return read_7b(); }
 
   YASIO__DECL int32_t read_i24();
   YASIO__DECL uint32_t read_u24();

@@ -69,7 +69,7 @@ int ibstream_view::read_7b()
       YASIO__THROW(std::logic_error("Format_Bad7BitInt32"), 0);
 
     // ReadByte handles end of stream cases for us.
-    b = read_i<uint8_t>();
+    b = read_byte();
     count |= (b & 0x7F) << shift;
     shift += 7;
   } while ((b & 0x80) != 0);

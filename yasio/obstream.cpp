@@ -149,10 +149,10 @@ void obstream::write_7b(int value)
   uint32_t v = (uint32_t)value; // support negative numbers
   while (v >= 0x80)
   {
-    write_i<uint8_t>((uint8_t)(v | 0x80));
+    write_byte((uint8_t)(v | 0x80));
     v >>= 7;
   }
-  write_i<uint8_t>((uint8_t)v);
+  write_byte((uint8_t)v);
 }
 
 void obstream::write_v(cxx17::string_view sv)

@@ -18,7 +18,7 @@ project(yasio)
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 option(YASIO_BUILD_WITH_SSL "Build yasio with ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build yasio with c-ares support" OFF)
-option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" ON)
+option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 

@@ -6,7 +6,7 @@
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
-#include "yasio/kcp/ikcp.h"
+#include "kcp/ikcp.h"
 
 #if defined(_MSC_VER)
 #  pragma comment(lib, "Winmm.lib")

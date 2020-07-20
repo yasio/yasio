@@ -52,7 +52,7 @@ SOFTWARE.
 #endif
 
 #if defined(YASIO_HAVE_KCP)
-#  include "yasio/kcp/ikcp.h"
+#  include "kcp/ikcp.h"
 #endif
 
 #if defined(YASIO_HAVE_CARES)

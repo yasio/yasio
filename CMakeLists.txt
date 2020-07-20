@@ -72,7 +72,7 @@ set (YASIO_CORE
 
 if (YASIO_BUILD_WITH_KCP)
   set(YASIO_CORE ${YASIO_CORE} 
-    yasio/kcp/ikcp.c
+    ${CMAKE_SOURCE_DIR}/external/kcp/ikcp.c
   )
 endif()
 
@@ -86,18 +86,22 @@ if (YASIO_BUILD_LUA)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/lyasio.cpp
   )
-endif()
-
-if(YASIO_BUILD_CCLUA)
-  set(YASIO_CORE ${YASIO_CORE} 
-    yasio/bindings/yasio_cclua.cpp
-  )
+  
+  if(YASIO_BUILD_CCLUA)
+      set(YASIO_CORE ${YASIO_CORE} 
+        yasio/bindings/yasio_cclua.cpp
+      )
+  endif()
 endif()
 
 if(ANDROID AND CARES_INCLUDE_DIR)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/platform/yasio_jni.cpp
   )
+endif()
+
+if(YASIO_BUILD_WITH_SSL OR YASIO_BUILD_WITH_KCP OR YASIO_BUILD_LUA OR YASIO_BUILD_WITH_CARES)
+    include_directories("${CMAKE_SOURCE_DIR}/external")
 endif()
 
 macro(source_group_by_dir proj_dir source_files)
@@ -281,7 +285,9 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/issue256)
     add_subdirectory(tests/echo_server)
     add_subdirectory(tests/echo_client)
-    add_subdirectory(examples/lua)
+    if(YASIO_BUILD_LUA)
+        add_subdirectory(examples/lua)
+    endif()
     add_subdirectory(examples/ftp_server)
 
     if(YASIO_BUILD_WITH_SSL)

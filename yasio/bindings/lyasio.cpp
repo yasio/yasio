@@ -72,9 +72,9 @@ static auto ibstream_read_v = [](yasio::ibstream* ibs, int length_field_bits) {
 #if YASIO__HAS_CXX14
 
 #  if !YASIO__HAS_CXX20
-#    include "yasio/sol/sol.hpp"
+#    include "sol/sol.hpp"
 #  else
-#    include "yasio/sol3/sol.hpp"
+#    include "sol3/sol.hpp"
 #  endif
 
 #  if !YASIO__HAS_CXX17
@@ -123,10 +123,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
         return std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(ev->packet()))
                                                       : new yasio::ibstream(ev->packet()));
       },
-      "cindex", &io_event::cindex, "transport",
-      &io_event::transport
+      "cindex", &io_event::cindex, "transport", &io_event::transport
 #  if !defined(YASIO_MINIFY_EVENT)
-      , "timestamp", &io_event::timestamp
+      ,
+      "timestamp", &io_event::timestamp
 #  endif
   );
 
@@ -332,7 +332,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
 #else
 
-#  include "yasio/kaguya/kaguya.hpp"
+#  include "kaguya/kaguya.hpp"
 /// customize the type conversion from/to lua
 namespace kaguya
 {

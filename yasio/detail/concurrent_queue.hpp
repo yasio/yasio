@@ -30,7 +30,7 @@ SOFTWARE.
 
 #include "yasio/detail/config.hpp"
 #if defined(YASIO_USE_SPSC_QUEUE)
-#  include "yasio/moodycamel/readerwriterqueue.h"
+#  include "moodycamel/readerwriterqueue.h"
 #else
 #  include <queue>
 #endif

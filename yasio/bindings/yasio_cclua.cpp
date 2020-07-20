@@ -115,7 +115,11 @@ YASIO_LUA_API void clear()
 
 #if YASIO__HAS_CXX14
 
-#  include "yasio/sol/sol.hpp"
+#  if !YASIO__HAS_CXX20
+#    include "sol/sol.hpp"
+#  else
+#    include "sol3/sol.hpp"
+#  endif
 
 extern "C" {
 struct lua_State;
@@ -133,7 +137,7 @@ YASIO_LUA_API int luaopen_yasio_cclua(lua_State* L)
 
 #else
 
-#  include "yasio/kaguya/kaguya.hpp"
+#  include "kaguya/kaguya.hpp"
 
 extern "C" {
 struct lua_State;

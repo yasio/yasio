@@ -1,4 +1,4 @@
-// yasio-v3.30
+// yasio-v3.33
 function yasioTest() {
   // ------- start of yasio test ----------
   var hostents = [
@@ -94,7 +94,7 @@ function yasioTest() {
 
       yasio.setTimeout(function () {
         yasio.clearInterval(cc.yclientID);
-        yclient.stop_service(); // must stop_service if you never want use the service, make sure it can be GC.
+        yclient.stop(); // must stop if you never want use the service, make sure it can be GC.
         yclient = null;
       }, 3);
     }

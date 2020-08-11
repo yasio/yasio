@@ -45,10 +45,11 @@ git clone https://github.com/yasio/yasio
 cd yasio
 git submodule update --init --recursive
 cd build
+
+# 生成yasio.sln
 cmake ..
 
-# 使用CMake命令行编译
-# 或者直接用VS打开 yasio.sln 解决方案
+# 使用CMake命令行编译或者直接用VS打开 build/yasio.sln 解决方案
 cmake --build . --config Debug
 ```
 

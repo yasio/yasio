@@ -28,6 +28,10 @@ SOFTWARE.
 #ifndef YASIO__LUA_HPP
 #define YASIO__LUA_HPP
 
+#if !defined(YASIO_LUA_ENABLE_GLOBAL)
+#  define YASIO_LUA_ENABLE_GLOBAL 0
+#endif
+
 #if defined(_WINDLL)
 #  if defined(LUA_LIB)
 #    define YASIO_LUA_API __declspec(dllexport)

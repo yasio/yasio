@@ -112,8 +112,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 {
   sol::state_view state_view(L);
 
+#  if !YASIO_LUA_ENABLE_GLOBAL
+  auto lyasio = state_view.create_table();
+#  else
   auto lyasio = state_view.create_named_table("yasio");
-
+#  endif
   lyasio.new_usertype<io_event>(
       "io_event", "kind", &io_event::kind, "status", &io_event::status, "packet",
       [](io_event* ev, sol::variadic_args args) {
@@ -440,7 +443,9 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   kaguya::State state(L);
 
   auto lyasio    = state.newTable();
+#  if YASIO_LUA_ENABLE_GLOBAL
   state["yasio"] = lyasio;
+#  endif
   // No any interface need export, only for holder
   // lyasio["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
 

@@ -19,8 +19,12 @@ project(yasio)
 option(YASIO_BUILD_WITH_SSL "Build yasio with ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build yasio with c-ares support" OFF)
 option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" OFF)
+option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
+option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
+option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" OFF)
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
+
 
 if (NOT YASIO_BUILD_CXX_STD)
     set(YASIO_BUILD_CXX_STD 11)
@@ -82,12 +86,12 @@ if (YAISO_BUILD_NI)
   )
 endif()
 
-if (YASIO_BUILD_LUA)
+if (YASIO_BUILD_WITH_LUA)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/lyasio.cpp
   )
   
-  if(YASIO_BUILD_CCLUA)
+  if(YASIO_BUILD_WITH_CCLUA)
       set(YASIO_CORE ${YASIO_CORE} 
         yasio/bindings/yasio_cclua.cpp
       )
@@ -100,7 +104,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
   )
 endif()
 
-if(YASIO_BUILD_WITH_SSL OR YASIO_BUILD_WITH_KCP OR YASIO_BUILD_LUA OR YASIO_BUILD_WITH_CARES)
+if(YASIO_BUILD_WITH_SSL OR YASIO_BUILD_WITH_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_BUILD_WITH_CARES)
     include_directories("${CMAKE_SOURCE_DIR}/external")
 endif()
 
@@ -285,8 +289,10 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/issue256)
     add_subdirectory(tests/echo_server)
     add_subdirectory(tests/echo_client)
-    if(YASIO_BUILD_LUA)
+    if(YASIO_BUILD_LUA_EXAMPLE)
         add_subdirectory(examples/lua)
+        target_include_directories(example_lua PRIVATE external)
+        target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=1)
     endif()
     add_subdirectory(examples/ftp_server)
 

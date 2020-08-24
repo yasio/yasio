@@ -164,7 +164,7 @@ source_group_by_dir(${CMAKE_CURRENT_SOURCE_DIR} YASIO_CORE)
 # --- add yasio core lib project
 if (APPLE)
     if (IOS)
-        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
+        # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
         add_library(yasio STATIC
            ${YASIO_CORE}
            ${THIRDPART_SRC}
@@ -183,7 +183,7 @@ if (APPLE)
 	    
         set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
     else ()
-        set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
+        # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
         add_library(yasio STATIC
             ${YASIO_CORE}
             ${THIRDPART_SRC}

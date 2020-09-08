@@ -1,5 +1,5 @@
 language: cpp
-matrix:
+jobs:
   include:
     - os: osx
       osx_image: xcode11

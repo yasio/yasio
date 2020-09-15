@@ -94,6 +94,11 @@ enum
   // parmas: func:print_fn_t
   YOPT_S_PRINT_FN,
 
+  // Set custom print function, native C++ ONLY, you must ensure thread safe of it.
+  // remark:
+  // parmas: func:print_fn2_t
+  YOPT_S_PRINT_FN2,
+
   // Set custom print function
   // params: func:io_event_cb_t*
   YOPT_S_EVENT_CB,
@@ -265,6 +270,15 @@ enum
   YEK_PACKET,
 };
 
+// the network core service log level
+enum
+{
+  YLOG_V,
+  YLOG_D,
+  YLOG_I,
+  YLOG_E,
+};
+
 // class fwds
 class highp_timer;
 class io_send_op;
@@ -297,10 +311,11 @@ typedef std::function<void(int, size_t)> io_completion_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
+typedef std::function<void(int level, const char*)> print_fn2_t;
 
 struct io_hostent
 {
-  io_hostent() {}
+  io_hostent() = default;
   io_hostent(std::string ip, u_short port) : host_(std::move(ip)), port_(port) {}
   io_hostent(io_hostent&& rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
   io_hostent(const io_hostent& rhs) : host_(rhs.host_), port_(rhs.port_) {}
@@ -309,7 +324,7 @@ struct io_hostent
   void set_port(u_short port) { port_ = port; }
   u_short get_port() const { return port_; }
   std::string host_;
-  u_short port_;
+  u_short port_ = 0;
 };
 
 class highp_timer
@@ -352,15 +367,11 @@ public:
   bool expired() const { return wait_duration().count() <= 0; }
 
   // Gets wait duration of timer.
-  std::chrono::microseconds wait_duration() const
-  {
-    return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ -
-                                                                 steady_clock_t::now());
-  }
+  std::chrono::microseconds wait_duration() const { return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ - steady_clock_t::now()); }
 
   io_service& service_;
-  std::chrono::microseconds duration_;
-  std::chrono::time_point<steady_clock_t> expire_time_;
+  std::chrono::microseconds duration_                  = {};
+  std::chrono::time_point<steady_clock_t> expire_time_ = {};
 };
 
 struct io_base
@@ -480,10 +491,10 @@ private:
 
   struct __unnamed01
   {
-    int max_frame_length    = YASIO_SZ(10, M); // 10MBytes
-    int length_field_offset = -1; // -1: directly, >= 0: store as 1~4bytes integer, default value=-1
-    int length_field_length = 4;  // 1,2,3,4
-    int length_adjustment   = 0;
+    int max_frame_length       = YASIO_SZ(10, M); // 10MBytes
+    int length_field_offset    = -1;              // -1: directly, >= 0: store as 1~4bytes integer, default value=-1
+    int length_field_length    = 4;               // 1,2,3,4
+    int length_adjustment      = 0;
     int initial_bytes_to_strip = 0;
   } lfb_;
   decode_len_fn_t decode_len_;
@@ -519,9 +530,7 @@ private:
 class io_send_op
 {
 public:
-  io_send_op(std::vector<char>&& buffer, io_completion_cb_t&& handler)
-      : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler))
-  {}
+  io_send_op(std::vector<char>&& buffer, io_completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
 
   size_t offset_;            // read pos from sending buffer
@@ -538,8 +547,7 @@ public:
 class io_sendto_op : public io_send_op
 {
 public:
-  io_sendto_op(std::vector<char>&& buffer, io_completion_cb_t&& handler,
-               const ip::endpoint& destination)
+  io_sendto_op(std::vector<char>&& buffer, io_completion_cb_t&& handler, const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
@@ -578,6 +586,9 @@ protected:
     expected_size_ = -1;
     return std::move(expected_packet_);
   }
+
+  // Returns the custom print function
+  YASIO__DECL const print_fn2_t& cprint() const;
 
   // Call at user thread
   YASIO__DECL virtual int write(std::vector<char>&&, io_completion_cb_t&&);
@@ -723,25 +734,21 @@ public:
       : cindex_(cindex), kind_(kind), status_(error), transport_(transport), packet_({})
 #if !defined(YASIO_MINIFY_EVENT)
         ,
-        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr),
-        transport_id_(transport->id_)
+        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
 #endif
   {}
   io_event(int cindex, int kind, transport_handle_t transport, std::vector<char> packet)
       : cindex_(cindex), kind_(kind), status_(0), transport_(transport), packet_(std::move(packet))
 #if !defined(YASIO_MINIFY_EVENT)
         ,
-        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr),
-        transport_id_(transport->id_)
+        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
 #endif
   {}
   io_event(io_event&& rhs)
-      : cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_), transport_(rhs.transport_),
-        packet_(std::move(rhs.packet_))
+      : cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_), transport_(rhs.transport_), packet_(std::move(rhs.packet_))
 #if !defined(YASIO_MINIFY_EVENT)
         ,
-        timestamp_(rhs.timestamp_), transport_udata_(rhs.transport_udata_),
-        transport_id_(rhs.transport_id_)
+        timestamp_(rhs.timestamp_), transport_udata_(rhs.transport_udata_), transport_id_(rhs.transport_id_)
 #endif
   {}
 
@@ -758,10 +765,7 @@ public:
 
 #if !defined(YASIO_MINIFY_EVENT)
   /* Gets to transport user data when process this event */
-  template <typename _Uty = void*> _Uty transport_udata() const
-  {
-    return (_Uty)(uintptr_t)transport_udata_;
-  }
+  template <typename _Uty = void*> _Uty transport_udata() const { return (_Uty)(uintptr_t)transport_udata_; }
 
   /* Sets trasnport user data when process this event */
   template <typename _Uty = void*> void transport_udata(_Uty uval)
@@ -818,7 +822,7 @@ public:
   **   b.this function only works once
   **   c. you should call once before call any 'io_servic::start'
   */
-  YASIO__DECL static void init_globals(const yasio::inet::print_fn_t&);
+  YASIO__DECL static void init_globals(const yasio::inet::print_fn2_t&);
 
 public:
   YASIO__DECL io_service();
@@ -876,14 +880,11 @@ public:
   **        + TCP/UDP: Use queue to store user message, flush at io_service thread
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
-  int write(transport_handle_t thandle, const void* buf, size_t len,
-            io_completion_cb_t completion_handler = nullptr)
+  int write(transport_handle_t thandle, const void* buf, size_t len, io_completion_cb_t completion_handler = nullptr)
   {
-    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len),
-                 std::move(completion_handler));
+    return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(completion_handler));
   }
-  YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer,
-                        io_completion_cb_t completion_handler = nullptr);
+  YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer, io_completion_cb_t completion_handler = nullptr);
 
   /*
    ** Summary: Write data to unconnected UDP transport with specified address.
@@ -892,27 +893,22 @@ public:
    **        + UDP: Use queue to store user message, flush at io_service thread
    **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
    */
-  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to,
-               io_completion_cb_t completion_handler = nullptr)
+  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to, io_completion_cb_t completion_handler = nullptr)
   {
-    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to,
-                    std::move(completion_handler));
+    return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to, std::move(completion_handler));
   }
-  YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer,
-                           const ip::endpoint& to, io_completion_cb_t completion_handler = nullptr);
+  YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer, const ip::endpoint& to, io_completion_cb_t completion_handler = nullptr);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
   YASIO_OBSOLETE_DEPRECATE(io_service::resolve)
-  YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                                 unsigned short port = 0)
+  YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0)
   {
     return this->resolve(endpoints, hostname, port);
   }
 
-  YASIO__DECL int resolve(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                          unsigned short port = 0);
+  YASIO__DECL int resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
 
   YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
   io_channel* cindex_to_handle(size_t index) const { return channel_at(index); }
@@ -926,15 +922,12 @@ private:
 
   std::vector<timer_impl_t>::iterator find_timer(highp_timer* key)
   {
-    return yasio__find_if(timer_queue_,
-                          [=](const timer_impl_t& timer) { return timer.first == key; });
+    return yasio__find_if(timer_queue_, [=](const timer_impl_t& timer) { return timer.first == key; });
   }
   void sort_timers()
   {
     std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-              [](const timer_impl_t& lhs, const timer_impl_t& rhs) {
-                return lhs.first->wait_duration() > rhs.first->wait_duration();
-              });
+              [](const timer_impl_t& lhs, const timer_impl_t& rhs) { return lhs.first->wait_duration() > rhs.first->wait_duration(); });
   }
 
   // Start a async resolve, It's only for internal use
@@ -984,10 +977,7 @@ private:
   YASIO__DECL void cleanup_ares_channel();
 #endif
 
-  void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket)
-  {
-    handle_connect_succeed(allocate_transport(ctx, std::move(socket)));
-  }
+  void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket) { handle_connect_succeed(allocate_transport(ctx, std::move(socket))); }
   YASIO__DECL void handle_connect_succeed(transport_handle_t);
   YASIO__DECL void handle_connect_failed(io_channel*, int ec);
   YASIO__DECL void notify_connect_succeed(transport_handle_t);
@@ -1002,12 +992,8 @@ private:
   YASIO__DECL void run(void);
 
   YASIO__DECL bool do_read(transport_handle_t, fd_set* fds_array, long long& max_wait_duration);
-  YASIO__DECL bool do_write(transport_handle_t transport, long long& max_wait_duration)
-  {
-    return transport->do_write(max_wait_duration);
-  }
-  YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred,
-                          int bytes_to_strip, long long& max_wait_duration);
+  YASIO__DECL bool do_write(transport_handle_t transport, long long& max_wait_duration) { return transport->do_write(max_wait_duration); }
+  YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip, long long& max_wait_duration);
 
   // The op mask will be cleared, the state will be set CLOSED when clear_state is 'true'
   YASIO__DECL bool cleanup_io(io_base* obj, bool clear_state = true);
@@ -1047,6 +1033,9 @@ private:
   YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer, int& error);
 
   int local_address_family() const { return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6; }
+
+  /* Returns the custom print function */
+  inline const print_fn2_t& cprint() const { return options_.print_; }
 
 private:
   state state_ = state::UNINITIALIZED; // The service state
@@ -1109,7 +1098,7 @@ private:
     // the event callback
     io_event_cb_t on_event_;
     // The custom debug print function
-    print_fn_t print_;
+    print_fn2_t print_;
 
 #if defined(YASIO_HAVE_SSL)
     // The full path cacert(.pem) file for ssl verifaction

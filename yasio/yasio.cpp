@@ -59,26 +59,24 @@ SOFTWARE.
 #  include "yasio/detail/ares.hpp"
 #endif
 
-#define YASIO_KLOG_CP(custom_print, format, ...)                                                   \
-  do                                                                                               \
-  {                                                                                                \
-    auto msg = ::yasio::strfmt(127, "[yasio][%lld]" format "\n",                                   \
-                               highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__);    \
-    if (custom_print)                                                                              \
-      custom_print(msg.c_str());                                                                   \
-    else                                                                                           \
-      YASIO_LOG_TAG("", "%s", msg.c_str());                                                        \
+#define YASIO_KLOG_CP(custom_print, level, format, ...)                                                                                                        \
+  do                                                                                                                                                           \
+  {                                                                                                                                                            \
+    auto msg = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__);                              \
+    if (custom_print)                                                                                                                                          \
+      custom_print(level, msg.c_str());                                                                                                                        \
+    else                                                                                                                                                       \
+      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                                                    \
   } while (false)
 
-#define YASIO_KLOG(format, ...) YASIO_KLOG_CP(options_.print_, format, ##__VA_ARGS__)
-#define YASIO_ILOG(format, ...) YASIO_KLOG_CP(get_service().options_.print_, format, ##__VA_ARGS__)
+#define YASIO_KLOGD(format, ...) YASIO_KLOG_CP(cprint(), YLOG_D, format, ##__VA_ARGS__)
+#define YASIO_KLOGI(format, ...) YASIO_KLOG_CP(cprint(), YLOG_I, format, ##__VA_ARGS__)
+#define YASIO_KLOGE(format, ...) YASIO_KLOG_CP(cprint(), YLOG_E, format, ##__VA_ARGS__)
 
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_KLOGV(fmt, ...) (void)0
-#  define YASIO_ILOGV(fmt, ...) (void)0
 #else
-#  define YASIO_KLOGV YASIO_KLOG
-#  define YASIO_ILOGV YASIO_ILOG
+#  define YASIO_KLOGV(format, ...) YASIO_KLOG_CP(cprint(), YLOG_V, format, ##__VA_ARGS__)
 #endif
 
 #define yasio__setbits(x, m) ((x) |= (m))
@@ -198,10 +196,11 @@ struct yasio__global_state
     INITF_SSL   = 1,
     INITF_CARES = 2,
   };
-  yasio__global_state(const print_fn_t& custom_print)
+  yasio__global_state(const print_fn2_t& custom_print)
   {
-    max_alloc_size =
-        static_cast<int>((std::max)(sizeof(io_transport_tcp), sizeof(io_transport_udp)));
+    auto cprint = [&]() -> const print_fn2_t& { return custom_print; };
+
+    max_alloc_size = static_cast<int>((std::max)(sizeof(io_transport_tcp), sizeof(io_transport_udp)));
 #if defined(YASIO_HAVE_KCP)
     max_alloc_size = (std::max)(max_alloc_size, static_cast<int>(sizeof(io_transport_kcp)));
 #endif
@@ -215,23 +214,18 @@ struct yasio__global_state
     if (ares_status == 0)
       yasio__setbits(init_flags, INITF_CARES);
     else
-      YASIO_KLOG_CP(custom_print, "[global] c-ares library init failed, status=%d, detail:%s",
-                    ares_status, ::ares_strerror(ares_status));
+      YASIO_KLOGI("[global] c-ares library init failed, status=%d, detail:%s", ares_status, ::ares_strerror(ares_status));
 #  if defined(__ANDROID__)
     ares_status = ::yasio__ares_init_android();
     if (ares_status != 0)
-      YASIO_KLOG_CP(custom_print,
-                    "[global] c-ares library init android failed, status=%d, detail:%s",
-                    ares_status, ::ares_strerror(ares_status));
+      YASIO_KLOGI("[global] c-ares library init android failed, status=%d, detail:%s", ares_status, ::ares_strerror(ares_status));
 #  endif
 #endif
     // print version & transport alloc size
-    YASIO_KLOG_CP(custom_print,
-                  "[global] the yasio-%x.%x.%x is initialized, the size of per transport is %d "
-                  "when object_pool "
-                  "enabled.",
-                  (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff,
-                  YASIO_VERSION_NUM & 0xff, max_alloc_size);
+    YASIO_KLOGI("[global] the yasio-%x.%x.%x is initialized, the size of per transport is %d "
+                "when object_pool "
+                "enabled.",
+                (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff, YASIO_VERSION_NUM & 0xff, max_alloc_size);
   }
   ~yasio__global_state()
   {
@@ -244,7 +238,7 @@ struct yasio__global_state
   int init_flags = 0;
   int max_alloc_size;
 };
-static yasio__global_state& yasio__shared_globals(const print_fn_t& prt = nullptr)
+static yasio__global_state& yasio__shared_globals(const print_fn2_t& prt = nullptr)
 {
   static yasio__global_state __global_state(prt);
   return __global_state;
@@ -261,16 +255,10 @@ void highp_timer::cancel()
 }
 
 /// io_send_op
-int io_send_op::perform(io_transport* transport, const void* buf, int n)
-{
-  return transport->write_cb_(buf, n);
-}
+int io_send_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n); }
 
 /// io_sendto_op
-int io_sendto_op::perform(io_transport* transport, const void* buf, int n)
-{
-  return transport->socket_->sendto(buf, n, destination_);
-}
+int io_sendto_op::perform(io_transport* transport, const void* buf, int n) { return transport->socket_->sendto(buf, n, destination_); }
 
 #if defined(YASIO_HAVE_SSL)
 /// ssl_auto_handle
@@ -307,12 +295,9 @@ int io_channel::join_multicast_group()
   if (socket_->is_open())
   {
     int loopback = yasio__testbits(properties_, YCPF_MCAST_LOOPBACK) ? 1 : 0;
-    socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                        multiaddr_.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP,
-                        loopback);
+    socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6, multiaddr_.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
     // ttl
-    socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6,
-                        multiaddr_.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
+    socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6, multiaddr_.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
                         YASIO_DEFAULT_MULTICAST_TTL);
 
     return configure_multicast_group(true);
@@ -334,16 +319,14 @@ int io_channel::configure_multicast_group(bool onoff)
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = 0;
     mreq.imr_multiaddr        = multiaddr_.in4_.sin_addr;
-    return socket_->set_optval(IPPROTO_IP, onoff ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP, &mreq,
-                               (int)sizeof(mreq));
+    return socket_->set_optval(IPPROTO_IP, onoff ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
   else
   { // ipv6
     struct ipv6_mreq mreq_v6;
     mreq_v6.ipv6mr_interface = 0;
     mreq_v6.ipv6mr_multiaddr = multiaddr_.in6_.sin6_addr;
-    return socket_->set_optval(IPPROTO_IPV6, onoff ? IPV6_JOIN_GROUP : IPV6_LEAVE_GROUP, &mreq_v6,
-                               (int)sizeof(mreq_v6));
+    return socket_->set_optval(IPPROTO_IPV6, onoff ? IPV6_JOIN_GROUP : IPV6_LEAVE_GROUP, &mreq_v6, (int)sizeof(mreq_v6));
   }
 }
 void io_channel::configure_host(std::string host)
@@ -386,9 +369,7 @@ int io_channel::__builtin_decode_len(void* ud, int n)
       switch (lfb_.length_field_length)
       {
         case 4:
-          length =
-              ntohl(*reinterpret_cast<int32_t*>((unsigned char*)ud + lfb_.length_field_offset)) +
-              lfb_.length_adjustment;
+          length = ntohl(*reinterpret_cast<int32_t*>((unsigned char*)ud + lfb_.length_field_offset)) + lfb_.length_adjustment;
           break;
         case 3:
           length = 0;
@@ -396,9 +377,7 @@ int io_channel::__builtin_decode_len(void* ud, int n)
           length = (ntohl(length) >> 8) + lfb_.length_adjustment;
           break;
         case 2:
-          length =
-              ntohs(*reinterpret_cast<uint16_t*>((unsigned char*)ud + lfb_.length_field_offset)) +
-              lfb_.length_adjustment;
+          length = ntohs(*reinterpret_cast<uint16_t*>((unsigned char*)ud + lfb_.length_field_offset)) + lfb_.length_adjustment;
           break;
         case 1:
           length = *((unsigned char*)ud + lfb_.length_field_offset) + lfb_.length_adjustment;
@@ -423,6 +402,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->ud_.ptr = nullptr;
 #endif
 }
+const print_fn2_t& io_transport::cprint() const { return ctx_->get_service().options_.print_; }
 int io_transport::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
@@ -430,10 +410,7 @@ int io_transport::write(std::vector<char>&& buffer, io_completion_cb_t&& handler
   get_service().interrupt();
   return n;
 }
-int io_transport::do_read(int revent, int& error)
-{
-  return revent ? this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error) : 0;
-}
+int io_transport::do_read(int revent, int& error) { return revent ? this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error) : 0; }
 bool io_transport::do_write(long long& max_wait_duration)
 {
   bool ret = false;
@@ -450,9 +427,8 @@ bool io_transport::do_write(long long& max_wait_duration)
       if (call_write(v.get(), error) < 0)
       {
         set_last_errno(error);
-        YASIO_ILOG(
-            "[index: %d] the connection #%u will lost due to write failed, ec=%d, detail:%s",
-            this->cindex(), this->id_, error, io_service::strerror(error));
+        YASIO_KLOGE("[index: %d] the connection #%u will lost due to write failed, ec=%d, detail:%s", this->cindex(), this->id_, error,
+                    io_service::strerror(error));
         break;
       }
     }
@@ -505,8 +481,7 @@ int io_transport::call_read(void* data, int size, int& error)
 }
 int io_transport::call_write(io_send_op* op, int& error)
 {
-  int n = op->perform(this, op->buffer_.data() + op->offset_,
-                      static_cast<int>(op->buffer_.size() - op->offset_));
+  int n = op->perform(this, op->buffer_.data() + op->offset_, static_cast<int>(op->buffer_.size() - op->offset_));
 
   if (n > 0)
   {
@@ -527,8 +502,7 @@ int io_transport::call_write(io_send_op* op, int& error)
       auto& options = get_service().options_;
       if (options.ignore_udp_error_)
       {
-        YASIO_KLOG_CP(options.print_, "warning: write udp socket failed, ec=%d, detail:%s", error,
-                      io_service::strerror(error));
+        YASIO_KLOGI("[index: %d] write udp socket failed, ec=%d, detail:%s", this->cindex(), error, io_service::strerror(error));
         this->complete_op(op, error);
         n = 0;
       }
@@ -538,8 +512,7 @@ int io_transport::call_write(io_send_op* op, int& error)
 }
 void io_transport::complete_op(io_send_op* op, int error)
 {
-  YASIO_ILOGV("[index: %d] write complete, bytes transferred: %d/%d", this->cindex(),
-              static_cast<int>(op->offset_), static_cast<int>(op->buffer_.size()));
+  YASIO_KLOGV("[index: %d] write complete, bytes transferred: %d/%d", this->cindex(), static_cast<int>(op->offset_), static_cast<int>(op->buffer_.size()));
   if (op->handler_)
     op->handler_(error, op->offset_);
   send_queue_.pop();
@@ -550,13 +523,10 @@ void io_transport::set_primitives()
   this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
 }
 // -------------------- io_transport_tcp ---------------------
-inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport(ctx, s)
-{}
+inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport(ctx, s) {}
 // ----------------------- io_transport_ssl ----------------
 #if defined(YASIO_HAVE_SSL)
-io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
+io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
 {
   yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
 }
@@ -610,9 +580,7 @@ void io_transport_ssl::set_primitives()
 }
 #endif
 // ----------------------- io_transport_udp ----------------
-io_transport_udp::io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport(ctx, s)
-{}
+io_transport_udp::io_transport_udp(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport(ctx, s) {}
 io_transport_udp::~io_transport_udp() {}
 ip::endpoint io_transport_udp::remote_endpoint() const
 {
@@ -672,8 +640,7 @@ int io_transport_udp::write(std::vector<char>&& buffer, io_completion_cb_t&& han
   else
     return write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
-int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to,
-                               io_completion_cb_t&& handler)
+int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to, io_completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -702,15 +669,13 @@ void io_transport_udp::set_primitives()
 }
 int io_transport_udp::handle_read(const char* buf, int bytes_transferred, int& /*error*/)
 { // pure udp, dispatch to upper layer directly
-  get_service().handle_event(event_ptr(
-      new io_event(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred))));
+  get_service().handle_event(event_ptr(new io_event(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred))));
   return bytes_transferred;
 }
 
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
-io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s)
-    : io_transport_udp(ctx, s)
+io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport_udp(ctx, s)
 {
   this->kcp_ = ::ikcp_create(0, this);
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
@@ -774,19 +739,15 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 #endif
 
 // ------------------------ io_service ------------------------
-void io_service::init_globals(const yasio::inet::print_fn_t& prt) { yasio__shared_globals(prt); }
+void io_service::init_globals(const yasio::inet::print_fn2_t& prt) { yasio__shared_globals(prt); }
 io_service::io_service() { this->init(nullptr, 1); }
 io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
 io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }
 io_service::io_service(const std::vector<io_hostent>& channel_eps)
 {
-  this->init(!channel_eps.empty() ? channel_eps.data() : nullptr,
-             static_cast<int>(channel_eps.size()));
+  this->init(!channel_eps.empty() ? channel_eps.data() : nullptr, static_cast<int>(channel_eps.size()));
 }
-io_service::io_service(const io_hostent* channel_eps, int channel_count)
-{
-  this->init(channel_eps, channel_count);
-}
+io_service::io_service(const io_hostent* channel_eps, int channel_count) { this->init(channel_eps, channel_count); }
 io_service::~io_service()
 {
   this->stop();
@@ -858,9 +819,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
 
   this->max_nfds_ = 0;
 
-  options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
-    return this->resolve(eps, host, port);
-  };
+  options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
 
   register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -965,14 +924,16 @@ void io_service::run()
     if (retval == -1)
     {
       int ec = xxsocket::get_last_errno();
-      YASIO_KLOG("do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
+      YASIO_KLOGD("[core] do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
       if (ec == EBADF)
+      {
         goto _L_end;
+      }
       continue; // just continue.
     }
 
     if (retval == 0)
-      YASIO_KLOGV("%s", "do_select is timeout, process_timers()");
+      YASIO_KLOGV("[core] %s", "do_select is timeout, process_timers()");
 
     // Reset the interrupter.
     else if (retval > 0 && FD_ISSET(this->interrupter_.read_descriptor(), &(fds_array[read_op])))
@@ -1013,8 +974,7 @@ void io_service::process_transports(fd_set* fds_array, long long& max_wait_durat
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    bool ok        = (do_read(transport, fds_array, max_wait_duration) &&
-               do_write(transport, max_wait_duration));
+    bool ok        = (do_read(transport, fds_array, max_wait_duration) && do_write(transport, max_wait_duration));
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
@@ -1146,8 +1106,7 @@ void io_service::handle_close(transport_handle_t thandle)
   auto ec  = thandle->error_;
 
   // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_KLOG("[index: %d] the connection #%u(%p) is lost, ec=%d, detail:%s", ctx->index_,
-             thandle->id_, thandle, ec, io_service::strerror(ec));
+  YASIO_KLOGD("[index: %d] the connection #%u(%p) is lost, ec=%d, detail:%s", ctx->index_, thandle->id_, thandle, ec, io_service::strerror(ec));
 
   // @Notify connection lost
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, thandle)));
@@ -1190,25 +1149,23 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
   if (yasio__testbits(flags, YEM_POLLERR))
     FD_CLR(fd, &(fds_array_[except_op]));
 }
-int io_service::write(transport_handle_t transport, std::vector<char> buffer,
-                      io_completion_cb_t handler)
+int io_service::write(transport_handle_t transport, std::vector<char> buffer, io_completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write(std::move(buffer), std::move(handler)) : 0;
   else
   {
-    YASIO_KLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
+    YASIO_KLOGE("[transport: %p] send failed, the connection not ok!", (void*)transport);
     return -1;
   }
 }
-int io_service::write_to(transport_handle_t transport, std::vector<char> buffer,
-                         const ip::endpoint& to, io_completion_cb_t handler)
+int io_service::write_to(transport_handle_t transport, std::vector<char> buffer, const ip::endpoint& to, io_completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write_to(std::move(buffer), to, std::move(handler)) : 0;
   else
   {
-    YASIO_KLOG("[transport: %p] send failed, the connection not ok!", (void*)transport);
+    YASIO_KLOGE("[transport: %p] send failed, the connection not ok!", (void*)transport);
     return -1;
   }
 }
@@ -1237,8 +1194,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   ctx->state_ = io_base::state::OPENING;
   auto& ep    = ctx->remote_eps_[0];
-  YASIO_KLOG("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(),
-             ctx->remote_port_);
+  YASIO_KLOGD("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(), ctx->remote_port_);
 
   if (ctx->socket_->open(ep.af(), ctx->socktype_))
   {
@@ -1248,8 +1204,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       ctx->socket_->reuse_address(false);
 
-    if (ctx->local_port_ != 0 || !ctx->local_host_.empty() ||
-        yasio__testbits(ctx->properties_, YCM_UDP))
+    if (ctx->local_port_ != 0 || !ctx->local_host_.empty() || yasio__testbits(ctx->properties_, YCM_UDP))
     {
       auto ifaddr = ctx->local_host_.empty() ? YASIO_ADDR_ANY(ep.af()) : ctx->local_host_.c_str();
       ctx->socket_->bind(ifaddr, ctx->local_port_);
@@ -1293,16 +1248,14 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
 void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_array)
 {
-  assert(yasio__testbits(ctx->properties_, YCM_TCP) &&
-         yasio__testbits(ctx->properties_, YCM_CLIENT));
+  assert(yasio__testbits(ctx->properties_, YCM_TCP) && yasio__testbits(ctx->properties_, YCM_CLIENT));
   assert(ctx->state_ == io_base::state::OPENING);
 
   if (ctx->state_ == io_base::state::OPENING)
   {
 #if !defined(YASIO_HAVE_SSL)
     int error = -1;
-    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
-        FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) || FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
     {
       if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
       {
@@ -1319,8 +1272,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
     if (!yasio__testbits(ctx->properties_, YCPF_SSL_HANDSHAKING))
     {
       int error = -1;
-      if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) ||
-          FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+      if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) || FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
       {
         if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
         {
@@ -1376,7 +1328,7 @@ void io_service::init_ssl_context()
 #  endif
     }
     else
-      YASIO_KLOG("load ca certifaction file failed!");
+      YASIO_KLOGE("[global] load ca certifaction file failed!");
   }
   else
     SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
@@ -1413,8 +1365,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
     When using a non-blocking socket, nothing is to be done, but select() can be used to check for
     the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
     */
-    if (status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE ||
-        status == SSL_ERROR_WANT_ASYNC)
+    if (status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE || status == SSL_ERROR_WANT_ASYNC)
       ; // Nothing need to do
     else
     {
@@ -1423,13 +1374,12 @@ void io_service::do_ssl_handshake(io_channel* ctx)
       {
         char errstring[256] = {0};
         ERR_error_string_n(error, errstring, sizeof(errstring));
-        YASIO_KLOG("SSL_do_handshake fail with ret=%d,error=%X, detail:%s", ret, error, errstring);
+        YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,error=%X, detail:%s", ctx->index_, ret, error, errstring);
       }
       else
       {
         error = xxsocket::get_last_errno();
-        YASIO_KLOG("SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ret, status,
-                   error, xxsocket::strerror(error));
+        YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ctx->index_, ret, status, error, xxsocket::strerror(error));
       }
       ctx->ssl_.destroy();
       handle_connect_failed(ctx, yasio::errc::ssl_handshake_failed);
@@ -1458,24 +1408,22 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     }
   }
 
-  auto& custom_print = current_service.options_.print_;
+  auto cprint = [&]() -> const print_fn2_t& { return current_service.options_.print_; };
   if (!ctx->remote_eps_.empty())
   {
     yasio__setlobyte(ctx->dns_queries_state_, YDQS_READY);
     ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-    YASIO_KLOG_CP(custom_print, "[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)",
-                  ctx->index_, ctx->remote_host_.c_str(),
-                  (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+    YASIO_KLOGD("[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)", ctx->index_, ctx->remote_host_.c_str(),
+                (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
   }
   else
   {
     ctx->set_last_errno(yasio::errc::resolve_host_failed);
     yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
-    YASIO_KLOG_CP(custom_print,
-                  "[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s",
-                  ctx->index_, ctx->remote_host_.c_str(), status, ::ares_strerror(status));
+    YASIO_KLOGE("[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), status,
+                ::ares_strerror(status));
   }
 
   current_service.interrupt();
@@ -1485,15 +1433,14 @@ void io_service::process_ares_requests(fd_set* fds_array)
   if (this->ares_outstanding_work_ > 0)
   {
     ares_socket_t socks[ARES_GETSOCK_MAXNUM] = {0};
-    int bitmask = ::ares_getsock(this->ares_, socks, ARES_GETSOCK_MAXNUM);
+    int bitmask                              = ::ares_getsock(this->ares_, socks, ARES_GETSOCK_MAXNUM);
 
     for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
     {
       if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
       {
         auto fd = socks[i];
-        ::ares_process_fd(this->ares_, FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD,
-                          FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
+        ::ares_process_fd(this->ares_, FD_ISSET(fd, &(fds_array[read_op])) ? fd : ARES_SOCKET_BAD, FD_ISSET(fd, &(fds_array[write_op])) ? fd : ARES_SOCKET_BAD);
       }
       else
         break;
@@ -1505,11 +1452,10 @@ void io_service::init_ares_channel()
   ares_options options = {};
   options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::micro::den);
   options.tries        = this->options_.dns_queries_tries_;
-  int status           = ::ares_init_options(&ares_, &options,
-                                   ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/);
+  int status           = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/);
   if (status == ARES_SUCCESS)
   {
-    YASIO_KLOG("[c-ares] init channel succeed");
+    YASIO_KLOGD("[c-ares] init channel succeed");
 #  if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1
     config_ares_name_servers(true);
 #  else
@@ -1517,8 +1463,7 @@ void io_service::init_ares_channel()
 #  endif
   }
   else
-    YASIO_KLOG("[c-ares] init channel failed, status=%d, detail:%s", status,
-               ::ares_strerror(status));
+    YASIO_KLOGE("[c-ares] init channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
 }
 bool io_service::config_ares_name_servers(bool dirty)
 {
@@ -1529,7 +1474,7 @@ bool io_service::config_ares_name_servers(bool dirty)
 #  if defined(__APPLE__)
     struct __res_state res;
     status = ::res_ninit(&res);
-    YASIO_KLOG("[c-ares] res_ninit status=%d, res.nscount=%d", status, res.nscount);
+    YASIO_KLOGD("[c-ares] res_ninit status=%d, res.nscount=%d", status, res.nscount);
     if (status == 0)
     {
       union res_sockaddr_union nsaddrs[MAXNS];
@@ -1568,15 +1513,14 @@ bool io_service::config_ares_name_servers(bool dirty)
       endpoint::inaddr_to_csv_nl(name_server->family, &name_server->addr, nscsv);
 
     if (!nscsv.empty()) // if no valid name server, use predefined fallback dns
-      YASIO_KLOG("[c-ares] use system dns: %s", nscsv.c_str());
+      YASIO_KLOGD("[c-ares] use system dns: %s", nscsv.c_str());
     else
     {
       status = ::ares_set_servers_csv(ares_, YASIO_CARES_FALLBACK_DNS);
       if (status == 0)
-        YASIO_KLOG("[c-ares] set fallback dns: '%s' succeed", YASIO_CARES_FALLBACK_DNS);
+        YASIO_KLOGD("[c-ares] set fallback dns: '%s' succeed", YASIO_CARES_FALLBACK_DNS);
       else
-        YASIO_KLOG("[c-ares] set fallback dns: '%s' failed, detail: %s", YASIO_CARES_FALLBACK_DNS,
-                   ::ares_strerror(status));
+        YASIO_KLOGE("[c-ares] set fallback dns: '%s' failed, detail: %s", YASIO_CARES_FALLBACK_DNS, ::ares_strerror(status));
     }
     ::ares_free_data(name_servers);
   }
@@ -1597,8 +1541,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   cleanup_io(ctx);
 
   // server: don't need resolve, don't use remote_eps_
-  auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family())
-                                          : ctx->remote_host_.c_str();
+  auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family()) : ctx->remote_host_.c_str();
   ip::endpoint ep(ifaddr, ctx->remote_port_);
   if (ctx->socket_->open(ep.af(), ctx->socktype_))
   {
@@ -1610,8 +1553,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
-      YASIO_KLOG("[index: %d] bind failed, ec=%d, detail:%s", ctx->index_, error,
-                 io_service::strerror(error));
+      YASIO_KLOGE("[index: %d] bind failed, ec=%d, detail:%s", ctx->index_, error, io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = io_base::state::CLOSED;
       return;
@@ -1629,14 +1571,13 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
         ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
       }
       register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-      YASIO_KLOG("[index: %d] socket.fd=%d listening at %s...", ctx->index_,
-                 (int)ctx->socket_->native_handle(), ep.to_string().c_str());
+      YASIO_KLOGD("[index: %d] socket.fd=%d listening at %s...", ctx->index_, (int)ctx->socket_->native_handle(), ep.to_string().c_str());
     }
     else
     {
       error = xxsocket::get_last_errno();
-      YASIO_KLOG("[index: %d] socket.fd=%d listening failed, ec=%d, detail:%s", ctx->index_,
-                 (int)ctx->socket_->native_handle(), error, io_service::strerror(error));
+      YASIO_KLOGE("[index: %d] socket.fd=%d listening failed, ec=%d, detail:%s", ctx->index_, (int)ctx->socket_->native_handle(), error,
+                  io_service::strerror(error));
       ctx->socket_->close();
       ctx->state_ = io_base::state::CLOSED;
     }
@@ -1647,8 +1588,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
   if (ctx->state_ == io_base::state::OPEN)
   {
     int error = 0;
-    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]) &&
-        ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
+    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]) && ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
     {
       if (yasio__testbits(ctx->properties_, YCM_TCP))
       {
@@ -1657,17 +1597,15 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         if (error == 0)
           handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
         else // The non-blocking tcp accept failed can be ignored.
-          YASIO_KLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index_,
-                      (int)ctx->socket_->native_handle(), error);
+          YASIO_KLOGV("[index: %d] socket.fd=%d, accept failed, ec=%u", ctx->index_, (int)ctx->socket_->native_handle(), error);
       }
       else // YCM_UDP
       {
         ip::endpoint peer;
-        int n = ctx->socket_->recvfrom(&ctx->buffer_.front(), static_cast<int>(ctx->buffer_.size()),
-                                       peer);
+        int n = ctx->socket_->recvfrom(&ctx->buffer_.front(), static_cast<int>(ctx->buffer_.size()), peer);
         if (n > 0)
         {
-          YASIO_KLOGV("recvfrom peer: %s succeed.", peer.to_string().c_str());
+          YASIO_KLOGV("[index: %d] recvfrom peer: %s succeed.", ctx->index_, peer.to_string().c_str());
           /*
           On Windows: always recv data from same client
           On Linux: only once, just like tcp accept, just like tcp accept
@@ -1689,13 +1627,11 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
          */
           // for win32, we check exists udp clients by ourself, and only write operation can be
           // perform on transports, the read operation still dispatch by channel.
-          auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
+          auto it        = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
             using namespace std;
-            return yasio__testbits(transport->ctx_->properties_, YCM_UDP) &&
-                   static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
+            return yasio__testbits(transport->ctx_->properties_, YCM_UDP) && static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
           });
-          auto transport = static_cast<io_transport_udp*>(
-              it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer, error));
+          auto transport = static_cast<io_transport_udp*>(it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer, error));
 #endif
           if (transport)
           {
@@ -1706,21 +1642,18 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             }
           }
           else
-            YASIO_KLOG("[index: %d] do_dgram_accept failed, ec=%d, detail:%s", ctx->index_, error,
-                       this->strerror(error));
+            YASIO_KLOGE("[index: %d] do_dgram_accept failed, ec=%d, detail:%s", ctx->index_, error, this->strerror(error));
         }
         else if (n < 0)
         {
           error = xxsocket::get_last_errno();
-          YASIO_KLOG("[index: %d] recvfrom failed, ec=%d, detail:%s", ctx->index_, error,
-                     this->strerror(error));
+          YASIO_KLOGE("[index: %d] recvfrom failed, ec=%d, detail:%s", ctx->index_, error, this->strerror(error));
         }
       }
     }
   }
 }
-transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoint& peer,
-                                               int& error)
+transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoint& peer, int& error)
 {
   auto client_sock = std::make_shared<xxsocket>();
   if (client_sock->open(peer.af(), SOCK_DGRAM))
@@ -1731,8 +1664,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       client_sock->reuse_address(false);
     if (client_sock->bind(YASIO_ADDR_ANY(peer.af()), ctx->remote_port_) == 0)
     {
-      auto transport =
-          static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(client_sock)));
+      auto transport = static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(client_sock)));
 
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);
@@ -1771,8 +1703,7 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
 #endif
     // apply tcp keepalive options
     if (options_.tcp_keepalive_.onoff)
-      connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle,
-                                options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
+      connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
   }
 
   notify_connect_succeed(transport);
@@ -1782,12 +1713,10 @@ void io_service::notify_connect_succeed(transport_handle_t transport)
   auto ctx = transport->ctx_;
 
   auto& s = transport->socket_;
-  YASIO_KLOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_,
-              s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
+  YASIO_KLOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_, s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
 
-  YASIO_KLOG("[index: %d] the connection #%u(%p) [%s] --> [%s] is established.", ctx->index_,
-             transport->id_, transport, s->local_endpoint().to_string().c_str(),
-             s->peer_endpoint().to_string().c_str());
+  YASIO_KLOGD("[index: %d] the connection #%u(%p) [%s] --> [%s] is established.", ctx->index_, transport->id_, transport,
+              s->local_endpoint().to_string().c_str(), s->peer_endpoint().to_string().c_str());
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, transport)));
 }
 transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_ptr<xxsocket> socket)
@@ -1837,12 +1766,11 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 
   cleanup_io(ctx);
 
-  YASIO_KLOG("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_,
-             ctx->remote_host_.c_str(), ctx->remote_port_, error, io_service::strerror(error));
+  YASIO_KLOGE("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), ctx->remote_port_, error,
+              io_service::strerror(error));
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error)));
 }
-bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
-                         long long& max_wait_duration)
+bool io_service::do_read(transport_handle_t transport, fd_set* fds_array, long long& max_wait_duration)
 {
   bool ret = false;
   do
@@ -1855,19 +1783,16 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     int n      = transport->do_read(revent, error);
     if (n >= 0)
     {
-      YASIO_KLOGV("[index: %d] do_read status ok, bytes transferred: %d, buffer used: %d",
-                  transport->cindex(), n, n + transport->wpos_);
+      YASIO_KLOGV("[index: %d] do_read status ok, bytes transferred: %d, buffer used: %d", transport->cindex(), n, n + transport->wpos_);
       if (transport->expected_size_ == -1)
       { // decode length
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->wpos_ + n);
         if (length > 0)
         {
-          int bytes_to_strip =
-              ::yasio::clamp(transport->ctx_->lfb_.initial_bytes_to_strip, 0, length - 1);
+          int bytes_to_strip        = ::yasio::clamp(transport->ctx_->lfb_.initial_bytes_to_strip, 0, length - 1);
           transport->expected_size_ = length;
-          transport->expected_packet_.reserve(
-              (std::min)(length - bytes_to_strip,
-                         YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
+          transport->expected_packet_.reserve((std::min)(length - bytes_to_strip,
+                                                         YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
           unpack(transport, transport->expected_size_, n, bytes_to_strip, max_wait_duration);
         }
         else if (length == 0) // header insufficient, wait readfd ready at next event step.
@@ -1880,16 +1805,14 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
       }
       else
       { // process incompleted pdu
-        unpack(transport,
-               transport->expected_size_ - static_cast<int>(transport->expected_packet_.size()), n,
-               0, max_wait_duration);
+        unpack(transport, transport->expected_size_ - static_cast<int>(transport->expected_packet_.size()), n, 0, max_wait_duration);
       }
     }
     else
     { // n < 0, regard as connection should close
       transport->set_last_errno(error);
-      YASIO_KLOG("[index: %d] the connection #%u will lost due to read failed, ec=%d, detail:%s",
-                  transport->cindex(), transport->id_, error, io_service::strerror(error));
+      YASIO_KLOGE("[index: %d] the connection #%u will lost due to read failed, ec=%d, detail:%s", transport->cindex(), transport->id_, error,
+                  io_service::strerror(error));
       break;
     }
 
@@ -1898,13 +1821,11 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
 
   return ret;
 }
-void io_service::unpack(transport_handle_t transport, int bytes_expected, int bytes_transferred,
-                        int bytes_to_strip, long long& max_wait_duration)
+void io_service::unpack(transport_handle_t transport, int bytes_expected, int bytes_transferred, int bytes_to_strip, long long& max_wait_duration)
 {
   auto bytes_available = bytes_transferred + transport->wpos_;
-  transport->expected_packet_.insert(
-      transport->expected_packet_.end(), transport->buffer_ + bytes_to_strip,
-      transport->buffer_ + (std::min)(bytes_expected, bytes_available));
+  transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_ + bytes_to_strip,
+                                     transport->buffer_ + (std::min)(bytes_expected, bytes_available));
 
   // set wpos to bytes of remain buffer
   transport->wpos_ = bytes_available - bytes_expected;
@@ -1919,8 +1840,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     YASIO_KLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
-    this->handle_event(event_ptr(
-        new io_event(transport->cindex(), YEK_PACKET, transport, transport->fetch_packet())));
+    this->handle_event(event_ptr(new io_event(transport->cindex(), YEK_PACKET, transport, transport->fetch_packet())));
   }
   else /* all buffer consumed, set wpos to ZERO, pdu incomplete, continue recv remain data. */
     transport->wpos_ = 0;
@@ -1978,7 +1898,7 @@ void io_service::open_internal(io_channel* ctx)
 {
   if (ctx->state_ == io_base::state::OPENING)
   { // in-opening, do nothing
-    YASIO_KLOG("[index: %d] the channel is in opening!", ctx->index_);
+    YASIO_KLOGD("[index: %d] the channel is in opening!", ctx->index_);
     return;
   }
 
@@ -2049,13 +1969,11 @@ int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
   auto wait_duration = get_wait_duration(max_wait_duration);
   if (wait_duration > 0)
   {
-    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000),
-                        (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 
 #if defined(YASIO_HAVE_CARES)
     int nfds = -1;
-    if (this->ares_outstanding_work_ > 0 &&
-        (nfds = ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op])) > 0)
+    if (this->ares_outstanding_work_ > 0 && (nfds = ::ares_fds(this->ares_, &fdsa[read_op], &fdsa[write_op])) > 0)
     {
       ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
       if (this->max_nfds_ < nfds)
@@ -2063,10 +1981,9 @@ int io_service::do_select(fd_set* fdsa, long long max_wait_duration)
     }
 #endif
 
-    YASIO_KLOGV("socket.select max_nfds_:%d waiting... %ld milliseconds", max_nfds_,
-                waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
+    YASIO_KLOGV("[core] socket.select max_nfds_:%d waiting... %ld milliseconds", max_nfds_, waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
     retval = ::select(this->max_nfds_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
-    YASIO_KLOGV("socket.select waked up, retval=%d", retval);
+    YASIO_KLOGV("[core] socket.select waked up, retval=%d", retval);
   }
 
   return retval;
@@ -2102,12 +2019,10 @@ bool io_service::cleanup_io(io_base* obj, bool clear_state)
 }
 u_short io_service::query_ares_state(io_channel* ctx)
 {
-  if (yasio__testbits(ctx->dns_queries_state_, YDQSF_QUERIES_NEEDED) &&
-      !yasio__testlobyte(ctx->dns_queries_state_, YDQS_INPRROGRESS))
+  if (yasio__testbits(ctx->dns_queries_state_, YDQSF_QUERIES_NEEDED) && !yasio__testlobyte(ctx->dns_queries_state_, YDQS_INPRROGRESS))
   {
     auto diff = (highp_clock() - ctx->dns_queries_timestamp_);
-    if (yasio__testlobyte(ctx->dns_queries_state_, YDQS_READY) &&
-        diff >= options_.dns_cache_timeout_)
+    if (yasio__testlobyte(ctx->dns_queries_state_, YDQS_READY) && diff >= options_.dns_cache_timeout_)
       yasio__setlobyte(ctx->dns_queries_state_, YDQS_DIRTY);
 
     if (yasio__testlobyte(ctx->dns_queries_state_, YDQS_DIRTY))
@@ -2123,7 +2038,7 @@ void io_service::start_resolve(io_channel* ctx)
   ctx->set_last_errno(EINPROGRESS);
   yasio__setlobyte(ctx->dns_queries_state_, YDQS_INPRROGRESS);
 
-  YASIO_KLOG("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
+  YASIO_KLOGD("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();
 
 #if defined(YASIO_ENABLE_ARES_PROFILER)
@@ -2160,16 +2075,14 @@ void io_service::start_resolve(io_channel* ctx)
       ctx->remote_eps_            = std::move(remote_eps);
       ctx->dns_queries_timestamp_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
-      YASIO_KLOG("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_,
-                 ctx->remote_host_.c_str(),
-                 (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+      YASIO_KLOGD("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_, ctx->remote_host_.c_str(),
+                  (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
 #  endif
     }
     else
     {
       yasio__setlobyte(ctx->dns_queries_state_, YDQS_FAILED);
-      YASIO_KLOG("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_,
-                 ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
+      YASIO_KLOGE("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
     }
     /*
     The getaddrinfo behavior at win32 is strange:
@@ -2203,19 +2116,15 @@ void io_service::start_resolve(io_channel* ctx)
   }
 
   ares_work_started();
-  ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint,
-                     io_service::ares_getaddrinfo_cb, ctx);
+  ::ares_getaddrinfo(this->ares_, ctx->remote_host_.c_str(), service, &hint, io_service::ares_getaddrinfo_cb, ctx);
 #endif
 }
-int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname,
-                        unsigned short port)
+int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
 {
   if (yasio__testbits(this->ipsv_, ipsv_ipv4))
     return xxsocket::resolve_v4(endpoints, hostname, port);
   else if (yasio__testbits(this->ipsv_, ipsv_ipv6)) // localhost is IPv6_only network
-    return xxsocket::resolve_v6(endpoints, hostname, port) != 0
-               ? xxsocket::resolve_v4to6(endpoints, hostname, port)
-               : 0;
+    return xxsocket::resolve_v6(endpoints, hostname, port) != 0 ? xxsocket::resolve_v4to6(endpoints, hostname, port) : 0;
   return -1;
 }
 void io_service::interrupt() { interrupter_.interrupt(); }
@@ -2270,8 +2179,16 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_RESOLV_FN:
       options_.resolv_ = *va_arg(ap, resolv_fn_t*);
       break;
-    case YOPT_S_PRINT_FN:
-      options_.print_ = *va_arg(ap, print_fn_t*);
+    case YOPT_S_PRINT_FN: {
+      auto ncb = *va_arg(ap, print_fn_t*);
+      if (ncb)
+        options_.print_ = [=](int, const char* msg) { ncb(msg); };
+      else
+        options_.print_ = nullptr;
+    }
+    break;
+    case YOPT_S_PRINT_FN2:
+      options_.print_ = *va_arg(ap, print_fn2_t*);
       break;
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
@@ -2401,15 +2318,13 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     }
     case YOPT_T_CONNECT: {
       auto transport = va_arg(ap, transport_handle_t);
-      if (transport && transport->is_open() &&
-          (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
+      if (transport && transport->is_open() && (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
         static_cast<io_transport_udp*>(transport)->connect();
       break;
     }
     case YOPT_T_DISCONNECT: {
       auto transport = va_arg(ap, transport_handle_t);
-      if (transport && transport->is_open() &&
-          (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
+      if (transport && transport->is_open() && (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)
         static_cast<io_transport_udp*>(transport)->disconnect();
       break;
     }

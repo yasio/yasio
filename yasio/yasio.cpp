@@ -450,7 +450,7 @@ bool io_transport::do_write(long long& max_wait_duration)
       if (call_write(v.get(), error) < 0)
       {
         set_last_errno(error);
-        YASIO_ILOGV(
+        YASIO_ILOG(
             "[index: %d] the connection #%u will lost due to write failed, ec=%d, detail:%s",
             this->cindex(), this->id_, error, io_service::strerror(error));
         break;
@@ -1888,7 +1888,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array,
     else
     { // n < 0, regard as connection should close
       transport->set_last_errno(error);
-      YASIO_KLOGV("[index: %d] the connection #%u will lost due to read failed, ec=%d, detail:%s",
+      YASIO_KLOG("[index: %d] the connection #%u will lost due to read failed, ec=%d, detail:%s",
                   transport->cindex(), transport->id_, error, io_service::strerror(error));
       break;
     }

@@ -1,3 +1,8 @@
+yaiso-3.33.4
+  
+* Add log level support, use option ```YOPT_S_PRINT_FN2```.
+  
+  
 yaiso-3.33.3
   
 * Add API ```xxsocket::tcp_rtt```.

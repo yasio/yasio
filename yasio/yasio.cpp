@@ -59,19 +59,22 @@ SOFTWARE.
 #  include "yasio/detail/ares.hpp"
 #endif
 
-#define YASIO_KLOG_CP(custom_print, level, format, ...)                                                                                                        \
-  do                                                                                                                                                           \
-  {                                                                                                                                                            \
-    auto msg = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__);                              \
-    if (custom_print)                                                                                                                                          \
-      custom_print(level, msg.c_str());                                                                                                                        \
-    else                                                                                                                                                       \
-      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                                                    \
+// clang-format off
+#define YASIO_KLOG_CP(level, format, ...)                                                                                                   \
+  do                                                                                                                                        \
+  {                                                                                                                                         \
+    auto& custom_print = cprint();                                                                                                          \
+    auto msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__); \
+    if (custom_print)                                                                                                                       \
+      custom_print(level, msg.c_str());                                                                                                     \
+    else                                                                                                                                    \
+      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                                 \
   } while (false)
+// clang-format on
 
-#define YASIO_KLOGD(format, ...) YASIO_KLOG_CP(cprint(), YLOG_D, format, ##__VA_ARGS__)
-#define YASIO_KLOGI(format, ...) YASIO_KLOG_CP(cprint(), YLOG_I, format, ##__VA_ARGS__)
-#define YASIO_KLOGE(format, ...) YASIO_KLOG_CP(cprint(), YLOG_E, format, ##__VA_ARGS__)
+#define YASIO_KLOGD(format, ...) YASIO_KLOG_CP(YLOG_D, format, ##__VA_ARGS__)
+#define YASIO_KLOGI(format, ...) YASIO_KLOG_CP(YLOG_I, format, ##__VA_ARGS__)
+#define YASIO_KLOGE(format, ...) YASIO_KLOG_CP(YLOG_E, format, ##__VA_ARGS__)
 
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_KLOGV(fmt, ...) (void)0

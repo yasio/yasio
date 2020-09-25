@@ -12,6 +12,7 @@ using namespace yasio;
 using namespace yasio::inet;
 
 static highp_time_t s_last_send_time[3] = {0};
+static const highp_time_t s_send_interval = 50; // (ms)
 
 void yasioTest()
 {
@@ -32,6 +33,7 @@ void yasioTest()
 
   int max_request_count = 2;
 
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
@@ -53,7 +55,7 @@ void yasioTest()
           auto index    = event->cindex();
           if (index == 0)
           {
-            tcp_send_timer.expires_from_now(std::chrono::seconds(2));
+            tcp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
             tcp_send_timer.async_wait([&service, transport, index]() -> bool {
               obstream obs;
               obs.write_bytes("[TCP] Hello, ");
@@ -64,7 +66,7 @@ void yasioTest()
           }
           else if (index == 1)
           {
-            udp_send_timer.expires_from_now(std::chrono::seconds(2));
+            udp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
             udp_send_timer.async_wait([&service, transport, index]() -> bool {
               obstream obs;
               obs.write_bytes("[UDP] Hello, ");
@@ -75,7 +77,7 @@ void yasioTest()
           }
           else if (index == 2)
           {
-            kcp_send_timer.expires_from_now(std::chrono::seconds(2));
+            kcp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
             kcp_send_timer.async_wait([&service, transport, &max_request_count, index]() -> bool {
               obstream obs;
               obs.write_bytes("[KCP] Hello, ");
@@ -110,7 +112,7 @@ void yasioTest()
   time_t duration = 0;
   while (service.is_running())
   {
-    service.dispatch();
+    // service.dispatch();
     if (duration >= 6000000)
     {
       for (auto transport : transports)

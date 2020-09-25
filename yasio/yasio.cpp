@@ -2319,12 +2319,14 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       }
       break;
     }
+#if defined(YASIO_HAVE_KCP)
     case YOPT_C_KCP_CONV: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
         channel->kcp_conv_ = va_arg(ap, uint32_t);
       break;
     }
+#endif
     case YOPT_T_CONNECT: {
       auto transport = va_arg(ap, transport_handle_t);
       if (transport && transport->is_open() && (transport->ctx_->properties_ & 0xff) == YCK_UDP_CLIENT)

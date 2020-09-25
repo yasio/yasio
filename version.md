@@ -1,3 +1,8 @@
+yaiso-3.33.5
+  
+* Add support to set kcp conv id, use option ```YOPT_C_KCP_CONV```.
+  
+  
 yaiso-3.33.4
   
 * Add log level support, use option ```YOPT_S_PRINT_FN2```.

@@ -680,7 +680,7 @@ int io_transport_udp::handle_read(const char* buf, int bytes_transferred, int& /
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport_udp(ctx, s)
 {
-  this->kcp_ = ::ikcp_create(0, this);
+  this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
   ::ikcp_nodelay(this->kcp_, 1, 10 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
@@ -2317,6 +2317,12 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
         yasio__setbits(channel->properties_, (uint32_t)va_arg(ap, int));
         yasio__clearbits(channel->properties_, (uint32_t)va_arg(ap, int));
       }
+      break;
+    }
+    case YOPT_C_KCP_CONV: {
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->kcp_conv_ = va_arg(ap, uint32_t);
       break;
     }
     case YOPT_T_CONNECT: {

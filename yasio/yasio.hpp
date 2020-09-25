@@ -212,6 +212,10 @@ enum
   // params: index:int
   YOPT_C_DISABLE_MCAST,
 
+  // The kcp conv id, must equal in two endpoint from the same connection
+  // params: index:int, conv:uint32_t
+  YOPT_C_KCP_CONV,
+
   // Change 4-tuple association for io_transport_udp
   // params: transport:transport_handle_t
   // remark: only works for udp client transport
@@ -517,6 +521,10 @@ private:
 
   // Current it's only for UDP
   std::vector<char> buffer_;
+
+#if defined(YASIO_HAVE_KCP)
+  uint32_t kcp_conv_ = 0;
+#endif
 
 #if defined(YASIO_HAVE_SSL)
   ssl_auto_handle ssl_;

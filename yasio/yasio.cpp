@@ -406,7 +406,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
 #endif
 }
 const print_fn2_t& io_transport::cprint() const { return ctx_->get_service().options_.print_; }
-int io_transport::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
+int io_transport::write(std::vector<char>&& buffer, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
@@ -636,14 +636,14 @@ int io_transport_udp::disconnect()
   }
   return retval;
 }
-int io_transport_udp::write(std::vector<char>&& buffer, io_completion_cb_t&& handler)
+int io_transport_udp::write(std::vector<char>&& buffer, completion_cb_t&& handler)
 {
   if (connected_)
     return io_transport::write(std::move(buffer), std::move(handler));
   else
     return write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
-int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to, io_completion_cb_t&& handler)
+int io_transport_udp::write_to(std::vector<char>&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx17::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -690,7 +690,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 
-int io_transport_kcp::write(std::vector<char>&& buffer, io_completion_cb_t&& /*handler*/)
+int io_transport_kcp::write(std::vector<char>&& buffer, completion_cb_t&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   int len    = static_cast<int>(buffer.size());
@@ -756,7 +756,7 @@ io_service::~io_service()
   this->stop();
   this->cleanup();
 }
-void io_service::start(io_event_cb_t cb)
+void io_service::start(event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
@@ -1152,7 +1152,7 @@ void io_service::unregister_descriptor(const socket_native_type fd, int flags)
   if (yasio__testbits(flags, YEM_POLLERR))
     FD_CLR(fd, &(fds_array_[except_op]));
 }
-int io_service::write(transport_handle_t transport, std::vector<char> buffer, io_completion_cb_t handler)
+int io_service::write(transport_handle_t transport, std::vector<char> buffer, completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write(std::move(buffer), std::move(handler)) : 0;
@@ -1162,7 +1162,7 @@ int io_service::write(transport_handle_t transport, std::vector<char> buffer, io
     return -1;
   }
 }
-int io_service::write_to(transport_handle_t transport, std::vector<char> buffer, const ip::endpoint& to, io_completion_cb_t handler)
+int io_service::write_to(transport_handle_t transport, std::vector<char> buffer, const ip::endpoint& to, completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write_to(std::move(buffer), to, std::move(handler)) : 0;
@@ -2240,7 +2240,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     }
     case YOPT_S_EVENT_CB:
-      options_.on_event_ = *va_arg(ap, io_event_cb_t*);
+      options_.on_event_ = *va_arg(ap, event_cb_t*);
       break;
     case YOPT_C_LFBFD_FN: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));

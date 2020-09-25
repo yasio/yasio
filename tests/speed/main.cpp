@@ -87,7 +87,7 @@ enum
 }
 #endif
 
-static const double s_send_limit_time = 5; // max send time in seconds
+static const double s_send_limit_time = 10; // max send time in seconds
 
 static long long s_send_total_bytes = 0;
 static long long s_recv_total_bytes = 0;

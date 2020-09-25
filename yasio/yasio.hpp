@@ -100,7 +100,7 @@ enum
   YOPT_S_PRINT_FN2,
 
   // Set custom print function
-  // params: func:io_event_cb_t*
+  // params: func:event_cb_t*
   YOPT_S_EVENT_CB,
 
   // Set tcp keepalive in seconds, probes is tries.
@@ -300,22 +300,26 @@ class io_service;
 typedef io_transport* transport_handle_t;
 
 // typedefs
-typedef std::unique_ptr<io_send_op> io_send_op_ptr;
+typedef std::unique_ptr<io_send_op> send_op_ptr;
 typedef std::unique_ptr<io_event> event_ptr;
 typedef std::shared_ptr<highp_timer> highp_timer_ptr;
 
-typedef highp_timer deadline_timer;
-typedef highp_timer_ptr deadline_timer_ptr;
-
-typedef std::function<void()> light_timer_cb_t;
 typedef std::function<bool()> timer_cb_t;
-typedef std::pair<highp_timer*, timer_cb_t> timer_impl_t;
-typedef std::function<void(event_ptr&&)> io_event_cb_t;
-typedef std::function<void(int, size_t)> io_completion_cb_t;
+typedef std::function<void()> light_timer_cb_t;
+typedef std::function<void(event_ptr&&)> event_cb_t;
+typedef std::function<void(int, size_t)> completion_cb_t;
 typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
 typedef std::function<void(int level, const char*)> print_fn2_t;
+
+typedef std::pair<highp_timer*, timer_cb_t> timer_impl_t;
+
+// alias, for compatible purpose only
+typedef highp_timer deadline_timer;
+typedef highp_timer_ptr deadline_timer_ptr;
+typedef event_cb_t io_event_cb_t;
+typedef completion_cb_t io_completion_cb_t;
 
 struct io_hostent
 {
@@ -538,12 +542,12 @@ private:
 class io_send_op
 {
 public:
-  io_send_op(std::vector<char>&& buffer, io_completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
+  io_send_op(std::vector<char>&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
 
   size_t offset_;            // read pos from sending buffer
   std::vector<char> buffer_; // sending data buffer
-  io_completion_cb_t handler_;
+  completion_cb_t handler_;
 
   YASIO__DECL virtual int perform(transport_handle_t transport, const void* buf, int n);
 
@@ -555,7 +559,7 @@ public:
 class io_sendto_op : public io_send_op
 {
 public:
-  io_sendto_op(std::vector<char>&& buffer, io_completion_cb_t&& handler, const ip::endpoint& destination)
+  io_sendto_op(std::vector<char>&& buffer, completion_cb_t&& handler, const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
@@ -599,10 +603,10 @@ protected:
   YASIO__DECL const print_fn2_t& cprint() const;
 
   // Call at user thread
-  YASIO__DECL virtual int write(std::vector<char>&&, io_completion_cb_t&&);
+  YASIO__DECL virtual int write(std::vector<char>&&, completion_cb_t&&);
 
   // Call at user thread
-  virtual int write_to(std::vector<char>&&, const ip::endpoint&, io_completion_cb_t&&)
+  virtual int write_to(std::vector<char>&&, const ip::endpoint&, completion_cb_t&&)
   {
     YASIO_LOG("[warning] io_transport doesn't support 'write_to' operation!");
     return 0;
@@ -639,7 +643,7 @@ protected:
   std::function<int(const void*, int)> write_cb_;
   std::function<int(void*, int)> read_cb_;
 
-  privacy::concurrent_queue<io_send_op_ptr> send_queue_;
+  privacy::concurrent_queue<send_op_ptr> send_queue_;
 
   // mark whether pollout event registerred.
   bool pollout_registerred_ = false;
@@ -688,8 +692,8 @@ protected:
   YASIO__DECL int connect();
   YASIO__DECL int disconnect();
 
-  YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
-  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&, io_completion_cb_t&&) override;
+  YASIO__DECL int write(std::vector<char>&&, completion_cb_t&&) override;
+  YASIO__DECL int write_to(std::vector<char>&&, const ip::endpoint&, completion_cb_t&&) override;
 
   YASIO__DECL void set_primitives() override;
 
@@ -715,7 +719,7 @@ public:
   ikcpcb* internal_object() { return kcp_; }
 
 protected:
-  YASIO__DECL int write(std::vector<char>&&, io_completion_cb_t&&) override;
+  YASIO__DECL int write(std::vector<char>&&, completion_cb_t&&) override;
 
   YASIO__DECL int do_read(int revent, int& error) override;
   YASIO__DECL bool do_write(long long& max_wait_duration) override;
@@ -841,12 +845,12 @@ public:
   YASIO__DECL ~io_service();
 
   YASIO_OBSOLETE_DEPRECATE(io_service::start)
-  void start_service(io_event_cb_t cb) { this->start(std::move(cb)); }
+  void start_service(event_cb_t cb) { this->start(std::move(cb)); }
 
   YASIO_OBSOLETE_DEPRECATE(io_service::stop)
   void stop_service() { this->stop(); };
 
-  YASIO__DECL void start(io_event_cb_t cb);
+  YASIO__DECL void start(event_cb_t cb);
   YASIO__DECL void stop();
 
   bool is_running() const { return this->state_ == io_service::state::RUNNING; }
@@ -888,11 +892,11 @@ public:
   **        + TCP/UDP: Use queue to store user message, flush at io_service thread
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
-  int write(transport_handle_t thandle, const void* buf, size_t len, io_completion_cb_t completion_handler = nullptr)
+  int write(transport_handle_t thandle, const void* buf, size_t len, completion_cb_t completion_handler = nullptr)
   {
     return write(thandle, std::vector<char>((char*)buf, (char*)buf + len), std::move(completion_handler));
   }
-  YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer, io_completion_cb_t completion_handler = nullptr);
+  YASIO__DECL int write(transport_handle_t thandle, std::vector<char> buffer, completion_cb_t completion_handler = nullptr);
 
   /*
    ** Summary: Write data to unconnected UDP transport with specified address.
@@ -901,11 +905,11 @@ public:
    **        + UDP: Use queue to store user message, flush at io_service thread
    **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
    */
-  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to, io_completion_cb_t completion_handler = nullptr)
+  int write_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to, completion_cb_t completion_handler = nullptr)
   {
     return write_to(thandle, std::vector<char>((char*)buf, (char*)buf + len), to, std::move(completion_handler));
   }
-  YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer, const ip::endpoint& to, io_completion_cb_t completion_handler = nullptr);
+  YASIO__DECL int write_to(transport_handle_t thandle, std::vector<char> buffer, const ip::endpoint& to, completion_cb_t completion_handler = nullptr);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
@@ -1104,7 +1108,7 @@ private:
     // The resolve function
     resolv_fn_t resolv_;
     // the event callback
-    io_event_cb_t on_event_;
+    event_cb_t on_event_;
     // The custom debug print function
     print_fn2_t print_;
 

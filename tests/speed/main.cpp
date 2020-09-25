@@ -43,7 +43,7 @@ Total Time: 10(s)
 Results:
   - TCP speed: 2.8GB/s(Windows), 2.3GB/s(Linux)
   - UDP speed: 2.8GB/s(windows), 2.6GB/s(Linux)
-  - KCP speed: 29MB/s(Windows), 16~46MB/s(linux)
+  - KCP speed: 29MB/s(Windows), 46MB/s(linux)
 */
 
 #define SPEEDTEST_PROTO_TCP 1
@@ -141,7 +141,6 @@ void setup_kcp_transfer(transport_handle_t handle)
   auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
   ::ikcp_setmtu(kcp_handle, YASIO_SZ(63, k));
   ::ikcp_wndsize(kcp_handle, 4096, 8192);
-  kcp_handle->interval = 0;
 }
 
 // The transport rely on low level proto UDP/TCP

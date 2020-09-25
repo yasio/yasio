@@ -50,7 +50,7 @@ Results:
 #define SPEEDTEST_PROTO_UDP 2
 #define SPEEDTEST_PROTO_KCP 3
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_UDP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT
@@ -145,7 +145,7 @@ void setup_kcp_transfer(transport_handle_t handle)
 }
 
 // The transport rely on low level proto UDP/TCP
-void ll_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
+void ll_send_repeated(io_service* service, transport_handle_t thandle, obstream* obs)
 {
   static long long time_start   = yasio::highp_clock<>();
   static double time_elapsed    = 0;
@@ -156,14 +156,14 @@ void ll_send_repeat_forever(io_service* service, transport_handle_t thandle, obs
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     s_send_total_bytes += bytes_transferred;
     s_send_speed = s_send_total_bytes / time_elapsed;
-    ll_send_repeat_forever(service, thandle, obs);
+    ll_send_repeated(service, thandle, obs);
   };
 
   if (time_elapsed < s_send_limit_time)
     service->write(thandle, obs->buffer(), cb);
 }
 
-void kcp_send_repeat_forever(io_service* service, transport_handle_t thandle, obstream* obs)
+void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream* obs)
 {
   static long long time_start   = yasio::highp_clock<>();
   static double time_elapsed    = 0;
@@ -211,7 +211,7 @@ void start_sender(io_service& service)
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
   deadline_timer timer(service);
-
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -237,10 +237,10 @@ void start_sender(io_service& service)
           if (SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP)
           {
             setup_kcp_transfer(thandle);
-            kcp_send_repeat_forever(&service, thandle, &obs);
+            kcp_send_repeated(&service, thandle, &obs);
           }
           else
-            ll_send_repeat_forever(&service, thandle, &obs);
+            ll_send_repeated(&service, thandle, &obs);
         }
         break;
       case YEK_CONNECTION_LOST:
@@ -326,9 +326,7 @@ int main(int, char**)
   static long long time_start = yasio::highp_clock<>();
   while (true)
   { // main thread, print speed only
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    sender.dispatch();
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     print_speed_detail(0.5, time_elapsed);
   }

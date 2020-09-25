@@ -12,7 +12,7 @@ using namespace yasio;
 using namespace yasio::inet;
 
 static highp_time_t s_last_send_time[3] = {0};
-static const highp_time_t s_send_interval = 50; // (ms)
+static const highp_time_t s_send_interval = 2000; // (ms)
 
 void yasioTest()
 {

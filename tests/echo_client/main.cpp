@@ -11,12 +11,14 @@
 using namespace yasio;
 using namespace yasio::inet;
 
+static highp_time_t s_last_send_time[3] = {0};
+
 void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {
-      {"test.yasio.org", 50001}, // tcp client
-      {"test.yasio.org", 50002},  // udp client
-      {"test.yasio.org", 50003},  // kcp client
+      {"test.yasio.org", 5001}, // tcp client
+      {"test.yasio.org", 5002},  // udp client
+      {"test.yasio.org", 5003},  // kcp client
   };
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
@@ -34,9 +36,13 @@ void yasioTest()
     switch (event->kind())
     {
       case YEK_PACKET: {
+        auto index = event->cindex();
+        auto diff  = highp_clock() - s_last_send_time[index];
+
         auto packet = std::move(event->packet());
         total_bytes_transferred += static_cast<int>(packet.size());
         fwrite(packet.data(), packet.size(), 1, stdout);
+        printf("latency: %lf(ms)\n", diff / 1000.0);
         fflush(stdout);
         break;
       }
@@ -44,33 +50,37 @@ void yasioTest()
         if (event->status() == 0)
         {
           auto transport = event->transport();
-          if (event->cindex() == 0)
+          auto index    = event->cindex();
+          if (index == 0)
           {
             tcp_send_timer.expires_from_now(std::chrono::seconds(2));
-            tcp_send_timer.async_wait([&service, transport]() -> bool {
+            tcp_send_timer.async_wait([&service, transport, index]() -> bool {
               obstream obs;
-              obs.write_bytes("[TCP] Hello\r\n");
+              obs.write_bytes("[TCP] Hello, ");
               service.write(transport, std::move(obs.buffer()));
+              s_last_send_time[index] = highp_clock();
               return false;
             });
           }
-          else if (event->cindex() == 1)
+          else if (index == 1)
           {
             udp_send_timer.expires_from_now(std::chrono::seconds(2));
-            udp_send_timer.async_wait([&service, transport]() -> bool {
+            udp_send_timer.async_wait([&service, transport, index]() -> bool {
               obstream obs;
-              obs.write_bytes("[UDP] Hello\r\n");
+              obs.write_bytes("[UDP] Hello, ");
               service.write(transport, std::move(obs.buffer()));
+              s_last_send_time[index] = highp_clock();
               return false;
             });
           }
-          else if (event->cindex() == 2)
+          else if (index == 2)
           {
             kcp_send_timer.expires_from_now(std::chrono::seconds(2));
-            kcp_send_timer.async_wait([&service, transport, &max_request_count]() -> bool {
+            kcp_send_timer.async_wait([&service, transport, &max_request_count, index]() -> bool {
               obstream obs;
-              obs.write_bytes("[KCP] Hello\r\n");
+              obs.write_bytes("[KCP] Hello, ");
               service.write(transport, std::move(obs.buffer()));
+              s_last_send_time[index] = highp_clock();
               return false;
             });
           }

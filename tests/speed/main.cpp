@@ -59,8 +59,7 @@ Results:
 #elif SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_KCP_CLIENT
 #else
-#  error                                                                                           \
-      "please define SPEEDTEST_TRANSFER_PROTOCOL to one of SPEEDTEST_PROTO_TCP, SPEEDTEST_PROTO_UDP, SPEEDTEST_PROTO_KCP"
+#  error "please define SPEEDTEST_TRANSFER_PROTOCOL to one of SPEEDTEST_PROTO_TCP, SPEEDTEST_PROTO_UDP, SPEEDTEST_PROTO_KCP"
 #endif
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
@@ -122,14 +121,13 @@ static void print_speed_detail(double interval, double time_elapsed)
   static double last_print_time     = 0;
   static long long send_total_bytes = 0;
   static long long recv_total_bytes = 0;
-  if (((time_elapsed - last_print_time) > interval) &&
-      (send_total_bytes != s_send_total_bytes || recv_total_bytes != s_recv_total_bytes))
+  if (((time_elapsed - last_print_time) > interval) && (send_total_bytes != s_send_total_bytes || recv_total_bytes != s_recv_total_bytes))
   {
     char str_send_speed[128], str_recv_speed[128];
     sbtoa(s_send_speed, str_send_speed);
     sbtoa(s_recv_speed, str_recv_speed);
-    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n",
-           str_send_speed, str_recv_speed, time_elapsed, s_send_total_bytes, s_recv_total_bytes);
+    printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n", str_send_speed, str_recv_speed, time_elapsed,
+           s_send_total_bytes, s_recv_total_bytes);
 
     send_total_bytes = s_send_total_bytes;
     recv_total_bytes = s_recv_total_bytes;
@@ -211,7 +209,9 @@ void start_sender(io_service& service)
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
   deadline_timer timer(service);
+#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_KCP
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
+#endif
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -228,8 +228,7 @@ void start_sender(io_service& service)
             // because some system's default sndbuf of udp is less than 64k, such as macOS.
             int sndbuf = 65536;
             xxsocket::set_last_errno(0);
-            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET,
-                               SO_SNDBUF, &sndbuf, sizeof(int));
+            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(thandle), SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int));
             int ec = xxsocket::get_last_errno();
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
@@ -285,8 +284,7 @@ void start_receiver(io_service& service)
           {
             int sndbuf = 65536;
             xxsocket::set_last_errno(0);
-            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(event->transport()),
-                               SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int));
+            service.set_option(YOPT_B_SOCKOPT, static_cast<io_base*>(event->transport()), SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(int));
             int ec = xxsocket::get_last_errno();
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
@@ -315,8 +313,7 @@ void start_receiver(io_service& service)
 
 int main(int, char**)
 {
-  io_hostent receiver_ep("127.0.0.1", speedtest::RECEIVER_PORT),
-      sender_ep("127.0.0.1", speedtest::SENDER_PORT);
+  io_hostent receiver_ep("127.0.0.1", speedtest::RECEIVER_PORT), sender_ep("127.0.0.1", speedtest::SENDER_PORT);
   io_service receiver(&receiver_ep, 1), sender(&sender_ep, 1);
 
   s_sender = &sender;
@@ -325,8 +322,13 @@ int main(int, char**)
 
   static long long time_start = yasio::highp_clock<>();
   while (true)
-  { // main thread, print speed only
+  { // for tcp/udp main thread, print speed only
+#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_KCP
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#else // for kcp should dispatch sender event at main thread
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    sender.dispatch();
+#endif
     auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     print_speed_detail(0.5, time_elapsed);
   }

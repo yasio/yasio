@@ -50,7 +50,7 @@ Results:
 #define SPEEDTEST_PROTO_UDP 2
 #define SPEEDTEST_PROTO_KCP 3
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_UDP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT
@@ -152,6 +152,7 @@ void ll_send_repeat_forever(io_service* service, transport_handle_t thandle, obs
   static double last_print_time = 0;
 
   auto cb = [=](int, size_t bytes_transferred) {
+    assert(bytes_transferred == obs->buffer().size());
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     s_send_total_bytes += bytes_transferred;
     s_send_speed = s_send_total_bytes / time_elapsed;

@@ -21,3 +21,5 @@ ignored/*.*
 /.vs
 /.xs
 /build
+/.vscode
+/**/.DS_Store

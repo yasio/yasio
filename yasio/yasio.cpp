@@ -682,7 +682,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
 {
   this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
-  ::ikcp_nodelay(this->kcp_, 1, 10 /*MAX_WAIT_DURATION / 1000*/, 2, 1);
+  ::ikcp_nodelay(this->kcp_, 1, YASIO_MAX_WAIT_DURATION, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
     return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
@@ -727,7 +727,7 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 
   auto current = static_cast<IUINT32>(highp_clock() / 1000);
   ::ikcp_update(kcp_, current);
-
+  ::ikcp_flush(kcp_);
   auto expire_time        = ::ikcp_check(kcp_, current);
   long long wait_duration = (long long)(expire_time - current) * 1000;
   if (wait_duration < 0)

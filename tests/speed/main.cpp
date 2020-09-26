@@ -16,34 +16,7 @@ using namespace yasio;
 using namespace yasio::inet;
 
 /*
-Devices:
-  - Windows: Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz / Windows 10(10.0.19041.264)
-  - Linux: Intel(R) Xeon(R) Platinum 8163 CPU @ 2.50GHz / Ubuntu 20.04
-
-Architecture: X64
-
-Compiling:
-  - Windows: VS2019 MSVC 14.25.28610
-    Optimize Flag: /O2
-    Commands:
-      - mkdir build/build_w64
-      - cd build/build_w64
-      - cmake ../../
-      - cmake --build . --config Release --target speedtest
-  - Linux: gcc version 9.3.0 (Ubuntu 9.3.0-10ubuntu2)
-    Optimize Flag: /O3
-    Commands:
-      - mkdir -p build/build_linux
-      - cd build/build_linux
-      - cmake ../../ -DCMAKE_BUILD_TYPE=Release
-      - cmake --build . --config Release --target speedtest
-
-Total Time: 10(s)
-
-Results:
-  - TCP speed: 2.8GB/s(Windows), 2.3GB/s(Linux)
-  - UDP speed: 2.8GB/s(windows), 2.6GB/s(Linux)
-  - KCP speed: 29MB/s(Windows), 46MB/s(linux)
+Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 */
 
 #define SPEEDTEST_PROTO_TCP 1
@@ -327,7 +300,7 @@ int main(int, char**)
   {
     // main thread, print speed only, so sleep 200ms
     // !Note: sleep(10ms) will cost 0.3%CPU, 200ms %0CPU, tested on macbook pro 2019
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     print_speed_detail(0.5, time_elapsed);

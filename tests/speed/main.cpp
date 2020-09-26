@@ -94,7 +94,7 @@ static long long s_recv_total_bytes = 0;
 static double s_send_speed = 0; // bytes/s
 static double s_recv_speed = 0;
 
-static const long long s_kcp_send_interval = 100; // (us) in microseconds
+static const long long s_kcp_send_interval = 10; // (us) in microseconds
 static const uint32_t s_kcp_conv           = 8633; // can be any, but must same with two endpoint
 
 static const char* proto_name(int myproto)

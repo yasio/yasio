@@ -682,7 +682,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
 {
   this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
-  ::ikcp_nodelay(this->kcp_, 1, YASIO_MAX_WAIT_DURATION, 2, 1);
+  ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
     return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
@@ -700,14 +700,19 @@ int io_transport_kcp::write(std::vector<char>&& buffer, completion_cb_t&& /*hand
 }
 int io_transport_kcp::do_read(int revent, int& error)
 {
-  int n = revent ? this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), error) : 0;
-  if (n > 0)
+  int n            = revent ? this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), error) : 0;
+  bool needs_input = n > 0;
+  if (needs_input)
     this->handle_read(rawbuf_.data(), n, error);
   if (!error)
   { // !important, should always try to call ikcp_recv when no error occured.
     n = ::ikcp_recv(kcp_, buffer_ + wpos_, sizeof(buffer_) - wpos_);
     if (n < 0) // EAGAIN/EWOULDBLOCK
       n = 0;
+
+    // If have any data from system or kcp, we needs interrupt
+    if (needs_input || n > 0)
+      get_service().interrupt();
   }
   return n;
 }
@@ -715,10 +720,8 @@ int io_transport_kcp::handle_read(const char* buf, int len, int& error)
 {
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))
-  {
-    get_service().interrupt();
     return len;
-  }
+
   // simply regards -1,-2,-3 as error and trigger connection lost event.
   error = yasio::errc::invalid_packet;
   return -1;
@@ -727,11 +730,11 @@ bool io_transport_kcp::do_write(long long& max_wait_duration)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
-  auto current = static_cast<IUINT32>(highp_clock() / 1000);
+  auto current = static_cast<IUINT32>(::yasio::clock());
   ::ikcp_update(kcp_, current);
   ::ikcp_flush(kcp_);
-  auto expire_time        = ::ikcp_check(kcp_, current);
-  long long wait_duration = (long long)(expire_time - current) * 1000;
+  auto expire_time           = ::ikcp_check(kcp_, current);
+  highp_time_t wait_duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
   if (wait_duration < 0)
     wait_duration = 0;
 

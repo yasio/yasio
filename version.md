@@ -1,3 +1,8 @@
+yaiso-3.33.6
+  
+* Reduce kcp cpu cost.
+  
+  
 yaiso-3.33.5
   
 * Add support to set kcp conv id, use option ```YOPT_C_KCP_CONV```.

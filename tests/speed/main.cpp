@@ -168,37 +168,40 @@ void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream
   static double last_print_time = 0;
 
 #if defined(_MSC_VER)
+  //!!!Note: since we use yasio io_service timer, no need to change timer resolution
+  // Default win32 Sleep resolution is 57ms, and best resolution only support 1ms
   ///////////////////////////////////////////////////////////////////////////
   /////////////// changing timer resolution
   ///////////////////////////////////////////////////////////////////////////
-  UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
-  TIMECAPS tc;
-  UINT wTimerRes = 0;
-  if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
-  {
-    wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
-    timeBeginPeriod(wTimerRes);
-  }
+  //~ UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
+  //~ TIMECAPS tc;
+  //~ UINT wTimerRes = 0;
+  //~ if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
+  //~ {
+  //~   wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
+  //~   timeBeginPeriod(wTimerRes);
+  //~ }
 #endif
 
-  while (time_elapsed < s_send_limit_time)
-  {
+  highp_timer_ptr ignored_ret = service->schedule(std::chrono::microseconds(s_kcp_send_interval), [=](){
     s_send_total_bytes += service->write(thandle, obs->buffer());
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     s_send_speed = s_send_total_bytes / time_elapsed;
     print_speed_detail(0.5, time_elapsed);
-
-    std::this_thread::sleep_for(std::chrono::microseconds(s_kcp_send_interval));
-  }
+    if(time_elapsed < s_send_limit_time)
+        return false;
+    printf("===> sender finished!\n");
+    return true; // tell this timer finished
+  });
 
 #if defined(_MSC_VER)
   ///////////////////////////////////////////////////////////////////////////
   /////////////// restoring timer resolution
   ///////////////////////////////////////////////////////////////////////////
-  if (wTimerRes != 0)
-  {
-    timeEndPeriod(wTimerRes);
-  }
+  //~ if (wTimerRes != 0)
+  //~ {
+  //~   timeEndPeriod(wTimerRes);
+  //~ }
 #endif
 }
 
@@ -209,9 +212,8 @@ void start_sender(io_service& service)
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
   deadline_timer timer(service);
-#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_KCP
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
-#endif
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
+
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -267,7 +269,7 @@ void start_receiver(io_service& service)
 {
   static long long time_start   = yasio::highp_clock<>();
   static double last_print_time = 0;
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -322,13 +324,11 @@ int main(int, char**)
 
   static long long time_start = yasio::highp_clock<>();
   while (true)
-  { // for tcp/udp main thread, print speed only
-#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_KCP
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-#else // for kcp should dispatch sender event at main thread
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    sender.dispatch();
-#endif
+  {
+    // main thread, print speed only, so sleep 200ms
+    // !Note: sleep(10ms) will cost 0.3%CPU, 200ms %0CPU, tested on macbook pro 2019
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
     auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     print_speed_detail(0.5, time_elapsed);
   }

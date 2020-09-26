@@ -715,8 +715,10 @@ int io_transport_kcp::handle_read(const char* buf, int len, int& error)
 {
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))
+  {
+    get_service().interrupt();
     return len;
-
+  }
   // simply regards -1,-2,-3 as error and trigger connection lost event.
   error = yasio::errc::invalid_packet;
   return -1;

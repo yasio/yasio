@@ -1,5 +1,5 @@
 ## Devices:
-  - Windows 10 & WSL2 & Ubuntu 20.04 On VMware 15.5: Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz / Windows 10(10.0.19041.264)
+  - Windows 10: Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz / Windows 10(10.0.19041.264)
   - Linux: Intel(R) Xeon(R) Platinum 8163 CPU @ 2.50GHz / Ubuntu 20.04 (Single Core CPU)
   - macOS: Intel(R) Core(TM) i7-8850H CPU @ 2.60GHz / macOS 10.15.4
   - Android: XIAOMI MIX2S (cocos2d-x game engine cpp-tests)
@@ -49,10 +49,6 @@
     - macOS: 16.6Gbits/s
     - Ubuntu 20.04 On Aliyun: 2.3~5.3Gbits/s, because it's Single Core CPU, so speed not stable
     - Android 10(MI MIX2S): 184Mbits/s (kcp.send.internval=1ms)
-## About WSL2:
-  - Microsoft docs: https://docs.microsoft.com/zh-cn/windows/wsl/wsl2-kernel
-  - Microsoft repo: https://github.com/microsoft/WSL2-Linux-Kernel
-  - How to install: https://github.com/mikemaccana/developing-with-wsl2-on-windows
 
 ## 分析结果：
   - ~~唯独阿里云Ubuntu测试结果异常，10s后，还在断断续续有接收，怀疑是安全规则问题~~、

@@ -284,7 +284,7 @@ if(OPENSSL_INCLUDE_DIR)
 endif()
 
 # checking build system have c-ares
-if(CARES_INCLUDE_DIR)
+if(CARES_INCLUDE_DIR AND YASIO_BUILD_WITH_CARES)
    target_include_directories(yasio PRIVATE "${CARES_INCLUDE_DIR}")
    target_link_libraries(yasio c-ares)
    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)

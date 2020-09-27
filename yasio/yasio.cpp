@@ -743,13 +743,15 @@ bool io_transport_kcp::do_write(highp_time_t& max_wait_duration)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
-  auto current = static_cast<IUINT32>(::yasio::clock());
-  ::ikcp_update(kcp_, current);
+  ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);
+
+  // check next time to call ikcp_update 
+  auto current               = static_cast<IUINT32>(::yasio::clock());
   auto expire_time           = ::ikcp_check(kcp_, current);
   highp_time_t wait_duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
   if (wait_duration < 0)
-    wait_duration = 0;
+    wait_duration = yasio__min_wait_duration;
 
   if (max_wait_duration > wait_duration)
     max_wait_duration = wait_duration;

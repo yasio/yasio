@@ -943,8 +943,6 @@ void io_service::run()
       if (this->state_ != io_service::state::RUNNING)
         break;
 
-      max_wait_duration = YASIO_MAX_WAIT_DURATION;
-
       if (retval < 0)
       {
         int ec = xxsocket::get_last_errno();
@@ -953,6 +951,7 @@ void io_service::run()
         {
           goto _L_end;
         }
+        max_wait_duration = YASIO_MAX_WAIT_DURATION;
         continue; // just continue.
       }
 
@@ -965,6 +964,8 @@ void io_service::run()
         --retval;
       }
     }
+
+    max_wait_duration = YASIO_MAX_WAIT_DURATION;
 
 #if defined(YASIO_HAVE_CARES)
     // process possible async resolve requests.

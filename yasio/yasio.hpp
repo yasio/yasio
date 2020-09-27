@@ -1134,15 +1134,6 @@ private:
   std::shared_ptr<life_token> life_token_;
   std::shared_ptr<cxx17::shared_mutex> life_mutex_;
 #endif
-
-public:
-  enum class test_role
-  {
-      none = 0,
-      sender = 1,
-      receiver = 2,
-  };
-  test_role role_ = test_role::none;
 }; // io_service
 
 } // namespace inet

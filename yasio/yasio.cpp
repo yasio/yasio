@@ -940,7 +940,8 @@ void io_service::run()
   this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    auto wait_duration = get_timeout(this->wait_duration_);
+    auto wait_duration = get_timeout(this->wait_duration_); // Gets current wait duration
+    this->wait_duration_ = YASIO_MAX_WAIT_DURATION; // Reset next wait duration
     if (wait_duration > 0)
     {
       int retval = do_select(fds_array, wait_duration);
@@ -955,7 +956,6 @@ void io_service::run()
         {
           goto _L_end;
         }
-        this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
         continue; // Try again.
       }
 
@@ -968,9 +968,6 @@ void io_service::run()
         --retval;
       }
     }
-
-    // Reset wait duration before any processing
-    this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
 
 #if defined(YASIO_HAVE_CARES)
     // process possible async resolve requests.

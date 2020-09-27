@@ -171,7 +171,7 @@ SOFTWARE.
 
 // The min wait duration in macroseconds when io_service have outstanding work to do.
 // !!!Only affects Single Core CPU
-#define YASIO_MIN_WAIT_DURATION 1000LL
+#define YASIO_MIN_WAIT_DURATION 10LL
 
 // The default ttl of multicast
 #define YASIO_DEFAULT_MULTICAST_TTL (int)128

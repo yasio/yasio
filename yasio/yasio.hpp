@@ -1004,7 +1004,7 @@ private:
   YASIO__DECL void run(void);
 
   YASIO__DECL bool do_read(transport_handle_t, fd_set* fds_array);
-  YASIO__DECL bool do_write(transport_handle_t transport) { return transport->do_write(wait_duration_); }
+  bool do_write(transport_handle_t transport) { return transport->do_write(this->wait_duration_); }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
   // The op mask will be cleared, the state will be set CLOSED when clear_state is 'true'

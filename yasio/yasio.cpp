@@ -935,7 +935,7 @@ void io_service::run()
   // Call once at startup
   this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
 
-  // event loop
+  // The core event loop
   fd_set fds_array[max_ops];
   this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)

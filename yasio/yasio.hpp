@@ -617,10 +617,10 @@ protected:
   YASIO__DECL void complete_op(io_send_op*, int error);
 
   // Call at io_service
-  YASIO__DECL virtual int do_read(int revent, int& error, highp_time_t& max_wait_duration);
+  YASIO__DECL virtual int do_read(int revent, int& error, highp_time_t& wait_duration);
 
   // Call at io_service, try flush pending packet
-  YASIO__DECL virtual bool do_write(highp_time_t& max_wait_duration);
+  YASIO__DECL virtual bool do_write(highp_time_t& wait_duration);
 
   // Sets the underlying layer socket io primitives.
   YASIO__DECL virtual void set_primitives();
@@ -704,7 +704,7 @@ protected:
   YASIO__DECL int confgure_remote(const ip::endpoint& peer);
 
   // process received data from low level
-  YASIO__DECL virtual int handle_input(const char* buf, int bytes_transferred, int& error);
+  YASIO__DECL virtual int handle_input(const char* buf, int bytes_transferred, int& error, highp_time_t& wait_duration);
 
   ip::endpoint peer_;                // for recv only
   mutable ip::endpoint destination_; // for sendto only
@@ -721,10 +721,10 @@ public:
 protected:
   YASIO__DECL int write(std::vector<char>&&, completion_cb_t&&) override;
 
-  YASIO__DECL int do_read(int revent, int& error, highp_time_t& max_wait_duration) override;
-  YASIO__DECL bool do_write(highp_time_t& max_wait_duration) override;
+  YASIO__DECL int do_read(int revent, int& error, highp_time_t& wait_duration) override;
+  YASIO__DECL bool do_write(highp_time_t& wait_duration) override;
 
-  YASIO__DECL int handle_input(const char* buf, int len, int& error) override;
+  YASIO__DECL int handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration) override;
 
   std::vector<char> rawbuf_; // the low level raw buffer
   ikcpcb* kcp_;
@@ -955,15 +955,15 @@ private:
 
   YASIO__DECL void open_internal(io_channel*);
 
-  YASIO__DECL void process_transports(fd_set* fds_array, highp_time_t& max_wait_duration);
+  YASIO__DECL void process_transports(fd_set* fds_array);
   YASIO__DECL void process_channels(fd_set* fds_array);
   YASIO__DECL void process_timers();
 
   YASIO__DECL void interrupt();
 
-  YASIO__DECL highp_time_t get_wait_duration(highp_time_t usec);
+  YASIO__DECL highp_time_t get_timeout(highp_time_t usec);
 
-  YASIO__DECL int do_select(fd_set* fds_array, highp_time_t max_wait_duration);
+  YASIO__DECL int do_select(fd_set* fds_array, highp_time_t wait_duration);
 
   YASIO__DECL void do_nonblocking_connect(io_channel*);
   YASIO__DECL void do_nonblocking_connect_completion(io_channel*, fd_set* fds_array);
@@ -1003,9 +1003,9 @@ private:
   // The major non-blocking event-loop
   YASIO__DECL void run(void);
 
-  YASIO__DECL bool do_read(transport_handle_t, fd_set* fds_array, highp_time_t& max_wait_duration);
-  YASIO__DECL bool do_write(transport_handle_t transport, highp_time_t& max_wait_duration) { return transport->do_write(max_wait_duration); }
-  YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip, highp_time_t& max_wait_duration);
+  YASIO__DECL bool do_read(transport_handle_t, fd_set* fds_array);
+  YASIO__DECL bool do_write(transport_handle_t transport) { return transport->do_write(wait_duration_); }
+  YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
   // The op mask will be cleared, the state will be set CLOSED when clear_state is 'true'
   YASIO__DECL bool cleanup_io(io_base* obj, bool clear_state = true);
@@ -1070,6 +1070,9 @@ private:
   // timer support timer_pair
   std::vector<timer_impl_t> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
+
+  // the next wait duration for socket.select
+  highp_time_t wait_duration_;
 
   // the max nfds for socket.select, must be max_fd + 1
   int max_nfds_;

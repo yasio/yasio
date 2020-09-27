@@ -422,7 +422,7 @@ int io_transport::write(std::vector<char>&& buffer, completion_cb_t&& handler)
   return n;
 }
 int io_transport::do_read(int revent, int& error, highp_time_t&) { return revent ? this->call_read(buffer_ + wpos_, sizeof(buffer_) - wpos_, error) : 0; }
-bool io_transport::do_write(highp_time_t& max_wait_duration)
+bool io_transport::do_write(highp_time_t& wait_duration)
 {
   bool ret = false;
   do
@@ -459,7 +459,7 @@ bool io_transport::do_write(highp_time_t& max_wait_duration)
         }
       }
       else
-        max_wait_duration = yasio__min_wait_duration;
+        wait_duration = yasio__min_wait_duration;
     }
     if (no_wevent && pollout_registerred_)
     {
@@ -683,7 +683,7 @@ void io_transport_udp::set_primitives()
     };
   }
 }
-int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& /*error*/)
+int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& /*error*/, highp_time_t&)
 { // pure udp, dispatch to upper layer directly
   get_service().handle_event(event_ptr(new io_event(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred))));
   return bytes_transferred;
@@ -711,12 +711,11 @@ int io_transport_kcp::write(std::vector<char>&& buffer, completion_cb_t&& /*hand
   get_service().interrupt();
   return retval == 0 ? len : retval;
 }
-int io_transport_kcp::do_read(int revent, int& error, highp_time_t& max_wait_duration)
+int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duration)
 {
   int n            = revent ? this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), error) : 0;
-  bool needs_input = n > 0;
-  if (needs_input)
-    this->handle_input(rawbuf_.data(), n, error);
+  if (n > 0)
+    this->handle_input(rawbuf_.data(), n, error, wait_duration);
   if (!error)
   { // !important, should always try to call ikcp_recv when no error occured.
     n = ::ikcp_recv(kcp_, buffer_ + wpos_, sizeof(buffer_) - wpos_);
@@ -724,22 +723,25 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& max_wait_dur
       n = 0;
 
     // If have any data from system or kcp, don't wait
-    if (needs_input || n > 0)
-      max_wait_duration = yasio__min_wait_duration;
+    if (n > 0)
+      wait_duration = yasio__min_wait_duration;
   }
   return n;
 }
-int io_transport_kcp::handle_input(const char* buf, int len, int& error)
+int io_transport_kcp::handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration)
 {
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))
+  {
+    wait_duration = yasio__min_wait_duration;
     return len;
+  }
 
   // simply regards -1,-2,-3 as error and trigger connection lost event.
   error = yasio::errc::invalid_packet;
   return -1;
 }
-bool io_transport_kcp::do_write(highp_time_t& max_wait_duration)
+bool io_transport_kcp::do_write(highp_time_t& wait_duration)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
@@ -749,15 +751,15 @@ bool io_transport_kcp::do_write(highp_time_t& max_wait_duration)
   // check next time to call ikcp_update 
   auto current               = static_cast<IUINT32>(::yasio::clock());
   auto expire_time           = ::ikcp_check(kcp_, current);
-  highp_time_t wait_duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
-  if (wait_duration < 0)
-    wait_duration = yasio__min_wait_duration;
+  highp_time_t diff = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
+  if (diff < 0)
+    diff = yasio__min_wait_duration;
 
-  if (max_wait_duration > wait_duration)
-    max_wait_duration = wait_duration;
+  if (wait_duration > diff)
+    wait_duration = diff;
 
   // Call super do_write to perform low layer socket.send
-  return io_transport_udp::do_write(max_wait_duration);
+  return io_transport_udp::do_write(wait_duration);
 }
 #endif
 
@@ -935,10 +937,10 @@ void io_service::run()
 
   // event loop
   fd_set fds_array[max_ops];
-  highp_time_t max_wait_duration = YASIO_MAX_WAIT_DURATION;
+  this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
   for (; this->state_ == io_service::state::RUNNING;)
   {
-    auto wait_duration = get_wait_duration(max_wait_duration);
+    auto wait_duration = get_timeout(this->wait_duration_);
     if (wait_duration > 0)
     {
       int retval = do_select(fds_array, wait_duration);
@@ -953,8 +955,8 @@ void io_service::run()
         {
           goto _L_end;
         }
-        max_wait_duration = YASIO_MAX_WAIT_DURATION;
-        continue; // just continue.
+        this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
+        continue; // Try again.
       }
 
       if (retval == 0)
@@ -967,7 +969,8 @@ void io_service::run()
       }
     }
 
-    max_wait_duration = YASIO_MAX_WAIT_DURATION;
+    // Reset wait duration before any processing
+    this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
 
 #if defined(YASIO_HAVE_CARES)
     // process possible async resolve requests.
@@ -975,7 +978,7 @@ void io_service::run()
 #endif
 
     // process active transports
-    process_transports(fds_array, max_wait_duration);
+    process_transports(fds_array);
 
     // process active channels
     process_channels(fds_array);
@@ -994,13 +997,13 @@ _L_end:
   cleanup_ssl_context();
 #endif
 }
-void io_service::process_transports(fd_set* fds_array, highp_time_t& max_wait_duration)
+void io_service::process_transports(fd_set* fds_array)
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    bool ok        = (do_read(transport, fds_array, max_wait_duration) && do_write(transport, max_wait_duration));
+    bool ok        = (do_read(transport, fds_array) && do_write(transport));
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
@@ -1661,7 +1664,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
 #endif
           if (transport)
           {
-            if (transport->handle_input(ctx->buffer_.data(), n, error) < 0)
+            if (transport->handle_input(ctx->buffer_.data(), n, error, this->wait_duration_) < 0)
             {
               transport->error_ = error;
               close(transport);
@@ -1796,7 +1799,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
               io_service::strerror(error));
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error)));
 }
-bool io_service::do_read(transport_handle_t transport, fd_set* fds_array, highp_time_t& max_wait_duration)
+bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
 {
   bool ret = false;
   do
@@ -1806,7 +1809,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array, highp_
 
     int error  = 0;
     int revent = FD_ISSET(transport->socket_->native_handle(), &(fds_array[read_op]));
-    int n      = transport->do_read(revent, error, max_wait_duration);
+    int n      = transport->do_read(revent, error, this->wait_duration_);
     if (n >= 0)
     {
       YASIO_KLOGV("[index: %d] do_read status ok, bytes transferred: %d, buffer used: %d", transport->cindex(), n, n + transport->wpos_);
@@ -1819,7 +1822,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array, highp_
           transport->expected_size_ = length;
           transport->expected_packet_.reserve((std::min)(length - bytes_to_strip,
                                                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
-          unpack(transport, transport->expected_size_, n, bytes_to_strip, max_wait_duration);
+          unpack(transport, transport->expected_size_, n, bytes_to_strip);
         }
         else if (length == 0) // header insufficient, wait readfd ready at next event step.
           transport->wpos_ += n;
@@ -1831,7 +1834,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array, highp_
       }
       else
       { // process incompleted pdu
-        unpack(transport, transport->expected_size_ - static_cast<int>(transport->expected_packet_.size()), n, 0, max_wait_duration);
+        unpack(transport, transport->expected_size_ - static_cast<int>(transport->expected_packet_.size()), n, 0);
       }
     }
     else
@@ -1847,7 +1850,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array, highp_
 
   return ret;
 }
-void io_service::unpack(transport_handle_t transport, int bytes_expected, int bytes_transferred, int bytes_to_strip, highp_time_t& max_wait_duration)
+void io_service::unpack(transport_handle_t transport, int bytes_expected, int bytes_transferred, int bytes_to_strip)
 {
   auto bytes_available = bytes_transferred + transport->wpos_;
   transport->expected_packet_.insert(transport->expected_packet_.end(), transport->buffer_ + bytes_to_strip,
@@ -1860,7 +1863,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     if (transport->wpos_ > 0)
     { /* move remain data to head of buffer and hold wpos. */
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->wpos_);
-      max_wait_duration = yasio__min_wait_duration;
+      this->wait_duration_ = yasio__min_wait_duration;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve it.
     YASIO_KLOGV("[index: %d] received a properly packet from peer, "
@@ -2007,7 +2010,7 @@ int io_service::do_select(fd_set* fdsa, highp_time_t wait_duration)
 
   return retval;
 }
-highp_time_t io_service::get_wait_duration(highp_time_t usec)
+highp_time_t io_service::get_timeout(highp_time_t usec)
 {
   if (this->timer_queue_.empty())
     return usec;

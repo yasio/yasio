@@ -208,7 +208,7 @@ struct yasio__global_state
   {
     auto cprint = [&]() -> const print_fn2_t& { return custom_print; };
 
-      // for single core CPU, we set minimal_wait_duration_ to 1ms
+    // for single core CPU, we set minimal wait duration to 10us by default
     yasio__min_wait_duration = std::thread::hardware_concurrency() > 1 ? 0LL : YASIO_MIN_WAIT_DURATION;
 
     max_alloc_size = static_cast<int>((std::max)(sizeof(io_transport_tcp), sizeof(io_transport_udp)));

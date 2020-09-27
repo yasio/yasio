@@ -192,6 +192,11 @@ static void yasio__set_thread_name(const char* threadName)
 #  define yasio__set_thread_name(name)
 #endif
 
+namespace
+{
+// the minimal wait duration for select
+static highp_time_t yasio__min_wait_duration = 0LL;
+}
 struct yasio__global_state
 {
   enum
@@ -202,6 +207,9 @@ struct yasio__global_state
   yasio__global_state(const print_fn2_t& custom_print)
   {
     auto cprint = [&]() -> const print_fn2_t& { return custom_print; };
+
+      // for single core CPU, we set minimal_wait_duration_ to 1ms
+    yasio__min_wait_duration = std::thread::hardware_concurrency() > 1 ? 0LL : YASIO_MIN_WAIT_DURATION;
 
     max_alloc_size = static_cast<int>((std::max)(sizeof(io_transport_tcp), sizeof(io_transport_udp)));
 #if defined(YASIO_HAVE_KCP)
@@ -451,7 +459,7 @@ bool io_transport::do_write(highp_time_t& max_wait_duration)
         }
       }
       else
-        max_wait_duration = 0;
+        max_wait_duration = yasio__min_wait_duration;
     }
     if (no_wevent && pollout_registerred_)
     {
@@ -675,7 +683,7 @@ void io_transport_udp::set_primitives()
     };
   }
 }
-int io_transport_udp::do_input(const char* buf, int bytes_transferred, int& /*error*/)
+int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& /*error*/)
 { // pure udp, dispatch to upper layer directly
   get_service().handle_event(event_ptr(new io_event(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred))));
   return bytes_transferred;
@@ -708,7 +716,7 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& max_wait_dur
   int n            = revent ? this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), error) : 0;
   bool needs_input = n > 0;
   if (needs_input)
-    this->do_input(rawbuf_.data(), n, error);
+    this->handle_input(rawbuf_.data(), n, error);
   if (!error)
   { // !important, should always try to call ikcp_recv when no error occured.
     n = ::ikcp_recv(kcp_, buffer_ + wpos_, sizeof(buffer_) - wpos_);
@@ -717,11 +725,11 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& max_wait_dur
 
     // If have any data from system or kcp, don't wait
     if (needs_input || n > 0)
-      max_wait_duration = 0;
+      max_wait_duration = yasio__min_wait_duration;
   }
   return n;
 }
-int io_transport_kcp::do_input(const char* buf, int len, int& error)
+int io_transport_kcp::handle_input(const char* buf, int len, int& error)
 {
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))
@@ -1650,7 +1658,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
 #endif
           if (transport)
           {
-            if (transport->do_input(ctx->buffer_.data(), n, error) < 0)
+            if (transport->handle_input(ctx->buffer_.data(), n, error) < 0)
             {
               transport->error_ = error;
               close(transport);
@@ -1849,7 +1857,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     if (transport->wpos_ > 0)
     { /* move remain data to head of buffer and hold wpos. */
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, transport->wpos_);
-      max_wait_duration = 0;
+      max_wait_duration = yasio__min_wait_duration;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve it.
     YASIO_KLOGV("[index: %d] received a properly packet from peer, "

@@ -704,7 +704,7 @@ protected:
   YASIO__DECL int confgure_remote(const ip::endpoint& peer);
 
   // process received data from low level
-  YASIO__DECL virtual int do_input(const char* buf, int bytes_transferred, int& error);
+  YASIO__DECL virtual int handle_input(const char* buf, int bytes_transferred, int& error);
 
   ip::endpoint peer_;                // for recv only
   mutable ip::endpoint destination_; // for sendto only
@@ -724,7 +724,7 @@ protected:
   YASIO__DECL int do_read(int revent, int& error, highp_time_t& max_wait_duration) override;
   YASIO__DECL bool do_write(highp_time_t& max_wait_duration) override;
 
-  YASIO__DECL int do_input(const char* buf, int len, int& error) override;
+  YASIO__DECL int handle_input(const char* buf, int len, int& error) override;
 
   std::vector<char> rawbuf_; // the low level raw buffer
   ikcpcb* kcp_;

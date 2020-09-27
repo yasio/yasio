@@ -158,7 +158,7 @@ SOFTWARE.
 /*
 **  The yasio version macros
 */
-#define YASIO_VERSION_NUM 0x033305
+#define YASIO_VERSION_NUM 0x033306
 
 /*
 ** The macros used by io_service.

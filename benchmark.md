@@ -45,12 +45,12 @@
     - Ubuntu 20.04 On Aliyun: 20.8Gbits/s
     - Android 10(MI MIX2S): 488Mbits/s
   - KCP speed: 
-    - Windows: 11Gbits/s+
-    - macOS: 16.6Gbits/s
+    - Windows: 11.0Gbits/s
+    - macOS: 21.0Gbits/s
     - Ubuntu 20.04 On Aliyun: 2.3~5.3Gbits/s, because it's Single Core CPU, so speed not stable
     - Android 10(MI MIX2S): 184Mbits/s (kcp.send.internval=1ms)
 
-## 分析结果：
-  - ~~唯独阿里云Ubuntu测试结果异常，10s后，还在断断续续有接收，怀疑是安全规则问题~~、
-  - 更新: 关于阿里云测试异常结果根本原因分析: 测试阿里云服务器是**单核CPU**，而原测试用例，**将kcp的interval设置成了0**，导致yasio的service占用100% CPU, 因此反而降低性能，保持**kcp.interval=10ms**，同时将发送kcp包间隔降低为100us，在阿里云服单核CPU本机传输性能可已达到**1.9Gbit/s**
+## 注意事项
+  - 多核CPU，当 ```io_service``` 任务饱和时可将 ```wait_duration``` 设置为**0**，以便事件循环在下次tick立刻执行任务
+  - 单核CPU，当 ```io_service``` 任务饱和时至少要给一定的 ```wait_duration``` 到```socket.select```，详见[提交记录](https://github.com/yasio/yasio/commit/0a549fdd558a17b75da3923d36e63c3c77904041)，以防止占满CPU降低整体传输性能，例如阿里云**单核CPU**服务器，最早测试用例里将 ```kcp.interval``` 设置成了**0**，传输性能很低，只有**40Mbits/s**，后来保持 ```kcp.interval=10ms```，同时将发包间隔降低为**100us**，传输性能提高到**1.9Gbit/s**
   - Android CPU相对PC比较弱，因此UDP/TCP传输速率均在480Mbits/s左右

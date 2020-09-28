@@ -722,7 +722,7 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duratio
     if (n < 0) // EAGAIN/EWOULDBLOCK
       n = 0;
 
-    // If have any data from system or kcp, don't wait
+    // If got data from kcp, don't wait
     if (n > 0)
       wait_duration = yasio__min_wait_duration;
   }
@@ -733,7 +733,7 @@ int io_transport_kcp::handle_input(const char* buf, int len, int& error, highp_t
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))
   {
-    wait_duration = yasio__min_wait_duration;
+    get_timeout(wait_duration); // call ikcp_check
     return len;
   }
 
@@ -745,21 +745,25 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
+  // FIXME: dynamic update kcp interval may avoid last packet delay issue
+  // kcp_->interval = ikcp_waitsnd(kcp_) ? 10 : 5000;
+
   ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);
-
-  // check next time to call ikcp_update 
-  auto current               = static_cast<IUINT32>(::yasio::clock());
-  auto expire_time           = ::ikcp_check(kcp_, current);
-  highp_time_t diff = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
-  if (diff < 0)
-    diff = yasio__min_wait_duration;
-
-  if (wait_duration > diff)
-    wait_duration = diff;
+  get_timeout(wait_duration); // call ikcp_check
 
   // Call super do_write to perform low layer socket.send
   return io_transport_udp::do_write(wait_duration);
+}
+void io_transport_kcp::get_timeout(highp_time_t& wait_duration) const
+{
+  auto current      = static_cast<IUINT32>(::yasio::clock());
+  auto expire_time  = ::ikcp_check(kcp_, current);
+  highp_time_t duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
+  if (duration < 0)
+    duration = yasio__min_wait_duration;
+  if (wait_duration > duration)
+    wait_duration = duration;
 }
 #endif
 

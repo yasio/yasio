@@ -45,7 +45,7 @@
     - Ubuntu 20.04 On Aliyun: 20.8Gbits/s
     - Android 10(MI MIX2S): 488Mbits/s
   - KCP speed: 
-    - Windows: 5.0Gbits/s
+    - Windows: 7.3Gbits/s
     - macOS: 16.6Gbits/s
     - Ubuntu 20.04 On Aliyun: 2.3~5.3Gbits/s, because it's Single Core CPU, so speed not stable
     - Android 10(MI MIX2S): 184Mbits/s (kcp.send.internval=1ms)

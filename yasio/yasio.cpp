@@ -698,7 +698,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
   ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
-    return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
+    return t->connected_ ? t->socket_->send(buf, len) : t->socket_->sendto(buf, len, t->ensure_destination());
   });
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
@@ -752,8 +752,7 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
   ::ikcp_flush(kcp_);
   get_timeout(wait_duration); // call ikcp_check
 
-  // Call super do_write to perform low layer socket.send
-  return io_transport_udp::do_write(wait_duration);
+  return true;
 }
 void io_transport_kcp::get_timeout(highp_time_t& wait_duration) const
 {

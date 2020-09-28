@@ -698,7 +698,12 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
   ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
-    return t->connected_ ? t->socket_->send(buf, len) : t->socket_->sendto(buf, len, t->ensure_destination());
+    if (yasio__min_wait_duration == 0)
+        return t->connected_ ? t->socket_->send(buf, len) : t->socket_->sendto(buf, len, t->ensure_destination());
+    // Enqueue to transport queue
+    // a. cache udp data if kernel buffer full
+    // b. lower packet lose, but may reduce transfer performance and large memory use
+    return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
   });
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
@@ -746,13 +751,19 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
 
   // FIXME: dynamic update kcp interval may avoid last packet delay issue
+  // But, if send to fast, doesn't work for solve packet delay issue
   // kcp_->interval = ikcp_waitsnd(kcp_) ? 10 : 5000;
 
   ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);
   get_timeout(wait_duration); // call ikcp_check
-
-  return true;
+  if (yasio__min_wait_duration == 0)
+    return true;
+  // Call super do_write to perform low layer socket.send
+  // benefit of transport queue: 
+  // a. cache udp data if kernel buffer full
+  // b. lower packet lose, but may reduce transfer performance and large memory use
+  return io_transport_udp::do_write(wait_duration);
 }
 void io_transport_kcp::get_timeout(highp_time_t& wait_duration) const
 {

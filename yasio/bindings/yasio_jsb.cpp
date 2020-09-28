@@ -1755,6 +1755,7 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
 #endif
         case YOPT_C_LOCAL_PORT:
         case YOPT_C_REMOTE_PORT:
+        case YOPT_C_KCP_CONV:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_ENABLE_MCAST:
@@ -1997,6 +1998,7 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
 
   YASIO_EXPORT_ENUM(YEK_CONNECT_RESPONSE);
   YASIO_EXPORT_ENUM(YEK_CONNECTION_LOST);

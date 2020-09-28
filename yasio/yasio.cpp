@@ -2353,7 +2353,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_C_KCP_CONV: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
-        channel->kcp_conv_ = va_arg(ap, uint32_t);
+        channel->kcp_conv_ = va_arg(ap, int);
       break;
     }
 #endif

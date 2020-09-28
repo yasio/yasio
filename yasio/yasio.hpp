@@ -726,7 +726,7 @@ protected:
 
   YASIO__DECL int handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration) override;
 
-  YASIO__DECL void get_timeout(highp_time_t& wait_duration) const;
+  YASIO__DECL void check_timeout(highp_time_t& wait_duration) const;
 
   std::vector<char> rawbuf_; // the low level raw buffer
   ikcpcb* kcp_;

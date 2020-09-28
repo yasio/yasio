@@ -738,7 +738,7 @@ int io_transport_kcp::handle_input(const char* buf, int len, int& error, highp_t
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))
   {
-    get_timeout(wait_duration); // call ikcp_check
+    this->check_timeout(wait_duration); // call ikcp_check
     return len;
   }
 
@@ -756,7 +756,7 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
 
   ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);
-  get_timeout(wait_duration); // call ikcp_check
+  this->check_timeout(wait_duration); // call ikcp_check
   if (yasio__min_wait_duration == 0)
     return true;
   // Call super do_write to perform low layer socket.send
@@ -765,7 +765,7 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
   // b. lower packet lose, but may reduce transfer performance and large memory use
   return io_transport_udp::do_write(wait_duration);
 }
-void io_transport_kcp::get_timeout(highp_time_t& wait_duration) const
+void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
 {
   auto current      = static_cast<IUINT32>(::yasio::clock());
   auto expire_time  = ::ikcp_check(kcp_, current);

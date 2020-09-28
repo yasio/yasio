@@ -701,8 +701,6 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
     if (yasio__min_wait_duration == 0)
         return t->connected_ ? t->socket_->send(buf, len) : t->socket_->sendto(buf, len, t->ensure_destination());
     // Enqueue to transport queue
-    // a. cache udp data if kernel buffer full
-    // b. lower packet lose, but may reduce transfer performance and large memory use
     return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
   });
 }
@@ -749,10 +747,6 @@ int io_transport_kcp::handle_input(const char* buf, int len, int& error, highp_t
 bool io_transport_kcp::do_write(highp_time_t& wait_duration)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-
-  // FIXME: dynamic update kcp interval may avoid last packet delay issue
-  // But, if send to fast, doesn't work for solve packet delay issue
-  // kcp_->interval = ikcp_waitsnd(kcp_) ? 10 : 5000;
 
   ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);

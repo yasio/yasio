@@ -75,6 +75,7 @@ typedef int socklen_t;
 #  endif
 #  include <sys/select.h>
 #  include <sys/socket.h>
+#  include <sys/un.h>
 #  include <netinet/in.h>
 #  include <netinet/tcp.h>
 #  include <net/if.h>
@@ -629,6 +630,13 @@ YASIO__NS_INLINE namespace ip
     sockaddr sa_;
     sockaddr_in in4_;
     sockaddr_in6 in6_;
+  #if !defined(_WIN32)
+    endpoint& as_un(const char* name) {
+      un_.sun_family = AF_UNIX;
+      strncpy(un_.sun_path, name, sizeof(un_.sun_path) - 1);
+    }
+    sockaddr_un un_;
+  #endif
   };
 
   // supported internet protocol flags

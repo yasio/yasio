@@ -52,7 +52,6 @@ public:
     char data[1024];
     for (;;)
     {
-      // Clear all data from the pipe.
       int bytes_read = xxsocket::recv(read_descriptor_, data, sizeof(data), 0);
       if (bytes_read == sizeof(data))
         continue;

@@ -948,7 +948,7 @@ int xxsocket::bind(const char* addr, unsigned short port) const
 
 int xxsocket::bind(const endpoint& ep) const
 {
-  return ::bind(this->fd, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
+  return ::bind(this->fd, &ep.sa_, ep.len());
 }
 
 int xxsocket::bind_any(bool ipv6) const
@@ -998,7 +998,7 @@ int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
 
 int xxsocket::connect(socket_native_type s, const endpoint& ep)
 {
-  return ::connect(s, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
+  return ::connect(s, &ep.sa_, ep.len());
 }
 
 int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
@@ -1209,7 +1209,7 @@ int xxsocket::recv(socket_native_type s, void* buf, int len, int flags)
 int xxsocket::sendto(const void* buf, int len, const endpoint& to, int flags) const
 {
   return static_cast<int>(::sendto(this->fd, (const char*)buf, len, flags, &to.sa_,
-                                   to.af() == AF_INET6 ? sizeof(to.in6_) : sizeof(to.in4_)));
+                                   to.len()));
 }
 
 int xxsocket::recvfrom(void* buf, int len, endpoint& from, int flags) const

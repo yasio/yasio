@@ -28,6 +28,7 @@ SOFTWARE.
 #ifndef YASIO__XXSOCKET_HPP
 #define YASIO__XXSOCKET_HPP
 
+#include <stddef.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -627,16 +628,35 @@ YASIO__NS_INLINE namespace ip
       endpoint(family, inaddr).inaddr_to_csv_nl(csv);
     }
 
+    socklen_t len() const {
+      switch(af())
+      {
+        case AF_INET:
+        return static_cast<socklen_t>(sizeof(sockaddr_in));
+        case AF_INET6:
+        return static_cast<socklen_t>(sizeof(sockaddr_in6));
+#if !defined(_WIN32)
+        return un_len(un_.sun_path);
+#endif
+        default:
+        return 0;
+      }
+    }
+
     sockaddr sa_;
     sockaddr_in in4_;
     sockaddr_in6 in6_;
-  #if !defined(_WIN32)
+#if !defined(_WIN32)
     endpoint& as_un(const char* name) {
       un_.sun_family = AF_UNIX;
       strncpy(un_.sun_path, name, sizeof(un_.sun_path) - 1);
+      return *this;
+    }
+    static socklen_t un_len(const char* name) {
+      return static_cast<socklen_t>(offsetof(struct sockaddr_un, sun_path) + strlen(name));
     }
     sockaddr_un un_;
-  #endif
+#endif
   };
 
   // supported internet protocol flags

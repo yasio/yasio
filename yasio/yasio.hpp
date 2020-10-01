@@ -240,6 +240,7 @@ enum
   YCM_UDP    = 1 << 3,
   YCM_KCP    = 1 << 4,
   YCM_SSL    = 1 << 5,
+  YCM_UDS    = 1 << 6, // IPC: posix domain socket
 };
 
 // channel kinds: for user to call io_service::open
@@ -456,14 +457,17 @@ protected:
 private:
   YASIO__DECL io_channel(io_service& service, int index);
 
-  void configure_address(std::string host, u_short port)
+  void set_address(std::string host, u_short port)
   {
-    configure_host(host);
-    configure_port(port);
+    set_host(host);
+    set_port(port);
   }
 
-  YASIO__DECL void configure_host(std::string host);
-  YASIO__DECL void configure_port(u_short port);
+  YASIO__DECL void set_host(std::string host);
+  YASIO__DECL void set_port(u_short port);
+
+  // configure address, check whether needs dns queries
+  YASIO__DECL void configure_address();
 
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
@@ -471,7 +475,8 @@ private:
   /* Since v3.33.0 mask,kind,flags,private_flags are stored to this field
   ** bit[1-8] mask & kinds
   ** bit[9-16] flags
-  ** bit[17-?] private flags
+  ** bit[17-24] private flags
+  ** bit[25~32] varidic flags
   */
   uint32_t properties_ = 0;
 
@@ -492,6 +497,8 @@ private:
   highp_time_t dns_queries_timestamp_ = 0;
 
   int index_;
+  // socket address family, by default will auto detect as INET/INET6
+  // for IPC_UDS, it's AF_UNIX
   int socktype_ = 0;
 
   // The timer for check resolve & connect timeout

@@ -376,26 +376,24 @@ void io_channel::configure_address()
     yasio__clearbits(properties_, YCPF_HOST_MOD);
     this->remote_eps_.clear();
     ip::endpoint ep;
-    switch (!!yasio__testbits(properties_, YCM_UDS))
-    {
 #if !defined(_WIN32)
-      case true:
-        ep.as_un(this->remote_host_.c_str());
-        this->remote_eps_.push_back(ep);
-        this->dns_queries_state_ = YDQS_READY;
-        break;
+    if (yasio__testbits(properties_, YCM_UDS))
+    {
+      ep.as_un(this->remote_host_.c_str());
+      this->remote_eps_.push_back(ep);
+      this->dns_queries_state_ = YDQS_READY;
+      return;
+    }
 #endif
-      default:
-        if (ep.assign(this->remote_host_.c_str(), this->remote_port_))
-        {
-          this->remote_eps_.push_back(ep);
-          this->dns_queries_state_ = YDQS_READY;
-        }
-        else
-        {
-          yasio__setbits(properties_, YCPF_NEEDS_QUERIES);
-          this->dns_queries_state_ = YDQS_DIRTY;
-        }
+    if (ep.assign(this->remote_host_.c_str(), this->remote_port_))
+    {
+      this->remote_eps_.push_back(ep);
+      this->dns_queries_state_ = YDQS_READY;
+    }
+    else
+    {
+      yasio__setbits(properties_, YCPF_NEEDS_QUERIES);
+      this->dns_queries_state_ = YDQS_DIRTY;
     }
   }
 

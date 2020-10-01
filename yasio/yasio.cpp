@@ -2086,7 +2086,7 @@ u_short io_service::query_ares_state(io_channel* ctx)
 {
   if (yasio__testbits(ctx->properties_, YCPF_NEEDS_QUERIES))
   {
-    switch (ctx->dns_queries_state_)
+    switch (static_cast<u_short>(ctx->dns_queries_state_))
     {
       case YDQS_INPRROGRESS:
         break;

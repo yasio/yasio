@@ -377,7 +377,7 @@ void io_channel::configure_address()
     this->remote_eps_.clear();
     ip::endpoint ep;
 #if YASIO__HAS_UDS
-    if (yasio__testbits(properties_, YCM_UDS))
+    if (yasio__unlikely(yasio__testbits(properties_, YCM_UDS)))
     {
       ep.as_un(this->remote_host_.c_str());
       this->remote_eps_.push_back(ep);
@@ -1611,7 +1611,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   cleanup_io(ctx);
 
   ip::endpoint ep;
-  if (!yasio__testbits(ctx->properties_, YCM_UDS))
+  if (yasio__likely(!yasio__testbits(ctx->properties_, YCM_UDS)))
   {
     // server: don't need resolve, don't use remote_eps_
     auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family()) : ctx->remote_host_.c_str();

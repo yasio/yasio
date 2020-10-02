@@ -625,7 +625,7 @@ YASIO__NS_INLINE namespace ip
           return static_cast<socklen_t>(sizeof(sockaddr_in6));
 #if YASIO__HAS_UDS
         case AF_UNIX:
-          return static_cast<socklen_t>(sizeof(sockaddr_un)); // un_len(un_.sun_path);
+          return un_len(un_.sun_path);
 #endif
         default:
           return 0;

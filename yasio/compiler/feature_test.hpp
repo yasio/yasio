@@ -104,6 +104,30 @@ SOFTWARE.
 #  define YASIO__64BITS 0
 #endif
 
+// Compatibility with non-clang compilers...
+#ifndef __has_attribute
+#  define __has_attribute(x) 0
+#endif
+#ifndef __has_builtin
+#  define __has_builtin(x) 0
+#endif
+
+/*
+ * Helps the compiler's optimizer predicting branches
+ */
+#if __has_builtin(__builtin_expect)
+#  ifdef __cplusplus
+#    define yasio__likely(exp) (__builtin_expect(!!(exp), true))
+#    define yasio__unlikely(exp) (__builtin_expect(!!(exp), false))
+#  else
+#    define yasio__likely(exp) (__builtin_expect(!!(exp), 1))
+#    define yasio__unlikely(exp) (__builtin_expect(!!(exp), 0))
+#  endif
+#else
+#  define yasio__likely(exp) (!!(exp))
+#  define yasio__unlikely(exp) (!!(exp))
+#endif
+
 #define YASIO__STD ::std::
 
 #if YASIO__HAS_CXX17

@@ -240,6 +240,7 @@ enum
   YCM_UDP    = 1 << 3,
   YCM_KCP    = 1 << 4,
   YCM_SSL    = 1 << 5,
+  YCM_UDS    = 1 << 6, // IPC: posix domain socket
 };
 
 // channel kinds: for user to call io_service::open
@@ -321,8 +322,7 @@ typedef highp_timer_ptr deadline_timer_ptr;
 typedef event_cb_t io_event_cb_t;
 typedef completion_cb_t io_completion_cb_t;
 
-struct io_hostent
-{
+struct io_hostent {
   io_hostent() = default;
   io_hostent(std::string ip, u_short port) : host_(std::move(ip)), port_(port) {}
   io_hostent(io_hostent&& rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
@@ -335,8 +335,7 @@ struct io_hostent
   u_short port_ = 0;
 };
 
-class highp_timer
-{
+class highp_timer {
 public:
   ~highp_timer() {}
   highp_timer(io_service& service) : service_(service) {}
@@ -352,7 +351,7 @@ public:
   // Wait timer timeout once.
   void async_wait_once(light_timer_cb_t cb)
   {
-#if YASIO__HAS_CXX17
+#if YASIO__HAS_CXX14
     this->async_wait([cb = std::move(cb)]() {
 #else
     this->async_wait([cb]() {
@@ -382,8 +381,7 @@ public:
   std::chrono::time_point<steady_clock_t> expire_time_ = {};
 };
 
-struct io_base
-{
+struct io_base {
   enum class state : u_short
   {
     CLOSED,
@@ -402,8 +400,7 @@ struct io_base
 };
 
 #if defined(YASIO_HAVE_SSL)
-class ssl_auto_handle
-{
+class ssl_auto_handle {
 public:
   ssl_auto_handle() : ssl_(nullptr) {}
   ~ssl_auto_handle() { destroy(); }
@@ -433,8 +430,7 @@ protected:
 };
 #endif
 
-class io_channel : public io_base
-{
+class io_channel : public io_base {
   friend class io_service;
   friend class io_transport;
   friend class io_transport_tcp;
@@ -456,14 +452,17 @@ protected:
 private:
   YASIO__DECL io_channel(io_service& service, int index);
 
-  void configure_address(std::string host, u_short port)
+  void set_address(std::string host, u_short port)
   {
-    configure_host(host);
-    configure_port(port);
+    set_host(host);
+    set_port(port);
   }
 
-  YASIO__DECL void configure_host(std::string host);
-  YASIO__DECL void configure_port(u_short port);
+  YASIO__DECL void set_host(std::string host);
+  YASIO__DECL void set_port(u_short port);
+
+  // configure address, check whether needs dns queries
+  YASIO__DECL void configure_address();
 
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
@@ -471,7 +470,8 @@ private:
   /* Since v3.33.0 mask,kind,flags,private_flags are stored to this field
   ** bit[1-8] mask & kinds
   ** bit[9-16] flags
-  ** bit[17-?] private flags
+  ** bit[17-24] byte1 of private flags
+  ** bit[25~32] byte2 of private flags
   */
   uint32_t properties_ = 0;
 
@@ -497,8 +497,7 @@ private:
   // The timer for check resolve & connect timeout
   highp_timer timer_;
 
-  struct __unnamed01
-  {
+  struct __unnamed01 {
     int max_frame_length       = YASIO_SZ(10, M); // 10MBytes
     int length_field_offset    = -1;              // -1: directly, >= 0: store as 1~4bytes integer, default value=-1
     int length_field_length    = 4;               // 1,2,3,4
@@ -539,8 +538,7 @@ private:
 #endif
 };
 
-class io_send_op
-{
+class io_send_op {
 public:
   io_send_op(std::vector<char>&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
@@ -556,8 +554,7 @@ public:
 #endif
 };
 
-class io_sendto_op : public io_send_op
-{
+class io_sendto_op : public io_send_op {
 public:
   io_sendto_op(std::vector<char>&& buffer, completion_cb_t&& handler, const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
@@ -570,8 +567,7 @@ public:
   ip::endpoint destination_;
 };
 
-class io_transport : public io_base
-{
+class io_transport : public io_base {
   friend class io_service;
   friend class io_send_op;
   friend class io_sendto_op;
@@ -650,24 +646,21 @@ protected:
 #if !defined(YASIO_MINIFY_EVENT)
 private:
   // The user data
-  union
-  {
+  union {
     void* ptr;
     int ival;
   } ud_;
 #endif
 };
 
-class io_transport_tcp : public io_transport
-{
+class io_transport_tcp : public io_transport {
   friend class io_service;
 
 public:
   io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
 };
 #if defined(YASIO_HAVE_SSL)
-class io_transport_ssl : public io_transport_tcp
-{
+class io_transport_ssl : public io_transport_tcp {
 public:
   YASIO__DECL io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL void set_primitives() override;
@@ -677,9 +670,10 @@ protected:
   ssl_auto_handle ssl_;
 #  endif
 };
+#else
+class io_transport_ssl {};
 #endif
-class io_transport_udp : public io_transport
-{
+class io_transport_udp : public io_transport {
   friend class io_service;
 
 public:
@@ -711,8 +705,7 @@ protected:
   bool connected_ = false;
 };
 #if defined(YASIO_HAVE_KCP)
-class io_transport_kcp : public io_transport_udp
-{
+class io_transport_kcp : public io_transport_udp {
 public:
   YASIO__DECL io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL ~io_transport_kcp();
@@ -732,10 +725,11 @@ protected:
   ikcpcb* kcp_;
   std::recursive_mutex send_mtx_;
 };
+#else
+class io_transport_kcp {};
 #endif
 
-class io_event final
-{
+class io_event final {
 public:
   io_event(int cindex, int kind, int error)
       : cindex_(cindex), kind_(kind), status_(error), transport_(nullptr), packet_({})
@@ -765,7 +759,6 @@ public:
         timestamp_(rhs.timestamp_), transport_udata_(rhs.transport_udata_), transport_id_(rhs.transport_id_)
 #endif
   {}
-
   ~io_event() {}
 
   int cindex() const { return cindex_; }
@@ -774,13 +767,11 @@ public:
   int status() const { return status_; }
 
   std::vector<char>& packet() { return packet_; }
-
   transport_handle_t transport() const { return transport_; }
 
 #if !defined(YASIO_MINIFY_EVENT)
   /* Gets to transport user data when process this event */
   template <typename _Uty = void*> _Uty transport_udata() const { return (_Uty)(uintptr_t)transport_udata_; }
-
   /* Sets trasnport user data when process this event */
   template <typename _Uty = void*> void transport_udata(_Uty uval)
   {
@@ -788,16 +779,12 @@ public:
     if (transport_)
       transport_->ud_.ptr = (void*)(uintptr_t)uval;
   }
-
   unsigned int transport_id() const { return transport_id_; }
-
   highp_time_t timestamp() const { return timestamp_; }
 #endif
-
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
-
 private:
   int cindex_;
   int kind_;
@@ -1088,8 +1075,7 @@ private:
   fd_set fds_array_[max_ops];
 
   // options
-  struct __unnamed_options
-  {
+  struct __unnamed_options {
     highp_time_t connect_timeout_     = 10LL * std::micro::den;
     highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
     highp_time_t dns_queries_timeout_ = 5LL * std::micro::den;
@@ -1099,8 +1085,7 @@ private:
     bool deferred_event_ = true;
 
     // tcp keepalive settings
-    struct __unnamed01
-    {
+    struct __unnamed01 {
       int onoff    = 0;
       int idle     = 7200;
       int interval = 75;
@@ -1125,7 +1110,6 @@ private:
 
   // The ip stack version supported by localhost
   u_short ipsv_ = 0;
-
 #if defined(YASIO_HAVE_SSL)
   SSL_CTX* ssl_ctx_ = nullptr;
 #endif
@@ -1134,8 +1118,7 @@ private:
   int ares_outstanding_work_ = 0;
 #else
   // we need life_token + life_mutex
-  struct life_token
-  {};
+  struct life_token {};
   std::shared_ptr<life_token> life_token_;
   std::shared_ptr<cxx17::shared_mutex> life_mutex_;
 #endif

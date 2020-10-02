@@ -49,10 +49,9 @@ public:
   // Reset the select interrupter. Returns true if the reset was successful.
   inline bool reset()
   {
+    char data[1024];
     for (;;)
     {
-      // Clear all data from the pipe.
-      char data[1024];
       int bytes_read = xxsocket::recv(read_descriptor_, data, sizeof(data), 0);
       if (bytes_read == sizeof(data))
         continue;

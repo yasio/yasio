@@ -19,11 +19,13 @@ using namespace yasio::inet;
 Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 */
 
+#define SPEEDTEST_VIA_UDS 1 // Now only support TCP/SOCK_STREAM
+
 #define SPEEDTEST_PROTO_TCP 1
 #define SPEEDTEST_PROTO_UDP 2
 #define SPEEDTEST_PROTO_KCP 3
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_TCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT
@@ -40,12 +42,22 @@ namespace speedtest
 {
 enum
 {
-  RECEIVER_PORT         = 3001,
-  SENDER_PORT           = RECEIVER_PORT,
+  RECEIVER_PORT = 3001,
+  SENDER_PORT   = RECEIVER_PORT,
+#  if !SPEEDTEST_VIA_UDS
   RECEIVER_CHANNEL_KIND = YCK_TCP_SERVER,
   SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND,
+#  else
+  RECEIVER_CHANNEL_KIND = YCK_TCP_SERVER | YCM_UDS,
+  SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND | YCM_UDS,
+#  endif
 };
-}
+} // namespace speedtest
+#  if !SPEEDTEST_VIA_UDS
+#    define SPEEDTEST_SOCKET_NAME "127.0.0.1"
+#  else
+#    define SPEEDTEST_SOCKET_NAME "speedtest.socket"
+#  endif
 #else
 namespace speedtest
 {
@@ -56,7 +68,8 @@ enum
   RECEIVER_CHANNEL_KIND = SPEEDTEST_DEFAULT_KIND,
   SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND,
 };
-}
+#  define SPEEDTEST_SOCKET_NAME "127.0.0.1"
+} // namespace speedtest
 #endif
 
 static const double s_send_limit_time = 10; // max send time in seconds
@@ -67,7 +80,7 @@ static long long s_recv_total_bytes = 0;
 static double s_send_speed = 0; // bytes/s
 static double s_recv_speed = 0;
 
-static const long long s_kcp_send_interval = 10; // (us) in microseconds
+static const long long s_kcp_send_interval = 10;   // (us) in microseconds
 static const uint32_t s_kcp_conv           = 8633; // can be any, but must same with two endpoint
 
 static const char* proto_name(int myproto)
@@ -156,13 +169,13 @@ void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream
   //~ }
 #endif
 
-  highp_timer_ptr ignored_ret = service->schedule(std::chrono::microseconds(s_kcp_send_interval), [=](){
+  highp_timer_ptr ignored_ret = service->schedule(std::chrono::microseconds(s_kcp_send_interval), [=]() {
     s_send_total_bytes += service->write(thandle, obs->buffer());
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     s_send_speed = s_send_total_bytes / time_elapsed;
     print_speed_detail(0.5, time_elapsed);
-    if(time_elapsed < s_send_limit_time)
-        return false;
+    if (time_elapsed < s_send_limit_time)
+      return false;
     printf("===> sender finished!\n");
     return true; // tell this timer finished
   });
@@ -288,7 +301,7 @@ void start_receiver(io_service& service)
 
 int main(int, char**)
 {
-  io_hostent receiver_ep("127.0.0.1", speedtest::RECEIVER_PORT), sender_ep("127.0.0.1", speedtest::SENDER_PORT);
+  io_hostent receiver_ep(SPEEDTEST_SOCKET_NAME, speedtest::RECEIVER_PORT), sender_ep(SPEEDTEST_SOCKET_NAME, speedtest::SENDER_PORT);
   io_service receiver(&receiver_ep, 1), sender(&sender_ep, 1);
 
   s_sender = &sender;

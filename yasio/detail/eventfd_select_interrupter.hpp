@@ -80,10 +80,10 @@ public:
     }
     else
     {
+      char data[1024];
       for (;;)
       {
         // Clear all data from the pipe.
-        char data[1024];
         int bytes_read = ::read(read_descriptor_, data, sizeof(data));
         if (bytes_read == sizeof(data))
           continue;

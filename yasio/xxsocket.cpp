@@ -479,9 +479,7 @@ int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
             }
             else if (flags & ipsv_ipv6)
             {
-              xxsocket::resolve_i(
-                  [&](const endpoint& ep6) { return 0 == (error = pconnect(ep6, local_port)); },
-                  hostname, port, AF_INET6, AI_V4MAPPED);
+              xxsocket::resolve_i([&](const endpoint& ep6) { return 0 == (error = pconnect(ep6, local_port)); }, hostname, port, AF_INET6, AI_V4MAPPED);
             }
             break;
           case AF_INET6:
@@ -497,8 +495,7 @@ int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
   return error;
 }
 
-int xxsocket::xpconnect_n(const char* hostname, u_short port,
-                          const std::chrono::microseconds& wtimeout, u_short local_port)
+int xxsocket::xpconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& wtimeout, u_short local_port)
 {
   auto flags = getipsv();
 
@@ -513,11 +510,8 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
               error = pconnect_n(ep, wtimeout, local_port);
             else if (flags & ipsv_ipv6)
             {
-              xxsocket::resolve_i(
-                  [&](const endpoint& ep6) {
-                    return 0 == (error = pconnect_n(ep6, wtimeout, local_port));
-                  },
-                  hostname, port, AF_INET6, AI_V4MAPPED);
+              xxsocket::resolve_i([&](const endpoint& ep6) { return 0 == (error = pconnect_n(ep6, wtimeout, local_port)); }, hostname, port, AF_INET6,
+                                  AI_V4MAPPED);
             }
             break;
           case AF_INET6:
@@ -536,18 +530,14 @@ int xxsocket::xpconnect_n(const char* hostname, u_short port,
 int xxsocket::pconnect(const char* hostname, u_short port, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolve_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); },
-                      hostname, port);
+  xxsocket::resolve_i([&](const endpoint& ep) { return 0 == (error = pconnect(ep, local_port)); }, hostname, port);
   return error;
 }
 
-int xxsocket::pconnect_n(const char* hostname, u_short port,
-                         const std::chrono::microseconds& wtimeout, u_short local_port)
+int xxsocket::pconnect_n(const char* hostname, u_short port, const std::chrono::microseconds& wtimeout, u_short local_port)
 {
   int error = -1;
-  xxsocket::resolve_i(
-      [&](const endpoint& ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); },
-      hostname, port);
+  xxsocket::resolve_i([&](const endpoint& ep) { return 0 == (error = pconnect_n(ep, wtimeout, local_port)); }, hostname, port);
   return error;
 }
 
@@ -574,8 +564,7 @@ int xxsocket::pconnect(const endpoint& ep, u_short local_port)
   return -1;
 }
 
-int xxsocket::pconnect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout,
-                         u_short local_port)
+int xxsocket::pconnect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout, u_short local_port)
 {
   if (this->reopen(ep.af()))
   {
@@ -613,8 +602,7 @@ int xxsocket::pserv(const char* addr, u_short port)
   return this->listen();
 }
 
-int xxsocket::resolve(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port,
-                      int socktype)
+int xxsocket::resolve(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port, int socktype)
 {
   return resolve_i(
       [&](const endpoint& ep) {
@@ -624,8 +612,7 @@ int xxsocket::resolve(std::vector<endpoint>& endpoints, const char* hostname, un
       hostname, port, AF_UNSPEC, AI_ALL, socktype);
 }
 
-int xxsocket::resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
-                         unsigned short port, int socktype)
+int xxsocket::resolve_v4(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port, int socktype)
 {
   return resolve_i(
       [&](const endpoint& ep) {
@@ -635,8 +622,7 @@ int xxsocket::resolve_v4(std::vector<endpoint>& endpoints, const char* hostname,
       hostname, port, AF_INET, 0, socktype);
 }
 
-int xxsocket::resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
-                         unsigned short port, int socktype)
+int xxsocket::resolve_v6(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port, int socktype)
 {
   return resolve_i(
       [&](const endpoint& ep) {
@@ -646,8 +632,7 @@ int xxsocket::resolve_v6(std::vector<endpoint>& endpoints, const char* hostname,
       hostname, port, AF_INET6, 0, socktype);
 }
 
-int xxsocket::resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname,
-                            unsigned short port, int socktype)
+int xxsocket::resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port, int socktype)
 {
   return xxsocket::resolve_i(
       [&](const endpoint& ep) {
@@ -657,8 +642,7 @@ int xxsocket::resolve_v4to6(std::vector<endpoint>& endpoints, const char* hostna
       hostname, port, AF_INET6, AI_V4MAPPED, socktype);
 }
 
-int xxsocket::resolve_tov6(std::vector<endpoint>& endpoints, const char* hostname,
-                           unsigned short port, int socktype)
+int xxsocket::resolve_tov6(std::vector<endpoint>& endpoints, const char* hostname, unsigned short port, int socktype)
 {
   return resolve_i(
       [&](const endpoint& ep) {
@@ -713,7 +697,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
   {
     for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
     {
-      ep.assign(aip);
+      ep.as_is(aip);
 
       YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
       switch (ep.af())
@@ -761,7 +745,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
     if (ifa->ifa_addr == NULL)
       continue;
 
-    ep.assign(ifa->ifa_addr);
+    ep.as_is(ifa->ifa_addr);
 
     YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
 
@@ -799,10 +783,7 @@ xxsocket& xxsocket::operator=(socket_native_type handle)
 
 xxsocket& xxsocket::operator=(xxsocket&& right) { return swap(right); }
 
-xxsocket::xxsocket(int af, int type, int protocol) : fd(invalid_socket)
-{
-  open(af, type, protocol);
-}
+xxsocket::xxsocket(int af, int type, int protocol) : fd(invalid_socket) { open(af, type, protocol); }
 
 xxsocket::~xxsocket(void) { close(); }
 
@@ -837,24 +818,21 @@ bool xxsocket::open_ex(int af, int type, int protocol)
     if (nullptr == __accept_ex)
     {
       GUID guidAcceptEx = WSAID_ACCEPTEX;
-      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidAcceptEx,
-                     sizeof(guidAcceptEx), &__accept_ex, sizeof(__accept_ex), &dwBytes, nullptr,
+      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidAcceptEx, sizeof(guidAcceptEx), &__accept_ex, sizeof(__accept_ex), &dwBytes, nullptr,
                      nullptr);
     }
 
     if (nullptr == __connect_ex)
     {
       GUID guidConnectEx = WSAID_CONNECTEX;
-      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidConnectEx,
-                     sizeof(guidConnectEx), &__connect_ex, sizeof(__connect_ex), &dwBytes, nullptr,
-                     nullptr);
+      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidConnectEx, sizeof(guidConnectEx), &__connect_ex, sizeof(__connect_ex), &dwBytes,
+                     nullptr, nullptr);
     }
 
     if (nullptr == __get_accept_ex_sockaddrs)
     {
       GUID guidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
-      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidGetAcceptExSockaddrs,
-                     sizeof(guidGetAcceptExSockaddrs), &__get_accept_ex_sockaddrs,
+      (void)WSAIoctl(this->fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidGetAcceptExSockaddrs, sizeof(guidGetAcceptExSockaddrs), &__get_accept_ex_sockaddrs,
                      sizeof(__get_accept_ex_sockaddrs), &dwBytes, nullptr, nullptr);
     }
   }
@@ -865,30 +843,23 @@ bool xxsocket::open_ex(int af, int type, int protocol)
 }
 
 #  if !defined(WP8)
-bool xxsocket::accept_ex(SOCKET sockfd_listened, SOCKET sockfd_prepared, PVOID lpOutputBuffer,
-                         DWORD dwReceiveDataLength, DWORD dwLocalAddressLength,
-                         DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived,
-                         LPOVERLAPPED lpOverlapped)
+bool xxsocket::accept_ex(SOCKET sockfd_listened, SOCKET sockfd_prepared, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength,
+                         DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
 {
-  return __accept_ex(sockfd_listened, sockfd_prepared, lpOutputBuffer, dwReceiveDataLength,
-                     dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived,
+  return __accept_ex(sockfd_listened, sockfd_prepared, lpOutputBuffer, dwReceiveDataLength, dwLocalAddressLength, dwRemoteAddressLength, lpdwBytesReceived,
                      lpOverlapped) != FALSE;
 }
 
-bool xxsocket::connect_ex(SOCKET s, const struct sockaddr* name, int namelen, PVOID lpSendBuffer,
-                          DWORD dwSendDataLength, LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped)
+bool xxsocket::connect_ex(SOCKET s, const struct sockaddr* name, int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength, LPDWORD lpdwBytesSent,
+                          LPOVERLAPPED lpOverlapped)
 {
-  return __connect_ex(s, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent,
-                      lpOverlapped);
+  return __connect_ex(s, name, namelen, lpSendBuffer, dwSendDataLength, lpdwBytesSent, lpOverlapped);
 }
 
-void xxsocket::translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength,
-                                   DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
-                                   sockaddr** LocalSockaddr, LPINT LocalSockaddrLength,
-                                   sockaddr** RemoteSockaddr, LPINT RemoteSockaddrLength)
+void xxsocket::translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
+                                   sockaddr** LocalSockaddr, LPINT LocalSockaddrLength, sockaddr** RemoteSockaddr, LPINT RemoteSockaddrLength)
 {
-  __get_accept_ex_sockaddrs(lpOutputBuffer, dwReceiveDataLength, dwLocalAddressLength,
-                            dwRemoteAddressLength, LocalSockaddr, LocalSockaddrLength,
+  __get_accept_ex_sockaddrs(lpOutputBuffer, dwReceiveDataLength, dwLocalAddressLength, dwRemoteAddressLength, LocalSockaddr, LocalSockaddrLength,
                             RemoteSockaddr, RemoteSockaddrLength);
 }
 #  endif
@@ -906,10 +877,7 @@ socket_native_type xxsocket::detach(void)
 
 socket_native_type xxsocket::native_handle(void) const { return this->fd; }
 
-int xxsocket::set_nonblocking(bool nonblocking) const
-{
-  return set_nonblocking(this->fd, nonblocking);
-}
+int xxsocket::set_nonblocking(bool nonblocking) const { return set_nonblocking(this->fd, nonblocking); }
 
 int xxsocket::set_nonblocking(socket_native_type s, bool nonblocking)
 {
@@ -941,20 +909,11 @@ int xxsocket::test_nonblocking(socket_native_type s)
 #endif
 }
 
-int xxsocket::bind(const char* addr, unsigned short port) const
-{
-  return this->bind(endpoint(addr, port));
-}
+int xxsocket::bind(const char* addr, unsigned short port) const { return this->bind(endpoint(addr, port)); }
 
-int xxsocket::bind(const endpoint& ep) const
-{
-  return ::bind(this->fd, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
-}
+int xxsocket::bind(const endpoint& ep) const { return ::bind(this->fd, &ep.sa_, ep.len()); }
 
-int xxsocket::bind_any(bool ipv6) const
-{
-  return this->bind(endpoint(!ipv6 ? "0.0.0.0" : "::", 0));
-}
+int xxsocket::bind_any(bool ipv6) const { return this->bind(endpoint(!ipv6 ? "0.0.0.0" : "::", 0)); }
 
 int xxsocket::listen(int backlog) const { return ::listen(this->fd, backlog); }
 
@@ -996,23 +955,13 @@ int xxsocket::connect(socket_native_type s, const char* addr, u_short port)
   return xxsocket::connect(s, peer);
 }
 
-int xxsocket::connect(socket_native_type s, const endpoint& ep)
-{
-  return ::connect(s, &ep.sa_, ep.af() == AF_INET6 ? sizeof(ep.in6_) : sizeof(ep.in4_));
-}
+int xxsocket::connect(socket_native_type s, const endpoint& ep) { return ::connect(s, &ep.sa_, ep.len()); }
 
-int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout)
-{
-  return connect_n(ip::endpoint(addr, port), wtimeout);
-}
+int xxsocket::connect_n(const char* addr, u_short port, const std::chrono::microseconds& wtimeout) { return connect_n(ip::endpoint(addr, port), wtimeout); }
 
-int xxsocket::connect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout)
-{
-  return this->connect_n(this->fd, ep, wtimeout);
-}
+int xxsocket::connect_n(const endpoint& ep, const std::chrono::microseconds& wtimeout) { return this->connect_n(this->fd, ep, wtimeout); }
 
-int xxsocket::connect_n(socket_native_type s, const endpoint& ep,
-                        const std::chrono::microseconds& wtimeout)
+int xxsocket::connect_n(socket_native_type s, const endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
   fd_set rset, wset;
   int n, error = 0;
@@ -1073,8 +1022,7 @@ int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& 
   return this->send_n(this->fd, buf, len, wtimeout, flags);
 }
 
-int xxsocket::send_n(socket_native_type s, const void* buf, int len,
-                     std::chrono::microseconds wtimeout, int flags)
+int xxsocket::send_n(socket_native_type s, const void* buf, int len, std::chrono::microseconds wtimeout, int flags)
 {
   int bytes_transferred;
   int n;
@@ -1095,8 +1043,7 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len,
       // Check for possible blocking.
       errcode = xxsocket::get_last_errno();
 
-      if (n == -1 &&
-          (errcode == EAGAIN || errcode == EWOULDBLOCK || errcode == ENOBUFS || errcode == EINTR))
+      if (n == -1 && (errcode == EAGAIN || errcode == EWOULDBLOCK || errcode == ENOBUFS || errcode == EINTR))
       {
 
         // Wait upto <timeout> for the blocking to subside.
@@ -1133,8 +1080,7 @@ int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeo
   return this->recv_n(this->fd, buf, len, wtimeout, flags);
 }
 
-int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::microseconds wtimeout,
-                     int flags)
+int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::microseconds wtimeout, int flags)
 {
   int bytes_transferred;
   int n;
@@ -1147,8 +1093,7 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::micr
     // Try to transfer as much of the remaining data as possible.
     // Since the socket is in non-blocking mode, this call will not
     // block.
-    n = xxsocket::recv(s, static_cast<char*>(buf) + bytes_transferred, len - bytes_transferred,
-                       flags);
+    n = xxsocket::recv(s, static_cast<char*>(buf) + bytes_transferred, len - bytes_transferred, flags);
 
     // Check for errors.
     if (n <= 0)
@@ -1186,30 +1131,17 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::micr
   return bytes_transferred;
 }
 
-int xxsocket::send(const void* buf, int len, int flags) const
-{
-  return static_cast<int>(::send(this->fd, (const char*)buf, len, flags));
-}
+int xxsocket::send(const void* buf, int len, int flags) const { return static_cast<int>(::send(this->fd, (const char*)buf, len, flags)); }
 
-int xxsocket::send(socket_native_type s, const void* buf, int len, int flags)
-{
-  return static_cast<int>(::send(s, (const char*)buf, len, flags));
-}
+int xxsocket::send(socket_native_type s, const void* buf, int len, int flags) { return static_cast<int>(::send(s, (const char*)buf, len, flags)); }
 
-int xxsocket::recv(void* buf, int len, int flags) const
-{
-  return static_cast<int>(this->recv(this->fd, buf, len, flags));
-}
+int xxsocket::recv(void* buf, int len, int flags) const { return static_cast<int>(this->recv(this->fd, buf, len, flags)); }
 
-int xxsocket::recv(socket_native_type s, void* buf, int len, int flags)
-{
-  return static_cast<int>(::recv(s, (char*)buf, len, flags));
-}
+int xxsocket::recv(socket_native_type s, void* buf, int len, int flags) { return static_cast<int>(::recv(s, (char*)buf, len, flags)); }
 
 int xxsocket::sendto(const void* buf, int len, const endpoint& to, int flags) const
 {
-  return static_cast<int>(::sendto(this->fd, (const char*)buf, len, flags, &to.sa_,
-                                   to.af() == AF_INET6 ? sizeof(to.in6_) : sizeof(to.in4_)));
+  return static_cast<int>(::sendto(this->fd, (const char*)buf, len, flags, &to.sa_, to.len()));
 }
 
 int xxsocket::recvfrom(void* buf, int len, endpoint& from, int flags) const
@@ -1218,10 +1150,7 @@ int xxsocket::recvfrom(void* buf, int len, endpoint& from, int flags) const
   return static_cast<int>(::recvfrom(this->fd, (char*)buf, len, flags, &from.sa_, &addrlen));
 }
 
-int xxsocket::handle_write_ready(const std::chrono::microseconds& wtimeout) const
-{
-  return handle_write_ready(this->fd, wtimeout);
-}
+int xxsocket::handle_write_ready(const std::chrono::microseconds& wtimeout) const { return handle_write_ready(this->fd, wtimeout); }
 
 int xxsocket::handle_write_ready(socket_native_type s, const std::chrono::microseconds& wtimeout)
 {
@@ -1229,10 +1158,7 @@ int xxsocket::handle_write_ready(socket_native_type s, const std::chrono::micros
   return xxsocket::select(s, nullptr, &writefds, nullptr, wtimeout);
 }
 
-int xxsocket::handle_read_ready(const std::chrono::microseconds& wtimeout) const
-{
-  return handle_read_ready(this->fd, wtimeout);
-}
+int xxsocket::handle_read_ready(const std::chrono::microseconds& wtimeout) const { return handle_read_ready(this->fd, wtimeout); }
 
 int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microseconds& wtimeout)
 {
@@ -1240,8 +1166,7 @@ int xxsocket::handle_read_ready(socket_native_type s, const std::chrono::microse
   return xxsocket::select(s, &readfds, nullptr, nullptr, wtimeout);
 }
 
-int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
-                     std::chrono::microseconds wtimeout)
+int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, std::chrono::microseconds wtimeout)
 {
   int n = 0;
 
@@ -1251,11 +1176,10 @@ int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd
     reregister_descriptor(s, writefds);
     reregister_descriptor(s, exceptfds);
 
-    timeval waitd_tv = {
-        static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
-        static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
-    long long start = highp_clock();
-    n               = ::select(static_cast<int>(s + 1), readfds, writefds, exceptfds, &waitd_tv);
+    timeval waitd_tv = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
+                        static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
+    long long start  = highp_clock();
+    n                = ::select(static_cast<int>(s + 1), readfds, writefds, exceptfds, &waitd_tv);
     wtimeout -= std::chrono::microseconds(highp_clock() - start);
 
     if (n < 0 && xxsocket::get_last_errno() == EINTR)
@@ -1289,6 +1213,7 @@ endpoint xxsocket::local_endpoint(socket_native_type fd)
   endpoint ep;
   socklen_t socklen = sizeof(ep);
   getsockname(fd, &ep.sa_, &socklen);
+  ep.len(socklen);
   return ep;
 }
 
@@ -1299,13 +1224,11 @@ endpoint xxsocket::peer_endpoint(socket_native_type fd)
   endpoint ep;
   socklen_t socklen = sizeof(ep);
   getpeername(fd, &ep.sa_, &socklen);
+  ep.len(socklen);
   return ep;
 }
 
-int xxsocket::set_keepalive(int flag, int idle, int interval, int probes)
-{
-  return set_keepalive(this->fd, flag, idle, interval, probes);
-}
+int xxsocket::set_keepalive(int flag, int idle, int interval, int probes) { return set_keepalive(this->fd, flag, idle, interval, probes); }
 
 int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interval, int probes)
 {
@@ -1315,8 +1238,7 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
   buffer_in.keepalivetime     = idle * 1000;
   buffer_in.keepaliveinterval = interval * 1000;
 
-  return WSAIoctl(s, SIO_KEEPALIVE_VALS, &buffer_in, sizeof(buffer_in), nullptr, 0, (DWORD*)&probes,
-                  nullptr, nullptr);
+  return WSAIoctl(s, SIO_KEEPALIVE_VALS, &buffer_in, sizeof(buffer_in), nullptr, 0, (DWORD*)&probes, nullptr, nullptr);
 #else
   int n = set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag);
   n += set_optval(s, IPPROTO_TCP, TCP_KEEPIDLE, idle);
@@ -1369,7 +1291,7 @@ uint32_t xxsocket::tcp_rtt(socket_native_type s)
   TCP_INFO_v0 info;
   DWORD tcpi_ver = 0, bytes_transferred = 0;
   int status = WSAIoctl(s, SIO_TCP_INFO,
-                        (LPVOID)&tcpi_ver, // lpvInBuffer pointer to a DWORD, version of tcp info
+                        (LPVOID)&tcpi_ver,           // lpvInBuffer pointer to a DWORD, version of tcp info
                         (DWORD)sizeof(tcpi_ver),     // size, in bytes, of the input buffer
                         (LPVOID)&info,               // pointer to a TCP_INFO_v0 structure
                         (DWORD)sizeof(info),         // size of the output buffer
@@ -1426,9 +1348,8 @@ const char* xxsocket::strerror(int error)
 #if defined(_MSC_VER) && !defined(_WINSTORE)
   static char error_msg[256];
   ZeroMemory(error_msg, sizeof(error_msg));
-  ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS |
-                       FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */,
-                   NULL, error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
+  ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,
+                   error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
                    error_msg, sizeof(error_msg), NULL);
 
   return error_msg;

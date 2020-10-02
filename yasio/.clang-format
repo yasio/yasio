@@ -12,13 +12,13 @@ ColumnLimit: 160
 # Always break before braces
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterClass: true
+  AfterClass: false
   AfterControlStatement: true
   AfterEnum: true
   AfterFunction: true
   AfterNamespace: true
-  AfterStruct: true
-  AfterUnion: true
+  AfterStruct: false
+  AfterUnion: false
   BeforeCatch: true
   BeforeElse: true
   IndentBraces: false

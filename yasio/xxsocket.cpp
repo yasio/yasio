@@ -745,7 +745,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
     if (ifa->ifa_addr == NULL)
       continue;
 
-    ep.as_in(ifa->ifa_addr);
+    ep.as_is(ifa->ifa_addr);
 
     YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
 

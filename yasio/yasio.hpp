@@ -476,7 +476,7 @@ private:
   ** bit[1-8] mask & kinds
   ** bit[9-16] flags
   ** bit[17-24] private flags
-  ** bit[25~32] varidic flags
+  ** bit[25~32] volatile flags
   */
   uint32_t properties_ = 0;
 

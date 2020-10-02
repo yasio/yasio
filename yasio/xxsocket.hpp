@@ -384,7 +384,7 @@ YASIO__NS_INLINE namespace ip
   inline bool is_global_in4_addr(const in_addr* addr) { return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr); };
   inline bool is_global_in6_addr(const in6_addr* addr) { return !!IN6_IS_ADDR_GLOBAL(addr); };
 
-  union endpoint
+  struct endpoint
   {
   public:
     endpoint(void) { this->zeroset(); }
@@ -415,9 +415,11 @@ YASIO__NS_INLINE namespace ip
       {
         case AF_INET:
           ::memcpy(&in4_, addr, sizeof(sockaddr_in));
+          this->len(sizeof(sockaddr_in));
           break;
         case AF_INET6:
           ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
+          this->len(sizeof(sockaddr_in6));
           break;
       }
     }
@@ -430,9 +432,11 @@ YASIO__NS_INLINE namespace ip
       {
         case AF_INET:
           ::memcpy(&in4_.sin_addr, addr, sizeof(in_addr));
+          this->len(sizeof(sockaddr_in));
           break;
         case AF_INET6:
           ::memcpy(&in6_.sin6_addr, addr, sizeof(in6_addr));
+          this->len(sizeof(sockaddr_in6));
           break;
       }
     }
@@ -449,6 +453,7 @@ YASIO__NS_INLINE namespace ip
         {
           this->in4_.sin_family = AF_INET;
           this->in4_.sin_port   = htons(port);
+          this->len(sizeof(sockaddr_in));
           return true;
         }
       }
@@ -458,6 +463,7 @@ YASIO__NS_INLINE namespace ip
         {
           this->in6_.sin6_family = AF_INET6;
           this->in6_.sin6_port   = htons(port);
+          this->len(sizeof(sockaddr_in6));
           return true;
         }
       }
@@ -471,14 +477,28 @@ YASIO__NS_INLINE namespace ip
       this->af(AF_INET);
       this->addr_v4(addr);
       this->port(port);
-
+      this->len(sizeof(sockaddr_in));
       return true;
     }
+
+#if YASIO__HAS_UDS
+    endpoint& as_un(const char* name)
+    {
+      un_.sun_family = AF_UNIX;
+      int n          = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
+      if (n > 0)
+        this->len(offsetof(struct sockaddr_un, sun_path) + n + 1);
+      else
+        this->len(0);
+      return *this;
+    }
+#endif
 
     void assign_raw(const void* ai_addr, size_t ai_addrlen)
     {
       this->zeroset();
       ::memcpy(this, ai_addr, ai_addrlen);
+      this->len(ai_addrlen);
     }
 
     void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
@@ -529,6 +549,12 @@ YASIO__NS_INLINE namespace ip
           n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
           n += sprintf(&addr.front() + n, "]:%u", this->port());
           break;
+#if YASIO__HAS_UDS
+        case AF_UNIX:
+          n = this->len();
+          addr.assign(un_.sun_path, n);
+          break;
+#endif
       }
 
       addr.resize(n);
@@ -615,35 +641,34 @@ YASIO__NS_INLINE namespace ip
     // family=AF_INET6
     static void inaddr_to_csv_nl(int family, const void* inaddr, std::string& csv) { endpoint(family, inaddr).inaddr_to_csv_nl(csv); }
 
+    void len(size_t n)
+    {
+#if !defined(__APPLE__)
+      len_ = static_cast<uint8_t>(n);
+#else
+      sa_.sa_len = static_cast<uint8_t>(n);
+#endif
+    }
     socklen_t len() const
     {
-      switch (af())
-      {
-        case AF_INET:
-          return static_cast<socklen_t>(sizeof(sockaddr_in));
-        case AF_INET6:
-          return static_cast<socklen_t>(sizeof(sockaddr_in6));
-#if YASIO__HAS_UDS
-        case AF_UNIX:
-          return un_len(un_.sun_path);
+#if !defined(__APPLE__)
+      return len_;
+#else
+      return sa_.sa_len;
 #endif
-        default:
-          return 0;
-      }
     }
 
-    sockaddr sa_;
-    sockaddr_in in4_;
-    sockaddr_in6 in6_;
-#if YASIO__HAS_UDS
-    endpoint& as_un(const char* name)
+    union
     {
-      un_.sun_family = AF_UNIX;
-      strncpy(un_.sun_path, name, sizeof(un_.sun_path) - 1);
-      return *this;
-    }
-    static socklen_t un_len(const char* name) { return static_cast<socklen_t>(offsetof(struct sockaddr_un, sun_path) + strlen(name) + 1); }
-    sockaddr_un un_;
+      sockaddr sa_;
+      sockaddr_in in4_;
+      sockaddr_in6 in6_;
+#if YASIO__HAS_UDS
+      sockaddr_un un_;
+#endif
+    };
+#if !defined(__APPLE__)
+    uint8_t len_;
 #endif
   };
 

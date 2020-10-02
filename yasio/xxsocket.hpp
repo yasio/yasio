@@ -486,12 +486,17 @@ YASIO__NS_INLINE namespace ip
 #if YASIO__HAS_UDS
     endpoint& as_un(const char* name)
     {
-      un_.sun_family = AF_UNIX;
-      int n          = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
+      int n = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
       if (n > 0)
+      {
+        un_.sun_family = AF_UNIX;
         this->len(offsetof(struct sockaddr_un, sun_path) + n + 1);
+      }
       else
+      {
+        un_.sun_family = AF_UNSPEC;
         this->len(0);
+      }
       return *this;
     }
 #endif

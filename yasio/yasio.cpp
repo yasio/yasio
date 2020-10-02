@@ -577,7 +577,7 @@ inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsoc
 #if defined(YASIO_HAVE_SSL)
 io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
 {
-  yasio__clearbits(ctx->properties_, YCVF_SSL_HANDSHAKING);
+  yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
 }
 void io_transport_ssl::set_primitives()
 {

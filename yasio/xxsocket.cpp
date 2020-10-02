@@ -713,7 +713,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
   {
     for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
     {
-      ep.assign(aip);
+      ep.as_in(aip);
 
       YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
       switch (ep.af())
@@ -761,7 +761,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
     if (ifa->ifa_addr == NULL)
       continue;
 
-    ep.assign(ifa->ifa_addr);
+    ep.as_in(ifa->ifa_addr);
 
     YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
 

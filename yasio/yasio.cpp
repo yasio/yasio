@@ -376,7 +376,7 @@ void io_channel::configure_address()
     yasio__clearbits(properties_, YCPF_HOST_MOD);
     this->remote_eps_.clear();
     ip::endpoint ep;
-#if !defined(_WIN32)
+#if YASIO__HAS_UDS
     if (yasio__testbits(properties_, YCM_UDS))
     {
       ep.as_un(this->remote_host_.c_str());
@@ -385,7 +385,7 @@ void io_channel::configure_address()
       return;
     }
 #endif
-    if (ep.assign(this->remote_host_.c_str(), this->remote_port_))
+    if (ep.as_in(this->remote_host_.c_str(), this->remote_port_))
     {
       this->remote_eps_.push_back(ep);
       this->dns_queries_state_ = YDQS_READY;
@@ -1610,9 +1610,20 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
 { // channel is server
   cleanup_io(ctx);
 
-  // server: don't need resolve, don't use remote_eps_
-  auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family()) : ctx->remote_host_.c_str();
-  ip::endpoint ep(ifaddr, ctx->remote_port_);
+  ip::endpoint ep;
+  if (!yasio__testbits(ctx->properties_, YCM_UDS))
+  {
+    // server: don't need resolve, don't use remote_eps_
+    auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family()) : ctx->remote_host_.c_str();
+    ep.as_in(ifaddr, ctx->remote_port_);
+  }
+#if YASIO__HAS_UDS
+  else
+  {
+    ep.as_un(ctx->remote_host_.c_str());
+    ::unlink(ctx->remote_host_.c_str());
+  }
+#endif
   if (ctx->socket_->open(ep.af(), ctx->socktype_))
   {
     int error = 0;
@@ -1620,6 +1631,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       ctx->socket_->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       ctx->socket_->reuse_address(false);
+
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();

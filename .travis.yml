@@ -11,7 +11,7 @@ jobs:
     - os: freebsd
       compiler: clang
       env:
-        - BUILD_TARGET=linux
+        - BUILD_TARGET=freebsd
     - os: osx
       osx_image: xcode11
       env: 

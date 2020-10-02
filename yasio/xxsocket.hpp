@@ -388,27 +388,24 @@ YASIO__NS_INLINE namespace ip
   {
   public:
     endpoint(void) { this->zeroset(); }
-    endpoint(const endpoint& rhs) { this->assign(rhs); }
-    explicit endpoint(const addrinfo* info) { as_in(info); }
-    explicit endpoint(const sockaddr* info) { as_in(info); }
+    endpoint(const endpoint& rhs) { this->as_is(rhs); }
+    explicit endpoint(const addrinfo* info) { as_is(info); }
+    explicit endpoint(const sockaddr* info) { as_is(info); }
     explicit endpoint(const char* addr, unsigned short port = 0) { as_in(addr, port); }
     explicit endpoint(uint32_t addr, unsigned short port = 0) { as_in(addr, port); }
     endpoint(int family, const void* addr, unsigned short port = 0) { as_in(family, addr, port); }
 
-    endpoint& operator=(const endpoint& rhs)
-    {
-      this->assign(rhs);
-      return *this;
-    }
+    explicit operator bool() const { return this->af() != AF_UNSPEC; }
 
-    bool assign(const endpoint& rhs)
+    endpoint& operator=(const endpoint& rhs) { return this->as_is(rhs); }
+    endpoint& as_is(const endpoint& rhs)
     {
       this->zeroset();
       memcpy(this, &rhs, sizeof(rhs));
-      return true;
+      return *this;
     }
-    void as_in(const addrinfo* info) { this->assign_raw(info->ai_addr, info->ai_addrlen); }
-    void as_in(const sockaddr* addr)
+    endpoint& as_is(const addrinfo* info) { return this->as_is_raw(info->ai_addr, info->ai_addrlen); }
+    endpoint& as_is(const sockaddr* addr)
     {
       this->zeroset();
       switch (addr->sa_family)
@@ -421,9 +418,15 @@ YASIO__NS_INLINE namespace ip
           ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
           this->len(sizeof(sockaddr_in6));
           break;
+#if YASIO__HAS_UDS
+        case AF_UNIX:
+          as_un(((sockaddr_un*)addr)->sun_path);
+          break;
+#endif
       }
+      return *this;
     }
-    void as_in(int family, const void* addr, u_short port)
+    endpoint& as_in(int family, const void* addr_in, u_short port)
     {
       this->zeroset();
       this->af(family);
@@ -431,16 +434,16 @@ YASIO__NS_INLINE namespace ip
       switch (family)
       {
         case AF_INET:
-          ::memcpy(&in4_.sin_addr, addr, sizeof(in_addr));
+          ::memcpy(&in4_.sin_addr, addr_in, sizeof(in_addr));
           this->len(sizeof(sockaddr_in));
           break;
         case AF_INET6:
-          ::memcpy(&in6_.sin6_addr, addr, sizeof(in6_addr));
+          ::memcpy(&in6_.sin6_addr, addr_in, sizeof(in6_addr));
           this->len(sizeof(sockaddr_in6));
           break;
       }
     }
-    bool as_in(const char* addr, unsigned short port)
+    endpoint& as_in(const char* addr, unsigned short port)
     {
       this->zeroset();
 
@@ -454,7 +457,6 @@ YASIO__NS_INLINE namespace ip
           this->in4_.sin_family = AF_INET;
           this->in4_.sin_port   = htons(port);
           this->len(sizeof(sockaddr_in));
-          return true;
         }
       }
       else
@@ -464,13 +466,12 @@ YASIO__NS_INLINE namespace ip
           this->in6_.sin6_family = AF_INET6;
           this->in6_.sin6_port   = htons(port);
           this->len(sizeof(sockaddr_in6));
-          return true;
         }
       }
 
-      return false;
+      return *this;
     }
-    bool as_in(uint32_t addr, u_short port)
+    endpoint& as_in(uint32_t addr, u_short port)
     {
       this->zeroset();
 
@@ -478,7 +479,7 @@ YASIO__NS_INLINE namespace ip
       this->addr_v4(addr);
       this->port(port);
       this->len(sizeof(sockaddr_in));
-      return true;
+      return *this;
     }
 
 #if YASIO__HAS_UDS
@@ -494,11 +495,12 @@ YASIO__NS_INLINE namespace ip
     }
 #endif
 
-    void assign_raw(const void* ai_addr, size_t ai_addrlen)
+    endpoint& as_is_raw(const void* ai_addr, size_t ai_addrlen)
     {
       this->zeroset();
       ::memcpy(this, ai_addr, ai_addrlen);
       this->len(ai_addrlen);
+      return *this;
     }
 
     void zeroset() { ::memset(this, 0x0, sizeof(*this)); }

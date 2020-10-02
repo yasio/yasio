@@ -1276,8 +1276,11 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
     if (ctx->local_port_ != 0 || !ctx->local_host_.empty() || yasio__testbits(ctx->properties_, YCM_UDP))
     {
-      auto ifaddr = ctx->local_host_.empty() ? YASIO_ADDR_ANY(ep.af()) : ctx->local_host_.c_str();
-      ctx->socket_->bind(ifaddr, ctx->local_port_);
+      if (!yasio__testbits(ctx->properties_, YCM_UDS))
+      {
+        auto ifaddr = ctx->local_host_.empty() ? YASIO_ADDR_ANY(ep.af()) : ctx->local_host_.c_str();
+        ctx->socket_->bind(ifaddr, ctx->local_port_);
+      }
     }
 
     // tcp connect directly, for udp do not need to connect.

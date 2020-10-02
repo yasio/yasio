@@ -497,8 +497,6 @@ private:
   highp_time_t dns_queries_timestamp_ = 0;
 
   int index_;
-  // socket address family, by default will auto detect as INET/INET6
-  // for IPC_UDS, it's AF_UNIX
   int socktype_ = 0;
 
   // The timer for check resolve & connect timeout

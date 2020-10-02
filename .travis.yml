@@ -9,6 +9,7 @@ jobs:
       env: 
         - BUILD_TARGET=linux
     - os: freebsd
+      compiler: clang
       env:
         - BUILD_TARGET=linux
     - os: osx

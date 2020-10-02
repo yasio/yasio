@@ -8,6 +8,9 @@ jobs:
     - os: linux
       env: 
         - BUILD_TARGET=linux
+    - os: freebsd
+      env:
+        - BUILD_TARGET=linux
     - os: osx
       osx_image: xcode11
       env: 

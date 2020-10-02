@@ -138,7 +138,7 @@ enum : u_short
 {
   YDQS_READY = 1,
   YDQS_DIRTY,
-  YDQS_INPRROGRESS,
+  YDQS_INPROGRESS,
   YDQS_FAILED,
 };
 
@@ -157,13 +157,11 @@ enum
   YCPF_PORT_MOD = 1 << 20,
 
   /* whether need dns queries */
-  YCPF_NEEDS_QUERIES = 1 << 21
-};
+  YCPF_NEEDS_QUERIES = 1 << 21,
 
-enum
-{
+  /// below is byte2 of private flags (25~32)
   /* whether ssl client in handshaking */
-  YCVF_SSL_HANDSHAKING = 1 << 25,
+  YCPF_SSL_HANDSHAKING = 1 << 25,
 };
 
 #if defined(_WIN32)
@@ -1342,7 +1340,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       ctx->timer_.cancel();
     }
 #else
-    if (!yasio__testbits(ctx->properties_, YCVF_SSL_HANDSHAKING))
+    if (!yasio__testbits(ctx->properties_, YCPF_SSL_HANDSHAKING))
     {
       int error = -1;
       if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) || FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
@@ -1426,7 +1424,7 @@ void io_service::do_ssl_handshake(io_channel* ctx)
     // !important, fix issue: https://github.com/yasio/yasio/issues/273
     ::SSL_set_tlsext_host_name(ssl, ctx->remote_host_.c_str());
 
-    yasio__setbits(ctx->properties_, YCVF_SSL_HANDSHAKING); // start ssl handshake
+    yasio__setbits(ctx->properties_, YCPF_SSL_HANDSHAKING); // start ssl handshake
     ctx->ssl_.reset(ssl);
   }
 
@@ -1846,7 +1844,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
 #if defined(YASIO_HAVE_SSL)
   // Remove tmp flags
-  yasio__clearbits(ctx->properties_, YCVF_SSL_HANDSHAKING);
+  yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
 #endif
 
   cleanup_io(ctx);
@@ -2101,7 +2099,7 @@ u_short io_service::query_ares_state(io_channel* ctx)
   {
     switch (static_cast<u_short>(ctx->dns_queries_state_))
     {
-      case YDQS_INPRROGRESS:
+      case YDQS_INPROGRESS:
         break;
       case YDQS_READY:
         if ((highp_clock() - ctx->dns_queries_timestamp_) < options_.dns_cache_timeout_)
@@ -2121,7 +2119,7 @@ void io_service::start_resolve(io_channel* ctx)
   // no need to consider thread safe.
   assert(ctx->dns_queries_state_ == YDQS_DIRTY);
   ctx->set_last_errno(EINPROGRESS);
-  ctx->dns_queries_state_ = YDQS_INPRROGRESS;
+  ctx->dns_queries_state_ = YDQS_INPROGRESS;
 
   YASIO_KLOGD("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();

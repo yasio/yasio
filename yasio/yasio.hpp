@@ -475,8 +475,8 @@ private:
   /* Since v3.33.0 mask,kind,flags,private_flags are stored to this field
   ** bit[1-8] mask & kinds
   ** bit[9-16] flags
-  ** bit[17-24] private flags
-  ** bit[25~32] volatile flags
+  ** bit[17-24] byte1 of private flags
+  ** bit[25~32] byte2 of private flags
   */
   uint32_t properties_ = 0;
 

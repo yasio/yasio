@@ -351,7 +351,7 @@ public:
   // Wait timer timeout once.
   void async_wait_once(light_timer_cb_t cb)
   {
-#if YASIO__HAS_CXX17
+#if YASIO__HAS_CXX14
     this->async_wait([cb = std::move(cb)]() {
 #else
     this->async_wait([cb]() {

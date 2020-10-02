@@ -442,6 +442,7 @@ YASIO__NS_INLINE namespace ip
           this->len(sizeof(sockaddr_in6));
           break;
       }
+      return *this;
     }
     endpoint& as_in(const char* addr, unsigned short port)
     {

@@ -10,11 +10,10 @@
 [![GitHub forks](https://img.shields.io/github/forks/yasio/yasio.svg?label=Fork)](https://github.com/yasio/yasio)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/yasio/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/yasio/yasio/context:cpp)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/yasio/yasio.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/yasio/yasio/alerts/)
-[![Last Commit](https://badgen.net/github/last-commit/yasio/yasio)](https://github.com/yasio/yasio)
-  
-[![Powered](https://img.shields.io/badge/Powered%20by-c4games-blue.svg)](http://c4games.com)  
   
 [![Supported Platforms](https://img.shields.io/badge/platform-ios%20%7C%20android%20%7C%20osx%20%7C%20windows%20%7C%20linux%20%7C%20freebsd-green.svg?style=flat-square)](https://github.com/yasio/yasio)
+  
+[![Powered](https://img.shields.io/badge/Powered%20by-c4games-blue.svg)](http://c4games.com)  
   
 **[简体中文](README.md)**
   

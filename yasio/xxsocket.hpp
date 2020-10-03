@@ -651,7 +651,7 @@ YASIO__NS_INLINE namespace ip
 
     void len(size_t n)
     {
-#if !defined(__APPLE__)
+#if defined(__linux__) || defined(_WIN32)
       len_ = static_cast<uint8_t>(n);
 #else
       sa_.sa_len = static_cast<uint8_t>(n);
@@ -659,7 +659,7 @@ YASIO__NS_INLINE namespace ip
     }
     socklen_t len() const
     {
-#if !defined(__APPLE__)
+#if defined(__linux__) || defined(_WIN32)
       return len_;
 #else
       return sa_.sa_len;

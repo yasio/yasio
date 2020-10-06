@@ -68,6 +68,7 @@ cmake --build . --config Debug
 * 支持KCP。
 * 支持SSL客户端，基于OpenSSL。
 * 支持非阻塞域名解析，基于c-ares。
+* 支持Unix Domain Socket。
 
 ## 发送延迟
 yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快**30倍**以上:  

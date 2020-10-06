@@ -65,6 +65,7 @@ cmake --build . --config Debug
 * Support ssl client with openssl
 * Support async resolve with c-ares
 * Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
+* Support Unix Domain Socket
 
   
 ## Core framework

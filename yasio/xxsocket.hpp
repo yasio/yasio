@@ -675,7 +675,7 @@ YASIO__NS_INLINE namespace ip
       sockaddr_un un_;
 #endif
     };
-#if !defined(__APPLE__)
+#if defined(__linux__) || defined(_WIN32)
     uint8_t len_;
 #endif
   };

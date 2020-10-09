@@ -973,9 +973,9 @@ private:
       --ares_outstanding_work_;
   }
   YASIO__DECL void process_ares_requests(fd_set* fds_array);
-  YASIO__DECL void init_ares_channel();
-  YASIO__DECL bool config_ares_name_servers(bool dirty);
-  YASIO__DECL void cleanup_ares_channel();
+  YASIO__DECL void recreate_ares_channel();
+  YASIO__DECL void config_ares_name_servers();
+  YASIO__DECL void destroy_ares_channel();
 #endif
 
   void handle_connect_succeed(io_channel* ctx, std::shared_ptr<xxsocket> socket) { handle_connect_succeed(allocate_transport(ctx, std::move(socket))); }

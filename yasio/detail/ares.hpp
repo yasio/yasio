@@ -36,10 +36,6 @@ extern void (*ares_free)(void* ptr);
 
 #if defined(__ANDROID__)
 #  include "yasio/platform/yasio_jni.hpp"
-#elif defined(__APPLE__)
-#  include <TargetConditionals.h>
-#  include <arpa/nameser.h>
-#  include <resolv.h>
 #endif
 
 #endif

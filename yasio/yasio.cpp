@@ -930,7 +930,7 @@ void io_service::run()
   init_ssl_context();
 #endif
 #if defined(YASIO_HAVE_CARES)
-  init_ares_channel();
+  recreate_ares_channel();
 #endif
 
   // Call once at startup
@@ -986,7 +986,7 @@ void io_service::run()
 _L_end:
   (void)0; // ONLY for xcode compiler happy.
 #if defined(YASIO_HAVE_CARES)
-  cleanup_ares_channel();
+  destroy_ares_channel();
 #endif
 #if defined(YASIO_HAVE_SSL)
   cleanup_ssl_context();
@@ -1456,66 +1456,29 @@ void io_service::process_ares_requests(fd_set* fds_array)
     }
   }
 }
-void io_service::init_ares_channel()
+void io_service::recreate_ares_channel()
 {
+  if (ares_)
+    destroy_ares_channel();
+
   ares_options options = {};
   options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::micro::den);
   options.tries        = this->options_.dns_queries_tries_;
   int status           = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/);
   if (status == ARES_SUCCESS)
   {
-    YASIO_KLOGD("[c-ares] init channel succeed");
-#  if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1
-    config_ares_name_servers(true);
-#  else
-    config_ares_name_servers(false);
-#  endif
+    YASIO_KLOGD("[c-ares] create channel succeed");
+    config_ares_name_servers();
   }
   else
-    YASIO_KLOGE("[c-ares] init channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
+    YASIO_KLOGE("[c-ares] create channel failed, status=%d, detail:%s", status, ::ares_strerror(status));
 }
-bool io_service::config_ares_name_servers(bool dirty)
+void io_service::config_ares_name_servers()
 {
   std::string nscsv;
-  int status = 0;
-  if (dirty)
-  {
-#  if defined(__APPLE__)
-    struct __res_state res;
-    status = ::res_ninit(&res);
-    YASIO_KLOGD("[c-ares] res_ninit status=%d, res.nscount=%d", status, res.nscount);
-    if (status == 0)
-    {
-      union res_sockaddr_union nsaddrs[MAXNS];
-      int nscnt = ::res_getservers(&res, nsaddrs, MAXNS);
-      for (unsigned int i = 0; i < nscnt; ++i)
-        endpoint::inaddr_to_csv_nl((sockaddr*)&nsaddrs[i].sin, nscsv);
-    }
-    ::res_nclose(&res);
-#  elif defined(__ANDROID__)
-    size_t num_servers = 0;
-    auto dns_servers   = ::ares_get_android_server_list(MAXNS, &num_servers);
-    if (dns_servers != nullptr)
-    {
-      for (int i = 0; i < num_servers; ++i)
-      {
-        nscsv += dns_servers[i];
-        nscsv += ',';
-        ::ares_free(dns_servers[i]);
-      }
-      ::ares_free(dns_servers);
-    }
-#  endif
-    if (!nscsv.empty())
-    {
-      ::ares_set_servers_csv(ares_, nscsv.c_str());
-      nscsv.clear();
-    }
-  }
-
   // list all dns servers for resov problem diagnosis
   ares_addr_node* name_servers = nullptr;
-  status                       = ::ares_get_servers(ares_, &name_servers);
+  int status                   = ::ares_get_servers(ares_, &name_servers);
   if (status == ARES_SUCCESS)
   {
     for (auto name_server = name_servers; name_server != nullptr; name_server = name_server->next)
@@ -1533,9 +1496,8 @@ bool io_service::config_ares_name_servers(bool dirty)
     }
     ::ares_free_data(name_servers);
   }
-  return true;
 }
-void io_service::cleanup_ares_channel()
+void io_service::destroy_ares_channel()
 {
   if (ares_ != nullptr)
   {
@@ -2113,7 +2075,10 @@ void io_service::start_resolve(io_channel* ctx)
   async_resolv_thread.detach();
 #else
   if (this->options_.dns_dirty_)
-    this->options_.dns_dirty_ = !config_ares_name_servers(true);
+  {
+    recreate_ares_channel();
+    this->options_.dns_dirty_ = false;
+  }
 
   ares_addrinfo_hints hint;
   memset(&hint, 0x0, sizeof(hint));

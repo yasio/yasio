@@ -30,8 +30,7 @@ SOFTWARE.
 
 extern "C" {
 #include "ares_config.h"
-#include "c-ares/ares.h"
-#include "c-ares/ares_android.h"
+#include "ares.h"
 extern void (*ares_free)(void* ptr);
 }
 

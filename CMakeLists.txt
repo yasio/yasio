@@ -90,7 +90,7 @@ if (YASIO_BUILD_WITH_CARES)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
     add_subdirectory(external/c-ares)
-    set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external" CACHE INTERNAL "c-ares Include Directory" )
+    set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
 endif()
 
 ### The yasio core library project

@@ -171,8 +171,7 @@ static const char* inet_ntop6(const u_char* src, char* dst, socklen_t size)
    * to use pointer overlays.  All the world's not a VAX.
    */
   char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"], *tp;
-  struct
-  {
+  struct {
     int base, len;
   } best, cur;
   u_int words[NS_IN6ADDRSZ / NS_INT16SZ];
@@ -1250,22 +1249,22 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
 
 void xxsocket::reuse_address(bool reuse)
 {
-  if (reuse)
-  {
-    // All operating systems have 'SO_REUSEADDR'
-    this->set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
+  int optval = reuse ? 1 : 0;
+
+  // All operating systems have 'SO_REUSEADDR'
+  this->set_optval(SOL_SOCKET, SO_REUSEADDR, optval);
 #if defined(SO_REUSEPORT) // macos,ios,linux,android
-    this->set_optval(SOL_SOCKET, SO_REUSEPORT, 1);
+  this->set_optval(SOL_SOCKET, SO_REUSEPORT, optval);
 #endif
-  }
-  else
-  {
+}
+
+void xxsocket::exclusive_address(bool exclusive)
+{
 #if defined(SO_EXCLUSIVEADDRUSE)
-    this->set_optval(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, 1);
+  this->set_optval(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, exclusive ? 1 : 0);
 #elif defined(SO_EXCLBIND)
-    this->set_optval(SOL_SOCKET, SO_EXCLBIND, 1);
+  this->set_optval(SOL_SOCKET, SO_EXCLBIND, exclusive ? 1 : 0);
 #endif
-  }
 }
 
 xxsocket::operator socket_native_type(void) const { return this->fd; }
@@ -1371,8 +1370,7 @@ const char* xxsocket::gai_strerror(int error)
 #ifdef _WIN32
 namespace
 {
-struct ws2_32_gc
-{
+struct ws2_32_gc {
   ws2_32_gc(void)
   {
     WSADATA dat = {0};

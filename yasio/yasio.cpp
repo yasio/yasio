@@ -1212,7 +1212,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       ctx->socket_->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
-      ctx->socket_->reuse_address(false);
+      ctx->socket_->exclusive_address(true);
 
     if (ctx->local_port_ != 0 || !ctx->local_host_.empty() || yasio__testbits(ctx->properties_, YCM_UDP))
     {

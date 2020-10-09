@@ -97,6 +97,7 @@ SOFTWARE.
 #  define YASIO__HAS_UDS 0
 #endif
 
+// Test whether sockaddr has member 'sa_len'
 #if defined(__linux__) || defined(_WIN32)
 #  define YASIO__HAS_SA_LEN 0
 #else

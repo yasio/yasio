@@ -75,7 +75,7 @@ static jobject yasio__get_app_context(JNIEnv* env, const char* className, const 
 }
 
 extern "C" {
-#  include "c-ares/ares.h"
+#  include "ares.h"
 
 int yasio__ares_init_android()
 {

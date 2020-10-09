@@ -418,7 +418,7 @@ YASIO__NS_INLINE namespace ip
           ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
           this->len(sizeof(sockaddr_in6));
           break;
-#if YASIO__HAS_UDS
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
         case AF_UNIX:
           as_un(((sockaddr_un*)addr)->sun_path);
           break;
@@ -483,7 +483,7 @@ YASIO__NS_INLINE namespace ip
       return *this;
     }
 
-#if YASIO__HAS_UDS
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
     endpoint& as_un(const char* name)
     {
       int n = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
@@ -557,7 +557,7 @@ YASIO__NS_INLINE namespace ip
           n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
           n += sprintf(&addr.front() + n, "]:%u", this->port());
           break;
-#if YASIO__HAS_UDS
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
         case AF_UNIX:
           n = this->len();
           addr.assign(un_.sun_path, n);
@@ -651,7 +651,7 @@ YASIO__NS_INLINE namespace ip
 
     void len(size_t n)
     {
-#if defined(__linux__) || defined(_WIN32)
+#if !YASIO__HAS_SA_LEN
       len_ = static_cast<uint8_t>(n);
 #else
       sa_.sa_len = static_cast<uint8_t>(n);
@@ -659,7 +659,7 @@ YASIO__NS_INLINE namespace ip
     }
     socklen_t len() const
     {
-#if defined(__linux__) || defined(_WIN32)
+#if !YASIO__HAS_SA_LEN
       return len_;
 #else
       return sa_.sa_len;
@@ -671,11 +671,11 @@ YASIO__NS_INLINE namespace ip
       sockaddr sa_;
       sockaddr_in in4_;
       sockaddr_in6 in6_;
-#if YASIO__HAS_UDS
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
       sockaddr_un un_;
 #endif
     };
-#if defined(__linux__) || defined(_WIN32)
+#if !YASIO__HAS_SA_LEN
     uint8_t len_;
 #endif
   };

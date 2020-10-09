@@ -362,7 +362,7 @@ void io_channel::configure_address()
     yasio__clearbits(properties_, YCPF_HOST_MOD);
     this->remote_eps_.clear();
     ip::endpoint ep;
-#if YASIO__HAS_UDS
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
     if (yasio__unlikely(yasio__testbits(properties_, YCM_UDS)))
     {
       ep.as_un(this->remote_host_.c_str());
@@ -1556,7 +1556,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     auto ifaddr = ctx->remote_host_.empty() ? YASIO_ADDR_ANY(local_address_family()) : ctx->remote_host_.c_str();
     ep.as_in(ifaddr, ctx->remote_port_);
   }
-#if YASIO__HAS_UDS
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
   else
   {
     ep.as_un(ctx->remote_host_.c_str());

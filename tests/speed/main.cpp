@@ -19,13 +19,17 @@ using namespace yasio::inet;
 Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 */
 
-#define SPEEDTEST_VIA_UDS 1 // Now only support TCP/SOCK_STREAM
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
+#  define SPEEDTEST_VIA_UDS 1 // Now only support TCP/SOCK_STREAM
+#else
+#  define SPEEDTEST_VIA_UDS 0
+#endif
 
 #define SPEEDTEST_PROTO_TCP 1
 #define SPEEDTEST_PROTO_UDP 2
 #define SPEEDTEST_PROTO_KCP 3
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_TCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT

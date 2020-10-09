@@ -85,6 +85,11 @@ SOFTWARE.
 // #define YASIO_DISABLE_CONCURRENT_SINGLETON 1
 
 /*
+** Uncomment or add compiler flag -DYASIO_ENABLE_UDS to enable unix domain socket via SOCK_STREAM
+*/
+// #define YASIO_ENABLE_UDS 1
+
+/*
 ** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and
 ** follow 3 lines code will be removed
 */

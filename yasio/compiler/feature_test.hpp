@@ -97,6 +97,16 @@ SOFTWARE.
 #  define YASIO__HAS_UDS 0
 #endif
 
+#if defined(__linux__) || defined(_WIN32)
+#  define YASIO__HAS_SA_LEN 0
+#else
+#  if defined(__unix__) || defined(__APPLE__)
+#    define YASIO__HAS_SA_LEN 1
+#  else
+#    define YASIO__HAS_SA_LEN 0
+#  endif
+#endif
+
 // 64bits Sense Macros
 #if defined(_M_X64) || defined(_WIN64) || defined(__LP64__) || defined(_LP64) || defined(__x86_64) || defined(__arm64__) || defined(__aarch64__)
 #  define YASIO__64BITS 1

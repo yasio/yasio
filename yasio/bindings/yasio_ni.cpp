@@ -78,9 +78,9 @@ inline const char* svtoa(cxx17::string_view& sv) { return !sv.empty() ? sv.data(
 
 extern "C" {
 
-YASIO_NI_API void yasio_init_globals(void(YASIO_INTEROP_DECL* pfn)(const char*))
+YASIO_NI_API void yasio_init_globals(void(YASIO_INTEROP_DECL* pfn)(int level, const char*))
 {
-  yasio::inet::print_fn_t custom_print = pfn;
+  yasio::inet::print_fn2_t custom_print = pfn;
   io_service::init_globals(custom_print);
 }
 YASIO_NI_API void yasio_start(int channel_count,

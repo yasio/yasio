@@ -1458,7 +1458,7 @@ void io_service::process_ares_requests(fd_set* fds_array)
 }
 void io_service::recreate_ares_channel()
 {
-  dns_dirty_ = false;
+  this->options_.dns_dirty_ = false;
   if (ares_)
     destroy_ares_channel();
 

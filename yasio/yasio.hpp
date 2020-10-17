@@ -1080,7 +1080,8 @@ private:
     highp_time_t dns_cache_timeout_   = 600LL * std::micro::den;
     highp_time_t dns_queries_timeout_ = 5LL * std::micro::den;
     int dns_queries_tries_            = 5;
-    bool dns_dirty_                   = false;
+
+    bool dns_dirty_                   = true; // only for c-ares
 
     bool deferred_event_ = true;
 

@@ -1458,6 +1458,7 @@ void io_service::process_ares_requests(fd_set* fds_array)
 }
 void io_service::recreate_ares_channel()
 {
+  dns_dirty_ = false;
   if (ares_)
     destroy_ares_channel();
 
@@ -2075,10 +2076,7 @@ void io_service::start_resolve(io_channel* ctx)
   async_resolv_thread.detach();
 #else
   if (this->options_.dns_dirty_)
-  {
     recreate_ares_channel();
-    this->options_.dns_dirty_ = false;
-  }
 
   ares_addrinfo_hints hint;
   memset(&hint, 0x0, sizeof(hint));

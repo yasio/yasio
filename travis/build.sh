@@ -42,7 +42,7 @@ function build_linux()
     echo "Building linux..."
     cd $YASIO_ROOT/build
     mkdir -p build_linux
-    cmake .. -G "Unix Makefiles" -Bbuild_linux -DCMAKE_BUILD_TYPE=Release -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON
+    cmake .. -G "Unix Makefiles" -Bbuild_linux -DCMAKE_BUILD_TYPE=Release -DYASIO_BUILD_WITH_SSL=ON -DYASIO_BUILD_WITH_CARES=ON -DYAISO_BUILD_NI=YES
     cmake --build build_linux -- -j `nproc`
     
     echo "run test issue201 on linux..."

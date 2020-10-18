@@ -207,10 +207,10 @@ YASIO_NI_API void yasio_dispatch(int count) { yasio_shared_service()->dispatch(c
 YASIO_NI_API void yasio_stop() { yasio_shared_service()->stop(); }
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
-YASIO_NI_API void yasio_set_print_fn(void(YASIO_INTEROP_DECL* pfn)(const char*))
+YASIO_NI_API void yasio_set_print_fn(void(YASIO_INTEROP_DECL* pfn)(int, const char*))
 {
-  yasio::inet::print_fn_t custom_print = pfn;
-  yasio_shared_service()->set_option(YOPT_S_PRINT_FN, &custom_print);
+  yasio::inet::print_fn2_t custom_print = pfn;
+  yasio_shared_service()->set_option(YOPT_S_PRINT_FN2, &custom_print);
 }
 YASIO_NI_API void yasio_memcpy(void* dst, const void* src, unsigned int len)
 {

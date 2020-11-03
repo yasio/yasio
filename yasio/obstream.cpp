@@ -46,13 +46,13 @@ void obstream::push8()
 void obstream::pop8()
 {
   auto offset = offset_stack_.top();
-  pwrite_i(offset, static_cast<uint8_t>(buffer_.size() - offset - sizeof(uint8_t)));
+  pwrite_ix(offset, static_cast<uint8_t>(buffer_.size() - offset - sizeof(uint8_t)));
   offset_stack_.pop();
 }
 void obstream::pop8(uint8_t value)
 {
   auto offset = offset_stack_.top();
-  pwrite_i(offset, value);
+  pwrite_ix(offset, value);
   offset_stack_.pop();
 }
 
@@ -64,13 +64,13 @@ void obstream::push16()
 void obstream::pop16()
 {
   auto offset = offset_stack_.top();
-  pwrite_i(offset, static_cast<uint16_t>(buffer_.size() - offset - sizeof(uint16_t)));
+  pwrite_ix(offset, static_cast<uint16_t>(buffer_.size() - offset - sizeof(uint16_t)));
   offset_stack_.pop();
 }
 void obstream::pop16(uint16_t value)
 {
   auto offset = offset_stack_.top();
-  pwrite_i(offset, value);
+  pwrite_ix(offset, value);
   offset_stack_.pop();
 }
 
@@ -105,14 +105,14 @@ void obstream::push32()
 void obstream::pop32()
 {
   auto offset = offset_stack_.top();
-  pwrite_i(offset, static_cast<uint32_t>(buffer_.size() - offset - sizeof(uint32_t)));
+  pwrite_ix(offset, static_cast<uint32_t>(buffer_.size() - offset - sizeof(uint32_t)));
   offset_stack_.pop();
 }
 
 void obstream::pop32(uint32_t value)
 {
   auto offset = offset_stack_.top();
-  pwrite_i(offset, value);
+  pwrite_ix(offset, value);
   offset_stack_.pop();
 }
 
@@ -142,7 +142,7 @@ void obstream::write_u24(uint32_t value)
   write_bytes(&value, 3);
 }
 
-void obstream::write_7b(int value)
+void obstream::write_i(int value)
 {
   // Write out an int 7 bits at a time.  The high bit of the byte,
   // when on, tells reader to continue reading more bytes.
@@ -158,7 +158,7 @@ void obstream::write_7b(int value)
 void obstream::write_v(cxx17::string_view sv)
 {
   int len = static_cast<int>(sv.length());
-  write_7b(len);
+  write_i(len);
   write_bytes(sv.data(), len);
 }
 

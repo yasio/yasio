@@ -155,8 +155,8 @@ void yasioTest()
 
   yasio::ibstream_view ibs(obstest.data(), static_cast<int>(obstest.length()));
   ibs.seek(3, SEEK_CUR);
-  auto r1 = ibs.read_i<double>();
-  auto f1 = ibs.read_i<float>();
+  auto r1 = ibs.read_ix<double>();
+  auto f1 = ibs.read_ix<float>();
   auto v1 = ibs.read_u24(); // should be 0x112233(1122867)
   auto v2 = ibs.read_u24(); // should be 1
   auto v3 = ibs.read_i24(); // should be 259

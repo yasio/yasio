@@ -1589,10 +1589,6 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         if (n > 0)
         {
           YASIO_KLOGV("[index: %d] recvfrom peer: %s succeed.", ctx->index_, peer.to_string().c_str());
-          /*
-          On Windows: always recv data from same client
-          On Linux: only once, just like tcp accept, just like tcp accept
-          */
 #if !defined(_WIN32)
           auto transport = static_cast<io_transport_udp*>(do_dgram_accept(ctx, peer, error));
 #else
@@ -1604,8 +1600,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
            Windows (unfortunately), detail see:
            https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
            https://cloud.tencent.com/developer/article/1004555
-           So we emulate thus by ourself, don't care the performance, just a workaround
-           implementation.
+           So we emulate thus by ourself, don't care the performance, just a workaround implementation.
          */
           // for win32, we check exists udp clients by ourself, and only write operation can be
           // perform on transports, the read operation still dispatch by channel.
@@ -2059,18 +2054,6 @@ void io_service::start_resolve(io_channel* ctx)
       ctx->dns_queries_state_ = YDQS_FAILED;
       YASIO_KLOGE("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
     }
-    /*
-    The getaddrinfo behavior at win32 is strange:
-    If the channel 0 is in non-blocking connect, and waiting at select, than
-    channel 1 request connect(need dns queries), it's wake up the select call,
-    do resolve with getaddrinfo. After resolved, the channel 0 call FD_ISSET
-    without select call, FD_ISSET will always return true, even through the
-    TCP connection handshake is not complete.
-
-    Try write data to a incomplete TCP will trigger error: 10057
-    Another result at this situation is: Try get local endpoint by getsockname
-    will return 0.0.0.0
-    */
     this->interrupt();
   });
   async_resolv_thread.detach();

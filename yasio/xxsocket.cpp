@@ -1273,10 +1273,12 @@ bool xxsocket::alive(void) const { return this->send("", 0) != -1; }
 
 int xxsocket::shutdown(int how) const { return ::shutdown(this->fd, how); }
 
-void xxsocket::close(void)
+void xxsocket::close(int shut_how)
 {
   if (is_open())
   {
+    if (shut_how >= 0)
+      ::shutdown(this->fd, shut_how);
     ::closesocket(this->fd);
     this->fd = invalid_socket;
   }

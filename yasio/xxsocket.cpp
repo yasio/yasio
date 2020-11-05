@@ -1277,6 +1277,7 @@ void xxsocket::close(void)
 {
   if (is_open())
   {
+    shutdown();
     ::closesocket(this->fd);
     this->fd = invalid_socket;
   }

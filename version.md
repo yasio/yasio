@@ -1,8 +1,13 @@
+yasio-3.33.8
+  
+* Auto call socket.shutdown at xxsocket::close to fix blocking on socket.recv when close socket at other thread for non-win32 platforms.
+  
+  
 yasio-3.33.7
   
 * Unix domain socket via ```SOCK_STREAM``` support, define ```YASIO_ENABLE_UDS``` at ```config.hpp``` and use ```YCM_UDS``` combine with ```YCK_TCP_CLIENT```, ```YCK_TCP_SERVER```
   
-
+  
 yaiso-3.33.6
   
 * Reduce kcp cpu cost.

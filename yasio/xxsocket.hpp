@@ -105,6 +105,8 @@ typedef int socklen_t;
 typedef int socket_native_type;
 #  undef socket
 #endif
+#define SD_NONE -1
+
 #include <fcntl.h> // common platform header
 
 // redefine socket error code for posix api
@@ -1060,11 +1062,11 @@ public:
 
   /* @brief: close sends
    ** @params:
-   **        non
+   **        shut_how: [SD_SEND] or [SD_RECEIVE] or [SD_BOTH] or [SD_NONE]
    **
    ** @returns: [0] succeed, otherwise, a value of SOCKET_ERROR is returned.
    */
-  YASIO__DECL void close(void);
+  YASIO__DECL void close(int shut_how = SD_BOTH);
 
   /* @brief: Retrive tcp socket rtt in microseconds
    ** @params:

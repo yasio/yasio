@@ -54,20 +54,10 @@ public:
   YASIO__DECL ibstream_view& operator=(const ibstream_view&) = delete;
   YASIO__DECL ibstream_view& operator=(ibstream_view&&) = delete;
 
-  template <typename _Nty> inline _Nty read_i() { return sread_i<_Nty>(consume(sizeof(_Nty))); }
-
-  template <typename _Nty> static _Nty sread_i(const void* src)
-  {
-    _Nty value;
-    ::memcpy(&value, src, sizeof(value));
-    return yasio::endian::ntohv(value);
-  }
-
   /* write 7bit encoded variant integer value
   ** @.net BinaryReader.Read7BitEncodedInt
   */
-  YASIO__DECL int read_7b();
-  int read_i7() { return read_7b(); }
+  YASIO__DECL int read_i();
 
   YASIO__DECL int32_t read_i24();
   YASIO__DECL uint32_t read_u24();
@@ -99,14 +89,21 @@ public:
 
   YASIO__DECL ptrdiff_t seek(ptrdiff_t offset, int whence);
 
+  template <typename _Nty> inline _Nty read_ix() { return sread_ix<_Nty>(consume(sizeof(_Nty))); }
+
+  template <typename _Nty> static _Nty sread_ix(const void* src)
+  {
+    _Nty value;
+    ::memcpy(&value, src, sizeof(value));
+    return yasio::endian::ntohv(value);
+  }
+
   template <typename _LenT> inline cxx17::string_view read_vx()
   {
-    _LenT n = read_i<_LenT>();
+    _LenT n = read_ix<_LenT>();
 
     if (n > 0)
-    {
       return read_bytes(n);
-    }
 
     return {};
   }
@@ -121,14 +118,14 @@ protected:
   const char* ptr_;
 };
 
-template <> inline float ibstream_view::sread_i<float>(const void* src)
+template <> inline float ibstream_view::sread_ix<float>(const void* src)
 {
   uint32_t nv;
   ::memcpy(&nv, src, sizeof(nv));
   return ntohf(nv);
 }
 
-template <> inline double ibstream_view::sread_i<double>(const void* src)
+template <> inline double ibstream_view::sread_ix<double>(const void* src)
 {
   uint64_t nv;
   ::memcpy(&nv, src, sizeof(nv));

@@ -54,7 +54,7 @@ void ibstream_view::reset(const void* data, size_t size)
   last_         = first_ + size;
 }
 
-int ibstream_view::read_7b()
+int ibstream_view::read_i()
 {
   // Read out an Int32 7 bits at a time.  The high bit
   // of the byte when on means to continue reading more bytes.
@@ -99,7 +99,7 @@ uint32_t ibstream_view::read_u24()
 
 cxx17::string_view ibstream_view::read_v()
 {
-  int count = read_7b();
+  int count = read_i();
   return read_bytes(count);
 }
 

@@ -369,11 +369,24 @@ static bool js_yasio_ibstream_read_bool(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setBoolean(cobj->read_i<bool>());
+  s.rval().setBoolean(cobj->read_ix<bool>());
 
   return true;
 }
 SE_BIND_FUNC(js_yasio_ibstream_read_bool)
+
+static bool js_yasio_ibstream_read_i(se::State& s)
+{
+  yasio::ibstream* cobj = (yasio::ibstream*)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto& args = s.args();
+  size_t argc      = args.size();
+
+  s.rval().setInt32(cobj->read_i());
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_ibstream_read_i)
 
 // for int8_t, int16_t, int32_t
 template <typename T> static bool js_yasio_ibstream_read_ix(se::State& s)
@@ -383,7 +396,7 @@ template <typename T> static bool js_yasio_ibstream_read_ix(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setInt32(cobj->read_i<T>());
+  s.rval().setInt32(cobj->read_ix<T>());
 
   return true;
 }
@@ -402,7 +415,7 @@ template <typename T> static bool js_yasio_ibstream_read_ux(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setUint32(cobj->read_i<T>());
+  s.rval().setUint32(cobj->read_ix<T>());
 
   return true;
 }
@@ -421,7 +434,7 @@ template <typename T> static bool js_yasio_ibstream_read_dx(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  s.rval().setNumber(double(cobj->read_i<T>()));
+  s.rval().setNumber(double(cobj->read_ix<T>()));
 
   return true;
 }
@@ -567,6 +580,7 @@ void js_register_yasio_ibstream(se::Object* obj)
   cls->defineFunction(#funcName, _SE(js_yasio_ibstream_##funcName))
 
   DEFINE_IBSTREAM_FUNC(read_bool);
+  DEFINE_IBSTREAM_FUNC(read_i);
   DEFINE_IBSTREAM_FUNC(read_i8);
   DEFINE_IBSTREAM_FUNC(read_i16);
   DEFINE_IBSTREAM_FUNC(read_i24);
@@ -777,13 +791,28 @@ static bool js_yasio_obstream_write_bool(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  cobj->write_i<bool>(args[0].toBoolean());
+  cobj->write_ix<bool>(args[0].toBoolean());
 
   s.rval().setUndefined();
 
   return true;
 }
 SE_BIND_FUNC(js_yasio_obstream_write_bool)
+
+static bool js_yasio_obstream_write_i(se::State& s)
+{
+  auto cobj = (yasio::obstream*)s.nativeThisObject();
+  SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
+  const auto& args = s.args();
+  size_t argc      = args.size();
+
+  cobj->write_i(args[0].toUint32());
+
+  s.rval().setUndefined();
+
+  return true;
+}
+SE_BIND_FUNC(js_yasio_obstream_write_i)
 
 template <typename T> static bool js_yasio_obstream_write_ix(se::State& s)
 {
@@ -792,7 +821,7 @@ template <typename T> static bool js_yasio_obstream_write_ix(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  cobj->write_i<T>(args[0].toUint32());
+  cobj->write_ix<T>(args[0].toUint32());
 
   s.rval().setUndefined();
 
@@ -829,7 +858,7 @@ template <typename T> static bool js_yasio_obstream_write_dx(se::State& s)
 
   double argval = 0;
   seval_to_double(args[0], &argval);
-  cobj->write_i<T>(static_cast<T>(argval));
+  cobj->write_ix<T>(static_cast<T>(argval));
 
   s.rval().setUndefined();
 
@@ -954,6 +983,7 @@ void js_register_yasio_obstream(se::Object* obj)
   DEFINE_OBSTREAM_FUNC(pop16);
   DEFINE_OBSTREAM_FUNC(pop8);
   DEFINE_OBSTREAM_FUNC(write_bool);
+  DEFINE_OBSTREAM_FUNC(write_i);
   DEFINE_OBSTREAM_FUNC(write_i8);
   DEFINE_OBSTREAM_FUNC(write_i16);
   DEFINE_OBSTREAM_FUNC(write_i24);

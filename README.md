@@ -1,6 +1,6 @@
 <p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="160" src="https://yasio.org/images/logo.png" alt="yasio logo"></a></p>
 
-# *YASIO* - *Y*et *A*nother asynchronous *S*ocket *I*/*O*.
+# *YASIO* - *Y*et another *A*synchronous *S*ocket *I*/*O*.
 [![Build Status](https://travis-ci.com/yasio/yasio.svg?branch=master)](https://travis-ci.com/yasio/yasio)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/d6qjfygtw2ewt9pf/branch/master?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
 [![Release](https://img.shields.io/badge/release-v3.33.7-blue.svg)](https://github.com/yasio/yasio/releases)

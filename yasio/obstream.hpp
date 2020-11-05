@@ -64,16 +64,13 @@ public:
   YASIO__DECL obstream& operator=(const obstream& rhs);
   YASIO__DECL obstream& operator=(obstream&& rhs);
 
-  template <typename _Nty> inline void write_i(_Nty value);
-
-  YASIO__DECL void write_i24(int32_t value);  // highest bit as sign
-  YASIO__DECL void write_u24(uint32_t value); // highest byte ignored
-
   /* write 7bit encoded variant integer value
   ** @.net BinaryWriter.Write7BitEncodedInt(Int32)
   */
-  YASIO__DECL void write_7b(int value);
-  void write_i7(int value) { write_7b(value); }
+  YASIO__DECL void write_i(int value);
+
+  YASIO__DECL void write_i24(int32_t value);  // highest bit as sign
+  YASIO__DECL void write_u24(uint32_t value); // highest byte ignored
 
   /* write blob data with '7bit encoded int' length field */
   YASIO__DECL void write_v(cxx17::string_view sv);
@@ -104,11 +101,17 @@ public:
 
   char* wptr(ptrdiff_t offset = 0) { return &buffer_.front() + offset; }
 
-  template <typename _Nty> inline void pwrite_i(ptrdiff_t offset, const _Nty value)
+  template <typename _Nty> inline void write_ix(_Nty value)
   {
-    swrite_i(wptr(offset), value);
+    auto nv = yasio::endian::htonv(value);
+    write_bytes(&nv, sizeof(nv));
   }
-  template <typename _Nty> static void swrite_i(void* dst, const _Nty value)
+
+  template <typename _Nty> inline void pwrite_ix(ptrdiff_t offset, const _Nty value)
+  {
+    swrite_ix(wptr(offset), value);
+  }
+  template <typename _Nty> static void swrite_ix(void* dst, const _Nty value)
   {
     auto nv = yasio::endian::htonv(value);
     ::memcpy(dst, &nv, sizeof(nv));
@@ -116,9 +119,7 @@ public:
 
   template <typename _LenT> inline void write_vx(const void* v, int size)
   {
-    auto l = yasio::endian::htonv(static_cast<_LenT>(size));
-
-    write_bytes(&l, sizeof(l));
+    write_ix<_LenT>(static_cast<_LenT>(size));
     if (size > 0)
       write_bytes(v, size);
   }
@@ -132,20 +133,13 @@ protected:
   std::stack<size_t> offset_stack_;
 }; // CLASS obstream
 
-template <typename _Nty> inline void obstream::write_i(_Nty value)
-{
-  auto nv = yasio::endian::htonv(value);
-
-  write_bytes(&nv, sizeof(nv));
-}
-
-template <> inline void obstream::write_i<float>(float value)
+template <> inline void obstream::write_ix<float>(float value)
 {
   auto nv = htonf(value);
   write_bytes(&nv, sizeof(nv));
 }
 
-template <> inline void obstream::write_i<double>(double value)
+template <> inline void obstream::write_ix<double>(double value)
 {
   auto nv = htond(value);
   write_bytes(&nv, sizeof(nv));

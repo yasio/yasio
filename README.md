@@ -23,9 +23,10 @@
 * [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
 
-## 集成Demos
+## 集成案例
 * [xlua](https://github.com/yasio/DemoU3D): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
-* [Unreal Engine 4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4, 未来会完善Lua, 可能基于Tencent的UnLua.
+* [Unreal Engine 4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4, 未来会完善Lua, 可能基于Tencent的UnLua。
+* [Engine-x][https://github/c4games/engine-x]: 作为Engine-x的异步TCP解决方案。
 
     
 ## 文档

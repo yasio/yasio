@@ -126,12 +126,13 @@ struct lua_State;
 YASIO_LUA_API int luaopen_yasio_cclua(lua_State* L)
 {
   int n = luaopen_yasio(L);
-  sol::stack_table yasio(L, n);
+  
+  sol::stack_table yasio(L, -1);
   yasio.set_function("delay", lyasio::stimer::delay);
   yasio.set_function("loop", lyasio::stimer::loop);
   yasio.set_function("kill", lyasio::stimer::kill);
-  yasio.pop();
-  return 0;
+  
+  return n;
 }
 }
 
@@ -151,7 +152,7 @@ YASIO_LUA_API int luaopen_yasio_cclua(lua_State* L)
   yasio.setField("loop", lyasio::stimer::loop);
   yasio.setField("kill", lyasio::stimer::kill);
 
-  return 0;
+  return yasio.push();
 }
 }
 #endif

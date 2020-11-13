@@ -290,6 +290,13 @@ io_channel::io_channel(io_service& service, int index) : timer_(service)
   index_             = index;
   decode_len_        = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
+std::string io_channel::format_destination() const 
+{ 
+    if (yasio__testbits(properties_, YCPF_NEEDS_QUERIES))
+      return yasio::strfmt(127, "%s(%s):%u", remote_host_.c_str(), !remote_eps_.empty()? remote_eps_[0].ip().c_str() : "null", remote_port_);
+
+    return yasio::strfmt(127, "%s:%u", remote_host_.c_str(), remote_port_);
+}
 void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
 {
   yasio__setbits(properties_, YCPF_MCAST);
@@ -1205,7 +1212,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
 
   ctx->state_ = io_base::state::OPENING;
   auto& ep    = ctx->remote_eps_[0];
-  YASIO_KLOGD("[index: %d] connecting server %s:%u...", ctx->index_, ctx->remote_host_.c_str(), ctx->remote_port_);
+  YASIO_KLOGD("[index: %d] connecting server %s(%s):%u...", ctx->index_, ctx->remote_host_.c_str(), ep.ip().c_str(), ctx->remote_port_);
   if (ctx->socket_->open(ep.af(), ctx->socktype_))
   {
     int ret = 0;
@@ -1746,7 +1753,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
   ctx->properties_ &= 0xffffff; // clear highest byte flags
   cleanup_io(ctx);
-  YASIO_KLOGE("[index: %d] connect server %s:%u failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), ctx->remote_port_, error,
+  YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error,
               io_service::strerror(error));
   this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error)));
 }

@@ -442,6 +442,7 @@ public:
   io_service& get_service() { return timer_.service_; }
   int index() const { return index_; }
   u_short remote_port() const { return remote_port_; }
+  YASIO__DECL std::string format_destination() const;
 
 protected:
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);

@@ -145,8 +145,8 @@ void yasioTest()
 
   yasio::obstream obstest;
   obstest.push24();
-  obstest.write_i(3.141592654);
-  obstest.write_i(1.17723f);
+  obstest.write_ix(3.141592654);
+  obstest.write_ix(1.17723f);
   obstest.write_u24(0x112233);
   obstest.write_u24(16777217); // uint24 value overflow test
   obstest.write_i24(259);

@@ -293,7 +293,7 @@ io_channel::io_channel(io_service& service, int index) : timer_(service)
 std::string io_channel::format_destination() const 
 { 
     if (yasio__testbits(properties_, YCPF_NEEDS_QUERIES))
-      return yasio::strfmt(127, "%s(%s):%u", remote_host_.c_str(), !remote_eps_.empty()? remote_eps_[0].ip().c_str() : "null", remote_port_);
+      return yasio::strfmt(127, "%s(%s):%u", remote_host_.c_str(), !remote_eps_.empty()? remote_eps_[0].ip().c_str() : "undefined", remote_port_);
 
     return yasio::strfmt(127, "%s:%u", remote_host_.c_str(), remote_port_);
 }

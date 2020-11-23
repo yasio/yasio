@@ -1629,9 +1629,9 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
             YASIO_KLOGE("[index: %d] do_dgram_accept failed, ec=%d, detail:%s", ctx->index_, error, this->strerror(error));
         }
         else if (n < 0)
-        {
+        { // warning only, not fatal error
           error = xxsocket::get_last_errno();
-          YASIO_KLOGE("[index: %d] recvfrom failed, ec=%d, detail:%s", ctx->index_, error, this->strerror(error));
+          YASIO_KLOGI("[index: %d] recvfrom failed, ec=%d, detail:%s", ctx->index_, error, this->strerror(error));
         }
       }
     }

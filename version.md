@@ -1,3 +1,10 @@
+yasio-3.33.9
+  
+* Fix win32 udp server implementation
+* Print remote point as peer for a new udp transport
+* Remove options ```YOPT_IGNORE_UDP_ERROR```
+  
+  
 yasio-3.33.8
   
 * Auto call socket.shutdown at xxsocket::close to fix blocking on socket.recv when close socket at other thread for non-win32 platforms.

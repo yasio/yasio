@@ -616,12 +616,6 @@ const ip::endpoint& io_transport_udp::ensure_destination() const
 {
   if (this->destination_.af() != AF_UNSPEC)
     return this->destination_;
-  if (yasio__testbits(ctx_->properties_, YCM_CLIENT))
-  {
-    if (!ctx_->remote_eps_.empty())
-      this->destination_ = ctx_->remote_eps_[0];
-    return this->destination_;
-  }
   return (this->destination_ = this->peer_);
 }
 int io_transport_udp::confgure_remote(const ip::endpoint& peer)

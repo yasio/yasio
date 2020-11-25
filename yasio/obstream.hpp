@@ -134,7 +134,7 @@ private:
   {
     // Write out an int 7 bits at a time.  The high bit of the byte,
     // when on, tells reader to continue reading more bytes.
-    auto v = (std::make_unsigned<_Ty>::type)value; // support negative numbers
+    auto v = (typename std::make_unsigned<_Ty>::type)value; // support negative numbers
     while (v >= 0x80)
     {
       write_byte((uint8_t)((uint32_t)v | 0x80));

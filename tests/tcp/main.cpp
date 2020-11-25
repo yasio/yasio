@@ -145,22 +145,26 @@ void yasioTest()
 
   yasio::obstream obstest;
   obstest.push24();
-  obstest.write_ix(3.141592654);
-  obstest.write_ix(1.17723f);
+  obstest.write(3.141592654);
+  obstest.write(1.17723f);
   obstest.write_u24(0x112233);
   obstest.write_u24(16777217); // uint24 value overflow test
   obstest.write_i24(259);
   obstest.write_i24(-16);
+  obstest.write_ix(20201125);
+  obstest.write_ix64(-9223372036854775808);
   obstest.pop24();
 
   yasio::ibstream_view ibs(obstest.data(), static_cast<int>(obstest.length()));
   ibs.seek(3, SEEK_CUR);
-  auto r1 = ibs.read_ix<double>();
-  auto f1 = ibs.read_ix<float>();
+  auto r1 = ibs.read<double>();
+  auto f1 = ibs.read<float>();
   auto v1 = ibs.read_u24(); // should be 0x112233(1122867)
   auto v2 = ibs.read_u24(); // should be 1
   auto v3 = ibs.read_i24(); // should be 259
   auto v4 = ibs.read_i24(); // should be -16
+  auto v5 = ibs.read_ix();
+  auto v6 = ibs.read_ix64();
 
   std::cout << r1 << ", " << f1 << ", " << v1 << ", " << v2 << ", " << v3 << ", " << v4 << "\n";
 

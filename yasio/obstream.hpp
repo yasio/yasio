@@ -86,10 +86,6 @@ public:
   /* 8 bits length field */
   YASIO__DECL void write_v8(cxx17::string_view);
 
-  YASIO__DECL void write_v32(const void* v, int size);
-  YASIO__DECL void write_v16(const void* v, int size);
-  YASIO__DECL void write_v8(const void* v, int size);
-
   YASIO__DECL void write_byte(uint8_t v);
 
   YASIO__DECL void write_bytes(cxx17::string_view);
@@ -118,6 +114,11 @@ public:
     ::memcpy(ptr, &nv, sizeof(nv));
   }
 
+  YASIO__DECL obstream sub(size_t offset, size_t count = -1);
+
+  YASIO__DECL void save(const char* filename);
+
+private:
   template <typename _LenT> inline void write_v_fx(cxx17::string_view value)
   {
     size_t size = value.size();
@@ -125,11 +126,6 @@ public:
     if (size)
       write_bytes(value.data(), size);
   }
-  YASIO__DECL obstream sub(size_t offset, size_t count = -1);
-
-  YASIO__DECL void save(const char* filename);
-
-private:
   template <typename _Ty> void write_ix_impl(_Ty value)
   {
     // Write out an int 7 bits at a time.  The high bit of the byte,

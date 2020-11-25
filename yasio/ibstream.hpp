@@ -127,7 +127,7 @@ template <> YASIO__DECL int64_t ibstream_view::read_ix<int64_t>();
 
 #if defined(_WIN32) || !YASIO__64BITS
 template <> inline long ibstream_view::read_ix<long>() { return read_ix<int>(); }
-#else
+#elif defined(__APPLE__)
 template <> inline long ibstream_view::read_ix<long>() { return static_cast<long>(read_ix<int64_t>()); }
 #endif
 

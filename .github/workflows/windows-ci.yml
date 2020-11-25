@@ -1,4 +1,4 @@
-name: win32
+name: windows
 
 on: [push]
 
@@ -20,9 +20,6 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
       # access regardless of the host operating system
@@ -30,9 +27,13 @@ jobs:
       # Note the current convention is to use the -S and -B options here to specify source 
       # and build directories, but this is only available with CMake 3.13 and higher.  
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-      run: cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x86 -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -A Win32 -DBUILD_EXTENSION_IMGUIEXT=ON -DLUA_ENGINE=luajit
+      run: |
+        cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x86 -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -A Win32
+        cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x64 -DCMAKE_BUILD_TYPE=%BUILD_TYPE%
 
     - name: Build
       shell: cmd
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build %GITHUB_WORKSPACE%/build_x86 --config %BUILD_TYPE% --target cpp-tests
+      run: |
+        cmake --build %GITHUB_WORKSPACE%/build_x86 --config %BUILD_TYPE%
+        cmake --build %GITHUB_WORKSPACE%/build_x64 --config %BUILD_TYPE%

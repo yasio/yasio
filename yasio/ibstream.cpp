@@ -84,7 +84,7 @@ int ibstream_view::read_ix()
   // the value of this byte must fit within 4 bits (32 - 28),
   // and it must not have the high bit set.
   byteReadJustNow = read_byte();
-  if (byteReadJustNow <= 0b1111u)
+  if (byteReadJustNow <= 0x0fu)
   {
     result |= (uint32_t)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
     return (int)result;
@@ -120,7 +120,7 @@ int64_t ibstream_view::read_ix64()
   // the value of this byte must fit within 1 bit (64 - 63),
   // and it must not have the high bit set.
   byteReadJustNow = read_byte();
-  if (byteReadJustNow <= 0b1u)
+  if (byteReadJustNow <= 1u)
   {
     result |= (uint64_t)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
     return (int64_t)result;

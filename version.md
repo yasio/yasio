@@ -1,3 +1,9 @@
+yasio-3.34.0
+  
+* Add 7bitInt64 encode/decode support for BinaryStream(obstream/ibstream)
+* Refactor obstream/ibstream intefaces, now 7bit int encode/decode api name is write_ix/read_ix, write_ix64/read_ix64
+  
+  
 yasio-3.33.9
   
 * Fix win32 udp server implementation

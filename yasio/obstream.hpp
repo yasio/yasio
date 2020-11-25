@@ -158,7 +158,7 @@ template <> inline void obstream::write_ix<int64_t>(int64_t value) { write_ix_im
 /* long */
 #if defined(_WIN32) || !YASIO__64BITS
 template <> inline void obstream::write_ix<long>(long value) { write_ix_impl<int>(static_cast<int>(value)); }
-#else
+#elif defined(__APPLE__)
 template <> inline void obstream::write_ix<long>(long value) { write_ix_impl<int64_t>(static_cast<int64_t>(value)); }
 #endif
 

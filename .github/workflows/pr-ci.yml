@@ -11,7 +11,7 @@ env:
 
 jobs:
   build-win32:
-    name: build-win32
+    name: build-windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2

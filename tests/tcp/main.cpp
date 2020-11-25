@@ -152,7 +152,7 @@ void yasioTest()
   obstest.write_i24(259);
   obstest.write_i24(-16);
   obstest.write_ix(20201125);
-  obstest.write_ix64(-9223372036854775808);
+  obstest.write_ix64(-9223372036854775807);
   obstest.pop24();
 
   yasio::ibstream_view ibs(obstest.data(), static_cast<int>(obstest.length()));

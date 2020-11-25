@@ -152,7 +152,7 @@ uint32_t ibstream_view::read_u24()
 
 cxx17::string_view ibstream_view::read_v()
 {
-  int count = static_cast<int>(read_ix());
+  int count = read_ix();
   return read_bytes(count);
 }
 

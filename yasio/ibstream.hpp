@@ -53,12 +53,12 @@ public:
   YASIO__DECL ibstream_view& operator=(const ibstream_view&) = delete;
   YASIO__DECL ibstream_view& operator=(ibstream_view&&) = delete;
 
-  /* Reads 7bit encoded variant integer value
+  /* read 7bit encoded variant integer value
   ** @.net BinaryReader.Read7BitEncodedInt
   */
   YASIO__DECL int read_ix();
 
-  /* Reads 7bit encoded variant large integer value
+  /* read 7bit encoded variant large integer value
   ** @.net BinaryReader.Read7BitEncodedInt64
   */
   YASIO__DECL int64_t read_ix64();
@@ -114,17 +114,17 @@ protected:
   const char* ptr_;
 };
 
-template <> inline float ibstream_view::sread<float>(const void* src)
+template <> inline float ibstream_view::sread<float>(const void* ptr)
 {
   uint32_t nv;
-  ::memcpy(&nv, src, sizeof(nv));
+  ::memcpy(&nv, ptr, sizeof(nv));
   return ntohf(nv);
 }
 
-template <> inline double ibstream_view::sread<double>(const void* src)
+template <> inline double ibstream_view::sread<double>(const void* ptr)
 {
   uint64_t nv;
-  ::memcpy(&nv, src, sizeof(nv));
+  ::memcpy(&nv, ptr, sizeof(nv));
   return ntohd(nv);
 }
 

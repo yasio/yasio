@@ -90,8 +90,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   hdr->type        = icmp_echo;
   hdr->seqno       = s_seqno++;
 
-  memcpy(&icmp_request.front() + sizeof(icmp_header), (const char*)userdata.data(),
-         (std::min)(userdata.size(), icmp_request.size() - sizeof(icmp_header)));
+  memcpy(&icmp_request.front() + sizeof(icmp_header), (const char*)userdata.data(), (std::min)(userdata.size(), icmp_request.size() - sizeof(icmp_header)));
   hdr->checksum = ip_chksum((uint16_t*)icmp_request.data(), icmp_request.size());
 
   s.sendto(icmp_request.data(), icmp_request.size(), endpoints[0]);
@@ -166,12 +165,11 @@ void yasioTest()
   auto v5 = ibs.read_ix();
   auto v6 = ibs.read_ix64();
 
-  std::cout << r1 << ", " << f1 << ", " << v1 << ", " << v2 << ", " << v3 << ", " << v4 << "\n";
+  std::cout << r1 << ", " << f1 << ", " << v1 << ", " << v2 << ", " << v3 << ", " << v4 << ", " << v5 << ", " << v6 << "\n";
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 
-  resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname,
-                           unsigned short port) {
+  resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port) {
     return service.resolve(endpoints, hostname, port);
   };
   service.set_option(YOPT_S_RESOLV_FN, &resolv);

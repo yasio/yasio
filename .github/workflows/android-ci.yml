@@ -11,6 +11,7 @@ env:
   BUILD_TYPE: Release
   GITHUB_CI: true
   PYENV_VERSION: 2.7.18
+  NDK_VER: r16b
 
 jobs:
   build:

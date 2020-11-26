@@ -124,7 +124,7 @@ function _M:sendHttpGetRequest(url, callback)
 
     if(idleChannelIndex ~= -1) then
         local requestItem = {
-            requestData = string.format("GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n",
+            requestData = string.format("GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n",
                 params.path,
                 params.host
             ),

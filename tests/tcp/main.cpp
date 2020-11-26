@@ -11,6 +11,8 @@
 using namespace yasio;
 using namespace yasio::inet;
 
+#define HTTP_TEST_HOST "tool.chinaz.com"
+
 static uint16_t ip_chksum(uint16_t* addr, int len)
 {
   int nleft       = len;
@@ -77,7 +79,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   static const int s_icmp_mtu = 1472;
   std::vector<char> icmp_request;
 
-  cxx17::string_view userdata = "yasio-3.33.1";
+  cxx17::string_view userdata = "yasio-3.34.0";
 
 #if !defined(_WIN32)
   int nud = (std::max)((int)icmp_min_len, (std::min)((int)userdata.size(), s_icmp_mtu));
@@ -132,7 +134,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
 
 void yasioTest()
 {
-  yasio::inet::io_hostent endpoints[] = {{"www.ip138.com", 80}};
+  yasio::inet::io_hostent endpoints[] = {{HTTP_TEST_HOST, 80}};
 
   for (int i = 0; i < 4; ++i)
   {
@@ -180,7 +182,7 @@ void yasioTest()
   deadline_timer udp_heartbeat(service);
   int total_bytes_transferred = 0;
 
-  int max_request_count = 5;
+  int max_request_count = 1;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start([&](event_ptr&& event) {
     switch (event->kind())
@@ -199,13 +201,14 @@ void yasioTest()
           if (event->cindex() == 0)
           {
             obstream obs;
-            obs.write_bytes("GET /index.htm HTTP/1.1\r\n");
+            obs.write_bytes("GET / HTTP/1.1\r\n");
 
-            obs.write_bytes("Host: www.ip138.com\r\n");
+            obs.write_bytes("Host: " HTTP_TEST_HOST "\r\n");
 
+            // Chrome/51.0.2704.106
             obs.write_bytes("User-Agent: Mozilla/5.0 (Windows NT 10.0; "
                             "WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/51.0.2704.106 Safari/537.36\r\n");
+                            "Chrome/87.0.4280.66 Safari/537.36\r\n");
             obs.write_bytes("Accept: */*;q=0.8\r\n");
             obs.write_bytes("Connection: Close\r\n\r\n");
 
@@ -218,7 +221,7 @@ void yasioTest()
         }
         break;
       case YEK_CONNECTION_LOST:
-        printf("The connection is lost, %d bytes transferred\n", total_bytes_transferred);
+        printf("\n\nThe connection is lost, %d bytes transferred\n", total_bytes_transferred);
 
         total_bytes_transferred = 0;
         if (--max_request_count > 0)
@@ -259,6 +262,10 @@ void yasioTest()
 
 int main(int, char**)
 {
+#if defined(_WIN32)
+  SetConsoleOutputCP(CP_UTF8);
+#endif
+
   yasioTest();
 
   return 0;

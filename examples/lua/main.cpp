@@ -11,12 +11,20 @@
 #  include "kaguya/kaguya.hpp"
 #endif
 
-int main(int argc, char** argv)
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
+
+int main(int argc, char** argv) 
 {
+#if defined(_WIN32)
+  SetConsoleOutputCP(CP_UTF8);
+#endif
+
 #if YASIO__HAS_CXX14
   sol::state s;
   s.open_libraries();
-  luaopen_yasio(s.lua_state());
+  luaopen_yasio(s.lua_state());   
 
   cxx17::string_view path = argv[0];
   auto pos                = path.find_last_of("/\\");

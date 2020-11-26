@@ -17,9 +17,11 @@ local server = io_service.new(hostents)
 
 local transport1 = nil
 local data_partial2 = nil
+local packet_count = 0
 server:start(function(event)
         local t = event:kind()
         if t == yasio.YEK_PACKET then
+            packet_count = packet_count + 1
         elseif(t == yasio.YEK_CONNECT_RESPONSE) then -- connect responseType
             if(event:status() == 0) then
                 local transport = event:transport()
@@ -91,7 +93,8 @@ client:open(0, yasio.YCK_TCP_CLIENT)
 
 -- httpclient 
 local http_client = require 'http_client'
-http_client:sendHttpGetRequest('http://ip138.com/index.htm', function(respData)
+http_client:sendHttpGetRequest('http://tool.chinaz.com/', function(respData)
+    print(string.format('http request done, %d bytes transferred\n', #respData))
     print(respData)
     stopFlag = stopFlag + 1
 end)
@@ -118,7 +121,5 @@ if(yasio.loop) then
             yasio_update(0.01)
         end)
 end
-
-print('done')
 
 return yasio_update

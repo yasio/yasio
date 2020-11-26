@@ -8,6 +8,7 @@ file(GLOB LUA_SRC_FILES
     "${LUA_SRC_PATH}/*.c")
 
 list(REMOVE_ITEM LUA_SRC_FILES "${LUA_SRC_PATH}/lua.c")
+list(REMOVE_ITEM LUA_SRC_FILES "${LUA_SRC_PATH}/onelua.c")
 
 set (EXAMPLE_LUA_SRC ${EXAMPLE_LUA_SRC_DIR}/main.cpp
     ${EXAMPLE_LUA_SRC_DIR}/../../yasio/bindings/lyasio.cpp

@@ -15,7 +15,7 @@ proto.e101 = function(msg)
     -- encode message fields.
     obs:write_i8(msg.id);
     obs:write_u16(msg.value1);
-    obs:write_i32(msg.value2);
+    obs:write_ix(msg.value2);
     obs:write_bool(msg.value3);
     obs:write_f(msg.value4);
     obs:write_lf(msg.value6);

@@ -73,8 +73,8 @@ cmake --build . --config Debug
 * 支持SSL客户端，基于OpenSSL。
 * 支持非阻塞域名解析，基于c-ares。
 * 支持Unix Domain Socket。
-* 支持二进制读写，两个工具类```obstream/ibstream```非常方便使用。
-* 支持和.net的兼容的整数压缩编码方式: 7Bit Encoded Int/Int64。
+* 支持二进制读写，两个工具类**obstream/ibstream**非常方便使用。
+* 支持和.net的兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。
 
 ## 发送延迟
 yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快**30倍**以上:  

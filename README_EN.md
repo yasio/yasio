@@ -71,8 +71,8 @@ cmake --build . --config Debug
 * Support async resolve with c-ares
 * Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
 * Support Unix Domain Socket
-* Support BinaryStram by ```obstream/ibstream```, easy to use
-* Support 7Bit Encoded Int/Int64 compatible with dotnet
+* Support BinaryStram by **obstream/ibstream**, easy to use
+* Support **7Bit Encoded Int/Int64** compatible with dotnet
   
 ## Core framework
 ![image](https://yasio.org/images/framework_en.png)  

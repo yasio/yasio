@@ -54,7 +54,7 @@ public:
   YASIO__DECL ibstream_view& operator=(ibstream_view&&) = delete;
 
   /* read 7bit encoded variant integer value
-  ** @.net BinaryReader.Read7BitEncodedInt(64)
+  ** @dotnet BinaryReader.Read7BitEncodedInt(64)
   */
   template <typename _IntType = int> _IntType read_ix();
 

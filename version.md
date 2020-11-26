@@ -1,7 +1,8 @@
 yasio-3.34.0
   
-* Add 7bitInt64 encode/decode support for BinaryStream(obstream/ibstream)
-* Refactor obstream/ibstream intefaces, now 7bit int encode/decode api name is write_ix/read_ix, write_ix64/read_ix64
+* Add ```7bit Encoded Int64``` support for **obstream/ibstream**
+* Rename **obstream/ibstream** ```7bit Encoded Int``` APIs ```write_i/read_i``` to ```write_ix/read_ix```
+* Rename **obstream/ibstream** ```Fixed Encoded Number``` APIs ```write_ix/read_ix``` to ```write/read```
   
   
 yasio-3.33.9

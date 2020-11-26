@@ -98,7 +98,7 @@ public:
   }
 
   /* write 7bit encoded variant integer value
-  ** @.net BinaryWriter.Write7BitEncodedInt(64)
+  ** @dotnet BinaryWriter.Write7BitEncodedInt(64)
   */
   template <typename _IntType> inline void write_ix(_IntType value);
 

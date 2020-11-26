@@ -48,30 +48,33 @@ g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest
 git clone https://github.com/yasio/yasio
 cd yasio
 git submodule update --init --recursive
-cd build
 
-# 生成yasio.sln
-cmake ..
+# 如果是macOS Xcode, 这里命令应该换成: cmake -B build -GXcode
+cmake -B build
 
-# 使用CMake命令行编译或者直接用VS打开 build/yasio.sln 解决方案
-cmake --build . --config Debug
+# 使用CMake命令行编译, 如果需要调试，则使用相应平台IDE打开即可:
+# a. Windows: 使用VisualStudio打开build/yasio.sln
+# b. macOS: 使用Xcode打开build/yasio.xcodeproj
+cmake --build build --config Debug
+
+# # 者直接用VS打开 
 ```
 
 ## 特性: 
-* 提供相同的API来管理TCP, UDP, KCP传输。
+* 支持TCP，UDP，KCP传输，且API是统一的。
+* 支持TCP粘包处理，业务完全不必关心。
+* 支持组播。
 * 支持IPv4/IPv6或者苹果IPv6_only网络。
 * 支持处理多个连接的所有网络事件。
 * 支持微秒级定时器。
-* 支持TCP粘包处理，业务完全不必关心。
 * 支持Lua绑定。
 * 支持Cocos2d-x jsb绑定。
 * 支持[CocosCreator jsb2.0绑定](https://github.com/yasio/inettester)。
 * 支持[Unity3D](https://github.com/yasio/DemoU3D)。
 * 支持[虚幻4](https://github.com/yasio/DemoUE4)。
-* 支持组播。
-* 支持KCP。
 * 支持SSL客户端，基于OpenSSL。
 * 支持非阻塞域名解析，基于c-ares。
+* 支持Header Only集成方式，只需要定义编译预处理器宏```YASIO_HEAD_ONLY=1```即可。
 * 支持Unix Domain Socket。
 * 支持二进制读写，两个工具类**obstream/ibstream**非常方便使用。
 * 支持和.net的兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。

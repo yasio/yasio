@@ -46,30 +46,30 @@ g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest
 git clone https://github.com/yasio/yasio
 cd yasio
 git submodule update --init --recursive
-cd build
-# For macOS xcode, it's shoud be cmake .. -GXcode
-cmake ..
+# For macOS xcode, it's shoud be: cmake -B build -GXcode
+cmake -B build
 
-# Use cmake command to build examples & tests, 
-# or open yasio.sln with visual studio(2013~2019 supported) at win32 platform
-cmake --build . --config Debug
+# Use cmake command to build examples & tests, or use platform specific IDE to open yasio project
+# a. Windows: Use Visual Studio(2013~2019 supported) to open build/yasio.sln
+# b. macOS: Use Xcode to open build/yasio.xcodeproj
+cmake --build build --config Debug
 ```
 
 ## Features: 
-* Same API to manipulate transport with TCP, UDP, KCP.
+* Support TCP/UDP/KCP, and manipulate APIs are same
+* Support process ```sticking packets``` for TCP internal, user do not need to care it
+* Support multicast
 * Support IPv4/IPv6 network
 * Support multi-connections at one thread
 * Support high-resolution deadline timer
-* Support unpack tcp packet internal, user do not need to care it
 * Support lua bindings
 * Support cocos2d-x jsb
 * Support [CocosCreator jsb2.0](https://github.com/yasio/inettester)
 * Support [Unity3D](https://github.com/yasio/DemoU3D)
 * Support [Unreal Engine 4](https://github.com/yasio/DemoUE4)
-* Support multicast
 * Support ssl client with openssl
 * Support async resolve with c-ares
-* Support header only with YASIO_HEAD_ONLY=1 set at config.hpp or compiler flags
+* Support header only with ```YASIO_HEAD_ONLY=1``` set at config.hpp or compiler flags
 * Support Unix Domain Socket
 * Support BinaryStram by **obstream/ibstream**, easy to use
 * Support **7Bit Encoded Int/Int64** compatible with dotnet

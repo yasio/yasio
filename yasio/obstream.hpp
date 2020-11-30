@@ -151,16 +151,11 @@ template <> inline void obstream::write<double>(double value)
   write_bytes(&nv, sizeof(nv));
 }
 
-template <> inline void obstream::write_ix<int>(int value) { write_ix_impl<int>(value); }
+// int32_t
+template <> inline void obstream::write_ix<int32_t>(int32_t value) { write_ix_impl<int32_t>(value); }
 
-template <> inline void obstream::write_ix<int64_t>(int64_t value) { write_ix_impl<int64_t>(value); }
-
-/* long */
-#if defined(_WIN32) || !YASIO__64BITS
-template <> inline void obstream::write_ix<long>(long value) { write_ix_impl<int>(static_cast<int>(value)); }
-#elif defined(__APPLE__)
-template <> inline void obstream::write_ix<long>(long value) { write_ix_impl<int64_t>(static_cast<int64_t>(value)); }
-#endif
+// int64_t
+template <> inline void obstream::write_ix<int64_t>(int64_t value) { write_ix_impl<int64_t>(static_cast<int64_t>(value)); }
 
 } // namespace yasio
 

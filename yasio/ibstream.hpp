@@ -122,14 +122,8 @@ template <> inline double ibstream_view::sread<double>(const void* ptr)
   return ntohd(nv);
 }
 
-template <> YASIO__DECL int ibstream_view::read_ix<int>();
+template <> YASIO__DECL int32_t ibstream_view::read_ix<int32_t>();
 template <> YASIO__DECL int64_t ibstream_view::read_ix<int64_t>();
-
-#if defined(_WIN32) || !YASIO__64BITS
-template <> inline long ibstream_view::read_ix<long>() { return read_ix<int>(); }
-#elif defined(__APPLE__)
-template <> inline long ibstream_view::read_ix<long>() { return static_cast<long>(read_ix<int64_t>()); }
-#endif
 
 /// --------------------- CLASS ibstream ---------------------
 class ibstream : public ibstream_view {

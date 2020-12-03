@@ -79,6 +79,12 @@ cmake --build build --config Debug
 * 支持二进制读写，两个工具类**obstream/ibstream**非常方便使用。
 * 支持和.net的兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。
 
+## 关于C++17
+yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查看 [cxx17](yasio/cxx17)
+- cxx17::string_view
+- cxx17::shared_mutex
+- cxx20::starts_with, cxx20::ends_with
+
 ## 发送延迟
 yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快**30倍**以上:  
 
@@ -91,12 +97,6 @@ yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息�
 
 ## 框架图
 ![image](https://yasio.org/images/framework.png)  
-
-## C++17
-yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查看 [cxx17](yasio/cxx17)
-- cxx17::string_view
-- cxx17::shared_mutex
-- cxx20::starts_with, cxx20::ends_with
 
 ## QQ交流群
 点击加入：[829884294](https://jq.qq.com/?_wv=1027&k=5LDEiNv)

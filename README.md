@@ -82,7 +82,7 @@ cmake --build build --config Debug
 ## 发送延迟
 yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快**30倍**以上:  
 
-|网络实现         | 实际执行发送操作延迟 |
+|网络实现         | 发送延迟 |
 | ------------- |:----------------:|
 |yasio	| ```0.06 ~ 0.1(ms)``` |
 |Cocos2d-X WebSocket	|```> 3~5(ms)``` |

@@ -73,6 +73,12 @@ cmake --build build --config Debug
 * Support Unix Domain Socket
 * Support BinaryStram by **obstream/ibstream**, easy to use
 * Support **7Bit Encoded Int/Int64** compatible with dotnet
+
+## C++17
+yasio provide follow C++17 standard components compatible with C++11 compiler, please see: [cxx17](yasio/cxx17)
+- cxx17::string_view
+- cxx17::shared_mutex
+- cxx20::starts_with, cxx20::ends_with
   
 ## Core framework
 ![image](https://yasio.org/images/framework_en.png)  

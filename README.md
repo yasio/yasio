@@ -80,7 +80,7 @@ cmake --build build --config Debug
 * 支持和.net的兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。
 
 ## 关于C++17
-yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查看 [cxx17](yasio/cxx17)
+yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查看 [cxx17](https://github.com/yasio/yasio/tree/master/yasio/cxx17)
 - cxx17::string_view
 - cxx17::shared_mutex
 - cxx20::starts_with, cxx20::ends_with

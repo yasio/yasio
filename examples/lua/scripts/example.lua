@@ -37,13 +37,22 @@ server:start(function(event)
                     passwd = "x-studio Pro is a powerful IDE!"
                 }
                 local obs = proto.e101(msg)
+   
+                -- separate packet to 2 partial
                 local data = obs:to_string()
                 local data_partial1 = data:sub(1, #data - 10)
-                server:write(transport, data_partial1)
-
-                print('The remain data will be sent after 3 seconds...')
-                transport1 = transport
+                
                 data_partial2 = data:sub(#data - 10 + 1, #data)
+                
+                -- write the whole packet
+                server:write(transport, obs)
+                
+                -- write the partial1
+                server:write(transport, data_partial1)
+                
+                -- write the partial2 after 3 seconds
+                transport1 = transport
+                print('The remain data will be sent after 3 seconds...')
             else
                 print("connect server failed!")
             end
@@ -113,7 +122,7 @@ local function yasio_update(dt)
             server:write(transport1, data_partial2)
         end
     end
-    return stopFlag >= 2
+    return stopFlag >= 3
 end
 
 if(yasio.loop) then

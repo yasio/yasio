@@ -2,7 +2,8 @@
 -- Module: protocol_base, <please write module description>
 -- Author: halx99
 -- Create Date: [2020-01-02 22:50:31]
-require 'protocol_enums'
+local proto = require 'protocol_enums'
+local yasio = require 'yasio'
 local obstream = yasio.obstream
 
 proto.begin_encode = function (id)
@@ -29,3 +30,5 @@ proto.begin_decode = function(ibs)
     }
     return msg
 end
+
+return proto

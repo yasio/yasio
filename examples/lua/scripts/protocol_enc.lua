@@ -6,7 +6,7 @@
 --
 --
 -- Implement all pure lua protocol encode functions.
-require 'protocol_enums'
+local proto = require 'protocol_dec'
 
 proto.e101 = function(msg)
     -- begin message encode.
@@ -28,4 +28,4 @@ proto.e101 = function(msg)
     return obs;
 end
 
-
+return proto

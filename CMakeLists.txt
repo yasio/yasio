@@ -323,7 +323,7 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     if(YASIO_BUILD_LUA_EXAMPLE)
         add_subdirectory(examples/lua)
         target_include_directories(example_lua PRIVATE external)
-        target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=1)
+        target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)
     endif()
     add_subdirectory(examples/ftp_server)
 

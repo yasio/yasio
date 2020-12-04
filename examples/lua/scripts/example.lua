@@ -1,9 +1,7 @@
--- yasio 3.33 demo
-require 'protocol_base'
-require 'protocol_enc'
-require 'protocol_dec'
+-- yasio 3.34 demo
+local proto = require 'protocol_enc'
+local yasio = require 'yasio' -- constants
 
-local yasio = yasio -- constants
 local io_service = yasio.io_service
 local stopFlag = 0
 
@@ -45,6 +43,7 @@ server:start(function(event)
                 data_partial2 = data:sub(#data - 10 + 1, #data)
                 
                 -- write the whole packet
+                print('write whole packet with yasio::obstream*')
                 server:write(transport, obs)
                 
                 -- write the partial1
@@ -54,12 +53,17 @@ server:start(function(event)
                 transport1 = transport
                 print('The remain data will be sent after 3 seconds...')
             else
-                print("connect server failed!")
+                print("create connection with client failed!")
             end
         elseif(t == yasio.YEK_CONNECTION_LOST) then -- connection lost event
             print("The connection is lost!")
         end
     end)
+ 
+-- enable reuse addr for tcp server    
+server:set_option(yasio.YOPT_C_MOD_FLAGS, 0, yasio.YCF_REUSEADDR, 0)
+server:set_option(yasio.YOPT_C_MOD_FLAGS, 1, yasio.YCF_REUSEADDR, 0)
+
 server:open(0, yasio.YCK_TCP_SERVER)
 server:open(1, yasio.YCK_TCP_SERVER)
 
@@ -98,7 +102,6 @@ client:start(function(event)
             print("The connection is lost!")
         end
     end)
-client:open(0, yasio.YCK_TCP_CLIENT)
 
 -- httpclient 
 local http_client = require 'http_client'
@@ -110,12 +113,22 @@ end)
 
 local elapsedTime = 0
 local partial2Sent = false
+local connectRequested = false
 
-local function yasio_update(dt)
+local function yasio_update(dt)  
+    elapsedTime = elapsedTime + dt
+
     server:dispatch(128)
     client:dispatch(128)
-    http_client:update()
-    elapsedTime = elapsedTime + dt
+    if http_client then
+        http_client:update()
+    end
+
+    if elapsedTime > 2 and not connectRequested then
+        connectRequested = true
+        print('connecting server...')
+        client:open(0, yasio.YCK_TCP_CLIENT)
+    end
     if elapsedTime > 3 and not partial2Sent then
         partial2Sent = true
         if transport1 then
@@ -126,8 +139,9 @@ local function yasio_update(dt)
 end
 
 if(yasio.loop) then
-    yasio.loop(-1, 0.01, function()
-            yasio_update(0.01)
+    print("start loop main thread to fetch event from yasio io_service!")
+    yasio.loop(-1, 0.02, function()
+            yasio_update(0.02)
         end)
 end
 

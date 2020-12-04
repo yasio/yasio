@@ -4,8 +4,10 @@
 -- Purpose: contains some constants defininations
 --
 --
-proto = proto or {}
+local proto = {}
 
 proto.numbers = {
     CID_SIMPLE1 = 101, 
 }
+
+return proto

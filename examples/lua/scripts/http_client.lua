@@ -4,6 +4,7 @@
 -- Create Date: [2020-02-03 17:46:47]
 
 local _M = {}
+local yasio = require 'yasio'
 
 --[[
 parse a url

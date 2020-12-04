@@ -6,7 +6,7 @@
 --
 --
 -- Implement all pure lua protocol decode functions.
-require 'protocol_enums'
+local proto = require 'protocol_base'
 
 proto.d101 = function(ibs)
     local msg = proto.begin_decode(ibs);
@@ -23,4 +23,4 @@ proto.d101 = function(ibs)
     return msg;
 end
 
-
+return proto

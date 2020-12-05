@@ -44,7 +44,7 @@ target_link_libraries (${target_name} ${EXAMPLE_LUA_LDLIBS})
 if (NOT MSVC)
     # see also: https://github.com/llvm/llvm-project/blob/master/clang/lib/Headers/__stddef_max_align_t.h
     if(APPLE)
-        target_compile_definitions (${target_name} PUBLIC LUAI_USER_ALIGNMENT_T=long double)
+        target_compile_definitions (${target_name} PUBLIC "LUAI_USER_ALIGNMENT_T=long double")
     else()
         target_compile_definitions (${target_name} PUBLIC LUAI_USER_ALIGNMENT_T=max_align_t)
     endif()

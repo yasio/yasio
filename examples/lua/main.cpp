@@ -33,6 +33,10 @@ static void lua_register_yasio(lua_State* L)
 
 int main(int argc, char** argv) 
 {
+
+  int sz_max_align = static_cast<int>(sizeof(max_align_t));
+  printf("sizeof(max_align_t)=%d\n", sz_max_align);
+
 #if defined(_WIN32)
   SetConsoleOutputCP(CP_UTF8);
 #endif

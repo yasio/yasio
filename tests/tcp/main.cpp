@@ -135,8 +135,6 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
 void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{HTTP_TEST_HOST, 80}};
-    
-  int sz_max_align = sizeof(max_align_t);
 
   for (int i = 0; i < 4; ++i)
   {

@@ -136,7 +136,7 @@ void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{HTTP_TEST_HOST, 80}};
     
-    int sizel = sizeof(long);
+  int sz_max_align = sizeof(max_align_t);
 
   for (int i = 0; i < 4; ++i)
   {

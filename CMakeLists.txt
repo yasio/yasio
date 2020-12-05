@@ -53,7 +53,7 @@ option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" OFF)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
-option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" OFF)
+option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 
 

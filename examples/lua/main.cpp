@@ -15,7 +15,7 @@
 #include <Windows.h>
 #endif
 
-static void lua_register_extensions(lua_State* L)
+static void lua_register_yasio(lua_State* L)
 {
 
   static luaL_Reg lua_exts[] = {{"yasio", luaopen_yasio},  {NULL, NULL}};
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 #if YASIO__HAS_CXX14
   sol::state s;
   s.open_libraries();
-  luaopen_yasio(s.lua_state());   
+  lua_register_yasio(s.lua_state());
 
   cxx17::string_view path = argv[0];
   auto pos                = path.find_last_of("/\\");
@@ -54,7 +54,6 @@ int main(int argc, char** argv)
 
   package_path           = s["package"]["path"];
 
-  lua_register_extensions(s.lua_state());
   sol::function function = s.script_file("scripts/example.lua");
 
   do
@@ -64,7 +63,7 @@ int main(int argc, char** argv)
 #else
   kaguya::State s;
   s.openlibs();
-  lua_register_extensions(s.state());
+  lua_register_yasio(s.state());
 
   cxx17::string_view path = argv[0];
   auto pos                = path.find_last_of("/\\");

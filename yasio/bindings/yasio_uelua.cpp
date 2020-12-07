@@ -25,6 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#include "yasio_uelua.h"
 #include "yasio/platform/yasio_ue4.hpp"
 #include "lua.hpp"
 #if defined(NS_SLUA)
@@ -35,14 +36,15 @@ using namespace NS_SLUA;
 DECLARE_LOG_CATEGORY_EXTERN(yasio_ue4, Log, All);
 DEFINE_LOG_CATEGORY(yasio_ue4);
 
-void yasio_uelua_init(void* L) {
-    auto Ls = (lua_State*)L;
-	print_fn2_t log_cb = [](int level, const char* msg) {
-		FString text(msg);
-		const TCHAR* tstr = *text;
-		UE_LOG(yasio_ue4, Log, L"%s", tstr);
-	};
-	io_service::init_globals(log_cb);
+void yasio_uelua_init(void* L)
+{
+  auto Ls            = (lua_State*)L;
+  print_fn2_t log_cb = [](int level, const char* msg) {
+    FString text(msg);
+    const TCHAR* tstr = *text;
+    UE_LOG(yasio_ue4, Log, L"%s", tstr);
+  };
+  io_service::init_globals(log_cb);
 
-	luaregister_yasio(Ls);
+  luaregister_yasio(Ls);
 }

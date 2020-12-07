@@ -31,7 +31,8 @@
 * [xlua](https://github.com/yasio/DemoU3D): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
 * Unreal Engine 4
   - [DemoUE4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4
-  - [sluaunreal](https://github.com/yasio/sluaunreal/commit/b0980d7416c56dcbf91b7b8bcc28720839089d1b): 集成到Tencent的sluaunreal
+  - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal
+  - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua
 * [Engine-x](https://github.com/c4games/engine-x): 作为Engine-x游戏引擎的异步TCP解决方案。
 
     

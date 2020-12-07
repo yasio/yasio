@@ -5,10 +5,10 @@ local yasio = require 'yasio' -- constants
 local io_service = yasio.io_service
 local stopFlag = 0
 
-local hostent = {host = '0.0.0.0', port = 8081}
+local hostent = {host = '0.0.0.0', port = 12191}
 local hostents = {
-    {host = '0.0.0.0', port = 8081},
-    {host = '0.0.0.0', port = 8082}
+    {host = '0.0.0.0', port = 12191},
+    {host = '0.0.0.0', port = 12192}
 }
 
 local server = io_service.new(hostents)
@@ -32,7 +32,7 @@ server:start(function(event)
                     value4 = 301.32,
                     value6 = 13883.197,
                     uname = "halx99",
-                    passwd = "x-studio Pro is a powerful IDE!"
+                    passwd = "yasio - x-studio Pro is a powerful IDE!"
                 }
                 local obs = proto.e101(msg)
    
@@ -43,7 +43,7 @@ server:start(function(event)
                 data_partial2 = data:sub(#data - 10 + 1, #data)
                 
                 -- write the whole packet
-                print('write whole packet with yasio::obstream*')
+                print('yasio - write whole packet with yasio::obstream*')
                 server:write(transport, obs)
                 
                 -- write the partial1
@@ -51,12 +51,10 @@ server:start(function(event)
                 
                 -- write the partial2 after 3 seconds
                 transport1 = transport
-                print('The remain data will be sent after 3 seconds...')
-            else
-                print("create connection with client failed!")
+                print('yasio - the remain data will be sent after 3 seconds...')
             end
         elseif(t == yasio.YEK_CONNECTION_LOST) then -- connection lost event
-            print("The connection is lost!")
+            print("yasio - the connection is lost!")
         end
     end)
  
@@ -84,29 +82,29 @@ client:start(function(event)
         if t == yasio.YEK_PACKET then
             local ibs = event:packet()
             local msg = proto.d101(ibs)
-            print(string.format('receve data from server: %s', msg.passwd))
+            print(string.format('yasio - receve data from server: %s', msg.passwd))
             stopFlag = stopFlag + 1
             -- test buffer out_of_range exception handler
             local _, result = pcall(ibs.read_i8, ibs)
             print(result)
         elseif(t == yasio.YEK_CONNECT_RESPONSE) then -- connect responseType
             if(event:status() == 0) then
-                print("connect server succeed.")
+                print("yasio - connect server succeed.")
                 -- local transport = event:transport()
                 -- local requestData = "GET /index.htm HTTP/1.1\r\nHost: www.ip138.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\r\nAccept: */*;q=0.8\r\nConnection: Close\r\n\r\n"
                 -- client:write(transport, obs)
             else
-                print("connect server failed!")
+                print("yasio - connect server failed!")
             end
         elseif(t == yasio.YEK_CONNECTION_LOST) then -- connection lost event
-            print("The connection is lost!")
+            print("yasio - the connection is lost!")
         end
     end)
 
 -- httpclient 
 local http_client = require 'http_client'
 http_client:sendHttpGetRequest('http://tool.chinaz.com/', function(respData)
-    print(string.format('http request done, %d bytes transferred\n', #respData))
+    print(string.format('yasio - http request done, %d bytes transferred\n', #respData))
     print(respData)
     stopFlag = stopFlag + 1
 end)
@@ -126,7 +124,7 @@ local function yasio_update(dt)
 
     if elapsedTime > 2 and not connectRequested then
         connectRequested = true
-        print('connecting server...')
+        print('yasio - connecting server...')
         client:open(0, yasio.YCK_TCP_CLIENT)
     end
     if elapsedTime > 3 and not partial2Sent then
@@ -139,7 +137,7 @@ local function yasio_update(dt)
 end
 
 if(yasio.loop) then
-    print("start loop main thread to fetch event from yasio io_service!")
+    print("yasio - start loop main thread to fetch event from yasio io_service!")
     yasio.loop(-1, 0.02, function()
             yasio_update(0.02)
         end)

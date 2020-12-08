@@ -48,3 +48,7 @@ void yasio_uelua_init(void* L)
 
   luaregister_yasio(Ls);
 }
+void yasio_uelua_cleanup()
+{
+  io_service::cleanup_globals();
+}

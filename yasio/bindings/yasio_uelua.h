@@ -29,5 +29,6 @@ SOFTWARE.
 #define YASIO__UELUA_HPP
 
 void yasio_uelua_init(void* L);
+void yasio_uelua_cleanup();
 
 #endif

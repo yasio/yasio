@@ -109,10 +109,17 @@ function _M:sendHttpGetRequest(url, callback)
         print('yasio.http_client: invalid url: ' .. url)
         return false
     end
-
-    if(params.protocol ~= 'http') then
-        print('yasio.http_client: only http supported currently, url=' .. url)
-        return false;
+    
+    local channelKind
+    if params.protocol == 'http' then
+        channelKind = yasio.YCK_TCP_CLIENT
+    elseif params.protocol == 'https' then
+        channelKind = yasio.YCK_SSL_CLIENT -- only present when natvie yasio compiled with YASIO_HAVE_SSL
+    end
+    
+    if not channelKind then
+        print('yasio.http_client: unsupported protocol, url=' .. url)
+        return false 
     end
 
     local idleChannelIndex = -1
@@ -134,7 +141,7 @@ function _M:sendHttpGetRequest(url, callback)
         }
         self.requests[idleChannelIndex] = requestItem
         self.service:set_option(yasio.YOPT_C_REMOTE_ENDPOINT, idleChannelIndex, params.host, params.port)
-        self.service:open(idleChannelIndex, yasio.YCK_TCP_CLIENT)
+        self.service:open(idleChannelIndex, channelKind)
         return true
     else
         print('yasio.http_client: no idle channel to send http request for url: ' .. url)

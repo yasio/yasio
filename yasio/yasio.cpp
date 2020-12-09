@@ -345,11 +345,11 @@ int io_channel::configure_multicast_group(bool onoff)
     return socket_->set_optval(IPPROTO_IPV6, onoff ? IPV6_JOIN_GROUP : IPV6_LEAVE_GROUP, &mreq_v6, (int)sizeof(mreq_v6));
   }
 }
-void io_channel::set_host(std::string host)
+void io_channel::set_host(cxx17::string_view host)
 {
   if (this->remote_host_ != host)
   {
-    this->remote_host_ = std::move(host);
+    cxx17::assign(this->remote_host_, host);
     yasio__setbits(properties_, YCPF_HOST_MOD);
   }
 }

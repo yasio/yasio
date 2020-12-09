@@ -320,10 +320,10 @@ typedef completion_cb_t io_completion_cb_t;
 
 struct io_hostent {
   io_hostent() = default;
-  io_hostent(std::string ip, u_short port) : host_(std::move(ip)), port_(port) {}
+  io_hostent(cxx17::string_view ip, u_short port) : host_(cxx17::svtos(ip)), port_(port) {}
   io_hostent(io_hostent&& rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
   io_hostent(const io_hostent& rhs) : host_(rhs.host_), port_(rhs.port_) {}
-  void set_ip(const std::string& value) { host_ = value; }
+  void set_ip(cxx17::string_view ip) { cxx17::assign(host_, ip); }
   const std::string& get_ip() const { return host_; }
   void set_port(u_short port) { port_ = port; }
   u_short get_port() const { return port_; }
@@ -463,13 +463,13 @@ protected:
 private:
   YASIO__DECL io_channel(io_service& service, int index);
 
-  void set_address(std::string host, u_short port)
+  void set_address(cxx17::string_view host, u_short port)
   {
     set_host(host);
     set_port(port);
   }
 
-  YASIO__DECL void set_host(std::string host);
+  YASIO__DECL void set_host(cxx17::string_view host);
   YASIO__DECL void set_port(u_short port);
 
   // configure address, check whether needs dns queries

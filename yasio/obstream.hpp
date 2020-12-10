@@ -85,11 +85,10 @@ public:
   bool empty() const { return buffer_.empty(); }
   size_t length() const { return buffer_.size(); }
   const char* data() const { return buffer_.data(); }
+  char* data() { return buffer_.data(); }
 
   const std::vector<char>& buffer() const { return buffer_; }
   std::vector<char>& buffer() { return buffer_; }
-
-  char* wptr(ptrdiff_t offset = 0) { return &buffer_.front() + offset; }
 
   template <typename _Nty> inline void write(_Nty value)
   {
@@ -100,9 +99,9 @@ public:
   /* write 7bit encoded variant integer value
   ** @dotnet BinaryWriter.Write7BitEncodedInt(64)
   */
-  template <typename _IntType> inline void write_ix(_IntType value);
+  template <typename _Intty> inline void write_ix(_Intty value);
 
-  template <typename _Nty> inline void pwrite(ptrdiff_t offset, const _Nty value) { swrite(wptr(offset), value); }
+  template <typename _Nty> inline void pwrite(ptrdiff_t offset, const _Nty value) { swrite(this->data() + offset, value); }
   template <typename _Nty> static void swrite(void* ptr, const _Nty value)
   {
     auto nv = yasio::endian::htonv(value);
@@ -111,7 +110,7 @@ public:
 
   YASIO__DECL obstream sub(size_t offset, size_t count = -1);
 
-  YASIO__DECL void save(const char* filename);
+  YASIO__DECL void save(const char* filename) const;
 
 private:
   template <typename _LenT> inline void write_v_fx(cxx17::string_view value)

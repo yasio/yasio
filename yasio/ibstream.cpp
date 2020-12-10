@@ -33,6 +33,8 @@ SOFTWARE.
 #  include "yasio/ibstream.hpp"
 #endif
 
+#include <fstream>
+
 #ifdef _WIN32
 #  pragma comment(lib, "ws2_32.lib")
 #endif
@@ -220,7 +222,23 @@ ptrdiff_t ibstream_view::seek(ptrdiff_t offset, int whence)
 /// --------------------- CLASS ibstream ---------------------
 ibstream::ibstream(std::vector<char> blob) : ibstream_view(), blob_(std::move(blob)) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }
 ibstream::ibstream(const obstream* obs) : ibstream_view(), blob_(obs->buffer()) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }
-
+bool ibstream::load(const char* filename) {
+  std::ifstream fin;
+  fin.open(filename, std::ios::binary);
+  if (fin.is_open())
+  {
+    fin.seekg(0, std::ios_base::end);
+    auto size = fin.tellg();
+    if (size > 0)
+    {
+      blob_.resize(static_cast<size_t>(size));
+      fin.seekg(0, std::ios_base::beg);
+      fin.read(blob_.data(), blob_.size());
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace yasio
 
 #endif

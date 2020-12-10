@@ -130,7 +130,7 @@ class ibstream : public ibstream_view {
 public:
   YASIO__DECL ibstream(std::vector<char> blob);
   YASIO__DECL ibstream(const obstream* obs);
-
+  YASIO__DECL bool load(const char* filename);
 private:
   std::vector<char> blob_;
 };

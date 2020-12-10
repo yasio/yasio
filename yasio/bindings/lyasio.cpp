@@ -144,13 +144,13 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
             std::vector<io_hostent> hosts;
             auto host = channel_eps["host"];
             if (host.valid())
-              hosts.push_back(io_hostent(host, channel_eps["port"]));
+              hosts.push_back(io_hostent(host.get<cxx17::string_view>(), channel_eps["port"]));
             else
             {
               for (auto item : channel_eps)
               {
                 auto ep = item.second.as<sol::table>();
-                hosts.push_back(io_hostent(ep["host"], ep["port"]));
+                hosts.push_back(io_hostent(ep["host"].get<cxx17::string_view>(), ep["port"]));
               }
             }
             return new (&uninitialized_memory)

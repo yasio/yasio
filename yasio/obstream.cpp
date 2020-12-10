@@ -85,14 +85,14 @@ void obstream::pop24()
 {
   auto offset = offset_stack_.top();
   auto value  = htonl(static_cast<uint32_t>(buffer_.size() - offset - 3)) >> 8;
-  memcpy(wptr(offset), &value, 3);
+  memcpy(this->data() + offset, &value, 3);
   offset_stack_.pop();
 }
 void obstream::pop24(uint32_t value)
 {
   auto offset = offset_stack_.top();
   value       = htonl(value) >> 8;
-  memcpy(wptr(offset), &value, 3);
+  memcpy(this->data() + offset, &value, 3);
   offset_stack_.pop();
 }
 
@@ -167,13 +167,12 @@ void obstream::write_bytes(std::streamoff offset, const void* v, int vl)
     ::memcpy(buffer_.data() + offset, v, vl);
 }
 
-void obstream::save(const char* filename)
+void obstream::save(const char* filename) const
 {
   std::ofstream fout;
   fout.open(filename, std::ios::binary);
-  if (!this->buffer_.empty())
-    fout.write(&this->buffer_.front(), this->length());
-  fout.close();
+  if (!this->empty())
+    fout.write(this->data(), this->length());
 }
 
 obstream obstream::sub(size_t offset, size_t count)

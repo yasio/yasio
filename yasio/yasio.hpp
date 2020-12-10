@@ -81,25 +81,26 @@ namespace inet
 enum
 { // lgtm [cpp/irregular-enum-init]
 
-  // Set with deferred dispatch event, default is: 1
+  // Set with deferred dispatch event.
   // params: deferred_event:int(1)
   YOPT_S_DEFERRED_EVENT = 1,
 
-  // Set custom resolve function, native C++ ONLY
+  // Set custom resolve function, native C++ ONLY.
   // params: func:resolv_fn_t*
+  // remarks: you must ensure thread safe of it.
   YOPT_S_RESOLV_FN,
 
-  // Set custom print function, native C++ ONLY, you must ensure thread safe of it.
-  // remark:
+  // Set custom print function, native C++ ONLY.
   // parmas: func:print_fn_t
+  // remarks: you must ensure thread safe of it.
   YOPT_S_PRINT_FN,
 
-  // Set custom print function, native C++ ONLY, you must ensure thread safe of it.
-  // remark:
+  // Set custom print function, native C++ ONLY.
   // parmas: func:print_fn2_t
+  // remarks: you must ensure thread safe of it.
   YOPT_S_PRINT_FN2,
 
-  // Set custom print function
+  // Set event callback
   // params: func:event_cb_t*
   YOPT_S_EVENT_CB,
 
@@ -108,11 +109,11 @@ enum
   YOPT_S_TCP_KEEPALIVE,
 
   // Don't start a new thread to run event loop
-  // value:int(0)
+  // params: value:int(0)
   YOPT_S_NO_NEW_THREAD,
 
   // Sets ssl verification cert, if empty, don't verify
-  // value:const char*
+  // params: path:const char*
   YOPT_S_SSL_CACERT,
 
   // Set connect timeout in seconds
@@ -125,7 +126,7 @@ enum
 
   // Set dns queries timeout in seconds, default is: 5
   // params: dns_queries_timeout : int(5)
-  // remark:
+  // remarks:
   //         a. this option must be set before 'io_service::start'
   //         b. only works when have c-ares
   //         c. since v3.33.0 it's milliseconds, previous is seconds.
@@ -141,14 +142,14 @@ enum
 
   // Set dns queries tries when timeout reached, default is: 5
   // params: dns_queries_tries : int(5)
-  // remark:
+  // remarks:
   //        a. this option must be set before 'io_service::start'
   //        b. relative option: YOPT_S_DNS_QUERIES_TIMEOUT
   YOPT_S_DNS_QUERIES_TRIES,
 
   // Set dns server dirty
   // params: reserved : int(1)
-  // remark:
+  // remarks:
   //        a. this option only works with c-ares enabled
   //        b. you should set this option after your mobile network changed
   YOPT_S_DNS_DIRTY,
@@ -166,7 +167,7 @@ enum
   //     length_adjustment:int(0),
   YOPT_C_LFBFD_PARAMS,
 
-  // Sets channel length field based frame decode initial bytes to strip, default is 0
+  // Sets channel length field based frame decode initial bytes to strip
   // params:
   //     index:int,
   //     initial_bytes_to_strip:int(0)
@@ -196,7 +197,7 @@ enum
   // params: index:int, ip:const char*, port:int
   YOPT_C_LOCAL_ENDPOINT,
 
-  // Sets channl flags
+  // Mods channl flags
   // params: index:int, flagsToAdd:int, flagsToRemove:int
   YOPT_C_MOD_FLAGS,
 
@@ -214,12 +215,12 @@ enum
 
   // Change 4-tuple association for io_transport_udp
   // params: transport:transport_handle_t
-  // remark: only works for udp client transport
+  // remarks: only works for udp client transport
   YOPT_T_CONNECT,
 
   // Dissolve 4-tuple association for io_transport_udp
   // params: transport:transport_handle_t
-  // remark: only works for udp client transport
+  // remarks: only works for udp client transport
   YOPT_T_DISCONNECT,
 
   // Sets io_base sockopt

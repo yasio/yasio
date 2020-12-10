@@ -124,8 +124,8 @@ enum
   // params: dns_cache_timeout : int(600),
   YOPT_S_DNS_CACHE_TIMEOUT,
 
-  // Set dns queries timeout in seconds, default is: 5
-  // params: dns_queries_timeout : int(5)
+  // Set dns queries timeout in milliseconds, default is: 5000
+  // params: dns_queries_timeout : int(5000)
   // remarks:
   //         a. this option must be set before 'io_service::start'
   //         b. only works when have c-ares
@@ -136,8 +136,7 @@ enum
   //         https://c-ares.haxx.se/ares_init_options.html
   YOPT_S_DNS_QUERIES_TIMEOUT,
 
-  // Set dns queries timeout in milliseconds, default is: 5000
-  // remark: same with YOPT_S_DNS_QUERIES_TIMEOUT, but in mmilliseconds
+  // [DEPRECATED], same with YOPT_S_DNS_QUERIES_TIMEOUT
   YOPT_S_DNS_QUERIES_TIMEOUTMS,
 
   // Set dns queries tries when timeout reached, default is: 5

@@ -28,7 +28,7 @@
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
 
 ## 集成案例
-* [xlua](https://github.com/yasio/DemoU3D): 将yasio集成到xlua, 使基于xlua的unity3d可以直接使用yasio的lua绑定接口。
+* [xlua](https://github.com/yasio/xLua): 将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
 * Unreal Engine 4
   - [DemoUE4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4
   - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal

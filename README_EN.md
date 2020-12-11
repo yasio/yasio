@@ -29,7 +29,7 @@
 * [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
 
 ## Integration Demos
-* [xlua](https://github.com/yasio/DemoU3D): Integrate yasio to xlua, make the unity3d game project based on xlua can use yasio lua bindings APIs.
+* [xlua](https://github.com/yasio/xLua): Integrate yasio to xlua, open scene `U3DScripting` and run it.
 * Unreal Engine 4
   - [DemoUE4](https://github.com/yasio/DemoUE4): Demo for Unreal Engine 4
   - [sluaunreal](https://github.com/yasio/sluaunreal): Integrate to Tencent's sluaunreal(A lua bindings solution for UE4)

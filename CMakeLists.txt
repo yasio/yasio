@@ -57,8 +57,8 @@ option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 
 
-if (NOT YASIO_BUILD_CXX_STD)
-    set(YASIO_BUILD_CXX_STD 11)
+if (NOT CXX_STD)
+    set(CXX_STD 11)
 endif()
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
@@ -244,13 +244,13 @@ macro(ConfigTargetSSL target_name)
 endmacro()
 
 # --- The compiler flags
-message("-- Building yasio with cpp${YASIO_BUILD_CXX_STD} support")
+message("-- Building yasio with cpp${CXX_STD} support")
 if ( IOS )
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
 endif ()
 if (NOT WIN32 OR CYGWIN)
-    if (YASIO_BUILD_CXX_STD EQUAL 17)
+    if (CXX_STD EQUAL 17)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
         if ( IOS )
             # Aligned deallocation function of type 'void (void *, std::align_val_t) noexcept' is only available on iOS 11 or newer
@@ -259,16 +259,16 @@ if (NOT WIN32 OR CYGWIN)
             # to test does it works well?
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
         endif()
-    elseif(YASIO_BUILD_CXX_STD EQUAL 14)
+    elseif(CXX_STD EQUAL 14)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
     else()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
 else()
-    if(YASIO_BUILD_CXX_STD EQUAL 17)
+    if(CXX_STD EQUAL 17)
         # target_compile_features(yasio PUBLIC cxx_std_17) works
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
-    elseif(YASIO_BUILD_CXX_STD EQUAL 14)
+    elseif(CXX_STD EQUAL 14)
         # target_compile_features(yasio PUBLIC cxx_std_14) not works
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++14")
     endif()

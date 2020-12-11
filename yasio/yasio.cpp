@@ -60,15 +60,15 @@ SOFTWARE.
 #endif
 
 // clang-format off
-#define YASIO_KLOG_CP(level, format, ...)                                                                                                   \
-  do                                                                                                                                        \
-  {                                                                                                                                         \
-    auto& custom_print = cprint();                                                                                                          \
-    auto msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__); \
-    if (custom_print)                                                                                                                       \
-      custom_print(level, msg.c_str());                                                                                                     \
-    else                                                                                                                                    \
-      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                                 \
+#define YASIO_KLOG_CP(level, format, ...)                                                                                    \
+  do                                                                                                                         \
+  {                                                                                                                          \
+    auto& custom_print = cprint();                                                                                           \
+    auto msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", ::yasio::clock<system_clock_t>(), ##__VA_ARGS__); \
+    if (custom_print)                                                                                                        \
+      custom_print(level, msg.c_str());                                                                                      \
+    else                                                                                                                     \
+      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                  \
   } while (false)
 // clang-format on
 
@@ -1472,7 +1472,7 @@ void io_service::recreate_ares_channel()
     destroy_ares_channel();
 
   ares_options options = {};
-  options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::micro::den);
+  options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::milli::den);
   options.tries        = this->options_.dns_queries_tries_;
   int status           = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/);
   if (status == ARES_SUCCESS)
@@ -2173,8 +2173,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       options_.dns_cache_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
       break;
     case YOPT_S_DNS_QUERIES_TIMEOUT:
-      options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::micro::den;
-      break;
     case YOPT_S_DNS_QUERIES_TIMEOUTMS:
       options_.dns_queries_timeout_ = static_cast<highp_time_t>(va_arg(ap, int)) * std::milli::den;
       break;

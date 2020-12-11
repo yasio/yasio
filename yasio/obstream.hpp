@@ -115,7 +115,7 @@ public:
 private:
   template <typename _LenT> inline void write_v_fx(cxx17::string_view value)
   {
-    size_t size = value.size();
+    int size = static_cast<int>(value.size());
     this->write<_LenT>(static_cast<_LenT>(size));
     if (size)
       write_bytes(value.data(), size);

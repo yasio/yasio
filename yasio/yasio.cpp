@@ -60,15 +60,15 @@ SOFTWARE.
 #endif
 
 // clang-format off
-#define YASIO_KLOG_CP(level, format, ...)                                                                                                   \
-  do                                                                                                                                        \
-  {                                                                                                                                         \
-    auto& custom_print = cprint();                                                                                                          \
-    auto msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", highp_clock<system_clock_t>() / std::milli::den, ##__VA_ARGS__); \
-    if (custom_print)                                                                                                                       \
-      custom_print(level, msg.c_str());                                                                                                     \
-    else                                                                                                                                    \
-      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                                 \
+#define YASIO_KLOG_CP(level, format, ...)                                                                                    \
+  do                                                                                                                         \
+  {                                                                                                                          \
+    auto& custom_print = cprint();                                                                                           \
+    auto msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", ::yasio::clock<system_clock_t>(), ##__VA_ARGS__); \
+    if (custom_print)                                                                                                        \
+      custom_print(level, msg.c_str());                                                                                      \
+    else                                                                                                                     \
+      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                  \
   } while (false)
 // clang-format on
 

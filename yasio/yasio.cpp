@@ -1222,7 +1222,6 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
       ctx->socket_->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       ctx->socket_->exclusive_address(true);
-
     if (ctx->local_port_ != 0 || !ctx->local_host_.empty() || yasio__testbits(ctx->properties_, YCM_UDP))
     {
       if (yasio__likely(!yasio__testbits(ctx->properties_, YCM_UDS)))
@@ -1541,8 +1540,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       ctx->socket_->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
-      ctx->socket_->reuse_address(false);
-
+      ctx->socket_->exclusive_address(false);
     if (ctx->socket_->bind(ep) != 0)
     {
       error = xxsocket::get_last_errno();
@@ -1648,11 +1646,10 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       client_sock->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
-      client_sock->reuse_address(false);
+      client_sock->exclusive_address(false);
     if (client_sock->bind(YASIO_ADDR_ANY(peer.af()), ctx->remote_port_) == 0)
     {
       auto transport = static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(client_sock)));
-
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);
 #if !defined(_WIN32)

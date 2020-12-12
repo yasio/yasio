@@ -39,6 +39,8 @@ namespace yasio
 {
 class obstream {
 public:
+  using convert_trait_type = ::yasio::endian::convert_trait<::yasio::endian::network_convert_tag>;
+
   YASIO__DECL obstream(size_t capacity = 128);
   YASIO__DECL obstream(const obstream& rhs);
   YASIO__DECL obstream(obstream&& rhs);
@@ -92,7 +94,7 @@ public:
 
   template <typename _Nty> inline void write(_Nty value)
   {
-    auto nv = yasio::endian::htonv(value);
+    auto nv = convert_trait_type::to<_Nty>(value);
     write_bytes(&nv, sizeof(nv));
   }
 
@@ -104,7 +106,7 @@ public:
   template <typename _Nty> inline void pwrite(ptrdiff_t offset, const _Nty value) { swrite(this->data() + offset, value); }
   template <typename _Nty> static void swrite(void* ptr, const _Nty value)
   {
-    auto nv = yasio::endian::htonv(value);
+    auto nv = convert_trait_type::to<_Nty>(value);
     ::memcpy(ptr, &nv, sizeof(nv));
   }
 
@@ -137,18 +139,6 @@ protected:
   std::vector<char> buffer_;
   std::stack<size_t> offset_stack_;
 }; // CLASS obstream
-
-template <> inline void obstream::write<float>(float value)
-{
-  auto nv = htonf(value);
-  write_bytes(&nv, sizeof(nv));
-}
-
-template <> inline void obstream::write<double>(double value)
-{
-  auto nv = htond(value);
-  write_bytes(&nv, sizeof(nv));
-}
 
 // int32_t
 template <> inline void obstream::write_ix<int32_t>(int32_t value) { write_ix_impl<int32_t>(value); }

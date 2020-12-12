@@ -222,7 +222,9 @@ ptrdiff_t ibstream_view::seek(ptrdiff_t offset, int whence)
 /// --------------------- CLASS ibstream ---------------------
 ibstream::ibstream(std::vector<char> blob) : ibstream_view(), blob_(std::move(blob)) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }
 ibstream::ibstream(const obstream* obs) : ibstream_view(), blob_(obs->buffer()) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }
-bool ibstream::load(const char* filename) {
+
+bool ibstream::load(const char* filename)
+{
   std::ifstream fin;
   fin.open(filename, std::ios::binary);
   if (fin.is_open())

@@ -40,6 +40,8 @@ namespace yasio
 class obstream;
 class ibstream_view {
 public:
+  using convert_trait_type = ::yasio::endian::convert_trait<::yasio::endian::network_convert_tag>;
+
   YASIO__DECL ibstream_view();
   YASIO__DECL ibstream_view(const void* data, size_t size);
   YASIO__DECL ibstream_view(const obstream*);
@@ -87,7 +89,8 @@ public:
   {
     _Nty value;
     ::memcpy(&value, ptr, sizeof(value));
-    return yasio::endian::ntohv(value);
+
+    return convert_trait_type::from<_Nty>(value);
   }
 
   template <typename _LenT> inline cxx17::string_view read_v_fx()
@@ -110,19 +113,6 @@ protected:
   const char* ptr_;
 };
 
-template <> inline float ibstream_view::sread<float>(const void* ptr)
-{
-  uint32_t nv;
-  ::memcpy(&nv, ptr, sizeof(nv));
-  return ntohf(nv);
-}
-template <> inline double ibstream_view::sread<double>(const void* ptr)
-{
-  uint64_t nv;
-  ::memcpy(&nv, ptr, sizeof(nv));
-  return ntohd(nv);
-}
-
 template <> YASIO__DECL int32_t ibstream_view::read_ix<int32_t>();
 template <> YASIO__DECL int64_t ibstream_view::read_ix<int64_t>();
 
@@ -131,6 +121,7 @@ class ibstream : public ibstream_view {
 public:
   YASIO__DECL ibstream(std::vector<char> blob);
   YASIO__DECL ibstream(const obstream* obs);
+
   YASIO__DECL bool load(const char* filename);
 
 private:

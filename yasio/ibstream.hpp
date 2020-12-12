@@ -78,8 +78,8 @@ public:
   YASIO__DECL cxx17::string_view read_bytes(int len);
 
   bool empty() const { return first_ == last_; }
-  size_t length(void) { return last_ - first_; }
-  const char* data() { return first_; }
+  size_t length(void) const { return last_ - first_; }
+  const char* data() const { return first_; }
 
   YASIO__DECL ptrdiff_t seek(ptrdiff_t offset, int whence);
 

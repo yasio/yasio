@@ -5,6 +5,7 @@ yasio-3.35.0 (dev)
 - Add io_service::cleanup_globals  
 *It's useful to clear custom print function object when you unload the module
 (usually .dll or .so) which contains the function object.*
+- Fix socket reuse_address behavior since v3.33.7
   
   
 yasio-3.34.0

@@ -236,6 +236,7 @@ bool ibstream::load(const char* filename)
       blob_.resize(static_cast<size_t>(size));
       fin.seekg(0, std::ios_base::beg);
       fin.read(blob_.data(), blob_.size());
+      this->reset(blob_.data(), static_cast<int>(blob_.size()));
       return true;
     }
   }

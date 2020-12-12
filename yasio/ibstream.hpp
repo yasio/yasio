@@ -40,7 +40,7 @@ namespace yasio
 class obstream;
 class ibstream_view {
 public:
-  using convert_trait_type = ::yasio::endian::convert_trait<::yasio::endian::network_convert_tag>;
+  using traits_type = ::yasio::endian::convert_traits<::yasio::endian::network_convert_tag>;
 
   YASIO__DECL ibstream_view();
   YASIO__DECL ibstream_view(const void* data, size_t size);
@@ -84,22 +84,18 @@ public:
   YASIO__DECL ptrdiff_t seek(ptrdiff_t offset, int whence);
 
   template <typename _Nty> inline _Nty read() { return sread<_Nty>(consume(sizeof(_Nty))); }
-
   template <typename _Nty> static _Nty sread(const void* ptr)
   {
     _Nty value;
     ::memcpy(&value, ptr, sizeof(value));
-
-    return convert_trait_type::from<_Nty>(value);
+    return traits_type::from<_Nty>(value);
   }
 
   template <typename _LenT> inline cxx17::string_view read_v_fx()
   {
     _LenT n = this->read<_LenT>();
-
     if (n > 0)
       return read_bytes(n);
-
     return {};
   }
 
@@ -119,6 +115,7 @@ template <> YASIO__DECL int64_t ibstream_view::read_ix<int64_t>();
 /// --------------------- CLASS ibstream ---------------------
 class ibstream : public ibstream_view {
 public:
+  ibstream() {}
   YASIO__DECL ibstream(std::vector<char> blob);
   YASIO__DECL ibstream(const obstream* obs);
 

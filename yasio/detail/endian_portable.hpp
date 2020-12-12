@@ -128,18 +128,18 @@ template <typename _Ty> static inline _Ty host_to_network(_Ty value) { return by
 template <typename _Ty> static inline _Ty network_to_host(_Ty value) { return byte_order_impl<_Ty, sizeof(_Ty)>::network_to_host(value); }
 
 /// <summary>
-/// CLASS TEMPLATE convert_trait
+/// CLASS TEMPLATE convert_traits
 /// </summary>
 struct network_convert_tag {};
 struct host_convert_tag {};
-template <typename _TT> struct convert_trait {};
+template <typename _TT> struct convert_traits {};
 
-template <> struct convert_trait<network_convert_tag> {
+template <> struct convert_traits<network_convert_tag> {
   template <typename _Ty> static inline _Ty to(_Ty value) { return host_to_network<_Ty>(value); }
   template <typename _Ty> static inline _Ty from(_Ty value) { return network_to_host<_Ty>(value); }
 };
 
-template <> struct convert_trait<host_convert_tag> {
+template <> struct convert_traits<host_convert_tag> {
   template <typename _Ty> static inline _Ty to(_Ty value) { return value; }
   template <typename _Ty> static inline _Ty from(_Ty value) { return value; }
 };

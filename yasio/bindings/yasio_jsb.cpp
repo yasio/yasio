@@ -1799,12 +1799,14 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
         case YOPT_C_ENABLE_MCAST:
         case YOPT_C_LOCAL_ENDPOINT:
         case YOPT_C_REMOTE_ENDPOINT:
-        case YOPT_C_MOD_FLAGS:
           if (args[2].isString())
           {
             JSStringWrapper str(args[2].toString());
             service->set_option(opt, args[1].toInt32(), str.get(), args[3].toInt32());
           }
+          break;
+        case YOPT_C_MOD_FLAGS:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
         case YOPT_S_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());

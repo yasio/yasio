@@ -165,12 +165,12 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
         service->start([=](event_ptr ev) { cb(std::move(ev)); });
       },
       "stop", &io_service::stop, "set_option",
-      [](io_service* service, int opt, sol::variadic_args va) {
+      [](io_service* service, int opt, sol::variadic_args args) {
         switch (opt)
         {
           case YOPT_C_LOCAL_HOST:
           case YOPT_C_REMOTE_HOST:
-            service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char*>());
+            service->set_option(opt, static_cast<int>(args[0]), args[1].as<const char*>());
             break;
 #  if YASIO_VERSION_NUM >= 0x033100
           case YOPT_C_LFBFD_IBTS:
@@ -178,34 +178,38 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
           case YOPT_C_LOCAL_PORT:
           case YOPT_C_REMOTE_PORT:
           case YOPT_C_KCP_CONV:
-            service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]));
+            service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
             break;
           case YOPT_C_ENABLE_MCAST:
           case YOPT_C_LOCAL_ENDPOINT:
           case YOPT_C_REMOTE_ENDPOINT:
+            service->set_option(opt, static_cast<int>(args[0]), args[1].as<const char*>(),
+                                static_cast<int>(args[2]));
+            break;
           case YOPT_C_MOD_FLAGS:
-            service->set_option(opt, static_cast<int>(va[0]), va[1].as<const char*>(),
-                                static_cast<int>(va[2]));
+            service->set_option(opt, static_cast<int>(args[0]),
+                              static_cast<int>(args[1]),
+                              static_cast<int>(args[2]));
             break;
           case YOPT_S_TCP_KEEPALIVE:
-            service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
-                                static_cast<int>(va[2]));
+            service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
+                                static_cast<int>(args[2]));
             break;
           case YOPT_C_LFBFD_PARAMS:
-            service->set_option(opt, static_cast<int>(va[0]), static_cast<int>(va[1]),
-                                static_cast<int>(va[2]), static_cast<int>(va[3]),
-                                static_cast<int>(va[4]));
+            service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),
+                                static_cast<int>(args[2]), static_cast<int>(args[3]),
+                                static_cast<int>(args[4]));
             break;
           case YOPT_S_EVENT_CB:
             (void)0;
             {
-              sol::function fn     = va[0];
+              sol::function fn     = args[0];
               io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void { fn(std::move(e)); };
               service->set_option(opt, std::addressof(fnwrap));
             }
             break;
           default:
-            service->set_option(opt, static_cast<int>(va[0]));
+            service->set_option(opt, static_cast<int>(args[0]));
         }
       },
       "dispatch", &io_service::dispatch, "open", &io_service::open, "is_open",
@@ -541,10 +545,14 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                   case YOPT_C_ENABLE_MCAST:
                   case YOPT_C_LOCAL_ENDPOINT:
                   case YOPT_C_REMOTE_ENDPOINT:
-                  case YOPT_C_MOD_FLAGS:
                     service->set_option(opt, static_cast<int>(args[0]),
                                         static_cast<const char*>(args[1]),
                                         static_cast<int>(args[2]));
+                    break;
+                  case YOPT_C_MOD_FLAGS:
+                    service->set_option(opt, static_cast<int>(args[0]),
+                                      static_cast<int>(args[1]),
+                                      static_cast<int>(args[2]));
                     break;
                   case YOPT_S_TCP_KEEPALIVE:
                     service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]),

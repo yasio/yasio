@@ -1,3 +1,9 @@
+yasio-3.34.2
+  
+- Provides normally byte order convert function templates `host_to_network` and `network_to_host` at `namespace yasio::endian`.
+- Using new `yasio::endian::convert_traits<network_convert_tag>` for `obstream` and `ibstream` byte order convertion.
+  
+  
 yasio-3.34.1
   
 - Add io_service::cleanup_globals  

@@ -209,10 +209,10 @@ ptrdiff_t ibstream_view::seek(ptrdiff_t offset, int whence)
         ptr_ = last_;
       break;
     case SEEK_END:
-      ptr_ = first_;
+      ptr_ = last_ - offset;
       break;
     case SEEK_SET:
-      ptr_ = last_;
+      ptr_ = first_ + offset;
       break;
     default:;
   }

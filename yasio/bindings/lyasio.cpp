@@ -268,14 +268,15 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       },
       "write_bytes",
       static_cast<void (yasio::obstream::*)(cxx17::string_view)>(&yasio::obstream::write_bytes),
-      "length", &yasio::obstream::length, "to_string",
-      [](yasio::obstream* obs) { return cxx17::string_view(obs->data(), obs->length()); });
+      "length", &yasio::obstream::length, 
+	  "to_string", [](yasio::obstream* obs) { return cxx17::string_view(obs->data(), obs->length()); }, 
+      "save", &yasio::obstream::save);
 
   // ##-- yasio::ibstream
   lyasio.new_usertype<yasio::ibstream>(
-      "ibstream",
-      sol::constructors<yasio::ibstream(std::vector<char>),
+      "ibstream", sol::constructors<yasio::ibstream(), yasio::ibstream(std::vector<char>),
                         yasio::ibstream(const yasio::obstream*)>(),
+      "load", &yasio::ibstream::load,
       "read_ix", &yasio::ibstream::read_ix<int64_t>,
       "read_bool", &yasio::ibstream::read<bool>, "read_i8", &yasio::ibstream::read<int8_t>,
       "read_i16", &yasio::ibstream::read<int16_t>, "read_i24", &yasio::ibstream::read_i24,

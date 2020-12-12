@@ -4,7 +4,7 @@
 # http://opensource.org/licenses/MIT
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0.2)
 
 # The workaround for solve try_compile failed with code sign
 # since cmake-3.18.2, not required
@@ -36,6 +36,8 @@ if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
         endif()
     endif()
 endif()
+
+cmake_policy(SET CMP0048 NEW)
 
 project(yasio)
 

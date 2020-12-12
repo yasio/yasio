@@ -188,13 +188,12 @@ cxx17::string_view ibstream_view::read_bytes(int len)
 
 const char* ibstream_view::consume(size_t size)
 {
-  if (ptr_ >= last_)
-    YASIO__THROW(std::out_of_range("ibstream_view::consume out of range!"), nullptr);
-
-  auto ptr = ptr_;
-  ptr_ += size;
-
-  return ptr;
+  if ( (ptr_ + size) <= last_ ) {
+    auto ptr = ptr_;
+    ptr_ += size;
+    return ptr;
+  }
+  YASIO__THROW(std::out_of_range("ibstream_view::consume out of range!"), nullptr);
 }
 
 ptrdiff_t ibstream_view::seek(ptrdiff_t offset, int whence)

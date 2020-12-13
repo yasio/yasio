@@ -44,12 +44,8 @@ SOFTWARE.
 
 // IEEE 754 16-bit half-precision floating-point
 #if defined(YASIO_HAVE_HALF_FLOAT)
-#  if defined(_WIN32)
-#    include "half/half.hpp"
+#  include "half/half.hpp"
 typedef half_float::half fp16_t;
-#  else
-typedef __fp16 fp16_t;
-#  endif
 #  define YASIO__SWAP_SHORT(s) ((((s) >> 8) & 0x00ff) | (((s) << 8) & 0xff00))
 #endif
 

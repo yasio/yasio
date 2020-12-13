@@ -101,16 +101,9 @@ SOFTWARE.
 // #define YASIO_MINIFY_EVENT 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_HAVE_HALF_FLOAT to enable half-precision floating-point library
+** Uncomment or add compiler flag -DYASIO_HAVE_HALF_FLOAT to enable half-precision floating-point support
 */
 // #define YASIO_HAVE_HALF_FLOAT 1
-
-/*
- * config IEEE 754 16-bit half-precision floating-point
- */
-#if YASIO__HAS_FP16 && !defined(YASIO_HAVE_HALF_FLOAT)
-#  define YASIO_HAVE_HALF_FLOAT 1
-#endif
 
 /*
 ** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and

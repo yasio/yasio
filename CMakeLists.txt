@@ -54,6 +54,7 @@ option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
+option(YASIO_BUILD_WITH_HALF "Build yasio with half-precision floating-point library" ON)
 
 
 if (NOT CXX_STD)
@@ -77,6 +78,10 @@ include_directories(
 )
 
 # --- The yasio optional dependencies
+
+if(YASIO_BUILD_WITH_HALF)
+    add_definitions(-DYASIO_HAVE_HALF_FLOAT=1)
+endif()
 
 ### openssl support
 if (YASIO_BUILD_WITH_SSL)

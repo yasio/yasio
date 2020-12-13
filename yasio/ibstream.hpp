@@ -28,13 +28,10 @@ SOFTWARE.
 #ifndef YASIO__IBSTREAM_HPP
 #define YASIO__IBSTREAM_HPP
 #include <stddef.h>
-#include <string>
-#include <sstream>
 #include <exception>
 #include <vector>
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/detail/endian_portable.hpp"
-#include "yasio/detail/config.hpp"
 namespace yasio
 {
 class obstream;

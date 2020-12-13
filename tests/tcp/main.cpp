@@ -154,6 +154,7 @@ void yasioTest()
   obstest.write_i24(-16);
   obstest.write_ix<int32_t>(20201125);
   obstest.write_ix<int64_t>(-9223372036854775807);
+  obstest.write(static_cast<fp16_t>(3.85f));
   obstest.pop24();
 
   yasio::ibstream_view ibs(obstest.data(), static_cast<int>(obstest.length()));
@@ -166,8 +167,9 @@ void yasioTest()
   auto v4 = ibs.read_i24(); // should be -16
   auto v5 = ibs.read_ix<int32_t>();
   auto v6 = ibs.read_ix<int64_t>();
+  auto v7 = static_cast<float>(ibs.read<fp16_t>());
 
-  std::cout << r1 << ", " << f1 << ", " << v1 << ", " << v2 << ", " << v3 << ", " << v4 << ", " << v5 << ", " << v6 << "\n";
+  std::cout << r1 << ", " << f1 << ", " << v1 << ", " << v2 << ", " << v3 << ", " << v4 << ", " << v5 << ", " << v6 << ", " << v7 << "\n";
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 

@@ -40,6 +40,19 @@ SOFTWARE.
 #  include <arpa/inet.h>
 #endif
 
+#include "yasio/detail/config.hpp"
+
+// IEEE 754 16-bit half-precision floating-point
+#if defined(YASIO_HAVE_HALF_FLOAT)
+#  if defined(_WIN32)
+#    include "half/half.hpp"
+typedef half_float::half fp16_t;
+#  else
+typedef __fp16 fp16_t;
+#  endif
+#  define YASIO__SWAP_SHORT(s) ((((s) >> 8) & 0x00ff) | (((s) << 8) & 0xff00))
+#endif
+
 #if !defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1800) || (NTDDI_VERSION <= 0x06010000 && !defined(WINRT))
 
 // clang-format off
@@ -104,6 +117,18 @@ template <typename _Ty> struct byte_order_impl<_Ty, sizeof(int64_t)> {
   static inline _Ty network_to_host(_Ty value) { return static_cast<_Ty>(ntohll(static_cast<uint64_t>(value))); }
 };
 
+#if defined(YASIO_HAVE_HALF_FLOAT)
+template <> struct byte_order_impl<fp16_t, sizeof(fp16_t)> {
+  static inline fp16_t host_to_network(fp16_t value)
+  {
+    uint16_t* p = (uint16_t*)&value;
+    *p          = YASIO__SWAP_SHORT(*p);
+    return value;
+  }
+  static inline fp16_t network_to_host(fp16_t value) { return host_to_network(value); }
+};
+#endif
+
 template <> struct byte_order_impl<float, sizeof(float)> {
   static inline float host_to_network(float value)
   {
@@ -124,8 +149,8 @@ template <> struct byte_order_impl<double, sizeof(double)> {
   static inline double network_to_host(double value) { return host_to_network(value); }
 };
 
-template <typename _Ty> static inline _Ty host_to_network(_Ty value) { return byte_order_impl<_Ty, sizeof(_Ty)>::host_to_network(value); }
-template <typename _Ty> static inline _Ty network_to_host(_Ty value) { return byte_order_impl<_Ty, sizeof(_Ty)>::network_to_host(value); }
+template <typename _Ty> inline _Ty host_to_network(_Ty value) { return byte_order_impl<_Ty, sizeof(_Ty)>::host_to_network(value); }
+template <typename _Ty> inline _Ty network_to_host(_Ty value) { return byte_order_impl<_Ty, sizeof(_Ty)>::network_to_host(value); }
 
 /// <summary>
 /// CLASS TEMPLATE convert_traits

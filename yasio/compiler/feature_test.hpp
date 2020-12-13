@@ -108,6 +108,13 @@ SOFTWARE.
 #  endif
 #endif
 
+// Test whether compiler has builtin IEEE 754 16-bit half-precision floating-point type __fp16
+#if defined(_WIN32)
+#  define YASIO__HAS_FP16 0
+#else
+#  define YASIO__HAS_FP16 1
+#endif
+
 // 64bits Sense Macros
 #if defined(_M_X64) || defined(_WIN64) || defined(__LP64__) || defined(_LP64) || defined(__x86_64) || defined(__arm64__) || defined(__aarch64__)
 #  define YASIO__64BITS 1

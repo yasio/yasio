@@ -31,7 +31,6 @@ int main()
           if (event->cindex() == 0)
           {
             obstream obs;
-            obs.write_i24(100);
             obs.push32();
             obs.write_bytes("hello world");
             obs.pop32();

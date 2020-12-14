@@ -246,9 +246,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       "obstream", "push32", &yasio::obstream::push32, "pop32",
       sol::overload(static_cast<void (yasio::obstream ::*)()>(&yasio::obstream::pop32),
                     static_cast<void (yasio::obstream ::*)(uint32_t)>(&yasio::obstream::pop32)),
-      "push24", &yasio::obstream::push24, "pop24",
-      sol::overload(static_cast<void (yasio::obstream ::*)()>(&yasio::obstream::pop24),
-                    static_cast<void (yasio::obstream ::*)(uint32_t)>(&yasio::obstream::pop24)),
       "push16", &yasio::obstream::push16, "pop16",
       sol::overload(static_cast<void (yasio::obstream ::*)()>(&yasio::obstream::pop16),
                     static_cast<void (yasio::obstream ::*)(uint16_t)>(&yasio::obstream::pop16)),
@@ -286,7 +283,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
       "read_i16", &yasio::ibstream::read<int16_t>,
       "read_i32", &yasio::ibstream::read<int32_t>, "read_i64", &yasio::ibstream::read<int64_t>,
       "read_u8", &yasio::ibstream::read<uint8_t>, "read_u16", &yasio::ibstream::read<uint16_t>,
-      "read_u24", &yasio::ibstream::read_u24, "read_u32", &yasio::ibstream::read<uint32_t>,
+      "read_u32", &yasio::ibstream::read<uint32_t>,
       "read_u64", &yasio::ibstream::read<uint64_t>, "read_f", &yasio::ibstream::read<float>,
       "read_lf", &yasio::ibstream::read<double>, "read_v",
       [](yasio::ibstream* ibs, sol::variadic_args args) {

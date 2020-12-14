@@ -18,8 +18,6 @@ function yasioTest() {
       obs.write_bool(false);
       obs.write_i8(256);
       obs.write_i16(20001);
-      obs.write_i24(-298);
-      obs.write_i24(16777215);
       obs.write_i32(20191011);
       obs.write_f(28.9);
       obs.write_lf(209.79);
@@ -74,19 +72,15 @@ function yasioTest() {
       msg.bval2 = ibs.read_bool();
       msg.u8val = ibs.read_i8();
       msg.i16val = ibs.read_i16();
-      msg.i24val = ibs.read_i24();
-      msg.u24val = ibs.read_u24();
       msg.i32val = ibs.read_i32();
       msg.fval = ibs.read_f();
       msg.lfval = ibs.read_lf();
       msg.strval = ibs.read_v();
-      cc.log("receive msg from server -->\n msg.bval1=%s\n msg.bval2=%s\n msg.i8val=%d\n msg.i16val=%d\n msg.i24val=%d\n msg.u24val=%d\n msg.i32val=%d\n msg.fval=%s\n msg.lfval=%s\n msg.strval=%s\n",
+      cc.log("receive msg from server -->\n msg.bval1=%s\n msg.bval2=%s\n msg.i8val=%d\n msg.i16val=%d\n msg.i32val=%d\n msg.fval=%s\n msg.lfval=%s\n msg.strval=%s\n",
         msg.bval1.toString(),
         msg.bval2.toString(),
         msg.u8val,
         msg.i16val,
-        msg.i24val,
-        msg.u24val,
         msg.i32val,
         msg.fval.toString(),
         msg.lfval.toString(),

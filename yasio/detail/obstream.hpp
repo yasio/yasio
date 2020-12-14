@@ -154,9 +154,18 @@ public:
   /* write 7bit encoded variant integer value
   ** @dotnet BinaryWriter.Write7BitEncodedInt(64)
   */
-  template <typename _Intty> inline void write_ix(_Intty value);
-  template <> inline void write_ix<int32_t>(int32_t value) { write_ix_impl<int32_t>(value); }
-  template <> inline void write_ix<int64_t>(int64_t value) { write_ix_impl<int64_t>(value); }
+  template <typename _Intty> inline void write_ix(_Intty value)
+  {
+    // Write out an int 7 bits at a time.  The high bit of the byte,
+    // when on, tells reader to continue reading more bytes.
+    auto v = (typename std::make_unsigned<_Intty>::type)value; // support negative numbers
+    while (v >= 0x80)
+    {
+      write_byte((uint8_t)((uint32_t)v | 0x80));
+      v >>= 7;
+    }
+    write_byte((uint8_t)v);
+  }
 
   template <typename _Nty> inline void pwrite(ptrdiff_t offset, const _Nty value) { swrite(this->data() + offset, value); }
   template <typename _Nty> static void swrite(void* ptr, const _Nty value)
@@ -194,18 +203,6 @@ private:
     this->write<_LenT>(static_cast<_LenT>(size));
     if (size)
       write_bytes(value.data(), size);
-  }
-  template <typename _Ty> void write_ix_impl(_Ty value)
-  {
-    // Write out an int 7 bits at a time.  The high bit of the byte,
-    // when on, tells reader to continue reading more bytes.
-    auto v = (typename std::make_unsigned<_Ty>::type)value; // support negative numbers
-    while (v >= 0x80)
-    {
-      write_byte((uint8_t)((uint32_t)v | 0x80));
-      v >>= 7;
-    }
-    write_byte((uint8_t)v);
   }
 
 protected:

@@ -2,8 +2,8 @@ yasio-3.35.0 (dev)
   
 - Provides normally byte order convert function templates `host_to_network` and `network_to_host` at `namespace yasio::endian`.
 - Reimplement `obstream`, `ibstream` as class templates `basic_obstream`, `basic_ibstream` with convert_traits support.
-- Using new `yasio::endian::convert_traits<network_convert_tag>` for `obstream` and `ibstream` byte order convertion.
-- Using new `yasio::endian::convert_traits<host_convert_tag>` for `fast_obstream` and `fast_ibstream` byte order convertion.
+- Using new `yasio::endian::convert_traits<network_convert_tag>` for `obstream` and `ibstream` with byte order convertion.
+- Using new `yasio::endian::convert_traits<host_convert_tag>` for `fast_obstream` and `fast_ibstream` without byte order convertion.
 - Add io_service::cleanup_globals  
 *It's useful to clear custom print function object when you unload the module
 (usually .dll or .so) which contains the function object.*

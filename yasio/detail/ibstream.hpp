@@ -30,10 +30,94 @@ SOFTWARE.
 #include "yasio/detail/obstream.hpp"
 namespace yasio
 {
+namespace detail
+{
+template <typename _Stream, typename _Intty> struct read_ix_helper {};
+
+template <typename _Stream> struct read_ix_helper<_Stream, int32_t> {
+  static int32_t read_ix(_Stream* stream)
+  {
+    // Unlike writing, we can't delegate to the 64-bit read on
+    // 64-bit platforms. The reason for this is that we want to
+    // stop consuming bytes if we encounter an integer overflow.
+    uint32_t result = 0;
+    uint8_t byteReadJustNow;
+
+    // Read the integer 7 bits at a time. The high bit
+    // of the byte when on means to continue reading more bytes.
+    //
+    // There are two failure cases: we've read more than 5 bytes,
+    // or the fifth byte is about to cause integer overflow.
+    // This means that we can read the first 4 bytes without
+    // worrying about integer overflow.
+    const int MaxBytesWithoutOverflow = 4;
+    for (int shift = 0; shift < MaxBytesWithoutOverflow * 7; shift += 7)
+    {
+      // ReadByte handles end of stream cases for us.
+      byteReadJustNow = stream->read_byte();
+      result |= static_cast<uint32_t>(byteReadJustNow & 0x7Fu) << shift;
+
+      if (byteReadJustNow <= 0x7Fu)
+        return (int)result; // early exit
+    }
+
+    // Read the 5th byte. Since we already read 28 bits,
+    // the value of this byte must fit within 4 bits (32 - 28),
+    // and it must not have the high bit set.
+    byteReadJustNow = stream->read_byte();
+    if (byteReadJustNow <= 0x0fu)
+    {
+      result |= (uint32_t)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
+      return (int)result;
+    }
+
+    YASIO__THROW(std::logic_error("Format_Bad7BitInt32"), 0);
+  }
+};
+
+template <typename _Stream> struct read_ix_helper<_Stream, int64_t> {
+  static int64_t read_ix(_Stream* stream)
+  {
+    uint64_t result = 0;
+    uint8_t byteReadJustNow;
+
+    // Read the integer 7 bits at a time. The high bit
+    // of the byte when on means to continue reading more bytes.
+    //
+    // There are two failure cases: we've read more than 10 bytes,
+    // or the tenth byte is about to cause integer overflow.
+    // This means that we can read the first 9 bytes without
+    // worrying about integer overflow.
+    const int MaxBytesWithoutOverflow = 9;
+    for (int shift = 0; shift < MaxBytesWithoutOverflow * 7; shift += 7)
+    {
+      // ReadByte handles end of stream cases for us.
+      byteReadJustNow = stream->read_byte();
+      result |= static_cast<uint64_t>(byteReadJustNow & 0x7Fu) << shift;
+
+      if (byteReadJustNow <= 0x7Fu)
+        return (int64_t)result; // early exit
+    }
+
+    // Read the 10th byte. Since we already read 63 bits,
+    // the value of this byte must fit within 1 bit (64 - 63),
+    // and it must not have the high bit set.
+    byteReadJustNow = stream->read_byte();
+    if (byteReadJustNow <= 1u)
+    {
+      result |= (uint64_t)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
+      return (int64_t)result;
+    }
+
+    YASIO__THROW(std::logic_error("Format_Bad7BitInt64"), 0);
+  }
+};
+} // namespace detail
+
 template <typename _ConvertTraits> class basic_ibstream_view {
 public:
   using traits_type = _ConvertTraits;
-
+  using my_type     = basic_ibstream_view<_ConvertTraits>;
   basic_ibstream_view() { this->reset("", 0); }
   basic_ibstream_view(const void* data, size_t size) { this->reset(data, size); }
   basic_ibstream_view(const obstream* obs) { this->reset(obs->data(), obs->length()); }
@@ -54,81 +138,7 @@ public:
   /* read 7bit encoded variant integer value
   ** @dotnet BinaryReader.Read7BitEncodedInt(64)
   */
-  template <typename _IntType> _IntType read_ix();
-  template <> int32_t read_ix<int32_t>()
-  {
-    // Unlike writing, we can't delegate to the 64-bit read on
-    // 64-bit platforms. The reason for this is that we want to
-    // stop consuming bytes if we encounter an integer overflow.
-    uint32_t result = 0;
-    uint8_t byteReadJustNow;
-
-    // Read the integer 7 bits at a time. The high bit
-    // of the byte when on means to continue reading more bytes.
-    //
-    // There are two failure cases: we've read more than 5 bytes,
-    // or the fifth byte is about to cause integer overflow.
-    // This means that we can read the first 4 bytes without
-    // worrying about integer overflow.
-    const int MaxBytesWithoutOverflow = 4;
-    for (int shift = 0; shift < MaxBytesWithoutOverflow * 7; shift += 7)
-    {
-      // ReadByte handles end of stream cases for us.
-      byteReadJustNow = read_byte();
-      result |= static_cast<uint32_t>(byteReadJustNow & 0x7Fu) << shift;
-
-      if (byteReadJustNow <= 0x7Fu)
-        return (int)result; // early exit
-    }
-
-    // Read the 5th byte. Since we already read 28 bits,
-    // the value of this byte must fit within 4 bits (32 - 28),
-    // and it must not have the high bit set.
-    byteReadJustNow = read_byte();
-    if (byteReadJustNow <= 0x0fu)
-    {
-      result |= (uint32_t)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
-      return (int)result;
-    }
-
-    YASIO__THROW(std::logic_error("Format_Bad7BitInt32"), 0);
-  }
-
-  template <> int64_t read_ix<int64_t>()
-  {
-    uint64_t result = 0;
-    uint8_t byteReadJustNow;
-
-    // Read the integer 7 bits at a time. The high bit
-    // of the byte when on means to continue reading more bytes.
-    //
-    // There are two failure cases: we've read more than 10 bytes,
-    // or the tenth byte is about to cause integer overflow.
-    // This means that we can read the first 9 bytes without
-    // worrying about integer overflow.
-    const int MaxBytesWithoutOverflow = 9;
-    for (int shift = 0; shift < MaxBytesWithoutOverflow * 7; shift += 7)
-    {
-      // ReadByte handles end of stream cases for us.
-      byteReadJustNow = read_byte();
-      result |= static_cast<uint64_t>(byteReadJustNow & 0x7Fu) << shift;
-
-      if (byteReadJustNow <= 0x7Fu)
-        return (int64_t)result; // early exit
-    }
-
-    // Read the 10th byte. Since we already read 63 bits,
-    // the value of this byte must fit within 1 bit (64 - 63),
-    // and it must not have the high bit set.
-    byteReadJustNow = read_byte();
-    if (byteReadJustNow <= 1u)
-    {
-      result |= (uint64_t)byteReadJustNow << (MaxBytesWithoutOverflow * 7);
-      return (int64_t)result;
-    }
-
-    YASIO__THROW(std::logic_error("Format_Bad7BitInt64"), 0);
-  }
+  template <typename _Intty> _Intty read_ix() { return detail::read_ix_helper<my_type, _Intty>::read_ix(this); }
 
   /* read blob data with '7bit encoded int' length field */
   cxx17::string_view read_v()

@@ -99,14 +99,12 @@ endif()
 
 ### The yasio core library project
 set (YASIO_CORE
+    yasio/detail/obstream.hpp
+    yasio/detail/ibstream.hpp
     yasio/xxsocket.hpp
     yasio/yasio.hpp
-    yasio/ibstream.hpp
-    yasio/obstream.hpp
     yasio/xxsocket.cpp
     yasio/yasio.cpp
-    yasio/ibstream.cpp
-    yasio/obstream.cpp
 )
 
 if (YASIO_BUILD_WITH_KCP)

@@ -280,8 +280,4 @@ using fast_ibstream      = basic_ibstream<::yasio::endian::convert_traits<::yasi
 
 } // namespace yasio
 
-#if defined(YASIO_HEADER_ONLY)
-#  include "yasio/ibstream.cpp" // lgtm [cpp/include-non-header]
-#endif
-
 #endif

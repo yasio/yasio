@@ -6,6 +6,8 @@ yasio-3.35.0 (dev)
 *It's useful to clear custom print function object when you unload the module
 (usually .dll or .so) which contains the function object.*
 - Fix socket reuse_address behavior since v3.33.7
+- Reimplement `obstream`, `ibstream` as `basic_obstream`, `basic_ibstream`, and Add `fast_obstream`,`fast_ibstream` serializer without  
+byte order convertion.
   
   
 yasio-3.34.0

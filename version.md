@@ -9,11 +9,10 @@ yasio-3.35.0 (dev)
 (usually .dll or .so) which contains the function object.*
 - Fix socket reuse_address behavior since v3.33.7
 - Add YOPT_S_DEFER_EVENT_CB.  
-  a. User can do custom packet resolve at network thread,  
-     such as decompress and crc check.  
-  b. Return true, io_service will continue enque to event queue  
-  c. Return false, io_service will drop the event  
-  d. Callback prototype is: typedef std::function<bool(event_ptr& event)> defer_event_cb;
+  *a. User can do custom packet resolve at network thread, such as decompress and crc check.*  
+  *b. Return true, io_service will continue enque to event queue.*  
+  *c. Return false, io_service will drop the event.*  
+  *d. Callback prototype is: typedef std::function<bool(event_ptr& event)> defer_event_cb;*
   
   
 yasio-3.34.0

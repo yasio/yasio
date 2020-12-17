@@ -35,9 +35,35 @@ SOFTWARE.
 #include "yasio/detail/endian_portable.hpp"
 namespace yasio
 {
+namespace detail
+{
+template <typename _Stream, typename _Intty> inline void write_ix_impl(_Stream* stream, _Intty value)
+{
+  // Write out an int 7 bits at a time.  The high bit of the byte,
+  // when on, tells reader to continue reading more bytes.
+  auto v = (typename std::make_unsigned<_Intty>::type)value; // support negative numbers
+  while (v >= 0x80)
+  {
+    stream->write_byte((uint8_t)((uint32_t)v | 0x80));
+    v >>= 7;
+  }
+  stream->write_byte((uint8_t)v);
+}
+template <typename _Stream, typename _Intty> struct write_ix_helper {};
+
+template <typename _Stream> struct write_ix_helper<_Stream, int32_t> {
+  static void write_ix(_Stream* stream, int32_t value) { write_ix_impl<_Stream, int32_t>(stream, value); }
+};
+
+template <typename _Stream> struct write_ix_helper<_Stream, int64_t> {
+  static void write_ix(_Stream* stream, int64_t value) { write_ix_impl<_Stream, int64_t>(stream, value); }
+};
+} // namespace detail
+
 template <typename _ConvertTraits> class basic_obstream {
 public:
   using traits_type = _ConvertTraits;
+  using this_type   = basic_obstream<_ConvertTraits>;
 
   basic_obstream(size_t capacity = 128) { buffer_.reserve(capacity); }
   basic_obstream(const basic_obstream& rhs) : buffer_(rhs.buffer_) {}
@@ -151,21 +177,7 @@ public:
     write_bytes(&nv, sizeof(nv));
   }
 
-  /* write 7bit encoded variant integer value
-  ** @dotnet BinaryWriter.Write7BitEncodedInt(64)
-  */
-  template <typename _Intty> inline void write_ix(_Intty value)
-  {
-    // Write out an int 7 bits at a time.  The high bit of the byte,
-    // when on, tells reader to continue reading more bytes.
-    auto v = (typename std::make_unsigned<_Intty>::type)value; // support negative numbers
-    while (v >= 0x80)
-    {
-      write_byte((uint8_t)((uint32_t)v | 0x80));
-      v >>= 7;
-    }
-    write_byte((uint8_t)v);
-  }
+  template <typename _Intty> void write_ix(_Intty value) { detail::write_ix_helper<this_type, _Intty>::write_ix(this, value); }
 
   template <typename _Nty> inline void pwrite(ptrdiff_t offset, const _Nty value) { swrite(this->data() + offset, value); }
   template <typename _Nty> static void swrite(void* ptr, const _Nty value)
@@ -203,6 +215,19 @@ private:
     this->write<_LenT>(static_cast<_LenT>(size));
     if (size)
       write_bytes(value.data(), size);
+  }
+
+  template <typename _Intty> inline void write_ix_impl(_Intty value)
+  {
+    // Write out an int 7 bits at a time.  The high bit of the byte,
+    // when on, tells reader to continue reading more bytes.
+    auto v = (typename std::make_unsigned<_Intty>::type)value; // support negative numbers
+    while (v >= 0x80)
+    {
+      write_byte((uint8_t)((uint32_t)v | 0x80));
+      v >>= 7;
+    }
+    write_byte((uint8_t)v);
   }
 
 protected:

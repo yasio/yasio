@@ -117,7 +117,7 @@ template <typename _Stream> struct read_ix_helper<_Stream, int64_t> {
 template <typename _ConvertTraits> class basic_ibstream_view {
 public:
   using traits_type = _ConvertTraits;
-  using my_type     = basic_ibstream_view<_ConvertTraits>;
+  using this_type     = basic_ibstream_view<_ConvertTraits>;
   basic_ibstream_view() { this->reset("", 0); }
   basic_ibstream_view(const void* data, size_t size) { this->reset(data, size); }
   basic_ibstream_view(const obstream* obs) { this->reset(obs->data(), obs->length()); }
@@ -138,7 +138,7 @@ public:
   /* read 7bit encoded variant integer value
   ** @dotnet BinaryReader.Read7BitEncodedInt(64)
   */
-  template <typename _Intty> _Intty read_ix() { return detail::read_ix_helper<my_type, _Intty>::read_ix(this); }
+  template <typename _Intty> _Intty read_ix() { return detail::read_ix_helper<this_type, _Intty>::read_ix(this); }
 
   /* read blob data with '7bit encoded int' length field */
   cxx17::string_view read_v()

@@ -60,10 +60,10 @@ template <typename _Stream> struct write_ix_helper<_Stream, int64_t> {
 };
 } // namespace detail
 
-template <typename _ConvertTraits> class basic_obstream {
+template <typename _Traits> class basic_obstream {
 public:
-  using traits_type = _ConvertTraits;
-  using this_type   = basic_obstream<_ConvertTraits>;
+  using convert_traits_type = _Traits;
+  using this_type           = basic_obstream<_Traits>;
 
   basic_obstream(size_t capacity = 128) { buffer_.reserve(capacity); }
   basic_obstream(const basic_obstream& rhs) : buffer_(rhs.buffer_) {}
@@ -173,7 +173,7 @@ public:
 
   template <typename _Nty> inline void write(_Nty value)
   {
-    auto nv = traits_type::template to<_Nty>(value);
+    auto nv = convert_traits_type::template to<_Nty>(value);
     write_bytes(&nv, sizeof(nv));
   }
 
@@ -182,7 +182,7 @@ public:
   template <typename _Nty> inline void pwrite(ptrdiff_t offset, const _Nty value) { swrite(this->data() + offset, value); }
   template <typename _Nty> static void swrite(void* ptr, const _Nty value)
   {
-    auto nv = traits_type::template to<_Nty>(value);
+    auto nv = convert_traits_type::template to<_Nty>(value);
     ::memcpy(ptr, &nv, sizeof(nv));
   }
 

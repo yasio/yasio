@@ -32,12 +32,12 @@ int main(int argc, char** argv)
     path.remove_suffix(path.size() - pos - 1);
   std::string package_path = s["package"]["path"];
   package_path.push_back(';');
-  package_path.append(path.data());
+  package_path.append(path.data(), path.length());
   package_path.append("scripts/?.lua;./scripts/?.lua");
   s["package"]["path"] = package_path;
 
-  package_path           = s["package"]["path"];
-
+  std::string new_package_path           = s["package"]["path"];
+  
   sol::function function = s.script_file("scripts/example.lua");
 
   do
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     path.remove_suffix(path.size() - pos - 1);
   std::string package_path = s["package"]["path"];
   package_path.push_back(';');
-  package_path.append(path.data());
+  package_path.append(path.data(), path.length());
   package_path.append("scripts/?.lua;./scripts/?.lua");
   s["package"]["path"] = package_path;
 

@@ -1,6 +1,15 @@
--- yasio 3.34 demo
+-- yasio 3.35 demo
 local proto = require 'protocol_enc'
 local yasio = require 'yasio' -- constants
+
+local obsnew = yasio.fast_obstream.new()
+obsnew:write_v("hello")
+obsnew:write_f16(9.3)
+
+local ibsnew = yasio.fast_ibstream.new(obsnew)
+local strval = ibsnew:read_v()
+local f16val = ibsnew:read_f16()
+print('yasio - f16val=' .. f16val)
 
 local io_service = yasio.io_service
 local stopFlag = 0

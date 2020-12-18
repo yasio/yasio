@@ -172,4 +172,11 @@ SOFTWARE.
 //   https://github.com/c-ares/c-ares/pull/29
 #define YASIO_CARES_FALLBACK_DNS "8.8.8.8,223.5.5.5,114.114.114.114"
 
+#if defined(YASIO_HAVE_HALF_FLOAT)
+// Includes IEEE 754 16-bit half-precision floating-point library
+#  include "half/half.hpp"
+typedef half_float::half fp16_t;
+#  define YASIO__SWAP_SHORT(s) ((((s) >> 8) & 0x00ff) | (((s) << 8) & 0xff00))
+#endif
+
 #endif

@@ -23,7 +23,7 @@ SOFTWARE.
 */
 #ifndef YASIO__SOL_HPP
 #define YASIO__SOL_HPP
-#include "yasio/detail/config.hpp"
+#include "yasio/detail/fp16.hpp"
 
 #if YASIO__HAS_CXX14
 

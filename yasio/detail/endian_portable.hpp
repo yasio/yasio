@@ -40,7 +40,7 @@ SOFTWARE.
 #  include <arpa/inet.h>
 #endif
 
-#include "yasio/detail/config.hpp"
+#include "yasio/detail/fp16.hpp"
 
 #if !defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1800) || (NTDDI_VERSION <= 0x06010000 && !defined(WINRT))
 

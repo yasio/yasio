@@ -1,4 +1,4 @@
-yasio-3.35.0 (dev)
+yasio-3.35.0
   
 - Provides normally byte order convert function templates `host_to_network` and `network_to_host` at `namespace yasio::endian`.
 - Reimplement `obstream`, `ibstream` as class templates `basic_obstream`, `basic_ibstream` with convert_traits support.

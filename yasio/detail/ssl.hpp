@@ -29,8 +29,33 @@ SOFTWARE.
 #ifndef YASIO__SSL_HPP
 #define YASIO__SSL_HPP
 
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#if YASIO_SSL_BACKEND == 1 // OpenSSL
+#  include <openssl/bio.h>
+#  include <openssl/ssl.h>
+#  include <openssl/err.h>
+#elif YASIO_SSL_BACKEND == 2 // mbedtls
+#  include "mbedtls/net_sockets.h"
+#  include "mbedtls/debug.h"
+#  include "mbedtls/ssl.h"
+#  include "mbedtls/entropy.h"
+#  include "mbedtls/ctr_drbg.h"
+#  include "mbedtls/error.h"
+#  include "mbedtls/certs.h"
+struct ssl_ctx_st {
+  mbedtls_ctr_drbg_context ctr_drbg;
+  mbedtls_entropy_context entropy;
+  mbedtls_x509_crt cacert;
+  mbedtls_x509_crt clicert;
+  mbedtls_x509_crl crl;
+  mbedtls_pk_context pk;
+  mbedtls_ssl_config conf;
+};
+struct ssl_st {
+  mbedtls_ssl_context impl;
+  mbedtls_net_context bio;
+};
+#else
+#  error "yasio - Unsupported ssl backend provided!"
+#endif
 
 #endif

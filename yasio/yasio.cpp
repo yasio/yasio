@@ -1411,20 +1411,21 @@ void io_service::init_ssl_context()
   int ret = 0;
   ssl_ctx_ = new SSL_CTX();
   ::mbedtls_ssl_config_init(&ssl_ctx_->conf);
-  if (!this->options_.cafile_.empty()) // Now, the cafile_ must be full path
-    ret = ::mbedtls_x509_crt_parse_file(&ssl_ctx_->cacert, this->options_.cafile_.c_str());
   ::mbedtls_x509_crt_init(&ssl_ctx_->cacert);
   ::mbedtls_ctr_drbg_init(&ssl_ctx_->ctr_drbg);
   ::mbedtls_entropy_init(&ssl_ctx_->entropy);
-  const char* pers = "yasio_ssl_client";
 
+  const char* pers = "yasio_ssl_client";
   ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, (const unsigned char*)pers, strlen(pers));
   if (ret != 0)
     YASIO_KLOGE(" failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret);
 
-  ret = ::mbedtls_x509_crt_parse(&ssl_ctx_->cacert, (const unsigned char*)mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
-  if (ret < 0)
-    YASIO_KLOGE(" failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", (unsigned int)-ret);
+  if (!this->options_.cafile_.empty()) // the cafile_ must be full path
+  {
+    ret = ::mbedtls_x509_crt_parse_file(&ssl_ctx_->cacert, this->options_.cafile_.c_str());
+    if (ret < 0)
+      YASIO_KLOGE(" failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", (unsigned int)-ret);
+  }
 
   if ((ret = ::mbedtls_ssl_config_defaults(&ssl_ctx_->conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     YASIO_KLOGE(" failed\n  ! mbedtls_ssl_config_defaults returned %d\n\n", ret);

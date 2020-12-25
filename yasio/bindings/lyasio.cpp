@@ -257,7 +257,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #  endif
-#  if defined(YASIO_HAVE_SSL)
+#  if defined(YASIO_SSL_BACKEND)
   YASIO_EXPORT_ENUM(YCK_SSL_CLIENT);
 #  endif
 
@@ -604,7 +604,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #  endif
-#  if defined(YASIO_HAVE_SSL)
+#  if YASIO_SSL_BACKEND
   YASIO_EXPORT_ENUM(YCK_SSL_CLIENT);
 #  endif
 

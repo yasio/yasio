@@ -114,7 +114,7 @@ function _M:sendHttpGetRequest(url, callback)
     if params.protocol == 'http' then
         channelKind = yasio.YCK_TCP_CLIENT
     elseif params.protocol == 'https' then
-        channelKind = yasio.YCK_SSL_CLIENT -- only present when natvie yasio compiled with YASIO_HAVE_SSL
+        channelKind = yasio.YCK_SSL_CLIENT -- only present when natvie yasio compiled with YASIO_SSL_BACKEND
     end
     
     if not channelKind then

@@ -47,7 +47,7 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 #  include "yasio/detail/ssl.hpp"
 #endif
 
@@ -216,7 +216,7 @@ struct yasio__global_state {
     auto cprint = [&]() -> const print_fn2_t& { return custom_print; };
     // for single core CPU, we set minimal wait duration to 10us by default
     yasio__min_wait_duration = std::thread::hardware_concurrency() > 1 ? 0LL : YASIO_MIN_WAIT_DURATION;
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND) && YASIO_SSL_BACKEND == 1
     if (OPENSSL_init_ssl(0, NULL) == 1)
       yasio__setbits(this->init_flags_, INITF_SSL);
 #endif
@@ -270,7 +270,7 @@ int io_send_op::perform(io_transport* transport, const void* buf, int n) { retur
 /// io_sendto_op
 int io_sendto_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n, &destination_); }
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 void ssl_auto_handle::destroy()
 {
   if (ssl_)
@@ -553,7 +553,7 @@ void io_transport::set_primitives()
 // -------------------- io_transport_tcp ---------------------
 inline io_transport_tcp::io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport(ctx, s) {}
 // ----------------------- io_transport_ssl ----------------
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 io_transport_ssl::io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
 {
   yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
@@ -934,7 +934,7 @@ void io_service::run()
 {
   yasio__set_thread_name("yasio");
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   init_ssl_context();
 #endif
 #if defined(YASIO_HAVE_CARES)
@@ -996,7 +996,7 @@ _L_end:
 #if defined(YASIO_HAVE_CARES)
   destroy_ares_channel();
 #endif
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   cleanup_ssl_context();
 #endif
 }
@@ -1276,7 +1276,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
   assert(ctx->state_ == io_base::state::OPENING && yasio__testbits(ctx->properties_, YCM_TCP) && yasio__testbits(ctx->properties_, YCM_CLIENT));
   if (ctx->state_ == io_base::state::OPENING)
   {
-#if !defined(YASIO_HAVE_SSL)
+#if !defined(YASIO_SSL_BACKEND)
     int error = -1;
     if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) || FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
     {
@@ -1318,7 +1318,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
 #endif
   }
 }
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 void io_service::init_ssl_context()
 {
 #  if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -1338,7 +1338,7 @@ void io_service::init_ssl_context()
     if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.cafile_.c_str(), nullptr) == 1)
     {
       ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
-#  if defined(YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH)
+#  if OPENSSL_VERSION_NUMBER >= 0x10101000L
       ::SSL_CTX_set_post_handshake_auth(ssl_ctx_, 1);
 #  endif
 #  if defined(X509_V_FLAG_PARTIAL_CHAIN)
@@ -1724,7 +1724,7 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_p
   {
     if (yasio__testbits(ctx->properties_, YCM_TCP))
     { // tcp like transport
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
       if (yasio__unlikely(yasio__testbits(ctx->properties_, YCM_SSL)))
       {
         transport = new (vp) io_transport_ssl(ctx, socket);
@@ -2162,7 +2162,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_NO_NEW_THREAD:
       this->options_.no_new_thread_ = !!va_arg(ap, int);
       break;
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
     case YOPT_S_SSL_CACERT:
       this->options_.cafile_ = va_arg(ap, const char*);
       break;

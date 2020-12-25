@@ -1495,7 +1495,7 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #endif
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   YASIO_EXPORT_ENUM(YCK_SSL_CLIENT);
 #endif
 

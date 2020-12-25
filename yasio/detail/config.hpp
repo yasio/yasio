@@ -74,9 +74,9 @@ SOFTWARE.
 // #define YASIO_HAVE_KCP 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_HAVE_SSL for SSL support
+** Uncomment or add compiler flag -DYASIO_SSL_BACKEND=1 for SSL support with OpenSSL
 */
-// #define YASIO_HAVE_SSL 1
+// #define YASIO_SSL_BACKEND 1
 
 /*
 ** Uncomment or add compiler flag -DYASIO_DISABLE_CONCURRENT_SINGLETON to disable concurrent

@@ -34,7 +34,7 @@ THIRD_PARTY_INCLUDES_START
 #pragma push_macro("check")
 #undef check
 #define YASIO_HEADER_ONLY 1
-#define YASIO_HAVE_SSL 1
+#define YASIO_SSL_BACKEND 1
 #include "yasio/yasio.hpp"
 #include "yasio/obstream.hpp"
 #include "yasio/ibstream.hpp"

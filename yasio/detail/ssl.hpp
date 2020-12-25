@@ -32,8 +32,5 @@ SOFTWARE.
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-#  define YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH
-#endif
 
 #endif

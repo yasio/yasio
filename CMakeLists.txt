@@ -46,7 +46,6 @@ if (WIN32)
 endif()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-option(YASIO_BUILD_WITH_SSL "Build yasio with ssl support" OFF)
 option(YASIO_BUILD_WITH_CARES "Build yasio with c-ares support" OFF)
 option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" OFF)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
@@ -56,6 +55,9 @@ option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 option(YASIO_BUILD_WITH_HALF "Build yasio with half-precision floating-point library" ON)
 
+if (NOT DEFINED YASIO_SSL_BACKEND)
+    set(YASIO_SSL_BACKEND 0)
+endif()
 
 if (NOT CXX_STD)
     set(CXX_STD 11)
@@ -84,7 +86,7 @@ if(YASIO_BUILD_WITH_HALF)
 endif()
 
 ### openssl support
-if (YASIO_BUILD_WITH_SSL)
+if (YASIO_SSL_BACKEND EQUAL 1)
    add_subdirectory(external/openssl)
 endif()
 
@@ -137,7 +139,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
   )
 endif()
 
-if(YASIO_BUILD_WITH_SSL OR YASIO_BUILD_WITH_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_BUILD_WITH_CARES OR YASIO_BUILD_WITH_HALF)
+if(YASIO_BUILD_WITH_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_BUILD_WITH_CARES OR YASIO_BUILD_WITH_HALF)
     include_directories("${CMAKE_SOURCE_DIR}/external")
 endif()
 
@@ -227,7 +229,7 @@ else ( )
 endif ( )
 
 macro(ConfigTargetSSL target_name)
-    if (YASIO_BUILD_WITH_SSL)
+    if (YASIO_SSL_BACKEND EQUAL 1)
         if (UNIX)
             target_link_libraries (${target_name} ext_ssl ext_crypto dl)
         else ()
@@ -278,7 +280,7 @@ endif()
 
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR)
-   target_compile_definitions(yasio PUBLIC YASIO_HAVE_SSL=1)
+   target_compile_definitions(yasio PUBLIC YASIO_SSL_BACKEND=1)
    target_include_directories(yasio PRIVATE "${OPENSSL_INCLUDE_DIR}")
    if(YASIO_BUILD_AS_SHARED AND (ANDROID OR LINUX))
        target_link_libraries (yasio ext_ssl ext_crypto)
@@ -329,7 +331,7 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     endif()
     add_subdirectory(examples/ftp_server)
 
-    if(YASIO_BUILD_WITH_SSL)
+    if(YASIO_SSL_BACKEND)
         add_subdirectory(tests/ssl)
     endif()
 endif ()

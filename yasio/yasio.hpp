@@ -60,7 +60,7 @@ SOFTWARE.
 typedef struct IKCPCB ikcpcb;
 #endif
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_st SSL;
 #endif
@@ -416,7 +416,7 @@ struct io_base {
   uint8_t opmask_;
 };
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 class ssl_auto_handle {
 public:
   ssl_auto_handle() : ssl_(nullptr) {}
@@ -547,7 +547,7 @@ private:
   int kcp_conv_ = 0;
 #endif
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   ssl_auto_handle ssl_;
 #endif
 
@@ -677,13 +677,13 @@ class io_transport_tcp : public io_transport {
 public:
   io_transport_tcp(io_channel* ctx, std::shared_ptr<xxsocket>& s);
 };
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
 class io_transport_ssl : public io_transport_tcp {
 public:
   YASIO__DECL io_transport_ssl(io_channel* ctx, std::shared_ptr<xxsocket>& s);
   YASIO__DECL void set_primitives() override;
 
-#  if defined(YASIO_HAVE_SSL)
+#  if defined(YASIO_SSL_BACKEND)
 protected:
   ssl_auto_handle ssl_;
 #  endif
@@ -976,7 +976,7 @@ private:
   YASIO__DECL void do_nonblocking_connect(io_channel*);
   YASIO__DECL void do_nonblocking_connect_completion(io_channel*, fd_set* fds_array);
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   YASIO__DECL void init_ssl_context();
   YASIO__DECL void cleanup_ssl_context();
   YASIO__DECL SSL_CTX* get_ssl_context();
@@ -1122,7 +1122,7 @@ private:
     // The custom debug print function
     print_fn2_t print_;
 
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
     // The full path cacert(.pem) file for ssl verifaction
     std::string cafile_;
 #endif
@@ -1130,7 +1130,7 @@ private:
 
   // The ip stack version supported by localhost
   u_short ipsv_ = 0;
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   SSL_CTX* ssl_ctx_ = nullptr;
 #endif
 #if defined(YASIO_HAVE_CARES)

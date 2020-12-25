@@ -1919,7 +1919,7 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #endif
-#if defined(YASIO_HAVE_SSL)
+#if defined(YASIO_SSL_BACKEND)
   YASIO_EXPORT_ENUM(YCK_SSL_CLIENT);
 #endif
 

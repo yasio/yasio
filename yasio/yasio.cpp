@@ -1333,9 +1333,9 @@ void io_service::init_ssl_context()
 #  endif
 
   ::SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
-  if (!this->options_.capath_.empty())
+  if (!this->options_.cafile_.empty())
   {
-    if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.capath_.c_str(), nullptr) == 1)
+    if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.cafile_.c_str(), nullptr) == 1)
     {
       ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
 #  if defined(YASIO_HAVE_SSL_CTX_SET_POST_HANDSHAKE_AUTH)
@@ -2164,7 +2164,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
 #if defined(YASIO_HAVE_SSL)
     case YOPT_S_SSL_CACERT:
-      this->options_.capath_ = va_arg(ap, const char*);
+      this->options_.cafile_ = va_arg(ap, const char*);
       break;
 #endif
     case YOPT_S_CONNECT_TIMEOUT:

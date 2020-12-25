@@ -1124,7 +1124,7 @@ private:
 
 #if defined(YASIO_HAVE_SSL)
     // The full path cacert(.pem) file for ssl verifaction
-    std::string capath_;
+    std::string cafile_;
 #endif
   } options_;
 

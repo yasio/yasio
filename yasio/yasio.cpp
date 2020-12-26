@@ -1408,34 +1408,31 @@ void io_service::init_ssl_context()
   else
     SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
 #  elif YASIO_SSL_BACKEND == 2
-  int ret = 0;
+  const char* pers = "yasio_ssl_client";
   ssl_ctx_ = new SSL_CTX();
   ::mbedtls_ssl_config_init(&ssl_ctx_->conf);
   ::mbedtls_x509_crt_init(&ssl_ctx_->cacert);
   ::mbedtls_ctr_drbg_init(&ssl_ctx_->ctr_drbg);
   ::mbedtls_entropy_init(&ssl_ctx_->entropy);
-
-  const char* pers = "yasio_ssl_client";
-  ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, (const unsigned char*)pers, strlen(pers));
+  int ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, (const unsigned char*)pers, strlen(pers));
   if (ret != 0)
-    YASIO_KLOGE(" failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret);
+    YASIO_KLOGE("mbedtls_ctr_drbg_seed fail with ret=%d", ret);
 
+  int authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
   if (!this->options_.cafile_.empty()) // the cafile_ must be full path
   {
-    ret = ::mbedtls_x509_crt_parse_file(&ssl_ctx_->cacert, this->options_.cafile_.c_str());
-    if (ret < 0)
-      YASIO_KLOGE(" failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", (unsigned int)-ret);
+    if ((ret = ::mbedtls_x509_crt_parse_file(&ssl_ctx_->cacert, this->options_.cafile_.c_str())) == 0)
+      authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
+    else
+      YASIO_KLOGE("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
   }
 
   if ((ret = ::mbedtls_ssl_config_defaults(&ssl_ctx_->conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-    YASIO_KLOGE(" failed\n  ! mbedtls_ssl_config_defaults returned %d\n\n", ret);
+    YASIO_KLOGE("mbedtls_ssl_config_defaults fail with ret=%d", ret);
 
-  /* OPTIONAL is not optimal for security,
-   * but makes interop easier in this simplified example */
-  ::mbedtls_ssl_conf_authmode(&ssl_ctx_->conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
-  ::mbedtls_ssl_conf_ca_chain(&ssl_ctx_->conf, &ssl_ctx_->cacert, NULL);
+  ::mbedtls_ssl_conf_authmode(&ssl_ctx_->conf, authmode);
+  ::mbedtls_ssl_conf_ca_chain(&ssl_ctx_->conf, &ssl_ctx_->cacert, nullptr);
   ::mbedtls_ssl_conf_rng(&ssl_ctx_->conf, ::mbedtls_ctr_drbg_random, &ssl_ctx_->ctr_drbg);
-  // ::mbedtls_ssl_conf_dbg(&ssl_ctx_->conf, my_debug, stdout); dbg not required
 #  endif
 }
 SSL_CTX* io_service::get_ssl_context() { return ssl_ctx_; }

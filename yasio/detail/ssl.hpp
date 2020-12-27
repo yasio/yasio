@@ -45,9 +45,6 @@ struct ssl_ctx_st {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_entropy_context entropy;
   mbedtls_x509_crt cacert;
-  mbedtls_x509_crt clicert;
-  mbedtls_x509_crl crl;
-  mbedtls_pk_context pk;
   mbedtls_ssl_config conf;
 };
 struct ssl_st {

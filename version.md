@@ -1,3 +1,8 @@
+yasio-3.36.0
+  
+1. Add ssl backend mbedtls support.
+  
+  
 yasio-3.35.0
   
 - Provides normally byte order convert function templates `host_to_network` and `network_to_host` at `namespace yasio::endian`.

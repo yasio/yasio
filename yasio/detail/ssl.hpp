@@ -29,8 +29,41 @@ SOFTWARE.
 #ifndef YASIO__SSL_HPP
 #define YASIO__SSL_HPP
 
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#if YASIO_SSL_BACKEND == 1 // OpenSSL
+#  include <openssl/bio.h>
+#  include <openssl/ssl.h>
+#  include <openssl/err.h>
+#elif YASIO_SSL_BACKEND == 2 // mbedtls
+#  include "mbedtls/net_sockets.h"
+#  include "mbedtls/debug.h"
+#  include "mbedtls/ssl.h"
+#  include "mbedtls/entropy.h"
+#  include "mbedtls/ctr_drbg.h"
+#  include "mbedtls/error.h"
+#  include "mbedtls/certs.h"
+struct ssl_ctx_st {
+  mbedtls_ctr_drbg_context ctr_drbg;
+  mbedtls_entropy_context entropy;
+  mbedtls_x509_crt cacert;
+  mbedtls_ssl_config conf;
+};
+struct ssl_st : public mbedtls_ssl_context {
+  mbedtls_net_context bio;
+};
+inline ssl_st* mbedtls_ssl_new(ssl_ctx_st* ctx)
+{
+  auto ssl = new ssl_st();
+  ::mbedtls_ssl_init(ssl);
+  ::mbedtls_ssl_setup(ssl, &ctx->conf);
+  return ssl;
+}
+inline void mbedtls_ssl_set_fd(ssl_st* ssl, int fd)
+{
+  ssl->bio.fd = fd;
+  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, NULL /*  rev_timeout() */);
+}
+#else
+#  error "yasio - Unsupported ssl backend provided!"
+#endif
 
 #endif

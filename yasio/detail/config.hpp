@@ -75,6 +75,8 @@ SOFTWARE.
 
 /*
 ** Uncomment or add compiler flag -DYASIO_SSL_BACKEND=1 for SSL support with OpenSSL
+** 1. -DYASIO_SSL_BACKEND=1: OpenSSL
+** 2. -DYASIO_SSL_BACKEND=2: mbedtls
 */
 // #define YASIO_SSL_BACKEND 1
 
@@ -136,7 +138,7 @@ SOFTWARE.
 /*
 **  The yasio version macros
 */
-#define YASIO_VERSION_NUM 0x033500
+#define YASIO_VERSION_NUM 0x033600
 
 /*
 ** The macros used by io_service.

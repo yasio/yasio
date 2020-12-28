@@ -979,7 +979,6 @@ private:
 #if defined(YASIO_SSL_BACKEND)
   YASIO__DECL void init_ssl_context();
   YASIO__DECL void cleanup_ssl_context();
-  YASIO__DECL SSL_CTX* get_ssl_context();
   YASIO__DECL void do_ssl_handshake(io_channel*);
 #endif
 

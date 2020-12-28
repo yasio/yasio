@@ -6,6 +6,8 @@
 
 cmake_minimum_required(VERSION 3.0.2)
 
+cmake_policy(SET CMP0079 NEW)
+
 # The workaround for solve try_compile failed with code sign
 # since cmake-3.18.2, not required
 # everyting for cmake toolchain config before project(xxx) is better
@@ -86,8 +88,12 @@ if(YASIO_BUILD_WITH_HALF)
 endif()
 
 ### openssl support
-if (YASIO_SSL_BACKEND EQUAL 1)
+if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    add_subdirectory(external/openssl)
+elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
+    include_directories("${CMAKE_SOURCE_DIR}/external/mbedtls/include")
+    set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/external/mbedtls)
 endif()
 
 ### c-ares support
@@ -244,6 +250,8 @@ macro(ConfigTargetSSL target_name)
                 $<TARGET_FILE_DIR:${target_name}>
             )
         endif()
+    elseif(YASIO_SSL_BACKEND EQUAL 2)
+        target_link_libraries(${target_name} mbedtls mbedcrypto mbedx509)
     endif()
 endmacro()
 
@@ -280,7 +288,7 @@ endif()
 
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR)
-   target_compile_definitions(yasio PUBLIC YASIO_SSL_BACKEND=1)
+   set(YASIO_SSL_BACKEND 1)
    target_include_directories(yasio PRIVATE "${OPENSSL_INCLUDE_DIR}")
    if(YASIO_BUILD_AS_SHARED AND (ANDROID OR LINUX))
        target_link_libraries (yasio ext_ssl ext_crypto)
@@ -301,6 +309,13 @@ endif()
 # checking build system have kcp
 if(YASIO_BUILD_WITH_KCP)
     target_compile_definitions(yasio PUBLIC YASIO_HAVE_KCP=1)
+endif()
+
+# add ssl preprocessor
+# 1. OpenSSL
+# 2. mbedtls
+if(YASIO_SSL_BACKEND)
+   target_compile_definitions(yasio PUBLIC YASIO_SSL_BACKEND=${YASIO_SSL_BACKEND})
 endif()
 
 if (ANDROID AND ANDROID_STRIP_TOOL)

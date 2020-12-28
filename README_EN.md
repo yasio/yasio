@@ -68,7 +68,7 @@ cmake --build build --config Debug
 * Support lua bindings
 * Support cocos2d-x jsb
 * Support [CocosCreator jsb2.0](https://github.com/yasio/inettester)
-* Support [Unity3D](https://github.com/yasio/DemoU3D)
+* Support [Unity3D](https://github.com/yasio/xLua)
 * Support [Unreal Engine 4](https://github.com/yasio/DemoUE4)
 * Support ssl client with openssl
 * Support async resolve with c-ares

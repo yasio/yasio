@@ -73,7 +73,7 @@ cmake --build build --config Debug
 * 支持Lua绑定。
 * 支持Cocos2d-x jsb绑定。
 * 支持[CocosCreator jsb2.0绑定](https://github.com/yasio/inettester)。
-* 支持[Unity3D](https://github.com/yasio/DemoU3D)。
+* 支持[Unity3D](https://github.com/yasio/xLua)。
 * 支持[虚幻4](https://github.com/yasio/DemoUE4)。
 * 支持SSL客户端，基于OpenSSL。
 * 支持非阻塞域名解析，基于c-ares。

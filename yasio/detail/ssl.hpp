@@ -50,7 +50,13 @@ struct ssl_ctx_st {
 struct ssl_st : public mbedtls_ssl_context {
   mbedtls_net_context bio;
 };
-// Emulate OpenSSL SSL_set_fd
+inline ssl_st* mbedtls_ssl_new(ssl_ctx_st* ctx)
+{
+  auto ssl = new ssl_st();
+  ::mbedtls_ssl_init(ssl);
+  ::mbedtls_ssl_setup(ssl, &ctx->conf);
+  return ssl;
+}
 inline void mbedtls_ssl_set_fd(ssl_st* ssl, int fd)
 {
   ssl->bio.fd = fd;

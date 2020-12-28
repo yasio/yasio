@@ -1426,7 +1426,6 @@ void io_service::init_ssl_context()
   ::mbedtls_ssl_conf_rng(&ssl_ctx_->conf, ::mbedtls_ctr_drbg_random, &ssl_ctx_->ctr_drbg);
 #  endif
 }
-SSL_CTX* io_service::get_ssl_context() { return ssl_ctx_; }
 void io_service::cleanup_ssl_context()
 {
   if (ssl_ctx_)
@@ -1448,14 +1447,12 @@ void io_service::do_ssl_handshake(io_channel* ctx)
   if (!ctx->ssl_)
   {
 #  if YASIO_SSL_BACKEND == 1
-    auto ssl = ::SSL_new(get_ssl_context());
+    auto ssl = ::SSL_new(ssl_ctx_);
     ::SSL_set_fd(ssl, static_cast<int>(ctx->socket_->native_handle()));
     ::SSL_set_connect_state(ssl);
     ::SSL_set_tlsext_host_name(ssl, ctx->remote_host_.c_str());
 #  elif YASIO_SSL_BACKEND == 2
-    auto ssl = new SSL();
-    ::mbedtls_ssl_init(ssl);
-    ::mbedtls_ssl_setup(ssl, &ssl_ctx_->conf);
+    auto ssl = ::mbedtls_ssl_new(ssl_ctx_);
     ::mbedtls_ssl_set_fd(ssl, static_cast<int>(ctx->socket_->native_handle()));
     ::mbedtls_ssl_set_hostname(ssl, ctx->remote_host_.c_str());
 #  endif

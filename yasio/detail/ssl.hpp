@@ -47,10 +47,15 @@ struct ssl_ctx_st {
   mbedtls_x509_crt cacert;
   mbedtls_ssl_config conf;
 };
-struct ssl_st {
-  mbedtls_ssl_context impl;
+struct ssl_st : public mbedtls_ssl_context {
   mbedtls_net_context bio;
 };
+// Emulate OpenSSL SSL_set_fd
+inline void mbedtls_ssl_set_fd(ssl_st* ssl, int fd)
+{
+  ssl->bio.fd = fd;
+  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, NULL /*  rev_timeout() */);
+}
 #else
 #  error "yasio - Unsupported ssl backend provided!"
 #endif

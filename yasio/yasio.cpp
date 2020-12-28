@@ -279,7 +279,7 @@ void ssl_auto_handle::destroy()
     ::SSL_shutdown(ssl_);
     ::SSL_free(ssl_);
 #  elif YASIO_SSL_BACKEND == 2
-    ::mbedtls_ssl_free(&ssl_->impl);
+    ::mbedtls_ssl_free(ssl_);
     delete ssl_;
 #  endif
     ssl_ = nullptr;
@@ -589,8 +589,8 @@ void io_transport_ssl::set_primitives()
     }
     return n;
 #  elif YASIO_SSL_BACKEND == 2
-    auto ssl_impl = &static_cast<SSL*>(ssl_)->impl;
-    int n         = ::mbedtls_ssl_read(ssl_impl, static_cast<uint8_t*>(data), len);
+    auto ssl = static_cast<SSL*>(ssl_);
+    int n    = ::mbedtls_ssl_read(ssl, static_cast<uint8_t*>(data), len);
     if (n > 0)
       return n;
     switch (n)
@@ -598,13 +598,10 @@ void io_transport_ssl::set_primitives()
       case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
         n = 0;
       case 0:
-        ::mbedtls_ssl_close_notify(ssl_impl);
+        ::mbedtls_ssl_close_notify(ssl);
         break;
       case MBEDTLS_ERR_SSL_WANT_READ:
       case MBEDTLS_ERR_SSL_WANT_WRITE:
-        /* The operation did not complete; the same TLS/SSL I/O function
-           should be called again later. This is basically an EWOULDBLOCK
-           equivalent. */
         if (xxsocket::get_last_errno() != EWOULDBLOCK)
           xxsocket::set_last_errno(EWOULDBLOCK);
         break;
@@ -628,9 +625,6 @@ void io_transport_ssl::set_primitives()
     {
       case SSL_ERROR_WANT_READ:
       case SSL_ERROR_WANT_WRITE:
-        /* The operation did not complete; the same TLS/SSL I/O function
-           should be called again later. This is basically an EWOULDBLOCK
-           equivalent. */
         if (xxsocket::get_last_errno() != EWOULDBLOCK)
           xxsocket::set_last_errno(EWOULDBLOCK);
         break;
@@ -638,16 +632,13 @@ void io_transport_ssl::set_primitives()
         xxsocket::set_last_errno(yasio::errc::ssl_write_failed);
     }
 #  elif YASIO_SSL_BACKEND == 2
-    int n = ::mbedtls_ssl_write(&static_cast<SSL*>(ssl_)->impl, static_cast<const uint8_t*>(data), len);
+    int n = ::mbedtls_ssl_write(static_cast<SSL*>(ssl_), static_cast<const uint8_t*>(data), len);
     if (n > 0)
       return n;
     switch (n)
     {
       case MBEDTLS_ERR_SSL_WANT_READ:
       case MBEDTLS_ERR_SSL_WANT_WRITE:
-        /* The operation did not complete; the same TLS/SSL I/O function
-           should be called again later. This is basically an EWOULDBLOCK
-           equivalent. */
         if (xxsocket::get_last_errno() != EWOULDBLOCK)
           xxsocket::set_last_errno(EWOULDBLOCK);
         break;
@@ -1458,21 +1449,16 @@ void io_service::do_ssl_handshake(io_channel* ctx)
   {
 #  if YASIO_SSL_BACKEND == 1
     auto ssl = ::SSL_new(get_ssl_context());
-    ::SSL_set_fd(ssl, ctx->socket_->native_handle());
+    ::SSL_set_fd(ssl, static_cast<int>(ctx->socket_->native_handle()));
     ::SSL_set_connect_state(ssl);
-
-    // !important, fix issue: https://github.com/yasio/yasio/issues/273
     ::SSL_set_tlsext_host_name(ssl, ctx->remote_host_.c_str());
 #  elif YASIO_SSL_BACKEND == 2
     auto ssl = new SSL();
-    ::mbedtls_ssl_init(&ssl->impl);
-    ::mbedtls_ssl_setup(&ssl->impl, &ssl_ctx_->conf);
-    ::mbedtls_ssl_set_hostname(&ssl->impl, ctx->remote_host_.c_str());
-
-    ssl->bio.fd = static_cast<int>(ctx->socket_->native_handle());
-    ::mbedtls_ssl_set_bio(&ssl->impl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, NULL /*  rev_timeout() */);
+    ::mbedtls_ssl_init(ssl);
+    ::mbedtls_ssl_setup(ssl, &ssl_ctx_->conf);
+    ::mbedtls_ssl_set_fd(ssl, static_cast<int>(ctx->socket_->native_handle()));
+    ::mbedtls_ssl_set_hostname(ssl, ctx->remote_host_.c_str());
 #  endif
-
     yasio__setbits(ctx->properties_, YCPF_SSL_HANDSHAKING); // start ssl handshake
     ctx->ssl_.reset(ssl);
   }
@@ -1509,26 +1495,30 @@ void io_service::do_ssl_handshake(io_channel* ctx)
   else
     handle_connect_succeed(ctx, ctx->socket_);
 #  elif YASIO_SSL_BACKEND == 2
-  int ret = ::mbedtls_ssl_handshake(&static_cast<SSL*>(ctx->ssl_)->impl);
-  /*
-    When using a non-blocking socket, nothing is to be done, but select() can be used to check for
-    the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
-    */
-  if (ret != 0)
+  auto ssl = static_cast<SSL*>(ctx->ssl_);
+  int ret = ::mbedtls_ssl_handshake_step(ssl);
+  if (ret == 0)
   {
-    if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
-      ; // Nothing need to do
-    else
+    if (ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER)
+      interrupt();
+    else // mbedtls_ssl_get_verify_result return 0 when valid cacert provided
+      handle_connect_succeed(ctx, ctx->socket_);
+  }
+  else
+  {
+    char errstring[256] = {0};
+    switch (ret)
     {
-      char errstring[256] = {0};
-      ::mbedtls_strerror(ret, errstring, sizeof(errstring));
-      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d, detail:%s", ctx->index_, ret, errstring);
-      ctx->ssl_.destroy();
-      handle_connect_failed(ctx, yasio::errc::ssl_handshake_failed);
+      case MBEDTLS_ERR_SSL_WANT_READ:
+      case MBEDTLS_ERR_SSL_WANT_WRITE:
+        break; // Nothing need to do
+      default:
+        ::mbedtls_strerror(ret, errstring, sizeof(errstring));
+        YASIO_KLOGE("[index: %d] mbedtls_ssl_handshake_step fail with ret=%d, detail:%s", ctx->index_, ret, errstring);
+        ctx->ssl_.destroy();
+        handle_connect_failed(ctx, yasio::errc::ssl_handshake_failed);
     }
   }
-  else // mbedtls_ssl_get_verify_result?
-    handle_connect_succeed(ctx, ctx->socket_);
 #  endif
 }
 #endif

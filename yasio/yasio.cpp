@@ -609,8 +609,6 @@ void io_transport_ssl::set_primitives()
         xxsocket::set_last_errno(yasio::errc::ssl_read_failed);
     }
     return n;
-#  else
-    return -1;
 #  endif
   };
   this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {

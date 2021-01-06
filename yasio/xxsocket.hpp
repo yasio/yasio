@@ -1046,14 +1046,6 @@ public:
   */
   YASIO__DECL static int select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, std::chrono::microseconds wtimeout);
 
-  /* @brief: check is a client socket alive
-  ** @params :
-  **          see MSDN or man page
-  ** @returns: If no error occurs, alive returns true. Otherwise, a value of false is
-  **          returned
-  */
-  YASIO__DECL bool alive(void) const;
-
   /* @brief: Disables sends or receives on this socket
   ** @params:
   **        how: [SD_SEND] or [SD_RECEIVE] or [SD_BOTH]

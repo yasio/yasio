@@ -1024,52 +1024,44 @@ int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& 
 
 int xxsocket::send_n(socket_native_type s, const void* buf, int len, std::chrono::microseconds wtimeout, int flags)
 {
-  int bytes_transferred;
+  int bytes_transferred = 0;
   int n;
-  int errcode = 0;
+  int ec = 0;
 
   xxsocket::set_nonblocking(s, true);
 
-  for (bytes_transferred = 0; bytes_transferred < len; bytes_transferred += n)
+  for (; bytes_transferred < len;)
   {
     // Try to transfer as much of the remaining data as possible.
     // Since the socket is in non-blocking mode, this call will not
     // block.
     n = xxsocket::send(s, (const char*)buf + bytes_transferred, len - bytes_transferred, flags);
-
-    // Check for errors.
-    if (n <= 0)
-    {
-      // Check for possible blocking.
-      errcode = xxsocket::get_last_errno();
-
-      if (n == -1 && (errcode == EAGAIN || errcode == EWOULDBLOCK || errcode == ENOBUFS || errcode == EINTR))
-      {
-
-        // Wait upto <timeout> for the blocking to subside.
-        auto start    = yasio::highp_clock();
-        int const rtn = handle_write_ready(s, wtimeout);
-        wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
-
-        // Did select() succeed?
-        if (rtn != -1)
-        {
-          if (wtimeout.count() > 0)
-          {
-            // Blocking subsided in <timeout> period.  Continue
-            // data transfer.
-            n = 0;
-            continue;
-          }
-          else
-            break;
-        }
-      }
-
-      // Wait in select() timed out or other data transfer or
-      // select() failures.
-      return n;
+    if (n > 0) {
+      bytes_transferred += n;
+      continue;
     }
+
+    // Check for possible blocking.
+    ec = xxsocket::get_last_errno();
+    if (n == -1 && (ec == EAGAIN || ec == EWOULDBLOCK || ec == ENOBUFS || ec == EINTR))
+    {
+      // Wait upto <timeout> for the blocking to subside.
+      auto start    = yasio::highp_clock();
+      int const rtn = handle_write_ready(s, wtimeout);
+      wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
+
+      // Did select() succeed?
+      if (rtn != -1 && wtimeout.count() > 0)
+      {
+        // Blocking subsided in <timeout> period.  Continue
+        // data transfer.
+        continue;
+      }
+    }
+
+    // Wait in select() timed out or other data transfer or
+    // select() failures.
+    break;
   }
 
   return bytes_transferred;
@@ -1082,50 +1074,44 @@ int xxsocket::recv_n(void* buf, int len, const std::chrono::microseconds& wtimeo
 
 int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::microseconds wtimeout, int flags)
 {
-  int bytes_transferred;
+  int bytes_transferred = 0;
   int n;
   int ec = 0;
 
   xxsocket::set_nonblocking(s, true);
 
-  for (bytes_transferred = 0; bytes_transferred < len; bytes_transferred += n)
+  for (; bytes_transferred < len;)
   {
     // Try to transfer as much of the remaining data as possible.
     // Since the socket is in non-blocking mode, this call will not
     // block.
     n = xxsocket::recv(s, static_cast<char*>(buf) + bytes_transferred, len - bytes_transferred, flags);
-
-    // Check for errors.
-    if (n <= 0)
-    {
-      // Check for possible blocking.
-      ec = xxsocket::get_last_errno();
-      if (n == -1 && (ec == EAGAIN || ec == EINTR || ec == EWOULDBLOCK || ec == EINPROGRESS))
-      {
-        // Wait upto <timeout> for the blocking to subside.
-        auto start    = yasio::highp_clock();
-        int const rtn = handle_read_ready(s, wtimeout);
-        wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
-
-        // Did select() succeed?
-        if (rtn != -1)
-        {
-          if (wtimeout.count() > 0)
-          {
-            // Blocking subsided in <timeout> period.  Continue
-            // data transfer.
-            n = 0;
-            continue;
-          }
-          else
-            break;
-        }
-      }
-
-      // Wait in select() timed out or other data transfer or
-      // select() failures.
-      return n;
+    if (n > 0) {
+      bytes_transferred += n;
+      continue;
     }
+
+    // Check for possible blocking.
+    ec = xxsocket::get_last_errno();
+    if (n == -1 && (ec == EAGAIN || ec == EINTR || ec == EWOULDBLOCK || ec == EINPROGRESS))
+    {
+      // Wait upto <timeout> for the blocking to subside.
+      auto start    = yasio::highp_clock();
+      int const rtn = handle_read_ready(s, wtimeout);
+      wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
+
+      // Did select() succeed?
+      if (rtn != -1 && wtimeout.count() > 0)
+      {
+        // Blocking subsided in <timeout> period.  Continue
+        // data transfer.
+        continue;
+      }
+    }
+
+    // Wait in select() timed out or other data transfer or
+    // select() failures.
+    break;
   }
 
   return bytes_transferred;

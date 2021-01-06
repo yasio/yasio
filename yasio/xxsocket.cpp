@@ -1258,8 +1258,6 @@ void xxsocket::exclusive_address(bool exclusive)
 
 xxsocket::operator socket_native_type(void) const { return this->fd; }
 
-bool xxsocket::alive(void) const { return this->send("", 0) != -1; }
-
 int xxsocket::shutdown(int how) const { return ::shutdown(this->fd, how); }
 
 void xxsocket::close(int shut_how)

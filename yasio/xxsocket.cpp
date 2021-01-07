@@ -886,8 +886,7 @@ int xxsocket::test_nonblocking(socket_native_type s)
     return 1;
   else if (r == -1 && GetLastError() == WSAEWOULDBLOCK)
     return 0;
-  return -1; /* In  case it is a connection socket (TCP) and it is not in connected state you will
-                get here 10060 */
+  return -1; /* In  case it is a connection socket (TCP) and it is not in connected state you will get here 10060 */
 #else
   int flags = ::fcntl(s, F_GETFL, 0);
   return flags & O_NONBLOCK;
@@ -900,8 +899,8 @@ int xxsocket::bind_any(bool ipv6) const { return this->bind(endpoint(!ipv6 ? "0.
 
 int xxsocket::listen(int backlog) const { return ::listen(this->fd, backlog); }
 
-xxsocket xxsocket::accept(socklen_t) { return ::accept(this->fd, nullptr, nullptr); }
-int xxsocket::accept_n(socket_native_type& new_sock)
+xxsocket xxsocket::accept() const { return ::accept(this->fd, nullptr, nullptr); }
+int xxsocket::accept_n(socket_native_type& new_sock) const
 {
   for (;;)
   {

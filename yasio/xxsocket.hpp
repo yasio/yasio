@@ -372,7 +372,7 @@ YASIO__NS_INLINE namespace ip
 
   struct endpoint {
   public:
-    endpoint(void) { this->zeroset(); }
+    endpoint() { this->zeroset(); }
     endpoint(const endpoint& rhs) { this->as_is(rhs); }
     explicit endpoint(const addrinfo* info) { as_is(info); }
     explicit endpoint(const sockaddr* info) { as_is(info); }
@@ -555,7 +555,7 @@ YASIO__NS_INLINE namespace ip
       return addr;
     }
 
-    unsigned short port(void) const { return ntohs(in4_.sin_port); }
+    unsigned short port() const { return ntohs(in4_.sin_port); }
     void port(unsigned short value) { in4_.sin_port = htons(value); }
 
     void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = htonl(addr); }
@@ -701,7 +701,7 @@ public: /// portable connect APIs
 
 public:
   // Construct a empty socket object
-  YASIO__DECL xxsocket(void);
+  YASIO__DECL xxsocket();
 
   // Construct with a exist socket handle
   YASIO__DECL xxsocket(socket_native_type handle);
@@ -719,7 +719,7 @@ public:
   // See also as function: open
   YASIO__DECL xxsocket(int af, int type, int protocol);
 
-  YASIO__DECL ~xxsocket(void);
+  YASIO__DECL ~xxsocket();
 
   // swap with other when this fd is closed.
   YASIO__DECL xxsocket& swap(xxsocket& who);
@@ -747,13 +747,13 @@ public:
 #endif
 
   /** Is this socket opened **/
-  YASIO__DECL bool is_open(void) const;
+  YASIO__DECL bool is_open() const;
 
   /** Gets the socket fd value **/
-  YASIO__DECL socket_native_type native_handle(void) const;
+  YASIO__DECL socket_native_type native_handle() const;
 
   /** Release ownership of the underlying native socket handle **/
-  YASIO__DECL socket_native_type release_handle(void);
+  YASIO__DECL socket_native_type release_handle();
 
   /* @brief: Set this socket io mode to nonblocking
   ** @params:
@@ -794,15 +794,12 @@ public:
   YASIO__DECL int listen(int backlog = SOMAXCONN) const;
 
   /* @brief: Permits an incoming connection attempt on this socket
-  ** @params:
-  **        addrlen: Usually is [sizeof (sockaddr)]
-  **
   ** @returns:
   **        If no error occurs, accept returns a new socket on which
   **        the actual connection is made.
   **        Otherwise, a value of [invalid_socket] is returned
   */
-  YASIO__DECL xxsocket accept(socklen_t addrlen = sizeof(sockaddr));
+  YASIO__DECL xxsocket accept() const;
 
   /* @brief: Permits an incoming connection attempt on this socket
   ** @params:
@@ -810,7 +807,7 @@ public:
   **        If no error occurs, return 0, and the new_sock will be the actual connection is made.
   **        Otherwise, a EWOULDBLOCK,EAGAIN or other value is returned
   */
-  YASIO__DECL int accept_n(socket_native_type& new_sock);
+  YASIO__DECL int accept_n(socket_native_type& new_sock) const;
 
   /* @brief: Establishes a connection to a specified this socket
   ** @params:
@@ -927,7 +924,7 @@ public:
   **
   ** @returns:
   */
-  YASIO__DECL endpoint local_endpoint(void) const;
+  YASIO__DECL endpoint local_endpoint() const;
   YASIO__DECL static endpoint local_endpoint(socket_native_type);
 
   /* @brief: Get peer address info
@@ -936,7 +933,7 @@ public:
   ** @returns:
   *  @remark: if this a listening socket fd, will return "0.0.0.0:0"
   */
-  YASIO__DECL endpoint peer_endpoint(void) const;
+  YASIO__DECL endpoint peer_endpoint() const;
   YASIO__DECL static endpoint peer_endpoint(socket_native_type);
 
   /* @brief: Configure TCP keepalive
@@ -1064,14 +1061,14 @@ public:
   YASIO__DECL uint32_t tcp_rtt() const;
   YASIO__DECL static uint32_t tcp_rtt(socket_native_type s);
 
-  YASIO__DECL operator socket_native_type(void) const;
+  YASIO__DECL operator socket_native_type() const;
 
   /// <summary>
   /// this function just for windows platform
   /// </summary>
-  YASIO__DECL static void init_ws32_lib(void);
+  YASIO__DECL static void init_ws32_lib();
 
-  YASIO__DECL static int get_last_errno(void);
+  YASIO__DECL static int get_last_errno();
   YASIO__DECL static void set_last_errno(int error);
 
   YASIO__DECL static bool not_send_error(int error);
@@ -1157,7 +1154,7 @@ public:
   **    ipv6/ipv4 but the wifi only support ipv4, then use ipv6 will cause network issue.
   **    For more detail, see: https://github.com/halx99/yasio/issues/130
   */
-  YASIO__DECL static int getipsv(void);
+  YASIO__DECL static int getipsv();
 
   /*
   ** @brief: Traverse local device network adapter address with valid ip

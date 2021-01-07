@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -509,7 +509,7 @@ int io_transport::call_read(void* data, int size, int& error)
   if (n < 0)
   {
     error = xxsocket::get_last_errno();
-    if (!YASIO__RECV_FAIL(error))
+    if (xxsocket::not_recv_error(error))
       return (error = 0); // status ok, clear error
     return n;
   }
@@ -533,10 +533,11 @@ int io_transport::call_write(io_send_op* op, int& error)
   else if (n < 0)
   {
     error = xxsocket::get_last_errno();
-    if (!YASIO__SEND_FAIL(error))
+    if (xxsocket::not_send_error(error))
       n = 0;
     else if (yasio__testbits(ctx_->properties_, YCM_UDP))
-    { // UDP: don't cause handle_close, simply drop the op
+    { // !!! For udp, simply drop the op instead trigger handle close,
+      // on android device, the error will be 'EPERM' when app in background.
       this->complete_op(op, error);
       n = 0;
     }
@@ -716,7 +717,7 @@ void io_transport_udp::set_primitives()
       if (n < 0)
       {
         auto error = xxsocket::get_last_errno();
-        if (YASIO__SEND_FAIL(error))
+        if (!xxsocket::not_send_error(error))
           YASIO_KLOGI("[index: %d] write udp socket failed, ec=%d, detail:%s", this->cindex(), error, io_service::strerror(error));
       }
       return n;
@@ -1742,7 +1743,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         else if (n < 0)
         {
           error = xxsocket::get_last_errno();
-          if (YASIO__RECV_FAIL(error))
+          if (!xxsocket::not_recv_error(error))
             YASIO_KLOGE("[index: %d] recvfrom failed, ec=%d, detail:%s", ctx->index_, error, this->strerror(error));
         }
       }

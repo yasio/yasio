@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -868,7 +868,7 @@ void xxsocket::translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLeng
 
 bool xxsocket::is_open(void) const { return this->fd != invalid_socket; }
 
-socket_native_type xxsocket::detach(void)
+socket_native_type xxsocket::release_handle(void)
 {
   socket_native_type result = this->fd;
   this->fd                  = invalid_socket;
@@ -1036,14 +1036,15 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, std::chrono
     // Since the socket is in non-blocking mode, this call will not
     // block.
     n = xxsocket::send(s, (const char*)buf + bytes_transferred, len - bytes_transferred, flags);
-    if (n > 0) {
+    if (n > 0)
+    {
       bytes_transferred += n;
       continue;
     }
 
     // Check for possible blocking.
     ec = xxsocket::get_last_errno();
-    if (n == -1 && (ec == EAGAIN || ec == EWOULDBLOCK || ec == ENOBUFS || ec == EINTR))
+    if (n == -1 && xxsocket::not_send_error(ec))
     {
       // Wait upto <timeout> for the blocking to subside.
       auto start    = yasio::highp_clock();
@@ -1086,14 +1087,15 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::micr
     // Since the socket is in non-blocking mode, this call will not
     // block.
     n = xxsocket::recv(s, static_cast<char*>(buf) + bytes_transferred, len - bytes_transferred, flags);
-    if (n > 0) {
+    if (n > 0)
+    {
       bytes_transferred += n;
       continue;
     }
 
     // Check for possible blocking.
     ec = xxsocket::get_last_errno();
-    if (n == -1 && (ec == EAGAIN || ec == EINTR || ec == EWOULDBLOCK || ec == EINPROGRESS))
+    if (n == -1 && xxsocket::not_recv_error(ec))
     {
       // Wait upto <timeout> for the blocking to subside.
       auto start    = yasio::highp_clock();
@@ -1132,7 +1134,7 @@ int xxsocket::sendto(const void* buf, int len, const endpoint& to, int flags) co
 
 int xxsocket::recvfrom(void* buf, int len, endpoint& from, int flags) const
 {
-  socklen_t addrlen = sizeof(from);
+  socklen_t addrlen{sizeof(from)};
   int n = static_cast<int>(::recvfrom(this->fd, (char*)buf, len, flags, &from.sa_, &addrlen));
   from.len(addrlen);
   return n;
@@ -1322,36 +1324,39 @@ int xxsocket::get_last_errno(void)
 #endif
 }
 
-void xxsocket::set_last_errno(int error)
+void xxsocket::set_last_errno(int ec)
 {
 #if defined(_WIN32)
-  ::WSASetLastError(error);
+  ::WSASetLastError(ec);
 #else
   errno = error;
 #endif
 }
 
-const char* xxsocket::strerror(int error)
+bool xxsocket::not_send_error(int ec) { return (ec == EWOULDBLOCK || ec == EAGAIN || ec == EINTR || ec == ENOBUFS); }
+bool xxsocket::not_recv_error(int ec) { return (ec == EWOULDBLOCK || ec == EAGAIN || ec == EINTR); }
+
+const char* xxsocket::strerror(int ec)
 {
 #if defined(_MSC_VER) && !defined(_WINSTORE)
   static char error_msg[256];
   ZeroMemory(error_msg, sizeof(error_msg));
-  ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,
-                   error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
+  ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL, ec,
+                   MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
                    error_msg, sizeof(error_msg), NULL);
 
   return error_msg;
 #else
-  return ::strerror(error);
+  return ::strerror(ec);
 #endif
 }
 
-const char* xxsocket::gai_strerror(int error)
+const char* xxsocket::gai_strerror(int ec)
 {
 #if defined(_WIN32)
-  return xxsocket::strerror(error);
+  return xxsocket::strerror(ec);
 #else
-  return ::gai_strerror(error);
+  return ::gai_strerror(ec);
 #endif
 }
 

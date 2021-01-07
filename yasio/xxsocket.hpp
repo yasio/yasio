@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -224,12 +224,6 @@ inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
   return ((High != 0) && (High != 0xf0));
 }
 #endif
-
-// shoulde close connection condition when retval of recv < 0
-#define YASIO__RECV_FAIL(ec) ((ec) != EAGAIN && (ec) != EWOULDBLOCK && (ec) != EINTR)
-
-// shoulde close connection condition when retval of send < 0
-#define YASIO__SEND_FAIL(ec) ((ec) != EAGAIN && (ec) != EWOULDBLOCK && (ec) != EINTR && (ec) != ENOBUFS && (ec) != EPERM)
 
 #define YASIO_ADDR_ANY(af) (af == AF_INET ? "0.0.0.0" : "::")
 
@@ -600,9 +594,6 @@ YASIO__NS_INLINE namespace ip
       return s;
     }
 
-    YASIO_OBSOLETE_DEPRECATE(endpoint::format_v4)
-    std::string to_strf_v4(const char* format) { return format_v4(format); }
-
     // in_addr(ip) to string with pred
     template <typename _Pred4, typename _Pred6> const char* inaddr_to_string(char* str /*[IN_MAX_ADDRSTRLEN]*/, _Pred4&& pred4, _Pred6&& pred6) const
     {
@@ -760,7 +751,8 @@ public:
   /** Gets the socket fd value **/
   YASIO__DECL socket_native_type native_handle(void) const;
 
-  YASIO__DECL socket_native_type detach(void);
+  /** Release ownership of the underlying native socket handle **/
+  YASIO__DECL socket_native_type release_handle(void);
 
   /* @brief: Set this socket io mode to nonblocking
   ** @params:
@@ -865,8 +857,8 @@ public:
    ** @params: omit
    **
    ** @returns:
-   **         If no error occurs, send returns the total number of bytes sent,
-   **         Oterwise, If retval <=0, mean error occured, and should close socket.
+   **         If no error occurs, retval == len,
+   **         Oterwise, If retval < len && not_recv_error(get_last_errno()), should close socket.
    */
   YASIO__DECL int send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags = 0);
   YASIO__DECL static int send_n(socket_native_type s, const void* buf, int len, std::chrono::microseconds wtimeout, int flags = 0);
@@ -875,8 +867,8 @@ public:
   ** @params:
   **       The timeout is in microseconds
   ** @returns:
-  **         If no error occurs, send returns the total number of bytes recvived,
-  **         Oterwise, If retval <=0, mean error occured, and should close socket.
+  **         If no error occurs, retval == len,
+  **         Oterwise, If retval < len && not_recv_error(get_last_errno()), should close socket.
   */
   YASIO__DECL int recv_n(void* buf, int len, const std::chrono::microseconds& wtimeout, int flags = 0) const;
   YASIO__DECL static int recv_n(socket_native_type s, void* buf, int len, std::chrono::microseconds wtimeout, int flags = 0);
@@ -1079,10 +1071,13 @@ public:
   YASIO__DECL static void init_ws32_lib(void);
 
   YASIO__DECL static int get_last_errno(void);
-  YASIO__DECL static void set_last_errno(int error);
+  YASIO__DECL static void set_last_errno(int ec);
 
-  YASIO__DECL static const char* strerror(int error);
-  YASIO__DECL static const char* gai_strerror(int error);
+  YASIO__DECL static bool not_send_error(int ec);
+  YASIO__DECL static bool not_recv_error(int ec);
+
+  YASIO__DECL static const char* strerror(int ec);
+  YASIO__DECL static const char* gai_strerror(int ec);
 
   /// <summary>
   /// Resolve all as ipv4 or ipv6 endpoints

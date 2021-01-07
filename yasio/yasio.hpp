@@ -852,12 +852,6 @@ public:
   YASIO__DECL io_service(const io_hostent* channel_eps, int channel_count);
   YASIO__DECL ~io_service();
 
-  YASIO_OBSOLETE_DEPRECATE(io_service::start)
-  void start_service(event_cb_t cb) { this->start(std::move(cb)); }
-
-  YASIO_OBSOLETE_DEPRECATE(io_service::stop)
-  void stop_service() { this->stop(); };
-
   YASIO__DECL void start(event_cb_t cb);
   YASIO__DECL void stop();
 
@@ -922,16 +916,7 @@ public:
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);
 
-  YASIO_OBSOLETE_DEPRECATE(io_service::resolve)
-  YASIO__DECL int builtin_resolv(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0)
-  {
-    return this->resolve(endpoints, hostname, port);
-  }
-
   YASIO__DECL int resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port = 0);
-
-  YASIO_OBSOLETE_DEPRECATE(io_service::channel_at)
-  io_channel* cindex_to_handle(size_t index) const { return channel_at(index); }
 
   // Gets channel by index
   YASIO__DECL io_channel* channel_at(size_t index) const;

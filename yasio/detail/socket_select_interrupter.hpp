@@ -99,8 +99,8 @@ private:
     server.set_nonblocking(true);
     server.set_optval(IPPROTO_TCP, TCP_NODELAY, 1);
 
-    read_descriptor_  = server.detach();
-    write_descriptor_ = client.detach();
+    read_descriptor_  = server.release_handle();
+    write_descriptor_ = client.release_handle();
   }
 
   // Close the descriptors.

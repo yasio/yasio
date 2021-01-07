@@ -1,6 +1,11 @@
 yasio-3.36.0
   
 1. Add ssl backend mbedtls support.
+2. Add `xxsocket::not_send_error` for check whether socket status is good when send retval < 0.
+3. Add `xxsocket::not_recv_error` for check whether socket status is good when recv retval < 0.
+4. Delete `xxsocket::alive`.
+5. Delete all deprecated functions.
+6. Rename `xxsocket::detach` to `xxsocket::release_handle`.
   
   
 yasio-3.35.0

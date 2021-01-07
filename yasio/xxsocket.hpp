@@ -1072,13 +1072,13 @@ public:
   YASIO__DECL static void init_ws32_lib(void);
 
   YASIO__DECL static int get_last_errno(void);
-  YASIO__DECL static void set_last_errno(int ec);
+  YASIO__DECL static void set_last_errno(int error);
 
-  YASIO__DECL static bool not_send_error(int ec);
-  YASIO__DECL static bool not_recv_error(int ec);
+  YASIO__DECL static bool not_send_error(int error);
+  YASIO__DECL static bool not_recv_error(int error);
 
-  YASIO__DECL static const char* strerror(int ec);
-  YASIO__DECL static const char* gai_strerror(int ec);
+  YASIO__DECL static const char* strerror(int error);
+  YASIO__DECL static const char* gai_strerror(int error);
 
   /// <summary>
   /// Resolve all as ipv4 or ipv6 endpoints

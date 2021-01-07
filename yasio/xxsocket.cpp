@@ -984,7 +984,7 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
   return xxsocket::connect(s, ep);
 }
 
-int xxsocket::disconnect() { return xxsocket::disconnect(this->fd); }
+int xxsocket::disconnect() const { return xxsocket::disconnect(this->fd); }
 int xxsocket::disconnect(socket_native_type s)
 {
   sockaddr addr_unspec  = {0};

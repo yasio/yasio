@@ -848,7 +848,7 @@ public:
   /* @brief: Disconnect a connectionless socket (such as SOCK_DGRAM)
   **
   */
-  YASIO__DECL int disconnect();
+  YASIO__DECL int disconnect() const;
   YASIO__DECL static int disconnect(socket_native_type s);
 
   /* @brief: nonblock send

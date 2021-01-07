@@ -1034,6 +1034,10 @@ public:
   ** @returns: If no error occurs, returns >= 0. Otherwise, a value of -1 is
   **          returned
   */
+  int select(fd_set* readfds, fd_set* writefds, fd_set* exceptfds, const std::chrono::microseconds& wtimeout) const
+  {
+    return xxsocket::select(this->fd, readfds, writefds, exceptfds, wtimeout);
+  }
   YASIO__DECL static int select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd_set* exceptfds, std::chrono::microseconds wtimeout);
 
   /* @brief: Disables sends or receives on this socket

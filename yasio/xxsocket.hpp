@@ -696,7 +696,8 @@ public: /// portable connect APIs
   YASIO__DECL int pconnect_n(const endpoint& ep, u_short local_port = 0);
 
   // easy to create a tcp ipv4 or ipv6 server socket.
-  YASIO__DECL int pserv(const char* addr, u_short port);
+  YASIO__DECL int pserve(const char* addr, u_short port);
+  YASIO__DECL int pserve(const endpoint& ep);
 
 public:
   // Construct a empty socket object

@@ -6,6 +6,7 @@ yasio-3.36.0
 4. Delete `xxsocket::alive`.
 5. Delete all deprecated functions.
 6. Rename `xxsocket::detach` to `xxsocket::release_handle`.
+7. Rename `xxsocket::pserv` to `xxsocket::pserve`.
   
   
 yasio-3.35.0

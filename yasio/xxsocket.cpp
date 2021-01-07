@@ -586,16 +586,15 @@ int xxsocket::pconnect_n(const endpoint& ep, u_short local_port)
   return -1;
 }
 
-int xxsocket::pserv(const char* addr, u_short port)
+int xxsocket::pserve(const char* addr, u_short port) { return this->pserve(endpoint{addr, port}); }
+int xxsocket::pserve(const endpoint& ep)
 {
-  endpoint local(addr, port);
-
-  if (!this->reopen(local.af()))
+  if (!this->reopen(ep.af()))
     return -1;
 
   set_optval(SOL_SOCKET, SO_REUSEADDR, 1);
 
-  int n = this->bind(local);
+  int n = this->bind(ep);
   if (n != 0)
     return n;
 

@@ -354,7 +354,7 @@ public:
 #if YASIO__HAS_CXX14
     this->async_wait(service, [cb = std::move(cb)]() {
 #else
-    this->async_wait([cb]() {
+    this->async_wait(service, [cb]() {
 #endif
       cb();
       return true;

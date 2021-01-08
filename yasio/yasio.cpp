@@ -1331,7 +1331,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       else
         handle_connect_failed(ctx, error);
 
-      ctx->timer_.cancel();
+      ctx->timer_.cancel(*this);
     }
 #else
     if (!yasio__testbits(ctx->properties_, YCPF_SSL_HANDSHAKING))

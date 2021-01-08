@@ -257,11 +257,11 @@ static yasio__global_state& yasio__shared_globals(const print_fn2_t& prt = nullp
 } // namespace
 
 /// highp_timer
-void highp_timer::async_wait(timer_cb_t cb) { this->service_.schedule_timer(this, std::move(cb)); }
-void highp_timer::cancel()
+void highp_timer::async_wait(io_service& service, timer_cb_t cb) { service.schedule_timer(this, std::move(cb)); }
+void highp_timer::cancel(io_service& service)
 {
   if (!expired())
-    this->service_.remove_timer(this);
+    service.remove_timer(this);
 }
 
 /// io_send_op
@@ -288,7 +288,7 @@ void ssl_auto_handle::destroy()
 #endif
 
 /// io_channel
-io_channel::io_channel(io_service& service, int index) : timer_(service)
+io_channel::io_channel(io_service& service, int index) : io_base(), service_(service)
 {
   socket_            = std::make_shared<xxsocket>();
   state_             = io_base::state::CLOSED;
@@ -951,7 +951,7 @@ void io_service::clear_channels()
   this->channel_ops_.clear();
   for (auto channel : channels_)
   {
-    channel->timer_.cancel();
+    channel->timer_.cancel(*this);
     cleanup_io(channel);
     delete channel;
   }
@@ -1297,7 +1297,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
         ctx->set_last_errno(EINPROGRESS);
         register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
         ctx->timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
-        ctx->timer_.async_wait_once([this, ctx]() {
+        ctx->timer_.async_wait_once(*this, [this, ctx]() {
           if (ctx->state_ != io_base::state::OPEN)
             handle_connect_failed(ctx, ETIMEDOUT);
         });
@@ -1356,7 +1356,7 @@ void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_
       do_ssl_handshake(ctx);
 
     if (ctx->state_ != io_base::state::OPENING)
-      ctx->timer_.cancel();
+      ctx->timer_.cancel(*this);
 #endif
   }
 }
@@ -1947,13 +1947,13 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
 }
 highp_timer_ptr io_service::schedule(const std::chrono::microseconds& duration, timer_cb_t cb)
 {
-  auto timer = std::make_shared<highp_timer>(*this);
+  auto timer = std::make_shared<highp_timer>();
   timer->expires_from_now(duration);
   /*!important, hold on `timer` by lambda expression */
 #if YASIO__HAS_CXX14
-  timer->async_wait([timer, cb = std::move(cb)]() { return cb(); });
+  timer->async_wait(*this, [timer, cb = std::move(cb)]() { return cb(); });
 #else
-  timer->async_wait([timer, cb]() { return cb(); });
+  timer->async_wait(*this, [timer, cb]() { return cb(); });
 #endif
   return timer;
 }

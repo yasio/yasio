@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -340,9 +340,6 @@ struct io_hostent {
 
 class highp_timer {
 public:
-  ~highp_timer() {}
-  highp_timer(io_service& service) : service_(service) {}
-
   void expires_from_now(const std::chrono::microseconds& duration)
   {
     this->duration_    = duration;
@@ -352,10 +349,10 @@ public:
   void expires_from_now() { this->expire_time_ = steady_clock_t::now() + this->duration_; }
 
   // Wait timer timeout once.
-  void async_wait_once(light_timer_cb_t cb)
+  void async_wait_once(io_service& service, light_timer_cb_t cb)
   {
 #if YASIO__HAS_CXX14
-    this->async_wait([cb = std::move(cb)]() {
+    this->async_wait(service, [cb = std::move(cb)]() {
 #else
     this->async_wait([cb]() {
 #endif
@@ -368,10 +365,10 @@ public:
   // @retval of timer_cb_t:
   //        true: wait once
   //        false: wait again after expired
-  YASIO__DECL void async_wait(timer_cb_t);
+  YASIO__DECL void async_wait(io_service& service, timer_cb_t);
 
   // Cancel the timer
-  YASIO__DECL void cancel();
+  YASIO__DECL void cancel(io_service& service);
 
   // Check if timer is expired?
   bool expired() const { return wait_duration().count() <= 0; }
@@ -379,7 +376,6 @@ public:
   // Gets wait duration of timer.
   std::chrono::microseconds wait_duration() const { return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ - steady_clock_t::now()); }
 
-  io_service& service_;
   std::chrono::microseconds duration_                  = {};
   std::chrono::time_point<steady_clock_t> expire_time_ = {};
 };
@@ -456,7 +452,7 @@ class io_channel : public io_base {
   friend class io_transport_kcp;
 
 public:
-  io_service& get_service() { return timer_.service_; }
+  io_service& get_service() { return service_; }
   int index() const { return index_; }
   u_short remote_port() const { return remote_port_; }
   YASIO__DECL std::string format_destination() const;
@@ -484,6 +480,8 @@ private:
 
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* ptr, int len);
+
+  io_service& service_;
 
   /* Since v3.33.0 mask,kind,flags,private_flags are stored to this field
   ** bit[1-8] mask & kinds

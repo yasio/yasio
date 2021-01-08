@@ -20,7 +20,7 @@ void start_exprie_timer()
   if (udpHeartTimer)
   {
     udpHeartTimer->expires_from_now();
-    udpHeartTimer->async_wait(create_timer_cb());
+    udpHeartTimer->async_wait(get_service(), create_timer_cb());
   }
   else
   {

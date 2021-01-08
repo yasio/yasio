@@ -11,7 +11,7 @@ int main()
       {"127.0.0.1", 8010} // tcp client
   };
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
-  deadline_timer delay_timer(service);
+  deadline_timer delay_timer;
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -54,7 +54,7 @@ int main()
   service.open(0, YCK_TCP_SERVER);              // open server
 
   delay_timer.expires_from_now(std::chrono::seconds(1));
-  delay_timer.async_wait_once([&]() {
+  delay_timer.async_wait_once(service, [&]() {
     service.open(1, YCK_TCP_CLIENT);
   });
 

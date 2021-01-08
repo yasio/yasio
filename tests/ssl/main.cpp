@@ -18,8 +18,8 @@ void yasioTest()
 
   std::vector<transport_handle_t> transports;
 
-  deadline_timer udpconn_delay(service);
-  deadline_timer udp_heartbeat(service);
+  deadline_timer udpconn_delay;
+  deadline_timer udp_heartbeat;
   int total_bytes_transferred = 0;
 
   int max_request_count = 3;
@@ -64,7 +64,7 @@ void yasioTest()
         if (--max_request_count > 0)
         {
           udpconn_delay.expires_from_now(std::chrono::seconds(1));
-          udpconn_delay.async_wait_once([&]() { service.open(0, YCK_SSL_CLIENT); });
+          udpconn_delay.async_wait_once(service, [&]() { service.open(0, YCK_SSL_CLIENT); });
         }
         else
           service.stop();

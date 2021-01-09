@@ -1,4 +1,4 @@
-docs_dir: docs
+docs_dir: ../docs
 site_name: yasio 中文文档
 repo_url: https://github.com/yasio/yasio
 repo_name: GitHub
@@ -58,11 +58,7 @@ plugins:
       lang:
         - en
         - ja
-  - pdf-export:
-      verbose: false
-      media_type: print
-      combined: true
-      combined_output_path: pdf/yasio-latest.pdf
+      separator: '[\s\-\，\。]+'
   - minify:
       minify_html: true
 extra_css:

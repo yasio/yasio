@@ -1,4 +1,4 @@
-docs_dir: ../docs
+docs_dir: ./
 site_name: yasio 中文文档
 repo_url: https://github.com/yasio/yasio
 repo_name: GitHub

@@ -1,0 +1,69 @@
+docs_dir: docs
+site_name: yasio 中文文档
+repo_url: https://github.com/yasio/yasio
+repo_name: GitHub
+edit_uri: edit/master/docs
+copyright: Copyright &copy; 2012 - 2021 yasio.org.
+theme:
+  name: material
+  language: en
+nav:
+  - 主页: index.md
+  - API 参考:
+    - io_service类: api/reference/io_service-class.md
+    - io_channel类: api/reference/io_channel-class.md
+    - io_event类: api/reference/io_event-class.md
+    - obstream类: api/reference/obstream-class.md
+    - ibstream类: api/reference/ibstream-class.md
+    - xxsocket类: api/reference/xxsocket-class.md
+    - io_service选项: api/reference/io_service-options.md
+  - 预处理器: preprocessor.md
+  - 常见问题: faq.md
+markdown_extensions:
+  - admonition
+  - abbr
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: yasio
+      repo: yasio
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+plugins:
+  - search:
+      lang:
+        - en
+        - ja
+  - pdf-export:
+      verbose: false
+      media_type: print
+      combined: true
+      combined_output_path: pdf/yasio-latest.pdf
+  - minify:
+      minify_html: true
+extra_css:
+  - 'assets/stylesheets/extra.css'

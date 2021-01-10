@@ -37,9 +37,7 @@
 
     
 ## 文档
-* 简体中文: [https://docs.yasio.org/](https://docs.yasio.org/)
-* English: [https://docs.yasio.org/en/latest](https://docs.yasio.org/en/latest)
-
+* [https://yasio.org/](https://yasio.org/)
 
 ## 使用g++快速运行tcptest测试程序
 ```sh

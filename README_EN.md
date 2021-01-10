@@ -36,8 +36,7 @@
   - [UnLua](https://github.com/yasio/UnLua): Integrate to Tencent's sluaunreal(Yet another lua bindings solution for UE4)
 
 ## Docomentation
-* Simplified Chinese: [https://docs.yasio.org/](https://docs.yasio.org/)
-* English: [https://docs.yasio.org/en/latest](https://docs.yasio.org/en/latest)
+* [https://yasio.org/en/latest](https://yasio.org/en/latest)
 
 ## Simple run tcptest with g++
 ```sh

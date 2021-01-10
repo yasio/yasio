@@ -79,7 +79,7 @@ SOFTWARE.
 #if !defined(YASIO_VERBOSE_LOG)
 #  define YASIO_KLOGV(fmt, ...) (void)0
 #else
-#  define YASIO_KLOGV(format, ...) YASIO_KLOG_CP(cprint(), YLOG_V, format, ##__VA_ARGS__)
+#  define YASIO_KLOGV(format, ...) YASIO_KLOG_CP(YLOG_V, format, ##__VA_ARGS__)
 #endif
 
 #define yasio__setbits(x, m) ((x) |= (m))

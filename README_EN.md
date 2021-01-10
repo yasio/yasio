@@ -1,4 +1,4 @@
-<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="160" src="https://yasio.org/images/logo.png" alt="yasio logo"></a></p>
+<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="160" src="docs/assets/images/logo.png" alt="yasio logo"></a></p>
 
 # *YASIO* - *Y*et another *A*synchronous *S*ocket *I*/*O*.
 
@@ -84,5 +84,5 @@ yasio provide follow C++17 standard components compatible with C++11 compiler, p
 - cxx20::starts_with, cxx20::ends_with
   
 ## Core framework
-![image](https://yasio.org/images/framework_en.png)  
+![image](docs/assets/images/framework_en.png)  
 

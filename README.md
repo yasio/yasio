@@ -1,4 +1,4 @@
-<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="160" src="https://yasio.org/images/logo.png" alt="yasio logo"></a></p>
+<p align="center"><a href="https://yasio.org" target="_blank" rel="noopener noreferrer"><img width="160" src="docs/assets/images/logo.png" alt="yasio logo"></a></p>
 
 # *YASIO* - *Y*et another *A*synchronous *S*ocket *I*/*O*.
 [![Android Build Status](https://github.com/yasio/yasio/workflows/android/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aandroid)
@@ -99,7 +99,7 @@ yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息�
 参考: [Cocos2d-X WebSocket.cpp](https://github.com/cocos2d/cocos2d-x/blob/v4/cocos/network/WebSocket.cpp)
 
 ## 框架图
-![image](https://yasio.org/images/framework.png)  
+![image](docs/assets/images/framework.png)  
 
 ## QQ交流群
 点击加入：[829884294](https://jq.qq.com/?_wv=1027&k=5LDEiNv)

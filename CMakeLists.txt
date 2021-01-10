@@ -88,6 +88,10 @@ if(YASIO_BUILD_WITH_HALF)
     add_definitions(-DYASIO_HAVE_HALF_FLOAT=1)
 endif()
 
+if(YASIO_VERBOSE_LOG)
+    add_definitions(-DYASIO_VERBOSE_LOG=1)
+endif()
+
 ### openssl support
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    add_subdirectory(external/openssl)

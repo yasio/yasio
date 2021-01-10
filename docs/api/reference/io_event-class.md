@@ -68,7 +68,7 @@ int status() const;
 std::vector<char>& packet()
 ```
 
-## Retrun value
+## 返回值
 
 消息包的引用, 用户可以使用std::move无GC方式从事件取走消息包。
 

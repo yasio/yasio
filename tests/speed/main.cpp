@@ -201,7 +201,7 @@ void start_sender(io_service& service)
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
-  deadline_timer timer(service);
+  
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
 
   service.start([&](event_ptr event) {

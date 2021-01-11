@@ -35,14 +35,6 @@ SOFTWARE.
 #endif
 #include <limits>
 #include <sstream>
-#if defined(_WIN32)
-#  include <io.h>
-#  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR | O_BINARY, S_IWRITE | S_IREAD
-#  define ftruncate _chsize
-#else
-#  include <unistd.h>
-#  define YASIO_O_OPEN_FLAGS O_CREAT | O_RDWR, S_IRWXU
-#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

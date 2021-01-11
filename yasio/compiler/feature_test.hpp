@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -106,6 +106,12 @@ SOFTWARE.
 #  else
 #    define YASIO__HAS_SA_LEN 0
 #  endif
+#endif
+
+#if !defined(_WIN32) || defined(NTDDI_VISTA)
+#  define YASIO__HAS_NTOP 1
+#else
+#  define YASIO__HAS_NTOP 0
 #endif
 
 // 64bits Sense Macros

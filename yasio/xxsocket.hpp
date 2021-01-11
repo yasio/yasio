@@ -363,8 +363,13 @@ YASIO__NS_INLINE namespace ip
 
   namespace compat
   {
+#if YASIO__HAS_NTOP
+  using ::inet_ntop;
+  using ::inet_pton;
+#else
   YASIO__DECL const char* inet_ntop(int af, const void* src, char* dst, socklen_t);
   YASIO__DECL int inet_pton(int af, const char* src, void* dst);
+#endif
   } // namespace compat
 
   inline bool is_global_in4_addr(const in_addr* addr) { return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr); };

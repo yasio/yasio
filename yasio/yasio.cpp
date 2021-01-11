@@ -46,6 +46,7 @@ SOFTWARE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "yasio/detail/thread_name.hpp"
 
 #if defined(YASIO_SSL_BACKEND)
 #  include "yasio/detail/ssl.hpp"
@@ -116,24 +117,21 @@ namespace inet
 {
 namespace
 {
-// event mask
 enum
-{
+{ // event mask
   YEM_POLLIN  = 1,
   YEM_POLLOUT = 2,
   YEM_POLLERR = 4,
 };
 
-// op mask
 enum
-{
+{ // op mask
   YOPM_OPEN  = 1,
   YOPM_CLOSE = 1 << 1,
 };
 
-// dns queries state
 enum : u_short
-{
+{ // dns queries state
   YDQS_READY = 1,
   YDQS_DIRTY,
   YDQS_INPROGRESS,
@@ -161,42 +159,6 @@ enum
   /* whether ssl client in handshaking */
   YCPF_SSL_HANDSHAKING = 1 << 25,
 };
-
-#if defined(_WIN32)
-const DWORD MS_VC_EXCEPTION = 0x406D1388;
-#  pragma pack(push, 8)
-typedef struct _yasio__thread_info {
-  DWORD dwType;     // Must be 0x1000.
-  LPCSTR szName;    // Pointer to name (in user addr space).
-  DWORD dwThreadID; // Thread ID (-1=caller thread).
-  DWORD dwFlags;    // Reserved for future use, must be zero.
-} yasio__thread_info;
-#  pragma pack(pop)
-static void yasio__set_thread_name(const char* threadName)
-{
-  yasio__thread_info info;
-  info.dwType     = 0x1000;
-  info.szName     = threadName;
-  info.dwThreadID = GetCurrentThreadId();
-  info.dwFlags    = 0;
-#  if !defined(__MINGW64__) && !defined(__MINGW32__)
-  __try
-  {
-    RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
-  }
-  __except (EXCEPTION_EXECUTE_HANDLER)
-  {}
-#  endif
-}
-#elif defined(__APPLE__)
-#  define yasio__set_thread_name(name) pthread_setname_np(name)
-#elif defined(__linux__) && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 12)))
-// These functions first appeared in glibc in version 2.12.
-// see: http://man7.org/linux/man-pages/man3/pthread_setname_np.3.html
-#  define yasio__set_thread_name(name) pthread_setname_np(pthread_self(), name)
-#else
-#  define yasio__set_thread_name(name)
-#endif
 
 namespace
 {
@@ -820,6 +782,7 @@ void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
 // ------------------------ io_service ------------------------
 void io_service::init_globals(const yasio::inet::print_fn2_t& prt) { yasio__shared_globals(prt).cprint_ = prt; }
 void io_service::cleanup_globals() { yasio__shared_globals().cprint_ = nullptr; }
+uint32_t io_service::tcp_rtt(transport_handle_t transport) { return transport->is_open() ? transport->socket_->tcp_rtt() : 0; }
 io_service::io_service() { this->init(nullptr, 1); }
 io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
 io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }
@@ -974,7 +937,7 @@ void io_service::dispatch(int max_count)
 }
 void io_service::run()
 {
-  yasio__set_thread_name("yasio");
+  yasio::set_thread_name("yasio");
 
 #if defined(YASIO_SSL_BACKEND)
   init_ssl_context();
@@ -1162,7 +1125,6 @@ void io_service::open(size_t index, int kind)
     open_internal(ctx);
   }
 }
-uint32_t io_service::tcp_rtt(transport_handle_t transport) { return transport->is_open() ? transport->socket_->tcp_rtt() : 0; }
 io_channel* io_service::channel_at(size_t index) const { return (index < channels_.size()) ? channels_[index] : nullptr; }
 void io_service::handle_close(transport_handle_t thandle)
 {

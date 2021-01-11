@@ -842,6 +842,9 @@ public:
   YASIO__DECL static void init_globals(const yasio::inet::print_fn2_t&);
   YASIO__DECL static void cleanup_globals();
 
+  // the additional API to get rtt of tcp transport
+  YASIO__DECL static uint32_t tcp_rtt(transport_handle_t);
+
 public:
   YASIO__DECL io_service();
   YASIO__DECL io_service(int channel_count);
@@ -876,9 +879,6 @@ public:
   YASIO__DECL void close(transport_handle_t);
   // close channel
   YASIO__DECL void close(int index);
-
-  // the additional API to get rtt of tcp transport
-  YASIO__DECL static uint32_t tcp_rtt(transport_handle_t);
 
   /*
   ** Summary: Write data to a TCP or connected UDP transport with last peer address

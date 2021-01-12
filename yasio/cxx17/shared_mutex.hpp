@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -36,6 +36,9 @@ SOFTWARE.
 #else
 #  include <system_error>
 #  if defined(_WIN32)
+#    if !defined(WIN32_LEAN_AND_MEAN)
+#      define WIN32_LEAN_AND_MEAN
+#    endif
 #    include <Windows.h>
 #    define yasio__smtx_t SRWLOCK
 #    define yasio__smtx_init(rwlock, attr) InitializeSRWLock(rwlock)

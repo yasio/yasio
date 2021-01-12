@@ -237,443 +237,444 @@ namespace inet
 // & 0x000000ff ) )
 static const socket_native_type invalid_socket = (socket_native_type)-1;
 
-YASIO__NS_INLINE namespace ip
+YASIO__NS_INLINE
+namespace ip
 {
 #pragma pack(push, 1)
-  // ip packet
-  struct ip_header {
-    // header size; 5+
-    unsigned char header_length : 4;
+// ip packet
+struct ip_header {
+  // header size; 5+
+  unsigned char header_length : 4;
 
-    // IP version: 0100/0x04(IPv4), 0110/0x05(IPv6)
-    unsigned char version : 4;
+  // IP version: 0100/0x04(IPv4), 0110/0x05(IPv6)
+  unsigned char version : 4;
 
-    // type of service:
-    union {
-      unsigned char value;
-      struct {
-        unsigned char priority : 3;
-        unsigned char D : 1;        // delay: 0(normal), 1(as little as possible)
-        unsigned char T : 1;        // throughput: 0(normal), 1(as big as possible)
-        unsigned char R : 1;        // reliability: 0(normal), 1(as big as possible)
-        unsigned char C : 1;        // transmission cost: 0(normal), 1(as little as possible)
-        unsigned char reserved : 1; // always be zero
-      } detail;
-    } TOS;
+  // type of service:
+  union {
+    unsigned char value;
+    struct {
+      unsigned char priority : 3;
+      unsigned char D : 1;        // delay: 0(normal), 1(as little as possible)
+      unsigned char T : 1;        // throughput: 0(normal), 1(as big as possible)
+      unsigned char R : 1;        // reliability: 0(normal), 1(as big as possible)
+      unsigned char C : 1;        // transmission cost: 0(normal), 1(as little as possible)
+      unsigned char reserved : 1; // always be zero
+    } detail;
+  } TOS;
 
-    // total size, header + data; MAX length is: 65535
-    unsigned short total_length;
+  // total size, header + data; MAX length is: 65535
+  unsigned short total_length;
 
-    // identifier: all split small packet set as the same value.
-    unsigned short identifier;
+  // identifier: all split small packet set as the same value.
+  unsigned short identifier;
 
-    // flags and frag
-    unsigned short flags : 3;
-    unsigned short frag : 13;
+  // flags and frag
+  unsigned short flags : 3;
+  unsigned short frag : 13;
 
-    // time of living, decreased by route, if zero, this packet will by dropped
-    // avoid foward looply.
-    unsigned char TTL;
+  // time of living, decreased by route, if zero, this packet will by dropped
+  // avoid foward looply.
+  unsigned char TTL;
 
-    // protocol
-    // 1: ICMP
-    // 2: IGMP
-    // 6: TCP
-    // 0x11/17: UDP
-    // 0x58/88: IGRP
-    // 0x59/89: OSPF
-    unsigned char protocol; // TCP / UDP / Other
+  // protocol
+  // 1: ICMP
+  // 2: IGMP
+  // 6: TCP
+  // 0x11/17: UDP
+  // 0x58/88: IGRP
+  // 0x59/89: OSPF
+  unsigned char protocol; // TCP / UDP / Other
 
-    // check header of IP-PACKET 's correctness.
-    unsigned short checksum;
+  // check header of IP-PACKET 's correctness.
+  unsigned short checksum;
 
-    typedef union {
-      unsigned int value;
-      struct {
-        unsigned int B1 : 8, B2 : 8, B3 : 8, B4 : 8;
-      } detail;
-    } dotted_decimal_t;
+  typedef union {
+    unsigned int value;
+    struct {
+      unsigned int B1 : 8, B2 : 8, B3 : 8, B4 : 8;
+    } detail;
+  } dotted_decimal_t;
 
-    // source ip address
-    dotted_decimal_t src_ip;
+  // source ip address
+  dotted_decimal_t src_ip;
 
-    // destination ip address
-    dotted_decimal_t dst_ip;
-  };
+  // destination ip address
+  dotted_decimal_t dst_ip;
+};
 
-  struct psd_header {
-    unsigned long src_addr;
-    unsigned long dst_addr;
-    char mbz;
-    char protocol;
-    unsigned short tcp_length;
-  };
+struct psd_header {
+  unsigned long src_addr;
+  unsigned long dst_addr;
+  char mbz;
+  char protocol;
+  unsigned short tcp_length;
+};
 
-  struct tcp_header {
-    unsigned short src_port; // lgtm [cpp/class-many-fields]
-    unsigned short dst_port;
-    unsigned int seqno;
-    unsigned int ackno;
-    unsigned char header_length : 4;
-    unsigned char reserved : 4;
-    unsigned char flg_fin : 1, flg_syn : 1, flg_rst : 1, flg_psh : 1, flg_ack : 1, flg_urg : 1, flg_reserved : 2;
-    unsigned short win_length;
-    unsigned short checksum;
-    unsigned short urp;
-  };
+struct tcp_header {
+  unsigned short src_port; // lgtm [cpp/class-many-fields]
+  unsigned short dst_port;
+  unsigned int seqno;
+  unsigned int ackno;
+  unsigned char header_length : 4;
+  unsigned char reserved : 4;
+  unsigned char flg_fin : 1, flg_syn : 1, flg_rst : 1, flg_psh : 1, flg_ack : 1, flg_urg : 1, flg_reserved : 2;
+  unsigned short win_length;
+  unsigned short checksum;
+  unsigned short urp;
+};
 
-  struct udp_header {
-    unsigned short src_port;
-    unsigned short dst_port;
-    unsigned short length;
-    unsigned short checksum;
-  };
+struct udp_header {
+  unsigned short src_port;
+  unsigned short dst_port;
+  unsigned short length;
+  unsigned short checksum;
+};
 
-  struct icmp_header {
-    unsigned char type;      // 8bit type
-    unsigned char code;      // 8bit code
-    unsigned short checksum; // 16bit check sum
-    unsigned short id;       // identifier: usually use process id
-    unsigned short seqno;    // message sequence NO.
-  };
+struct icmp_header {
+  unsigned char type;      // 8bit type
+  unsigned char code;      // 8bit code
+  unsigned short checksum; // 16bit check sum
+  unsigned short id;       // identifier: usually use process id
+  unsigned short seqno;    // message sequence NO.
+};
 
-  struct eth_header {
-    unsigned dst_eth[6];
-    unsigned src_eth[6];
-    unsigned eth_type;
-  };
+struct eth_header {
+  unsigned dst_eth[6];
+  unsigned src_eth[6];
+  unsigned eth_type;
+};
 
-  struct arp_header {
-    unsigned short arp_hw;    // format of hardware address
-    unsigned short arp_pro;   // format of protocol address
-    unsigned char arp_hlen;   // length of hardware address
-    unsigned char arp_plen;   // length of protocol address
-    unsigned short arp_op;    // arp operation
-    unsigned char arp_oha[6]; // sender hardware address
-    unsigned long arp_opa;    // sender protocol address
-    unsigned char arp_tha;    // target hardware address
-    unsigned long arp_tpa;    // target protocol address;
-  };
+struct arp_header {
+  unsigned short arp_hw;    // format of hardware address
+  unsigned short arp_pro;   // format of protocol address
+  unsigned char arp_hlen;   // length of hardware address
+  unsigned char arp_plen;   // length of protocol address
+  unsigned short arp_op;    // arp operation
+  unsigned char arp_oha[6]; // sender hardware address
+  unsigned long arp_opa;    // sender protocol address
+  unsigned char arp_tha;    // target hardware address
+  unsigned long arp_tpa;    // target protocol address;
+};
 
-  struct arp_packet {
-    eth_header ethhdr;
-    arp_header arphdr;
-  };
+struct arp_packet {
+  eth_header ethhdr;
+  arp_header arphdr;
+};
 #pragma pack(pop)
 
-  namespace compat
-  {
+namespace compat
+{
 #if YASIO__HAS_NTOP
-  using ::inet_ntop;
-  using ::inet_pton;
+using ::inet_ntop;
+using ::inet_pton;
 #else
-  YASIO__DECL const char* inet_ntop(int af, const void* src, char* dst, socklen_t);
-  YASIO__DECL int inet_pton(int af, const char* src, void* dst);
+YASIO__DECL const char* inet_ntop(int af, const void* src, char* dst, socklen_t);
+YASIO__DECL int inet_pton(int af, const char* src, void* dst);
 #endif
-  } // namespace compat
+} // namespace compat
 
-  inline bool is_global_in4_addr(const in_addr* addr) { return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr); };
-  inline bool is_global_in6_addr(const in6_addr* addr) { return !!IN6_IS_ADDR_GLOBAL(addr); };
+inline bool is_global_in4_addr(const in_addr* addr) { return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr); };
+inline bool is_global_in6_addr(const in6_addr* addr) { return !!IN6_IS_ADDR_GLOBAL(addr); };
 
-  struct endpoint {
-  public:
-    endpoint() { this->zeroset(); }
-    endpoint(const endpoint& rhs) { this->as_is(rhs); }
-    explicit endpoint(const addrinfo* info) { as_is(info); }
-    explicit endpoint(const sockaddr* info) { as_is(info); }
-    explicit endpoint(const char* addr, unsigned short port = 0) { as_in(addr, port); }
-    explicit endpoint(uint32_t addr, unsigned short port = 0) { as_in(addr, port); }
-    endpoint(int family, const void* addr, unsigned short port = 0) { as_in(family, addr, port); }
+struct endpoint {
+public:
+  endpoint() { this->zeroset(); }
+  endpoint(const endpoint& rhs) { this->as_is(rhs); }
+  explicit endpoint(const addrinfo* info) { as_is(info); }
+  explicit endpoint(const sockaddr* info) { as_is(info); }
+  explicit endpoint(const char* addr, unsigned short port = 0) { as_in(addr, port); }
+  explicit endpoint(uint32_t addr, unsigned short port = 0) { as_in(addr, port); }
+  endpoint(int family, const void* addr, unsigned short port = 0) { as_in(family, addr, port); }
 
-    explicit operator bool() const { return this->af() != AF_UNSPEC; }
+  explicit operator bool() const { return this->af() != AF_UNSPEC; }
 
-    endpoint& operator=(const endpoint& rhs) { return this->as_is(rhs); }
-    endpoint& as_is(const endpoint& rhs)
+  endpoint& operator=(const endpoint& rhs) { return this->as_is(rhs); }
+  endpoint& as_is(const endpoint& rhs)
+  {
+    this->zeroset();
+    memcpy(this, &rhs, sizeof(rhs));
+    return *this;
+  }
+  endpoint& as_is(const addrinfo* info) { return this->as_is_raw(info->ai_addr, info->ai_addrlen); }
+  endpoint& as_is(const sockaddr* addr)
+  {
+    this->zeroset();
+    switch (addr->sa_family)
     {
-      this->zeroset();
-      memcpy(this, &rhs, sizeof(rhs));
-      return *this;
-    }
-    endpoint& as_is(const addrinfo* info) { return this->as_is_raw(info->ai_addr, info->ai_addrlen); }
-    endpoint& as_is(const sockaddr* addr)
-    {
-      this->zeroset();
-      switch (addr->sa_family)
-      {
-        case AF_INET:
-          ::memcpy(&in4_, addr, sizeof(sockaddr_in));
-          this->len(sizeof(sockaddr_in));
-          break;
-        case AF_INET6:
-          ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
-          this->len(sizeof(sockaddr_in6));
-          break;
+      case AF_INET:
+        ::memcpy(&in4_, addr, sizeof(sockaddr_in));
+        this->len(sizeof(sockaddr_in));
+        break;
+      case AF_INET6:
+        ::memcpy(&in6_, addr, sizeof(sockaddr_in6));
+        this->len(sizeof(sockaddr_in6));
+        break;
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
-        case AF_UNIX:
-          as_un(((sockaddr_un*)addr)->sun_path);
-          break;
+      case AF_UNIX:
+        as_un(((sockaddr_un*)addr)->sun_path);
+        break;
 #endif
-      }
-      return *this;
     }
-    endpoint& as_in(int family, const void* addr_in, u_short port)
+    return *this;
+  }
+  endpoint& as_in(int family, const void* addr_in, u_short port)
+  {
+    this->zeroset();
+    this->af(family);
+    this->port(port);
+    switch (family)
     {
-      this->zeroset();
-      this->af(family);
-      this->port(port);
-      switch (family)
-      {
-        case AF_INET:
-          ::memcpy(&in4_.sin_addr, addr_in, sizeof(in_addr));
-          this->len(sizeof(sockaddr_in));
-          break;
-        case AF_INET6:
-          ::memcpy(&in6_.sin6_addr, addr_in, sizeof(in6_addr));
-          this->len(sizeof(sockaddr_in6));
-          break;
-      }
-      return *this;
+      case AF_INET:
+        ::memcpy(&in4_.sin_addr, addr_in, sizeof(in_addr));
+        this->len(sizeof(sockaddr_in));
+        break;
+      case AF_INET6:
+        ::memcpy(&in6_.sin6_addr, addr_in, sizeof(in6_addr));
+        this->len(sizeof(sockaddr_in6));
+        break;
     }
-    endpoint& as_in(const char* addr, unsigned short port)
-    {
-      this->zeroset();
-
-      /*
-       * Windows XP no inet_pton or inet_ntop
-       */
-      if (strchr(addr, ':') == nullptr)
-      { // ipv4
-        if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
-        {
-          this->in4_.sin_family = AF_INET;
-          this->in4_.sin_port   = htons(port);
-          this->len(sizeof(sockaddr_in));
-        }
-      }
-      else
-      { // ipv6
-        if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1)
-        {
-          this->in6_.sin6_family = AF_INET6;
-          this->in6_.sin6_port   = htons(port);
-          this->len(sizeof(sockaddr_in6));
-        }
-      }
-
-      return *this;
-    }
-    endpoint& as_in(uint32_t addr, u_short port)
-    {
-      this->zeroset();
-
-      this->af(AF_INET);
-      this->addr_v4(addr);
-      this->port(port);
-      this->len(sizeof(sockaddr_in));
-      return *this;
-    }
-
-#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
-    endpoint& as_un(const char* name)
-    {
-      int n = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
-      if (n > 0)
-      {
-        un_.sun_family = AF_UNIX;
-        this->len(offsetof(struct sockaddr_un, sun_path) + n + 1);
-      }
-      else
-      {
-        un_.sun_family = AF_UNSPEC;
-        this->len(0);
-      }
-      return *this;
-    }
-#endif
-
-    endpoint& as_is_raw(const void* ai_addr, size_t ai_addrlen)
-    {
-      this->zeroset();
-      ::memcpy(this, ai_addr, ai_addrlen);
-      this->len(ai_addrlen);
-      return *this;
-    }
-
-    void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
-
-    void af(int v) { sa_.sa_family = v; }
-    int af() const { return sa_.sa_family; }
-
-    void ip(const char* addr)
-    {
-      /*
-       * Windows XP no inet_pton or inet_ntop
-       */
-      if (strchr(addr, ':') == nullptr)
-      { // ipv4
-        this->in4_.sin_family = AF_INET;
-        compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
-      }
-      else
-      { // ipv6
-        this->in6_.sin6_family = AF_INET6;
-        compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
-      }
-    }
-    std::string ip() const
-    {
-      std::string ipstring(IN_MAX_ADDRSTRLEN - 1, '\0');
-
-      auto str = inaddr_to_string(
-          &ipstring.front(), [](const in_addr*) { return true; }, [](const in6_addr*) { return true; });
-
-      ipstring.resize(str ? strlen(str) : 0);
-      return ipstring;
-    }
-    // to_string with port, can simply add prefix "http::" or "https://" for url
-    std::string to_string() const
-    {
-      std::string addr(IN_MAX_ADDRSTRLEN + sizeof("65535") + 2, '[');
-
-      size_t n = 0;
-
-      switch (sa_.sa_family)
-      {
-        case AF_INET:
-          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
-          n += sprintf(&addr.front() + n, ":%u", this->port());
-          break;
-        case AF_INET6:
-          n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
-          n += sprintf(&addr.front() + n, "]:%u", this->port());
-          break;
-#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
-        case AF_UNIX:
-          n = this->len();
-          addr.assign(un_.sun_path, n);
-          break;
-#endif
-      }
-
-      addr.resize(n);
-
-      return addr;
-    }
-
-    unsigned short port() const { return ntohs(in4_.sin_port); }
-    void port(unsigned short value) { in4_.sin_port = htons(value); }
-
-    void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = htonl(addr); }
-    uint32_t addr_v4() const { return ntohl(in4_.sin_addr.s_addr); }
+    return *this;
+  }
+  endpoint& as_in(const char* addr, unsigned short port)
+  {
+    this->zeroset();
 
     /*
-     %N: s_net   127
-     %H: s_host  0
-     %L: s_lh    0
-     %M: s_impno 1
-     %l: low byte of port
-     %h: high byte of port
-    */
-    std::string format_v4(const char* foramt)
-    {
-      static const char* const _SIN_FORMATS[] = {"%N", "%H", "%L", "%M", "%l", "%h"};
-
-      unsigned char addr_bytes[sizeof(in4_.sin_addr.s_addr) + sizeof(u_short)];
-      memcpy(addr_bytes, &in4_.sin_addr.s_addr, sizeof(in4_.sin_addr.s_addr));
-      memcpy(addr_bytes + sizeof(in4_.sin_addr.s_addr), &in4_.sin_port, sizeof(in4_.sin_port));
-
-      char snum[sizeof("255")] = {0};
-      const size_t _N0         = sizeof("%N") - 1;
-      std::string s            = foramt;
-      for (size_t idx = 0; idx < YASIO_ARRAYSIZE(_SIN_FORMATS); ++idx)
+     * Windows XP no inet_pton or inet_ntop
+     */
+    if (strchr(addr, ':') == nullptr)
+    { // ipv4
+      if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
       {
-        auto fmt   = _SIN_FORMATS[idx];
-        auto offst = s.find(fmt);
-        if (offst != std::string::npos)
-        {
-          sprintf(snum, "%u", addr_bytes[idx]);
-          s.replace(offst, _N0, snum);
-        }
+        this->in4_.sin_family = AF_INET;
+        this->in4_.sin_port   = htons(port);
+        this->len(sizeof(sockaddr_in));
       }
-
-      return s;
     }
-
-    // in_addr(ip) to string with pred
-    template <typename _Pred4, typename _Pred6> const char* inaddr_to_string(char* str /*[IN_MAX_ADDRSTRLEN]*/, _Pred4&& pred4, _Pred6&& pred6) const
-    {
-      switch (af())
+    else
+    { // ipv6
+      if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1)
       {
-        case AF_INET:
-          if (pred4(&in4_.sin_addr))
-            return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
-          break;
-        case AF_INET6:
-          if (pred6(&in6_.sin6_addr))
-            return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
-          break;
-      }
-      return nullptr;
-    }
-
-    // in_addr(ip) to csv without loopback or linklocal address
-    void inaddr_to_csv_nl(std::string& csv)
-    {
-      char str[INET6_ADDRSTRLEN] = {0};
-      if (inaddr_to_string(str, is_global_in4_addr, is_global_in6_addr))
-      {
-        csv += str;
-        csv += ',';
+        this->in6_.sin6_family = AF_INET6;
+        this->in6_.sin6_port   = htons(port);
+        this->len(sizeof(sockaddr_in6));
       }
     }
 
-    // the in_addr(from sockaddr) to csv string helper function without loopback or linklocal
-    // address
-    static void inaddr_to_csv_nl(const sockaddr* addr, std::string& csv) { endpoint(addr).inaddr_to_csv_nl(csv); }
-
-    // the in_addr/in6_addr to csv string helper function without loopback or linklocal address
-    // the inaddr should be union of in_addr,in6_addr or ensure it's memory enough when
-    // family=AF_INET6
-    static void inaddr_to_csv_nl(int family, const void* inaddr, std::string& csv) { endpoint(family, inaddr).inaddr_to_csv_nl(csv); }
-
-    void len(size_t n)
-    {
-#if !YASIO__HAS_SA_LEN
-      len_ = static_cast<uint8_t>(n);
-#else
-      sa_.sa_len = static_cast<uint8_t>(n);
-#endif
-    }
-    socklen_t len() const
-    {
-#if !YASIO__HAS_SA_LEN
-      return len_;
-#else
-      return sa_.sa_len;
-#endif
-    }
-
-    union {
-      sockaddr sa_;
-      sockaddr_in in4_;
-      sockaddr_in6 in6_;
-#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
-      sockaddr_un un_;
-#endif
-    };
-#if !YASIO__HAS_SA_LEN
-    uint8_t len_;
-#endif
-  };
-
-  // supported internet protocol flags
-  enum : u_short
+    return *this;
+  }
+  endpoint& as_in(uint32_t addr, u_short port)
   {
-    ipsv_unavailable = 0,
-    ipsv_ipv4        = 1,
-    ipsv_ipv6        = 2,
-    ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6,
+    this->zeroset();
+
+    this->af(AF_INET);
+    this->addr_v4(addr);
+    this->port(port);
+    this->len(sizeof(sockaddr_in));
+    return *this;
+  }
+
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
+  endpoint& as_un(const char* name)
+  {
+    int n = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
+    if (n > 0)
+    {
+      un_.sun_family = AF_UNIX;
+      this->len(offsetof(struct sockaddr_un, sun_path) + n + 1);
+    }
+    else
+    {
+      un_.sun_family = AF_UNSPEC;
+      this->len(0);
+    }
+    return *this;
+  }
+#endif
+
+  endpoint& as_is_raw(const void* ai_addr, size_t ai_addrlen)
+  {
+    this->zeroset();
+    ::memcpy(this, ai_addr, ai_addrlen);
+    this->len(ai_addrlen);
+    return *this;
+  }
+
+  void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
+
+  void af(int v) { sa_.sa_family = v; }
+  int af() const { return sa_.sa_family; }
+
+  void ip(const char* addr)
+  {
+    /*
+     * Windows XP no inet_pton or inet_ntop
+     */
+    if (strchr(addr, ':') == nullptr)
+    { // ipv4
+      this->in4_.sin_family = AF_INET;
+      compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
+    }
+    else
+    { // ipv6
+      this->in6_.sin6_family = AF_INET6;
+      compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
+    }
+  }
+  std::string ip() const
+  {
+    std::string ipstring(IN_MAX_ADDRSTRLEN - 1, '\0');
+
+    auto str = inaddr_to_string(
+        &ipstring.front(), [](const in_addr*) { return true; }, [](const in6_addr*) { return true; });
+
+    ipstring.resize(str ? strlen(str) : 0);
+    return ipstring;
+  }
+  // to_string with port, can simply add prefix "http::" or "https://" for url
+  std::string to_string() const
+  {
+    std::string addr(IN_MAX_ADDRSTRLEN + sizeof("65535") + 2, '[');
+
+    size_t n = 0;
+
+    switch (sa_.sa_family)
+    {
+      case AF_INET:
+        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
+        n += sprintf(&addr.front() + n, ":%u", this->port());
+        break;
+      case AF_INET6:
+        n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
+        n += sprintf(&addr.front() + n, "]:%u", this->port());
+        break;
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
+      case AF_UNIX:
+        n = this->len();
+        addr.assign(un_.sun_path, n);
+        break;
+#endif
+    }
+
+    addr.resize(n);
+
+    return addr;
+  }
+
+  unsigned short port() const { return ntohs(in4_.sin_port); }
+  void port(unsigned short value) { in4_.sin_port = htons(value); }
+
+  void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = htonl(addr); }
+  uint32_t addr_v4() const { return ntohl(in4_.sin_addr.s_addr); }
+
+  /*
+   %N: s_net   127
+   %H: s_host  0
+   %L: s_lh    0
+   %M: s_impno 1
+   %l: low byte of port
+   %h: high byte of port
+  */
+  std::string format_v4(const char* foramt)
+  {
+    static const char* const _SIN_FORMATS[] = {"%N", "%H", "%L", "%M", "%l", "%h"};
+
+    unsigned char addr_bytes[sizeof(in4_.sin_addr.s_addr) + sizeof(u_short)];
+    memcpy(addr_bytes, &in4_.sin_addr.s_addr, sizeof(in4_.sin_addr.s_addr));
+    memcpy(addr_bytes + sizeof(in4_.sin_addr.s_addr), &in4_.sin_port, sizeof(in4_.sin_port));
+
+    char snum[sizeof("255")] = {0};
+    const size_t _N0         = sizeof("%N") - 1;
+    std::string s            = foramt;
+    for (size_t idx = 0; idx < YASIO_ARRAYSIZE(_SIN_FORMATS); ++idx)
+    {
+      auto fmt   = _SIN_FORMATS[idx];
+      auto offst = s.find(fmt);
+      if (offst != std::string::npos)
+      {
+        sprintf(snum, "%u", addr_bytes[idx]);
+        s.replace(offst, _N0, snum);
+      }
+    }
+
+    return s;
+  }
+
+  // in_addr(ip) to string with pred
+  template <typename _Pred4, typename _Pred6> const char* inaddr_to_string(char* str /*[IN_MAX_ADDRSTRLEN]*/, _Pred4&& pred4, _Pred6&& pred6) const
+  {
+    switch (af())
+    {
+      case AF_INET:
+        if (pred4(&in4_.sin_addr))
+          return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
+        break;
+      case AF_INET6:
+        if (pred6(&in6_.sin6_addr))
+          return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
+        break;
+    }
+    return nullptr;
+  }
+
+  // in_addr(ip) to csv without loopback or linklocal address
+  void inaddr_to_csv_nl(std::string& csv)
+  {
+    char str[INET6_ADDRSTRLEN] = {0};
+    if (inaddr_to_string(str, is_global_in4_addr, is_global_in6_addr))
+    {
+      csv += str;
+      csv += ',';
+    }
+  }
+
+  // the in_addr(from sockaddr) to csv string helper function without loopback or linklocal
+  // address
+  static void inaddr_to_csv_nl(const sockaddr* addr, std::string& csv) { endpoint(addr).inaddr_to_csv_nl(csv); }
+
+  // the in_addr/in6_addr to csv string helper function without loopback or linklocal address
+  // the inaddr should be union of in_addr,in6_addr or ensure it's memory enough when
+  // family=AF_INET6
+  static void inaddr_to_csv_nl(int family, const void* inaddr, std::string& csv) { endpoint(family, inaddr).inaddr_to_csv_nl(csv); }
+
+  void len(size_t n)
+  {
+#if !YASIO__HAS_SA_LEN
+    len_ = static_cast<uint8_t>(n);
+#else
+    sa_.sa_len = static_cast<uint8_t>(n);
+#endif
+  }
+  socklen_t len() const
+  {
+#if !YASIO__HAS_SA_LEN
+    return len_;
+#else
+    return sa_.sa_len;
+#endif
+  }
+
+  union {
+    sockaddr sa_;
+    sockaddr_in in4_;
+    sockaddr_in6 in6_;
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
+    sockaddr_un un_;
+#endif
   };
+#if !YASIO__HAS_SA_LEN
+  uint8_t len_;
+#endif
+};
+
+// supported internet protocol flags
+enum : u_short
+{
+  ipsv_unavailable = 0,
+  ipsv_ipv4        = 1,
+  ipsv_ipv6        = 2,
+  ipsv_dual_stack  = ipsv_ipv4 | ipsv_ipv6,
+};
 } // namespace ip
 
 #if !YASIO__HAS_NS_INLINE

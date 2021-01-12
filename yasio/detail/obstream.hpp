@@ -235,8 +235,8 @@ protected:
   std::stack<size_t> offset_stack_;
 }; // CLASS basic_obstream
 
-using obstream      = basic_obstream<::yasio::endian::convert_traits<::yasio::endian::network_convert_tag>>;
-using fast_obstream = basic_obstream<::yasio::endian::convert_traits<::yasio::endian::host_convert_tag>>;
+using obstream      = basic_obstream<::yasio::convert_traits<::yasio::network_convert_tag>>;
+using fast_obstream = basic_obstream<::yasio::convert_traits<::yasio::host_convert_tag>>;
 
 } // namespace yasio
 

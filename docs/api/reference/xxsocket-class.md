@@ -392,7 +392,7 @@ socket_native_type native_handle() const;
 
 socket文件描述符，`yasio::inet::invalid_socket` 表示无效socket。
 
-## <a name="native_handle"></a> xxsocket::release_handle
+## <a name="release_handle"></a> xxsocket::release_handle
 
 释放底层socket描述符控制权。
 
@@ -561,7 +561,7 @@ TCP: 发起TCP三次握手
 
 UDP: 建立4元组绑定
 
-## <a name="connect"></a> xxsocket::connect_n
+## <a name="connect_n"></a> xxsocket::connect_n
 
 建立连接。
 

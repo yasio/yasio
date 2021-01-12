@@ -84,6 +84,18 @@ highp_time_t timestamp() const;
 
 和系统时间无关的微秒级时间戳。
 
+## <a name="transport"></a> io_event::transport
+
+获取事件的传输会话句柄。
+
+```cpp
+transport_handle_t transport() const;
+```
+
+### 返回值
+
+返回句柄，当收到断开事件时，传输会话句柄已失效，仅可用作地址值比较。
+
 ## <a name="transport_id"></a> io_event::transport_id
 
 获取事件的传输会话ID。

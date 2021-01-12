@@ -12,8 +12,8 @@ namespace yasio {}
 |----------|-----------------|
 |[yasio::host_to_network](#host_to_network)|主机字节序转网络字节序|
 |[yasio::network_to_host](#network_to_host)|网络字节序转主机字节序|
-|[yasio::xhighp_clock](#xhighp_clock)|获取毫秒级时间戳|
-|[yasio::highp_clock](#highp_clock)|获取毫秒级时间戳|
+|[yasio::xhighp_clock](#xhighp_clock)|获取纳秒级时间戳|
+|[yasio::highp_clock](#highp_clock)|获取微秒级时间戳|
 |[yasio::clock](#clock)|获取毫秒级时间戳|
 |[yasio::set_thread_name](#set_thread_name)|设置调用者线程名|
 |[yasio::basic_strfmt](#basic_strfmt)|格式化字符串|
@@ -117,6 +117,7 @@ inline highp_time_t xhighp_clock();
 ### 模板参数
 
 *_Ty*<br/>
+
 - yasio::steady_clock_t: 返回当前系统时间无关的时间戳
 - yasio::system_clock_t: 返回系统UTC时间戳
 
@@ -140,6 +141,7 @@ inline highp_time_t highp_clock();
 ### 模板参数
 
 *_Ty*<br/>
+
 - `yasio::steady_clock_t`: 返回当前系统时间无关的时间戳
 - `yasio::system_clock_t`: 返回系统UTC时间戳
 

@@ -1,3 +1,13 @@
+yasio-3.37.0
+  
+1. Make timer object more safe, don't hold reference of io_service.
+2. Embed default zh_CN docs markdown sources.
+3. Fix compile error when YASIO_VERBOSE_LOG enabled.
+4. Fix `speedtest` compile error when YASIO_HAVE_KCP enabled.
+5. Make `host_to_network` and `network_to_host` public at `namespace yasio`.
+6. Add `yasio::set_thread_name` to set caller thread name.
+  
+  
 yasio-3.36.0
   
 1. Add ssl backend mbedtls support.

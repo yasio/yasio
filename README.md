@@ -73,12 +73,12 @@ cmake --build build --config Debug
 * 支持[CocosCreator jsb2.0绑定](https://github.com/yasio/inettester)。
 * 支持[Unity3D](https://github.com/yasio/xLua)。
 * 支持[虚幻4](https://github.com/yasio/DemoUE4)。
-* 支持SSL客户端，基于OpenSSL。
+* 支持SSL客户端，基于OpenSSL/MbedTLS。
 * 支持非阻塞域名解析，基于c-ares。
 * 支持Header Only集成方式，只需要定义编译预处理器宏```YASIO_HEAD_ONLY=1```即可。
 * 支持Unix Domain Socket。
 * 支持二进制读写，两个工具类**obstream/ibstream**非常方便使用。
-* 支持和.net的兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。
+* 支持和.net兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。
 
 ## 关于C++17
 yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查看 [cxx17](https://github.com/yasio/yasio/tree/master/yasio/cxx17)

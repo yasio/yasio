@@ -7,7 +7,7 @@ helpviewer_keywords: []
 
 # io_channel Class
 
-负责建立 tcp/udp/kcp 连接并创建transport。
+负责管理 TCP/SSL/UDP/KCP 连接和传输会话。
 
 
 ## 语法

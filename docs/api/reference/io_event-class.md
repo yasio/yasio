@@ -70,7 +70,7 @@ std::vector<char>& packet()
 
 ## 返回值
 
-消息包的引用, 用户可以使用std::move无GC方式从事件取走消息包。
+消息包的引用, 用户可以使用`std::move`无GC方式从事件取走消息包。
 
 ## <a name="timestamp"></a> io_event::timestamp
 

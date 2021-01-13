@@ -12,9 +12,9 @@ helpviewer_keywords: []
 
     - 自3.35.0起，优化为类模板basic_obstream实现，体现了C++模板强大的代码复用能力。
 
-    - `obstream` 当写入int16~int64和float/double类型是, 会自动将主机字节序转换问网络字节序 <br/>
+    - `obstream` 当写入int16~int64和float/double类型时, 会自动将主机字节序转换问网络字节序。
 
-    - `fast_obstream` 不会转换任何字节序
+    - `fast_obstream` 不会转换任何字节序。
 
 ## 语法
 

@@ -42,7 +42,7 @@ namespace yasio { namespace inet { class io_service; } }
 
 ## 注意
 
-默认transport的创建会使用对象池 `object_pool`。
+默认传输会话的创建会使用对象池 `object_pool`。
 
 ## 要求
 
@@ -157,7 +157,7 @@ void open(size_t cindex, int kind);
 
 ### 注意
 
-对于tcp, 将会请求内核发起非阻塞3次握手来建立tcp可靠连接。
+对于`TCP`, 将会请求内核发起非阻塞3次握手来建立可靠连接。
 
 *cindex* 的值必须小于io_service初始化时的信道数量。
 
@@ -192,7 +192,7 @@ void close(int cindex);
 
 ### 注意
 
-对于tcp， 将会出发tcp的4次握手来终止连接。
+对于`TCP`， 将会发起4次握手来终止连接。
 
 ## <a name="is_open"></a> io_service::is_open
 
@@ -307,7 +307,7 @@ int write_to(
 
 ### 注意
 
-此函数仅可用于 *DGRAM* 传输会话，即 `udp,kcp`。
+此函数仅可用于 *DGRAM* 传输会话，即 `UDP,KCP`。
 
 发送完成回调 *completion_handler* 不支持 `KCP`。
 

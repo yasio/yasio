@@ -138,10 +138,11 @@ void yasioTest()
 
   for (int i = 0; i < 4; ++i)
   {
+    auto start_ms = yasio::clock();
     if (icmp_ping("www.ip138.com", std::chrono::seconds(3)))
-      printf("ping www.ip138.com succeed, times=%d\n", i + 1);
+      printf("ping www.ip138.com succeed, time=%d(ms)\n", static_cast<int>(yasio::clock() - start_ms));
     else
-      printf("ping www.ip138.com failed, times=%d\n", i + 1);
+      printf("ping www.ip138.com failed!\n");
   }
 
   yasio::fast_obstream obstest;

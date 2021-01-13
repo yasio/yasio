@@ -1,6 +1,7 @@
 # yasio 中文文档
 
 [![Release](https://img.shields.io/badge/release-v3.37.0-blue.svg)](https://github.com/yasio/yasio/releases)
+[![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
 [![Documentation Status](https://readthedocs.org/projects/yasio-docs/badge/?version=latest)](https://readthedocs.org/projects/yasio-docs)
 
 yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务。
@@ -17,6 +18,14 @@ yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基�
 
     - 架构: x86, x64, ARM等。
     - 操作系统: Windows, macOS, Linux, FreeBSD, iOS, Android等。
+
+- 术语:
+    - 网络服务: `io_service`
+    - 信道: `io_channel`
+    - 传输会话: `io_transport`
+
+- 框架图:
+![image](assets/images/framework.png)  
 
 ## 快速开始
 此实例程序简单向 ``tool.chinaz.com`` 发送http请求并打印响应数据。

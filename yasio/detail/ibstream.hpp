@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -178,6 +178,7 @@ public:
   size_t length(void) const { return last_ - first_; }
   const char* data() const { return first_; }
 
+  void advance(ptrdiff_t offset) { ptr_ += offset; }
   ptrdiff_t seek(ptrdiff_t offset, int whence)
   {
     switch (whence)

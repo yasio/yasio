@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -170,6 +170,14 @@ public:
 
   const std::vector<char>& buffer() const { return buffer_; }
   std::vector<char>& buffer() { return buffer_; }
+
+  void clear()
+  {
+    buffer_.clear();
+    std::stack<size_t> tmp;
+    tmp.swap(offset_stack_);
+  }
+  void shrink_to_fit() { buffer_.shrink_to_fit(); }
 
   template <typename _Nty> inline void write(_Nty value)
   {

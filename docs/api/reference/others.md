@@ -48,9 +48,9 @@ inline _Ty host_to_network(_Ty value);
 #include <inttypes.h>
 #include "yasio/detail/endian_portable.hpp"
 int main(){
-    unsigned short v1 = 0x1122;
-    unsigned int v2 = 0x11223344;
-    unsigned long long v3 = 0x1122334455667788;
+    uint16_t v1 = 0x1122;
+    uint32_t v2 = 0x11223344;
+    uint64_t v3 = 0x1122334455667788;
     // output will be: net.v1=2211, net.v2=44332211, net.v3=8877665544332211
     printf("net.v1=%04" PRIx16 ", net.v2=%08" PRIx32 ", net.v3=%016" PRIx64 "\n",
         yasio::host_to_network(v1),
@@ -89,9 +89,9 @@ inline _Ty network_to_host(_Ty value);
 #include <inttypes.h>
 #include "yasio/detail/endian_portable.hpp"
 int main(){
-    unsigned short v1 = 0x2211;
-    unsigned int v2 = 0x44332211;
-    unsigned long long v3 = 0x8877665533442211;
+    uint16_t v1 = 0x2211;
+    uint32_t v2 = 0x44332211;
+    uint64_t v3 = 0x8877665533442211;
     // output will be: net.v1=1122, net.v2=11223344, net.v3=1122334455667788
     printf("net.v1=%04" PRIx16 ", net.v2=%08" PRIx32 ", net.v3=%016" PRIx64 "\n",
         yasio::network_to_host(v1),

@@ -1060,7 +1060,7 @@ uint32_t tcp_rtt() const;
 
 ### 返回值
 
-返回TCP的RTT事件，单位: `微秒`。
+返回TCP的RTT时间，单位: `微秒`。
 
 ## <a name="get_last_errno"></a> xxsocket::get_last_errno
 

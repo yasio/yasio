@@ -45,6 +45,7 @@ using fast_ibstream_view = basic_ibstream_view<endian::host_convert_tag>;
 |[ibstream_view::empty](#empty)|检查流是否为空|
 |[ibstream_view::data](#data)|获取流数据指针|
 |[ibstream_view::length](#length)|获取流大小|
+|[ibstream_view::advance](#advance)|向前移动流的读取游标|
 |[ibstream_view::seek](#seek)|移动流的读取游标|
 
 ## 注意
@@ -223,9 +224,26 @@ size_t length() const;
 
 当前流长度。
 
+## <a name="advance"></a> ibstream_view::advance
+
+向前移动流读取游标。
+
+```cpp
+void advance(ptrdiff_t offset);
+```
+
+### 参数
+
+*offset*<br/>
+要向前移动的偏移量。
+
+### 注意
+
+若*offset*传负数，则反向可移动读取游标。
+
 ## <a name="seek"></a> ibstream_view::seek
 
-移动流读取位置偏移。
+移动读取游标。
 
 ```cpp
 ptrdiff_t seek(ptrdiff_t offset, int whence);

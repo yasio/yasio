@@ -46,6 +46,8 @@ using fast_obstream = basic_obstream<endian::host_convert_tag>;
 |[obstream::data](#data)|获取流数据指针|
 |[obstream::length](#length)|获取流数据大小|
 |[obstream::buffer](#buffer)|获取流内部缓冲区|
+|[obstream::clear](#clear)|清理流，以便复用|
+|[obstream::shrink_to_fit](#shrink_to_fit)|释放流内部缓冲区多余内存|
 |[obstream::save](#save)|保存流二进制数据到文件系统|
 
 ## 要求
@@ -254,6 +256,26 @@ int main( )
 
    return 0;
 }
+```
+
+## <a name="clear"></a> obstream::clear
+
+清理流，以便复用。
+
+```cpp
+void clear();
+```
+
+### 注意
+
+此函数不会释放buffer内存，对于高效地复用序列化器非常有用。
+
+## <a name="shrink_to_fit"></a> obstream::shrink_to_fit
+
+释放流内部缓冲区多余内存。
+
+```cpp
+void shrink_to_fit();
 ```
 
 ## <a name="save"></a> obstream::save

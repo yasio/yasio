@@ -6,6 +6,8 @@ yasio-3.37.0
 4. Fix `speedtest` compile error when YASIO_HAVE_KCP enabled.
 5. Make `host_to_network` and `network_to_host` public at `namespace yasio`.
 6. Add `yasio::set_thread_name` to set caller thread name.
+7. Add `obstream::clear` for buffer reuse.
+8. Add `ibstream::advance` to move read position fastly.
   
   
 yasio-3.36.0

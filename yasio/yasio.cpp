@@ -358,33 +358,23 @@ void io_channel::configure_address()
         ep.port(this->remote_port_);
   }
 }
-int io_channel::__builtin_decode_len(void* ud, int n)
+int io_channel::__builtin_decode_len(void* d, int n)
 {
-  if (lfb_.length_field_offset >= 0)
+  int loffset = uparams_.length_field_offset;
+  int lsize   = uparams_.length_field_length;
+  if (loffset >= 0)
   {
-    if (n >= (lfb_.length_field_offset + lfb_.length_field_length))
+    if (n >= (loffset + lsize))
     {
-      int32_t length = -1;
-      switch (lfb_.length_field_length)
-      {
-        case 4:
-          length = ntohl(*reinterpret_cast<int32_t*>((unsigned char*)ud + lfb_.length_field_offset)) + lfb_.length_adjustment;
-          break;
-        case 3:
-          length = 0;
-          memcpy(&length, (unsigned char*)ud + lfb_.length_field_offset, 3);
-          length = (ntohl(length) >> 8) + lfb_.length_adjustment;
-          break;
-        case 2:
-          length = ntohs(*reinterpret_cast<uint16_t*>((unsigned char*)ud + lfb_.length_field_offset)) + lfb_.length_adjustment;
-          break;
-        case 1:
-          length = *((unsigned char*)ud + lfb_.length_field_offset) + lfb_.length_adjustment;
-          break;
-      }
-      if (length > lfb_.max_frame_length)
-        length = -1;
-      return length;
+      int len = 0;
+      memcpy(&len, (uint8_t*)d + loffset, lsize);
+      len = yasio::network_to_host(len);
+      if (lsize < YASIO_SSIZEOF(int))
+        len = (len >> (YASIO_SSIZEOF(int) - lsize) * 8);
+      len += uparams_.length_adjustment;
+      if (len > uparams_.max_frame_length)
+        len = -1;
+      return len;
     }
     return 0;
   }
@@ -1845,7 +1835,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
         int length = transport->ctx_->decode_len_(transport->buffer_, transport->wpos_ + n);
         if (length > 0)
         {
-          int bytes_to_strip        = ::yasio::clamp(transport->ctx_->lfb_.initial_bytes_to_strip, 0, length - 1);
+          int bytes_to_strip        = ::yasio::clamp(transport->ctx_->uparams_.initial_bytes_to_strip, 0, length - 1);
           transport->expected_size_ = length;
           transport->expected_packet_.reserve((std::min)(length - bytes_to_strip,
                                                          YASIO_MAX_PDU_BUFFER_SIZE)); // #perfomance, avoid memory reallocte.
@@ -2245,21 +2235,21 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_DNS_DIRTY:
       options_.dns_dirty_ = true;
       break;
-    case YOPT_C_LFBFD_PARAMS: {
+    case YOPT_C_UNPACK_PARAMS: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
-        channel->lfb_.max_frame_length    = va_arg(ap, int);
-        channel->lfb_.length_field_offset = va_arg(ap, int);
-        channel->lfb_.length_field_length = va_arg(ap, int);
-        channel->lfb_.length_adjustment   = va_arg(ap, int);
+        channel->uparams_.max_frame_length    = va_arg(ap, int);
+        channel->uparams_.length_field_offset = va_arg(ap, int);
+        channel->uparams_.length_field_length = yasio::clamp(va_arg(ap, int), YASIO_SSIZEOF(int8_t), YASIO_SSIZEOF(int));
+        channel->uparams_.length_adjustment   = va_arg(ap, int);
       }
       break;
     }
-    case YOPT_C_LFBFD_IBTS: {
+    case YOPT_C_UNPACK_STRIP: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
-        channel->lfb_.initial_bytes_to_strip = ::yasio::clamp(va_arg(ap, int), 0, YASIO_MAX_IBTS);
+        channel->uparams_.initial_bytes_to_strip = yasio::clamp(va_arg(ap, int), 0, YASIO_UPARAMS_MAX_STRIP);
       break;
     }
     case YOPT_S_EVENT_CB:

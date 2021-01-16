@@ -8,6 +8,7 @@ yasio-3.37.0
 6. Add `yasio::set_thread_name` to set caller thread name.
 7. Add `obstream::clear` for buffer reuse.
 8. Add `ibstream::advance` to move read position fastly.
+9. Enhance builtin `decode_len` function for transport stream unpack.
   
   
 yasio-3.36.0

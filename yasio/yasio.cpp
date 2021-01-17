@@ -367,10 +367,8 @@ int io_channel::__builtin_decode_len(void* d, int n)
     if (n >= (loffset + lsize))
     {
       int len = 0;
-      memcpy(&len, (uint8_t*)d + loffset, lsize);
-      len = yasio::network_to_host(len);
-      if (lsize < YASIO_SSIZEOF(int))
-        len >>= ((YASIO_SSIZEOF(int) - lsize) * 8);
+      ::memcpy(&len, (uint8_t*)d + loffset, lsize);
+      len = yasio::network_convert_traits::fromint(len, lsize);
       len += uparams_.length_adjustment;
       if (len > uparams_.max_frame_length)
         len = -1;

@@ -140,6 +140,15 @@ public:
   */
   template <typename _Intty> _Intty read_ix() { return detail::read_ix_helper<this_type, _Intty>::read_ix(this); }
 
+  int read_varint(int size)
+  {
+    size = yasio::clamp(size, 1, YASIO_SSIZEOF(int));
+
+    int value = 0;
+    ::memcpy(&value, consume(size), size);
+    return convert_traits_type::fromint(value, size);
+  }
+
   /* read blob data with '7bit encoded int' length field */
   cxx17::string_view read_v()
   {

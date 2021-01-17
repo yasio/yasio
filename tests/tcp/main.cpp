@@ -145,24 +145,26 @@ void yasioTest()
       printf("ping www.ip138.com failed!\n");
   }
 
-  yasio::fast_obstream obstest;
-  obstest.push16();
-  obstest.write(3.141592654);
-  obstest.write(1.17723f);
-  obstest.write_ix<int32_t>(20201125);
-  obstest.write_ix<int64_t>(-9223372036854775807);
-  obstest.write(static_cast<fp16_t>(3.85f));
-  obstest.pop16();
+  yasio::obstream obs;
+  obs.push(sizeof(u_short));
+  obs.write(3.141592654);
+  obs.write(1.17723f);
+  obs.write_ix<int32_t>(20201125);
+  obs.write_ix<int64_t>(-9223372036854775807);
+  obs.write(static_cast<fp16_t>(3.85f));
+  obs.write_varint(23123, 3);
+  obs.pop(sizeof(u_short));
 
-  yasio::fast_ibstream_view ibs(obstest.data(), static_cast<int>(obstest.length()));
-  ibs.seek(2, SEEK_CUR);
+  yasio::ibstream_view ibs(&obs);
+  auto r0 = ibs.read_varint(sizeof(u_short)); // length: uint24
   auto r1 = ibs.read<double>();
   auto f1 = ibs.read<float>();
   auto v5 = ibs.read_ix<int32_t>();
   auto v6 = ibs.read_ix<int64_t>();
   auto v7 = static_cast<float>(ibs.read<fp16_t>());
+  auto v8 = ibs.read_varint(3); // uint24
 
-  std::cout << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v7 << "\n";
+  std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v7 << ", " << v8 << "\n";
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 

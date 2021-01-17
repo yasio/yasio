@@ -151,12 +151,29 @@ template <typename _TT> struct convert_traits {};
 template <> struct convert_traits<network_convert_tag> {
   template <typename _Ty> static inline _Ty to(_Ty value) { return host_to_network<_Ty>(value); }
   template <typename _Ty> static inline _Ty from(_Ty value) { return network_to_host<_Ty>(value); }
+  static int toint(int value, int size)
+  {
+    auto netval = host_to_network<unsigned int>(value);
+    if (size < YASIO_SSIZEOF(int))
+      netval >>= ((YASIO_SSIZEOF(int) - size) * 8);
+    return static_cast<int>(netval);
+  }
+  static int fromint(int value, int size)
+  {
+    auto hostval = network_to_host<unsigned int>(value);
+    if (size < YASIO_SSIZEOF(int))
+      hostval >>= ((YASIO_SSIZEOF(int) - size) * 8);
+    return static_cast<int>(hostval);
+  }
 };
 
 template <> struct convert_traits<host_convert_tag> {
   template <typename _Ty> static inline _Ty to(_Ty value) { return value; }
   template <typename _Ty> static inline _Ty from(_Ty value) { return value; }
+  static int toint(int value, int) { return value; }
+  static int fromint(int value, int) { return value; }
 };
+using network_convert_traits = convert_traits<network_convert_tag>;
 } // namespace endian
 #if !YASIO__HAS_NS_INLINE
 using namespace yasio::endian;

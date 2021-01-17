@@ -1,6 +1,6 @@
 ---
 title: "ibstream Class"
-date: "12/10/2020"
+date: "1/16/2021"
 f1_keywords: ["ibstream", "yasio/ibstream", ]
 helpviewer_keywords: []
 ---
@@ -38,7 +38,7 @@ using fast_ibstream_view = basic_ibstream_view<endian::host_convert_tag>;
 |----------|-----------------|
 |[ibstream_view::reset](#reset)|重置待反序列化数据|
 |[ibstream_view::read](#read)|函数模板，读取数值|
-|[ibstream_view:read_ix](#read_ix)|函数模板，读取**7bit Encoded Int/Int64**整数值|
+|[ibstream_view:read_ix](#read_ix)|函数模板，读取(**7bit Encoded Int/Int64**)整数值|
 |[ibstream_view:read_v](#read_v)|读取带长度域(**7bit Encoded Int/Int64**)的二进制数据|
 |[ibstream_view:read_byte](#read_byte)|读取1个字节|
 |[ibstream_view:read_bytes](#read_bytes)|读取指定长度二进制数据|

@@ -93,7 +93,7 @@ int main(){
     uint32_t v2 = 0x44332211;
     uint64_t v3 = 0x8877665533442211;
     // output will be: net.v1=1122, net.v2=11223344, net.v3=1122334455667788
-    printf("net.v1=%04" PRIx16 ", net.v2=%08" PRIx32 ", net.v3=%016" PRIx64 "\n",
+    printf("host.v1=%04" PRIx16 ", host.v2=%08" PRIx32 ", host.v3=%016" PRIx64 "\n",
         yasio::network_to_host(v1),
         yasio::network_to_host(v2),
         yasio::network_to_host(v3));

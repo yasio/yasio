@@ -4,22 +4,18 @@
 
 ??? question "yasio是否依赖其他网络库?"
 
-    yasio的核心代码默认不依赖任何第三方库，从作者从业踏入通信行业开始就琢磨着编写一个轻量而好用的通用网络库，  
-    xxsocket就是yasio的起源，只有异步消息发送的软中断器提取于boost.asio。
+    yasio的核心代码默认不依赖任何第三方库，从作者从业踏入通信行业开始就琢磨着编写一个轻量而好用的通用网络库，xxsocket就是yasio的起源，只有异步消息发送的软中断器提取于boost.asio。
 
 ??? question "为什么使用yasio?"
 
-    1. 开源社区已知比较有名的网络库有asio,libevent,libev,libuv，他们提供的都是非常基础的非阻塞多路io复用模型，  
-    并且，各平台底层会使用iocp,kqueue,epoll,select等模型，拿来做客户端网络，诸如连接管理，TCP粘包处理等都  
-    需要程序员自己处理。
+    1. 开源社区已知比较有名的网络库有asio,libevent,libev,libuv，他们提供的都是非常基础的非阻塞多路io复用模型，并且，各平台底层会使用iocp,kqueue,epoll,select等模型，拿来做客户端网络，如连接管理，TCP粘包处理等都需要程序员自己处理。
     2. yasio将连接管理，TCP拆包都封装到了底层。
     3. yasio将TCP,UDP,KCP统一抽象成Transport更加方便使用。
     4. yasio更轻量级，所有平台均使用select模型。
 
 ??? question "yasio是否支持非阻塞域名解析?"
 
-    支持，但需要依赖c-ares库，这个库是完全实现DNS协议，并可以很好的和现有select模型结合使用，域名解析无需新开线程。
-    如果不开启c-ares，yasio内部会为每次域名解析开线程。但会默认缓存10分钟，所以也不用担心开线程太频繁。
+    支持，但需要依赖c-ares库，这个库是完全实现DNS协议，并可以很好的和现有select模型结合使用，域名解析无需新开线程。如果不开启c-ares，yasio内部会为每次域名解析开线程。但会默认缓存10分钟，所以也不用担心开线程太频繁。
 
 ??? question "yasio是否支持SSL/TLS传输?"
 

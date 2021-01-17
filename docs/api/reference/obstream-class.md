@@ -12,7 +12,7 @@ helpviewer_keywords: []
 
     - 自3.35.0起，优化为类模板basic_obstream实现，体现了C++模板强大的代码复用能力。
 
-    - `obstream` 当写入int16~int64和float/double类型时, 会自动将主机字节序转换问网络字节序。
+    - `obstream` 当写入int16~int64和float/double类型时, 会自动将主机字节序转换为网络字节序。
 
     - `fast_obstream` 不会转换任何字节序。
 
@@ -38,7 +38,7 @@ using fast_obstream = basic_obstream<endian::host_convert_tag>;
 |Name|Description|
 |----------|-----------------|
 |[obstream::write](#write)|函数模板，写入数值|
-|[obstream::write_ix](#write_ix)|函数模板**7bit Encoded Int/Int64**数值|
+|[obstream::write_ix](#write_ix)|函数模板，写入(**7bit Encoded Int/Int64**)数值|
 |[obstream::write_v](#write_v)|写入带长度域(**7bit Encoded Int**)的二进制数据|
 |[obstream::write_byte](#write_byte)|写入1个字节|
 |[obstream::write_bytes](#write_bytes)|写入指定长度二进制数据|

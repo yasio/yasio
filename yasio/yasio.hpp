@@ -314,7 +314,7 @@ typedef std::function<void()> light_timer_cb_t;
 typedef std::function<void(event_ptr&&)> event_cb_t;
 typedef std::function<bool(event_ptr&)> defer_event_cb_t;
 typedef std::function<void(int, size_t)> completion_cb_t;
-typedef std::function<int(void* ptr, int len)> decode_len_fn_t;
+typedef std::function<int(void* d, int n)> decode_len_fn_t;
 typedef std::function<int(std::vector<ip::endpoint>&, const char*, unsigned short)> resolv_fn_t;
 typedef std::function<void(const char*)> print_fn_t;
 typedef std::function<void(int level, const char*)> print_fn2_t;

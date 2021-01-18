@@ -28,5 +28,6 @@ jobs:
         prepare: pkg install -y cmake bash
         envs: "TRAVIS_OS_NAME=freebsd BUILD_TARGET=freebsd BUILD_TYPE=Release"
         run: |
-          chsh -s /usr/local/bin/bash
-          travis/build.sh
+          echo Building on freebsd...
+          cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build
+          cmake --build %GITHUB_WORKSPACE%/build

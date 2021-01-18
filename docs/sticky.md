@@ -7,7 +7,7 @@ yasio的粘包处理不仅针对TCP，对于UDP，如果发送端有组包发送
 
 ## <a name="lfbfd_params"></a> YOPT_C_LFBFD_PARAMS
 
-通过设置信道拆包参数。
+设置信道拆包参数。
 
 ### 参数
 
@@ -25,7 +25,7 @@ yasio的粘包处理不仅针对TCP，对于UDP，如果发送端有组包发送
 
 ### 注意
 
-消息包长度字段必须使用网络字节序编码。请查看内置解码长度实现:
+消息包长度字段必须使用网络字节序编码。请查看内置解码包长度实现:
 
 ```cpp
 int io_channel::__builtin_decode_len(void* d, int n)
@@ -51,7 +51,7 @@ int io_channel::__builtin_decode_len(void* d, int n)
 
 ## decode_len_fn_t
 
-信道解码函数原型。
+信道解码消息包长度函数原型。
 
 ```cpp
 typedef std::function<int(void* d, int n)> decode_len_fn_t;
@@ -69,9 +69,9 @@ typedef std::function<int(void* d, int n)> decode_len_fn_t;
 
 返回消息包数据实际长度。
 
-- `> 0`: 解包长度成功。
-- `== 0`: 接收数据不足以获取消息包实际长度，yasio底层会继续接收数据。
-- `< 0`: 解码数据包长度异常，会触发当前传输会话断开。
+- `> 0`: 解码包长度成功。
+- `== 0`: 接收数据不足以解码消息包实际长度，yasio底层会继续接收数据，一旦收到新数据，会再次调用此函数。
+- `< 0`: 解码包长度异常，会触发当前传输会话断开。
 
 ## 注意
 

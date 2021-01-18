@@ -22,10 +22,10 @@ jobs:
       with:
         submodules: 'recursive'
         
-    - uses: vmactions/freebsd-vm@v0.1.0
+    - name: build
+      uses: vmactions/freebsd-vm@v0.1.0
       with:
-        envs: "TRAVIS_OS_NAME=freebsd BUILD_TARGET=freebsd BUILD_TYPE=Release"
         prepare: pkg install -y cmake bash
+        envs: "TRAVIS_OS_NAME=freebsd BUILD_TARGET=freebsd BUILD_TYPE=Release"
         run:
-          travis/install.sh
           travis/build.sh

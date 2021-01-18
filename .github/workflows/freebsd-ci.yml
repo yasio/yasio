@@ -27,6 +27,6 @@ jobs:
       with:
         prepare: pkg install -y cmake bash
         envs: "TRAVIS_OS_NAME=freebsd BUILD_TARGET=freebsd BUILD_TYPE=Release"
-        usesh: true
-        run:
+        run: |
+          chsh -s /usr/local/bin/bash
           travis/build.sh

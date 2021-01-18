@@ -29,5 +29,5 @@ jobs:
         envs: "TRAVIS_OS_NAME=freebsd BUILD_TARGET=freebsd BUILD_TYPE=Release"
         run: |
           echo Building on freebsd...
-          cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build
-          cmake --build %GITHUB_WORKSPACE%/build
+          cmake .. -G "Unix Makefiles" -Bbuild_freebsd
+          cmake --build build_freebsd

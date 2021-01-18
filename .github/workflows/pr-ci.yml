@@ -5,9 +5,6 @@ on: [pull_request]
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  # Simple let github action to build all (TODO: optimize in the future)
-  TRAVIS_PULL_REQUEST: true
-  GITHUB_CI: true
 
 jobs:
   build-win32:

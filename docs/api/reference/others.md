@@ -30,12 +30,16 @@ namespace yasio {}
 ```cpp
 template <typename _Ty>
 inline _Ty host_to_network(_Ty value);
+inline int host_to_network(int value, int size);
 ```
 
 ### 参数
 
 *value*<br/>
 要转换的数值，value类型 *_Ty* 可以是任意1~8字节数值类型。
+
+*size*<br/>
+要转换的数值有效字节数，只能是1~4字节。
 
 ### 返回值
 
@@ -71,12 +75,16 @@ int main(){
 ```cpp
 template <typename _Ty>
 inline _Ty network_to_host(_Ty value);
+inline int network_to_host(int value, int size);
 ```
 
 ### 参数
 
 *value*<br/>
 要转换的数值，value类型 *_Ty* 可以是任意1~8字节数值类型。
+
+*size*<br/>
+要转换的数值有效字节数，只能是1~4字节。
 
 ### 返回值
 

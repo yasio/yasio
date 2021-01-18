@@ -12,13 +12,25 @@
 #endif
 
 #if defined(_WIN32)
-#include <Windows.h>
+#  include <Windows.h>
+#  pragma comment(lib, "winmm.lib")
 #endif
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
 #if defined(_WIN32)
   SetConsoleOutputCP(CP_UTF8);
+#endif
+
+#if defined(_MSC_VER)
+  UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
+  TIMECAPS tc;
+  UINT wTimerRes = 0;
+  if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
+  {
+    wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
+    timeBeginPeriod(wTimerRes);
+  }
 #endif
 
 #if YASIO__HAS_CXX14
@@ -36,13 +48,13 @@ int main(int argc, char** argv)
   package_path.append("scripts/?.lua;./scripts/?.lua");
   s["package"]["path"] = package_path;
 
-  std::string new_package_path           = s["package"]["path"];
-  
+  std::string new_package_path = s["package"]["path"];
+
   sol::function function = s.script_file("scripts/example.lua");
 
   do
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
   } while (!function.call(50.0 / 1000));
 #else
   kaguya::State s;
@@ -65,6 +77,16 @@ int main(int argc, char** argv)
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   } while (!update(50.0 / 1000));
+#endif
+
+#if defined(_MSC_VER)
+  ///////////////////////////////////////////////////////////////////////////
+  /////////////// restoring timer resolution
+  ///////////////////////////////////////////////////////////////////////////
+  if (wTimerRes != 0)
+  {
+    timeEndPeriod(wTimerRes);
+  }
 #endif
   return 0;
 }

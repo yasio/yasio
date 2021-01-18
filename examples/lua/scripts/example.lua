@@ -112,8 +112,9 @@ client:start(function(event)
 
 -- httpclient 
 local http_client = require 'http_client'
+local start = yasio.highp_clock() / 1000 -- (ms)
 http_client:sendHttpGetRequest('http://tool.chinaz.com/', function(respData)
-    print(string.format('yasio - http request done, %d bytes transferred\n', #respData))
+    print(string.format('yasio - http request done, %d bytes transferred, time cost=%f(ms)\n', #respData, (yasio.highp_clock() / 1000) - start))
     print(respData)
     stopFlag = stopFlag + 1
 end)

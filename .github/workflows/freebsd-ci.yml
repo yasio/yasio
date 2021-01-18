@@ -1,14 +1,12 @@
-name: android
+name: freebsd
 
 on: [push]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  TRAVIS_OS_NAME: linux
-  BUILD_TARGET: android
+  TRAVIS_OS_NAME: freebsd
+  BUILD_TARGET: freebsd
   BUILD_TYPE: Release
-  PYENV_VERSION: 2.7.18
-  NDK_VER: r16b
 
 jobs:
   build:
@@ -17,18 +15,17 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-18.04
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-        
-    - name: Create Build Environment
-      # Some projects don't allow in-source building, so create a separate build directory
-      # We'll use this as our working directory for all
-      run: travis/install.sh
-      
     - name: Build
-      # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: travis/build.sh
+      uses: vmactions/freebsd-vm@v0.1.0
+      with:
+        prepare: pkg install -y cmake
+        run: |
+          echo Building on freebsd...
+          cmake -G "Unix Makefiles" -S . -Bbuild
+          cmake --build build

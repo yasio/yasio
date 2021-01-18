@@ -364,6 +364,7 @@ int io_channel::__builtin_decode_len(void* d, int n)
   int lsize   = uparams_.length_field_length;
   if (loffset >= 0)
   {
+    assert(lsize >= 1 && lsize <= YASIO_SSIZEOF(int));
     int len = 0;
     if (n >= (loffset + lsize))
     {

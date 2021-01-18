@@ -21,12 +21,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-        
-    - name: build
+    - name: Build
       uses: vmactions/freebsd-vm@v0.1.0
       with:
-        prepare: pkg install -y cmake bash
-        envs: "TRAVIS_OS_NAME=freebsd BUILD_TARGET=freebsd BUILD_TYPE=Release"
+        prepare: pkg install -y cmake
         run: |
           echo Building on freebsd...
           cmake -G "Unix Makefiles" -S . -Bbuild

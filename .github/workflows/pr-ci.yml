@@ -21,7 +21,6 @@ jobs:
           cmake --build %GITHUB_WORKSPACE%/build_x86 --config %BUILD_TYPE%
           cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x64 -DCMAKE_BUILD_TYPE=%BUILD_TYPE%
           cmake --build %GITHUB_WORKSPACE%/build_x64 --config %BUILD_TYPE%
-
   build-linux:
     name: build-linux
     runs-on: ubuntu-18.04
@@ -36,7 +35,6 @@ jobs:
         run: |
           travis/install.sh
           travis/build.sh
-
   build-android:
     name: build-android
     runs-on: ubuntu-18.04
@@ -53,7 +51,6 @@ jobs:
         run: |
           travis/install.sh
           travis/build.sh
-
   build-osx:
     name: build-osx
     runs-on: macos-latest
@@ -68,7 +65,6 @@ jobs:
         run: |
           travis/install.sh
           travis/build.sh
- 
   build-ios:
     name: build-ios
     runs-on: macos-latest
@@ -83,3 +79,18 @@ jobs:
         run: |
           travis/install.sh
           travis/build.sh
+  build-freebsd:
+    name: build-freebsd
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Build
+        uses: vmactions/freebsd-vm@v0.1.0
+        with:
+          prepare: pkg install -y cmake
+          run: |
+            echo Building on freebsd...
+            cmake -G "Unix Makefiles" -S . -Bbuild
+            cmake --build build

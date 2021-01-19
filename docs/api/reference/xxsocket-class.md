@@ -527,7 +527,9 @@ int accept_n(socket_native_type& new_sock) const;
 
 ### 注意
 
-如果此函数返回0，new_sock会被设置为非阻塞模式。
+如果此函数返回`0`，*new_sock* 会被设置为非阻塞模式。
+
+调用此函数之前，请手动调用 `xxsocket::set_nonblocking` 将socket设置为非阻塞模式。
 
 
 ## <a name="connect"></a> xxsocket::connect

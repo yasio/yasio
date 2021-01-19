@@ -54,7 +54,7 @@ int main()
   service.open(0, YCK_TCP_SERVER);              // open server
 
   delay_timer.expires_from_now(std::chrono::seconds(1));
-  delay_timer.async_wait_once(service, [&]() {
+  delay_timer.async_wait_once(service, [](io_service& service) {
     service.open(1, YCK_TCP_CLIENT);
   });
 

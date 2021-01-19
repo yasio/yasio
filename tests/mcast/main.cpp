@@ -55,7 +55,7 @@ void yasioMulticastTest()
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n");
 
-          service.schedule(std::chrono::milliseconds(1000), [&, obs, transport]() {
+          service.schedule(std::chrono::milliseconds(1000), [obs, transport](io_service& service) {
 #if !defined(_WIN32)
             // Non-win32 have a good udp-server implementation
             // so we can leave mutlicast group, then use send

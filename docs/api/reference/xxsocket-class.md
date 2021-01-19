@@ -11,7 +11,7 @@ helpviewer_keywords: []
 
 !!! attention "特别注意"
 
-    xxsocket除了 `accept_n`以外的所有 `xxx_n` 接口均会将socket设置为非阻塞模式，且不会恢复。
+    xxsocket除了 `accept_n`以外的所有 `xxx_n` 接口均会将当前socket对象底层描述符设置为非阻塞模式，且不会恢复。
 
 ## 语法
 
@@ -527,8 +527,7 @@ int accept_n(socket_native_type& new_sock) const;
 
 ### 注意
 
-由于此函数是用于TCP服务器，会多次调用，因此不会自动将socket设置为非阻塞模式，<br/>
-因此调用此函数前，请手动调用 `xxsocket::set_nonblocking` 设置非阻塞模式。
+如果此函数返回0，new_sock会被设置为非阻塞模式。
 
 
 ## <a name="connect"></a> xxsocket::connect

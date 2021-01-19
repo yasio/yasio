@@ -30,7 +30,7 @@ void start_exprie_timer()
 
 timer_cb_t create_timer_cb()
 {
-  return []() {
+  return [](io_service&) {
     if (udpHeartTimer->expired())
     {
       printf("udp timer %lld\n", getTimeStamp());
@@ -90,7 +90,7 @@ int main()
 
   std::this_thread::sleep_for(std::chrono::microseconds(1000 * 1000));
   printf("tmp timer call at %lld\n", getTimeStamp());
-  get_service().schedule(std::chrono::milliseconds(1), []() {
+  get_service().schedule(std::chrono::milliseconds(1), [](io_service&) {
     printf("tmp timer start at %lld\n", getTimeStamp());
     return true;
   });

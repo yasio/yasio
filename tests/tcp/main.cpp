@@ -224,7 +224,7 @@ void yasioTest()
         if (--max_request_count > 0)
         {
           udpconn_delay.expires_from_now(std::chrono::seconds(1));
-          udpconn_delay.async_wait_once(service, [&]() { service.open(0); });
+          udpconn_delay.async_wait_once(service, [](io_service& service) { service.open(0); });
         }
         else
           service.stop();

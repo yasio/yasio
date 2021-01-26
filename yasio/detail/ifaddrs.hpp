@@ -789,7 +789,7 @@ static struct ifaddrs* get_link_address(const struct nlmsghdr* message,
   assert(message);
   net_address = reinterpret_cast<ifaddrmsg*>(NLMSG_DATA(message));
   length      = static_cast<ssize_t>(IFA_PAYLOAD(message));
-  YASIO_LOGV("   address data length: %u", (uint_t)length);
+  YASIO_LOGV("   address data length: %u", (unsigned int)length);
   if (length <= 0)
   {
     goto error;

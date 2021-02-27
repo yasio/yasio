@@ -1,4 +1,4 @@
-yasio-3.37.0
+yasio-3.37.1
   
 1. Update yasio_ni to v2.
   

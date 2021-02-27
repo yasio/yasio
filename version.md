@@ -1,5 +1,10 @@
 yasio-3.37.0
   
+1. Update yasio_ni to v2.
+  
+  
+yasio-3.37.0
+  
 1. Make timer object more safe, don't hold reference of io_service.
 2. Embed default zh_CN docs markdown sources.
 3. Fix compile error when YASIO_VERBOSE_LOG enabled.

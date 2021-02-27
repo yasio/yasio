@@ -846,7 +846,7 @@ public:
   YASIO__DECL static void cleanup_globals();
 
   // the additional API to get rtt of tcp transport
-  YASIO__DECL static uint32_t tcp_rtt(transport_handle_t);
+  YASIO__DECL static unsigned int tcp_rtt(transport_handle_t);
 
 public:
   YASIO__DECL io_service();

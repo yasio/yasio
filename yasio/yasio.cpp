@@ -762,7 +762,7 @@ void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
 // ------------------------ io_service ------------------------
 void io_service::init_globals(const yasio::inet::print_fn2_t& prt) { yasio__shared_globals(prt).cprint_ = prt; }
 void io_service::cleanup_globals() { yasio__shared_globals().cprint_ = nullptr; }
-uint32_t io_service::tcp_rtt(transport_handle_t transport) { return transport->is_open() ? transport->socket_->tcp_rtt() : 0; }
+unsigned int io_service::tcp_rtt(transport_handle_t transport) { return transport->is_open() ? transport->socket_->tcp_rtt() : 0; }
 io_service::io_service() { this->init(nullptr, 1); }
 io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
 io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }

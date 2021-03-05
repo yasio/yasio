@@ -106,17 +106,21 @@ YASIO_NI_API void yasio_destroy_service(intptr_t service_ptr)
 }
 YASIO_NI_API void yasio_set_resolv_fn(intptr_t service_ptr, int(YASIO_INTEROP_DECL* resolv)(const char* host, intptr_t sbuf))
 {
-  resolv_fn_t fn = [resolv](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
-    char buffer[128] = {0};
-    int ret          = resolv(host, (intptr_t)&buffer[0]);
-    if (0 == ret)
-    {
-      eps.push_back(ip::endpoint(buffer, port));
-    }
-    return ret;
-  };
   io_service* service = reinterpret_cast<io_service*>(service_ptr);
-  service->set_option(YOPT_S_RESOLV_FN, &fn);
+  if (service)
+  {
+    resolv_fn_t fn = [resolv](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
+      char buffer[128] = {0};
+      int ret          = resolv(host, (intptr_t)&buffer[0]);
+      if (0 == ret)
+      {
+        eps.push_back(ip::endpoint(buffer, port));
+      }
+      return ret;
+    };
+
+    service->set_option(YOPT_S_RESOLV_FN, &fn);
+  }
 }
 /*
   Because, unity c# Marshal call C language vardic paremeter function will crash,
@@ -128,6 +132,8 @@ YASIO_NI_API void yasio_set_resolv_fn(intptr_t service_ptr, int(YASIO_INTEROP_DE
 YASIO_NI_API void yasio_set_option(intptr_t service_ptr, int opt, const char* pszArgs)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
+  if (!service)
+    return;
 
   // process one arg
   switch (opt)
@@ -184,32 +190,40 @@ YASIO_NI_API void yasio_set_option(intptr_t service_ptr, int opt, const char* ps
 YASIO_NI_API void yasio_open(intptr_t service_ptr, int cindex, int kind)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
-  service->open(cindex, kind);
+  if (service)
+    service->open(cindex, kind);
 }
 YASIO_NI_API void yasio_close(intptr_t service_ptr, int cindex)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
-  service->close(cindex);
+  if (service)
+    service->close(cindex);
 }
 YASIO_NI_API void yasio_close_handle(intptr_t service_ptr, intptr_t thandle)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
-  auto p       = reinterpret_cast<transport_handle_t>(thandle);
-  service->close(p);
+  if (service)
+    service->close(reinterpret_cast<transport_handle_t>(thandle));
 }
 YASIO_NI_API int yasio_write(intptr_t service_ptr, intptr_t thandle, const unsigned char* bytes, int len)
 {
-  std::vector<char> buf(bytes, bytes + len);
   auto service = reinterpret_cast<io_service*>(service_ptr);
-  auto p       = reinterpret_cast<transport_handle_t>(thandle);
-  return service->write(p, std::move(buf));
+  if (service)
+  {
+    std::vector<char> buf(bytes, bytes + len);
+    return service->write(reinterpret_cast<transport_handle_t>(thandle), std::move(buf));
+  }
+  return -1;
 }
 YASIO_NI_API int yasio_write_ob(intptr_t service_ptr, intptr_t thandle, intptr_t obs_ptr)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
-  auto p       = reinterpret_cast<transport_handle_t>(thandle);
-  auto obs     = reinterpret_cast<obstream*>(obs_ptr);
-  return service->write(p, std::move(obs->buffer()));
+  if (service)
+  {
+    auto obs = reinterpret_cast<obstream*>(obs_ptr);
+    return service->write(reinterpret_cast<transport_handle_t>(thandle), std::move(obs->buffer()));
+  }
+  return -1;
 }
 YASIO_NI_API unsigned int yasio_tcp_rtt(intptr_t thandle)
 {
@@ -219,7 +233,17 @@ YASIO_NI_API unsigned int yasio_tcp_rtt(intptr_t thandle)
 YASIO_NI_API void yasio_dispatch(intptr_t service_ptr, int count)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
-  service->dispatch(count);
+  if (service)
+    service->dispatch(count);
+}
+YASIO_NI_API void yasio_set_print_fn(intptr_t service_ptr, void(YASIO_INTEROP_DECL* pfn)(int, const char*))
+{
+  auto service = reinterpret_cast<io_service*>(service_ptr);
+  if (service)
+  {
+    yasio::inet::print_fn2_t custom_print = pfn;
+    service->set_option(YOPT_S_PRINT_FN2, &custom_print);
+  }
 }
 YASIO_NI_API intptr_t yasio_ob_new(int capacity) { return reinterpret_cast<intptr_t>(new obstream(capacity)); }
 YASIO_NI_API void yasio_ob_release(intptr_t obs_ptr)
@@ -245,9 +269,4 @@ YASIO_NI_API void yasio_ob_write_bytes(intptr_t obs_ptr, intptr_t bytes, int len
 
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
 YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
-YASIO_NI_API void yasio_set_print_fn(void(YASIO_INTEROP_DECL* pfn)(int, const char*))
-{
-  yasio::inet::print_fn2_t custom_print = pfn;
-  yasio_shared_service()->set_option(YOPT_S_PRINT_FN2, &custom_print);
-}
 }

@@ -55,7 +55,6 @@ option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
-option(YASIO_BUILD_AS_SHARED "Build yasio as shared library" OFF)
 option(YASIO_BUILD_WITH_HALF "Build yasio with half-precision floating-point library" ON)
 
 if (NOT DEFINED YASIO_SSL_BACKEND)
@@ -208,23 +207,11 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
         ${THIRDPART_SRC}
     )
     target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
-elseif ( WIN32 AND NOT CYGWIN )
-    add_library(yasio STATIC
+else ( ) # linux/android/win
+    add_library(yasio
             ${YASIO_CORE}
             ${THIRDPART_SRC}
         )
-else ( ) # linux system
-    if(YASIO_BUILD_AS_SHARED)
-        add_library(yasio SHARED
-            ${YASIO_CORE}
-            ${THIRDPART_SRC}
-        )
-    else()
-        add_library(yasio STATIC
-            ${YASIO_CORE}
-            ${THIRDPART_SRC}
-        )
-    endif()
 endif ( )
 	
 if ( WIN32 AND NOT CYGWIN )
@@ -295,7 +282,7 @@ endif()
 if(OPENSSL_INCLUDE_DIR)
    set(YASIO_SSL_BACKEND 1)
    target_include_directories(yasio PRIVATE "${OPENSSL_INCLUDE_DIR}")
-   if(YASIO_BUILD_AS_SHARED AND (ANDROID OR LINUX))
+   if(BUILD_SHARED_LIBS AND (ANDROID OR LINUX))
        target_link_libraries (yasio ext_ssl ext_crypto)
    endif()
 endif()
@@ -306,7 +293,7 @@ if(CARES_INCLUDE_DIR AND YASIO_BUILD_WITH_CARES)
    target_link_libraries(yasio c-ares)
    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
 
-   if(ANDROID AND YASIO_BUILD_AS_SHARED)
+   if(ANDROID AND BUILD_SHARED_LIBS)
        target_compile_definitions(yasio PRIVATE YASIO_BUILD_AS_SHARED=1)
    endif()
 endif()

@@ -56,6 +56,7 @@ option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YASIO_BUILD_WITH_HALF "Build yasio with half-precision floating-point library" ON)
+option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 if (NOT DEFINED YASIO_SSL_BACKEND)
     set(YASIO_SSL_BACKEND 0)
@@ -195,11 +196,18 @@ if (APPLE)
         set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
     else ()
         # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
-        add_library(yasio STATIC
-            ${YASIO_CORE}
-            ${THIRDPART_SRC}
-        )
-        # set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
+        if (BUILD_SHARED_LIBS)
+            add_library(yasio MODULE
+                ${YASIO_CORE}
+                ${THIRDPART_SRC}
+            )
+            set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
+        else()
+            add_library(yasio STATIC
+                ${YASIO_CORE}
+                ${THIRDPART_SRC}
+            )
+        endif()
     endif ()
 elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
     add_library(yasio STATIC
@@ -207,11 +215,11 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
         ${THIRDPART_SRC}
     )
     target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
-else ( ) # linux/android/win
+else ( ) # linux/win32/android
     add_library(yasio
-            ${YASIO_CORE}
-            ${THIRDPART_SRC}
-        )
+        ${YASIO_CORE}
+        ${THIRDPART_SRC}
+    )
 endif ( )
 	
 if ( WIN32 AND NOT CYGWIN )
@@ -310,9 +318,10 @@ if(YASIO_SSL_BACKEND)
    target_compile_definitions(yasio PUBLIC YASIO_SSL_BACKEND=${YASIO_SSL_BACKEND})
 endif()
 
-if (ANDROID AND ANDROID_STRIP_TOOL)
+if (ANDROID AND BUILD_SHARED_LIBS)
+    message("CMAKE_STRIP=${CMAKE_STRIP}")
     add_custom_command(TARGET yasio POST_BUILD
-        COMMAND ${ANDROID_STRIP_TOOL} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/libyasio.so
+        COMMAND mkdir -p ${PROJECT_BINARY_DIR}/stripped && ${CMAKE_STRIP} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/stripped/libyasio.so
     )
 endif()
 

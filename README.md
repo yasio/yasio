@@ -29,11 +29,13 @@
 * [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
 
 ## 集成案例
-* [xlua](https://github.com/yasio/xLua): 将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
+* Unity
+  - [OpenNSM2](https://github.com/yasio/OpenNSM2): Unity 纯C#封装，打开场景`SampleScene`运行即可。
+  - [xlua](https://github.com/yasio/xLua): 将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
 * Unreal Engine 4
-  - [DemoUE4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4
-  - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal
-  - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua
+  - [DemoUE4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4。
+  - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
+  - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
 * [Engine-x](https://github.com/c4games/engine-x): 作为Engine-x游戏引擎的异步TCP解决方案。
 
     

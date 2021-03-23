@@ -22,6 +22,7 @@ nav:
     - 其他常用API: api/reference/others.md
   - 预处理器: preprocessor.md
   - 粘包处理: unpacking.md
+  - Interop: interop.md
   - 常见问题: faq.md
 markdown_extensions:
   - admonition

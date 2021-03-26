@@ -234,6 +234,8 @@ else ( )
     )
 endif ( )
 
+target_include_directories(yasio PUBLIC ${CMAKE_CURRENT_DOURCE_DIR}/)
+
 macro(ConfigTargetSSL target_name)
     if (YASIO_SSL_BACKEND EQUAL 1)
         if (UNIX)

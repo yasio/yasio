@@ -546,8 +546,7 @@ private:
   // Current it's only for UDP
   std::vector<char> buffer_;
 
-  // The bytes transferred from socket low layer
-  // currently, only works for client channel
+  // The bytes transferred from socket low layer, currently, only works for client channel
   long long bytes_transferred_ = 0;
 
 #if defined(YASIO_HAVE_KCP)

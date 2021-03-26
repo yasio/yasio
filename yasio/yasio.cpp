@@ -447,7 +447,10 @@ int io_transport::call_read(void* data, int size, int& error)
 {
   int n = read_cb_(data, size);
   if (n > 0)
+  {
+    ctx_->bytes_transferred_ += n;
     return n;
+  }
   if (n < 0)
   {
     error = xxsocket::get_last_errno();
@@ -1726,7 +1729,9 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
   auto& connection = transport->socket_;
   if (yasio__testbits(ctx->properties_, YCM_CLIENT))
   {
-    ctx->state_ = io_base::state::OPEN;
+    // Reset client channel bytes transferred when a new connection established
+    ctx->bytes_transferred_ = 0;
+    ctx->state_             = io_base::state::OPEN;
     if (yasio__testbits(ctx->properties_, YCM_UDP))
       static_cast<io_transport_udp*>(transport)->confgure_remote(ctx->remote_eps_[0]);
   }

@@ -217,8 +217,9 @@ void yasioTest()
           transports.push_back(transport);
         }
         break;
-      case YEK_CONNECTION_LOST:
-        printf("\n\nThe connection is lost, %d bytes transferred\n", total_bytes_transferred);
+      case YEK_CONNECTION_LOST: {
+        auto channel = service.channel_at(event->cindex());
+        printf("\n\nThe connection is lost, %d bytes transferred, internal stats: %lld\n", total_bytes_transferred, channel->bytes_transferred());
 
         total_bytes_transferred = 0;
         if (--max_request_count > 0)
@@ -229,6 +230,7 @@ void yasioTest()
         else
           service.stop();
         break;
+      }
     }
   });
 

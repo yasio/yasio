@@ -31,7 +31,7 @@
 
 ## Integration Demos
 * Unity
-  - [OpenNSM2](https://github.com/yasio/OpenNSM2): unity c# wrapper of yasio, open scene `SampleScene` and run it.
+  - [OpenNSM2](https://github.com/yasio/OpenNSM2): The unity c# wrapper of yasio, open scene `SampleScene` and run it.
   - [xlua](https://github.com/yasio/xLua): Integrate yasio to xlua, open scene `U3DScripting` and run it.
 * [xlua](https://github.com/yasio/xLua): 
 * Unreal Engine 4

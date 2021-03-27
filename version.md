@@ -1,6 +1,7 @@
 yasio-3.37.1
   
 1. Update yasio_ni to v2.
+2. Add `io_channel::bytes_transferred`, it's useful for client channel `Traffic Statistics`.
   
   
 yasio-3.37.0

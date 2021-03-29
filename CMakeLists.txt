@@ -96,9 +96,9 @@ endif()
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    add_subdirectory(external/openssl)
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
-    include_directories("${CMAKE_SOURCE_DIR}/external/mbedtls/include")
+    include_directories("${PROJECT_SOURCE_DIR}/external/mbedtls/include")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
-    add_subdirectory(${CMAKE_SOURCE_DIR}/external/mbedtls)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/external/mbedtls)
 endif()
 
 ### c-ares support
@@ -107,7 +107,7 @@ if (YASIO_BUILD_WITH_CARES)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
     add_subdirectory(external/c-ares)
-    set(CARES_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
+    set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/external/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
 endif()
 
 ### The yasio core library project
@@ -122,7 +122,7 @@ set (YASIO_CORE
 
 if (YASIO_BUILD_WITH_KCP)
   set(YASIO_CORE ${YASIO_CORE} 
-    ${CMAKE_SOURCE_DIR}/external/kcp/ikcp.c
+    ${PROJECT_SOURCE_DIR}/external/kcp/ikcp.c
   )
 endif()
 
@@ -151,7 +151,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
 endif()
 
 if(YASIO_BUILD_WITH_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_BUILD_WITH_CARES OR YASIO_BUILD_WITH_HALF)
-    include_directories("${CMAKE_SOURCE_DIR}/external")
+    include_directories("${PROJECT_SOURCE_DIR}/external")
 endif()
 
 macro(source_group_by_dir proj_dir source_files)

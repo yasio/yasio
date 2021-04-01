@@ -15,8 +15,8 @@ function build_osx()
     cmake .. -GXcode -Bbuild_osx -DYASIO_SSL_BACKEND=1 -DYASIO_BUILD_WITH_CARES=ON
     cmake --build build_osx --config Release
     
-    echo "run test issue201 on osx..."
-    build_osx/tests/issue201/Release/issue201
+    echo "run test tcptest on osx..."
+    build_osx/tests/tcp/Release/tcptest
     
     exit 0
 }

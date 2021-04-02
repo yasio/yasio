@@ -121,6 +121,15 @@ SOFTWARE.
 #  define YASIO__DECL
 #endif
 
+/*
+** The interop decl, it's useful for store managed c# function as c++ function pointer properly.
+*/
+#if !defined(_WIN32) || YASIO__64BITS
+#  define YASIO_INTEROP_DECL
+#else
+#  define YASIO_INTEROP_DECL __stdcall
+#endif
+
 #define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 #define YASIO_SSIZEOF(T) static_cast<int>(sizeof(T))

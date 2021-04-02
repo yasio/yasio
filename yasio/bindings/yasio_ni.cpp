@@ -40,12 +40,6 @@ SOFTWARE.
 #  define YASIO_NI_API
 #endif
 
-#if !defined(_WIN32) || YASIO__64BITS
-#  define YASIO_INTEROP_DECL
-#else
-#  define YASIO_INTEROP_DECL __stdcall
-#endif
-
 #define YASIO_MAX_OPTION_ARGC 5
 
 using namespace yasio;

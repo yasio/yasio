@@ -1052,6 +1052,8 @@ void io_service::process_channels(fd_set* fds_array)
         finish = (ctx->state_ != io_base::state::OPEN);
         if (!finish)
           do_nonblocking_accept_completion(ctx, fds_array);
+        else
+          ctx->bytes_transferred_ = 0;
       }
 
       if (finish)

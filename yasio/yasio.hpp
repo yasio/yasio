@@ -460,6 +460,7 @@ public:
   YASIO__DECL std::string format_destination() const;
 
   long long bytes_transferred() const { return bytes_transferred_; }
+  unsigned int connect_id() const { return connect_id_; }
 
 protected:
   YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
@@ -548,6 +549,8 @@ private:
 
   // The bytes transferred from socket low layer, currently, only works for client channel
   long long bytes_transferred_ = 0;
+
+  unsigned int connect_id_ = 0;
 
 #if defined(YASIO_HAVE_KCP)
   int kcp_conv_ = 0;

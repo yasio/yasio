@@ -230,6 +230,28 @@ YASIO_NI_API void yasio_dispatch(intptr_t service_ptr, int count)
   if (service)
     service->dispatch(count);
 }
+YASIO_NI_API long long yasio_bytes_transferred(intptr_t service_ptr, int cindex)
+{
+  auto service = reinterpret_cast<io_service*>(service_ptr);
+  if (service)
+  {
+    auto channel = service->channel_at(cindex);
+    if (channel)
+      return channel->bytes_transferred();
+  }
+  return 0;
+}
+YASIO_NI_API unsigned int yasio_connect_id(intptr_t service_ptr, int cindex)
+{
+  auto service = reinterpret_cast<io_service*>(service_ptr);
+  if (service)
+  {
+    auto channel = service->channel_at(cindex);
+    if (channel)
+      return channel->connect_id();
+  }
+  return 0;
+}
 YASIO_NI_API void yasio_set_print_fn(intptr_t service_ptr, void(YASIO_INTEROP_DECL* pfn)(int, const char*))
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);

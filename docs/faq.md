@@ -78,7 +78,7 @@
         * Lua虚拟机实现中默认最大对齐类型是double，而```max_align_t```类型是C11标准才引入的： https://en.cppreference.com/w/c/types/max_align_t ，因此Lua作为ANSI C89标准兼容实现并未完美处理各个编译器地址对齐问题，而是留给了用户定义: ```LUAI_USER_ALIGNMENT_T```
         * 在C++11编译系统下已经引入 ```std::max_align_t```类型: https://en.cppreference.com/w/cpp/types/max_align_t
 
-    **重要: max_align_t各平台定义请查看llvm项目的 [__stddef_max_align_t.h](https://github.com/llvm/llvm-project/blob/master/clang/lib/Headers/__stddef_max_align_t.h)**
+    **重要: max_align_t各平台定义请查看llvm项目的 [__stddef_max_align_t.h](https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/__stddef_max_align_t.h)**
 
 ??? question "Can't load xxx.bundle on macOS?" 
 

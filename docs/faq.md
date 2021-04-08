@@ -80,9 +80,9 @@
 
     **重要: max_align_t各平台定义请查看llvm项目的 [__stddef_max_align_t.h](https://github.com/llvm/llvm-project/blob/master/clang/lib/Headers/__stddef_max_align_t.h)**
 
-??? question "Can't load xlua bundle on macOS?" 
+??? question "Can't load xxx.bundle on macOS?" 
 
-    The file `xlua.bundle` needs change attr by command `sudo xattr -r -d com.apple.quarantine xlua.bundle`  
+    The file `xxx.bundle` needs change attr by command `sudo xattr -r -d com.apple.quarantine xxx.bundle`  
 
 ??? question "xxsocket的resolve系列函数socktype参数作用？"
 

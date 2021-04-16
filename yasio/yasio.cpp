@@ -676,7 +676,7 @@ void io_transport_udp::set_primitives()
 }
 int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& /*error*/, highp_time_t&)
 { // pure udp, dispatch to upper layer directly
-  get_service().handle_event(event_ptr(new io_event(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred))));
+  get_service().handle_event(cxx17::make_unique<io_event>(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred)));
   return bytes_transferred;
 }
 
@@ -1119,7 +1119,7 @@ void io_service::handle_close(transport_handle_t thandle)
               io_service::strerror(ec));
 
   // @Notify connection lost
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECTION_LOST, ec, thandle)));
+  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_CONNECTION_LOST, ec, thandle));
   cleanup_io(thandle, false);
   deallocate_transport(thandle);
 
@@ -1757,7 +1757,7 @@ void io_service::notify_connect_succeed(transport_handle_t t)
   YASIO_KLOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_, s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
   YASIO_KLOGD("[index: %d] the connection #%u(%p) [%s] --> [%s] is established.", ctx->index_, t->id_, t, t->local_endpoint().to_string().c_str(),
               t->remote_endpoint().to_string().c_str());
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, 0, t)));
+  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_CONNECT_RESPONSE, 0, t));
 }
 transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_ptr<xxsocket> socket)
 {
@@ -1812,7 +1812,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
   ctx->properties_ &= 0xffffff; // clear highest byte flags
   cleanup_io(ctx);
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
-  this->handle_event(event_ptr(new io_event(ctx->index_, YEK_CONNECT_RESPONSE, error)));
+  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_CONNECT_RESPONSE, error));
 }
 bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
 {
@@ -1883,7 +1883,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     YASIO_KLOGV("[index: %d] received a properly packet from peer, "
                 "packet size:%d",
                 transport->cindex(), transport->expected_size_);
-    this->handle_event(event_ptr(new io_event(transport->cindex(), YEK_PACKET, transport, transport->fetch_packet())));
+    this->handle_event(cxx17::make_unique<io_event>(transport->cindex(), YEK_PACKET, transport, transport->fetch_packet()));
   }
   else /* all buffer consumed, set 'offset' to ZERO, pdu incomplete, continue recv remain data. */
     offset = 0;

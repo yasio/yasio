@@ -132,7 +132,7 @@ SOFTWARE.
 
 #if !defined(YASIO_API)
 #  if defined(_WINDLL)
-#    if defined(YASIO_LIB)
+#    if defined(YASIO_SHARED_LIB)
 #      define YASIO_API __declspec(dllexport)
 #    else
 #      define YASIO_API __declspec(dllimport)

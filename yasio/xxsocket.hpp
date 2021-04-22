@@ -684,7 +684,7 @@ using namespace yasio::inet::ip;
 /*
 ** CLASS xxsocket: a posix socket wrapper
 */
-class xxsocket {
+class YASIO_API xxsocket {
 public: /// portable connect APIs
   // easy to connect a server ipv4 or ipv6 with local ip protocol version detect
   // for support ipv6 ONLY network.

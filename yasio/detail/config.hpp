@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -128,6 +128,18 @@ SOFTWARE.
 #  define YASIO_INTEROP_DECL
 #else
 #  define YASIO_INTEROP_DECL __stdcall
+#endif
+
+#if !defined(YASIO_API)
+#  if defined(_WINDLL)
+#    if defined(YASIO_LIB)
+#      define YASIO_API __declspec(dllexport)
+#    else
+#      define YASIO_API __declspec(dllimport)
+#    endif
+#  else
+#    define YASIO_API
+#  endif
 #endif
 
 #define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))

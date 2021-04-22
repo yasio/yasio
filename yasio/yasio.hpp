@@ -340,7 +340,7 @@ struct io_hostent {
   u_short port_ = 0;
 };
 
-class highp_timer {
+class YASIO_API highp_timer {
 public:
   void expires_from_now(const std::chrono::microseconds& duration)
   {
@@ -382,7 +382,7 @@ public:
   std::chrono::time_point<steady_clock_t> expire_time_ = {};
 };
 
-struct io_base {
+struct YASIO_API io_base {
   enum class state : uint8_t
   {
     CLOSED,
@@ -445,7 +445,7 @@ protected:
 };
 #endif
 
-class io_channel : public io_base {
+class YASIO_API io_channel : public io_base {
   friend class io_service;
   friend class io_transport;
   friend class io_transport_tcp;
@@ -566,7 +566,7 @@ private:
 };
 
 // for tcp transport only
-class io_send_op {
+class YASIO_API io_send_op {
 public:
   io_send_op(std::vector<char>&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
@@ -583,7 +583,7 @@ public:
 };
 
 // for udp transport only
-class io_sendto_op : public io_send_op {
+class YASIO_API io_sendto_op : public io_send_op {
 public:
   io_sendto_op(std::vector<char>&& buffer, completion_cb_t&& handler, const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
@@ -680,7 +680,7 @@ private:
 #endif
 };
 
-class io_transport_tcp : public io_transport {
+class YASIO_API io_transport_tcp : public io_transport {
   friend class io_service;
 
 public:
@@ -700,7 +700,7 @@ protected:
 #else
 class io_transport_ssl {};
 #endif
-class io_transport_udp : public io_transport {
+class YASIO_API io_transport_udp : public io_transport {
   friend class io_service;
 
 public:
@@ -825,7 +825,7 @@ private:
 #endif
 };
 
-class io_service // lgtm [cpp/class-many-fields]
+class YASIO_API io_service // lgtm [cpp/class-many-fields]
 {
   friend class highp_timer;
   friend class io_transport;

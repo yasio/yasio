@@ -236,6 +236,10 @@ endif ( )
 
 target_include_directories(yasio PUBLIC ${CMAKE_CURRENT_DOURCE_DIR}/)
 
+if (BUILD_SHARED_LIBS)
+    target_compile_definitions(yasio PRIVATE YASIO_SHARED_LIB=1)
+endif()
+
 macro(ConfigTargetSSL target_name)
     if (YASIO_SSL_BACKEND EQUAL 1)
         if (UNIX)
@@ -302,10 +306,6 @@ if(CARES_INCLUDE_DIR AND YASIO_BUILD_WITH_CARES)
    target_include_directories(yasio PRIVATE "${CARES_INCLUDE_DIR}")
    target_link_libraries(yasio c-ares)
    target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
-
-   if(ANDROID AND BUILD_SHARED_LIBS)
-       target_compile_definitions(yasio PRIVATE YASIO_BUILD_AS_SHARED=1)
-   endif()
 endif()
 
 # checking build system have kcp

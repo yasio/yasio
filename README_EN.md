@@ -26,6 +26,7 @@
 **yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows & linux & apple & android & win10-universal.  
 
 ## Showcase
+* [Place Girls](http://hcsj.c4connect.co.jp/): A popular mobile game published on jp.
 * [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.
 * [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
 

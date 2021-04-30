@@ -4,6 +4,7 @@ yasio-3.37.1
 2. Add `io_channel::bytes_transferred`, it's useful for client channel `Traffic Statistics`.
 3. Add `io_channel::connect_id`.
 4. Add support build as windows dll.
+5. Add `YASIO_USE_SHARED_PACKET` to control whether packet could be shared on multi-threadings.
   
   
 yasio-3.37.0

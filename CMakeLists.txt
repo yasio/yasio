@@ -42,7 +42,8 @@ endif()
 
 cmake_policy(SET CMP0048 NEW)
 
-project(yasio)
+set(yasio_target_name yasio)
+project(${yasio_target_name})
 
 if (WIN32)
     add_compile_options(" /Bv")
@@ -82,32 +83,6 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${THIRDPART_INC}
 )
-
-# --- The yasio config preprocessors
-macro(yasio_config_pred pred)
-    if(${pred})
-        add_definitions(-D${pred}=1)
-    endif()
-endmacro()
-macro(yasio_config_option optname optval)
-    if(${optname})
-        add_definitions(-D${optname}=${optval})
-    endif()
-endmacro()
-
-yasio_config_pred(YASIO_VERBOSE_LOG)
-yasio_config_pred(YASIO_USE_SPSC_QUEUE)
-yasio_config_pred(YASIO_USE_SHARED_PACKET)
-yasio_config_pred(YASIO_DISABLE_OBJECT_POOL)
-yasio_config_pred(YASIO_ENABLE_ARES_PROFILER)
-yasio_config_pred(YASIO_HAVE_CARES)
-yasio_config_pred(YASIO_HAVE_KCP)
-yasio_config_option(YASIO_SSL_BACKEND ${YASIO_SSL_BACKEND})
-# yasio_config_pred(YASIO_DISABLE_CONCURRENT_SINGLETON)
-yasio_config_pred(YASIO_ENABLE_UDS)
-yasio_config_pred(YASIO_NT_COMPAT_GAI)
-yasio_config_pred(YASIO_MINIFY_EVENT)
-yasio_config_pred(YASIO_HAVE_HALF_FLOAT)
 
 ### openssl support
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
@@ -194,7 +169,7 @@ source_group_by_dir(${CMAKE_CURRENT_SOURCE_DIR} YASIO_CORE)
 if (APPLE)
     if (IOS)
         # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD)")
-        add_library(yasio STATIC
+        add_library(${yasio_target_name} STATIC
            ${YASIO_CORE}
            ${THIRDPART_SRC}
         )
@@ -210,51 +185,51 @@ if (APPLE)
             endif()
         endmacro(set_xcode_property)
 	    
-        set_xcode_property (yasio IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
+        set_xcode_property (${yasio_target_name} IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
     else ()
         # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
         if (BUILD_SHARED_LIBS)
-            add_library(yasio MODULE
+            add_library(${yasio_target_name} MODULE
                 ${YASIO_CORE}
                 ${THIRDPART_SRC}
             )
-            set_target_properties ( yasio PROPERTIES BUNDLE TRUE )
+            set_target_properties (${yasio_target_name} PROPERTIES BUNDLE TRUE )
         else()
-            add_library(yasio STATIC
+            add_library(${yasio_target_name} STATIC
                 ${YASIO_CORE}
                 ${THIRDPART_SRC}
             )
         endif()
     endif ()
 elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
-    add_library(yasio STATIC
+    add_library(${yasio_target_name} STATIC
         ${YASIO_CORE}
         ${THIRDPART_SRC}
     )
-    target_compile_options(yasio PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
+    target_compile_options(${yasio_target_name} PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
 else ( ) # linux/win32/android
-    add_library(yasio
+    add_library(${yasio_target_name}
         ${YASIO_CORE}
         ${THIRDPART_SRC}
     )
 endif ( )
 	
 if ( WIN32 AND NOT CYGWIN )
-    target_link_libraries(yasio
+    target_link_libraries(${yasio_target_name}
         ws2_32
         ${THIRDPART_LIB} 
     )
 else ( )
-    target_link_libraries(yasio
+    target_link_libraries(${yasio_target_name}
         m
         ${THIRDPART_LIB} 
     )
 endif ( )
 
-target_include_directories(yasio PUBLIC ${CMAKE_CURRENT_DOURCE_DIR}/)
+target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_DOURCE_DIR}/)
 
 if (BUILD_SHARED_LIBS)
-    target_compile_definitions(yasio PRIVATE YASIO_SHARED_LIB=1)
+    target_compile_definitions(${yasio_target_name} PRIVATE YASIO_SHARED_LIB=1)
 endif()
 
 macro(ConfigTargetSSL target_name)
@@ -301,10 +276,10 @@ if (NOT WIN32 OR CYGWIN)
     endif()
 else()
     if(CXX_STD EQUAL 17)
-        # target_compile_features(yasio PUBLIC cxx_std_17) works
+        # target_compile_features(${yasio_target_name} PUBLIC cxx_std_17) works
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
     elseif(CXX_STD EQUAL 14)
-        # target_compile_features(yasio PUBLIC cxx_std_14) not works
+        # target_compile_features(${yasio_target_name} PUBLIC cxx_std_14) not works
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++14")
     endif()
 endif()
@@ -312,24 +287,52 @@ endif()
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR)
    set(YASIO_SSL_BACKEND 1)
-   target_include_directories(yasio PRIVATE "${OPENSSL_INCLUDE_DIR}")
+   target_include_directories(${yasio_target_name} PRIVATE "${OPENSSL_INCLUDE_DIR}")
    if(BUILD_SHARED_LIBS AND (ANDROID OR LINUX))
-       target_link_libraries (yasio ext_ssl ext_crypto)
+       target_link_libraries (${yasio_target_name} ext_ssl ext_crypto)
    endif()
 endif()
 
 # checking build system have c-ares
 if(CARES_INCLUDE_DIR AND YASIO_HAVE_CARES)
-   target_include_directories(yasio PRIVATE "${CARES_INCLUDE_DIR}")
-   target_link_libraries(yasio c-ares)
+   target_include_directories(${yasio_target_name} PRIVATE "${CARES_INCLUDE_DIR}")
+   target_link_libraries(${yasio_target_name} c-ares)
 endif()
 
 if (ANDROID AND BUILD_SHARED_LIBS)
     message("CMAKE_STRIP=${CMAKE_STRIP}")
-    add_custom_command(TARGET yasio POST_BUILD
+    add_custom_command(TARGET ${yasio_target_name} POST_BUILD
         COMMAND mkdir -p ${PROJECT_BINARY_DIR}/stripped && ${CMAKE_STRIP} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/stripped/libyasio.so
     )
 endif()
+
+
+# The yasio config preprocessors
+macro(yasio_config_pred pred)
+    if(${pred})
+        target_compile_definitions(${yasio_target_name} PUBLIC ${pred}=1)
+    endif()
+endmacro()
+macro(yasio_config_option optname optval)
+    if(${optname})
+        target_compile_definitions(${yasio_target_name} PUBLIC ${optname}=${optval})
+    endif()
+endmacro()
+
+yasio_config_pred(YASIO_VERBOSE_LOG)
+yasio_config_pred(YASIO_USE_SPSC_QUEUE)
+yasio_config_pred(YASIO_USE_SHARED_PACKET)
+yasio_config_pred(YASIO_DISABLE_OBJECT_POOL)
+yasio_config_pred(YASIO_ENABLE_ARES_PROFILER)
+yasio_config_pred(YASIO_HAVE_CARES)
+yasio_config_pred(YASIO_HAVE_KCP)
+yasio_config_option(YASIO_SSL_BACKEND ${YASIO_SSL_BACKEND})
+# yasio_config_pred(YASIO_DISABLE_CONCURRENT_SINGLETON)
+yasio_config_pred(YASIO_ENABLE_UDS)
+yasio_config_pred(YASIO_NT_COMPAT_GAI)
+yasio_config_pred(YASIO_MINIFY_EVENT)
+yasio_config_pred(YASIO_HAVE_HALF_FLOAT)
+yasio_config_pred(YASIO_NO_JNI_ONLOAD)
 
 # The tests & examples
 if(NOT IOS AND YASIO_BUILD_TESTS)

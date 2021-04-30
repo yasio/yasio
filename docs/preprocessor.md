@@ -12,6 +12,7 @@
 |*YASIO_VERBOSE_LOG*|是否打印详细日志，默认关闭。|
 |*YASIO_NT_COMPAT_GAI*|是否启用Windows XP系统下使用 `getaddrinfo` API支持。|
 |*YASIO_USE_SPSC_QUEUE*|是否使用SPSC(单生产者单消费者)队列，<br/>仅当只有一个线程调用io_service::write时放可启用，默认关闭。|
+|*YASIO_USE_SHARED_PACKET*|是否使用 `std::shared_ptr` 包装网络包，使其能在多线程之间共享，默认关闭。|
 |*YASIO_HAVE_HALF_FLOAT*|是否启用半精度浮点数支持，依赖 [half.hpp](https://github.com/yasio/external/blob/master/half/half.hpp)。|
 |*YASIO_DISABLE_OBJECT_POOL*|是否禁用对象池的使用，默认启用。|
 |*YASIO_DISABLE_CONCURRENT_SINGLETON*|是否禁用并发单利类模板。|

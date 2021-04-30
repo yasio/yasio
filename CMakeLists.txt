@@ -82,15 +82,22 @@ include_directories(
     ${THIRDPART_INC}
 )
 
-# --- The yasio optional dependencies
+# --- The yasio config preprocessors
+macro(yasio_config_pred pred)
+    if(${pred})
+        add_definitions(-D${pred}=1)
+    endif()
+endmacro()
 
-if(YASIO_BUILD_WITH_HALF)
-    add_definitions(-DYASIO_HAVE_HALF_FLOAT=1)
-endif()
-
-if(YASIO_VERBOSE_LOG)
-    add_definitions(-DYASIO_VERBOSE_LOG=1)
-endif()
+yasio_config_pred(YASIO_VERBOSE_LOG)
+yasio_config_pred(YASIO_USE_SPSC_QUEUE)
+yasio_config_pred(YASIO_USE_SHARED_PACKET)
+yasio_config_pred(YASIO_DISABLE_OBJECT_POOL)
+yasio_config_pred(YASIO_SSL_BACKEND)
+yasio_config_pred(YASIO_ENABLE_UDS)
+yasio_config_pred(YASIO_NT_COMPAT_GAI)
+yasio_config_pred(YASIO_MINIFY_EVENT)
+yasio_config_pred(YASIO_HAVE_HALF_FLOAT)
 
 ### openssl support
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl

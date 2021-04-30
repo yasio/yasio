@@ -59,6 +59,10 @@ if (NOT DEFINED YASIO_SSL_BACKEND)
     set(YASIO_SSL_BACKEND 0)
 endif()
 
+if (NOT DEFINED YASIO_HAVE_HALF_FLOAT)
+    set(YASIO_HAVE_HALF_FLOAT ON)
+endif()
+
 if (NOT CXX_STD)
     set(CXX_STD 11)
 endif()

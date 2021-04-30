@@ -151,7 +151,9 @@ void yasioTest()
   obs.write(1.17723f);
   obs.write_ix<int32_t>(20201125);
   obs.write_ix<int64_t>(-9223372036854775807);
+#if defined(YASIO_HAVE_HALF_FLOAT)
   obs.write(static_cast<fp16_t>(3.85f));
+#endif
   obs.write_varint(23123, 3);
   obs.pop(sizeof(u_short));
 
@@ -161,11 +163,15 @@ void yasioTest()
   auto f1 = ibs.read<float>();
   auto v5 = ibs.read_ix<int32_t>();
   auto v6 = ibs.read_ix<int64_t>();
+#if defined(YASIO_HAVE_HALF_FLOAT)
   auto v7 = static_cast<float>(ibs.read<fp16_t>());
+#endif
   auto v8 = ibs.read_varint(3); // uint24
-
+#if defined(YASIO_HAVE_HALF_FLOAT)
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v7 << ", " << v8 << "\n";
-
+#else
+  std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v8 << "\n";
+#endif
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 
   resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port) {
@@ -243,7 +249,7 @@ void yasioTest()
   service.set_option(YOPT_S_TCP_KEEPALIVE, 5, 10, 2);
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  service.open(0); // open http client
+  service.open(0, YCK_TCP_CLIENT); // open http client
   time_t duration = 0;
   while (service.is_running())
   {

@@ -33,8 +33,8 @@ jobs:
           submodules: 'recursive'
       - name: Build
         run: |
-          travis/install.sh
-          travis/build.sh
+          ci/install.sh
+          ci/build.sh
   build-android:
     name: build-android
     runs-on: ubuntu-18.04
@@ -49,8 +49,8 @@ jobs:
           submodules: 'recursive'
       - name: Build
         run: |
-          travis/install.sh
-          travis/build.sh
+          ci/install.sh
+          ci/build.sh
   build-osx:
     name: build-osx
     runs-on: macos-latest
@@ -63,8 +63,8 @@ jobs:
           submodules: 'recursive'
       - name: Build
         run: |
-          travis/install.sh
-          travis/build.sh
+          ci/install.sh
+          ci/build.sh
   build-ios:
     name: build-ios
     runs-on: macos-latest
@@ -77,8 +77,8 @@ jobs:
           submodules: 'recursive'
       - name: Build
         run: |
-          travis/install.sh
-          travis/build.sh
+          ci/install.sh
+          ci/build.sh
   build-freebsd:
     name: build-freebsd
     runs-on: macos-latest

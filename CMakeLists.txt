@@ -49,13 +49,10 @@ if (WIN32)
 endif()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-option(YASIO_BUILD_WITH_CARES "Build yasio with c-ares support" OFF)
-option(YASIO_BUILD_WITH_KCP "Build yasio with kcp support" OFF)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
-option(YASIO_BUILD_WITH_HALF "Build yasio with half-precision floating-point library" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 if (NOT DEFINED YASIO_SSL_BACKEND)
@@ -88,12 +85,21 @@ macro(yasio_config_pred pred)
         add_definitions(-D${pred}=1)
     endif()
 endmacro()
+macro(yasio_config_option optname optval)
+    if(${optname})
+        add_definitions(-D${optname}=${optval})
+    endif()
+endmacro()
 
 yasio_config_pred(YASIO_VERBOSE_LOG)
 yasio_config_pred(YASIO_USE_SPSC_QUEUE)
 yasio_config_pred(YASIO_USE_SHARED_PACKET)
 yasio_config_pred(YASIO_DISABLE_OBJECT_POOL)
-yasio_config_pred(YASIO_SSL_BACKEND)
+yasio_config_pred(YASIO_ENABLE_ARES_PROFILER)
+yasio_config_pred(YASIO_HAVE_CARES)
+yasio_config_pred(YASIO_HAVE_KCP)
+yasio_config_option(YASIO_SSL_BACKEND ${YASIO_SSL_BACKEND})
+# yasio_config_pred(YASIO_DISABLE_CONCURRENT_SINGLETON)
 yasio_config_pred(YASIO_ENABLE_UDS)
 yasio_config_pred(YASIO_NT_COMPAT_GAI)
 yasio_config_pred(YASIO_MINIFY_EVENT)
@@ -109,7 +115,7 @@ elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
 endif()
 
 ### c-ares support
-if (YASIO_BUILD_WITH_CARES)
+if (YASIO_HAVE_CARES)
     set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
@@ -127,7 +133,7 @@ set (YASIO_CORE
     yasio/yasio.cpp
 )
 
-if (YASIO_BUILD_WITH_KCP)
+if (YASIO_HAVE_KCP)
   set(YASIO_CORE ${YASIO_CORE} 
     ${PROJECT_SOURCE_DIR}/external/kcp/ikcp.c
   )
@@ -157,7 +163,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
   )
 endif()
 
-if(YASIO_BUILD_WITH_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_BUILD_WITH_CARES OR YASIO_BUILD_WITH_HALF)
+if(YASIO_HAVE_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_HAVE_CARES OR YASIO_HAVE_HALF_FLOAT)
     include_directories("${PROJECT_SOURCE_DIR}/external")
 endif()
 
@@ -309,22 +315,9 @@ if(OPENSSL_INCLUDE_DIR)
 endif()
 
 # checking build system have c-ares
-if(CARES_INCLUDE_DIR AND YASIO_BUILD_WITH_CARES)
+if(CARES_INCLUDE_DIR AND YASIO_HAVE_CARES)
    target_include_directories(yasio PRIVATE "${CARES_INCLUDE_DIR}")
    target_link_libraries(yasio c-ares)
-   target_compile_definitions(yasio PUBLIC YASIO_HAVE_CARES=1 YASIO_ENABLE_ARES_PROFILER=1)
-endif()
-
-# checking build system have kcp
-if(YASIO_BUILD_WITH_KCP)
-    target_compile_definitions(yasio PUBLIC YASIO_HAVE_KCP=1)
-endif()
-
-# add ssl preprocessor
-# 1. OpenSSL
-# 2. mbedtls
-if(YASIO_SSL_BACKEND)
-   target_compile_definitions(yasio PUBLIC YASIO_SSL_BACKEND=${YASIO_SSL_BACKEND})
 endif()
 
 if (ANDROID AND BUILD_SHARED_LIBS)
@@ -338,7 +331,7 @@ endif()
 if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)
-    if(YASIO_BUILD_WITH_KCP)
+    if(YASIO_HAVE_KCP)
         add_subdirectory(tests/speed)
     endif()
     add_subdirectory(tests/issue166)

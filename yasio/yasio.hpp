@@ -756,6 +756,24 @@ protected:
 class io_transport_kcp {};
 #endif
 
+using io_packet = std::vector<char>;
+#if defined(YASIO_USE_SHARED_PACKET)
+using packet_t = std::shared_ptr<io_packet>;
+inline packet_t wrap_packet(io_packet& raw_packet) { return std::make_shared<io_packet>(std::move(raw_packet)); }
+inline bool is_packet_empty(packet_t& pkt) { return !pkt; }
+inline io_packet& forward_packet(packet_t& pkt) { return *pkt; }
+inline io_packet&& forward_packet(packet_t&& pkt) { return std::move(*pkt); }
+inline io_packet::pointer packet_data(packet_t& pkt) { return pkt->data(); }
+inline io_packet::size_type packet_len(packet_t& pkt) { return pkt->size(); }
+#else
+using packet_t = io_packet;
+inline packet_t wrap_packet(io_packet& raw_packet) { return packet_t(std::move(raw_packet)); }
+inline bool is_packet_empty(packet_t& pkt) { return pkt.empty(); }
+inline io_packet& forward_packet(packet_t& pkt) { return pkt; }
+inline io_packet&& forward_packet(packet_t&& pkt) { return std::move(pkt); }
+inline io_packet::pointer packet_data(packet_t& pkt) { return pkt.data(); }
+inline io_packet::size_type packet_len(packet_t& pkt) { return pkt.size(); }
+#endif
 class io_event final {
 public:
   io_event(int cindex, int kind, int error)
@@ -773,7 +791,7 @@ public:
 #endif
   {}
   io_event(int cindex, int kind, transport_handle_t transport, std::vector<char> packet)
-      : cindex_(cindex), kind_(kind), status_(0), transport_(transport), packet_(std::move(packet))
+      : cindex_(cindex), kind_(kind), status_(0), transport_(transport), packet_(wrap_packet(std::move(packet)))
 #if !defined(YASIO_MINIFY_EVENT)
         ,
         timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
@@ -793,7 +811,7 @@ public:
   int kind() const { return kind_; }
   int status() const { return status_; }
 
-  std::vector<char>& packet() { return packet_; }
+  packet_t& packet() { return packet_; }
   transport_handle_t transport() const { return transport_; }
 
 #if !defined(YASIO_MINIFY_EVENT)
@@ -817,7 +835,7 @@ private:
   int kind_;
   int status_;
   transport_handle_t transport_;
-  std::vector<char> packet_;
+  packet_t packet_;
 #if !defined(YASIO_MINIFY_EVENT)
   highp_time_t timestamp_;
   void* transport_udata_;

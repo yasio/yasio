@@ -77,19 +77,27 @@ YASIO_NI_API void yasio_init_globals(void(YASIO_INTEROP_DECL* pfn)(int level, co
   io_service::init_globals(custom_print);
 }
 YASIO_NI_API void yasio_cleanup_globals() { io_service::cleanup_globals(); }
-
-YASIO_NI_API intptr_t yasio_create_service(int channel_count,
-                                           void(YASIO_INTEROP_DECL* event_cb)(int kind, int status, int cidx, intptr_t t, intptr_t bytes, int len))
+YASIO_NI_API void* yasio_create_service(int channel_count, void(YASIO_INTEROP_DECL* event_cb)(int kind, int status, int cidx, void* t, void* opaque))
 {
   assert(!!event_cb);
   io_service* service = new io_service(channel_count);
   service->start([=](event_ptr e) {
-    event_cb(e->kind(), e->status(), e->cindex(), reinterpret_cast<intptr_t>(e->transport()), reinterpret_cast<intptr_t>(e->packet().data()),
-             static_cast<int>(e->packet().size()));
+    auto& pkt = e->packet();
+    event_cb(e->kind(), e->status(), e->cindex(), e->transport(), !is_packet_empty(pkt) ? &pkt : nullptr);
   });
-  return reinterpret_cast<intptr_t>(service);
+  return service;
 }
-YASIO_NI_API void yasio_destroy_service(intptr_t service_ptr)
+YASIO_NI_API void* yasio_unwrap_ptr(void* opaque, int offset)
+{
+  auto& pkt = *(packet_t*)opaque;
+  return packet_data(pkt) + offset;
+}
+YASIO_NI_API int yasio_unwrap_len(void* opaque, int offset)
+{
+  auto& pkt = *(packet_t*)opaque;
+  return static_cast<int>(packet_len(pkt) - offset);
+}
+YASIO_NI_API void yasio_destroy_service(void* service_ptr)
 {
   io_service* service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
@@ -98,14 +106,14 @@ YASIO_NI_API void yasio_destroy_service(intptr_t service_ptr)
     delete service;
   }
 }
-YASIO_NI_API void yasio_set_resolv_fn(intptr_t service_ptr, int(YASIO_INTEROP_DECL* resolv)(const char* host, intptr_t sbuf))
+YASIO_NI_API void yasio_set_resolv_fn(void* service_ptr, int(YASIO_INTEROP_DECL* resolv)(const char* host, void* sbuf))
 {
   io_service* service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
   {
     resolv_fn_t fn = [resolv](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) {
       char buffer[128] = {0};
-      int ret          = resolv(host, (intptr_t)&buffer[0]);
+      int ret          = resolv(host, &buffer[0]);
       if (0 == ret)
       {
         eps.push_back(ip::endpoint(buffer, port));
@@ -123,7 +131,7 @@ YASIO_NI_API void yasio_set_resolv_fn(intptr_t service_ptr, int(YASIO_INTEROP_DE
     opt: the opt value
     pszArgs: split by ';'
   */
-YASIO_NI_API void yasio_set_option(intptr_t service_ptr, int opt, const char* pszArgs)
+YASIO_NI_API void yasio_set_option(void* service_ptr, int opt, const char* pszArgs)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (!service)
@@ -181,25 +189,25 @@ YASIO_NI_API void yasio_set_option(intptr_t service_ptr, int opt, const char* ps
       YASIO_LOG("The option: %d unsupported by yasio_set_option!", opt);
   }
 }
-YASIO_NI_API void yasio_open(intptr_t service_ptr, int cindex, int kind)
+YASIO_NI_API void yasio_open(void* service_ptr, int cindex, int kind)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
     service->open(cindex, kind);
 }
-YASIO_NI_API void yasio_close(intptr_t service_ptr, int cindex)
+YASIO_NI_API void yasio_close(void* service_ptr, int cindex)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
     service->close(cindex);
 }
-YASIO_NI_API void yasio_close_handle(intptr_t service_ptr, intptr_t thandle)
+YASIO_NI_API void yasio_close_handle(void* service_ptr, void* thandle)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
     service->close(reinterpret_cast<transport_handle_t>(thandle));
 }
-YASIO_NI_API int yasio_write(intptr_t service_ptr, intptr_t thandle, const unsigned char* bytes, int len)
+YASIO_NI_API int yasio_write(void* service_ptr, void* thandle, const unsigned char* bytes, int len)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
@@ -209,7 +217,7 @@ YASIO_NI_API int yasio_write(intptr_t service_ptr, intptr_t thandle, const unsig
   }
   return -1;
 }
-YASIO_NI_API int yasio_write_ob(intptr_t service_ptr, intptr_t thandle, intptr_t obs_ptr)
+YASIO_NI_API int yasio_write_ob(void* service_ptr, void* thandle, void* obs_ptr)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
@@ -219,18 +227,18 @@ YASIO_NI_API int yasio_write_ob(intptr_t service_ptr, intptr_t thandle, intptr_t
   }
   return -1;
 }
-YASIO_NI_API unsigned int yasio_tcp_rtt(intptr_t thandle)
+YASIO_NI_API unsigned int yasio_tcp_rtt(void* thandle)
 {
   auto p = reinterpret_cast<transport_handle_t>(thandle);
   return io_service::tcp_rtt(p);
 }
-YASIO_NI_API void yasio_dispatch(intptr_t service_ptr, int count)
+YASIO_NI_API void yasio_dispatch(void* service_ptr, int count)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
     service->dispatch(count);
 }
-YASIO_NI_API long long yasio_bytes_transferred(intptr_t service_ptr, int cindex)
+YASIO_NI_API long long yasio_bytes_transferred(void* service_ptr, int cindex)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
@@ -241,7 +249,7 @@ YASIO_NI_API long long yasio_bytes_transferred(intptr_t service_ptr, int cindex)
   }
   return 0;
 }
-YASIO_NI_API unsigned int yasio_connect_id(intptr_t service_ptr, int cindex)
+YASIO_NI_API unsigned int yasio_connect_id(void* service_ptr, int cindex)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
@@ -252,7 +260,7 @@ YASIO_NI_API unsigned int yasio_connect_id(intptr_t service_ptr, int cindex)
   }
   return 0;
 }
-YASIO_NI_API void yasio_set_print_fn(intptr_t service_ptr, void(YASIO_INTEROP_DECL* pfn)(int, const char*))
+YASIO_NI_API void yasio_set_print_fn(void* service_ptr, void(YASIO_INTEROP_DECL* pfn)(int, const char*))
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
@@ -261,26 +269,26 @@ YASIO_NI_API void yasio_set_print_fn(intptr_t service_ptr, void(YASIO_INTEROP_DE
     service->set_option(YOPT_S_PRINT_FN2, &custom_print);
   }
 }
-YASIO_NI_API intptr_t yasio_ob_new(int capacity) { return reinterpret_cast<intptr_t>(new obstream(capacity)); }
-YASIO_NI_API void yasio_ob_release(intptr_t obs_ptr)
+YASIO_NI_API void* yasio_ob_new(int capacity) { return new obstream(capacity); }
+YASIO_NI_API void yasio_ob_release(void* obs_ptr)
 {
   auto obs = reinterpret_cast<obstream*>(obs_ptr);
   delete obs;
 }
-YASIO_NI_API void yasio_ob_write_short(intptr_t obs_ptr, short value)
+YASIO_NI_API void yasio_ob_write_short(void* obs_ptr, short value)
 {
   auto obs = reinterpret_cast<obstream*>(obs_ptr);
   obs->write(value);
 }
-YASIO_NI_API void yasio_ob_write_int(intptr_t obs_ptr, int value)
+YASIO_NI_API void yasio_ob_write_int(void* obs_ptr, int value)
 {
   auto obs = reinterpret_cast<obstream*>(obs_ptr);
   obs->write(value);
 }
-YASIO_NI_API void yasio_ob_write_bytes(intptr_t obs_ptr, intptr_t bytes, int len)
+YASIO_NI_API void yasio_ob_write_bytes(void* obs_ptr, void* bytes, int len)
 {
   auto obs = reinterpret_cast<obstream*>(obs_ptr);
-  obs->write_bytes(reinterpret_cast<const void*>(bytes), len);
+  obs->write_bytes(bytes, len);
 }
 
 YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }

@@ -142,7 +142,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
         bool copy = false;
         if (args.size() >= 2)
           copy = args[1];
-        return std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(ev->packet())) : new yasio::ibstream(ev->packet()));
+        auto& pkt = ev->packet();
+        return !is_packet_empty(pkt)
+                   ? std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(forward_packet((packet_t &&) pkt)) : new yasio::ibstream(forward_packet(pkt)))
+                   : std::unique_ptr<yasio::ibstream>{};
       },
       "cindex", &io_event::cindex, "transport", &io_event::transport
 #  if !defined(YASIO_MINIFY_EVENT)
@@ -246,6 +249,20 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
   yasio_lib["highp_clock"] = &highp_clock<steady_clock_t>;
   yasio_lib["highp_time"]  = &highp_clock<system_clock_t>;
+
+  yasio_lib["unwrap_ptr"] = [](lua_State* L) -> int {
+    auto& pkt  = *(packet_t*)lua_touserdata(L, 1);
+    int offset = lua_isinteger(L, 2) ? static_cast<int>(lua_tointeger(L, 2)) : 0;
+    lua_pushlightuserdata(L, packet_data(pkt) + offset);
+    return 1;
+  };
+
+  yasio_lib["unwrap_len"] = [](lua_State* L) -> int {
+    auto& pkt  = *(packet_t*)lua_touserdata(L, 1);
+    int offset = lua_isinteger(L, 2) ? static_cast<int>(lua_tointeger(L, 2)) : 0;
+    lua_pushinteger(L, packet_len(pkt) - offset);
+    return 1;
+  };
 
   // ##-- yasio enums
 #  define YASIO_EXPORT_ENUM(v) yasio_lib[#  v] = v
@@ -489,8 +506,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 #  if YASIO_LUA_ENABLE_GLOBAL
   state["yasio"] = yasio_lib;
 #  endif
-  // No any interface need export, only for holder
-  // yasio_lib["io_transport"].setClass(kaguya::UserdataMetatable<io_transport>());
 
   yasio_lib["io_event"].setClass(kaguya::UserdataMetatable<io_event>()
 
@@ -498,8 +513,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                                      .addFunction("status", &io_event::status)
                                      .addStaticFunction("packet",
                                                         [](io_event* ev, bool /*raw*/, bool copy) {
-                                                          return std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(ev->packet()))
-                                                                                                        : new yasio::ibstream(ev->packet()));
+                                                          auto& pkt = ev->packet();
+                                                          return !is_packet_empty(pkt) ? std::unique_ptr<yasio::ibstream>(
+                                                                                             !copy ? new yasio::ibstream(forward_packet((packet_t &&) pkt))
+                                                                                                   : new yasio::ibstream(forward_packet(pkt)))
+                                                                                       : std::unique_ptr<yasio::ibstream>{};
                                                         })
                                      .addFunction("cindex", &io_event::cindex)
                                      .addFunction("transport", &io_event::transport)
@@ -593,6 +611,20 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 
   yasio_lib.setField("highp_clock", &highp_clock<steady_clock_t>);
   yasio_lib.setField("highp_time", &highp_clock<system_clock_t>);
+
+  yasio_lib.setField("unwrap_ptr", [](lua_State* L) -> int {
+    auto& pkt  = *(packet_t*)lua_touserdata(L, 1);
+    int offset = lua_isinteger(L, 2) ? static_cast<int>(lua_tointeger(L, 2)) : 0;
+    lua_pushlightuserdata(L, packet_data(pkt) + offset);
+    return 1;
+  });
+
+  yasio_lib.setField("unwrap_len", [](lua_State* L) -> int {
+    auto& pkt  = *(packet_t*)lua_touserdata(L, 1);
+    int offset = lua_isinteger(L, 2) ? static_cast<int>(lua_tointeger(L, 2)) : 0;
+    lua_pushinteger(L, packet_len(pkt) - offset);
+    return 1;
+  });
 
   // ##-- yasio enums
 #  define YASIO_EXPORT_ENUM(v) yasio_lib[#  v] = v

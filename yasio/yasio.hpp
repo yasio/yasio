@@ -759,7 +759,7 @@ class io_transport_kcp {};
 using io_packet = std::vector<char>;
 #if !defined(YASIO_USE_SHARED_PACKET)
 using packet_t = io_packet;
-inline packet_t&& wrap_packet(io_packet& raw_packet) { return (packet_t &&) raw_packet; }
+inline packet_t wrap_packet(io_packet& raw_packet) { return std::move(raw_packet); }
 inline bool is_packet_empty(packet_t& pkt) { return pkt.empty(); }
 inline io_packet& forward_packet(packet_t& pkt) { return pkt; }
 inline io_packet&& forward_packet(packet_t&& pkt) { return std::move(pkt); }

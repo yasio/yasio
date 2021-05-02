@@ -99,10 +99,10 @@ public:
   template <typename... _Types> void emplace(_Types&&... values)
   {
     std::lock_guard<std::recursive_mutex> lck(this->mtx_);
-    queue_.emplace(std::forward<_Types>(values)...);
+    queue_.emplace_back(std::forward<_Types>(values)...);
   }
 
-  void pop() { queue_.pop(); }
+  void pop() { queue_.pop_front(); }
   bool empty() const { return this->queue_.empty(); }
   void clear()
   {
@@ -123,8 +123,14 @@ public:
     return concurrent_item{};
   }
 
+  // ixxx api don't perform auto lock
+  int isize() const { return queue_.size(); }
+  typename std::deque<_Ty>::iterator ibegin(typename std::deque<_Ty>::difference_type off) { return queue_.begin() + off; }
+  typename std::deque<_Ty>::iterator iend() { return queue_.end(); }
+  typename std::deque<_Ty>::iterator ierase(typename std::deque<_Ty>::iterator iter) { return queue_.erase(iter); }
+
 protected:
-  std::queue<_Ty> queue_;
+  std::deque<_Ty> queue_;
   std::recursive_mutex mtx_;
 };
 template <typename _Ty> class concurrent_queue<_Ty, false> : public concurrent_queue_primitive<_Ty>
@@ -149,7 +155,7 @@ public:
     while (count-- > 0 && !this->deal_.empty())
     {
       auto event = std::move(this->deal_.front());
-      deal_.pop();
+      deal_.pop_front();
       func(std::move(event));
     };
   }
@@ -161,7 +167,7 @@ public:
   }
 
 private:
-  std::queue<_Ty> deal_;
+  std::deque<_Ty> deal_;
 };
 #endif
 } // namespace privacy

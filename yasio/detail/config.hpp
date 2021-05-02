@@ -112,6 +112,8 @@ SOFTWARE.
 */
 // #define YASIO_HAVE_HALF_FLOAT 1
 
+#define YASIO_ENABLE_MERGE_SEND 1
+
 /*
 ** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and
 ** follow 3 lines code will be removed
@@ -194,6 +196,8 @@ SOFTWARE.
 
 // The max Initial Bytes To Strip for unpack.
 #define YASIO_UNPACK_MAX_STRIP 32
+
+#define YASIO_MAX_MERGE_SIZE (1 * 1024 * 1024)
 
 // The fallback name servers when c-ares can't get name servers from system config,
 // For Android 8 or later, yasio will try to retrive through jni automitically,

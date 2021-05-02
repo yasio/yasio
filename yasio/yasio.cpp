@@ -409,6 +409,30 @@ bool io_transport::do_write(highp_time_t& wait_duration)
     if (wrap)
     {
       auto& v = *wrap;
+#if defined(YASIO_ENABLE_MERGE_SEND)
+      int merged_size = static_cast<int>(v->buffer_.size());
+      auto iter       = send_queue_.ibegin(1);
+      while (merged_size < YASIO_MAX_MERGE_SIZE && iter != send_queue_.iend())
+      {
+        auto bytes_allow_merge = (YASIO_MAX_MERGE_SIZE - merged_size);
+        if (bytes_allow_merge > 0)
+        {
+          auto& item_buffer = (*iter)->buffer_;
+          int item_size       = static_cast<int>(item_buffer.size());
+          int merge_item_size = (std::min)(bytes_allow_merge, item_size);
+          // preform merge
+          v->buffer_.insert(v->buffer_.end(), item_buffer.begin(), item_buffer.begin() + merge_item_size);
+          if (bytes_allow_merge >= item_size)
+          {
+            iter = send_queue_.ierase(iter);
+          }
+          else
+            break;
+        }
+        else
+          break;
+      }
+#endif
       if (call_write(v.get(), error) < 0)
       {
         this->set_last_errno(error, yasio::net::io_base::error_stage::WRITE);

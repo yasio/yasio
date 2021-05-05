@@ -19,4 +19,4 @@ endif()
 
 target_link_libraries (${target_name} ${ECHO_CLIENT_LDLIBS})
 
-ConfigTargetSSL(${target_name})
+ConfigTargetDepends(${target_name})

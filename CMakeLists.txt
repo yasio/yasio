@@ -50,6 +50,7 @@ if (WIN32)
 endif()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
+option(YASIO_BUILD_STANDALONE "Build yasio standalone" ON)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
@@ -232,7 +233,8 @@ if (BUILD_SHARED_LIBS)
     target_compile_definitions(${yasio_target_name} PRIVATE YASIO_SHARED_LIB=1)
 endif()
 
-macro(ConfigTargetSSL target_name)
+macro(ConfigTargetDepends target_name)
+    # config ssl dll or lib
     if (YASIO_SSL_BACKEND EQUAL 1)
         if (UNIX)
             target_link_libraries (${target_name} ext_ssl ext_crypto dl)
@@ -250,6 +252,24 @@ macro(ConfigTargetSSL target_name)
         endif()
     elseif(YASIO_SSL_BACKEND EQUAL 2)
         target_link_libraries(${target_name} mbedtls mbedcrypto mbedx509)
+    endif()
+    
+    # copy yasio.dll
+    if(BUILD_SHARED_LIBS AND WIN32)
+       add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/\$\(Configuration\)/yasio.dll"
+                $<TARGET_FILE_DIR:${target_name}>
+            )
+    endif()
+    
+    # plainlua.dll
+    if(YASIO_BUILD_STANDALONE AND YASIO_BUILD_STANDALONE AND WIN32)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/\$\(Configuration\)/plainlua.dll"
+                $<TARGET_FILE_DIR:${target_name}>
+            )
     endif()
 endmacro()
 
@@ -306,6 +326,14 @@ if (ANDROID AND BUILD_SHARED_LIBS)
     )
 endif()
 
+# lua
+if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_STANDALONE)
+   add_subdirectory(yasio/bindings/lua)
+   set_target_properties(plainlua PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+   target_link_libraries(${yasio_target_name} plainlua)
+endif()
 
 # The yasio config preprocessors
 macro(yasio_config_pred pred)

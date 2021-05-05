@@ -19,4 +19,4 @@ endif()
 target_link_libraries (${target_name} ${SSLTEST_LDLIBS})
 
 # link ssl stubs
-ConfigTargetSSL(${target_name})
+ConfigTargetDepends(${target_name})

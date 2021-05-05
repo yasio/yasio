@@ -264,7 +264,7 @@ macro(ConfigTargetDepends target_name)
     endif()
     
     # plainlua.dll
-    if(YASIO_BUILD_STANDALONE AND YASIO_BUILD_STANDALONE AND WIN32)
+    if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_STANDALONE AND WIN32)
         add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_BINARY_DIR}/\$\(Configuration\)/plainlua.dll"
@@ -377,7 +377,7 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/issue256)
     add_subdirectory(tests/echo_server)
     add_subdirectory(tests/echo_client)
-    if(YASIO_BUILD_LUA_EXAMPLE)
+    if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_LUA_EXAMPLE)
         add_subdirectory(examples/lua)
         target_include_directories(example_lua PRIVATE external)
         target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)

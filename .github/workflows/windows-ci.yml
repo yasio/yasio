@@ -28,8 +28,8 @@ jobs:
       # and build directories, but this is only available with CMake 3.13 and higher.  
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
       run: |
-        cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x86 -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -A Win32
-        cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x64 -DCMAKE_BUILD_TYPE=%BUILD_TYPE%
+        cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x86 -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON -A Win32
+        cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x64 -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON
 
     - name: Build
       shell: cmd

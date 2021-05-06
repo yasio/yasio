@@ -8,7 +8,7 @@ file(GLOB LUA_SRC_FILES
 list(REMOVE_ITEM LUA_SRC_FILES "${LUA_SRC_PATH}/lua.c")
 list(REMOVE_ITEM LUA_SRC_FILES "${LUA_SRC_PATH}/onelua.c")
 
-add_library(${target_name} SHARED ${LUA_SRC_FILES})
+add_library(${target_name} ${LUA_SRC_FILES})
 
 # fix default lua_newuserdata can't return aligned pointer properly
 # MSVC max_align_t=double, lua already handle properly
@@ -21,10 +21,12 @@ if (NOT MSVC)
     endif()
 endif()
 
-target_compile_definitions(${target_name} 
-    PUBLIC LUA_BUILD_AS_DLL=1
-    # PUBLIC LUA_CORE=1
-    )
+if(MSVC AND BUILD_SHARED_LIBS)
+    target_compile_definitions(${target_name} 
+        PUBLIC LUA_BUILD_AS_DLL=1
+        # PUBLIC LUA_CORE=1
+        )
+endif()
 
 target_include_directories(${target_name} 
     INTERFACE ${LUA_SRC_PATH}

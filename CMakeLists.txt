@@ -56,6 +56,11 @@ option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set (LINUX TRUE)
+endif()
+
 if (NOT DEFINED YASIO_SSL_BACKEND)
     set(YASIO_SSL_BACKEND 0)
 endif()
@@ -92,6 +97,7 @@ if (YASIO_SSL_BACKEND EQUAL 1) # openssl
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
     include_directories("${PROJECT_SOURCE_DIR}/external/mbedtls/include")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
+    set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
     add_subdirectory(${PROJECT_SOURCE_DIR}/external/mbedtls)
 endif()
 
@@ -100,6 +106,9 @@ if (YASIO_HAVE_CARES)
     set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
+    if(LINUX AND BUILD_SHARED_LIBS)
+        set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -O3 -fPIC")
+    endif()
     add_subdirectory(external/c-ares)
     set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/external/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
 endif()

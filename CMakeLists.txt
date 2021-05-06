@@ -5,7 +5,7 @@
 # http://opensource.org/licenses/MIT
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.13.0)
 
 cmake_policy(SET CMP0079 NEW)
 
@@ -50,7 +50,6 @@ if (WIN32)
 endif()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-option(YASIO_BUILD_STANDALONE "Build yasio standalone" ON)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
@@ -70,6 +69,8 @@ if (NOT CXX_STD)
 endif()
 
 MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
+
+set (YASIO_USE_PREBUILT_LUA FALSE)
 
 if (ANDROID)
     if (NOT THIRDPART_LIB)
@@ -263,13 +264,15 @@ macro(ConfigTargetDepends target_name)
             )
     endif()
     
-    # plainlua.dll
-    if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_STANDALONE AND WIN32)
-        add_custom_command(TARGET ${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_BINARY_DIR}/\$\(Configuration\)/plainlua.dll"
-                $<TARGET_FILE_DIR:${target_name}>
-            )
+    # copy plainlua.dll
+    if(YASIO_BUILD_WITH_LUA AND WIN32)
+        if(NOT YASIO_USE_PREBUILT_LUA)
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_BINARY_DIR}/\$\(Configuration\)/plainlua.dll"
+                    $<TARGET_FILE_DIR:${target_name}>
+                )
+        endif()
     endif()
 endmacro()
 
@@ -327,12 +330,20 @@ if (ANDROID AND BUILD_SHARED_LIBS)
 endif()
 
 # lua
-if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_STANDALONE)
-   add_subdirectory(yasio/bindings/lua)
-   set_target_properties(plainlua PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-    )
-   target_link_libraries(${yasio_target_name} plainlua)
+if(YASIO_BUILD_WITH_LUA)
+    find_package(Lua "5.1.0")
+    if(NOT LUA_FOUND)
+        add_subdirectory(yasio/bindings/lua)
+        set_target_properties(plainlua PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        )
+        target_link_libraries(${yasio_target_name} plainlua)
+        set(YASIO_USE_PREBUILT_LUA FALSE)
+    else()
+        target_include_directories(${yasio_target_name} PUBLIC ${LUA_INCLUDE_DIR})
+        target_link_libraries(${yasio_target_name} ${LUA_LIBRARIES})
+        set(YASIO_USE_PREBUILT_LUA TRUE)
+    endif()
 endif()
 
 # The yasio config preprocessors

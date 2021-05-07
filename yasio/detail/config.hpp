@@ -146,7 +146,6 @@ SOFTWARE.
 #    define YASIO_API
 #  endif
 #endif
-#endif
 
 #define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 

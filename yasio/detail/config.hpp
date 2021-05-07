@@ -136,8 +136,8 @@ SOFTWARE.
 #endif
 
 #if !defined(YASIO_API)
-#  if defined(_WINDLL) && !defined(YASIO_HEADER_ONLY)
-#    if defined(YASIO_SHARED_LIB)
+#  if defined(YASIO_BUILD_AS_SHARED) && !defined(YASIO_HEADER_ONLY)
+#    if defined(YASIO_LIB)
 #      define YASIO_API __declspec(dllexport)
 #    else
 #      define YASIO_API __declspec(dllimport)

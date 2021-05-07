@@ -1,5 +1,5 @@
 #include <thread>
-#include "yasio/bindings/lyasio.h"
+#include "yasio/bindings/lyasio.hpp"
 #include "yasio/cxx17/string_view.hpp"
 #if YASIO__HAS_CXX14
 #  if !YASIO__HAS_CXX20

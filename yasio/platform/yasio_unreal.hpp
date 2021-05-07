@@ -21,28 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__UE4_HPP
-#define YASIO__UE4_HPP
+#ifndef YASIO__UNREAL_HPP
+#define YASIO__UNREAL_HPP
 
-/*
-UE4 builtin namespace 'UI' conflicit with openssl typedef strcut st_UI UI;
-ossl_typ.h(143): error C2365: 'UI': redefinition; previous definition was 'namespace'
-*/
-#define UI UI_ST
+#include "yasio/detail/config.hpp"
 
-THIRD_PARTY_INCLUDES_START
-#pragma push_macro("check")
-#undef check
-#define YASIO_HEADER_ONLY 1
-#define YASIO_SSL_BACKEND 1
-#include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
-#include "yasio/ibstream.hpp"
-using namespace yasio;
-using namespace yasio::inet;
-#pragma pop_macro("check")
-THIRD_PARTY_INCLUDES_END
-
-#undef UI
+YASIO_API void yasio_unreal_init();
+YASIO_API void yasio_unreal_cleanup();
 
 #endif

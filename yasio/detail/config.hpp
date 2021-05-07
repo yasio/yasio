@@ -147,6 +147,10 @@ SOFTWARE.
 #  endif
 #endif
 
+#if defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING) || defined(UE_SERVER)
+#define YASIO_INSIDE_UNREAL 1
+#endif
+
 #define YASIO_ARRAYSIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 #define YASIO_SSIZEOF(T) static_cast<int>(sizeof(T))

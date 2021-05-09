@@ -240,7 +240,10 @@ endif ( )
 target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_DOURCE_DIR}/)
 
 if (BUILD_SHARED_LIBS)
-    target_compile_definitions(${yasio_target_name} PRIVATE YASIO_SHARED_LIB=1)
+    target_compile_definitions(${yasio_target_name} 
+        PUBLIC  YASIO_BUILD_AS_SHARED=1 
+        PRIVATE YASIO_LIB=1
+        )
 endif()
 
 macro(ConfigTargetDepends target_name)

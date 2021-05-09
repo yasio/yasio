@@ -136,11 +136,15 @@ SOFTWARE.
 #endif
 
 #if !defined(YASIO_API)
-#  if defined(_WINDLL) && !defined(YASIO_HEADER_ONLY)
-#    if defined(YASIO_SHARED_LIB)
-#      define YASIO_API __declspec(dllexport)
+#  if defined(YASIO_BUILD_AS_SHARED) && !defined(YASIO_HEADER_ONLY)
+#    if defined(_WIN32)
+#      if defined(YASIO_LIB)
+#        define YASIO_API __declspec(dllexport)
+#      else
+#        define YASIO_API __declspec(dllimport)
+#      endif
 #    else
-#      define YASIO_API __declspec(dllimport)
+#      define YASIO_API
 #    endif
 #  else
 #    define YASIO_API
@@ -164,6 +168,10 @@ SOFTWARE.
 #  define YASIO_OBSOLETE_DEPRECATE(_Replacement)
 #endif
 // clang-format on
+
+#if defined(UE_BUILD_DEBUG) || defined(UE_BUILD_DEVELOPMENT) || defined(UE_BUILD_TEST) || defined(UE_BUILD_SHIPPING) || defined(UE_SERVER)
+#  define YASIO_INSIDE_UNREAL 1
+#endif // Unreal Engine 4 bullshit
 
 /*
 **  The yasio version macros

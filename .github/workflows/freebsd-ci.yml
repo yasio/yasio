@@ -24,6 +24,7 @@ jobs:
     - name: Build
       uses: vmactions/freebsd-vm@v0.1.4
       with:
+        envs: 'TRAVIS_OS_NAME BUILD_TARGET'
         usesh: true
         prepare: pkg install -y cmake
         run: |

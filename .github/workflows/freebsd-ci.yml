@@ -22,8 +22,9 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Build
-      uses: vmactions/freebsd-vm@v0.1.0
+      uses: vmactions/freebsd-vm@v0.1.4
       with:
+        usesh: true
         prepare: pkg install -y cmake
         run: |
           echo Building on freebsd...

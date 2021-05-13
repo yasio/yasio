@@ -1218,19 +1218,22 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
       if (yasio__likely(!yasio__testbits(ctx->properties_, YCM_UDS)))
       {
         auto ifaddr = ctx->local_host_.empty() ? YASIO_ADDR_ANY(ep.af()) : ctx->local_host_.c_str();
-        ctx->socket_->bind(ifaddr, ctx->local_port_);
+        ret         = ctx->socket_->bind(ifaddr, ctx->local_port_);
       }
     }
 
-    // tcp connect directly, for udp do not need to connect.
-    if (yasio__testbits(ctx->properties_, YCM_TCP))
-      ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
-    else // udp, we should set non-blocking mode manually
-      ctx->socket_->set_nonblocking(true);
+    if (ret == 0)
+    {
+      // tcp connect directly, for udp do not need to connect.
+      if (yasio__testbits(ctx->properties_, YCM_TCP))
+        ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
+      else // udp, we should set non-blocking mode manually
+        ctx->socket_->set_nonblocking(true);
 
-    // join the multicast group for udp
-    if (yasio__testbits(ctx->properties_, YCPF_MCAST))
-      ctx->join_multicast_group();
+      // join the multicast group for udp
+      if (yasio__testbits(ctx->properties_, YCPF_MCAST))
+        ctx->join_multicast_group();
+    }
 
     if (ret < 0)
     { // setup non-blocking connect

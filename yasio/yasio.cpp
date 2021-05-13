@@ -1618,6 +1618,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
       break;
     }
 
+    ctx->socket_->set_nonblocking(true);
     ctx->state_ = io_base::state::OPEN;
     if (yasio__testbits(ctx->properties_, YCM_UDP))
     {
@@ -1637,6 +1638,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     ctx->socket_->close();
     ctx->state_ = io_base::state::CLOSED;
   }
+  // TODO: consider how to notify server without breaking compatible
   // this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error));
 }
 void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_array)

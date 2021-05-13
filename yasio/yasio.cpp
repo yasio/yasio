@@ -676,7 +676,7 @@ void io_transport_udp::set_primitives()
 }
 int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& /*error*/, highp_time_t&)
 { // pure udp, dispatch to upper layer directly
-  get_service().handle_event(cxx17::make_unique<io_event>(cindex(), YEK_PACKET, this, std::vector<char>(buf, buf + bytes_transferred)));
+  get_service().handle_event(cxx17::make_unique<io_event>(cindex(), YEK_ON_PACKET, this, std::vector<char>(buf, buf + bytes_transferred)));
   return bytes_transferred;
 }
 
@@ -1119,7 +1119,7 @@ void io_service::handle_close(transport_handle_t thandle)
               io_service::strerror(ec));
 
   // @Notify connection lost
-  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_CONNECTION_LOST, ec, thandle));
+  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_ON_CLOSE, ec, thandle));
   cleanup_io(thandle, false);
   deallocate_transport(thandle);
 
@@ -1591,43 +1591,53 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     ::unlink(ctx->remote_host_.c_str());
   }
 #endif
-  if (ctx->socket_->open(ep.af(), ctx->socktype_))
+  int error = -1;
+  io_base::error_stage where = io_base::error_stage::NONE;
+  do
   {
-    int error = 0;
+    xxsocket::set_last_errno(0);
+    if (!ctx->socket_->open(ep.af(), ctx->socktype_))
+    {
+      where = io_base::error_stage::OPEN_SOCKET;
+      break;
+    }
+
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       ctx->socket_->reuse_address(true);
     if (yasio__testbits(ctx->properties_, YCF_EXCLUSIVEADDRUSE))
       ctx->socket_->exclusive_address(false);
     if (ctx->socket_->bind(ep) != 0)
     {
-      error = xxsocket::get_last_errno();
-      YASIO_KLOGE("[index: %d] bind failed, ec=%d, detail:%s", ctx->index_, error, io_service::strerror(error));
-      ctx->socket_->close();
-      ctx->state_ = io_base::state::CLOSED;
-      return;
+      where = io_base::error_stage::BIND_SOCKET;
+      break;
     }
-    ctx->socket_->set_nonblocking(true);
-    if (yasio__testbits(ctx->properties_, YCM_UDP) || ctx->socket_->listen(YASIO_SOMAXCONN) == 0)
+
+    if (yasio__testbits(ctx->properties_, YCM_TCP) && ctx->socket_->listen(YASIO_SOMAXCONN) != 0)
     {
-      ctx->state_ = io_base::state::OPEN;
-      if (yasio__testbits(ctx->properties_, YCM_UDP))
-      {
-        if (yasio__testbits(ctx->properties_, YCPF_MCAST))
-          ctx->join_multicast_group();
-        ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
-      }
-      register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
-      YASIO_KLOGD("[index: %d] socket.fd=%d listening at %s...", ctx->index_, (int)ctx->socket_->native_handle(), ep.to_string().c_str());
+      where = io_base::error_stage::LISTEN_SOCKET;
+      break;
     }
-    else
+
+    ctx->state_ = io_base::state::OPEN;
+    if (yasio__testbits(ctx->properties_, YCM_UDP))
     {
-      error = xxsocket::get_last_errno();
-      YASIO_KLOGE("[index: %d] socket.fd=%d listening failed, ec=%d, detail:%s", ctx->index_, (int)ctx->socket_->native_handle(), error,
-                  io_service::strerror(error));
-      ctx->socket_->close();
-      ctx->state_ = io_base::state::CLOSED;
+      if (yasio__testbits(ctx->properties_, YCPF_MCAST))
+        ctx->join_multicast_group();
+      ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
     }
+    register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
+    YASIO_KLOGD("[index: %d] open server succeed, socket.fd=%d listening at %s...", ctx->index_, (int)ctx->socket_->native_handle(), ep.to_string().c_str());
+    error = 0;
+  } while (false);
+
+  if (error < 0)
+  {
+    error = xxsocket::get_last_errno();
+    YASIO_KLOGE("[index: %d] open server failed during stage %d, ec=%d, detail:%s", where, ctx->index_, error, io_service::strerror(error));
+    ctx->socket_->close();
+    ctx->state_ = io_base::state::CLOSED;
   }
+  // this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error));
 }
 void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_array)
 {
@@ -1757,7 +1767,7 @@ void io_service::notify_connect_succeed(transport_handle_t t)
   YASIO_KLOGV("[index: %d] sndbuf=%d, rcvbuf=%d", ctx->index_, s->get_optval<int>(SOL_SOCKET, SO_SNDBUF), s->get_optval<int>(SOL_SOCKET, SO_RCVBUF));
   YASIO_KLOGD("[index: %d] the connection #%u(%p) [%s] --> [%s] is established.", ctx->index_, t->id_, t, t->local_endpoint().to_string().c_str(),
               t->remote_endpoint().to_string().c_str());
-  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_CONNECT_RESPONSE, 0, t));
+  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, 0, t));
 }
 transport_handle_t io_service::allocate_transport(io_channel* ctx, std::shared_ptr<xxsocket> socket)
 {
@@ -1812,7 +1822,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
   ctx->properties_ &= 0xffffff; // clear highest byte flags
   cleanup_io(ctx);
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
-  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_CONNECT_RESPONSE, error));
+  this->handle_event(cxx17::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error));
 }
 bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
 {

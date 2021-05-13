@@ -274,9 +274,12 @@ enum
 // event kinds
 enum
 {
-  YEK_CONNECT_RESPONSE = 1,
-  YEK_CONNECTION_LOST,
-  YEK_PACKET,
+  YEK_ON_OPEN = 1,
+  YEK_ON_CLOSE,
+  YEK_ON_PACKET,
+  YEK_CONNECT_RESPONSE = YEK_ON_OPEN,
+  YEK_CONNECTION_LOST  = YEK_ON_CLOSE,
+  YEK_PACKET           = YEK_ON_PACKET,
 };
 
 // the network core service log level
@@ -394,6 +397,9 @@ struct YASIO_API io_base {
     NONE,
     READ,
     WRITE,
+    OPEN_SOCKET,
+    BIND_SOCKET,
+    LISTEN_SOCKET
   };
   io_base() : error_(0), state_(state::CLOSED), opmask_(0) {}
   virtual ~io_base() {}

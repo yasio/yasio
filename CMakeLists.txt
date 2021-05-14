@@ -205,7 +205,7 @@ else ( )
     )
 endif ( )
 
-target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_DOURCE_DIR}/)
+target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/external)
 
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(${yasio_target_name} 

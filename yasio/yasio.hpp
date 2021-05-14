@@ -401,13 +401,26 @@ struct YASIO_API io_base {
     BIND_SOCKET,
     LISTEN_SOCKET
   };
-  io_base() : error_(0), state_(state::CLOSED), opmask_(0) {}
+  io_base() : error_(0), state_(state::CLOSED), opmask_(0)
+  {
+    static unsigned int s_object_id = 0;
+    this->id_                       = ++s_object_id;
+  }
   virtual ~io_base() {}
+
   void set_last_errno(int error, error_stage stage = error_stage::NONE)
   {
     error_       = error;
     error_stage_ = stage;
   }
+
+#if !defined(YASIO_MINIFY_EVENT)
+  // usedata
+  union {
+    void* ptr;
+    int ival;
+  } ud_{};
+#endif
 
   std::shared_ptr<xxsocket> socket_;
   int error_; // socket error(>= -1), application error(< -1)
@@ -418,6 +431,10 @@ struct YASIO_API io_base {
   bool pollout_registerred_ = false;
   std::atomic<state> state_;
   uint8_t opmask_;
+  unsigned int id_;
+
+public:
+  unsigned int id() const { return id_; }
 };
 
 #if defined(YASIO_SSL_BACKEND)
@@ -611,13 +628,12 @@ class io_transport : public io_base {
   io_transport(const io_transport&) = delete;
 
 public:
-  unsigned int id() const { return id_; }
+  int cindex() const { return ctx_->index_; }
 
   ip::endpoint local_endpoint() const { return socket_->local_endpoint(); }
   virtual ip::endpoint remote_endpoint() const { return socket_->peer_endpoint(); }
 
   io_channel* get_context() const { return ctx_; }
-  int cindex() const { return ctx_->index_; }
 
   virtual ~io_transport() { send_queue_.clear(); }
 
@@ -661,13 +677,11 @@ protected:
   bool is_valid() const { return state_ == io_base::state::OPEN; }
   void invalid() { state_ = io_base::state::CLOSED; }
 
-  unsigned int id_;
-
   char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
   int offset_ = 0;                      // recv buffer offset
 
-  std::vector<char> expected_packet_;
   int expected_size_ = -1;
+  std::vector<char> expected_packet_;
 
   io_channel* ctx_;
 
@@ -675,15 +689,6 @@ protected:
   std::function<int(void*, int)> read_cb_;
 
   privacy::concurrent_queue<send_op_ptr> send_queue_;
-
-#if !defined(YASIO_MINIFY_EVENT)
-private:
-  // The user data
-  union {
-    void* ptr;
-    int ival;
-  } ud_;
-#endif
 };
 
 class YASIO_API io_transport_tcp : public io_transport {
@@ -782,72 +787,75 @@ inline io_packet::size_type packet_len(packet_t& pkt) { return pkt->size(); }
 #endif
 class io_event final {
 public:
-  io_event(int cindex, int kind, int error)
-      : cindex_(cindex), kind_(kind), status_(error), transport_(nullptr), packet_({})
+  io_event(int cidx, int kind, int status, io_base* source /*not nullable*/, int passive = 0)
+      : kind_(kind), passive_(passive), status_(status), cindex_(cidx), source_id_(source->id_), source_(source)
+  {
 #if !defined(YASIO_MINIFY_EVENT)
-        ,
-        timestamp_(highp_clock()), transport_udata_(nullptr), transport_id_(-1)
+    source_ud_ = source_->ud_.ptr; // store ud because source maybe garbage collected when event processed
 #endif
-  {}
-  io_event(int cindex, int kind, int error, transport_handle_t transport)
-      : cindex_(cindex), kind_(kind), status_(error), transport_(transport), packet_({})
+  }
+  io_event(int cidx, io_packet&& pkt, io_base* source /*not nullable*/)
+      : kind_(YEK_ON_PACKET), passive_(0), status_(0), cindex_(cidx), source_id_(source->id_), source_(source), packet_(wrap_packet(pkt))
+  {
 #if !defined(YASIO_MINIFY_EVENT)
-        ,
-        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
+    source_ud_ = source_->ud_.ptr; // store ud because source maybe garbage collected when event processed
 #endif
-  {}
-  io_event(int cindex, int kind, transport_handle_t transport, std::vector<char> packet)
-      : cindex_(cindex), kind_(kind), status_(0), transport_(transport), packet_(wrap_packet(packet))
-#if !defined(YASIO_MINIFY_EVENT)
-        ,
-        timestamp_(highp_clock()), transport_udata_(transport->ud_.ptr), transport_id_(transport->id_)
-#endif
-  {}
-  io_event(io_event&& rhs)
-      : cindex_(rhs.cindex_), kind_(rhs.kind_), status_(rhs.status_), transport_(rhs.transport_), packet_(std::move(rhs.packet_))
-#if !defined(YASIO_MINIFY_EVENT)
-        ,
-        timestamp_(rhs.timestamp_), transport_udata_(rhs.transport_udata_), transport_id_(rhs.transport_id_)
-#endif
-  {}
+  }
+  io_event(const io_event&) = delete;
+  io_event(io_event&& rhs)  = delete;
   ~io_event() {}
 
+public:
   int cindex() const { return cindex_; }
-
-  int kind() const { return kind_; }
   int status() const { return status_; }
 
+  int kind() const { return kind_; }
+
+  // whether the event triggered by server channel
+  int passive() const { return passive_; }
+
   packet_t& packet() { return packet_; }
-  transport_handle_t transport() const { return transport_; }
+
+  /*[nullable]*/ transport_handle_t transport() const { return dynamic_cast<transport_handle_t>(this->source()); }
+
+  io_base* source() const { return source_; }
+  unsigned int source_id() const { return source_id_; }
 
 #if !defined(YASIO_MINIFY_EVENT)
   /* Gets to transport user data when process this event */
-  template <typename _Uty = void*> _Uty transport_udata() const { return (_Uty)(uintptr_t)transport_udata_; }
+  template <typename _Uty = void*> _Uty transport_ud() const { return (_Uty)(uintptr_t)source_ud_; }
   /* Sets trasnport user data when process this event */
-  template <typename _Uty = void*> void transport_udata(_Uty uval)
+  template <typename _Uty = void*> void transport_ud(_Uty uval)
   {
-    transport_udata_ = (void*)(uintptr_t)uval;
-    if (transport_)
-      transport_->ud_.ptr = (void*)(uintptr_t)uval;
+    source_ud_ = (void*)(uintptr_t)uval;
+
+    auto t = this->transport();
+    if (t)
+      t->ud_.ptr = (void*)(uintptr_t)uval;
   }
-  unsigned int transport_id() const { return transport_id_; }
   highp_time_t timestamp() const { return timestamp_; }
 #endif
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 private:
-  int cindex_;
-  int kind_;
+  unsigned int kind_ : 31;
+  unsigned int passive_ : 1;
+
   int status_;
-  transport_handle_t transport_;
+
+  int cindex_;
+  unsigned int source_id_;
+
+  io_base* source_;
   packet_t packet_;
 #if !defined(YASIO_MINIFY_EVENT)
-  highp_time_t timestamp_;
-  void* transport_udata_;
-  unsigned int transport_id_;
+  void* source_ud_;
+  highp_time_t timestamp_ = highp_clock();
 #endif
 };
+
+static const int io_event_size = sizeof(io_event);
 
 class YASIO_API io_service // lgtm [cpp/class-many-fields]
 {
@@ -1033,6 +1041,7 @@ private:
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
   // The op mask will be cleared, the state will be set CLOSED when clear_state is 'true'
+  YASIO__DECL bool cleanup_channel(io_channel* channel, bool clear_state = true);
   YASIO__DECL bool cleanup_io(io_base* obj, bool clear_state = true);
 
   YASIO__DECL void handle_close(transport_handle_t);

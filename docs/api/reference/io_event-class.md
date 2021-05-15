@@ -43,9 +43,9 @@ int kind() const;
 
 事件类型，可以是以下值:
 
-* `YEK_PACKET`: 消息包事件
-* `YEK_CONNECT_RESPONSE`: 连接响应事件
-* `YEK_CONNECTION_LOST`: 连接丢失事件
+* `YEK_ON_PACKET`: 消息包事件
+* `YEK_ON_OPEN`: 连接响应事件
+* `YEK_ON_CLOSE`: 连接丢失事件
 
 ## <a name="status"></a> io_event::status
 

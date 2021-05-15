@@ -351,6 +351,7 @@ yasio_config_pred(YASIO_ENABLE_UDS)
 yasio_config_pred(YASIO_NT_COMPAT_GAI)
 yasio_config_pred(YASIO_MINIFY_EVENT)
 yasio_config_pred(YASIO_HAVE_HALF_FLOAT)
+yasio_config_pred(YASIO_ENABLE_PASSIVE_EVENT)
 yasio_config_pred(YASIO_NO_JNI_ONLOAD)
 
 # The tests & examples

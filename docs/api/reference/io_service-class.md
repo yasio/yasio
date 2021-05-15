@@ -115,7 +115,7 @@ int main() {
     auto service = yasio_shared_service(io_hostent{host="ip138.com", port=80});
     service->start([](event_ptr&& ev) {
     auto kind = ev->kind();
-    if (kind == YEK_CONNECT_RESPONSE)
+    if (kind == YEK_ON_OPEN)
     {
         if (ev->status() == 0)
         printf("[%d] connect succeed.\n", ev->cindex());

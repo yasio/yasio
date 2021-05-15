@@ -1638,8 +1638,9 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     ctx->socket_->close();
     ctx->state_ = io_base::state::CLOSED;
   }
-
+#if defined(YASIO_ENABLE_PASSIVE_EVENT)
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx, 1));
+#endif
 }
 void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_array)
 {
@@ -2043,10 +2044,11 @@ highp_time_t io_service::get_timeout(highp_time_t usec)
 }
 bool io_service::cleanup_channel(io_channel* ctx, bool clear_state)
 {
-  bool needs_notify = yasio__testbits(ctx->properties_, YCM_SERVER) && ctx->socket_->is_open();
   bool bret         = cleanup_io(ctx, clear_state);
-  if (needs_notify)
+#if defined(YAISO_ENABLE_PASSIVE_EVENT)
+  if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))
     handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_CLOSE, 0, ctx, 1));
+#endif
   return bret;
 }
 bool io_service::cleanup_io(io_base* obj, bool clear_state)

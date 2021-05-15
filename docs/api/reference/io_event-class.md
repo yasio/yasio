@@ -24,6 +24,7 @@ namespace yasio { namespace inet { class io_event; } }
 |----------|-----------------|
 |[io_event::kind](#kind)|获取事件类型|
 |[io_event::status](#status)|获取事件状态|
+|[io_event::passive](#passive)|检查是否是被动事件|
 |[io_event::packet](#packet)|获取事件消息包|
 |[io_event::timestamp](#timestamp)|获取事件时间戳|
 |[io_event::transport](#transport)|获取事件传输会话|
@@ -43,9 +44,9 @@ int kind() const;
 
 事件类型，可以是以下值:
 
-* `YEK_ON_PACKET`: 消息包事件
-* `YEK_ON_OPEN`: 连接响应事件
-* `YEK_ON_CLOSE`: 连接丢失事件
+* `YEK_ON_PACKET`: 消息事件
+* `YEK_ON_OPEN`: 打开事件，对于客户端信道，代表连接响应
+* `YEK_ON_CLOSE`: 关闭事件，对于客户端信道，代表连接丢失
 
 ## <a name="status"></a> io_event::status
 
@@ -59,6 +60,20 @@ int status() const;
 
 - 0: 正常
 - 非0: 出错, 用户只需要简单打印即可。
+
+## <a name="passive"></a> io_event::passive
+
+检查是否是被动事件
+
+```cpp
+int passive() const
+```
+
+### 返回值
+
+- 0: 非被动事件，包括客户端信道的连接打开、关闭事件和传输会话的消息事件。
+- 1: open或close服务器信道时产生，仅当打开编译配置`YASIO_ENABLE_PASSIVE_EVENT`才会产生。  
+且为保持兼容，此行为默认是关闭的。
 
 ## <a name="packet"></a> io_event::packet
 

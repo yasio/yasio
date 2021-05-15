@@ -16,3 +16,4 @@
 |*YASIO_HAVE_HALF_FLOAT*|是否启用半精度浮点数支持，依赖 [half.hpp](https://github.com/yasio/external/blob/master/half/half.hpp)。|
 |*YASIO_DISABLE_OBJECT_POOL*|是否禁用对象池的使用，默认启用。|
 |*YASIO_DISABLE_CONCURRENT_SINGLETON*|是否禁用并发单利类模板。|
+|*YASIO_ENABLE_PASSIVE_EVENT*|是否启用服务端信道open/close事件产生，默认关闭。|

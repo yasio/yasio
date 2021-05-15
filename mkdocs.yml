@@ -85,3 +85,5 @@ extra:
     - name: English
       link: https://yasio.org/en/latest/
       lang: en
+  version:
+    provider: mike

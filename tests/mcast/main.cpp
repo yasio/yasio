@@ -72,6 +72,8 @@ void yasioMulticastTest()
         break;
       }
       case YEK_CONNECT_RESPONSE:
+        if (event->passive())
+          return;
         if (event->cindex() == MCAST_CLIENT_INDEX)
         {
           auto transport = event->transport();

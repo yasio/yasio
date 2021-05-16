@@ -22,7 +22,7 @@ name: docs
 on:
   push:
     branches:
-      - master
+      - docs-ci
 
 env:
   PYTHON_VERSION: 3.x

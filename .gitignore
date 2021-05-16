@@ -24,3 +24,5 @@ ignored/*.*
 /build*
 /.vscode
 /**/.DS_Store
+/site
+/_site

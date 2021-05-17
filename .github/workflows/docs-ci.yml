@@ -50,6 +50,9 @@ jobs:
         run: |
           mkdocs --version
           mike --version
+          git config user.name "halx99"
+          git config user.email "halx99@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           mike delete --all
           git checkout 3.37.1
           mike deploy 3.37.1 stable -t=stable
@@ -57,10 +60,5 @@ jobs:
           mike deploy 3.37.2 latest -t=latest
           mike set-default stable
           git checkout gh-pages
-          git config user.name "halx99"
-          git config user.email "halx99@users.noreply.github.com"
-          git branch
-          git config --list
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git commit -am "[docs-ci] Update docs changes"
-          git push
+          git push origin gh-pages -f

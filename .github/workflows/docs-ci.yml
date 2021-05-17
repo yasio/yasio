@@ -50,9 +50,11 @@ jobs:
         run: |
           mkdocs --version
           mike --version
-          git config user.name "halx99"
-          git config user.email "halx99@users.noreply.github.com"
+          git config user.name "docs-ci"
+          git config user.email "docs-ci@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          pwd
+          git remote -v
           mike delete --all
           git checkout 3.37.1
           mike deploy 3.37.1 stable -t=stable

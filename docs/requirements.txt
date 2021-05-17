@@ -1,4 +1,5 @@
 mkdocs-material>=6.2.3
+mike>=1.0.0
 pymdown-extensions>=8.1
 mkdocs-git-revision-date-localized-plugin
 cffi

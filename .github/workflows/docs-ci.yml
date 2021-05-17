@@ -1,0 +1,41 @@
+name: docs
+
+on: [push]
+
+env:
+  DOCS_CI: 1
+  PYTHON_VERSION: 3.x
+
+jobs:
+  documentation:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python runtime
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r docs/requirements.txt
+      - name: Deploy docs
+        env:
+          GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
+        run: |
+          mkdocs --version
+          mike --version
+          git config user.name "docs-bot"
+          git config user.email "docs-bot@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git fetch
+          mike delete --all
+          git checkout 3.37.1
+          mike deploy 3.37.1 stable -t=stable
+          git checkout master
+          mike deploy 3.37.2 latest -t=latest
+          mike set-default stable --push

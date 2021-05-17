@@ -785,20 +785,31 @@ inline io_packet&& forward_packet(packet_t&& pkt) { return std::move(*pkt); }
 inline io_packet::pointer packet_data(packet_t& pkt) { return pkt->data(); }
 inline io_packet::size_type packet_len(packet_t& pkt) { return pkt->size(); }
 #endif
+
+/*
+ * Notes: store some properties of event source to make sure user can safe get them deferred
+ */
 class io_event final {
 public:
-  io_event(int cidx, int kind, int status, io_base* source /*not nullable*/, int passive = 0)
-      : kind_(kind), passive_(passive), status_(status), cindex_(cidx), source_id_(source->id_), source_(source)
+  io_event(int cidx, int kind, int status, io_channel* source /*not nullable*/, int passive = 0)
+      : kind_(kind), passive_(passive), writable_(0), status_(status), cindex_(cidx), source_id_(source->id_), source_(source)
   {
 #if !defined(YASIO_MINIFY_EVENT)
-    source_ud_ = source_->ud_.ptr; // store ud because source maybe garbage collected when event processed
+    source_ud_ = source_->ud_.ptr;
 #endif
   }
-  io_event(int cidx, io_packet&& pkt, io_base* source /*not nullable*/)
-      : kind_(YEK_ON_PACKET), passive_(0), status_(0), cindex_(cidx), source_id_(source->id_), source_(source), packet_(wrap_packet(pkt))
+  io_event(int cidx, int kind, int status, io_transport* source /*not nullable*/, int passive = 0)
+      : kind_(kind), passive_(passive), writable_(1), status_(status), cindex_(cidx), source_id_(source->id_), source_(source)
   {
 #if !defined(YASIO_MINIFY_EVENT)
-    source_ud_ = source_->ud_.ptr; // store ud because source maybe garbage collected when event processed
+    source_ud_ = source_->ud_.ptr;
+#endif
+  }
+  io_event(int cidx, io_packet&& pkt, io_transport* source /*not nullable*/)
+      : kind_(YEK_ON_PACKET), passive_(0), writable_(1), status_(0), cindex_(cidx), source_id_(source->id_), source_(source), packet_(wrap_packet(pkt))
+  {
+#if !defined(YASIO_MINIFY_EVENT)
+    source_ud_ = source_->ud_.ptr;
 #endif
   }
   io_event(const io_event&) = delete;
@@ -816,7 +827,7 @@ public:
 
   packet_t& packet() { return packet_; }
 
-  /*[nullable]*/ transport_handle_t transport() const { return dynamic_cast<transport_handle_t>(this->source()); }
+  /*[nullable]*/ transport_handle_t transport() const { return writable_ ? static_cast<transport_handle_t>(source_) : nullptr; }
 
   io_base* source() const { return source_; }
   unsigned int source_id() const { return source_id_; }
@@ -839,7 +850,8 @@ public:
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_event, 512)
 #endif
 private:
-  unsigned int kind_ : 31;
+  unsigned int kind_ : 30;
+  unsigned int writable_ : 1;
   unsigned int passive_ : 1;
 
   int status_;

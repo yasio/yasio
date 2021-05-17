@@ -51,6 +51,7 @@ using namespace cc;
 #include "cocos/base/CCScheduler.h"
 using namespace cocos2d;
 using StringUtil = StringUtils;
+#define CC_LOG_DEBUG CCLOG
 #endif
 
 using namespace yasio;

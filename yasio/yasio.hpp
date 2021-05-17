@@ -646,8 +646,8 @@ protected:
     return std::move(expected_packet_);
   }
 
-  // Returns the custom print function
-  YASIO__DECL const print_fn2_t& cprint() const;
+  // For log macro only
+  YASIO__DECL const print_fn2_t& __get_cprint() const;
 
   // Call at user thread
   YASIO__DECL virtual int write(std::vector<char>&&, completion_cb_t&&);
@@ -1080,8 +1080,8 @@ private:
 
   int local_address_family() const { return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6; }
 
-  /* Returns the custom print function */
-  inline const print_fn2_t& cprint() const { return options_.print_; }
+  /* For log macro only */
+  inline const print_fn2_t& __get_cprint() const { return options_.print_; }
 
 private:
   state state_ = state::UNINITIALIZED; // The service state

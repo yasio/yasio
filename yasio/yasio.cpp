@@ -53,15 +53,15 @@ SOFTWARE.
 #endif
 
 // clang-format off
-#define YASIO_KLOG_CP(level, format, ...)                                                                                    \
-  do                                                                                                                         \
-  {                                                                                                                          \
-    auto& custom_print = cprint();                                                                                           \
-    auto msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", ::yasio::clock<system_clock_t>(), ##__VA_ARGS__); \
-    if (custom_print)                                                                                                        \
-      custom_print(level, msg.c_str());                                                                                      \
-    else                                                                                                                     \
-      YASIO_LOG_TAG("", "%s", msg.c_str());                                                                                  \
+#define YASIO_KLOG_CP(level, format, ...)                                                                                      \
+  do                                                                                                                           \
+  {                                                                                                                            \
+    auto& __cprint = __get_cprint();                                                                                           \
+    auto __msg           = ::yasio::strfmt(127, "[yasio][%lld]" format "\n", ::yasio::clock<system_clock_t>(), ##__VA_ARGS__); \
+    if (__cprint)                                                                                                              \
+      __cprint(level, __msg.c_str());                                                                                          \
+    else                                                                                                                       \
+      YASIO_LOG_TAG("", "%s", __msg.c_str());                                                                                  \
   } while (false)
 // clang-format on
 
@@ -167,7 +167,7 @@ struct yasio__global_state {
   };
   yasio__global_state(const print_fn2_t& custom_print)
   {
-    auto cprint = [&]() -> const print_fn2_t& { return custom_print; };
+    auto __get_cprint = [&]() -> const print_fn2_t& { return custom_print; };
     // for single core CPU, we set minimal wait duration to 10us by default
     yasio__min_wait_duration = std::thread::hardware_concurrency() > 1 ? 0LL : YASIO_MIN_WAIT_DURATION;
 #if defined(YASIO_SSL_BACKEND) && YASIO_SSL_BACKEND == 1
@@ -386,7 +386,7 @@ io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_
   this->ud_.ptr = nullptr;
 #endif
 }
-const print_fn2_t& io_transport::cprint() const { return ctx_->get_service().options_.print_; }
+const print_fn2_t& io_transport::__get_cprint() const { return ctx_->get_service().options_.print_; }
 int io_transport::write(std::vector<char>&& buffer, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
@@ -1482,7 +1482,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_a
     }
   }
 
-  auto cprint = [&]() -> const print_fn2_t& { return current_service.options_.print_; };
+  auto __get_cprint = [&]() -> const print_fn2_t& { return current_service.options_.print_; };
   if (!ctx->remote_eps_.empty())
   {
     ctx->dns_queries_state_     = YDQS_READY;
@@ -2044,7 +2044,7 @@ highp_time_t io_service::get_timeout(highp_time_t usec)
 }
 bool io_service::cleanup_channel(io_channel* ctx, bool clear_state)
 {
-  bool bret         = cleanup_io(ctx, clear_state);
+  bool bret = cleanup_io(ctx, clear_state);
 #if defined(YAISO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))
     handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_CLOSE, 0, ctx, 1));

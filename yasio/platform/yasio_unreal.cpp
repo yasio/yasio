@@ -37,7 +37,7 @@ YASIO_API void yasio_unreal_init()
     print_fn2_t log_cb = [](int level, const char* msg) {
         FString text(msg);
         const TCHAR* tstr = *text;
-        UE_LOG(yasio_ue4, Log, L"%s", tstr);
+        UE_LOG(yasio_ue4, Log, TEXT("%s"), tstr);
     };
     io_service::init_globals(log_cb);
 }

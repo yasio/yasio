@@ -29,7 +29,7 @@ namespace yasio { namespace inet { class io_event; } }
 |[io_event::timestamp](#timestamp)|获取事件时间戳|
 |[io_event::transport](#transport)|获取事件传输会话|
 |[io_event::transport_id](#transport_id)|获取事件传输会话ID|
-|[io_event::transport_udata](#transport_udata)|设置或获取事件传输会话用户数据|
+|[io_event::transport_ud](#transport_ud)|设置或获取事件传输会话用户数据|
 
 
 ## <a name="kind"></a> io_event::kind
@@ -123,16 +123,16 @@ unsigned int transport_id() const;
 
 32位无符号整数范围内的唯一ID。
 
-## <a name="transport_udata"></a> io_event::transport_udata
+## <a name="transport_ud"></a> io_event::transport_ud
 
 设置或获取传输会话用户数据。
 
 ```cpp
 template<typename _Uty>
-_Uty io_event::transport_udata();
+_Uty io_event::transport_ud();
 
 template<typename _Uty>
-void io_event::transport_udata(_Uty uservalue);
+void io_event::transport_ud(_Uty uservalue);
 ```
 
 ### 注意

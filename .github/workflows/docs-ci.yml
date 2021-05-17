@@ -1,10 +1,9 @@
 name: docs
-on:
-  push:
-    branches:
-      - docs-ci
+
+on: [push]
 
 env:
+  DOCS_CI: 1
   PYTHON_VERSION: 3.x
 
 jobs:
@@ -30,16 +29,13 @@ jobs:
         run: |
           mkdocs --version
           mike --version
-          git config user.name "docs-ci"
-          git config user.email "docs-ci@users.noreply.github.com"
+          git config user.name "docs-bot"
+          git config user.email "docs-bot@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git remote -v
           git fetch
           mike delete --all
           git checkout 3.37.1
           mike deploy 3.37.1 stable -t=stable
           git checkout master
           mike deploy 3.37.2 latest -t=latest
-          mike set-default stable
-          git checkout gh-pages
-          git push origin gh-pages -f
+          mike set-default stable --push

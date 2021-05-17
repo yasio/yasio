@@ -57,8 +57,10 @@ jobs:
           mike deploy 3.37.2 latest -t=latest
           mike set-default stable
           git checkout gh-pages
-          git config --global user.name 'halx99'
-          git config --global user.email 'halx99@users.noreply.github.com'
+          git config user.name "halx99"
+          git config user.email "halx99@users.noreply.github.com"
+          git branch
+          git config --list
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git commit -am "[docs-ci] Update docs changes"
           git push

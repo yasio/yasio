@@ -42,5 +42,4 @@ jobs:
           mike deploy 3.37.2 latest -t=latest
           mike set-default stable
           git checkout gh-pages
-          git commit -am "[docs-ci] Update docs changes"
           git push origin gh-pages -f

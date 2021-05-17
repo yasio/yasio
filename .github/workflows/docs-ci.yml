@@ -48,5 +48,11 @@ jobs:
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
         run: |
-          mkdocs gh-deploy --force
           mkdocs --version
+          mike --version
+          mike delete --all
+          git checkout 3.37.1
+          mike deploy 3.37.1 stable -t=stable
+          git checkout master
+          mike deploy 3.37.2 latest -t=latest
+          mike set-default --push stable

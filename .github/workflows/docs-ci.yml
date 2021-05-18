@@ -23,6 +23,12 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install -r docs/requirements.txt
+      - name: Install missing fonts
+        run: |
+          wget https://github.com/simdsoft/fontlist/releases/download/v1.0/fontlist.zip
+          unzip fontlist.zip
+          mkdir -p ~/.fonts/
+          cp fontlist/* ~/.fonts/
       - name: Deploy docs
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}

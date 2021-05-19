@@ -257,7 +257,7 @@ macro(ConfigTargetDepends target_name)
 endmacro()
 
 # --- The compiler flags
-message("-- Building yasio with cpp${CXX_STD} support")
+message(STATUS "Building yasio with C++${CXX_STD} support")
 if ( IOS )
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
@@ -303,7 +303,7 @@ if(CARES_INCLUDE_DIR AND YASIO_HAVE_CARES)
 endif()
 
 if (ANDROID AND BUILD_SHARED_LIBS)
-    message("CMAKE_STRIP=${CMAKE_STRIP}")
+    message(STATUS "CMAKE_STRIP=${CMAKE_STRIP}")
     add_custom_command(TARGET ${yasio_target_name} POST_BUILD
         COMMAND mkdir -p ${PROJECT_BINARY_DIR}/stripped && ${CMAKE_STRIP} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/stripped/libyasio.so
     )

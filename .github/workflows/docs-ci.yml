@@ -1,6 +1,11 @@
 name: docs
 
-on: [push]
+on:
+  push:
+    paths:
+      - mkdocs.yml
+      - docs/**
+      - .github/workflows/docs-ci.yml
 
 env:
   DOCS_CI: 1

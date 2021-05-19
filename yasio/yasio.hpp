@@ -798,8 +798,8 @@ public:
     source_ud_ = source_->ud_.ptr;
 #endif
   }
-  io_event(int cidx, int kind, int status, io_transport* source /*not nullable*/, int passive = 0)
-      : kind_(kind), passive_(passive), writable_(1), status_(status), cindex_(cidx), source_id_(source->id_), source_(source)
+  io_event(int cidx, int kind, int status, io_transport* source /*not nullable*/)
+      : kind_(kind), passive_(0), writable_(1), status_(status), cindex_(cidx), source_id_(source->id_), source_(source)
   {
 #if !defined(YASIO_MINIFY_EVENT)
     source_ud_ = source_->ud_.ptr;

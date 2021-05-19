@@ -1,3 +1,16 @@
+yasio-3.37.2
+  
+1. Add pkg-config file.
+2. Improve UnrealEngine support.
+3. Improve cmake scripts.
+4. Fix bind failed not processed.
+5. Add passive event support for server open/close.
+6. Add YASIO_ENABLE_PASSIVE_EVENT to control whether generate passive event.
+7. Add github action docs-ci and host docs on github pages.
+8. Fix gcc-4.7 compile issues.
+9. Renable appveyor ci for build with vs2013.
+  
+  
 yasio-3.37.1
   
 1. Update yasio_ni to v2.

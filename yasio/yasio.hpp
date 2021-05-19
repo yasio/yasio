@@ -867,8 +867,6 @@ private:
 #endif
 };
 
-static const int io_event_size = sizeof(io_event);
-
 class YASIO_API io_service // lgtm [cpp/class-many-fields]
 {
   friend class highp_timer;

@@ -1,25 +1,13 @@
 image:
   - Visual Studio 2013
-  - Visual Studio 2019
 
-version: 3.37.1.{build}
+version: 3.37.2.{build}
 
 environment:
     matrix:
-      - GEN: -G "Visual Studio 12 2013"
-      - GEN: -G "Visual Studio 12 2013 Win64"
-      - GEN: -A Win32 -G "Visual Studio 16 2019"
-      - GEN: -G "Visual Studio 16 2019"
-matrix:
-  exclude:
-    - image: Visual Studio 2019
-      GEN: -G "Visual Studio 12 2013"
-    - image: Visual Studio 2019
-      GEN: -G "Visual Studio 12 2013 Win64"
-    - image: Visual Studio 2013
-      GEN: -A Win32 -G "Visual Studio 16 2019"
-    - image: Visual Studio 2013
-      GEN: -G "Visual Studio 16 2019"
+      - ARCH: x86
+      - ARCH: x64
+
 install:
   # Remove the VS Xamarin targets to reduce AppVeyor specific noise in build
   # logs.  See also http://help.appveyor.com/discussions/problems/4569
@@ -27,9 +15,4 @@ install:
   - git submodule update --init --recursive
 
 build_script:
-  - cd build
-  - mkdir build_win
-  - cd build_win
-  - cmake --version
-  - cmake %GEN% ../../
-  - cmake --build . --config Release --clean-first
+  - ps: .\ci\build.ps1

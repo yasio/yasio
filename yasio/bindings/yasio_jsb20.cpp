@@ -28,11 +28,11 @@ SOFTWARE.
 #define YASIO_HEADER_ONLY 1
 #define YASIO_HAVE_KCP 1
 
-#include "yasio/bindings/yasio_jsb20.hpp"
 #include "yasio/yasio.hpp"
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 #include "yasio/detail/ref_ptr.hpp"
+#include "yasio/bindings/yasio_jsb20.hpp"
 
 #if __has_include(<cocos/bindings/jswrapper/SeApi.h>) || defined(YASIO_CREATOR_30_OR_LATER)
 #include "cocos/bindings/jswrapper/SeApi.h"
@@ -43,20 +43,21 @@ SOFTWARE.
 #include "cocos/base/StringUtil.h"
 using namespace cc;
 #else
-#include "cocos2d.h"
+// undef __has_attribute to fix engine doesn't handle properly on CCLog.h
+#undef __has_attribute
 #include "cocos/scripting/js-bindings/jswrapper/SeApi.h"
 #include "cocos/scripting/js-bindings/manual/jsb_conversions.hpp"
 #include "cocos/scripting/js-bindings/manual/jsb_global.h"
 #include "cocos/platform/CCApplication.h"
 #include "cocos/base/CCScheduler.h"
+#include "cocos2d.h"
 using namespace cocos2d;
-using StringUtil = StringUtils;
+#define StringUtil StringUtils
 #define CC_LOG_DEBUG CCLOG
 #endif
 
 using namespace yasio;
 using namespace yasio::inet;
-
 
 namespace yasio_jsb
 {

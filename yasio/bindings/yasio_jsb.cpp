@@ -35,6 +35,10 @@ SOFTWARE.
 #include "yasio/obstream.hpp"
 #include "yasio/detail/ref_ptr.hpp"
 
+// A workaround to fix compile issue caused by `CCPlatformMacros.h` doesn't handle `__has_attribute` it properly
+#  if !__has_attribute(format)
+#    undef __has_attribute
+#  endif
 #include "cocos2d.h"
 #include "scripting/js-bindings/manual/cocos2d_specifics.hpp"
 using namespace yasio;

@@ -32,7 +32,6 @@ SOFTWARE.
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 #include "yasio/detail/ref_ptr.hpp"
-#include "yasio/bindings/yasio_jsb20.hpp"
 
 #if __has_include(<cocos/bindings/jswrapper/SeApi.h>) || defined(YASIO_CREATOR_30_OR_LATER)
 #include "cocos/bindings/jswrapper/SeApi.h"
@@ -43,8 +42,10 @@ SOFTWARE.
 #include "cocos/base/StringUtil.h"
 using namespace cc;
 #else
-// undef __has_attribute to fix engine doesn't handle properly on CCLog.h
-#undef __has_attribute
+// A workaround to fix compile issue caused by `CCLog.h` doesn't handle `__has_attribute` it properly
+#  if !__has_attribute(format)
+#    undef __has_attribute
+#  endif
 #include "cocos/scripting/js-bindings/jswrapper/SeApi.h"
 #include "cocos/scripting/js-bindings/manual/jsb_conversions.hpp"
 #include "cocos/scripting/js-bindings/manual/jsb_global.h"

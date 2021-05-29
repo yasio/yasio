@@ -9,10 +9,10 @@ cmake --version
 # run build
 echo "env:ARCH=$env:ARCH"
 if($env:ARCH -eq "x64") {
-    cmake -G "Visual Studio 12 2013 Win64" -B build
+    cmake -G "Visual Studio 12 2013 Win64" -B build -DYASIO_BUILD_WITH_LUA=ON
 }
 else {
-    cmake -G "Visual Studio 12 2013" -B build
+    cmake -G "Visual Studio 12 2013" -B build -DYASIO_BUILD_WITH_LUA=ON
 }
 
 cmake --build build --config Release --clean-first

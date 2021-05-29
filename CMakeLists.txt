@@ -237,21 +237,20 @@ macro(ConfigTargetDepends target_name)
     
     # copy yasio.dll
     if(BUILD_SHARED_LIBS AND WIN32)
-       add_custom_command(TARGET ${target_name} POST_BUILD
+        add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CMAKE_BINARY_DIR}/\$\(Configuration\)/yasio.dll"
                 $<TARGET_FILE_DIR:${target_name}>
             )
-    endif()
-    
-    # copy plainlua.dll
-    if(YASIO_BUILD_WITH_LUA AND WIN32)
-        if(NOT YASIO_USE_PREBUILT_LUA)
-            add_custom_command(TARGET ${target_name} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${CMAKE_BINARY_DIR}/\$\(Configuration\)/plainlua.dll"
-                    $<TARGET_FILE_DIR:${target_name}>
-                )
+        # copy plainlua.dll
+        if(YASIO_BUILD_WITH_LUA)
+            if(NOT YASIO_USE_PREBUILT_LUA)
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${CMAKE_BINARY_DIR}/\$\(Configuration\)/plainlua.dll"
+                        $<TARGET_FILE_DIR:${target_name}>
+                    )
+            endif()
         endif()
     endif()
 endmacro()

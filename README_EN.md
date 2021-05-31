@@ -39,6 +39,7 @@
   - [DemoUE4](https://github.com/yasio/DemoUE4): Demo for Unreal Engine 4
   - [sluaunreal](https://github.com/yasio/sluaunreal): Integrate to Tencent's sluaunreal(A lua bindings solution for UE4)
   - [UnLua](https://github.com/yasio/UnLua): Integrate to Tencent's sluaunreal(Yet another lua bindings solution for UE4)
+* [adxe](https://github.com/adxeproject/adxe): Use as tcp/udp asynchronous socket solution of game engine `adxe`
 
 ## Docomentation
 * [https://yasio.org/en/latest](https://yasio.org/en/latest)

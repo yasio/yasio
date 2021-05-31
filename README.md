@@ -37,7 +37,7 @@
   - [DemoUE4](https://github.com/yasio/DemoUE4): 将yasio集成到Unreal Engine 4。
   - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
-* [Engine-x](https://github.com/c4games/engine-x): 作为Engine-x游戏引擎的异步TCP解决方案。
+* [adxe](https://github.com/adxeproject/adxe): 作为Engine-x游戏引擎的异步TCP解决方案。
 
     
 ## 文档

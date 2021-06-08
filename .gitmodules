@@ -1,6 +1,3 @@
 [submodule "examples/ftp_server"]
 	path = examples/ftp_server
 	url = https://github.com/yasio/ftp_server
-[submodule "external"]
-	path = external
-	url = https://github.com/yasio/external

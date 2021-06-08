@@ -1,3 +1,6 @@
 [submodule "examples/ftp_server"]
 	path = examples/ftp_server
 	url = https://github.com/yasio/ftp_server
+[submodule "thirdparty"]
+	path = thirdparty
+	url = https://github.com/yasio/thirdparty.git

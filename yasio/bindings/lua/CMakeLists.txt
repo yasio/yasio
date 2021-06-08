@@ -1,6 +1,6 @@
 set(target_name plainlua)
 
-set(LUA_SRC_PATH ${PROJECT_SOURCE_DIR}/external/lua)
+set(LUA_SRC_PATH ${PROJECT_SOURCE_DIR}/thirdparty/lua)
 
 file(GLOB LUA_SRC_FILES 
     "${LUA_SRC_PATH}/*.c")

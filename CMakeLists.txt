@@ -61,12 +61,12 @@ include_directories(
 
 ### openssl support
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
-   add_subdirectory(external/openssl)
+   add_subdirectory(thirdparty/openssl)
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
-    include_directories("${PROJECT_SOURCE_DIR}/external/mbedtls/include")
+    include_directories("${PROJECT_SOURCE_DIR}/thirdparty/mbedtls/include")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
     set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/external/mbedtls)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/mbedtls)
 endif()
 
 ### c-ares support
@@ -77,8 +77,8 @@ if (YASIO_HAVE_CARES)
     if(LINUX AND BUILD_SHARED_LIBS)
         set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -O3 -fPIC")
     endif()
-    add_subdirectory(external/c-ares)
-    set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/external/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
+    add_subdirectory(thirdparty/c-ares)
+    set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
 endif()
 
 ### The yasio core library project
@@ -93,7 +93,7 @@ set (YASIO_CORE
 
 if (YASIO_HAVE_KCP)
   set(YASIO_CORE ${YASIO_CORE} 
-    ${PROJECT_SOURCE_DIR}/external/kcp/ikcp.c
+    ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
   )
 endif()
 
@@ -122,7 +122,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
 endif()
 
 if(YASIO_HAVE_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_HAVE_CARES OR YASIO_HAVE_HALF_FLOAT)
-    include_directories("${PROJECT_SOURCE_DIR}/external")
+    include_directories("${PROJECT_SOURCE_DIR}/thirdparty")
 endif()
 
 macro(source_group_by_dir proj_dir source_files)
@@ -205,7 +205,7 @@ else ( )
     )
 endif ( )
 
-target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/external)
+target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
 
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(${yasio_target_name} 
@@ -370,7 +370,7 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
     add_subdirectory(tests/echo_client)
     if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_LUA_EXAMPLE)
         add_subdirectory(examples/lua)
-        target_include_directories(example_lua PRIVATE external)
+        target_include_directories(example_lua PRIVATE thirdparty)
         target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)
     endif()
     add_subdirectory(examples/ftp_server)

@@ -37,7 +37,7 @@
   - [yasio-unreal](https://github.com/yasio/yasio-unreal): yasio的UnrealEngine插件。
   - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
-* [adxe](https://github.com/adxeproject/adxe): 作为Engine-x游戏引擎的异步TCP解决方案。
+* [adxe](https://github.com/adxeproject/adxe): 作为adxe游戏引擎的异步TCP解决方案。
 
     
 ## 文档
@@ -76,7 +76,7 @@ cmake --build build --config Debug
 * 支持Cocos2d-x jsb绑定。
 * 支持[CocosCreator jsb2.0绑定](https://github.com/yasio/inettester)。
 * 支持[Unity3D](https://github.com/yasio/xLua)。
-* 支持[虚幻4](https://github.com/yasio/DemoUE4)。
+* 支持[虚幻引擎](https://github.com/yasio/yasio-unreal)。
 * 支持SSL客户端，基于OpenSSL/MbedTLS。
 * 支持非阻塞域名解析，基于c-ares。
 * 支持Header Only集成方式，只需要定义编译预处理器宏```YASIO_HEAD_ONLY=1```即可。

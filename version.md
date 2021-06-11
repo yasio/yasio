@@ -9,6 +9,7 @@ yasio-3.37.2
 7. Add github action docs-ci and host docs on github pages.
 8. Fix gcc-4.7 compile issues.
 9. Renable appveyor ci for build with vs2013.
+10. Inline namespace `yasio::inet`.
   
   
 yasio-3.37.1

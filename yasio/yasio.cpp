@@ -105,6 +105,8 @@ enum
   eof                   = -20, // end of file.
 };
 }
+
+YASIO__NS_INLINE
 namespace inet
 {
 namespace

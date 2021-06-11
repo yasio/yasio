@@ -65,6 +65,7 @@ static LPFN_CONNECTEX __connect_ex                         = nullptr;
 #if !YASIO__HAS_NTOP
 namespace yasio
 {
+YASIO__NS_INLINE
 namespace inet
 {
 YASIO__NS_INLINE

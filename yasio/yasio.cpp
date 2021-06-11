@@ -410,7 +410,7 @@ bool io_transport::do_write(highp_time_t& wait_duration)
       auto& v = *wrap;
       if (call_write(v.get(), error) < 0)
       {
-        this->set_last_errno(error, yasio::net::io_base::error_stage::WRITE);
+        this->set_last_errno(error, yasio::io_base::error_stage::WRITE);
         break;
       }
     }
@@ -1855,7 +1855,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
           transport->offset_ += n;
         else
         {
-          transport->set_last_errno(yasio::errc::invalid_packet, yasio::net::io_base::error_stage::READ);
+          transport->set_last_errno(yasio::errc::invalid_packet, yasio::io_base::error_stage::READ);
           break;
         }
       }
@@ -1866,7 +1866,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
     }
     else
     { // n < 0, regard as connection should close
-      transport->set_last_errno(error, yasio::net::io_base::error_stage::READ);
+      transport->set_last_errno(error, yasio::io_base::error_stage::READ);
       break;
     }
     ret = true;

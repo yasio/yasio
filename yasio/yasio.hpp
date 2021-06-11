@@ -75,6 +75,7 @@ typedef struct ares_addrinfo ares_addrinfo;
 
 namespace yasio
 {
+YASIO__NS_INLINE
 namespace inet
 {
 // options
@@ -1181,6 +1182,9 @@ private:
 }; // io_service
 
 } // namespace inet
+#if !YASIO__HAS_NS_INLINE
+using namespace yasio::inet;
+#endif
 } /* namespace yasio */
 
 #define yasio_shared_service yasio::gc::singleton<yasio::inet::io_service>::instance

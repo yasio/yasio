@@ -90,16 +90,6 @@ yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查
 - cxx17::shared_mutex
 - cxx20::starts_with, cxx20::ends_with
 
-## 发送延迟
-yasio比同样使用消息队列的Cocos2d-x WebSocket实现处理发送消息快**30倍**以上:  
-
-|网络实现         | 发送延迟 |
-| ------------- |:----------------:|
-|yasio	| ```0.06 ~ 0.1(ms)``` |
-|Cocos2d-X WebSocket	|```> 3~5(ms)``` |
-
-参考: [Cocos2d-X WebSocket.cpp](https://github.com/cocos2d/cocos2d-x/blob/v4/cocos/network/WebSocket.cpp)
-
 ## 框架图
 ![image](docs/assets/images/framework.png)  
 

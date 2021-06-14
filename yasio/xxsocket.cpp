@@ -53,8 +53,6 @@ SOFTWARE.
 #  pragma warning(disable : 4996)
 #endif
 
-using namespace yasio;
-
 #if defined(_WIN32) && !defined(_WINSTORE)
 static LPFN_ACCEPTEX __accept_ex                           = nullptr;
 static LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
@@ -78,6 +76,12 @@ namespace compat
 } // namespace inet
 } // namespace yasio
 #endif
+
+namespace yasio
+{
+YASIO__NS_INLINE
+namespace inet
+{
 
 int xxsocket::xpconnect(const char* hostname, u_short port, u_short local_port)
 {
@@ -950,6 +954,8 @@ const char* xxsocket::gai_strerror(int error)
   return ::gai_strerror(error);
 #endif
 }
+} // namespace inet
+} // namespace yasio
 
 // initialize win32 socket library
 #ifdef _WIN32

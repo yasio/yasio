@@ -679,7 +679,6 @@ enum : u_short
 } // namespace ip
 
 #if !YASIO__HAS_NS_INLINE
-using namespace yasio::inet;
 using namespace yasio::inet::ip;
 #endif
 
@@ -1183,7 +1182,9 @@ private:
 }; // namespace inet
 
 } // namespace inet
-
+#if !YASIO__HAS_NS_INLINE
+using namespace yasio::inet;
+#endif
 } // namespace yasio
 
 namespace std

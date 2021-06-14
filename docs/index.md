@@ -31,7 +31,6 @@ yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基�
     #include "yasio/yasio.hpp"
     #include "yasio/obstream.hpp"
     using namespace yasio;
-    using namespace yasio::inet;
     int main()
     {
         io_service service({"tool.chinaz.com", 80});

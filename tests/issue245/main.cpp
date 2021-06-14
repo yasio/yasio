@@ -8,7 +8,6 @@
 #endif
 
 using namespace yasio;
-using namespace yasio::inet;
 
 static int count = 0;
 

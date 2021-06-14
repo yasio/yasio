@@ -2,7 +2,6 @@
 #include "yasio/xxsocket.hpp"
 
 using namespace yasio;
-using namespace yasio::inet;
 
 int main()
 {

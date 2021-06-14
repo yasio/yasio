@@ -58,7 +58,6 @@ using namespace cocos2d;
 #endif
 
 using namespace yasio;
-using namespace yasio::inet;
 
 namespace yasio_jsb
 {

@@ -54,7 +54,6 @@ SOFTWARE.
 #endif
 
 using namespace yasio;
-using namespace yasio::inet;
 
 #if defined(_WIN32) && !defined(_WINSTORE)
 static LPFN_ACCEPTEX __accept_ex                           = nullptr;

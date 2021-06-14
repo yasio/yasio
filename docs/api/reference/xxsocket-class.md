@@ -261,7 +261,6 @@ TCP监听端口。
 #include <vector>
 #include "yasio/xxsocket.hpp"
 using namespace yasio;
-using namespace yasio::inet;
 
 xxsocket g_server;
 static bool g_stopped = false;
@@ -1335,7 +1334,6 @@ static int getipsv();
 #include <vector>
 #include "yasio/xxsocket.hpp"
 using namespace yasio;
-using namespace yasio::inet;
 int main(){
     const char* host = "github.com";
     std::vector<ip::endpoint> eps;
@@ -1373,7 +1371,6 @@ static void traverse_local_address(std::function<bool(const ip::endpoint&)> hand
 #include <vector>
 #include "yasio/xxsocket.hpp"
 using namespace yasio;
-using namespace yasio::inet;
 int main(){
     int flags = 0;
     xxsocket::traverse_local_address([&](const ip::endpoint& ep) -> bool {

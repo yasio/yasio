@@ -13,7 +13,7 @@ helpviewer_keywords: []
 ## 语法
 
 ```cpp
-namespace yasio { namespace inet { class io_channel; } }
+namespace yasio { inline namespace inet { class io_channel; } }
 ```
 
 ## 成员

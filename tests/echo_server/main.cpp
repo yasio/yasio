@@ -1,7 +1,7 @@
 #include "yasio/yasio.hpp"
 #include <signal.h>
 
-using namespace yasio::inet;
+using namespace yasio;
 
 io_service* gservice = nullptr;
 void handle_signal(int sig)

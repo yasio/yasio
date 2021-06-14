@@ -2,7 +2,6 @@
 #include "yasio/obstream.hpp"
 
 using namespace yasio;
-using namespace yasio::inet;
 deadline_timer_ptr udpHeartTimer = nullptr;
 
 void start_exprie_timer();

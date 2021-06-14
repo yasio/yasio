@@ -9,7 +9,6 @@
 #include "yasio/detail/obstream.hpp"
 
 using namespace yasio;
-using namespace yasio::inet;
 
 #define HTTP_TEST_HOST "tool.chinaz.com"
 

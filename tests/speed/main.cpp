@@ -13,7 +13,6 @@
 #endif
 
 using namespace yasio;
-using namespace yasio::inet;
 
 /*
 Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md

@@ -11,7 +11,7 @@ helpviewer_keywords: []
 ## 语法
 
 ```cpp
-namespace yasio { namespace inet { class io_service; } }
+namespace yasio { inline namespace inet { class io_service; } }
 ```
 
 ## 成员
@@ -79,7 +79,6 @@ io_service::io_service(const io_hostent* channel_eps, int channel_count);
 #include "yasio/yasio.hpp"
 int main() {
     using namespace yasio;
-    using namespace yasio::inet;
     io_service s1; // s1 only support 1 channel
     io_service s2(5); // s2 support 5 channels concurrency
     io_service s3(io_hostent{"github.com", 443}); // s3 support 1 channel
@@ -111,7 +110,6 @@ void start(io_event_cb_t cb);
 #include "yasio/yasio.hpp"
 int main() {
     using namespace yasio;
-    using namespace yasio::inet;
     auto service = yasio_shared_service(io_hostent{host="ip138.com", port=80});
     service->start([](event_ptr&& ev) {
     auto kind = ev->kind();
@@ -453,7 +451,6 @@ void set_option(int opt, ...);
 
 int main(){
     using namespace yasio;
-    using namespace yasio::inet;
     io_hostent hosts[] = {
     {"192.168.1.66", 20336},
     {"192.168.1.88", 20337},

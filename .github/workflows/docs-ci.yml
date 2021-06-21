@@ -57,6 +57,6 @@ jobs:
           mike deploy 3.37.1
           git checkout 3.37.2
           mike deploy 3.37.2
-          git checkout master
+          git checkout main
           mike deploy latest
           mike set-default 3.37.2 --push

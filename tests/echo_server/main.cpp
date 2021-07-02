@@ -1,5 +1,6 @@
 #include "yasio/yasio.hpp"
 #include <signal.h>
+#include "yasio/ibstream.hpp"
 
 using namespace yasio;
 

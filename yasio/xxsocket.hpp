@@ -542,11 +542,11 @@ public:
     switch (sa_.sa_family)
     {
       case AF_INET:
-        n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
+        n = strlen(compat::inet_ntop(AF_INET, (void*)&in4_.sin_addr, &addr.front(), static_cast<socklen_t>(addr.length())));
         n += sprintf(&addr.front() + n, ":%u", this->port());
         break;
       case AF_INET6:
-        n = strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
+        n = strlen(compat::inet_ntop(AF_INET6, (void*)&in6_.sin6_addr, &addr.front() + 1, static_cast<socklen_t>(addr.length() - 1)));
         n += sprintf(&addr.front() + n, "]:%u", this->port());
         break;
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
@@ -608,11 +608,11 @@ public:
     {
       case AF_INET:
         if (pred4(&in4_.sin_addr))
-          return compat::inet_ntop(AF_INET, &in4_.sin_addr, str, INET_ADDRSTRLEN);
+          return compat::inet_ntop(AF_INET, (void*)&in4_.sin_addr, str, INET_ADDRSTRLEN);
         break;
       case AF_INET6:
         if (pred6(&in6_.sin6_addr))
-          return compat::inet_ntop(AF_INET6, &in6_.sin6_addr, str, INET6_ADDRSTRLEN);
+          return compat::inet_ntop(AF_INET6, (void*)&in6_.sin6_addr, str, INET6_ADDRSTRLEN);
         break;
     }
     return nullptr;

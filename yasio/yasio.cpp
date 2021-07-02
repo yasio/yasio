@@ -51,6 +51,7 @@ SOFTWARE.
 #if defined(YASIO_HAVE_CARES)
 #  include "yasio/detail/ares.hpp"
 #endif
+#include "tclog.h"
 
 // clang-format off
 #define YASIO_KLOG_CP(level, format, ...)                                                                                      \
@@ -87,6 +88,10 @@ SOFTWARE.
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
 #endif
+
+void wirteKcpLog(const char* log,IKCPCB * kcp, void* user) { 
+    LOG_INFO("%s", log)
+}
 
 namespace yasio
 {
@@ -685,9 +690,12 @@ int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& 
 // ----------------------- io_transport_kcp ------------------
 io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s) : io_transport_udp(ctx, s)
 {
+  YASIO_KLOGD("[index: %d][conv:%d] io_transport_kcp %s:%d...", ctx->index_, ctx->kcp_conv_, ctx->remote_host_.c_str(), ctx->remote_port_);
   this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
+  /*this->kcp_->logmask = 0xffff;
+  this->kcp_->writelog = &wirteKcpLog;*/
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
-  ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
+  ::ikcp_nodelay(this->kcp_, 1, 10 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
     if (yasio__min_wait_duration == 0)

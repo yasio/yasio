@@ -23,6 +23,8 @@ option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
+option(YASIO_HAVE_KCP "Build yasio with kcp" ON)
+option(YASIO_VERBOSE_LOG "Build yasio with kcp" ON)
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -92,6 +94,7 @@ set (YASIO_CORE
 )
 
 if (YASIO_HAVE_KCP)
+message("YASIO_HAVE_KCP has here!")
   set(YASIO_CORE ${YASIO_CORE} 
     ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
   )
@@ -143,7 +146,7 @@ macro(source_group_by_dir proj_dir source_files)
 endmacro(source_group_by_dir)
 
 source_group_by_dir(${CMAKE_CURRENT_SOURCE_DIR} YASIO_CORE)
-
+message("add==========================1")
 # --- add yasio core lib project
 if (APPLE)
     if (IOS)
@@ -187,6 +190,7 @@ elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Switch")
     )
     target_compile_options(${yasio_target_name} PRIVATE -m64 -mcpu=cortex-a57+fp+simd+crypto+crc -fno-common -fno-short-enums -ffunction-sections -fdata-sections -fPIC -fms-extensions)
 else ( ) # linux/win32/android
+	message("add==========================YASIO_CORE")
     add_library(${yasio_target_name}
         ${YASIO_CORE}
         ${THIRDPART_SRC}

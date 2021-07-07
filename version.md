@@ -1,3 +1,8 @@
+yasio-3.37.3
+  
+1. Unify io_service timeout options: `XXX_TIMEOUT in seconds` and `XXX_TIMEOUTMS in milliseconds`
+  
+  
 yasio-3.37.2
   
 1. Add pkg-config file.

@@ -13,14 +13,14 @@ path_classifiers:
     - tests
     - examples
   library:
-    - external
+    - thirdparty
 
 #########################################################################################
 # Use the `queries` block to change the default display of query results.               #
 #########################################################################################
 queries:
   # Start by hiding the results of all queries.
-  - exclude: "external"
+  - exclude: "thirdparty"
 
 #########################################################################################
 # Define changes to the default code extraction process.                                #

@@ -1,14 +1,15 @@
 name: docs
 
 on:
-  # push:
-  #   paths:
-  #     - mkdocs.yml
-  #     - docs/**
-  #     - .github/workflows/docs-ci.yml
   workflow_dispatch:
     # Inputs the workflow accepts.
     inputs:
+      versions:
+        description: 'Please specific active versions'
+        # Default value if no value is explicitly provided
+        default: '3.37.1,3.37.2,3.37.3'
+        # Input has to be provided for the workflow to run
+        required: true
       comment:
         description: 'Comment only'
         # Default value if no value is explicitly provided
@@ -45,18 +46,10 @@ jobs:
       - name: Deploy docs
         env:
           GOOGLE_ANALYTICS_KEY: ${{ secrets.GOOGLE_ANALYTICS_KEY }}
+          ACTIVE_VERSIONS: ${{ github.event.inputs.versions }}
         run: |
-          mkdocs --version
-          mike --version
           git config user.name "docs-bot"
           git config user.email "docs-bot@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git fetch
-          mike delete --all
-          git checkout 3.37.1
-          mike deploy 3.37.1
-          git checkout 3.37.2
-          mike deploy 3.37.2
-          git checkout main
-          mike deploy latest
-          mike set-default 3.37.2 --push
+          source ci/docs.sh

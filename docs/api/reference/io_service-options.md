@@ -24,7 +24,7 @@ io_service支持的所有选项。
 |*YOPT_S_DNS_CACHE_TIMEOUT*|Set dns cache timeout in seconds.<br/>params: dns_cache_timeout : int(600)|
 |*YOPT_S_DNS_CACHE_TIMEOUTMS*|Set dns cache timeout in milliseconds.<br/>params: dns_cache_timeout : int(600000)|
 |*YOPT_S_DNS_QUERIES_TIMEOUT*|Set dns queries timeout in seconds, default is: 5.<br/>params: dns_queries_timeout : int(5)<br/>remark: <br/>a. this option must be set before 'io_service::start'<br/>b. only works when have c-ares<br/>c. since v3.33.0 it's milliseconds, previous is seconds.<br/>d. the timeout algorithm of c-ares is complicated, usually, by default, dns queries<br/>will failed with timeout after more than 75 seconds.<br/>e. for more detail, please see:<br/>https://c-ares.haxx.se/ares_init_options.html|
-|*YOPT_S_DNS_QUERIES_TIMEOUTMS*|Set dns queries timeout in seconds, see also YOPT_S_DNS_QUERIES_TIMEOUT|
+|*YOPT_S_DNS_QUERIES_TIMEOUTMS*|Set dns queries timeout in seconds, see also *YOPT_S_DNS_QUERIES_TIMEOUT*|
 |*YOPT_S_DNS_QUERIES_TRIES*|Set dns queries tries when timeout reached, default is: 5.<br/>params: dns_queries_tries : int(5)<br/>remarks:<br/>a. this option must be set before 'io_service::start'<br/>b. relative option: *YOPT_S_DNS_QUERIES_TIMEOUT*|
 |*YOPT_S_DNS_DIRTY*|Set dns server dirty.<br/>params: reserved : int(1)<br/>remarks:<br/>a. this option only works with c-ares enabled<br/>b. you should set this option after your mobile network changed|
 |*YOPT_C_LFBFD_FN*|Sets channel length field based frame decode function.<br/>params: index:int, func:decode_len_fn_t*<br/>remark: native C++ ONLY|

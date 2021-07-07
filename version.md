@@ -1,6 +1,9 @@
 yasio-3.37.3
   
 1. Unify io_service timeout options: `XXX_TIMEOUT in seconds` and `XXX_TIMEOUTMS in milliseconds`
+2. Add io_channel user timer support
+3. Move `yasio:errc` to `yasio.hpp`
+4. Add `yasio_fwd.hpp`
   
   
 yasio-3.37.2

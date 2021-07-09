@@ -7,6 +7,7 @@ on:
       - thirdparty/**/*
       - tests/**/*
       - examples/**/*
+      - CMakeLists.txt
       - .github/workflows/ios-ci.yml
 
 env:

@@ -152,11 +152,13 @@ void yasioTest()
   yes      = cxx20::starts_with(std::string{"hello world"}, "hello");
   yes      = cxx20::starts_with(std::string{"hello world"}, std::string{"hello"});
   yes      = cxx20::starts_with(std::string{"hello world"}, (int)'h');
+#if YASIO__HAS_FULL_CXX11
   yes      = cxx20::starts_with("hello world"_sv, (int)'h');
   yes      = cxx20::starts_with("hello world"_sv, "hello");
   yes      = cxx20::starts_with("hello world", "hello"_sv);
   yes      = cxx20::starts_with(std::string{"hello world"}, "hello"_sv);
   yes      = cxx20::starts_with("hello world"_sv, std::string{"hello"});
+#endif
 
   yasio::obstream obs;
   obs.push(sizeof(u_short));

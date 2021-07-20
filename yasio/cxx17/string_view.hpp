@@ -1447,6 +1447,8 @@ namespace cxx20
 {
 template< class T >
 using decay_t = typename std::decay<T>::type;
+template< class T >
+using remove_const_t = typename std::remove_const<T>::type;
 namespace char_ranges
 { // allow get char type from char*, wchar_t*, std::string, std::wstring
 template <typename _Ty> struct value_type {
@@ -1454,11 +1456,11 @@ template <typename _Ty> struct value_type {
 };
 
 template <typename _Ty> struct value_type<_Ty&> {
-  using type = std::remove_const_t<_Ty>;
+  using type = remove_const_t<_Ty>;
 };
 
 template <typename _Ty> struct value_type<_Ty*> {
-  using type = std::remove_const_t<_Ty>;
+  using type = remove_const_t<_Ty>;
 };
 } // namespace char_ranges
 

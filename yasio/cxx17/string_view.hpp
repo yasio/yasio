@@ -1445,6 +1445,8 @@ inline std::basic_string<_CharT, _Traits, Allocator> svtos(const basic_string_vi
 
 namespace cxx20
 {
+template< class T >
+using decay_t = typename std::decay<T>::type;
 namespace char_ranges
 { // allow get char type from char*, wchar_t*, std::string, std::wstring
 template <typename _Ty> struct value_type {
@@ -1452,11 +1454,11 @@ template <typename _Ty> struct value_type {
 };
 
 template <typename _Ty> struct value_type<_Ty&> {
-  using type = std::remove_const_t<typename _Ty>;
+  using type = std::remove_const_t<_Ty>;
 };
 
 template <typename _Ty> struct value_type<_Ty*> {
-  using type = std::remove_const_t<typename _Ty>;
+  using type = std::remove_const_t<_Ty>;
 };
 } // namespace char_ranges
 
@@ -1471,7 +1473,7 @@ inline bool starts_with(cxx17::basic_string_view<_CharT> lhs,
 template <typename _T1, typename _T2> 
 inline bool starts_with(_T1&& lhs, _T2&& v) // (2)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_T1>>::type;
+  using char_type = char_ranges::value_type<decay_t<_T1>>::type;
   return starts_with(cxx17::basic_string_view<char_type>{lhs}, cxx17::basic_string_view<char_type>{v});
 }
 
@@ -1484,7 +1486,7 @@ inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, int c) // (3)
 template <typename _Ty> 
 inline bool starts_with(_Ty&& lhs, int c) // (4)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_Ty>>::type;
+  using char_type = char_ranges::value_type<decay_t<_Ty>>::type;
   return starts_with(cxx17::basic_string_view<char_type>{lhs}, c);
 }
 
@@ -1499,7 +1501,7 @@ inline bool ends_with(cxx17::basic_string_view<_CharT> lhs,
 template <typename _T1, typename _T2> 
 inline bool ends_with(_T1&& lhs, _T2&& v) // (2)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_T1>>::type;
+  using char_type = char_ranges::value_type<decay_t<_T1>>::type;
   return ends_with(cxx17::basic_string_view<char_type>{lhs}, cxx17::basic_string_view<char_type>{v});
 }
 
@@ -1511,7 +1513,7 @@ inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, int c) // (3)
 
 template <typename _Ty> inline bool ends_with(_Ty&& lhs, int c) // (4)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_Ty>>::type;
+  using char_type = char_ranges::value_type<decay_t<_Ty>>::type;
   return ends_with(cxx17::basic_string_view<char_type>{lhs}, c);
 }
 
@@ -1547,7 +1549,7 @@ inline bool iequals<wchar_t>(cxx17::basic_string_view<wchar_t> lhs,
 #endif
 template <typename _T1, typename _T2> inline bool iequals(_T1&& lhs, _T2&& v)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_T1>>::type;
+  using char_type = char_ranges::value_type<decay_t<_T1>>::type;
   return iequals(cxx17::basic_string_view<char_type>{lhs}, cxx17::basic_string_view<char_type>{v});
 }
 // starts_with(), since C++20:
@@ -1560,7 +1562,7 @@ inline bool starts_with(cxx17::basic_string_view<_CharT> lhs,
 
 template <typename _T1, typename _T2> inline bool starts_with(_T1&& lhs, _T2&& v) // (2)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_T1>>::type;
+  using char_type = char_ranges::value_type<decay_t<_T1>>::type;
   return starts_with(cxx17::basic_string_view<char_type>{lhs}, cxx17::basic_string_view<char_type>{v});
 }
 
@@ -1572,7 +1574,7 @@ inline bool starts_with(cxx17::basic_string_view<_CharT> lhs, int c) // (3)
 
 template <typename _Ty> inline bool starts_with(_Ty&& lhs, int c) // (4)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_Ty>>::type;
+  using char_type = char_ranges::value_type<decay_t<_Ty>>::type;
   return starts_with(cxx17::basic_string_view<char_type>{lhs}, c);
 }
 
@@ -1586,7 +1588,7 @@ inline bool ends_with(cxx17::basic_string_view<_CharT> lhs,
 
 template <typename _T1, typename _T2> inline bool ends_with(_T1&& lhs, _T2&& v) // (2)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_T1>>::type;
+  using char_type = char_ranges::value_type<decay_t<_T1>>::type;
   return ends_with(cxx17::basic_string_view<char_type>{lhs}, cxx17::basic_string_view<char_type>{v});
 }
 
@@ -1598,7 +1600,7 @@ inline bool ends_with(cxx17::basic_string_view<_CharT> lhs, int c) // (3)
 
 template <typename _Ty> inline bool ends_with(_Ty&& lhs, int c) // (4)
 {
-  using char_type = char_ranges::value_type<std::decay_t<_Ty>>::type;
+  using char_type = char_ranges::value_type<decay_t<_Ty>>::type;
   return ends_with(cxx17::basic_string_view<char_type>{lhs}, c);
 }
 } // namespace ic

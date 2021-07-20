@@ -131,6 +131,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   return false; // timeout
 }
 
+
 void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{HTTP_TEST_HOST, 80}};
@@ -143,6 +144,21 @@ void yasioTest()
     else
       printf("ping www.ip138.com failed!\n");
   }
+
+  using namespace cxx17;
+  bool yes = cxx20::starts_with("hello world", "hello");
+  yes      = cxx20::starts_with("hello world", (int)'h');
+  yes      = cxx20::starts_with("hello world", std::string{"hello"});
+  yes      = cxx20::starts_with(std::string{"hello world"}, "hello");
+  yes      = cxx20::starts_with(std::string{"hello world"}, std::string{"hello"});
+  yes      = cxx20::starts_with(std::string{"hello world"}, (int)'h');
+#if YASIO__HAS_FULL_CXX11
+  yes      = cxx20::starts_with("hello world"_sv, (int)'h');
+  yes      = cxx20::starts_with("hello world"_sv, "hello");
+  yes      = cxx20::starts_with("hello world", "hello"_sv);
+  yes      = cxx20::starts_with(std::string{"hello world"}, "hello"_sv);
+  yes      = cxx20::starts_with("hello world"_sv, std::string{"hello"});
+#endif
 
   yasio::obstream obs;
   obs.push(sizeof(u_short));

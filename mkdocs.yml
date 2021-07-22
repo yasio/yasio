@@ -2,7 +2,7 @@ docs_dir: docs
 site_name: yasio
 repo_url: https://github.com/yasio/yasio
 repo_name: GitHub
-edit_uri: edit/master/docs
+edit_uri: edit/main/docs
 copyright: Copyright &copy; 2012 - 2021 yasio.org.
 theme:
   name: material

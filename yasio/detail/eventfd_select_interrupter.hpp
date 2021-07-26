@@ -23,11 +23,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
+#if defined(__GLIBC__) && (__GLIBC__ == 2 && __GLIBC_MINOR__ < 8)
 #  include <asm/unistd.h>
-#else // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
+#else
 #  include <sys/eventfd.h>
-#endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
+#endif
 
 #include <unistd.h>
 

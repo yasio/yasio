@@ -16,7 +16,7 @@ env:
   BUILD_TARGET: android
   BUILD_TYPE: Release
   PYENV_VERSION: 2.7.18
-  NDK_VER: r16b
+  NDK_VER: r14b
 
 jobs:
   build:

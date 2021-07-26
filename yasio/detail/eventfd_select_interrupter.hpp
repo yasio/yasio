@@ -25,9 +25,9 @@
 #include <fcntl.h>
 #if defined(__GLIBC__) && (__GLIBC__ == 2 && __GLIBC_MINOR__ < 8)
 #  include <asm/unistd.h>
-#else
+#else // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
 #  include <sys/eventfd.h>
-#endif
+#endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 8
 
 #include <unistd.h>
 

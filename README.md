@@ -27,7 +27,7 @@
 ## 应用案例
 * [放置少女](http://hcsj.c4connect.co.jp/): 用于客户端网络传输。
 * [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
-* [x-studio软件项目](https://x-studio.net/): 用于实现局域网UDP+TCP发现更新机制。
+* [x-studio软件项目](https://x-studio.net/): 网络解决方案。
 
 ## 集成案例
 * Unity
@@ -37,7 +37,7 @@
   - [yasio-unreal](https://github.com/yasio/yasio-unreal): yasio的UnrealEngine插件。
   - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
-* [adxe](https://github.com/adxeproject/adxe): 作为adxe游戏引擎的异步TCP解决方案。
+* [adxe](https://github.com/adxeproject/adxe): 作为adxe游戏引擎的网络解决方案。
 
     
 ## 文档

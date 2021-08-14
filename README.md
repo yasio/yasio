@@ -8,7 +8,7 @@
 [![macOS Build Status](https://github.com/yasio/yasio/workflows/osx/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aosx)
 [![FreeBSD Build Status](https://github.com/yasio/yasio/workflows/freebsd/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Afreebsd)  
 
-[![Release](https://img.shields.io/badge/release-v3.37.3-blue.svg)](https://github.com/yasio/yasio/releases)
+[![Release](https://img.shields.io/badge/release-v3.37.4-blue.svg)](https://github.com/yasio/yasio/releases)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/yasio/yasio.svg?label=Stars)](https://github.com/yasio/yasio)
@@ -38,8 +38,8 @@
   - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
 * [adxe](https://github.com/adxeproject/adxe): 作为adxe游戏引擎的网络解决方案。
+* [HttpClient of adxe](https://github.com/adxeproject/adxe/blob/dev/cocos/network/HttpClient.cpp): 基于yasio的HttpClient实现最佳实践。
 
-    
 ## 文档
 * [https://yasio.github.io/yasio](https://yasio.github.io/yasio)
 

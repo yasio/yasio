@@ -1,3 +1,14 @@
+yasio-3.37.4
+  
+1. Make c++20 compatible API `starts_with/ends_wtih` more easy to use
+2. Correct `yasio::set_thread_name` platform macro detection
+3. Move `yasio::errc` to standalone file `errc.hpp`
+4. Improve `YOPT_DNS_DIRTY` behavior
+5. Fix header only link when c-ares enabled
+6. Make `yasio::strfmt` more reusable
+7. Improve Unreal Engine support
+  
+  
 yasio-3.37.3
   
 1. Unify io_service timeout options: `XXX_TIMEOUT in seconds` and `XXX_TIMEOUTMS in milliseconds`

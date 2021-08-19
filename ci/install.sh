@@ -16,4 +16,5 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_TARGET}" == "android" ]]; then
     "android-ndk-$NDK_VER/toolchains/llvm/prebuilt/linux-x86_64/*"
     wget -O ~/ninja-linux.zip https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
     unzip ~/ninja-linux.zip -d ~/
+    ~/ninja --version
 fi

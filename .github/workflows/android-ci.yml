@@ -11,7 +11,7 @@ on:
       - .github/workflows/android-ci.yml
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.) 
   TRAVIS_OS_NAME: linux
   BUILD_TARGET: android
   BUILD_TYPE: Release

@@ -118,13 +118,13 @@ template <typename _Ty> struct byte_order_impl<_Ty, sizeof(int8_t)> {
 };
 
 template <typename _Ty> struct byte_order_impl<_Ty, sizeof(int16_t)> {
-  static inline _Ty host_to_network(_Ty value) { return static_cast<_Ty>((::htons)(static_cast<u_short>(value))); }
-  static inline _Ty network_to_host(_Ty value) { return static_cast<_Ty>((::ntohs)(static_cast<u_short>(value))); }
+  static inline _Ty host_to_network(_Ty value) { return static_cast<_Ty>((htons)(static_cast<u_short>(value))); }
+  static inline _Ty network_to_host(_Ty value) { return static_cast<_Ty>((ntohs)(static_cast<u_short>(value))); }
 };
 
 template <typename _Ty> struct byte_order_impl<_Ty, sizeof(int32_t)> {
-  static inline _Ty host_to_network(_Ty value) { return (_Ty)((::htonl)((uint32_t)(value))); }
-  static inline _Ty network_to_host(_Ty value) { return (_Ty)((::ntohl)((uint32_t)(value))); }
+  static inline _Ty host_to_network(_Ty value) { return (_Ty)((htonl)((uint32_t)(value))); }
+  static inline _Ty network_to_host(_Ty value) { return (_Ty)((ntohl)((uint32_t)(value))); }
 };
 
 template <typename _Ty> struct byte_order_impl<_Ty, sizeof(int64_t)> {

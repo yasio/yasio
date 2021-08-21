@@ -400,7 +400,6 @@ protected:
 template <typename _ConvertTraits>
 class basic_obstream<_ConvertTraits, dynamic_extent> : public basic_obstream_view<_ConvertTraits, dynamic_buffer> {
 public:
-  basic_obstream() : basic_obstream_view(&buffer_) {}
   basic_obstream(size_t capacity = 128) : basic_obstream_view(&buffer_) { buffer_.reserve(capacity); }
   basic_obstream(const basic_obstream& rhs) : basic_obstream_view(&buffer_), buffer_(rhs.buffer_) {}
   basic_obstream(basic_obstream&& rhs) : basic_obstream_view(&buffer_), buffer_(std::move(rhs.buffer_)) {}

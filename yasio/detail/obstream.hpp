@@ -182,7 +182,7 @@ public:
   using convert_traits_type        = _ConvertTraits;
   using buffer_type                = _BufferType;
   using buffer_implementation_type = typename buffer_type::implementation_type;
-  using this_type                  = basic_obstream_view<convert_traits_type, buffer_type>;
+  using my_type                  = basic_obstream_view<convert_traits_type, buffer_type>;
 
   static const size_t npos = -1;
 
@@ -320,7 +320,7 @@ public:
   template <typename _Intty>
   void write_ix(_Intty value)
   {
-    detail::write_ix_helper<this_type, _Intty>::write_ix(this, value);
+    detail::write_ix_helper<my_type, _Intty>::write_ix(this, value);
   }
 
   void write_varint(int value, int size)
@@ -380,9 +380,9 @@ protected:
   std::stack<size_t> offset_stack_;
 }; // CLASS basic_obstream
 
-enum
+enum : size_t
 {
-  dynamic_extent = -1
+  dynamic_extent = (size_t)-1
 };
 
 template <typename _ConvertTraits, size_t _Extent = dynamic_extent>
@@ -390,8 +390,10 @@ class basic_obstream;
 
 template <typename _ConvertTraits, size_t _Extent>
 class basic_obstream : public basic_obstream_view<_ConvertTraits, fixed_buffer<_Extent>> {
+  using super_type = basic_obstream_view<_ConvertTraits, fixed_buffer<_Extent>>;
 public:
-  basic_obstream() : basic_obstream_view(&buffer_) {}
+  using buffer_type = typename super_type::buffer_type;
+  basic_obstream() : super_type(&buffer_) {}
 
 protected:
   buffer_type buffer_;
@@ -399,10 +401,13 @@ protected:
 
 template <typename _ConvertTraits>
 class basic_obstream<_ConvertTraits, dynamic_extent> : public basic_obstream_view<_ConvertTraits, dynamic_buffer> {
+  using super_type = basic_obstream_view<_ConvertTraits, dynamic_buffer>;
+  using my_type = basic_obstream<_ConvertTraits, dynamic_extent>;
 public:
-  basic_obstream(size_t capacity = 128) : basic_obstream_view(&buffer_) { buffer_.reserve(capacity); }
-  basic_obstream(const basic_obstream& rhs) : basic_obstream_view(&buffer_), buffer_(rhs.buffer_) {}
-  basic_obstream(basic_obstream&& rhs) : basic_obstream_view(&buffer_), buffer_(std::move(rhs.buffer_)) {}
+  using buffer_type = typename super_type::buffer_type;
+  basic_obstream(size_t capacity = 128) : super_type(&buffer_) { buffer_.reserve(capacity); }
+  basic_obstream(const basic_obstream& rhs) : super_type(&buffer_), buffer_(rhs.buffer_) {}
+  basic_obstream(basic_obstream&& rhs) : super_type(&buffer_), buffer_(std::move(rhs.buffer_)) {}
   basic_obstream& operator=(const basic_obstream& rhs)
   {
     buffer_ = rhs.buffer_;
@@ -414,10 +419,10 @@ public:
     return *this;
   }
 
-  basic_obstream sub(size_t offset, size_t count = npos)
+  basic_obstream sub(size_t offset, size_t count = super_type::npos)
   {
     basic_obstream obs;
-    auto n = length();
+    auto n = my_type::length();
     if (offset < n)
     {
       if (count > (n - offset))

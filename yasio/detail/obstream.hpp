@@ -95,7 +95,7 @@ public:
     if (newsize < max_size())
       this->pos_ = newsize;
     else
-      throw std::out_of_range("const_buffer: out of range");
+      throw std::out_of_range("fixed_buffer_view: out of range");
   }
 
   void write_byte(uint8_t value)
@@ -120,7 +120,7 @@ public:
       this->pos_ += n;
     }
     else
-      throw std::out_of_range("const_buffer: out of range");
+      throw std::out_of_range("fixed_buffer_view: out of range");
   }
   void shrink_to_fit(){};
   void clear() { this->pos_ = 0; }

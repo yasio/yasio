@@ -89,15 +89,6 @@ public:
   fixed_buffer_view(char* buf, size_t n) : first_(buf), last_(buf + n) {}
   fixed_buffer_view(char* first, char* last) : first_(first), last_(last) {}
 
-  void reserve(size_t /*capacity*/){};
-  void resize(size_t newsize)
-  {
-    if (newsize < max_size())
-      this->pos_ = newsize;
-    else
-      throw std::out_of_range("fixed_buffer_view: out of range");
-  }
-
   void write_byte(uint8_t value)
   {
     if (pos_ < this->max_size())
@@ -122,6 +113,16 @@ public:
     else
       throw std::out_of_range("fixed_buffer_view: out of range");
   }
+
+  void resize(size_t newsize)
+  {
+    if (newsize < max_size())
+      this->pos_ = newsize;
+    else
+      throw std::out_of_range("fixed_buffer_view: out of range");
+  }
+
+  void reserve(size_t /*capacity*/){};
   void shrink_to_fit(){};
   void clear() { this->pos_ = 0; }
   char* data() { return first_; }
@@ -150,9 +151,6 @@ public:
   implementation_type& get_implementation() { return this->impl_; }
   const implementation_type& get_implementation() const { return this->impl_; }
 
-  void reserve(size_t capacity) { impl_.reserve(capacity); }
-  void resize(size_t newsize) { impl_.resize(newsize); }
-
   void write_byte(uint8_t value) { impl_.push_back(value); }
   void write_bytes(const void* d, int n)
   {
@@ -168,6 +166,8 @@ public:
     return n;
   }
 
+  void resize(size_t newsize) { impl_.resize(newsize); }
+  void reserve(size_t capacity) { impl_.reserve(capacity); }
   void shrink_to_fit(){};
   void clear() { impl_.clear(); }
   char* data() { return impl_.data(); }
@@ -439,12 +439,12 @@ protected:
 using obstream_view = basic_obstream_view<convert_traits<network_convert_tag>>;
 template <size_t _Extent>
 using obstream_any = basic_obstream<convert_traits<network_convert_tag>, _Extent>;
-using obstream      = obstream_any<dynamic_extent>;
+using obstream     = obstream_any<dynamic_extent>;
 
 using fast_obstream_view = basic_obstream_view<convert_traits<host_convert_tag>>;
 template <size_t _Extent>
 using fast_obstream_any = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
-using fast_obstream      = fast_obstream_any<dynamic_extent>;
+using fast_obstream     = fast_obstream_any<dynamic_extent>;
 
 } // namespace yasio
 

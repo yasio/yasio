@@ -152,8 +152,8 @@ public:
 
   void reserve(size_t capacity) { impl_.reserve(capacity); }
   void resize(size_t newsize) { impl_.resize(newsize); }
-  void write_byte(uint8_t value) { impl_.push_back(value); }
 
+  void write_byte(uint8_t value) { impl_.push_back(value); }
   void write_bytes(const void* d, int n)
   {
     if (n > 0)
@@ -169,11 +169,8 @@ public:
   }
 
   void shrink_to_fit(){};
-
   void clear() { impl_.clear(); }
-
   char* data() { return impl_.data(); }
-
   size_t length() const { return impl_.size(); }
   bool empty() const { return impl_.empty(); }
 

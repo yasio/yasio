@@ -441,14 +441,14 @@ protected:
 
 using obstream_view = basic_obstream_view<convert_traits<network_convert_tag>>;
 template <size_t _Extent>
-using obstream_span = basic_obstream<convert_traits<network_convert_tag>, _Extent>;
-using obstream      = obstream_span<dynamic_extent>;
+using obstream_any = basic_obstream<convert_traits<network_convert_tag>, _Extent>;
+using obstream      = obstream_any<dynamic_extent>;
 
 using fast_obstream_view = basic_obstream_view<convert_traits<host_convert_tag>>;
 
 template <size_t _Extent>
-using fast_obstream_span = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
-using fast_obstream      = fast_obstream_span<dynamic_extent>;
+using fast_obstream_any = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
+using fast_obstream      = fast_obstream_any<dynamic_extent>;
 
 } // namespace yasio
 

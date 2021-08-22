@@ -1,7 +1,7 @@
 ---
 title: "yasio::obstream Class"
-date: "16/10/2020"
-f1_keywords: ["obstream", "yasio/obstream", ]
+date: "22/8/2021"
+f1_keywords ["obstream", "yasio/obstream", ]
 helpviewer_keywords: []
 ---
 # obstream Class
@@ -10,6 +10,7 @@ helpviewer_keywords: []
 
 !!! attention "注意"
 
+    - 自3.37.5起，新增`obstream_any`类模板具备序列化已知大小的小块栈内存能力。
     - 自3.35.0起，优化为类模板basic_obstream实现，体现了C++模板强大的代码复用能力。
 
     - `obstream` 当写入int16~int64和float/double类型时, 会自动将主机字节序转换为网络字节序。
@@ -20,8 +21,13 @@ helpviewer_keywords: []
 
 ```cpp
 namespace yasio { 
-using obstream = basic_obstream<endian::network_convert_tag>;
-using fast_obstream = basic_obstream<endian::host_convert_tag>;
+template <size_t _Extent>
+using obstream_any = basic_obstream<convert_traits<network_convert_tag>, _Extent>;
+using obstream     = obstream_any<dynamic_extent>;
+
+template <size_t _Extent>
+using fast_obstream_any = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
+using fast_obstream     = fast_obstream_any<dynamic_extent>;
 }
 ```
 

@@ -14,7 +14,7 @@ set(yasio_target_name yasio)
 project(${yasio_target_name})
 
 if (WIN32)
-    add_compile_options(" /Bv")
+    add_compile_options(" /Bv /D_CRT_SECURE_NO_WARNINGS")
 endif()
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)

@@ -38,6 +38,11 @@ SOFTWARE.
 #include "yasio/detail/utils.hpp"
 namespace yasio
 {
+enum : size_t
+{
+  dynamic_extent = (size_t)-1
+};
+
 namespace detail
 {
 template <typename _Stream, typename _Intty>
@@ -73,12 +78,12 @@ public:
   implementation_type& get_implementation() { return *this; }
   const implementation_type& get_implementation() const { return *this; }
 
-  template <size_t _N>
-  fixed_buffer_view(std::array<char, _N>& buf) : first_(buf.data()), last_(buf.data() + _N)
+  template <size_t _Extent>
+  fixed_buffer_view(std::array<char, _Extent>& buf) : first_(buf.data()), last_(buf.data() + _Extent)
   {}
 
-  template <size_t _N>
-  fixed_buffer_view(char (&buf)[_N]) : first_(buf), last_(buf + _N)
+  template <size_t _Extent>
+  fixed_buffer_view(char (&buf)[_Extent]) : first_(buf), last_(buf + _Extent)
   {}
 
   fixed_buffer_view(char* buf, size_t n) : first_(buf), last_(buf + n) {}
@@ -88,55 +93,55 @@ public:
   void resize(size_t newsize)
   {
     if (newsize < max_size())
-      this->wpos_ = newsize;
+      this->pos_ = newsize;
     else
       throw std::out_of_range("const_buffer: out of range");
   }
 
   void write_byte(uint8_t value)
   {
-    if (wpos_ < this->max_size())
+    if (pos_ < this->max_size())
     {
-      this->data()[this->wpos_] = value;
-      ++this->wpos_;
+      this->first_[this->pos_] = value;
+      ++this->pos_;
     }
   }
 
   void write_bytes(const void* d, int n)
   {
     if (n > 0)
-      write_bytes(this->wpos_, d, n);
+      write_bytes(this->pos_, d, n);
   }
   void write_bytes(size_t offset, const void* d, int n)
   {
     if ((offset + n) <= this->max_size())
     {
       ::memcpy(this->data() + offset, d, n);
-      this->wpos_ += n;
+      this->pos_ += n;
     }
     else
       throw std::out_of_range("const_buffer: out of range");
   }
   void shrink_to_fit(){};
-  void clear() { this->wpos_ = 0; }
+  void clear() { this->pos_ = 0; }
   char* data() { return first_; }
-  size_t length() const { return this->wpos_; }
+  size_t length() const { return this->pos_; }
   bool empty() const { return first_ == last_; }
   size_t max_size() const { return last_ - first_; }
 
 private:
   char* first_;
   char* last_;
-  size_t wpos_ = 0;
+  size_t pos_ = 0;
 };
 
-template <size_t _N>
+template <size_t _Extent>
 class fixed_buffer : public fixed_buffer_view {
 public:
   fixed_buffer() : fixed_buffer_view(impl_) {}
 
 private:
-  std::array<char, _N> impl_;
+  std::array<char, _Extent> impl_;
 };
 
 class dynamic_buffer {
@@ -182,7 +187,7 @@ public:
   using convert_traits_type        = _ConvertTraits;
   using buffer_type                = _BufferType;
   using buffer_implementation_type = typename buffer_type::implementation_type;
-  using my_type                  = basic_obstream_view<convert_traits_type, buffer_type>;
+  using my_type                    = basic_obstream_view<convert_traits_type, buffer_type>;
 
   static const size_t npos = -1;
 
@@ -380,17 +385,13 @@ protected:
   std::stack<size_t> offset_stack_;
 }; // CLASS basic_obstream
 
-enum : size_t
-{
-  dynamic_extent = (size_t)-1
-};
-
 template <typename _ConvertTraits, size_t _Extent = dynamic_extent>
 class basic_obstream;
 
 template <typename _ConvertTraits, size_t _Extent>
 class basic_obstream : public basic_obstream_view<_ConvertTraits, fixed_buffer<_Extent>> {
   using super_type = basic_obstream_view<_ConvertTraits, fixed_buffer<_Extent>>;
+
 public:
   using buffer_type = typename super_type::buffer_type;
   basic_obstream() : super_type(&buffer_) {}
@@ -402,7 +403,8 @@ protected:
 template <typename _ConvertTraits>
 class basic_obstream<_ConvertTraits, dynamic_extent> : public basic_obstream_view<_ConvertTraits, dynamic_buffer> {
   using super_type = basic_obstream_view<_ConvertTraits, dynamic_buffer>;
-  using my_type = basic_obstream<_ConvertTraits, dynamic_extent>;
+  using my_type    = basic_obstream<_ConvertTraits, dynamic_extent>;
+
 public:
   using buffer_type = typename super_type::buffer_type;
   basic_obstream(size_t capacity = 128) : super_type(&buffer_) { buffer_.reserve(capacity); }

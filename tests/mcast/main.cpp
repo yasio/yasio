@@ -7,6 +7,7 @@
 #include "yasio/obstream.hpp"
 
 #define UDP_TEST_ONLY 0
+#define MCAST_ADDR "239.0.0.19"
 
 using namespace yasio;
 
@@ -24,11 +25,11 @@ void yasioMulticastTest()
 #if UDP_TEST_ONLY
     {"127.0.0.1", 22016} // multicast client
 #else
-    {"224.0.0.19", 22016} // multicast client
+    {MCAST_ADDR, 22016} // multicast client
 #endif
   };
 
-  static ip::endpoint server_mcast_ep{"224.0.0.19", 22016};
+  static ip::endpoint server_mcast_ep{MCAST_ADDR, 22016};
 
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
   service.start([&](event_ptr&& event) {
@@ -55,7 +56,7 @@ void yasioMulticastTest()
           service.write(transport, std::move(obs.buffer()));
 #else
           u_short remote_port = event->transport()->remote_endpoint().port();
-          const ip::endpoint client_mcast_ep{"224.0.0.19", remote_port};
+          const ip::endpoint client_mcast_ep{MCAST_ADDR, remote_port};
           service.write_to(transport, std::move(obs.buffer()), client_mcast_ep);
 #endif
         }
@@ -102,12 +103,12 @@ void yasioMulticastTest()
 
   /// channel 0: enable  multicast
 #if !UDP_TEST_ONLY
-  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, "224.0.0.19", 1);
+  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, MCAST_ADDR, 1);
 #endif
   service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
 #if !UDP_TEST_ONLY
-  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, "224.0.0.19", 1);
+  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, MCAST_ADDR, 1);
 #endif
   service.open(MCAST_CLIENT_INDEX, YCK_UDP_CLIENT);
 

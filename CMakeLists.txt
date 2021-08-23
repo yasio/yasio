@@ -13,10 +13,6 @@ cmake_policy(SET CMP0048 NEW)
 set(yasio_target_name yasio)
 project(${yasio_target_name})
 
-if (WIN32)
-    add_compile_options(" /Bv")
-endif()
-
 #option ( LUA_COMPAT_MODULE "compat module" ON)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
@@ -24,9 +20,13 @@ option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
-
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set (LINUX TRUE)
+endif()
+
+if (WIN32)
+    add_compile_options(" /Bv")
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 if (NOT DEFINED YASIO_SSL_BACKEND)

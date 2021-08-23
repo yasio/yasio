@@ -6,6 +6,8 @@
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
+#define UDP_TEST_ONLY 0
+
 using namespace yasio;
 
 enum
@@ -18,11 +20,15 @@ void yasioMulticastTest()
 {
 
   io_hostent hosts[] = {
-      {"0.0.0.0", 22016},   // udp server
-      {"224.0.0.19", 22016} // multicast client
+    {"0.0.0.0", 22016}, // udp server
+#if UDP_TEST_ONLY
+    {"127.0.0.1", 22016} // multicast client
+#else
+    {"224.0.0.19", 22016} // multicast client
+#endif
   };
 
-  static ip::endpoint mcast_ep{"224.0.0.19", 22016};
+  static ip::endpoint server_mcast_ep{"224.0.0.19", 22016};
 
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
   service.start([&](event_ptr&& event) {
@@ -45,7 +51,13 @@ void yasioMulticastTest()
           obs.write_bytes("hello client, my ip is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n\n");
+#if UDP_TEST_ONLY
           service.write(transport, std::move(obs.buffer()));
+#else
+          u_short remote_port = event->transport()->remote_endpoint().port();
+          const ip::endpoint client_mcast_ep{"224.0.0.19", remote_port};
+          service.write_to(transport, std::move(obs.buffer()), client_mcast_ep);
+#endif
         }
         else if (event->cindex() == MCAST_CLIENT_INDEX)
         {
@@ -54,16 +66,11 @@ void yasioMulticastTest()
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n");
 
-          service.schedule(std::chrono::milliseconds(1000), [obs, transport](io_service& service) {
-#if !defined(_WIN32)
-            // Non-win32 have a good udp-server implementation
-            // so we can leave mutlicast group, then use send
-            service.set_option(YOPT_C_DISABLE_MCAST, MCAST_CLIENT_INDEX);
-            service.write(transport, std::move(obs.buffer()));
+          service.schedule(std::chrono::milliseconds(1000), [obs, transport](io_service& service) mutable {
+#if !UDP_TEST_ONLY
+            service.write_to(transport, std::move(obs.buffer()), server_mcast_ep);
 #else
-            // because win32 socket kernel can't route one-server --> multi-clients
-            // so we always send to multicast address
-            service.write_to(transport, std::move(obs.buffer()), mcast_ep);
+            service.write(transport, std::move(obs.buffer()));
 #endif
             return true;
           });
@@ -77,26 +84,31 @@ void yasioMulticastTest()
         {
           auto transport = event->transport();
           obstream obs;
-          obs.write_bytes("hello world");
+          obs.write_bytes("==> hello server, I'm client\n\n");
           service.write(transport, std::move(obs.buffer()));
         }
         else if (event->cindex() == MCAST_SERVER_INDEX)
         {
-          printf("The connection is success, server recieved\n");
+          printf("==> A client income\n");
         }
         break;
       case YEK_CONNECTION_LOST:
-        printf("The connection is lost, bytes transferred\n");
+        printf("The connection is lost!\n");
         break;
     }
   });
 
-  /// channel 0: enable  multicast
   service.set_option(YOPT_C_MOD_FLAGS, MCAST_SERVER_INDEX, YCF_REUSEADDR, 0);
+
+  /// channel 0: enable  multicast
+#if !UDP_TEST_ONLY
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, "224.0.0.19", 1);
+#endif
   service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
+#if !UDP_TEST_ONLY
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, "224.0.0.19", 1);
+#endif
   service.open(MCAST_CLIENT_INDEX, YCK_UDP_CLIENT);
 
   time_t duration = 0;

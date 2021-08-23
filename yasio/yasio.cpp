@@ -609,9 +609,12 @@ int io_transport_udp::connect()
     this->peer_ = ctx_->remote_eps_[0];
   }
 
-  int retval = this->socket_->connect_n(this->peer_);
-  connected_ = (retval == 0);
-
+  int retval = 0;
+  if (!yasio__testbits(ctx_->properties_, YCPF_MCAST))
+  {
+    retval     = this->socket_->connect_n(this->peer_);
+    connected_ = (retval == 0);
+  }
   set_primitives();
   return retval;
 }

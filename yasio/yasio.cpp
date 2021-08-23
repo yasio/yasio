@@ -1657,27 +1657,7 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
         if (n > 0)
         {
           YASIO_KLOGV("[index: %d] recvfrom peer: %s succeed.", ctx->index_, peer.to_string().c_str());
-#if !defined(_WIN32)
           auto transport = static_cast<io_transport_udp*>(do_dgram_accept(ctx, peer, error));
-#else
-          /*
-           Because Bind() the client socket to the socket address of the listening socket.  On
-           Linux this essentially passes the responsibility for receiving data for the client
-           session from the well-known listening socket, to the newly allocated client socket.  It
-           is important to note that this behavior is not the same on other platforms, like
-           Windows (unfortunately), detail see:
-           https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
-           https://cloud.tencent.com/developer/article/1004555
-           So we emulate thus by ourself, don't care the performance, just a workaround implementation.
-         */
-          // for win32, we check exists udp clients by ourself, and only write operation can be
-          // perform on transports, the read operation still dispatch by channel.
-          auto it        = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
-            using namespace std;
-            return yasio__testbits(transport->ctx_->properties_, YCM_UDP) && static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
-          });
-          auto transport = static_cast<io_transport_udp*>(it != this->transports_.end() ? *it : do_dgram_accept(ctx, peer, error));
-#endif
           if (transport)
           {
             if (transport->handle_input(ctx->buffer_.data(), n, error, this->wait_duration_) < 0)
@@ -1701,6 +1681,34 @@ void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_a
 }
 transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoint& peer, int& error)
 {
+  /*
+    Because Bind() the client socket to the socket address of the listening socket.  On
+    Linux this essentially passes the responsibility for receiving data for the client
+    session from the well-known listening socket, to the newly allocated client socket.  It
+    is important to note that this behavior is not the same on other platforms, like
+    Windows (unfortunately), detail see:
+    https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
+    https://cloud.tencent.com/developer/article/1004555
+    So we emulate thus by ourself, don't care the performance, just a workaround implementation.
+  */
+  // for win32 or multicast, we check exists udp clients by ourself, and only write operation can be
+  // perform on transports, the read operation still dispatch by channel.
+#if defined(_WIN32)
+  bool user_route = true;
+#else
+  bool user_route = false;
+#endif
+  user_route = user_route || yasio__testbits(ctx->properties_, YCPF_MCAST);
+  if (user_route)
+  {
+    auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
+      using namespace std;
+      return yasio__testbits(transport->ctx_->properties_, YCM_UDP) && static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
+    });
+    if (it != this->transports_.end())
+      return *it;
+  }
+
   auto new_sock = std::make_shared<xxsocket>();
   if (new_sock->open(peer.af(), SOCK_DGRAM))
   {
@@ -1714,11 +1722,10 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       auto transport = static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(new_sock)));
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);
-#if !defined(_WIN32)
-      handle_connect_succeed(transport);
-#else
-      notify_connect_succeed(transport);
-#endif
+      if (!user_route)
+        handle_connect_succeed(transport);
+      else
+        notify_connect_succeed(transport);
       return transport;
     }
   }

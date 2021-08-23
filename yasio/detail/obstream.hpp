@@ -111,7 +111,7 @@ public:
       this->pos_ += n;
     }
     else
-      throw std::out_of_range("fixed_buffer_view: out of range");
+      YASIO__THROW_NOP(std::out_of_range("fixed_buffer_view: out of range"));
   }
 
   void resize(size_t newsize)
@@ -119,7 +119,7 @@ public:
     if (newsize < max_size())
       this->pos_ = newsize;
     else
-      throw std::out_of_range("fixed_buffer_view: out of range");
+      YASIO__THROW_NOP(std::out_of_range("fixed_buffer_view: out of range"));
   }
 
   void reserve(size_t /*capacity*/){};

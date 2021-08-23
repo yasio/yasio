@@ -1,7 +1,7 @@
 image:
   - Visual Studio 2013
 
-version: 3.37.4.{build}
+version: 3.37.5.{build}
 
 environment:
     matrix:

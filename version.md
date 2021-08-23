@@ -1,3 +1,9 @@
+yasio-3.37.5
+  
+1. Make `yasio::obstream` more reusable
+2. Fix multicast behavior incorrect
+  
+  
 yasio-3.37.4
   
 1. Make c++20 compatible API `starts_with/ends_wtih` more easy to use

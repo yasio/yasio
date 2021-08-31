@@ -1822,7 +1822,7 @@ void io_service::deallocate_transport(transport_handle_t t)
 void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
   ctx->properties_ &= 0xffffff; // clear highest byte flags
-  cleanup_io(ctx);
+  cleanup_channel(ctx);
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx));
 }
@@ -2043,6 +2043,9 @@ highp_time_t io_service::get_timeout(highp_time_t usec)
 }
 bool io_service::cleanup_channel(io_channel* ctx, bool clear_state)
 {
+#if YASIO_SSL_BACKEND != 0
+  ctx->ssl_.destroy();
+#endif
   bool bret = cleanup_io(ctx, clear_state);
 #if defined(YAISO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))

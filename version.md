@@ -2,6 +2,7 @@ yasio-3.37.5
   
 1. Make `yasio::obstream` more reusable
 2. Fix multicast behavior incorrect
+3. Fix ssl handle not destroy when connect timeout reached
   
   
 yasio-3.37.4

@@ -3,6 +3,7 @@ yasio-3.37.5
 1. Make `yasio::obstream` more reusable
 2. Fix multicast behavior incorrect
 3. Fix ssl handle not destroy when connect timeout reached
+4. Mbedtls 3.0.0 support
   
   
 yasio-3.37.4

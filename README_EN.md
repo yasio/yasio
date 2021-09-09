@@ -36,7 +36,7 @@
   - [xlua](https://github.com/yasio/xLua): Integrate yasio to xlua, open scene `U3DScripting` and run it.
 * [xlua](https://github.com/yasio/xLua): 
 * UnrealEngine
-  - [yasio-unreal](https://github.com/yasio/yasio_unreal): The yasio UnrealEngine plugin
+  - [yasio_unreal](https://github.com/yasio/yasio_unreal): The yasio UnrealEngine plugin
   - [sluaunreal](https://github.com/yasio/sluaunreal): Integrate to Tencent's sluaunreal(A lua bindings solution for UE4)
   - [UnLua](https://github.com/yasio/UnLua): Integrate to Tencent's sluaunreal(Yet another lua bindings solution for UE4)
 * [adxe](https://github.com/adxeproject/adxe): Use as tcp/udp asynchronous socket solution of game engine `adxe`
@@ -74,8 +74,8 @@ cmake --build build --config Debug
 * Support lua bindings
 * Support cocos2d-x jsb
 * Support [CocosCreator jsb2.0](https://github.com/yasio/inettester)
-* Support [Unity3D](https://github.com/yasio/xLua)
-* Support [Unreal Engine](https://github.com/yasio/yasio-unreal)
+* Support [Unity3D](https://github.com/yasio/yasio_unity)
+* Support [Unreal Engine](https://github.com/yasio/yasio_unreal)
 * Support ssl client with OpenSSL/MbedTLS
 * Support async resolve with c-ares
 * Support header only with ```YASIO_HEAD_ONLY=1``` set at config.hpp or compiler flags

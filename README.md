@@ -31,10 +31,10 @@
 
 ## 集成案例
 * Unity
-  - [OpenNSM2](https://github.com/yasio/OpenNSM2): Unity 纯C#封装，打开场景`SampleScene`运行即可。
+  - [yasio_unity](https://github.com/yasio/yasio_unity): Unity 纯C#封装，打开场景`SampleScene`运行即可。
   - [xlua](https://github.com/yasio/xLua): 将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
 * UnrealEngine
-  - [yasio-unreal](https://github.com/yasio/yasio-unreal): yasio的UnrealEngine插件。
+  - [yasio-unreal](https://github.com/yasio/yasio_unreal): yasio的UnrealEngine插件。
   - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
 * [adxe](https://github.com/adxeproject/adxe): 作为adxe游戏引擎的网络解决方案。

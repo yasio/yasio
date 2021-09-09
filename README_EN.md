@@ -32,11 +32,11 @@
 
 ## Integration Demos
 * Unity
-  - [OpenNSM2](https://github.com/yasio/OpenNSM2): The unity c# wrapper of yasio, open scene `SampleScene` and run it.
+  - [yasio_unity](https://github.com/yasio/yasio_unity): The unity c# wrapper of yasio, open scene `SampleScene` and run it.
   - [xlua](https://github.com/yasio/xLua): Integrate yasio to xlua, open scene `U3DScripting` and run it.
 * [xlua](https://github.com/yasio/xLua): 
 * UnrealEngine
-  - [yasio-unreal](https://github.com/yasio/yasio-unreal): The yasio UnrealEngine plugin
+  - [yasio-unreal](https://github.com/yasio/yasio_unreal): The yasio UnrealEngine plugin
   - [sluaunreal](https://github.com/yasio/sluaunreal): Integrate to Tencent's sluaunreal(A lua bindings solution for UE4)
   - [UnLua](https://github.com/yasio/UnLua): Integrate to Tencent's sluaunreal(Yet another lua bindings solution for UE4)
 * [adxe](https://github.com/adxeproject/adxe): Use as tcp/udp asynchronous socket solution of game engine `adxe`

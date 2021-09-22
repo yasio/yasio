@@ -222,16 +222,16 @@ macro(ConfigTargetDepends target_name)
     # config ssl dll or lib
     if (YASIO_SSL_BACKEND EQUAL 1)
         if (UNIX)
-            target_link_libraries (${target_name} ext_ssl ext_crypto dl)
+            target_link_libraries (${target_name} OpenSSL::SSL OpenSSL::Crypto dl)
         else ()
-            target_link_libraries (${target_name} ext_ssl ext_crypto)
+            target_link_libraries (${target_name} OpenSSL::SSL OpenSSL::Crypto)
         endif()
 
         if (WIN32)
             add_custom_command(TARGET ${target_name}
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${OPENSSL_LIBRARY_DIR}/libcrypto-1_1.dll
-                ${OPENSSL_LIBRARY_DIR}/libssl-1_1.dll
+                ${OPENSSL_LIBRARY_DIR}/libcrypto-3.dll
+                ${OPENSSL_LIBRARY_DIR}/libssl-3.dll
                 $<TARGET_FILE_DIR:${target_name}>
             )
         endif()
@@ -295,7 +295,7 @@ if(OPENSSL_INCLUDE_DIR)
    set(YASIO_SSL_BACKEND 1)
    target_include_directories(${yasio_target_name} PRIVATE "${OPENSSL_INCLUDE_DIR}")
    if(BUILD_SHARED_LIBS AND (ANDROID OR LINUX))
-       target_link_libraries (${yasio_target_name} ext_ssl ext_crypto)
+       target_link_libraries (${yasio_target_name} OpenSSL::SSL OpenSSL::crypto)
    endif()
 endif()
 

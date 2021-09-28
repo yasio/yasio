@@ -218,9 +218,9 @@ target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DI
 
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(${yasio_target_name} 
-        PUBLIC  YASIO_BUILD_SHARED_LIBS=1
-        PUBLIC  YASIO_EXPORT_DLL=1
-        PRIVATE YASIO_LIB=1
+        PUBLIC  YASIO_BUILD_SHARED_LIBS=1 # Tell yasio we are building shared libs
+        PUBLIC  YASIO_EXPORT_DLL=1 # Tell yasio to we needs export all yasio-core classes
+        PRIVATE YASIO_LIB=1 # Tell yasio we are building yasio-core libs
         )
 endif()
 

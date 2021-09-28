@@ -22,7 +22,12 @@ option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    set (LINUX TRUE)
+    if(ANDROID)
+        set(SYSTEM_STRING "Android")
+    else()
+        set(LINUX TRUE)
+        set(SYSTEM_STRING "Linux")
+    endif()
 endif()
 
 if (WIN32)
@@ -227,11 +232,13 @@ macro(ConfigTargetDepends target_name)
             target_link_libraries (${target_name} OpenSSL::SSL OpenSSL::Crypto)
         endif()
 
-        if (WIN32)
+        if (MSVC)
+			get_property(SSL_DLL_PATH TARGET OpenSSL::SSL PROPERTY IMPORTED_LOCATION)
+			get_property(CRYPTO_DLL_PATH TARGET OpenSSL::Crypto PROPERTY IMPORTED_LOCATION)
             add_custom_command(TARGET ${target_name}
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${OPENSSL_LIBRARY_DIR}/libcrypto-3.dll
-                ${OPENSSL_LIBRARY_DIR}/libssl-3.dll
+                ${SSL_DLL_PATH}
+                ${CRYPTO_DLL_PATH}
                 $<TARGET_FILE_DIR:${target_name}>
             )
         endif()

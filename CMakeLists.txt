@@ -138,7 +138,7 @@ macro(source_group_by_dir proj_dir source_files)
     if(MSVC OR APPLE)
         get_filename_component(sgbd_cur_dir ${proj_dir} ABSOLUTE)
         foreach(sgbd_file ${${source_files}})
-			get_filename_component(sgbd_abs_file ${sgbd_file} ABSOLUTE)
+            get_filename_component(sgbd_abs_file ${sgbd_file} ABSOLUTE)
             file(RELATIVE_PATH sgbd_fpath ${sgbd_cur_dir} ${sgbd_abs_file})
             string(REGEX REPLACE "\(.*\)/.*" \\1 sgbd_group_name ${sgbd_fpath})
             string(COMPARE EQUAL ${sgbd_fpath} ${sgbd_group_name} sgbd_nogroup)
@@ -172,7 +172,7 @@ if (APPLE)
                XCODE_ATTRIBUTE_${XCODE_PROPERTY}[variant=${XCODE_RELVERSION_I}] "${XCODE_VALUE}")
             endif()
         endmacro(set_xcode_property)
-	    
+        
         set_xcode_property (${yasio_target_name} IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
     else ()
         # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
@@ -201,7 +201,7 @@ else ( ) # linux/win32/android
         ${THIRDPART_SRC}
     )
 endif ( )
-	
+    
 if ( WIN32 AND NOT CYGWIN )
     target_link_libraries(${yasio_target_name}
         ws2_32
@@ -233,8 +233,8 @@ macro(ConfigTargetDepends target_name)
         endif()
 
         if (MSVC)
-			get_property(SSL_DLL_PATH TARGET OpenSSL::SSL PROPERTY IMPORTED_LOCATION)
-			get_property(CRYPTO_DLL_PATH TARGET OpenSSL::Crypto PROPERTY IMPORTED_LOCATION)
+            get_property(SSL_DLL_PATH TARGET OpenSSL::SSL PROPERTY IMPORTED_LOCATION)
+            get_property(CRYPTO_DLL_PATH TARGET OpenSSL::Crypto PROPERTY IMPORTED_LOCATION)
             add_custom_command(TARGET ${target_name}
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${SSL_DLL_PATH}

@@ -1334,13 +1334,14 @@ void io_service::init_ssl_context()
   else
     SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
 #  elif YASIO_SSL_BACKEND == 2
-  const char* pers = "yasio_ssl_client";
   ssl_ctx_ = new SSL_CTX();
   ::mbedtls_ssl_config_init(&ssl_ctx_->conf);
   ::mbedtls_x509_crt_init(&ssl_ctx_->cacert);
   ::mbedtls_ctr_drbg_init(&ssl_ctx_->ctr_drbg);
   ::mbedtls_entropy_init(&ssl_ctx_->entropy);
-  int ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, (const unsigned char*)pers, strlen(pers));
+  using namespace cxx17;
+  auto pers = "yasio_ssl_client"_sv;
+  int ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, pers.data(), pers.length());
   if (ret != 0)
     YASIO_KLOGE("mbedtls_ctr_drbg_seed fail with ret=%d", ret);
 

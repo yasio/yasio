@@ -1,4 +1,4 @@
-// yasio-v3.33
+// yasio-v3.37.5
 function yasioTest() {
   // ------- start of yasio test ----------
   var hostents = [
@@ -18,7 +18,7 @@ function yasioTest() {
       obs.write_bool(false);
       obs.write_i8(256);
       obs.write_i16(20001);
-      obs.write_i32(20191011);
+      obs.write_i32(191011);
       obs.write_f(28.9);
       obs.write_lf(209.79);
       obs.write_v("hello client!");

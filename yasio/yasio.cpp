@@ -1341,7 +1341,7 @@ void io_service::init_ssl_context()
   ::mbedtls_entropy_init(&ssl_ctx_->entropy);
   using namespace cxx17;
   auto pers = "yasio_ssl_client"_sv;
-  int ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, pers.data(), pers.length());
+  int ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, (const unsigned char*)pers.data(), pers.length());
   if (ret != 0)
     YASIO_KLOGE("mbedtls_ctr_drbg_seed fail with ret=%d", ret);
 

@@ -2,6 +2,7 @@ yasio-3.37.6
   
 1. Add option `YOPT_S_DNS_LIST` to set custom dns servers build with c-ares.
 2. OpenSSL 3.0.0 support
+3. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
   
   
 yasio-3.37.5

@@ -1,3 +1,9 @@
+yasio-3.37.6
+  
+1. Add option `YOPT_S_DNS_LIST` to set custom dns servers build with c-ares.
+2. OpenSSL 3.0.0 support
+  
+  
 yasio-3.37.5
   
 1. Make `yasio::obstream` more reusable

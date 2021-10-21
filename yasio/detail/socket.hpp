@@ -37,7 +37,15 @@ SOFTWARE.
 #  endif
 #  include <WinSock2.h>
 #  include <Windows.h>
-#  if defined(_WIN32) && !defined(_WINSTORE)
+#  if defined(YASIO_INSIDE_UNREAL)
+#    if !defined(TRUE)
+#      define TRUE 1
+#    endif
+#    if !defined(FALSE)
+#      define FALSE 0
+#    endif
+#  endif
+#  if !defined(_WINSTORE)
 #    include <Mswsock.h>
 #    include <Mstcpip.h>
 #  endif

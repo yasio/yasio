@@ -29,6 +29,8 @@ SOFTWARE.
 #ifndef YASIO__SOCKET_HPP
 #define YASIO__SOCKET_HPP
 
+#include "yasio/detail/config.hpp"
+
 #ifdef _WIN32
 #  if !defined(WIN32_LEAN_AND_MEAN)
 #    define WIN32_LEAN_AND_MEAN

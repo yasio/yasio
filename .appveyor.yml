@@ -7,8 +7,8 @@ environment:
     global:
       BUILD_TYPE: Release
     matrix:
-      - ARCH: x86
-      - ARCH: x64
+      - BUILD_ARCH: x86
+      - BUILD_ARCH: x64
 
 install:
   # Remove the VS Xamarin targets to reduce AppVeyor specific noise in build

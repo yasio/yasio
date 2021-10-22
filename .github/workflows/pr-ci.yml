@@ -7,20 +7,43 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build-win32:
+  build-windows:
     name: build-windows
     runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - x86
+          - x64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: 'recursive'
+      - uses: ilammy/msvc-dev-cmd@v1.9.0
+        with: 
+          arch: ${{ env.BUILD_ARCH }}
       - name: Build
-        shell: cmd
-        run: |
-          cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x86 -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -A Win32
-          cmake --build %GITHUB_WORKSPACE%/build_x86 --config %BUILD_TYPE%
-          cmake -S %GITHUB_WORKSPACE% -B %GITHUB_WORKSPACE%/build_x64 -DCMAKE_BUILD_TYPE=%BUILD_TYPE%
-          cmake --build %GITHUB_WORKSPACE%/build_x64 --config %BUILD_TYPE%
+        run: ci\build.ps1
+  build-mingw:
+    name: build-mingw
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+        - { sys: mingw64, env: x86_64 }
+        - { sys: mingw32, env: i686 }
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - uses: msys2/setup-msys2@v2
+        with: 
+          msystem: ${{ matrix.sys }}
+          install: mingw-w64-${{ matrix.env }}-toolchain
+      - name: Build
+        run: ci\build.ps1
   build-linux:
     name: build-linux
     runs-on: ubuntu-18.04

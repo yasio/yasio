@@ -27,10 +27,8 @@ jobs:
     strategy:
       matrix:
         include:
-        - { sys: mingw64, env: x86_64, arch: x64 }
-        - { sys: mingw32, env: i686, arch: x86 }
-    env:
-      BUILD_ARCH: ${{ matrix.arch }}
+        - { sys: mingw64, env: x86_64 }
+        - { sys: mingw32, env: i686 }
 
     steps:
     - uses: actions/checkout@v2

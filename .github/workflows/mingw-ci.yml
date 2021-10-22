@@ -1,4 +1,4 @@
-name: windows
+name: mingw
 
 on:
   push:
@@ -14,7 +14,7 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   GITHUB_CI: 'true'
-  TOOLCHAIN: 'msvc'
+  TOOLCHAIN: 'mingw'
 
 jobs:
   build:
@@ -26,9 +26,9 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        arch:
-          - x86
-          - x64
+        include:
+        - { sys: mingw64, env: x86_64, arch: x64 }
+        - { sys: mingw32, env: i686, arch: x86 }
     env:
       BUILD_ARCH: ${{ matrix.arch }}
 
@@ -37,9 +37,10 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - uses: ilammy/msvc-dev-cmd@v1.9.0
+    - uses: msys2/setup-msys2@v2
       with: 
-        arch: ${{ env.BUILD_ARCH }}
+        msystem: ${{ matrix.sys }}
+        install: mingw-w64-${{ matrix.env }}-toolchain
 
     - name: Build
       run: ci\build.ps1

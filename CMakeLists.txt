@@ -30,7 +30,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     endif()
 endif()
 
-if (WIN32)
+if (WIN32 AND NOT MINGW)
     add_compile_options(" /Bv")
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()

@@ -195,7 +195,7 @@ typedef int socket_native_type;
 
 #define IN_MAX_ADDRSTRLEN INET6_ADDRSTRLEN
 
-#if !defined(_WS2IPDEF_)
+#if !defined(_WS2IPDEF_) || defined(__MINGW32__)
 inline bool IN4_IS_ADDR_LOOPBACK(const in_addr* a)
 {
   return ((a->s_addr & 0xff) == 0x7f); // 127/8

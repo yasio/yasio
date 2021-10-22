@@ -66,7 +66,7 @@ int FormatAddress(SOCKADDR* sa, int salen, char* addrbuf, int addrbuflen)
 //    structure containing SOCKADDR structures representing the resolved addresses.
 //    Note that if 'addr' is non-NULL, then getaddrinfo will resolve it whether
 //    it is a string literal address or a hostname.
-struct addrinfo* ResolveAddress(char* addr, char* port, int af, int type, int proto)
+struct addrinfo* ResolveAddress(const char* addr, const char* port, int af, int type, int proto)
 {
   struct addrinfo hints, *res = NULL;
 
@@ -136,9 +136,9 @@ int gSocketType     = SOCK_DGRAM,    // datagram
     gTtl            = DEFAULT_TTL,   // Multicast TTL value
     gBufferSize     = BUFSIZE;       // Buffer size for send/recv
 char *gBindAddr     = NULL,          // Address to bind socket to (default is 0.0.0.0 or ::)
-    *gInterface     = NULL,          // Interface to join the multicast group on
-        *gMulticast = MCASTADDRV4,   // Multicast group to join
-            *gPort  = MCASTPORT;     // Port number to use
+    *gInterface     = NULL;          // Interface to join the multicast group on
+const char *gMulticast   = MCASTADDRV4;   // Multicast group to join
+const char *gPort        = MCASTPORT;     // Port number to use
 
 // Function: usage
 

@@ -195,6 +195,16 @@ typedef int socket_native_type;
 
 #define IN_MAX_ADDRSTRLEN INET6_ADDRSTRLEN
 
+// Fix some older mingw mssing AI_XXX macros
+#if defined(__MINGW32__)
+#  if !defined(AI_ALL)
+#    define AI_ALL 0x00000100
+#  endif
+#  if !defined(AI_V4MAPPED)
+#    define AI_V4MAPPED 0x00000800
+#  endif
+#endif
+
 #if !defined(_WS2IPDEF_) || defined(__MINGW32__)
 inline bool IN4_IS_ADDR_LOOPBACK(const in_addr* a)
 {

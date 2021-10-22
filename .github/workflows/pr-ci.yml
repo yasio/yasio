@@ -4,6 +4,7 @@ on: [pull_request]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  GITHUB_CI: 'true'
   BUILD_TYPE: Release
 
 jobs:
@@ -17,6 +18,7 @@ jobs:
           - x64
     env:
       BUILD_ARCH: ${{ matrix.arch }}
+      TOOLCHAIN: 'msvc'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -34,6 +36,8 @@ jobs:
         include:
         - { sys: mingw64, env: x86_64 }
         - { sys: mingw32, env: i686 }
+    env:
+      TOOLCHAIN: 'mingw'
     steps:
       - uses: actions/checkout@v2
         with:

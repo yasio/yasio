@@ -195,7 +195,7 @@ typedef int socket_native_type;
 
 #define IN_MAX_ADDRSTRLEN INET6_ADDRSTRLEN
 
-// Fix some older mingw mssing AI_XXX macros
+// Workaround for older MinGW missing AI_XXX macros
 #if defined(__MINGW32__)
 #  if !defined(AI_ALL)
 #    define AI_ALL 0x00000100

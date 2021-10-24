@@ -4,6 +4,7 @@ yasio-3.37.6
 2. OpenSSL 3.0.0 support
 3. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
 4. Add MinGW build support
+5. Fix timer not sort when same timer expire time changed, thanks to @koobin
   
   
 yasio-3.37.5

@@ -357,12 +357,7 @@ public:
       this->len(sizeof(sockaddr_in6));
     }
   }
-  std::string ip() const
-  {
-    std::string ret;
-    this->format_to(ret, fmt_default | fmt_no_port);
-    return ret;
-  }
+  std::string ip() const { return this->to_string(fmt_default | fmt_no_port); }
   std::string to_string(int flags = fmt_default) const
   {
     std::string ret;

@@ -338,6 +338,7 @@ int main() {
     obs.write(1.17723f);
     obs.write_ix<int32_t>(20201125);
     obs.write_ix<int64_t>(-9223372036854775807);
+    obs.pop(sizeof(u_short));
     return 0;
 }
 ```
@@ -355,6 +356,7 @@ int main() {
     obs.write(1.17723f);
     obs.write_ix<int32_t>(20201125);
     obs.write_ix<int64_t>(-9223372036854775807);
+    obs.pop(sizeof(u_short));
     return 0;
 }
 ```
@@ -373,6 +375,7 @@ int main() {
     obs.write(1.17723f);
     obs.write_ix<int32_t>(20201125);
     obs.write_ix<int64_t>(-9223372036854775807);
+    obs.pop(sizeof(u_short));
     return 0;
 }
 ```

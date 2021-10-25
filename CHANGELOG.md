@@ -1,10 +1,12 @@
 yasio-3.37.6
   
 1. Add option `YOPT_S_DNS_LIST` to set custom dns servers build with c-ares.
-2. OpenSSL 3.0.0 support
-3. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
+2. Add OpenSSL 3.0.0 support
+3. Add better API `ip::endpoint::format_to` to format socket address to string
 4. Add MinGW build support
-5. Fix timer not sort when same timer expire time changed, thanks to @koobin
+5. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
+6. Fix timer not sort when same timer expire time changed, thanks to @koobin
+7. Fix the `len` of `ip::endpoint` not set when update endpoint ip with `ip::endpoint::ip`, will cause error 10014 on windows
   
   
 yasio-3.37.5

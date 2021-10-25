@@ -1,16 +1,11 @@
----
-title: "yasio::obstream Class"
-date: "22/8/2021"
-f1_keywords ["obstream", "yasio/obstream", ]
-helpviewer_keywords: []
----
 # obstream Class
 
 提供二进制序列化功能。
 
 !!! attention "注意"
 
-    - 自3.37.5起，新增`obstream_any`类模板具备序列化已知大小的小块栈内存能力。
+    - `yasio::obstream` 等价于 `yasio::obstream_any<yasio::dynamic_extent>`
+    - 自3.37.5起，新增`obstream_any`类模板具备序列化已知大小的小块栈内存能力，请查看示例: [使用栈空间序列化](#serialize_on_stack)
     - 自3.35.0起，优化为类模板basic_obstream实现，体现了C++模板强大的代码复用能力。
 
     - `obstream` 当写入int16~int64和float/double类型时, 会自动将主机字节序转换为网络字节序。
@@ -322,6 +317,63 @@ int main( )
    }
 
    return 0;
+}
+```
+
+## <a name="serialize_on_stack"></a> The serialize on stack examples
+
+### 注意事项
+
+- 对应不转换字节序版本，加前缀 `fast_` 即可, 例如: `fast_obstream_any`
+- 序列化过程中，当指 `fixed_buffer` 不足时会抛出 `std::out_of_range` 异常
+
+### obstream_any用法
+```cpp
+#include "yasio/obstream.hpp"
+
+int main() {
+    yasio::obstream_any<128> obs; // 使用栈空间, 注意不要太大，防止栈空间溢出
+    obs.push(sizeof(u_short));
+    obs.write(3.141592654);
+    obs.write(1.17723f);
+    obs.write_ix<int32_t>(20201125);
+    obs.write_ix<int64_t>(-9223372036854775807);
+    return 0;
+}
+```
+
+### obstream_view + fixed_buffer用法
+
+```cpp
+#include "yasio/obstream.hpp"
+
+int main() {
+    yasio::fixed_buffer<128> fb; // 使用栈空间, 注意不要太大，防止栈空间溢出
+    yasio::obstream_view obs(&fb);
+    obs.push(sizeof(u_short));
+    obs.write(3.141592654);
+    obs.write(1.17723f);
+    obs.write_ix<int32_t>(20201125);
+    obs.write_ix<int64_t>(-9223372036854775807);
+    return 0;
+}
+```
+
+### obstream_view + fixed_buffer_view + char[]用法
+
+```cpp
+#include "yasio/obstream.hpp"
+
+int main() {
+    char raw_fb[128]; // 使用栈空间, 注意不要太大，防止栈空间溢出
+    yasio::fixed_buffer_view fb(raw_fb);
+    yasio::obstream_view obs(&fb);
+    obs.push(sizeof(u_short));
+    obs.write(3.141592654);
+    obs.write(1.17723f);
+    obs.write_ix<int32_t>(20201125);
+    obs.write_ix<int64_t>(-9223372036854775807);
+    return 0;
 }
 ```
 

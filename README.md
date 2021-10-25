@@ -26,20 +26,19 @@
 **yasio** 是一个轻量级跨平台的异步socket库，专注于客户端和基于各种游戏引擎的游戏客户端网络服务, 支持windows & linux & apple & android & win10-universal。  
 
 ## 应用案例
-* [放置少女](http://hcsj.c4connect.co.jp/): 用于客户端网络传输。
-* [红警OL手游项目](https://hongjing.qq.com/): 用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
-* [x-studio软件项目](https://x-studio.net/): 网络解决方案。
+* [放置少女](http://hcsj.c4connect.co.jp/)：用于客户端网络传输。
+* [红警OL手游项目](https://hongjing.qq.com/)：用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
+* [x-studio软件项目](https://x-studio.net/)：网络解决方案。
 
 ## 集成案例
 * Unity
-  - [yasio_unity](https://github.com/yasio/yasio_unity): Unity 纯C#封装，打开场景`SampleScene`运行即可。
-  - [xlua](https://github.com/yasio/xLua): 将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
+  - [yasio_unity](https://github.com/yasio/yasio_unity)：Unity 纯C#封装，打开场景`SampleScene`运行即可。
+  - [xlua](https://github.com/yasio/xLua)：将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
 * UnrealEngine
-  - [yasio_unreal](https://github.com/yasio/yasio_unreal): yasio的UnrealEngine插件。
-  - [sluaunreal](https://github.com/yasio/sluaunreal): 集成到Tencent的sluaunreal。
-  - [UnLua](https://github.com/yasio/UnLua): 集成到Tencent的UnLua。
-* [adxe](https://github.com/adxeproject/adxe): 作为adxe游戏引擎的网络解决方案。
-* [HttpClient of adxe](https://github.com/adxeproject/adxe/blob/dev/cocos/network/HttpClient.cpp): 基于yasio的HttpClient实现最佳实践。
+  - [yasio_unreal](https://github.com/yasio/yasio_unreal)：yasio的UnrealEngine插件。
+  - [sluaunreal](https://github.com/yasio/sluaunreal)：集成到Tencent的sluaunreal。
+  - [UnLua](https://github.com/yasio/UnLua)：集成到Tencent的UnLua。
+* [adxe](https://github.com/adxeproject/adxe)：作为adxe游戏引擎的网络解决方案，例如：[HttpClient](https://github.com/adxeproject/adxe/blob/dev/cocos/network/HttpClient.cpp)
 
 ## 文档
 * [https://yasio.github.io/yasio](https://yasio.github.io/yasio)
@@ -55,18 +54,18 @@ git clone https://github.com/yasio/yasio
 cd yasio
 git submodule update --init --recursive
 
-# 如果是macOS Xcode, 这里命令应该换成: cmake -B build -GXcode
+# 如果是macOS Xcode, 这里命令应该换成：cmake -B build -GXcode
 cmake -B build
 
 # 使用CMake命令行编译, 如果需要调试，则使用相应平台IDE打开即可:
-# a. Windows: 使用VisualStudio打开build/yasio.sln
-# b. macOS: 使用Xcode打开build/yasio.xcodeproj
+# a. Windows：使用VisualStudio打开build/yasio.sln
+# b. macOS：使用Xcode打开build/yasio.xcodeproj
 cmake --build build --config Debug
 
 # # 者直接用VS打开 
 ```
 
-## 特性: 
+## 特性：
 * 支持TCP，UDP，KCP传输，且API是统一的。
 * 支持TCP粘包处理，业务完全不必关心。
 * 支持组播。
@@ -83,13 +82,14 @@ cmake --build build --config Debug
 * 支持Header Only集成方式，只需要定义编译预处理器宏```YASIO_HEAD_ONLY=1```即可。
 * 支持Unix Domain Socket。
 * 支持二进制读写，两个工具类**obstream/ibstream**非常方便使用。
-* 支持和.net兼容的整数压缩编码方式: **7Bit Encoded Int/Int64**。
+* 支持和.net兼容的整数压缩编码方式：**7Bit Encoded Int/Int64**。
 
 ## 关于C++17
-yasio提供了如下可在C++11编译器下使用的C++17标准库组件, 请查看 [cxx17](https://github.com/yasio/yasio/tree/master/yasio/cxx17)
+yasio提供了如下可在C++11编译器下使用的C++17标准库组件，请查看 [cxx17](https://github.com/yasio/yasio/tree/master/yasio/cxx17)
 - cxx17::string_view
 - cxx17::shared_mutex
-- cxx20::starts_with, cxx20::ends_with
+- cxx20::starts_with
+- cxx20::ends_with
 
 ## 框架图
 ![image](docs/assets/images/framework.png)  

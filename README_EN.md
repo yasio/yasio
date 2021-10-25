@@ -40,8 +40,7 @@
   - [yasio_unreal](https://github.com/yasio/yasio_unreal): The yasio UnrealEngine plugin
   - [sluaunreal](https://github.com/yasio/sluaunreal): Integrate to Tencent's sluaunreal(A lua bindings solution for UE4)
   - [UnLua](https://github.com/yasio/UnLua): Integrate to Tencent's sluaunreal(Yet another lua bindings solution for UE4)
-* [adxe](https://github.com/adxeproject/adxe): Use as tcp/udp asynchronous socket solution of game engine `adxe`
-* [HttpClient of adxe](https://github.com/adxeproject/adxe/blob/dev/cocos/network/HttpClient.cpp): The best practice of HttpClient based on yasio
+* [adxe](https://github.com/adxeproject/adxe): Use as tcp/udp asynchronous socket solution of game engine `adxe`, such as: [HttpClient](https://github.com/adxeproject/adxe/blob/dev/cocos/network/HttpClient.cpp)
 
 ## Docomentation
 * [https://yasio.github.io/en](https://yasio.github.io/en)
@@ -88,7 +87,8 @@ cmake --build build --config Debug
 yasio provide follow C++17 standard components compatible with C++11 compiler, please see: [cxx17](https://github.com/yasio/yasio/tree/master/yasio/cxx17)
 - cxx17::string_view
 - cxx17::shared_mutex
-- cxx20::starts_with, cxx20::ends_with
+- cxx20::starts_with
+- cxx20::ends_with
   
 ## Core framework
 ![image](docs/assets/images/framework_en.png)  

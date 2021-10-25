@@ -436,37 +436,37 @@ public:
   {
     if (!(fmt_no_local & flags) || is_global())
     {
-      size_t len = 0;
+      size_t n = 0;
       switch (af())
       {
         case AF_INET:
-          len = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buf, buf_len));
+          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buf, buf_len));
           break;
         case AF_INET6:
-          buf[len++] = '[';
-          len += strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, buf + len, buf_len - len));
-          buf[len++] = ']';
+          buf[n++] = '[';
+          n += strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, buf + n, buf_len - n));
+          buf[n++] = ']';
           break;
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
         case AF_UNIX:
           if (!(flags & fmt_no_un_path))
           {
-            len = (std::min)(static_cast<size_t>(this->len()), buf_len);
-            memcpy(buf, un_.sun_path, len);
+            n = (std::min)(static_cast<size_t>(this->len()), buf_len);
+            memcpy(buf, un_.sun_path, n);
           }
-          return len;
+          return n;
 #endif
       }
-      if (len > 0)
+      if (n > 0)
       {
         if (!(flags & fmt_no_port))
         {
           u_short p = this->port();
           if (!(flags & fmt_no_port_0) || p != 0)
-            len += sprintf(buf + len, ":%u", (unsigned int)p);
+            n += sprintf(buf + n, ":%u", (unsigned int)p);
         }
       }
-      return len;
+      return n;
     }
     return 0;
   }

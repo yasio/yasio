@@ -320,12 +320,12 @@ int main( )
 }
 ```
 
-## <a name="serialize_on_stack"></a> The serialize on stack examples
+## <a name="serialize_on_stack"></a> 使用栈内存序列化示例
 
 ### 注意事项
 
 - 对应不转换字节序版本，加前缀 `fast_` 即可, 例如: `fast_obstream_any`
-- 序列化过程中，当指 `fixed_buffer` 不足时会抛出 `std::out_of_range` 异常
+- 序列化过程中，当 `fixed_buffer` 检测到内存空间不足时会抛出 `std::out_of_range` 异常
 
 ### obstream_any用法
 ```cpp

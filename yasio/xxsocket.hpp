@@ -334,11 +334,13 @@ public:
     { // ipv4
       this->in4_.sin_family = AF_INET;
       compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
+      this->len(sizeof(sockaddr_in));
     }
     else
     { // ipv6
       this->in6_.sin6_family = AF_INET6;
       compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
+      this->len(sizeof(sockaddr_in6));
     }
   }
   std::string ip() const
@@ -421,7 +423,8 @@ public:
   }
 
   // in_addr(ip) to string with pred
-  template <typename _Pred4, typename _Pred6> const char* inaddr_to_string(char* str /*[IN_MAX_ADDRSTRLEN]*/, _Pred4&& pred4, _Pred6&& pred6) const
+  template <typename _Pred4, typename _Pred6>
+  const char* inaddr_to_string(char* str /*[IN_MAX_ADDRSTRLEN]*/, _Pred4&& pred4, _Pred6&& pred6) const
   {
     switch (af())
     {
@@ -796,8 +799,13 @@ public:
   ** @returns: If no error occurs, set_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   **       returned
   */
-  template <typename _Ty> inline int set_optval(int level, int optname, const _Ty& optval) { return set_optval(this->fd, level, optname, optval); }
-  template <typename _Ty> inline static int set_optval(socket_native_type sockfd, int level, int optname, const _Ty& optval)
+  template <typename _Ty>
+  inline int set_optval(int level, int optname, const _Ty& optval)
+  {
+    return set_optval(this->fd, level, optname, optval);
+  }
+  template <typename _Ty>
+  inline static int set_optval(socket_native_type sockfd, int level, int optname, const _Ty& optval)
   {
     return set_optval(sockfd, level, optname, &optval, static_cast<socklen_t>(sizeof(_Ty)));
   }
@@ -820,14 +828,20 @@ public:
   ** @returns: If no error occurs, get_optval returns zero. Otherwise, a value of SOCKET_ERROR is
   *returned
   */
-  template <typename _Ty> inline _Ty get_optval(int level, int optname) const
+  template <typename _Ty>
+  inline _Ty get_optval(int level, int optname) const
   {
     _Ty optval = {};
     get_optval(this->fd, level, optname, optval);
     return optval;
   }
-  template <typename _Ty> inline int get_optval(int level, int optname, _Ty& optval) const { return get_optval(this->fd, level, optname, optval); }
-  template <typename _Ty> inline static int get_optval(socket_native_type sockfd, int level, int optname, _Ty& optval)
+  template <typename _Ty>
+  inline int get_optval(int level, int optname, _Ty& optval) const
+  {
+    return get_optval(this->fd, level, optname, optval);
+  }
+  template <typename _Ty>
+  inline static int get_optval(socket_native_type sockfd, int level, int optname, _Ty& optval)
   {
     socklen_t optlen = static_cast<socklen_t>(sizeof(_Ty));
     return get_optval(sockfd, level, optname, &optval, &optlen);
@@ -846,8 +860,13 @@ public:
   **
   **
   */
-  template <typename _Ty> inline int ioctl(long cmd, const _Ty& value) const { return xxsocket::ioctl(this->fd, cmd, value); }
-  template <typename _Ty> inline static int ioctl(socket_native_type s, long cmd, const _Ty& value)
+  template <typename _Ty>
+  inline int ioctl(long cmd, const _Ty& value) const
+  {
+    return xxsocket::ioctl(this->fd, cmd, value);
+  }
+  template <typename _Ty>
+  inline static int ioctl(socket_native_type s, long cmd, const _Ty& value)
   {
     u_long argp = static_cast<u_long>(value);
     return ::ioctlsocket(s, cmd, &argp);

@@ -301,10 +301,8 @@ public:
   {
     this->zeroset();
 
-    this->af(AF_INET);
     this->addr_v4(addr);
     this->port(port);
-    this->len(sizeof(sockaddr_in));
     return *this;
   }
 
@@ -368,8 +366,13 @@ public:
   unsigned short port() const { return ntohs(in4_.sin_port); }
   void port(unsigned short value) { in4_.sin_port = htons(value); }
 
-  void addr_v4(uint32_t addr) { in4_.sin_addr.s_addr = htonl(addr); }
-  uint32_t addr_v4() const { return ntohl(in4_.sin_addr.s_addr); }
+  void addr_v4(uint32_t addr)
+  {
+    this->af(AF_INET);
+    in4_.sin_addr.s_addr = htonl(addr);
+    this->len(sizeof(sockaddr_in));
+  }
+  uint32_t addr_v4() const { return af() == AF_INET ? ntohl(in4_.sin_addr.s_addr) : 0u; }
 
   // check does endpoint is global address, not linklocal or loopback
   bool is_global() const

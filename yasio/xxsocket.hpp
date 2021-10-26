@@ -502,6 +502,9 @@ public:
     return s;
   }
 
+  sockaddr* operator&() { return &sa_; }
+  const sockaddr* operator&() const { return &sa_; }
+
   union {
     sockaddr sa_;
     sockaddr_in in4_;

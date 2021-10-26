@@ -211,7 +211,7 @@ void highp_timer::cancel(io_service& service)
 int io_send_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n, nullptr); }
 
 /// io_sendto_op
-int io_sendto_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n, &destination_); }
+int io_sendto_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n, std::addressof(destination_)); }
 
 #if defined(YASIO_SSL_BACKEND)
 void ssl_auto_handle::destroy()

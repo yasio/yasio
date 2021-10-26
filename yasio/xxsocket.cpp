@@ -348,28 +348,18 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
 
   endpoint ep;
   /* Walk through linked list*/
-  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+  for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next)
   {
-    if (ifa->ifa_addr == NULL)
+    if (ifa->ifa_addr == nullptr)
       continue;
-    family = ifa->ifa_addr->sa_family;
-    if (family == AF_INET || family == AF_INET6)
+    if (ep.as_is(ifa->ifa_addr))
     {
-      ep.as_is(ifa->ifa_addr);
       YASIO_LOGV("xxsocket::traverse_local_address: ip=%s", ep.ip().c_str());
-      switch (ep.af())
+      if (ep.is_global())
       {
-        case AF_INET:
-          if (!IN4_IS_ADDR_LOOPBACK(&ep.in4_.sin_addr) && !IN4_IS_ADDR_LINKLOCAL(&ep.in4_.sin_addr))
-            done = handler(ep);
-          break;
-        case AF_INET6:
-          if (IN6_IS_ADDR_GLOBAL(&ep.in6_.sin6_addr))
-            done = handler(ep);
+        if (handler(ep))
           break;
       }
-      if (done)
-        break;
     }
   }
 

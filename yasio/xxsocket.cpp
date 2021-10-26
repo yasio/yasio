@@ -310,7 +310,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
   const char* errmsg = nullptr;
   if (ailist != nullptr)
   {
-    for (auto aip = ailist; aip != NULL; aip = aip->ai_next)
+    for (auto aip = ailist; aip != nullptr; aip = aip->ai_next)
     {
       if (ep.as_is(aip))
       {
@@ -564,7 +564,7 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep, const std::chr
   if (n == 0)
     goto done; /* connect completed immediately */
 
-  if ((n = xxsocket::select(s, &rset, &wset, NULL, wtimeout)) <= 0)
+  if ((n = xxsocket::select(s, &rset, &wset, nullptr, wtimeout)) <= 0)
     error = xxsocket::get_last_errno();
   else if ((FD_ISSET(s, &rset) || FD_ISSET(s, &wset)))
   { /* Everythings are ok */
@@ -918,7 +918,7 @@ const char* xxsocket::strerror(int error)
   ZeroMemory(error_msg, sizeof(error_msg));
   ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,
                    error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
-                   error_msg, sizeof(error_msg), NULL);
+                   error_msg, sizeof(error_msg), nullptr);
 
   return error_msg;
 #else

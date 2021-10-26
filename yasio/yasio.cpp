@@ -680,7 +680,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, std::shared_ptr<xxsocket>& s
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
     if (yasio__min_wait_duration == 0)
-      return t->write_cb_(buf, len, &t->ensure_destination());
+      return t->write_cb_(buf, len, std::address_of(t->ensure_destination()));
     // Enqueue to transport queue
     return t->io_transport_udp::write(std::vector<char>(buf, buf + len), nullptr);
   });

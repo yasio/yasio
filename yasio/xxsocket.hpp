@@ -38,6 +38,7 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 #include <functional>
+#include <memory>
 #include "yasio/detail/socket.hpp"
 #include "yasio/detail/logging.hpp"
 

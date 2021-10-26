@@ -128,7 +128,7 @@ const sockaddr* operator&() const;
 
 ### 注意
 
-如果需要获取`ip::endpoint*`类型指针，请使用`std::address_of`。
+如果需要获取`ip::endpoint*`类型指针，请使用`std::addressof`。
 
 ### 示例
 

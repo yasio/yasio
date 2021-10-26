@@ -16,7 +16,7 @@ helpviewer_keywords: []
 ## 语法
 
 ```cpp
-namespace yasio { namespace inet { class xxsocket; } }
+namespace yasio { inline namespace inet { class xxsocket; } }
 ```
 
 ## 成员

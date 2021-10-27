@@ -1,6 +1,6 @@
 # endpoint Class
 
-封装底层bsd socket地址，支持IPv4和IPv6，包含ip和端口信息，可直接用于底层socket bind/connect/sendto/recvfrom。
+封装底层 `bsd socket` 地址，支持IPv4和IPv6，包含IP地址和端口信息，可直接用于底层 socket API: `bind/connect/sendto/recvfrom`。
 
 ## 语法
 
@@ -19,17 +19,17 @@ namespace yasio { inline namespace inet { inline namespace ip { struct endpoint;
 |Name|Description|
 |----------|-----------------|
 |[endpoint::operator bool](#operator-bool)|检查是否是一个有效地址|
-|[endpoint::operator =](#operator-assign)|赋值运算符重载|
-|[endpoint::operator &](#operator-addrof)|取地址运算符重载|
-|[endpoint::as_is](#as_is)|从系统地址类型构造|
+|[endpoint::operator=](#operator-assign)|赋值运算符重载|
+|[endpoint::operator&](#operator-addrof)|取地址运算符重载|
+|[endpoint::as_is](#as_is)|从已知地址类型构造|
 |[endpoint::as_in](#as_in)|从ip，端口等地址信息构造|
 |[endpoint::as_un](#as_un)|构造为unix domain socket地址|
 |[endpoint::as_is_raw](#as_is_raw)|从连续内存地址构造|
-|[endpoint::zeroset](#zeroset)|重置地址|
-|[endpoint::af](#af)|获取或设置地址族|
-|[endpoint::ip](#ip)|获取或设置ip|
-|[endpoint::port](#port)|获取或设置端口|
-|[endpoint::addr_v4](#addr_v4)|获取或设置IPv4地址|
+|[endpoint::zeroset](#zeroset)|清零|
+|[endpoint::af](#af)|设置或获取地址类型(族)|
+|[endpoint::ip](#ip)|设置或获取字符串形式ip|
+|[endpoint::port](#port)|设置或获取端口|
+|[endpoint::addr_v4](#addr_v4)|设置或获取IPv4地址|
 |[endpoint::is_global](#is_global)|检查是否是全局地址|
 |[endpoint::len](#len)|获取地址长度|
 |[endpoint::to_string](#to_string)|将地址转换为字符串|
@@ -80,7 +80,7 @@ endpoint::endpoint(int family, const void* addr, unsigned short port = 0);
 检查是否是一个有效地址。
 
 ```cpp
-explicit endpoint::operator bool() const;
+explicit operator bool() const;
 ```
 
 ### 返回值
@@ -93,7 +93,7 @@ explicit endpoint::operator bool() const;
 赋值运算符重载。
 
 ```cpp
-endpoint& endpoint::operator =(const endpoint& rhs) const;
+endpoint& operator=(const endpoint& rhs) const;
 ```
 
 ### 返回值
@@ -312,7 +312,7 @@ uint32_t addr_v4() const;
 
 ### 参数
 *addr*<br/>
-uint32_t表示的IPv4地址，会将endpoint的地址类型修改为`AF_INET`。
+`uint32_t` 表示的IPv4地址，会将 `endpoint` 的地址类型修改为 `AF_INET`。
 
 ### 返回值
 
@@ -361,7 +361,7 @@ std::string to_string(int flags = endpoint::fmt_default) const;
 ### 参数
 
 *flags*<br/>
-转换字符串标记，详见: [endpoint::fmt_xxx](#fmt_xxx)
+格式化标志位，详见: [endpoint::fmt_xxx](#fmt_xxx)
 
 ### 返回值
 
@@ -383,16 +383,16 @@ size_t format_to(char* buf, size_t buf_len, int flags) const;
 格式化目标缓冲区。
 
 *buf_len*<br/>
-格式化目标缓冲区大小，必须确保 > `endpoint::max_fmt_len`。
+格式化目标缓冲区大小，必须确保大于 `endpoint::max_fmt_len`。
 
 *flags*<br/>
-转换字符串标记，详见: [endpoint::fmt_xxx](#fmt_xxx)
+格式化标志位，详见: [endpoint::fmt_xxx](#fmt_xxx)
 
 ### 返回值
 
 返回字符串表示的IPv4或IPv6地址，是否包含端口取决于参数`flags`。
 
-## <a name="fmt_xxx"></a> endpoint::format_flags
+## <a name="fmt_xxx"></a> endpoint::fmt_xxx
 
 地址格式化标志位枚举值
 

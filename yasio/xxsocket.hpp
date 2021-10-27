@@ -202,9 +202,9 @@ public:
   enum
   {
     fmt_no_local   = 1,
-    fmt_no_port    = 2,
-    fmt_no_port_0  = 4,
-    fmt_no_un_path = 8,
+    fmt_no_port    = 1 << 1,
+    fmt_no_port_0  = 1 << 2,
+    fmt_no_un_path = 1 << 3,
     fmt_default    = fmt_no_port_0 | fmt_no_un_path,
   };
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS

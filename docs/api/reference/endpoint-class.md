@@ -44,9 +44,10 @@ endpoint::endpoint();
 endpoint::endpoint(const endpoint& rhs);
 explicit endpoint::endpoint(const addrinfo* ai);
 explicit endpoint::endpoint(const sockaddr* sa);
-explicit endpoint::endpoint(const char* ip, unsigned short port = 0);
-explicit endpoint::endpoint(uint32_t addrv4, unsigned short port = 0);
-endpoint::endpoint(int family, const void* addr, unsigned short port = 0);
+endpoint::endpoint(const char* str_ep);
+endpoint::endpoint(const char* ip, unsigned short port);
+endpoint::endpoint(uint32_t addrv4, unsigned short port);
+endpoint::endpoint(int family, const void* addr, unsigned short port);
 ```
 
 ### 参数
@@ -59,6 +60,9 @@ endpoint::endpoint(int family, const void* addr, unsigned short port = 0);
 
 *sa*<br/>
 构造endpoint的sockaddr信息
+
+*str_ep*<br/>
+字符串表示的IP和端口信息，格式为 `127.0.0.1:2022` 或 `[fe80::1]:2033`
 
 *ip*<br/>
 构造endpoint的IPv4或IPv6地址字符串
@@ -151,6 +155,8 @@ int main() {
 endpoint& as_is(const endpoint& rhs);
 endpoint& as_is(const addrinfo* info);
 endpoint& as_is(const sockaddr* addr);
+endpoint& as_is(const char* str_ep);
+```
 ```
 
 ### 参数
@@ -163,6 +169,9 @@ addrinfo*地址信息
 
 *addr*<br/>
 sockaddr*类型地址
+
+*str_ep*<br/>
+字符串表示的IP和端口信息，格式为 `127.0.0.1:2022` 或 `[fe80::1]:2033`
 
 ### 返回值
 

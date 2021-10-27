@@ -218,9 +218,9 @@ public:
   explicit endpoint(const addrinfo* info) { as_is(info); }
   explicit endpoint(const sockaddr* info) { as_is(info); }
   explicit endpoint(const char* str_ep) { as_is(str_ep); }
-  explicit endpoint(const char* addr, unsigned short port = 0) { as_in(addr, port); }
-  explicit endpoint(uint32_t addr, unsigned short port = 0) { as_in(addr, port); }
-  endpoint(int family, const void* addr, unsigned short port = 0) { as_in(family, addr, port); }
+  endpoint(const char* addr, unsigned short port) { as_in(addr, port); }
+  endpoint(uint32_t addr, unsigned short port) { as_in(addr, port); }
+  endpoint(int family, const void* addr, unsigned short port) { as_in(family, addr, port); }
 
   explicit operator bool() const { return this->af() != AF_UNSPEC; }
 
@@ -264,14 +264,10 @@ public:
     { // regards ipv6
       ++str_ep;
       auto rbracket = strchr(str_ep, ']');
-      if (rbracket)
+      if (rbracket && rbracket[1] == ':')
       {
-        auto colon = strchr(rbracket + 1, ':');
-        if (colon)
-        {
-          memcpy(addr, str_ep, rbracket - str_ep);
-          as_in6(addr, atoi(colon + 1));
-        }
+        memcpy(addr, str_ep, rbracket - str_ep);
+        as_in6(addr, atoi(rbracket + 2));
       }
     }
     else

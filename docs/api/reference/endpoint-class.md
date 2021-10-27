@@ -44,7 +44,7 @@ endpoint::endpoint();
 endpoint::endpoint(const endpoint& rhs);
 explicit endpoint::endpoint(const addrinfo* ai);
 explicit endpoint::endpoint(const sockaddr* sa);
-endpoint::endpoint(const char* str_ep);
+explicit endpoint::endpoint(const char* str_ep);
 endpoint::endpoint(const char* ip, unsigned short port);
 endpoint::endpoint(uint32_t addrv4, unsigned short port);
 endpoint::endpoint(int family, const void* addr, unsigned short port);
@@ -156,7 +156,6 @@ endpoint& as_is(const endpoint& rhs);
 endpoint& as_is(const addrinfo* info);
 endpoint& as_is(const sockaddr* addr);
 endpoint& as_is(const char* str_ep);
-```
 ```
 
 ### 参数

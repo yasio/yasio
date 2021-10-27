@@ -217,6 +217,7 @@ public:
   endpoint(const endpoint& rhs) { this->as_is(rhs); }
   explicit endpoint(const addrinfo* info) { as_is(info); }
   explicit endpoint(const sockaddr* info) { as_is(info); }
+  explicit endpoint(const char* str_ep) { as_is(str_ep); }
   explicit endpoint(const char* addr, unsigned short port = 0) { as_in(addr, port); }
   explicit endpoint(uint32_t addr, unsigned short port = 0) { as_in(addr, port); }
   endpoint(int family, const void* addr, unsigned short port = 0) { as_in(family, addr, port); }
@@ -252,6 +253,38 @@ public:
     }
     return *this;
   }
+  /*
+    IPv4: 127.0.0.1:2022
+    IPv6: [fe80::1]:2022
+    */
+  endpoint& as_is(const char* str_ep)
+  {
+    char addr[AF_INET6 + 1] = {0};
+    if (str_ep[0] == '[')
+    { // regards ipv6
+      ++str_ep;
+      auto rbracket = strchr(str_ep, ']');
+      if (rbracket)
+      {
+        auto colon = strchr(rbracket + 1, ':');
+        if (colon)
+        {
+          memcpy(addr, str_ep, rbracket - str_ep);
+          as_in6(addr, atoi(colon + 1));
+        }
+      }
+    }
+    else
+    { // regards ipv4
+      auto colon = strchr(str_ep, ':');
+      if (colon)
+      {
+        memcpy(addr, str_ep, colon - str_ep);
+        as_in4(addr, atoi(colon + 1));
+      }
+    }
+    return *this;
+  }
   endpoint& as_in(int family, const void* addr_in, u_short port)
   {
     this->zeroset();
@@ -277,26 +310,34 @@ public:
     /*
      * Windows XP no inet_pton or inet_ntop
      */
-    if (strchr(addr, ':') == nullptr)
-    { // ipv4
-      if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
-      {
-        this->in4_.sin_family = AF_INET;
-        this->in4_.sin_port   = htons(port);
-        this->len(sizeof(sockaddr_in));
-      }
+    if (strchr(addr, ':'))
+    { // regards as ipv6
+      as_in6(addr, port);
     }
     else
-    { // ipv6
-      if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1)
-      {
-        this->in6_.sin6_family = AF_INET6;
-        this->in6_.sin6_port   = htons(port);
-        this->len(sizeof(sockaddr_in6));
-      }
+    { // ipv4
+      as_in4(addr, port);
     }
 
     return *this;
+  }
+  void as_in6(const char* addr, unsigned short port)
+  {
+    if (compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr) == 1)
+    {
+      this->in6_.sin6_family = AF_INET6;
+      this->in6_.sin6_port   = host_to_network(port);
+      this->len(sizeof(sockaddr_in6));
+    }
+  }
+  void as_in4(const char* addr, unsigned short port)
+  {
+    if (compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr) == 1)
+    {
+      this->in4_.sin_family = AF_INET;
+      this->in4_.sin_port   = host_to_network(port);
+      this->len(sizeof(sockaddr_in));
+    }
   }
   endpoint& as_in(uint32_t addr, u_short port)
   {
@@ -364,16 +405,16 @@ public:
     return ret;
   }
 
-  unsigned short port() const { return ntohs(in4_.sin_port); }
-  void port(unsigned short value) { in4_.sin_port = htons(value); }
+  unsigned short port() const { return network_to_host(in4_.sin_port); }
+  void port(unsigned short value) { in4_.sin_port = host_to_network(value); }
 
   void addr_v4(uint32_t addr)
   {
     this->af(AF_INET);
-    in4_.sin_addr.s_addr = htonl(addr);
+    in4_.sin_addr.s_addr = host_to_network(addr);
     this->len(sizeof(sockaddr_in));
   }
-  uint32_t addr_v4() const { return af() == AF_INET ? ntohl(in4_.sin_addr.s_addr) : 0u; }
+  uint32_t addr_v4() const { return af() == AF_INET ? network_to_host(in4_.sin_addr.s_addr) : 0u; }
 
   // check does endpoint is global address, not linklocal or loopback
   bool is_global() const

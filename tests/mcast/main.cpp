@@ -67,9 +67,20 @@ void yasioMulticastTest()
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n");
 
-          service.schedule(std::chrono::milliseconds(1000), [obs, transport](io_service& service) mutable {
+          service.schedule(std::chrono::milliseconds(1000), [obs, transport, pk = std::move(packet)](io_service& service) mutable {
 #if !UDP_TEST_ONLY
-            service.write_to(transport, std::move(obs.buffer()), server_mcast_ep);
+            // parse non multi-cast endpoint
+            // win32: not required but also works
+            // non-win32: required, otherwise the server 4-tuple doesn't works
+            endpoint non_mcast_ep;
+            pk.push_back('\0'); // ensure null-terminated character
+            cxx17::string_view sv(pk.data(), pk.size() - 1);
+            auto colon = sv.find_first_of(':');
+            if (colon != cxx17::string_view::npos)
+            {
+              if (non_mcast_ep.as_is(&sv[colon + 1]))
+                service.write_to(transport, std::move(obs.buffer()), non_mcast_ep);
+            }
 #else
             service.write(transport, std::move(obs.buffer()));
 #endif

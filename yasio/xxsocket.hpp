@@ -205,7 +205,7 @@ public:
     fmt_no_port    = 2,
     fmt_no_port_0  = 4,
     fmt_no_un_path = 8,
-    fmt_default    = fmt_no_port_0 | fmt_no_un_path, // fmt_no_port_0 | fmt_no_un_path
+    fmt_default    = fmt_no_port_0 | fmt_no_un_path,
   };
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
   static const size_t max_fmt_len = (std::max)(sizeof("65535") + IN_MAX_ADDRSTRLEN + 2, sizeof(sockaddr_un::sun_path));
@@ -254,14 +254,14 @@ public:
     return *this;
   }
   /*
-    IPv4: 127.0.0.1:2022
-    IPv6: [fe80::1]:2022
-    */
+   * IPv4: 127.0.0.1:2022
+   * IPv6: [fe80::1]:2022
+   */
   endpoint& as_is(const char* str_ep)
   {
     char addr[AF_INET6 + 1] = {0};
     if (str_ep[0] == '[')
-    { // regards ipv6
+    { // ipv6
       ++str_ep;
       auto rbracket = strchr(str_ep, ']');
       if (rbracket && rbracket[1] == ':')
@@ -271,7 +271,7 @@ public:
       }
     }
     else
-    { // regards ipv4
+    { // ipv4
       auto colon = strchr(str_ep, ':');
       if (colon)
       {
@@ -303,11 +303,8 @@ public:
   {
     this->zeroset();
 
-    /*
-     * Windows XP no inet_pton or inet_ntop
-     */
     if (strchr(addr, ':'))
-    { // regards as ipv6
+    { // ipv6
       as_in6(addr, port);
     }
     else
@@ -377,20 +374,17 @@ public:
 
   void ip(const char* addr)
   {
-    /*
-     * Windows XP no inet_pton or inet_ntop
-     */
-    if (strchr(addr, ':') == nullptr)
-    { // ipv4
-      this->in4_.sin_family = AF_INET;
-      compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
-      this->len(sizeof(sockaddr_in));
-    }
-    else
+    if (strchr(addr, ':'))
     { // ipv6
       this->in6_.sin6_family = AF_INET6;
       compat::inet_pton(AF_INET6, addr, &this->in6_.sin6_addr);
       this->len(sizeof(sockaddr_in6));
+    }
+    else
+    { // ipv4
+      this->in4_.sin_family = AF_INET;
+      compat::inet_pton(AF_INET, addr, &this->in4_.sin_addr);
+      this->len(sizeof(sockaddr_in));
     }
   }
   std::string ip() const { return this->to_string(fmt_default | fmt_no_port); }

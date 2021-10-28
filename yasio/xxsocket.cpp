@@ -549,11 +549,11 @@ int xxsocket::connect_n(const endpoint& ep, const std::chrono::microseconds& wti
 int xxsocket::connect_n(socket_native_type s, const endpoint& ep, const std::chrono::microseconds& wtimeout)
 {
   fd_set rset, wset;
-  int n, error = 0;
+  int ret, error = 0;
 
   set_nonblocking(s, true);
 
-  if ((n = xxsocket::connect(s, ep)) < 0)
+  if ((ret = xxsocket::connect(s, ep)) < 0)
   {
     error = xxsocket::get_last_errno();
     if (error != EINPROGRESS && error != EWOULDBLOCK)
@@ -561,10 +561,10 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep, const std::chr
   }
 
   /* Do whatever we want while the connect is taking place. */
-  if (n == 0)
+  if (ret == 0)
     goto done; /* connect completed immediately */
 
-  if ((n = xxsocket::select(s, &rset, &wset, nullptr, wtimeout)) <= 0)
+  if ((ret = xxsocket::select(s, &rset, &wset, nullptr, wtimeout)) <= 0)
     error = xxsocket::get_last_errno();
   else if ((FD_ISSET(s, &rset) || FD_ISSET(s, &wset)))
   { /* Everythings are ok */
@@ -599,7 +599,20 @@ int xxsocket::disconnect(socket_native_type s)
 {
   sockaddr addr_unspec  = {0};
   addr_unspec.sa_family = AF_UNSPEC;
+#if defined(_WIN32)
   return ::connect(s, &addr_unspec, sizeof(addr_unspec));
+#else
+  int ret, error;
+  for (;;)
+  {
+    ret = ::connect(s, &addr_unspec, sizeof(addr_unspec));
+    if (ret == 0)
+      return 0;
+    if ((error = xxsocket::get_last_errno()) == EINTR)
+      continue;
+    return error == EAFNOSUPPORT ? 0 : -1;
+  }
+#endif
 }
 
 int xxsocket::send_n(const void* buf, int len, const std::chrono::microseconds& wtimeout, int flags)

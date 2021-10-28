@@ -1701,9 +1701,13 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
     https://blog.grijjy.com/2018/08/29/creating-high-performance-udp-servers-on-windows-and-linux
     https://cloud.tencent.com/developer/article/1004555
     So we emulate thus by ourself, don't care the performance, just a workaround implementation.
+
+    Notes:
+      a. for win32: we check exists udp clients by ourself, and only write operation can be
+         perform on transports, the read event still routed by channel.
+      b. for non-win32 multicast: same with win32, because the kernel can't route same udp peer as 1
+         transport when the peer always sendto multicast address.
   */
-  // for win32 or multicast, we check exists udp clients by ourself, and only write operation can be
-  // perform on transports, the read operation still dispatch by channel.
   const bool user_route = !YASIO__UDP_KROUTE || yasio__testbits(ctx->properties_, YCPF_MCAST);
   if (user_route)
   {

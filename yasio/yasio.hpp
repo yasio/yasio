@@ -223,6 +223,7 @@ enum
 
   // Enable channel multicast mode
   // params: index:int, multi_addr:const char*, loopback:int
+  // refer to: https://www.tldp.org/HOWTO/Multicast-HOWTO-2.html
   YOPT_C_ENABLE_MCAST,
 
   // Disable channel multicast mode

@@ -1,11 +1,11 @@
 /*
  * !!!Important Notes:
- * 1. On some large company network area, the multicast packet is not allow by router
+ * 1. On some large companies' local area network, the multicast packet is not allow by router
  * 2. Please use your home router to test
  * 3. Disable all other adapters(virutal network adapter, VPN, and etc) except your WIFI or Ethernet Adapter
- * 4. Disalbe all firewalls if necessary.
- * 4. Run `mcasttest.exe server` on one of your device
- * 5. Run `mcasttest.exe client` on other ofr your devices
+ * 4. Disalbe all firewalls if necessary
+ * 5. Run `mcasttest.exe server` on one of your device
+ * 6. Run `mcasttest.exe client` on other of your devices
  */
 #include <ctype.h>
 #include <stdlib.h>

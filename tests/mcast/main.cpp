@@ -7,18 +7,27 @@
 #include "yasio/obstream.hpp"
 
 #define UDP_TEST_ONLY 0
-#define MCAST_ADDR "239.0.0.19"
+#define MCAST_ADDR "224.0.0.19"
 
 using namespace yasio;
 
 enum
 {
   MCAST_SERVER_INDEX = 0,
-  MCAST_CLIENT_INDEX = 1
+  MCAST_CLIENT_INDEX = 1,
+};
+
+// 1: server, 2: client, 3: server,client
+enum
+{
+  MCAST_ROLE_SERVER = 1,
+  MCAST_ROLE_CLIENT = 2,
+  MCAST_ROLE_DUAL   = MCAST_ROLE_SERVER | MCAST_ROLE_CLIENT,
 };
 
 void yasioMulticastTest()
 {
+  const int mcast_role = MCAST_ROLE_DUAL;
 
   io_hostent hosts[] = {
     {"0.0.0.0", 22016}, // udp server
@@ -112,16 +121,20 @@ void yasioMulticastTest()
 
   service.set_option(YOPT_C_MOD_FLAGS, MCAST_SERVER_INDEX, YCF_REUSEADDR, 0);
 
+  const int mcast_loopback = mcast_role == MCAST_ROLE_DUAL ? 1 : 0;
+
   /// channel 0: enable  multicast
 #if !UDP_TEST_ONLY
-  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, MCAST_ADDR, 1);
+  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, MCAST_ADDR, mcast_loopback);
 #endif
-  service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
+  if (mcast_role & MCAST_ROLE_SERVER)
+    service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
 #if !UDP_TEST_ONLY
-  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, MCAST_ADDR, 1);
+  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, MCAST_ADDR, mcast_loopback);
 #endif
-  service.open(MCAST_CLIENT_INDEX, YCK_UDP_CLIENT);
+  if (mcast_role & MCAST_ROLE_CLIENT)
+    service.open(MCAST_CLIENT_INDEX, YCK_UDP_CLIENT);
 
   time_t duration = 0;
   while (service.is_running())

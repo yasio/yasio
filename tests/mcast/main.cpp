@@ -8,6 +8,7 @@
 
 #define UDP_TEST_ONLY 0
 #define MCAST_ADDR "224.0.0.19"
+#define MCAST_PORT (unsigned short)22016
 
 using namespace yasio;
 
@@ -30,11 +31,11 @@ void yasioMulticastTest()
   const int mcast_role = MCAST_ROLE_DUAL;
 
   io_hostent hosts[] = {
-    {"0.0.0.0", 22016}, // udp server
+    {"0.0.0.0", MCAST_PORT}, // udp server
 #if UDP_TEST_ONLY
-    {"127.0.0.1", 22016} // multicast client
+    {"127.0.0.1", MCAST_PORT} // multicast client
 #else
-    {MCAST_ADDR, 22016} // multicast client
+    {MCAST_ADDR, MCAST_PORT} // multicast client
 #endif
   };
 
@@ -43,7 +44,6 @@ void yasioMulticastTest()
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
   service.start([&](event_ptr&& event) {
     auto thandle = event->transport();
-
     switch (event->kind())
     {
       case YEK_PACKET: {

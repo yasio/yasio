@@ -239,6 +239,7 @@ io_channel::io_channel(io_service& service, int index) : io_base(), service_(ser
   index_             = index;
   decode_len_        = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
+const print_fn2_t& io_channel::__get_cprint() const { return get_service().options_.print_; }
 std::string io_channel::format_destination() const
 {
   if (yasio__testbits(properties_, YCPF_NEEDS_QUERIES))
@@ -246,7 +247,7 @@ std::string io_channel::format_destination() const
 
   return yasio::strfmt(127, "%s:%u", remote_host_.c_str(), remote_port_);
 }
-void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
+void io_channel::enable_multicast(const ip::endpoint& ep, int loopback)
 {
   yasio__setbits(properties_, YCPF_MCAST);
   if (loopback)
@@ -254,7 +255,7 @@ void io_channel::enable_multicast_group(const ip::endpoint& ep, int loopback)
 
   multiaddr_ = ep;
 }
-int io_channel::join_multicast_group()
+void io_channel::join_multicast_group()
 {
   if (socket_->is_open())
   {
@@ -263,12 +264,15 @@ int io_channel::join_multicast_group()
     // ttl
     socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6, multiaddr_.af() == AF_INET ? IP_MULTICAST_TTL : IPV6_MULTICAST_HOPS,
                         YASIO_DEFAULT_MULTICAST_TTL);
-
-    return configure_multicast_group(true);
+    int ret = configure_multicast_group(true);
+    if (yasio__unlikely(ret != 0))
+    {
+      int ec = xxsocket::get_last_errno();
+      YASIO_KLOGE("[index: %d] join to multicast group %s failed, ec=%d, detail:%s", this->index_, multiaddr_.to_string().c_str(), ec, xxsocket::strerror(ec));
+    }
   }
-  return -1;
 }
-void io_channel::disable_multicast_group()
+void io_channel::disable_multicast()
 {
   yasio__clearbits(properties_, YCPF_MCAST);
   yasio__clearbits(properties_, YCPF_MCAST_LOOPBACK);
@@ -1547,7 +1551,7 @@ void io_service::config_ares_name_servers()
   {
     int count = 0;
     for (auto ns = name_servers; ns != nullptr; ns = ns->next)
-      if(endpoint{ns->family, &ns->addr, static_cast<u_short>(ns->udp_port)}.format_to(nscsv, endpoint::fmt_default | endpoint::fmt_no_local))
+      if (endpoint{ns->family, &ns->addr, static_cast<u_short>(ns->udp_port)}.format_to(nscsv, endpoint::fmt_default | endpoint::fmt_no_local))
         nscsv.push_back(',');
     if (!nscsv.empty()) // if no valid name server, use predefined fallback dns
       YASIO_KLOGI("[c-ares] use %s dns: %s", what, nscsv.c_str());
@@ -2357,18 +2361,16 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       {
         const char* addr = va_arg(ap, const char*);
         int loopback     = va_arg(ap, int);
-        channel->enable_multicast_group(ip::endpoint(addr, 0), loopback);
+        channel->enable_multicast(ip::endpoint(addr, 0), loopback);
         if (channel->socket_->is_open())
-        { // client join directly
           channel->join_multicast_group();
-        }
       }
       break;
     }
     case YOPT_C_DISABLE_MCAST: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
-        channel->disable_multicast_group();
+        channel->disable_multicast();
       break;
     }
     case YOPT_C_MOD_FLAGS: {

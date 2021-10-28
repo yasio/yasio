@@ -494,7 +494,7 @@ class YASIO_API io_channel : public io_base {
   friend class io_transport_kcp;
 
 public:
-  io_service& get_service() { return service_; }
+  io_service& get_service() const { return service_; }
   int index() const { return index_; }
   u_short remote_port() const { return remote_port_; }
   YASIO__DECL std::string format_destination() const;
@@ -506,10 +506,12 @@ public:
   highp_timer& get_user_timer() { return this->user_timer_; }
 #endif
 protected:
-  YASIO__DECL void enable_multicast_group(const ip::endpoint& ep, int loopback);
-  YASIO__DECL int join_multicast_group();
-  YASIO__DECL void disable_multicast_group();
+  YASIO__DECL void enable_multicast(const ip::endpoint& ep, int loopback);
+  YASIO__DECL void disable_multicast();
+  YASIO__DECL void join_multicast_group();
   YASIO__DECL int configure_multicast_group(bool onoff);
+  // For log macro only
+  YASIO__DECL const print_fn2_t& __get_cprint() const;
 
 private:
   YASIO__DECL io_channel(io_service& service, int index);

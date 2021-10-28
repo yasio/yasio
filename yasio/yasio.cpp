@@ -1704,14 +1704,16 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
   */
   // for win32 or multicast, we check exists udp clients by ourself, and only write operation can be
   // perform on transports, the read operation still dispatch by channel.
-#if defined(_WIN32) // route on user mode
-  auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
-    using namespace std;
-    return yasio__testbits(transport->ctx_->properties_, YCM_UDP) && static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
-  });
-  if (it != this->transports_.end())
-    return *it;
-#endif
+  const bool user_route = !YASIO__UDP_KROUTE || yasio__testbits(ctx->properties_, YCPF_MCAST);
+  if (user_route)
+  {
+    auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
+      using namespace std;
+      return yasio__testbits(transport->ctx_->properties_, YCM_UDP) && static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
+    });
+    if (it != this->transports_.end())
+      return *it;
+  }
 
   auto new_sock = std::make_shared<xxsocket>();
   if (new_sock->open(peer.af(), SOCK_DGRAM))
@@ -1726,11 +1728,10 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       auto transport = static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(new_sock)));
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);
-#if defined(_WIN32)
-      notify_connect_succeed(transport);
-#else
-      handle_connect_succeed(transport);
-#endif
+      if (user_route)
+        notify_connect_succeed(transport);
+      else
+        handle_connect_succeed(transport);
       return transport;
     }
   }

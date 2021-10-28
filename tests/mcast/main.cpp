@@ -2,8 +2,10 @@
  * !!!Important Notes:
  * 1. On some large company network area, the multicast packet is not allow by router
  * 2. Please use your home router to test
- * 3. Run `mcasttest.exe server` on one of your device
- * 4. Run `mcasttest.exe client` on other ofr your devices
+ * 3. Disable all other adapters(virutal network adapter, VPN, and etc) except your WIFI or Ethernet Adapter
+ * 4. Disalbe all firewalls if necessary.
+ * 4. Run `mcasttest.exe server` on one of your device
+ * 5. Run `mcasttest.exe client` on other ofr your devices
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -166,9 +168,9 @@ int main(int argc, char** argv)
   int role = MCAST_ROLE_DUAL;
   if (argc >= 2)
   {
-    if (strcmp(argv[1], "server"))
+    if (strcmp(argv[1], "server") == 0)
       role = MCAST_ROLE_SERVER;
-    else if (strcmp(argv[1], "client"))
+    else if (strcmp(argv[1], "client") == 0)
       role = MCAST_ROLE_CLIENT;
   }
 

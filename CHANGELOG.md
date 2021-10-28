@@ -8,6 +8,7 @@ yasio-3.37.6
 6. Fix timer not sort when same timer expire time changed, thanks to @koobin
 7. Fix the `len` of `ip::endpoint` not set when update endpoint ip with `ip::endpoint::ip`, will cause error 10014 on windows
 8. Make `ibstream_view` can construct with `basic_obstream_view`
+9. Imporve multicast server route behavior
   
   
 yasio-3.37.5

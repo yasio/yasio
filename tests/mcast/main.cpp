@@ -1,3 +1,10 @@
+/*
+ * !!!Important Notes:
+ * 1. On some large company network area, the multicast packet is not allow by router
+ * 2. Please use your home router to test
+ * 3. Run `mcasttest.exe server` on one of your device
+ * 4. Run `mcasttest.exe client` on other ofr your devices
+ */
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,10 +33,8 @@ enum
   MCAST_ROLE_DUAL   = MCAST_ROLE_SERVER | MCAST_ROLE_CLIENT,
 };
 
-void yasioMulticastTest()
+void yasioMulticastTest(int mcast_role)
 {
-  const int mcast_role = MCAST_ROLE_DUAL;
-
   io_hostent hosts[] = {
     {"0.0.0.0", MCAST_PORT}, // udp server
 #if UDP_TEST_ONLY
@@ -40,6 +45,7 @@ void yasioMulticastTest()
   };
 
   static ip::endpoint server_mcast_ep{MCAST_ADDR, 22016};
+  static ip::endpoint my_endpoint;
 
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
   service.start([&](event_ptr&& event) {
@@ -73,7 +79,17 @@ void yasioMulticastTest()
         {
           obstream obs;
           obs.write_bytes("hello server, my ip is:");
-          obs.write_bytes(event->transport()->local_endpoint().to_string());
+
+          if (!my_endpoint)
+          {
+            // Temporary associate the UDP handle to a remote address and port for we can get local network adapter real ip
+            service.set_option(YOPT_T_CONNECT, transport);
+            my_endpoint = event->transport()->local_endpoint();
+            // Dssociate the UDP handle to a remote address and port we don't require it
+            service.set_option(YOPT_T_DISCONNECT, transport);
+          }
+
+          obs.write_bytes(my_endpoint.to_string());
           obs.write_bytes("\n");
 
           service.schedule(std::chrono::milliseconds(1000), [obs, transport, pk = std::move(packet)](io_service& service) mutable {
@@ -145,11 +161,20 @@ void yasioMulticastTest()
   }
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+  int role = MCAST_ROLE_DUAL;
+  if (argc >= 2)
+  {
+    if (strcmp(argv[1], "server"))
+      role = MCAST_ROLE_SERVER;
+    else if (strcmp(argv[1], "client"))
+      role = MCAST_ROLE_CLIENT;
+  }
+
   // reference:
   // https://www.winsocketdotnetworkprogramming.com/winsock2programming/winsock2advancedmulticast9a.html
-  yasioMulticastTest();
+  yasioMulticastTest(role);
 
   return 0;
 }

@@ -99,9 +99,6 @@ void yasioMulticastTest(int mcast_role)
         }
         else if (event->cindex() == MCAST_CLIENT_INDEX)
         {
-          obstream obs;
-          obs.write_bytes("hi server, my endpoint is:");
-
           if (!my_endpoint)
           {
             // Temporary associate the UDP handle to a remote address and port for we can get local network adapter real ip
@@ -110,12 +107,11 @@ void yasioMulticastTest(int mcast_role)
             // Dssociate the UDP handle to a remote address and port we don't require it
             service.set_option(YOPT_T_DISCONNECT, transport);
           }
-
-          obs.write_bytes(my_endpoint.to_string());
-          obs.write_bytes("\n");
-
-          service.schedule(std::chrono::milliseconds(1000), [obs, transport, pk = std::move(packet)](io_service& service) mutable {
-
+          service.schedule(std::chrono::milliseconds(1000), [transport](io_service& service) mutable {
+            obstream obs;
+            obs.write_bytes("hi server, my endpoint is:");
+            obs.write_bytes(my_endpoint.to_string());
+            obs.write_bytes("\n");
 #if !TEST_UDP_ONLY
             /*
              * Notes: If write_to a differrent remote endpoint at linux, the server recvfrom will got a different client port

@@ -247,18 +247,32 @@ std::string io_channel::format_destination() const
 
   return yasio::strfmt(127, "%s:%u", remote_host_.c_str(), remote_port_);
 }
-void io_channel::enable_multicast(const ip::endpoint& ep, int loopback)
+void io_channel::enable_multicast(const char* addr, int loopback)
 {
   yasio__setbits(properties_, YCPF_MCAST);
+
   if (loopback)
     yasio__setbits(properties_, YCPF_MCAST_LOOPBACK);
 
-  multiaddr_ = ep;
+  if (addr)
+    multiaddr_.as_in(addr, (u_short)0);
 }
 void io_channel::join_multicast_group()
 {
   if (socket_->is_open())
   {
+    // interface
+    switch (multiif_.af())
+    {
+      case AF_INET:
+        socket_->set_optval(IPPROTO_IP, IP_MULTICAST_IF, multiif_.in4_.sin_addr);
+        break;
+      case AF_INET6:
+        socket_->set_optval(IPPROTO_IPV6, IP_MULTICAST_IF, multiif_.in6_.sin6_scope_id);
+        break;
+      default:;
+    }
+
     int loopback = yasio__testbits(properties_, YCPF_MCAST_LOOPBACK) ? 1 : 0;
     socket_->set_optval(multiaddr_.af() == AF_INET ? IPPROTO_IP : IPPROTO_IPV6, multiaddr_.af() == AF_INET ? IP_MULTICAST_LOOP : IPV6_MULTICAST_LOOP, loopback);
     // ttl
@@ -285,14 +299,14 @@ int io_channel::configure_multicast_group(bool onoff)
   if (multiaddr_.af() == AF_INET)
   { // ipv4
     struct ip_mreq mreq;
-    mreq.imr_interface.s_addr = 0;
+    mreq.imr_interface.s_addr = multiif_.in4_.sin_addr.s_addr;
     mreq.imr_multiaddr        = multiaddr_.in4_.sin_addr;
     return socket_->set_optval(IPPROTO_IP, onoff ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP, &mreq, (int)sizeof(mreq));
   }
   else
   { // ipv6
     struct ipv6_mreq mreq_v6;
-    mreq_v6.ipv6mr_interface = 0;
+    mreq_v6.ipv6mr_interface = multiif_.in6_.sin6_scope_id;
     mreq_v6.ipv6mr_multiaddr = multiaddr_.in6_.sin6_addr;
     return socket_->set_optval(IPPROTO_IPV6, onoff ? IPV6_JOIN_GROUP : IPV6_LEAVE_GROUP, &mreq_v6, (int)sizeof(mreq_v6));
   }
@@ -595,33 +609,31 @@ const ip::endpoint& io_transport_udp::ensure_destination() const
     return this->destination_;
   return (this->destination_ = this->peer_);
 }
-int io_transport_udp::confgure_remote(const ip::endpoint& peer)
+void io_transport_udp::confgure_remote(const ip::endpoint& peer)
 {
   if (connected_) // connected, update peer is pointless and useless
-    return -1;
+    return;
   this->peer_ = peer;
   if (!yasio__testbits(ctx_->properties_, YCPF_MCAST) || !yasio__testbits(ctx_->properties_, YCM_CLIENT))
     this->connect(); // multicast client, don't bind multicast address for we can recvfrom non-multicast address
-  return 0;
 }
-int io_transport_udp::connect()
+void io_transport_udp::connect()
 {
   if (connected_)
-    return 0;
+    return;
 
   if (this->peer_.af() == AF_UNSPEC)
   {
     if (ctx_->remote_eps_.empty())
-      return -1;
+      return;
     this->peer_ = ctx_->remote_eps_[0];
   }
 
   int retval = this->socket_->connect_n(this->peer_);
   connected_ = (retval == 0);
   set_primitives();
-  return retval;
 }
-int io_transport_udp::disconnect()
+void io_transport_udp::disconnect()
 {
 #if defined(__linux__)
   auto ifaddr = this->socket_->local_endpoint();
@@ -633,10 +645,9 @@ int io_transport_udp::disconnect()
     ifaddr.ip(ctx_->local_host_.empty() ? YASIO_ADDR_ANY(ifaddr.af()) : ctx_->local_host_.c_str());
     this->socket_->bind(ifaddr);
 #endif
-    connected_ = false;
-    set_primitives();
   }
-  return retval;
+  connected_ = false;
+  set_primitives();
 }
 int io_transport_udp::write(std::vector<char>&& buffer, completion_cb_t&& handler)
 {
@@ -2367,13 +2378,23 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       }
       break;
     }
+    case YOPT_C_MCAST_IF: {
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        const char* ifaddr = va_arg(ap, const char*);
+        if (ifaddr)
+          channel->multiif_.as_in(ifaddr, (unsigned short)0);
+      }
+      break;
+    }
     case YOPT_C_ENABLE_MCAST: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)
       {
         const char* addr = va_arg(ap, const char*);
         int loopback     = va_arg(ap, int);
-        channel->enable_multicast(ip::endpoint(addr, 0), loopback);
+        channel->enable_multicast(addr, loopback);
         if (channel->socket_->is_open())
           channel->join_multicast_group();
       }

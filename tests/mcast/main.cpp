@@ -24,15 +24,16 @@
 #  define TEST_LOOP_ADDR "127.0.0.1"
 #  define TEST_SERVER_ADDR "0.0.0.0"
 #  define TEST_MCAST_ADDR "224.0.0.19"
+#  define TEST_MCAST_IF nullptr
 #else
 #  define TEST_LOOP_ADDR "::1"
 #  define TEST_SERVER_ADDR "::"
 #  if defined(__APPLE__) || defined(_AIX) || defined(__MVS__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #    define TEST_MCAST_ADDR "ff02::1%lo0"
-#    define TEST_MCAST_IF_ADDR "::1%lo0"
+#    define TEST_MCAST_IF "::1%lo0"
 #  else
 #    define TEST_MCAST_ADDR "ff02::1"
-#    define TEST_MCAST_IF_ADDR nullptr
+#    define TEST_MCAST_IF nullptr
 #  endif
 #endif
 
@@ -155,12 +156,14 @@ void yasioMulticastTest(int mcast_role)
 
   /// channel 0: enable  multicast
 #if !TEST_UDP_ONLY
+  service.set_option(YOPT_C_MCAST_IF, MCAST_SERVER_INDEX, TEST_MCAST_IF);
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, TEST_MCAST_ADDR, mcast_loopback);
 #endif
   if (mcast_role & MCAST_ROLE_SERVER)
     service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
 #if !TEST_UDP_ONLY
+  service.set_option(YOPT_C_MCAST_IF, MCAST_SERVER_INDEX, TEST_MCAST_IF);
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, TEST_MCAST_ADDR, mcast_loopback);
 #endif
   if (mcast_role & MCAST_ROLE_CLIENT)

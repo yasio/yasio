@@ -597,15 +597,17 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
 int xxsocket::disconnect() const { return xxsocket::disconnect(this->fd); }
 int xxsocket::disconnect(socket_native_type s)
 {
-  sockaddr addr_unspec  = {0};
-  addr_unspec.sa_family = AF_UNSPEC;
+  ip::endpoint addr_unspec = xxsocket::local_endpoint(s);
+  auto addr_len            = addr_unspec.len();
+  addr_unspec.zeroset();
+  addr_unspec.af(AF_UNSPEC);
 #if defined(_WIN32)
-  return ::connect(s, &addr_unspec, sizeof(addr_unspec));
+  return ::connect(s, &addr_unspec, addr_len);
 #else
   int ret, error;
   for (;;)
   {
-    ret = ::connect(s, &addr_unspec, sizeof(addr_unspec));
+    ret = ::connect(s, &addr_unspec, addr_len);
     if (ret == 0)
       return 0;
     if ((error = xxsocket::get_last_errno()) == EINTR)

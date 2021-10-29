@@ -15,9 +15,26 @@
 #include "yasio/ibstream.hpp"
 #include "yasio/obstream.hpp"
 
-#define UDP_TEST_ONLY 0
-#define MCAST_ADDR "224.0.0.19"
-#define MCAST_PORT (unsigned short)22016
+#define TEST_WITH_IPV6 0
+#define TEST_UDP_ONLY 0
+
+#define TEST_PORT (unsigned short)22016
+
+#if !TEST_WITH_IPV6
+#  define TEST_LOOP_ADDR "127.0.0.1"
+#  define TEST_SERVER_ADDR "0.0.0.0"
+#  define TEST_MCAST_ADDR "224.0.0.19"
+#else
+#  define TEST_LOOP_ADDR "::1"
+#  define TEST_SERVER_ADDR "::"
+#  if defined(__APPLE__) || defined(_AIX) || defined(__MVS__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#    define TEST_MCAST_ADDR "ff02::1%lo0"
+#    define TEST_MCAST_IF_ADDR "::1%lo0"
+#  else
+#    define TEST_MCAST_ADDR "ff02::1"
+#    define TEST_MCAST_IF_ADDR nullptr
+#  endif
+#endif
 
 using namespace yasio;
 
@@ -38,18 +55,19 @@ enum
 void yasioMulticastTest(int mcast_role)
 {
   io_hostent hosts[] = {
-    {"0.0.0.0", MCAST_PORT}, // udp server
-#if UDP_TEST_ONLY
-    {"127.0.0.1", MCAST_PORT} // multicast client
+    {TEST_SERVER_ADDR, TEST_PORT}, // udp server
+#if TEST_UDP_ONLY
+    {TEST_LOOP_ADDR, TEST_PORT} // multicast client
 #else
-    {MCAST_ADDR, MCAST_PORT} // multicast client
+    {TEST_MCAST_ADDR, TEST_PORT} // multicast client
 #endif
   };
 
-  static ip::endpoint server_mcast_ep{MCAST_ADDR, 22016};
+  static ip::endpoint server_mcast_ep{TEST_MCAST_ADDR, 22016};
   static ip::endpoint my_endpoint;
 
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
+
   service.start([&](event_ptr&& event) {
     auto thandle = event->transport();
     switch (event->kind())
@@ -66,21 +84,21 @@ void yasioMulticastTest(int mcast_role)
           // multicast udp server channel
           // delay reply msg
           obstream obs;
-          obs.write_bytes("hello client, my ip is:");
+          obs.write_bytes("hello client, my endpoint is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n\n");
-#if UDP_TEST_ONLY
+#if TEST_UDP_ONLY
           service.write(transport, std::move(obs.buffer()));
 #else
           u_short remote_port = event->transport()->remote_endpoint().port();
-          const ip::endpoint client_mcast_ep{MCAST_ADDR, remote_port};
+          const ip::endpoint client_mcast_ep{TEST_MCAST_ADDR, remote_port};
           service.write_to(transport, std::move(obs.buffer()), client_mcast_ep);
 #endif
         }
         else if (event->cindex() == MCAST_CLIENT_INDEX)
         {
           obstream obs;
-          obs.write_bytes("hello server, my ip is:");
+          obs.write_bytes("hello server, my endpoint is:");
 
           if (!my_endpoint)
           {
@@ -95,7 +113,7 @@ void yasioMulticastTest(int mcast_role)
           obs.write_bytes("\n");
 
           service.schedule(std::chrono::milliseconds(1000), [obs, transport, pk = std::move(packet)](io_service& service) mutable {
-#if !UDP_TEST_ONLY
+#if !TEST_UDP_ONLY
             // parse non multi-cast endpoint
             // win32: not required but also works
             // non-win32: required, otherwise the server 4-tuple doesn't works
@@ -142,14 +160,14 @@ void yasioMulticastTest(int mcast_role)
   const int mcast_loopback = mcast_role == MCAST_ROLE_DUAL ? 1 : 0;
 
   /// channel 0: enable  multicast
-#if !UDP_TEST_ONLY
-  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, MCAST_ADDR, mcast_loopback);
+#if !TEST_UDP_ONLY
+  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_SERVER_INDEX, TEST_MCAST_ADDR, mcast_loopback);
 #endif
   if (mcast_role & MCAST_ROLE_SERVER)
     service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
-#if !UDP_TEST_ONLY
-  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, MCAST_ADDR, mcast_loopback);
+#if !TEST_UDP_ONLY
+  service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, TEST_MCAST_ADDR, mcast_loopback);
 #endif
   if (mcast_role & MCAST_ROLE_CLIENT)
     service.open(MCAST_CLIENT_INDEX, YCK_UDP_CLIENT);

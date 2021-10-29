@@ -573,7 +573,7 @@ private:
 #if defined(_WIN32)
       zone_value = atoi(zoneptr + 1);
 #else
-      zone_value = ::if_nametoindex(zonep + 1);
+      zone_value = ::if_nametoindex(zoneptr + 1);
 #endif
       endptr = zoneptr;
     }

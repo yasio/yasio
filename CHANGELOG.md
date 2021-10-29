@@ -1,15 +1,20 @@
 yasio-3.37.6
   
-1. Add option `YOPT_S_DNS_LIST` to set custom dns servers build with c-ares.
+1. Add option `YOPT_S_DNS_LIST` to set custom dns servers build with c-ares
 2. Add OpenSSL 3.0.0 support
 3. Add better API `ip::endpoint::format_to` to format socket address to string
-4. Add MinGW build support
-5. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
-6. Fix timer not sort when same timer expire time changed, thanks to @koobin
-7. Fix the `len` of `ip::endpoint` not set when update endpoint ip with `ip::endpoint::ip`, will cause error 10014 on windows
-8. Make `ibstream_view` can construct with `basic_obstream_view`
-9. Imporve multicast server route behavior
-10. Improve `xxsocket::disconnect` platform compatible for udp
+4. Add API `ip::endpoint::scope_id` to set or get ipv6 `scope_id`
+5. Improve `ip::endpoint::as_xx` for parsing `scope_id` from ipv6 string
+6. Add MinGW build support
+7. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
+8. Fix timer not sort when same timer expire time changed, thanks to @koobin
+9. Fix the `len` of `ip::endpoint` not set when update endpoint ip with `ip::endpoint::ip`, will cause error 10014 on windows
+10. Make `ibstream_view` can construct with `basic_obstream_view`
+11. Improve `xxsocket::disconnect` platform compatible for udp
+12. Imporve `multicast` server route behavior
+13. Add option `YOPT_C_MCAST_IF` to set multicast interface, on BSD-like system, it's required for ipv6
+14. Improve udp disconnect compatible on BSD-like system
+15. The `multicast` test now support both ipv4 and ipv6 and test on windows,linux,macOS
   
   
 yasio-3.37.5

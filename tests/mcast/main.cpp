@@ -87,12 +87,12 @@ void yasioMulticastTest(int mcast_role)
           obs.write_bytes("hello client, my endpoint is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
           obs.write_bytes("\n\n");
-#if TEST_UDP_ONLY
-          service.write(transport, std::move(obs.buffer()));
-#else
+#if !TEST_UDP_ONLY
           u_short remote_port = event->transport()->remote_endpoint().port();
           const ip::endpoint client_mcast_ep{TEST_MCAST_ADDR, remote_port};
           service.write_to(transport, std::move(obs.buffer()), client_mcast_ep);
+#else
+          service.write(transport, std::move(obs.buffer()));
 #endif
         }
         else if (event->cindex() == MCAST_CLIENT_INDEX)
@@ -113,19 +113,12 @@ void yasioMulticastTest(int mcast_role)
           obs.write_bytes("\n");
 
           service.schedule(std::chrono::milliseconds(1000), [obs, transport, pk = std::move(packet)](io_service& service) mutable {
+            
 #if !TEST_UDP_ONLY
-            // parse non multi-cast endpoint
-            // win32: not required but also works
-            // non-win32: required, otherwise the server 4-tuple doesn't works
-            endpoint non_mcast_ep;
-            pk.push_back('\0'); // ensure null-terminated character
-            cxx17::string_view sv(pk.data(), pk.size() - 1);
-            auto colon = sv.find_first_of(':');
-            if (colon != cxx17::string_view::npos)
-            {
-              if (non_mcast_ep.as_is(&sv[colon + 1]))
-                service.write_to(transport, std::move(obs.buffer()), non_mcast_ep);
-            }
+            /*
+            * Notes: If write_to a differrent remote endpoint at linux, the server recvfrom will got a different client port
+            */
+            service.write_to(transport, std::move(obs.buffer()), server_mcast_ep);
 #else
             service.write(transport, std::move(obs.buffer()));
 #endif
@@ -142,7 +135,7 @@ void yasioMulticastTest(int mcast_role)
           auto transport = event->transport();
           obstream obs;
           obs.write_bytes("==> hello server, I'm client\n\n");
-          service.write(transport, std::move(obs.buffer()));
+          service.write_to(transport, std::move(obs.buffer()), server_mcast_ep);
         }
         else if (event->cindex() == MCAST_SERVER_INDEX)
         {

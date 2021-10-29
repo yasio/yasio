@@ -623,9 +623,16 @@ int io_transport_udp::connect()
 }
 int io_transport_udp::disconnect()
 {
-  const int retval = this->socket_->disconnect();
+#if defined(__linux__)
+  auto ifaddr = this->socket_->local_endpoint();
+#endif
+  int retval = this->socket_->disconnect();
   if (retval == 0)
   {
+#if defined(__linux__) // Because some of linux will unbind when disconnect succeed, so try to rebind
+    ifaddr.ip(ctx_->local_host_.empty() ? YASIO_ADDR_ANY(ifaddr.af()) : ctx_->local_host_.c_str());
+    this->socket_->bind(ifaddr);
+#endif
     connected_ = false;
     set_primitives();
   }

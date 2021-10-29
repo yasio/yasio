@@ -163,7 +163,7 @@ void yasioMulticastTest(int mcast_role)
     service.open(MCAST_SERVER_INDEX, YCK_UDP_SERVER);
 
 #if !TEST_UDP_ONLY
-  service.set_option(YOPT_C_MCAST_IF, MCAST_SERVER_INDEX, TEST_MCAST_IF);
+  service.set_option(YOPT_C_MCAST_IF, MCAST_CLIENT_INDEX, TEST_MCAST_IF);
   service.set_option(YOPT_C_ENABLE_MCAST, MCAST_CLIENT_INDEX, TEST_MCAST_ADDR, mcast_loopback);
 #endif
   if (mcast_role & MCAST_ROLE_CLIENT)

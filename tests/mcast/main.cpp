@@ -76,7 +76,8 @@ void yasioMulticastTest(int mcast_role)
         // print packet msg
         auto packet = std::move(event->packet());
         fwrite(packet.data(), packet.size(), 1, stdout);
-        fprintf(stdout, "%s", "\n--------------------\n");
+        fprintf(stdout, "%lld--------------------\n\n", (long long)yasio::clock<yasio::system_clock_t>() / 1000);
+
         fflush(stdout);
         auto transport = event->transport();
         if (event->cindex() == MCAST_SERVER_INDEX)
@@ -84,9 +85,9 @@ void yasioMulticastTest(int mcast_role)
           // multicast udp server channel
           // delay reply msg
           obstream obs;
-          obs.write_bytes("hello client, my endpoint is:");
+          obs.write_bytes("hi client, my endpoint is:");
           obs.write_bytes(event->transport()->local_endpoint().to_string());
-          obs.write_bytes("\n\n");
+          obs.write_bytes("\n");
 #if !TEST_UDP_ONLY
           u_short remote_port = event->transport()->remote_endpoint().port();
           const ip::endpoint client_mcast_ep{TEST_MCAST_ADDR, remote_port};
@@ -98,7 +99,7 @@ void yasioMulticastTest(int mcast_role)
         else if (event->cindex() == MCAST_CLIENT_INDEX)
         {
           obstream obs;
-          obs.write_bytes("hello server, my endpoint is:");
+          obs.write_bytes("hi server, my endpoint is:");
 
           if (!my_endpoint)
           {
@@ -113,11 +114,11 @@ void yasioMulticastTest(int mcast_role)
           obs.write_bytes("\n");
 
           service.schedule(std::chrono::milliseconds(1000), [obs, transport, pk = std::move(packet)](io_service& service) mutable {
-            
+
 #if !TEST_UDP_ONLY
             /*
-            * Notes: If write_to a differrent remote endpoint at linux, the server recvfrom will got a different client port
-            */
+             * Notes: If write_to a differrent remote endpoint at linux, the server recvfrom will got a different client port
+             */
             service.write_to(transport, std::move(obs.buffer()), server_mcast_ep);
 #else
             service.write(transport, std::move(obs.buffer()));
@@ -134,7 +135,7 @@ void yasioMulticastTest(int mcast_role)
         {
           auto transport = event->transport();
           obstream obs;
-          obs.write_bytes("==> hello server, I'm client\n\n");
+          obs.write_bytes("==> hello server, I'm client\n");
           service.write_to(transport, std::move(obs.buffer()), server_mcast_ep);
         }
         else if (event->cindex() == MCAST_SERVER_INDEX)

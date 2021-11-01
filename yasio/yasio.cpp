@@ -819,6 +819,10 @@ void io_service::stop()
   if (this->state_ == io_service::state::RUNNING)
   {
     this->state_ = io_service::state::STOPPING;
+    for (size_t ch = 0; ch < channels_.size(); ch++)
+	  {
+		  close(ch);
+	  }
     this->interrupt();
     this->join();
   }
@@ -841,6 +845,7 @@ void io_service::join()
 void io_service::handle_stop()
 {
   clear_transports();
+	this->timer_queue_.clear();
   this->state_ = io_service::state::IDLE;
 }
 void io_service::init(const io_hostent* channel_eps, int channel_count)
@@ -945,14 +950,15 @@ void io_service::run()
   // The core event loop
   fd_set fds_array[max_ops];
   this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
-  for (; this->state_ == io_service::state::RUNNING;)
+  for (; this->state_ == io_service::state::RUNNING || 
+	       this->state_ == io_service::state::STOPPING;)
   {
     auto wait_duration   = get_timeout(this->wait_duration_); // Gets current wait duration
     this->wait_duration_ = YASIO_MAX_WAIT_DURATION;           // Reset next wait duration
     if (wait_duration > 0)
     {
       int retval = do_select(fds_array, wait_duration);
-      if (this->state_ != io_service::state::RUNNING)
+	    if (this->state_ != io_service::state::RUNNING && transports_.size() == 0)
         break;
 
       if (retval < 0)

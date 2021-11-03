@@ -950,6 +950,7 @@ public:
   YASIO__DECL void stop();
 
   bool is_running() const { return this->state_ == io_service::state::RUNNING; }
+  bool is_stopping() const { return this->state_ == io_service::state::STOPPING; }
 
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
@@ -1013,6 +1014,7 @@ public:
   YASIO__DECL io_channel* channel_at(size_t index) const;
 
 private:
+  YASIO__DECL void handle_stop();
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);
   YASIO__DECL void remove_timer(highp_timer*);
 
@@ -1031,11 +1033,6 @@ private:
 
   YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
   YASIO__DECL void cleanup();
-
-  YASIO__DECL void handle_stop();
-
-  /* Call by stop_service, wait io_service thread exit properly & do cleanup */
-  YASIO__DECL void join();
 
   YASIO__DECL void open_internal(io_channel*);
 

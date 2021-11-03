@@ -7,13 +7,13 @@ yasio-3.37.6
 5. Improve `ip::endpoint::as_xx` for parsing `scope_id` from ipv6 string
 6. Add MinGW build support
 7. Fix compile issue when build inside unreal engine with module `TraceAnalysis`
-8. Fix timer not sort when same timer expire time changed, thanks to @koobin
+8. Fix timer not sort when same timer expire time changed, thanks to `@koobin`
 9. Fix the `len` of `ip::endpoint` not set when update endpoint ip with `ip::endpoint::ip`, will cause error `10014` on windows
 10. Make `ibstream_view` can construct with `basic_obstream_view`
 11. Improve `xxsocket::disconnect` platform compatible for udp, such as BSD-like system
-12. Imporve `multicast` support, and the test case works on windows,linux,macOS
+12. Imporve `multicast` support, and the test case works on windows,linux,macOS, thanks to `@wzhengsen`
 13. Add option `YOPT_C_MCAST_IF` to set multicast interface, on BSD-like system, it's required for ipv6
-14. Improve `io_service::stop` flow
+14. Improve `io_service::stop` flow, thanks to `@koobin`
   
   
 yasio-3.37.5

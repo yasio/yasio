@@ -926,8 +926,8 @@ public:
   };
 
   /*
-  ** Summary: init global state with custom print function, you must ensure thread safe of it.
-  ** @remark:
+  ** summary: init global state with custom print function, you must ensure thread safe of it.
+  ** remark:
   **   a. this function is not required, if you don't want print init log to custom console.
   **   b. this function only works once
   **   c. you should call once before call any 'io_servic::start'
@@ -947,6 +947,14 @@ public:
   YASIO__DECL ~io_service();
 
   YASIO__DECL void start(event_cb_t cb);
+  /* summary: stop the io_service
+  **
+  ** remark:
+  ** a. IF caller thread isn't service worker thread, the service state will be IDLE.
+  ** b. IF caller thread is service worker thread, the service state will be STOPPING,
+  **    then you needs to invoke this API again at other thread
+  ** c. Strong recommend invoke this API at your event dispatch thread.
+  */
   YASIO__DECL void stop();
 
   bool is_running() const { return this->state_ == io_service::state::RUNNING; }
@@ -975,14 +983,14 @@ public:
   YASIO__DECL void close(int index);
 
   /*
-  ** Summary: Write data to a TCP or connected UDP transport with last peer address
-  ** @retval: < 0: failed
-  ** @params:
+  ** summary: Write data to a TCP or connected UDP transport with last peer address
+  ** retval: < 0: failed
+  ** params:
   **        'thandle': the transport to write, could be tcp/udp/kcp
   **        'buf': the data to write
   **        'len': the data len
   **        'handler': send finish callback, only works for TCP transport
-  ** @remark:
+  ** remark:
   **        + TCP/UDP: Use queue to store user message, flush at io_service thread
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
@@ -994,8 +1002,8 @@ public:
 
   /*
    ** Summary: Write data to unconnected UDP transport with specified address.
-   ** @retval: < 0: failed
-   ** @remark: This function only for UDP like transport (UDP or KCP)
+   ** retval: < 0: failed
+   ** remark: This function only for UDP like transport (UDP or KCP)
    **        + UDP: Use queue to store user message, flush at io_service thread
    **        + KCP: Use the queue provided by kcp internal, flush at io_service thread
    */
@@ -1014,7 +1022,6 @@ public:
   YASIO__DECL io_channel* channel_at(size_t index) const;
 
 private:
-  YASIO__DECL void handle_stop();
   YASIO__DECL void schedule_timer(highp_timer*, timer_cb_t&&);
   YASIO__DECL void remove_timer(highp_timer*);
 
@@ -1033,6 +1040,9 @@ private:
 
   YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
   YASIO__DECL void cleanup();
+
+  // Try to dispose thread and other resources, service state will be IDLE when succeed
+  YASIO__DECL void handle_stop();
 
   YASIO__DECL void open_internal(io_channel*);
 
@@ -1107,10 +1117,10 @@ private:
   YASIO__DECL bool shutdown_internal(transport_handle_t);
 
   /*
-  ** Summay: Query async resolve state for new endpoint set
-  ** @retval:
+  ** summay: Query async resolve state for new endpoint set
+  ** retval:
   **   YDQS_READY, YDQS_INPRROGRESS, YDQS_FAILED
-  ** @remark: will start a async resolv when the state is: YDQS_DIRTY
+  ** remark: will start a async resolv when the state is: YDQS_DIRTY
   */
   YASIO__DECL u_short query_ares_state(io_channel* ctx);
 
@@ -1121,7 +1131,7 @@ private:
   YASIO__DECL static const char* strerror(int error);
 
   /*
-  ** Summary: For udp-server only, make dgram handle to communicate with client
+  ** summary: For udp-server only, make dgram handle to communicate with client
   */
   YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer, int& error);
 

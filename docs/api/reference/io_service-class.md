@@ -28,7 +28,7 @@ namespace yasio { inline namespace inet { class io_service; } }
 |----------|-----------------|
 |[io_service::start](#start)|启动网络服务|
 |[io_service::stop](#stop)|停止网络服务|
-|[io_service::is_running](#is_running)|判断网络服务是否出于运行状态|
+|[io_service::is_running](#is_running)|判断网络服务是否运行中|
 |[io_service::is_stopping](#is_stopping)|判断网络服务是否停止中|
 |[io_service::close](#close)|关闭传输会话|
 |[io_service::is_open](#is_open)|检测信道或会话是否打开|
@@ -137,8 +137,7 @@ void stop()
 ### 注意
 
 - 当在非网络服务线程调用此函数时，会等待服务线程退出并进入 `IDLE` 状态，此状态下可以再次调用 `start` 重新启动服务。
-- 当在网络服务自身线程调用了次函数时，会进入 `STOPPING` 状态，业务应该在非网络服务线程判断是否依然处于 `STOPPING` 状态  
-  来决定是否再次调用`stop`，例如:  
+- 当在网络服务自身线程调用了次函数时，会进入 `STOPPING` 状态，业务应该在非网络服务线程判断是否依然处于 `STOPPING` 状态来决定是否再次调用`stop`，例如:  
   ```cpp
   if (service->is_stopping()) {
     service->stop();
@@ -154,7 +153,7 @@ bool is_running() const
 ```
 
 ### 返回值
-`true`: 网络服务在正常运行中，`false`: 网络服务处于其他状态
+`true`: 网络服务运行中，`false`: 网络服务处于其他状态
 
 
 ## <a name="is_stopping"></a> io_service::is_stopping

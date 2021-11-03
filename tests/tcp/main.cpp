@@ -78,7 +78,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   static const int s_icmp_mtu = 1472;
   std::vector<char> icmp_request;
 
-  cxx17::string_view userdata = "yasio-3.34.0";
+  cxx17::string_view userdata = "yasio-3.37.6";
 
 #if !defined(_WIN32)
   int nud = (std::max)((int)icmp_min_len, (std::min)((int)userdata.size(), s_icmp_mtu));
@@ -92,7 +92,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   hdr->seqno       = s_seqno++;
 
   memcpy(&icmp_request.front() + sizeof(icmp_header), (const char*)userdata.data(), (std::min)(userdata.size(), icmp_request.size() - sizeof(icmp_header)));
-  hdr->checksum = ip_chksum((uint16_t*)icmp_request.data(), icmp_request.size());
+  hdr->checksum = ip_chksum((uint16_t*)icmp_request.data(), static_cast<int>(icmp_request.size()));
 
   s.sendto(icmp_request.data(), icmp_request.size(), endpoints[0]);
 

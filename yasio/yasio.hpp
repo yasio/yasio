@@ -1038,8 +1038,8 @@ private:
   // Start a async resolve, It's only for internal use
   YASIO__DECL void start_resolve(io_channel*);
 
-  YASIO__DECL void init(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
-  YASIO__DECL void cleanup();
+  YASIO__DECL void initialize(const io_hostent* channel_eps /* could be nullptr */, int channel_count);
+  YASIO__DECL void finalize();
 
   // Try to dispose thread and other resources, service state will be IDLE when succeed
   YASIO__DECL void handle_stop();
@@ -1108,9 +1108,8 @@ private:
   // please call this at initialization, don't new channel at runtime
   // dynmaically: because this API is not thread safe.
   YASIO__DECL void create_channels(const io_hostent* eps, int count);
-  // Clear all channels after service exit.
-  YASIO__DECL void clear_channels();   // destroy all channels
-  YASIO__DECL void clear_transports(); // destroy all transports
+  YASIO__DECL void destroy_channels(); // destroy all channels
+  YASIO__DECL void clear_transports(); // clear all transports
   YASIO__DECL bool close_internal(io_channel*);
 
   // shutdown a tcp-connection if possible

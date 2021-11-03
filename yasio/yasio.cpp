@@ -776,19 +776,19 @@ void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
 void io_service::init_globals(const yasio::inet::print_fn2_t& prt) { yasio__shared_globals(prt).cprint_ = prt; }
 void io_service::cleanup_globals() { yasio__shared_globals().cprint_ = nullptr; }
 unsigned int io_service::tcp_rtt(transport_handle_t transport) { return transport->is_open() ? transport->socket_->tcp_rtt() : 0; }
-io_service::io_service() { this->init(nullptr, 1); }
-io_service::io_service(int channel_count) { this->init(nullptr, channel_count); }
-io_service::io_service(const io_hostent& channel_ep) { this->init(&channel_ep, 1); }
+io_service::io_service() { this->initialize(nullptr, 1); }
+io_service::io_service(int channel_count) { this->initialize(nullptr, channel_count); }
+io_service::io_service(const io_hostent& channel_ep) { this->initialize(&channel_ep, 1); }
 io_service::io_service(const std::vector<io_hostent>& channel_eps)
 {
-  this->init(!channel_eps.empty() ? channel_eps.data() : nullptr, static_cast<int>(channel_eps.size()));
+  this->initialize(!channel_eps.empty() ? channel_eps.data() : nullptr, static_cast<int>(channel_eps.size()));
 }
-io_service::io_service(const io_hostent* channel_eps, int channel_count) { this->init(channel_eps, channel_count); }
+io_service::io_service(const io_hostent* channel_eps, int channel_count) { this->initialize(channel_eps, channel_count); }
 io_service::~io_service()
 {
   if (this->is_stopping()) // still in stopping
     this->handle_stop();
-  this->cleanup();
+  this->finalize();
 }
 void io_service::start(event_cb_t cb)
 {
@@ -846,7 +846,7 @@ void io_service::handle_stop()
   this->timer_queue_.clear();
   this->state_ = io_service::state::IDLE;
 }
-void io_service::init(const io_hostent* channel_eps, int channel_count)
+void io_service::initialize(const io_hostent* channel_eps, int channel_count)
 {
   // at least one channel
   if (channel_count < 1)
@@ -869,7 +869,7 @@ void io_service::init(const io_hostent* channel_eps, int channel_count)
 #endif
   this->state_ = io_service::state::IDLE;
 }
-void io_service::cleanup()
+void io_service::finalize()
 {
   if (this->state_ == io_service::state::IDLE)
   {
@@ -878,7 +878,7 @@ void io_service::cleanup()
     life_token_.reset();
 #endif
 
-    clear_channels();
+    destroy_channels();
 
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
@@ -903,7 +903,7 @@ void io_service::create_channels(const io_hostent* channel_eps, int channel_coun
     channels_.push_back(channel);
   }
 }
-void io_service::clear_channels()
+void io_service::destroy_channels()
 {
   this->channel_ops_.clear();
   for (auto channel : channels_)

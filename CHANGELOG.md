@@ -13,6 +13,7 @@ yasio-3.37.6
 11. Improve `xxsocket::disconnect` platform compatible for udp, such as BSD-like system
 12. Imporve `multicast` support, and the test case works on windows,linux,macOS
 13. Add option `YOPT_C_MCAST_IF` to set multicast interface, on BSD-like system, it's required for ipv6
+14. Improve `io_service::stop` flow
   
   
 yasio-3.37.5

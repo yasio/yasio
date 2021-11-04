@@ -613,7 +613,7 @@ int xxsocket::disconnect(socket_native_type s)
      * The udp socket will be success disconnected by kernel function: `sodisconnect(upic_socket.c)`, then in the kernel, will continue try to
      * connect with new sockaddr, but will failed with follow errno:
      * a. EINVAL: addrlen mismatch
-     * b. ENOSUPPORT: family mismatch
+     * b. EAFNOSUPPORT: family mismatch
      * So, we just simply ignore them for the disconnect behavior.
      */
     return (error == EAFNOSUPPORT || error == EINVAL) ? 0 : -1;

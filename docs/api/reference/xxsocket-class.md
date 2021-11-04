@@ -1,6 +1,6 @@
 ---
 title: "yasio::inet::xxsocket Class"
-date: "1/5/2021"
+date: "4/11/2021"
 f1_keywords: ["xxsocket", "yasio/xxsocket", ]
 helpviewer_keywords: []
 ---
@@ -49,6 +49,7 @@ namespace yasio { inline namespace inet { class xxsocket; } }
 |[xxsocket::accept_n](#accept_n)|非阻塞方式接受TCP连接|
 |[xxsocket::connect](#connect)|建立连接|
 |[xxsocket::connect_n](#connect_n)|非阻塞方式建立连接|
+|[xxsocket::disconnect](#disconnect)|断开UDP和远程地址的绑定|
 |[xxsocket::send](#send)|发送数据|
 |[xxsocket::send_n](#send_n)|非阻塞方式发送数据|
 |[xxsocket::recv](#recv)|接受数据|
@@ -595,13 +596,20 @@ TCP: 发起TCP三次握手
 
 UDP: 建立4元组绑定
 
-## <a name="connect"></a> xxsocket::connect_n
+## <a name="disconnect"></a> xxsocket::disconnect
 
 解除socket和远程主机的4元组绑定。
 
 ```cpp
 int disconnect() const;
 ```
+
+### 返回值
+
+`0`: 成功， `< 0`失败，通过 `xxsocket::get_last_errno` 获取错误码。
+
+## 注意
+仅支持UDP
 
 ### 返回值
 

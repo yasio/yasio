@@ -29,16 +29,16 @@ int main()
           obs1.push32();
           for (auto i = 0; i < 119 - 4; ++i)
             obs1.write_byte(i + 1);
-          obs1.pop32(obs1.length());
+          obs1.pop32(static_cast<uint32_t>(obs1.length()));
 
           obstream obs2;
           obs2.push32();
           for (auto i = 0; i < 104 - 4; ++i)
             obs2.write_byte(i + 1);
-          obs2.pop32(obs2.length());
+          obs2.pop32(static_cast<uint32_t>(obs2.length()));
 
           // merge 2 packets
-          obs1.write_bytes(obs2.data(), obs2.length());
+          obs1.write_bytes(obs2.data(), static_cast<int>(obs2.length()));
           service.write(event->transport(), std::move(obs1.buffer()));
         }
 

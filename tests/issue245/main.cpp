@@ -52,7 +52,8 @@ int main()
   obs.write_bytes("Connection: Close\r\n\r\n");
   auto k = obs.data();
   printf("sending...\n");
-  if (obs.length() != sock.send(obs.data(), obs.length()))
+  int n = static_cast<int>(obs.length());
+  if (n != sock.send(obs.data(), n))
   {
     printf("send error!\n");
     return -4;

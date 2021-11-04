@@ -94,7 +94,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   memcpy(&icmp_request.front() + sizeof(icmp_header), (const char*)userdata.data(), (std::min)(userdata.size(), icmp_request.size() - sizeof(icmp_header)));
   hdr->checksum = ip_chksum((uint16_t*)icmp_request.data(), static_cast<int>(icmp_request.size()));
 
-  s.sendto(icmp_request.data(), icmp_request.size(), endpoints[0]);
+  s.sendto(icmp_request.data(), static_cast<int>(icmp_request.size()), endpoints[0]);
 
   fd_set readfds;
   if (xxsocket::select(s, &readfds, nullptr, nullptr, wtimeout) > 0)

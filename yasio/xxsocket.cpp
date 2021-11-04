@@ -286,8 +286,6 @@ int xxsocket::getipsv(void)
 
 void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> handler)
 {
-  int family = AF_UNSPEC;
-  bool done  = false;
   /* Only windows support use getaddrinfo to get local ip address(not loopback or linklocal),
     Because nullptr same as "localhost": always return loopback address and at unix/linux the
     gethostname always return "localhost"

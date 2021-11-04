@@ -594,11 +594,12 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep)
 int xxsocket::disconnect() const { return xxsocket::disconnect(this->fd); }
 int xxsocket::disconnect(socket_native_type s)
 {
-  sockaddr addr_unspec{0};
-  addr_unspec.sa_family = AF_UNSPEC;
 #if defined(_WIN32)
+  sockaddr_storage addr_unspec{0};
   return ::connect(s, &addr_unspec, sizeof(addr_unspec));
 #else
+  sockaddr addr_unspec{0};
+  addr_unspec.sa_family = AF_UNSPEC;
   int ret, error;
   for (;;)
   {

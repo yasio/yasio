@@ -616,7 +616,7 @@ int xxsocket::disconnect(socket_native_type s)
      * connect with new sockaddr, but will failed with follow errno:
      * a. EINVAL: addrlen mismatch
      * b. ENOSUPPORT: family mismatch
-     * We just simply ignore them for the disconnect behavior
+     * So, we just simply ignore them for the disconnect behavior.
      */
     return (error == EAFNOSUPPORT || error == EINVAL) ? 0 : -1;
 #  else

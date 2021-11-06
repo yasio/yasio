@@ -8,7 +8,8 @@ on:
       - tests/**/*
       - examples/**/*
       - CMakeLists.txt
-      - .github/workflows/mingw-ci.yml
+      - .github/workflows/windows-ci.yml
+      - ci/**/*
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

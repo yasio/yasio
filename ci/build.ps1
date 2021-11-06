@@ -10,15 +10,24 @@ if (!($env:GITHUB_CI -eq "true")) {
 cmake --version
 
 # Generate
-echo "env:BUILD_ARCH=$env:BUILD_ARCH"
+echo "env:BUILD_ARCH=$env:BUILD_ARCH, env:UWP=$env:UWP"
 
 if ($env:GITHUB_CI -eq "true") {
     if ($env:TOOLCHAIN -eq "msvc") { # Generate vs2019 on github ci
-       if ($env:BUILD_ARCH -eq "x64") {
-           cmake -B build -DYASIO_SSL_BACKEND=1
+       # Determine arch name
+       $archName=""
+       if ($env:BUILD_ARCH -eq "x86") {
+           $archName="Win32"
        }
        else {
-           cmake -A Win32 -B build -DYASIO_SSL_BACKEND=1
+           $archName=$env:BUILD_ARCH
+       }
+    
+       if ($env:UWP -eq "true") {
+           cmake -A $archName -B build
+       }
+       else {
+           cmake -A $archName -B build -DYASIO_SSL_BACKEND=1
        }
     }
     else { # Generate mingw

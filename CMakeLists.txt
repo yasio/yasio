@@ -30,6 +30,10 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     endif()
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
+    set(UWP TRUE)
+endif()
+
 if (WIN32 AND NOT MINGW)
     add_compile_options(" /Bv")
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -366,7 +370,7 @@ yasio_config_pred(YASIO_ENABLE_PASSIVE_EVENT)
 yasio_config_pred(YASIO_NO_JNI_ONLOAD)
 
 # The tests & examples
-if(NOT IOS AND YASIO_BUILD_TESTS)
+if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/mcast)
     if(YASIO_HAVE_KCP)
@@ -393,6 +397,6 @@ if(NOT IOS AND YASIO_BUILD_TESTS)
 endif ()
 
 ### Sets startup project for vs .sln
-if (WIN32 AND YASIO_BUILD_TESTS)
+if (WIN32 AND NOT UWP AND YASIO_BUILD_TESTS)
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
 endif ()

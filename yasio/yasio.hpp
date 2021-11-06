@@ -562,9 +562,10 @@ private:
   */
   u_short remote_port_ = 0;
 
-  std::atomic<u_short> dns_queries_state_;
-
-  highp_time_t dns_queries_timestamp_ = 0;
+  // The domain name resolve state
+  std::atomic<u_short> resolve_state_;
+  // The last domain name resolved time for dns cache support
+  highp_time_t resolved_time_ = 0;
 
   int index_;
   int socktype_ = 0;

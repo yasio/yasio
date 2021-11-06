@@ -111,11 +111,11 @@ enum
 };
 
 enum : u_short
-{ // dns queries state
-  YDQS_READY = 1,
-  YDQS_DIRTY,
-  YDQS_INPROGRESS,
-  YDQS_FAILED,
+{ // domain name resolve state
+  YRES_READY = 1,
+  YRES_DIRTY,
+  YRES_INPROGRESS,
+  YRES_FAILED,
 };
 
 enum
@@ -132,8 +132,8 @@ enum
   /* whether port modified */
   YCPF_PORT_MOD = 1 << 20,
 
-  /* whether need dns queries */
-  YCPF_NEEDS_QUERIES = 1 << 21,
+  /* host is domain name, needs resolve */
+  YCPF_NEEDS_RESOLVE = 1 << 21,
 
   /// below is byte2 of private flags (25~32)
   /* whether ssl client in handshaking */
@@ -233,16 +233,16 @@ void ssl_auto_handle::destroy()
 /// io_channel
 io_channel::io_channel(io_service& service, int index) : io_base(), service_(service)
 {
-  socket_            = std::make_shared<xxsocket>();
-  state_             = io_base::state::CLOSED;
-  dns_queries_state_ = YDQS_FAILED;
-  index_             = index;
-  decode_len_        = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+  socket_        = std::make_shared<xxsocket>();
+  state_         = io_base::state::CLOSED;
+  resolve_state_ = YRES_FAILED;
+  index_         = index;
+  decode_len_    = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 const print_fn2_t& io_channel::__get_cprint() const { return get_service().options_.print_; }
 std::string io_channel::format_destination() const
 {
-  if (yasio__testbits(properties_, YCPF_NEEDS_QUERIES))
+  if (yasio__testbits(properties_, YCPF_NEEDS_RESOLVE))
     return yasio::strfmt(127, "%s(%s):%u", remote_host_.c_str(), !remote_eps_.empty() ? remote_eps_[0].ip().c_str() : "undefined", remote_port_);
 
   return yasio::strfmt(127, "%s:%u", remote_host_.c_str(), remote_port_);
@@ -341,19 +341,19 @@ void io_channel::configure_address()
     {
       ep.as_un(this->remote_host_.c_str());
       this->remote_eps_.push_back(ep);
-      this->dns_queries_state_ = YDQS_READY;
+      this->resolve_state_ = YRES_READY;
       return;
     }
 #endif
     if (ep.as_in(this->remote_host_.c_str(), this->remote_port_))
     {
       this->remote_eps_.push_back(ep);
-      this->dns_queries_state_ = YDQS_READY;
+      this->resolve_state_ = YRES_READY;
     }
     else
     {
-      yasio__setbits(properties_, YCPF_NEEDS_QUERIES);
-      this->dns_queries_state_ = YDQS_DIRTY;
+      yasio__setbits(properties_, YCPF_NEEDS_RESOLVE);
+      this->resolve_state_ = YRES_DIRTY;
     }
   }
 
@@ -1035,13 +1035,13 @@ void io_service::process_channels(fd_set* fds_array)
         {
           switch (this->query_ares_state(ctx))
           {
-            case YDQS_READY:
+            case YRES_READY:
               do_nonblocking_connect(ctx);
               break;
-            case YDQS_FAILED:
+            case YRES_FAILED:
               handle_connect_failed(ctx, yasio::errc::resolve_host_failed);
               break;
-            default:; // YDQS_INPRROGRESS
+            default:; // YRES_INPRROGRESS
           }
         }
         else if (ctx->state_ == io_base::state::OPENING)
@@ -1198,7 +1198,7 @@ void io_service::handle_event(event_ptr event)
 }
 void io_service::do_nonblocking_connect(io_channel* ctx)
 {
-  assert(ctx->dns_queries_state_ == YDQS_READY);
+  assert(ctx->resolve_state_ == YRES_READY);
   if (this->ipsv_ == 0)
     this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
   if (ctx->socket_->is_open())
@@ -1498,17 +1498,17 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   auto __get_cprint = [&]() -> const print_fn2_t& { return current_service.options_.print_; };
   if (!ctx->remote_eps_.empty())
   {
-    ctx->dns_queries_state_     = YDQS_READY;
-    ctx->dns_queries_timestamp_ = highp_clock();
+    ctx->resolve_state_ = YRES_READY;
+    ctx->resolved_time_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
     YASIO_KLOGD("[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)", ctx->index_, ctx->remote_host_.c_str(),
-                (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+                (ctx->resolved_time_ - ctx->ares_start_time_) / 1000.0);
 #  endif
   }
   else
   {
     ctx->set_last_errno(yasio::errc::resolve_host_failed);
-    ctx->dns_queries_state_ = YDQS_FAILED;
+    ctx->resolve_state_ = YRES_FAILED;
     YASIO_KLOGE("[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), status,
                 ::ares_strerror(status));
   }
@@ -2071,6 +2071,10 @@ bool io_service::cleanup_channel(io_channel* ctx, bool clear_state)
 #if YASIO_SSL_BACKEND != 0
   ctx->ssl_.destroy();
 #endif
+  // needs reset resolve state to dirty when last resolv fail
+  // to make sure we can start_resolve again when user request connect
+  if (ctx->resolve_state_ == YRES_FAILED)
+    ctx->resolve_state_ = YRES_DIRTY;
   bool bret = cleanup_io(ctx, clear_state);
 #if defined(YAISO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))
@@ -2095,30 +2099,30 @@ bool io_service::cleanup_io(io_base* obj, bool clear_state)
 u_short io_service::query_ares_state(io_channel* ctx)
 {
   update_dns_status();
-  if (yasio__testbits(ctx->properties_, YCPF_NEEDS_QUERIES))
+  if (yasio__testbits(ctx->properties_, YCPF_NEEDS_RESOLVE))
   {
-    switch (static_cast<u_short>(ctx->dns_queries_state_))
+    switch (static_cast<u_short>(ctx->resolve_state_))
     {
-      case YDQS_INPROGRESS:
+      case YRES_INPROGRESS:
         break;
-      case YDQS_READY:
-        if ((highp_clock() - ctx->dns_queries_timestamp_) < options_.dns_cache_timeout_)
+      case YRES_READY:
+        if ((highp_clock() - ctx->resolved_time_) < options_.dns_cache_timeout_)
           break;
         // dns cache timeout, change state to dirty and start resolve
-        ctx->dns_queries_state_ = YDQS_DIRTY;
-      case YDQS_DIRTY:
+        ctx->resolve_state_ = YRES_DIRTY;
+      case YRES_DIRTY:
         start_resolve(ctx);
         break;
     }
   }
-  return ctx->dns_queries_state_;
+  return ctx->resolve_state_;
 }
 void io_service::start_resolve(io_channel* ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
-  assert(ctx->dns_queries_state_ == YDQS_DIRTY);
+  assert(ctx->resolve_state_ == YRES_DIRTY);
   ctx->set_last_errno(EINPROGRESS);
-  ctx->dns_queries_state_ = YDQS_INPROGRESS;
+  ctx->resolve_state_ = YRES_INPROGRESS;
   YASIO_KLOGD("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
   ctx->remote_eps_.clear();
 #if defined(YASIO_ENABLE_ARES_PROFILER)
@@ -2151,17 +2155,17 @@ void io_service::start_resolve(io_channel* ctx)
       return;
     if (error == 0)
     {
-      ctx->dns_queries_state_     = YDQS_READY;
-      ctx->remote_eps_            = std::move(remote_eps);
-      ctx->dns_queries_timestamp_ = highp_clock();
+      ctx->resolve_state_ = YRES_READY;
+      ctx->remote_eps_    = std::move(remote_eps);
+      ctx->resolved_time_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
       YASIO_KLOGD("[index: %d] resolve %s succeed, cost: %g(ms)", ctx->index_, ctx->remote_host_.c_str(),
-                  (ctx->dns_queries_timestamp_ - ctx->ares_start_time_) / 1000.0);
+                  (ctx->resolved_time_ - ctx->ares_start_time_) / 1000.0);
 #  endif
     }
     else
     {
-      ctx->dns_queries_state_ = YDQS_FAILED;
+      ctx->resolve_state_ = YRES_FAILED;
       YASIO_KLOGE("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
     }
     this->interrupt();
@@ -2191,7 +2195,7 @@ void io_service::update_dns_status()
     recreate_ares_channel();
 #endif
     for (auto channel : this->channels_)
-      channel->dns_queries_state_ = YDQS_DIRTY;
+      channel->resolve_state_ = YRES_DIRTY;
   }
 }
 int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)

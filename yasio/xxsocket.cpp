@@ -819,14 +819,15 @@ int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interv
   buffer_in.onoff             = flag;
   buffer_in.keepalivetime     = idle * 1000;
   buffer_in.keepaliveinterval = interval * 1000;
-
   return WSAIoctl(s, SIO_KEEPALIVE_VALS, &buffer_in, sizeof(buffer_in), nullptr, 0, (DWORD*)&probes, nullptr, nullptr);
 #else
-  int n = set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag);
-  n += set_optval(s, IPPROTO_TCP, TCP_KEEPIDLE, idle);
-  n += set_optval(s, IPPROTO_TCP, TCP_KEEPINTVL, interval);
-  n += set_optval(s, IPPROTO_TCP, TCP_KEEPCNT, probes);
-  return n;
+  if (set_optval(s, SOL_SOCKET, SO_KEEPALIVE, flag) != 0)
+    return -1;
+  if (set_optval(s, IPPROTO_TCP, TCP_KEEPIDLE, idle) != 0)
+    return -1;
+  if (set_optval(s, IPPROTO_TCP, TCP_KEEPINTVL, interval) != 0)
+    return -1;
+  return set_optval(s, IPPROTO_TCP, TCP_KEEPCNT, probes);
 #endif
 }
 

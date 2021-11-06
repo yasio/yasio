@@ -24,7 +24,7 @@ if ($env:GITHUB_CI -eq "true") {
        }
     
        if ($env:UWP -eq "true") {
-           cmake -A $archName -B build
+           cmake -A $archName -B build -DCMAKE_SYSTEM_NAME=WindowsStore "-DCMAKE_SYSTEM_VERSION=10.0" -DBUILD_SHARED_LIBS=ON -DYAISO_BUILD_NI=ON
        }
        else {
            cmake -A $archName -B build -DYASIO_SSL_BACKEND=1

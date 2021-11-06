@@ -928,7 +928,7 @@ bool xxsocket::not_recv_error(int error) { return (error == EWOULDBLOCK || error
 
 const char* xxsocket::strerror(int error)
 {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   static char error_msg[256];
   ZeroMemory(error_msg, sizeof(error_msg));
   ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,

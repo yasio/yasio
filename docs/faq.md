@@ -2,6 +2,18 @@
 
 ## 重点问题解答
 
+??? question "在iOS 14+设备上连接本地局域网主机任意端口号报错：ec=65, detail:No route to host"
+
+    - 解决方案: 打开你的iPhone【设置】【隐私】【本地网络】找到你的应用，开启即可。
+
+??? question "在iOS设备上连接服务器端口号为10161时失败，错误信息：ec=65, detail:No route to host"
+
+    - 根本原因:
+        - 当APP初次启动时，在ios14.1+设备上，会提示请求 `Local Network Permission` 权限，用户点拒绝。
+        - 端口号 10161 是系统保留端口，用于 `SNMP via TLS` 协议。 
+    - 解决方案: 使用其他端口号作为APP服务端口，建议使用动态/私密端口，范围： 49152~65535。
+    - 其他参考: https://www.speedguide.net/port.php
+
 ??? question "yasio是否依赖其他网络库?"
 
     yasio的核心代码默认不依赖任何第三方库，从作者从业踏入通信行业开始就琢磨着编写一个轻量而好用的通用网络库，xxsocket就是yasio的起源，只有异步消息发送的软中断器提取于boost.asio。
@@ -30,14 +42,6 @@
     从 `3.30` 版本开始已处理。  
     如果不处理，实测过iOS在加载资源比较耗时会触发SIGPIPE直接导致APP闪退，处理后，仅仅触发TCP连接断开，错误码32，错误信息: `Broken pipe`  
     详见: https://github.com/yasio/yasio/issues/170
-
-??? question "在iOS设备上连接服务器端口号为10161时失败，错误信息：ec=65, detail:No route to host"
-
-    - 根本原因:
-        - 当APP初次启动时，在ios14.1+设备上，会提示请求 `Local Network Permission` 权限，用户点拒绝。
-        - 端口号 10161 是系统保留端口，用于 `SNMP via TLS` 协议。 
-    - 解决方案: 使用其他端口号作为APP服务端口，建议使用动态/私密端口，范围： 49152~65535。
-    - 其他参考: https://www.speedguide.net/port.php
 
 ??? question "macOS 上发送UDP失败，报错误码40，错误信息 `Message too long` 怎么办？"
 

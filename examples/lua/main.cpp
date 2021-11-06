@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   SetConsoleOutputCP(CP_UTF8);
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
   TIMECAPS tc;
   UINT wTimerRes = 0;
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
   } while (!update(50.0 / 1000));
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   ///////////////////////////////////////////////////////////////////////////
   /////////////// restoring timer resolution
   ///////////////////////////////////////////////////////////////////////////

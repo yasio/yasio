@@ -156,22 +156,6 @@ void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
-#if defined(_MSC_VER)
-  //!!!Note: since we use yasio io_service timer, no need to change timer resolution
-  // Default win32 Sleep resolution is 57ms, and best resolution only support 1ms
-  ///////////////////////////////////////////////////////////////////////////
-  /////////////// changing timer resolution
-  ///////////////////////////////////////////////////////////////////////////
-  //~ UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
-  //~ TIMECAPS tc;
-  //~ UINT wTimerRes = 0;
-  //~ if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
-  //~ {
-  //~   wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
-  //~   timeBeginPeriod(wTimerRes);
-  //~ }
-#endif
-
   highp_timer_ptr ignored_ret = service->schedule(std::chrono::microseconds(s_kcp_send_interval), [=](io_service&) {
     s_send_total_bytes += service->write(thandle, obs->buffer());
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
@@ -182,16 +166,6 @@ void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream
     printf("===> sender finished!\n");
     return true; // tell this timer finished
   });
-
-#if defined(_MSC_VER)
-  ///////////////////////////////////////////////////////////////////////////
-  /////////////// restoring timer resolution
-  ///////////////////////////////////////////////////////////////////////////
-  //~ if (wTimerRes != 0)
-  //~ {
-  //~   timeEndPeriod(wTimerRes);
-  //~ }
-#endif
 }
 
 void start_sender(io_service& service)

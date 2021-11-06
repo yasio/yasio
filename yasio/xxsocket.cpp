@@ -52,7 +52,7 @@ SOFTWARE.
 #  pragma warning(disable : 4996)
 #endif
 
-#if defined(_WIN32) && !defined(_WINSTORE)
+#if defined(_WIN32)
 static LPFN_ACCEPTEX __accept_ex                           = nullptr;
 static LPFN_GETACCEPTEXSOCKADDRS __get_accept_ex_sockaddrs = nullptr;
 static LPFN_CONNECTEX __connect_ex                         = nullptr;
@@ -397,10 +397,9 @@ bool xxsocket::reopen(int af, int type, int protocol)
   return this->open(af, type, protocol);
 }
 
-#if defined(_WIN32) && !defined(_WINSTORE)
+#if defined(_WIN32)
 bool xxsocket::open_ex(int af, int type, int protocol)
 {
-#  if !defined(WP8)
   if (invalid_socket == this->fd)
   {
     this->fd = ::WSASocket(af, type, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
@@ -428,12 +427,8 @@ bool xxsocket::open_ex(int af, int type, int protocol)
     }
   }
   return is_open();
-#  else
-  return false;
-#  endif
 }
 
-#  if !defined(WP8)
 bool xxsocket::accept_ex(SOCKET sockfd_listened, SOCKET sockfd_prepared, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength,
                          DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
 {
@@ -453,8 +448,6 @@ void xxsocket::translate_sockaddrs(PVOID lpOutputBuffer, DWORD dwReceiveDataLeng
   __get_accept_ex_sockaddrs(lpOutputBuffer, dwReceiveDataLength, dwLocalAddressLength, dwRemoteAddressLength, LocalSockaddr, LocalSockaddrLength,
                             RemoteSockaddr, RemoteSockaddrLength);
 }
-#  endif
-
 #endif
 
 bool xxsocket::is_open(void) const { return this->fd != invalid_socket; }
@@ -821,7 +814,7 @@ endpoint xxsocket::peer_endpoint(socket_native_type fd)
 int xxsocket::set_keepalive(int flag, int idle, int interval, int probes) { return set_keepalive(this->fd, flag, idle, interval, probes); }
 int xxsocket::set_keepalive(socket_native_type s, int flag, int idle, int interval, int probes)
 {
-#if defined(_WIN32) && !defined(WP8) && !defined(_WINSTORE)
+#if defined(_WIN32)
   tcp_keepalive buffer_in;
   buffer_in.onoff             = flag;
   buffer_in.keepalivetime     = idle * 1000;
@@ -934,7 +927,7 @@ bool xxsocket::not_recv_error(int error) { return (error == EWOULDBLOCK || error
 
 const char* xxsocket::strerror(int error)
 {
-#if defined(_MSC_VER) && !defined(_WINSTORE)
+#if defined(_MSC_VER)
   static char error_msg[256];
   ZeroMemory(error_msg, sizeof(error_msg));
   ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,

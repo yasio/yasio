@@ -1006,7 +1006,7 @@ void io_service::process_transports(fd_set* fds_array)
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_;
-      if (0 == opm)
+      if (0 == opm && this->state_ == io_service::state::RUNNING)
       { // no open/close operations request
         ++iter;
         continue;

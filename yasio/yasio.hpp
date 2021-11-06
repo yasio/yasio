@@ -564,7 +564,7 @@ private:
 
   // The domain name resolve state
   std::atomic<u_short> resolve_state_;
-  // The last domain name resolved time for dns cache support
+  // The last domain name resolved time in microseconds for dns cache support
   highp_time_t resolved_time_ = 0;
 
   int index_;

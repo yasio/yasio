@@ -110,14 +110,6 @@ enum
   YOPM_CLOSE = 1 << 1,
 };
 
-enum : u_short
-{ // domain name resolve state
-  YRES_READY = 1,
-  YRES_DIRTY,
-  YRES_INPROGRESS,
-  YRES_FAILED,
-};
-
 enum
 {
   /* whether udp server enable multicast service */
@@ -135,9 +127,13 @@ enum
   /* host is domain name, needs resolve */
   YCPF_NEEDS_RESOLVE = 1 << 21,
 
-  /// below is byte2 of private flags (25~32)
+  /// below is byte2 of private flags (25~32) are mutable, and will be cleared automatically when connect flow done.
+
+  /* whether the name resolve in progress */
+  YCPF_NAME_RESOLVING = 1 << 25,
+
   /* whether ssl client in handshaking */
-  YCPF_SSL_HANDSHAKING = 1 << 25,
+  YCPF_SSL_HANDSHAKING = 1 << 26,
 };
 
 namespace
@@ -233,11 +229,10 @@ void ssl_auto_handle::destroy()
 /// io_channel
 io_channel::io_channel(io_service& service, int index) : io_base(), service_(service)
 {
-  socket_        = std::make_shared<xxsocket>();
-  state_         = io_base::state::CLOSED;
-  resolve_state_ = YRES_FAILED;
-  index_         = index;
-  decode_len_    = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+  socket_     = std::make_shared<xxsocket>();
+  state_      = io_base::state::CLOSED;
+  index_      = index;
+  decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 const print_fn2_t& io_channel::__get_cprint() const { return get_service().options_.print_; }
 std::string io_channel::format_destination() const
@@ -329,42 +324,6 @@ void io_channel::set_port(u_short port)
     yasio__setbits(properties_, YCPF_PORT_MOD);
   }
 }
-void io_channel::configure_address()
-{
-  if (yasio__testbits(properties_, YCPF_HOST_MOD))
-  {
-    yasio__clearbits(properties_, YCPF_HOST_MOD);
-    this->remote_eps_.clear();
-    ip::endpoint ep;
-#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
-    if (yasio__unlikely(yasio__testbits(properties_, YCM_UDS)))
-    {
-      ep.as_un(this->remote_host_.c_str());
-      this->remote_eps_.push_back(ep);
-      this->resolve_state_ = YRES_READY;
-      return;
-    }
-#endif
-    if (ep.as_in(this->remote_host_.c_str(), this->remote_port_))
-    {
-      this->remote_eps_.push_back(ep);
-      this->resolve_state_ = YRES_READY;
-    }
-    else
-    {
-      yasio__setbits(properties_, YCPF_NEEDS_RESOLVE);
-      this->resolve_state_ = YRES_DIRTY;
-    }
-  }
-
-  if (yasio__testbits(properties_, YCPF_PORT_MOD))
-  {
-    yasio__clearbits(properties_, YCPF_PORT_MOD);
-    if (!this->remote_eps_.empty())
-      for (auto& ep : this->remote_eps_)
-        ep.port(this->remote_port_);
-  }
-}
 int io_channel::__builtin_decode_len(void* d, int n)
 {
   int loffset = uparams_.length_field_offset;
@@ -388,7 +347,7 @@ int io_channel::__builtin_decode_len(void* d, int n)
 // -------------------- io_transport ---------------------
 io_transport::io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s) : ctx_(ctx)
 {
-  this->state_  = io_base::state::OPEN;
+  this->state_  = io_base::state::OPENED;
   this->socket_ = s;
 #if !defined(YASIO_MINIFY_EVENT)
   this->ud_.ptr = nullptr;
@@ -1028,38 +987,41 @@ void io_service::process_channels(fd_set* fds_array)
     {
       auto ctx    = *iter;
       bool finish = true;
-      ctx->configure_address();
       if (yasio__testbits(ctx->properties_, YCM_CLIENT))
-      { // resolving, opening
-        if (yasio__testbits(ctx->opmask_, YOPM_OPEN))
+      {
+        if (yasio__unlikely(yasio__testbits(ctx->opmask_, YOPM_OPEN)))
         {
-          switch (this->query_ares_state(ctx))
-          {
-            case YRES_READY:
-              do_nonblocking_connect(ctx);
-              break;
-            case YRES_FAILED:
-              handle_connect_failed(ctx, yasio::errc::resolve_host_failed);
-              break;
-            default:; // YRES_INPRROGRESS
-          }
+          yasio__clearbits(ctx->opmask_, YOPM_OPEN);
+          ctx->state_ = io_base::state::RESOLVING;
         }
-        else if (ctx->state_ == io_base::state::OPENING)
-          do_nonblocking_connect_completion(ctx, fds_array);
 
-        finish = ctx->error_ != EINPROGRESS && !yasio__testbits(ctx->opmask_, YOPM_OPEN);
+        switch (ctx->state_)
+        {
+          case io_base::state::OPENING:
+            do_connect_completion(ctx, fds_array);
+            break;
+          case io_base::state::RESOLVING:
+            if (do_resolve(ctx) == 0)
+              do_connect(ctx);
+            else if (ctx->error_ != EINPROGRESS)
+              handle_connect_failed(ctx, ctx->error_);
+            break;
+          default:;
+        }
+        finish = ctx->error_ != EINPROGRESS;
       }
       else if (yasio__testbits(ctx->properties_, YCM_SERVER))
       {
+        do_resolve(ctx);
         auto opmask = ctx->opmask_;
         if (yasio__testbits(opmask, YOPM_OPEN))
-          do_nonblocking_accept(ctx);
+          do_accept(ctx);
         else if (yasio__testbits(opmask, YOPM_CLOSE))
           cleanup_channel(ctx);
 
-        finish = (ctx->state_ != io_base::state::OPEN);
+        finish = (ctx->state_ != io_base::state::OPENED);
         if (!finish)
-          do_nonblocking_accept_completion(ctx, fds_array);
+          do_accept_completion(ctx, fds_array);
         else
           ctx->bytes_transferred_ = 0;
       }
@@ -1100,7 +1062,7 @@ bool io_service::is_open(transport_handle_t transport) const { return transport-
 bool io_service::is_open(int index) const
 {
   auto ctx = channel_at(index);
-  return ctx != nullptr && ctx->state_ == io_base::state::OPEN;
+  return ctx != nullptr && ctx->state_ == io_base::state::OPENED;
 }
 void io_service::open(size_t index, int kind)
 {
@@ -1196,20 +1158,13 @@ void io_service::handle_event(event_ptr event)
   else
     options_.on_event_(std::move(event));
 }
-void io_service::do_nonblocking_connect(io_channel* ctx)
+void io_service::do_connect(io_channel* ctx)
 {
-  assert(ctx->resolve_state_ == YRES_READY);
+  assert(!ctx->remote_eps_.empty());
   if (this->ipsv_ == 0)
     this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
   if (ctx->socket_->is_open())
     cleanup_io(ctx);
-
-  yasio__clearbits(ctx->opmask_, YOPM_OPEN);
-  if (ctx->remote_eps_.empty())
-  {
-    this->handle_connect_failed(ctx, yasio::errc::no_available_address);
-    return;
-  }
 
   ctx->state_ = io_base::state::OPENING;
   auto& ep    = ctx->remote_eps_[0];
@@ -1254,7 +1209,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
         register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
         ctx->timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
         ctx->timer_.async_wait_once(*this, [ctx](io_service& thiz) {
-          if (ctx->state_ != io_base::state::OPEN)
+          if (ctx->state_ != io_base::state::OPENED)
             thiz.handle_connect_failed(ctx, ETIMEDOUT);
         });
       }
@@ -1269,7 +1224,7 @@ void io_service::do_nonblocking_connect(io_channel* ctx)
     this->handle_connect_failed(ctx, xxsocket::get_last_errno());
 }
 
-void io_service::do_nonblocking_connect_completion(io_channel* ctx, fd_set* fds_array)
+void io_service::do_connect_completion(io_channel* ctx, fd_set* fds_array)
 {
   assert(ctx->state_ == io_base::state::OPENING && yasio__testbits(ctx->properties_, YCM_TCP) && yasio__testbits(ctx->properties_, YCM_CLIENT));
   if (ctx->state_ == io_base::state::OPENING)
@@ -1498,7 +1453,6 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   auto __get_cprint = [&]() -> const print_fn2_t& { return current_service.options_.print_; };
   if (!ctx->remote_eps_.empty())
   {
-    ctx->resolve_state_ = YRES_READY;
     ctx->resolved_time_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
     YASIO_KLOGD("[index: %d] ares_getaddrinfo_cb: resolve %s succeed, cost:%g(ms)", ctx->index_, ctx->remote_host_.c_str(),
@@ -1508,7 +1462,6 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   else
   {
     ctx->set_last_errno(yasio::errc::resolve_host_failed);
-    ctx->resolve_state_ = YRES_FAILED;
     YASIO_KLOGE("[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), status,
                 ::ares_strerror(status));
   }
@@ -1591,7 +1544,7 @@ void io_service::destroy_ares_channel()
   }
 }
 #endif
-void io_service::do_nonblocking_accept(io_channel* ctx)
+void io_service::do_accept(io_channel* ctx)
 { // channel is server
   cleanup_channel(ctx);
 
@@ -1637,7 +1590,7 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
     }
 
     ctx->socket_->set_nonblocking(true);
-    ctx->state_ = io_base::state::OPEN;
+    ctx->state_ = io_base::state::OPENED;
     if (yasio__testbits(ctx->properties_, YCM_UDP))
     {
       if (yasio__testbits(ctx->properties_, YCPF_MCAST))
@@ -1660,9 +1613,9 @@ void io_service::do_nonblocking_accept(io_channel* ctx)
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx, 1));
 #endif
 }
-void io_service::do_nonblocking_accept_completion(io_channel* ctx, fd_set* fds_array)
+void io_service::do_accept_completion(io_channel* ctx, fd_set* fds_array)
 {
-  if (ctx->state_ == io_base::state::OPEN)
+  if (ctx->state_ == io_base::state::OPENED)
   {
     int error = 0;
     if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]) && ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
@@ -1762,13 +1715,14 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
 void io_service::handle_connect_succeed(transport_handle_t transport)
 {
   auto ctx = transport->ctx_;
-  ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
+  ctx->properties_ &= 0xffffff; // clear highest byte flags
+  ctx->set_last_errno(0);       // clear errno, value may be EINPROGRESS
   auto& connection = transport->socket_;
   if (yasio__testbits(ctx->properties_, YCM_CLIENT))
   {
     // Reset client channel bytes transferred when a new connection established
     ctx->bytes_transferred_ = 0;
-    ctx->state_             = io_base::state::OPEN;
+    ctx->state_             = io_base::state::OPENED;
     if (yasio__testbits(ctx->properties_, YCM_UDP))
       static_cast<io_transport_udp*>(transport)->confgure_remote(ctx->remote_eps_[0]);
   }
@@ -2073,8 +2027,6 @@ bool io_service::cleanup_channel(io_channel* ctx, bool clear_state)
 #endif
   // needs reset resolve state to dirty when last resolv fail
   // to make sure we can start_resolve again when user request connect
-  if (ctx->resolve_state_ == YRES_FAILED)
-    ctx->resolve_state_ = YRES_DIRTY;
   bool bret = cleanup_io(ctx, clear_state);
 #if defined(YAISO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))
@@ -2096,35 +2048,62 @@ bool io_service::cleanup_io(io_base* obj, bool clear_state)
   }
   return false;
 }
-u_short io_service::query_ares_state(io_channel* ctx)
+
+int io_service::do_resolve(io_channel* ctx)
 {
-  update_dns_status();
-  if (yasio__testbits(ctx->properties_, YCPF_NEEDS_RESOLVE))
+  if (yasio__unlikely(yasio__testbits(ctx->properties_, YCPF_HOST_MOD)))
   {
-    switch (static_cast<u_short>(ctx->resolve_state_))
+    yasio__clearbits(ctx->properties_, YCPF_HOST_MOD);
+    ctx->remote_eps_.clear();
+    ip::endpoint ep;
+#if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
+    if (yasio__unlikely(yasio__testbits(ctx->properties_, YCM_UDS)))
     {
-      case YRES_INPROGRESS:
-        break;
-      case YRES_READY:
-        if ((highp_clock() - ctx->resolved_time_) < options_.dns_cache_timeout_)
-          break;
-        // dns cache timeout, change state to dirty and start resolve
-        ctx->resolve_state_ = YRES_DIRTY;
-      case YRES_DIRTY:
-        start_resolve(ctx);
-        break;
+      ep.as_un(ctx->remote_host_.c_str());
+      ctx->remote_eps_.push_back(ep);
+      return 0;
     }
+#endif
+    if (ep.as_in(ctx->remote_host_.c_str(), ctx->remote_port_))
+      ctx->remote_eps_.push_back(ep);
+    else
+      yasio__setbits(ctx->properties_, YCPF_NEEDS_RESOLVE);
   }
-  return ctx->resolve_state_;
+
+  if (yasio__unlikely(yasio__testbits(ctx->properties_, YCPF_PORT_MOD)))
+  {
+    yasio__clearbits(ctx->properties_, YCPF_PORT_MOD);
+    if (!ctx->remote_eps_.empty())
+      for (auto& ep : ctx->remote_eps_)
+        ep.port(ctx->remote_port_);
+  }
+
+  if (yasio__likely(!ctx->remote_eps_.empty()))
+  {
+    if (!yasio__testbits(ctx->properties_, YCPF_NEEDS_RESOLVE))
+      return 0;
+
+    update_dns_status();
+    if (yasio__likely((highp_clock() - ctx->resolved_time_) < options_.dns_cache_timeout_))
+      return 0;
+    ctx->remote_eps_.clear();
+  }
+
+  if (yasio__unlikely(!yasio__testbits(ctx->properties_, YCPF_NAME_RESOLVING)))
+  {
+    if (yasio__likely(!ctx->remote_host_.empty()))
+      start_resolve(ctx);
+    else
+      ctx->error_ = yasio::errc::no_available_address;
+  }
+  return -1;
 }
 void io_service::start_resolve(io_channel* ctx)
 { // Only call at event-loop thread, so
   // no need to consider thread safe.
-  assert(ctx->resolve_state_ == YRES_DIRTY);
+  yasio__setbits(ctx->properties_, YCPF_NAME_RESOLVING);
   ctx->set_last_errno(EINPROGRESS);
-  ctx->resolve_state_ = YRES_INPROGRESS;
   YASIO_KLOGD("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
-  ctx->remote_eps_.clear();
 #if defined(YASIO_ENABLE_ARES_PROFILER)
   ctx->ares_start_time_ = highp_clock();
 #endif
@@ -2155,7 +2134,6 @@ void io_service::start_resolve(io_channel* ctx)
       return;
     if (error == 0)
     {
-      ctx->resolve_state_ = YRES_READY;
       ctx->remote_eps_    = std::move(remote_eps);
       ctx->resolved_time_ = highp_clock();
 #  if defined(YASIO_ENABLE_ARES_PROFILER)
@@ -2164,10 +2142,7 @@ void io_service::start_resolve(io_channel* ctx)
 #  endif
     }
     else
-    {
-      ctx->resolve_state_ = YRES_FAILED;
       YASIO_KLOGE("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
-    }
     this->interrupt();
   });
   async_resolv_thread.detach();
@@ -2195,7 +2170,7 @@ void io_service::update_dns_status()
     recreate_ares_channel();
 #endif
     for (auto channel : this->channels_)
-      channel->resolve_state_ = YRES_DIRTY;
+      channel->resolved_time_ = 0;
   }
 }
 int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)

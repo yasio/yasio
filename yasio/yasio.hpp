@@ -415,8 +415,9 @@ struct YASIO_API io_base {
   enum class state : uint8_t
   {
     CLOSED,
+    RESOLVING,
     OPENING,
-    OPEN,
+    OPENED,
   };
   enum class error_stage : uint8_t
   {
@@ -534,9 +535,6 @@ private:
   YASIO__DECL void set_host(cxx17::string_view host);
   YASIO__DECL void set_port(u_short port);
 
-  // configure address, check whether needs dns queries
-  YASIO__DECL void configure_address();
-
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* d, int n);
 
@@ -562,8 +560,6 @@ private:
   */
   u_short remote_port_ = 0;
 
-  // The domain name resolve state
-  std::atomic<u_short> resolve_state_;
   // The last domain name resolved time in microseconds for dns cache support
   highp_time_t resolved_time_ = 0;
 
@@ -710,7 +706,7 @@ protected:
 
   YASIO__DECL io_transport(io_channel* ctx, std::shared_ptr<xxsocket>& s);
 
-  bool is_valid() const { return state_ == io_base::state::OPEN; }
+  bool is_valid() const { return state_ == io_base::state::OPENED; }
   void invalid() { state_ = io_base::state::CLOSED; }
 
   char buffer_[YASIO_INET_BUFFER_SIZE]; // recv buffer, 64K
@@ -1057,8 +1053,9 @@ private:
 
   YASIO__DECL int do_select(fd_set* fds_array, highp_time_t wait_duration);
 
-  YASIO__DECL void do_nonblocking_connect(io_channel*);
-  YASIO__DECL void do_nonblocking_connect_completion(io_channel*, fd_set* fds_array);
+  YASIO__DECL int do_resolve(io_channel* ctx);
+  YASIO__DECL void do_connect(io_channel*);
+  YASIO__DECL void do_connect_completion(io_channel*, fd_set* fds_array);
 
 #if defined(YASIO_SSL_BACKEND)
   YASIO__DECL void init_ssl_context();
@@ -1116,17 +1113,9 @@ private:
   // shutdown a tcp-connection if possible
   YASIO__DECL bool shutdown_internal(transport_handle_t);
 
-  /*
-  ** summay: Query async resolve state for new endpoint set
-  ** retval:
-  **   YDQS_READY, YDQS_INPRROGRESS, YDQS_FAILED
-  ** remark: will start a async resolv when the state is: YDQS_DIRTY
-  */
-  YASIO__DECL u_short query_ares_state(io_channel* ctx);
-
   // supporting server
-  YASIO__DECL void do_nonblocking_accept(io_channel*);
-  YASIO__DECL void do_nonblocking_accept_completion(io_channel*, fd_set* fds_array);
+  YASIO__DECL void do_accept(io_channel*);
+  YASIO__DECL void do_accept_completion(io_channel*, fd_set* fds_array);
 
   YASIO__DECL static const char* strerror(int error);
 

@@ -747,7 +747,7 @@ io_service::io_service(const std::vector<io_hostent>& channel_eps)
 io_service::io_service(const io_hostent* channel_eps, int channel_count) { this->initialize(channel_eps, channel_count); }
 io_service::~io_service()
 {
-  if (this->is_stopping()) // still in stopping
+  if (this->stop_flag_) // still in stopping?
     this->handle_stop();
   this->finalize();
 }
@@ -755,6 +755,7 @@ void io_service::start(event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
+    this->stop_flag_   = 0;
     auto& global_state = yasio__shared_globals();
     if (!this->options_.print_)
       this->options_.print_ = global_state.cprint_;
@@ -778,15 +779,18 @@ void io_service::start(event_cb_t cb)
 }
 void io_service::stop()
 {
-  if (this->state_ == io_service::state::RUNNING)
+  if (!this->stop_flag_)
   {
-    this->state_ = io_service::state::STOPPING;
-    for (auto c : channels_)
-      this->close(c->index());
-    this->interrupt();
-    this->handle_stop();
+    this->stop_flag_ = YOPM_CLOSE;
+    if (this->state_ == io_service::state::RUNNING)
+    {
+      for (auto c : channels_)
+        this->close(c->index());
+      this->interrupt();
+      this->handle_stop();
+    }
   }
-  else if (this->state_ == io_service::state::STOPPING)
+  else
     this->handle_stop();
 }
 void io_service::handle_stop()
@@ -805,7 +809,9 @@ void io_service::handle_stop()
     this->dispatch((std::numeric_limits<int>::max)());
   clear_transports();
   this->timer_queue_.clear();
-  this->state_ = io_service::state::IDLE;
+  this->stop_flag_ = 0;
+  this->worker_id_ = std::thread::id{};
+  this->state_     = io_service::state::IDLE;
 }
 void io_service::initialize(const io_hostent* channel_eps, int channel_count)
 {
@@ -946,7 +952,7 @@ void io_service::run()
 
     // process timeout timers
     process_timers();
-  } while (this->state_ == io_service::state::RUNNING || !this->transports_.empty());
+  } while (!this->stop_flag_ || !this->transports_.empty());
 
 #if defined(YASIO_HAVE_CARES)
   destroy_ares_channel();
@@ -954,6 +960,8 @@ void io_service::run()
 #if defined(YASIO_SSL_BACKEND)
   cleanup_ssl_context();
 #endif
+
+  this->state_ = io_service::state::AT_EXITING;
 }
 void io_service::process_transports(fd_set* fds_array)
 {
@@ -964,9 +972,9 @@ void io_service::process_transports(fd_set* fds_array)
     bool ok        = (do_read(transport, fds_array) && do_write(transport));
     if (ok)
     {
-      int opm = transport->opmask_ | transport->ctx_->opmask_;
-      if (0 == opm && this->state_ == io_service::state::RUNNING)
-      { // no open/close operations request
+      int opm = transport->opmask_ | transport->ctx_->opmask_ | this->stop_flag_;
+      if (0 == opm)
+      { // no open/close/stop operations request
         ++iter;
         continue;
       }

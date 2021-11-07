@@ -919,7 +919,7 @@ public:
     UNINITIALIZED,
     IDLE,
     RUNNING,
-    STOPPING,
+    AT_EXITING,
   };
 
   /*
@@ -955,7 +955,7 @@ public:
   YASIO__DECL void stop();
 
   bool is_running() const { return this->state_ == io_service::state::RUNNING; }
-  bool is_stopping() const { return this->state_ == io_service::state::STOPPING; }
+  bool is_stopping() const { return !!this->stop_flag_; }
 
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
@@ -1188,7 +1188,7 @@ private:
     } tcp_keepalive_;
 
     bool no_new_thread_ = false;
-
+    
     // The resolve function
     resolv_fn_t resolv_;
     // the event callback
@@ -1208,6 +1208,8 @@ private:
 
   // The ip stack version supported by localhost
   u_short ipsv_ = 0;
+  // The stop flag to notify all transports needs close
+  uint8_t stop_flag_ = 0;
 #if defined(YASIO_SSL_BACKEND)
   SSL_CTX* ssl_ctx_ = nullptr;
 #endif

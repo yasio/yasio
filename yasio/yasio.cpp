@@ -79,10 +79,7 @@ SOFTWARE.
 #define yasio__setbits(x, m) ((x) |= (m))
 #define yasio__clearbits(x, m) ((x) &= ~(m))
 #define yasio__testbits(x, m) ((x) & (m))
-
-#define yasio__testlobyte(x, v) (((x) & (uint16_t)0x00ff) == (v))
 #define yasio__setlobyte(x, v) ((x) = ((x) & ~((decltype(x))0xff)) | (v))
-#define yasio__lobyte(x) ((x) & (uint16_t)0x00ff)
 
 #if defined(_MSC_VER)
 #  pragma warning(push)
@@ -118,11 +115,11 @@ enum
   /* whether multicast loopback, if 1, local machine can recv self multicast packet */
   YCPF_MCAST_LOOPBACK = 1 << 18,
 
-  /* whether host modified */
-  YCPF_HOST_MOD = 1 << 19,
+  /* whether host dirty */
+  YCPF_HOST_DIRTY = 1 << 19,
 
-  /* whether port modified */
-  YCPF_PORT_MOD = 1 << 20,
+  /* whether port dirty */
+  YCPF_PORT_DIRTY = 1 << 20,
 
   /* host is domain name, needs resolve */
   YCPF_NEEDS_RESOLVE = 1 << 21,
@@ -311,7 +308,7 @@ void io_channel::set_host(cxx17::string_view host)
   if (this->remote_host_ != host)
   {
     cxx17::assign(this->remote_host_, host);
-    yasio__setbits(properties_, YCPF_HOST_MOD);
+    yasio__setbits(properties_, YCPF_HOST_DIRTY);
   }
 }
 void io_channel::set_port(u_short port)
@@ -321,7 +318,7 @@ void io_channel::set_port(u_short port)
   if (this->remote_port_ != port)
   {
     this->remote_port_ = port;
-    yasio__setbits(properties_, YCPF_PORT_MOD);
+    yasio__setbits(properties_, YCPF_PORT_DIRTY);
   }
 }
 int io_channel::__builtin_decode_len(void* d, int n)
@@ -2053,9 +2050,9 @@ bool io_service::cleanup_io(io_base* obj, bool clear_mask)
 
 int io_service::do_resolve(io_channel* ctx)
 {
-  if (yasio__unlikely(yasio__testbits(ctx->properties_, YCPF_HOST_MOD)))
+  if (yasio__unlikely(yasio__testbits(ctx->properties_, YCPF_HOST_DIRTY)))
   {
-    yasio__clearbits(ctx->properties_, YCPF_HOST_MOD);
+    yasio__clearbits(ctx->properties_, YCPF_HOST_DIRTY);
     ctx->remote_eps_.clear();
     ip::endpoint ep;
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
@@ -2072,9 +2069,9 @@ int io_service::do_resolve(io_channel* ctx)
       yasio__setbits(ctx->properties_, YCPF_NEEDS_RESOLVE);
   }
 
-  if (yasio__unlikely(yasio__testbits(ctx->properties_, YCPF_PORT_MOD)))
+  if (yasio__unlikely(yasio__testbits(ctx->properties_, YCPF_PORT_DIRTY)))
   {
-    yasio__clearbits(ctx->properties_, YCPF_PORT_MOD);
+    yasio__clearbits(ctx->properties_, YCPF_PORT_DIRTY);
     if (!ctx->remote_eps_.empty())
       for (auto& ep : ctx->remote_eps_)
         ep.port(ctx->remote_port_);

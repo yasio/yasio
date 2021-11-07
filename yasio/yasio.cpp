@@ -1003,7 +1003,7 @@ void io_service::process_channels(fd_set* fds_array)
           ctx->state_ = io_base::state::RESOLVING;
         }
 
-        switch (ctx->state_)
+        switch (static_cast<io_base::state>(ctx->state_))
         {
           case io_base::state::OPENING:
             do_connect_completion(ctx, fds_array);
@@ -1099,15 +1099,12 @@ void io_service::handle_close(transport_handle_t thandle)
               io_service::strerror(ec));
 
   handle_event(cxx14::make_unique<io_event>(thandle->cindex(), YEK_ON_CLOSE, ec, thandle));
-  cleanup_io(thandle, false);
+  cleanup_io(thandle);
   deallocate_transport(thandle);
-
   if (yasio__testbits(ctx->properties_, YCM_CLIENT))
   {
-    ctx->error_ = 0;
     yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
-    ctx->state_ = io_base::state::CLOSED;
-    ctx->properties_ &= 0xffffff; // clear highest byte flags
+    cleanup_channel(ctx, false);
   }
 }
 void io_service::register_descriptor(const socket_native_type fd, int flags)
@@ -1809,7 +1806,6 @@ void io_service::deallocate_transport(transport_handle_t t)
 }
 void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
-  ctx->properties_ &= 0xffffff; // clear highest byte flags
   cleanup_channel(ctx);
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx));
@@ -2028,26 +2024,25 @@ highp_time_t io_service::get_timeout(highp_time_t usec)
   else
     return usec;
 }
-bool io_service::cleanup_channel(io_channel* ctx, bool clear_state)
+bool io_service::cleanup_channel(io_channel* ctx, bool clear_mask)
 {
 #if YASIO_SSL_BACKEND != 0
   ctx->ssl_.destroy();
 #endif
-  // needs reset resolve state to dirty when last resolv fail
-  // to make sure we can start_resolve again when user request connect
-  bool bret = cleanup_io(ctx, clear_state);
+  ctx->properties_ &= 0xffffff; // clear highest byte flags
+  bool bret = cleanup_io(ctx, clear_mask);
 #if defined(YAISO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))
     handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_CLOSE, 0, ctx, 1));
 #endif
   return bret;
 }
-bool io_service::cleanup_io(io_base* obj, bool clear_state)
+bool io_service::cleanup_io(io_base* obj, bool clear_mask)
 {
-  obj->error_  = 0;
-  obj->opmask_ = 0;
-  if (clear_state)
-    obj->state_ = io_base::state::CLOSED;
+  obj->error_ = 0;
+  obj->state_ = io_base::state::CLOSED;
+  if (clear_mask)
+    obj->opmask_ = 0;
   if (obj->socket_->is_open())
   {
     unregister_descriptor(obj->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);

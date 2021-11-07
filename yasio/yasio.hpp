@@ -1095,9 +1095,8 @@ private:
   bool do_write(transport_handle_t transport) { return transport->do_write(this->wait_duration_); }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
-  // The op mask will be cleared, the state will be set CLOSED when clear_state is 'true'
-  YASIO__DECL bool cleanup_channel(io_channel* channel, bool clear_state = true);
-  YASIO__DECL bool cleanup_io(io_base* obj, bool clear_state = true);
+  YASIO__DECL bool cleanup_channel(io_channel* channel, bool clear_mask = true);
+  YASIO__DECL bool cleanup_io(io_base* obj, bool clear_mask = true);
 
   YASIO__DECL void handle_close(transport_handle_t);
   YASIO__DECL void handle_event(event_ptr event);
@@ -1188,7 +1187,7 @@ private:
     } tcp_keepalive_;
 
     bool no_new_thread_ = false;
-    
+
     // The resolve function
     resolv_fn_t resolv_;
     // the event callback

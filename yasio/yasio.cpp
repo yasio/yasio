@@ -1720,8 +1720,8 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
 void io_service::handle_connect_succeed(transport_handle_t transport)
 {
   auto ctx = transport->ctx_;
-  ctx->properties_ &= 0xffffff; // clear highest byte flags
-  ctx->set_last_errno(0);       // clear errno, value may be EINPROGRESS
+  ctx->clear_mutable_flags();
+  ctx->set_last_errno(0); // clear errno, value may be EINPROGRESS
   auto& connection = transport->socket_;
   if (yasio__testbits(ctx->properties_, YCM_CLIENT))
   {
@@ -2029,7 +2029,7 @@ bool io_service::cleanup_channel(io_channel* ctx, bool clear_mask)
 #if YASIO_SSL_BACKEND != 0
   ctx->ssl_.destroy();
 #endif
-  ctx->properties_ &= 0xffffff; // clear highest byte flags
+  ctx->clear_mutable_flags();
   bool bret = cleanup_io(ctx, clear_mask);
 #if defined(YAISO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))

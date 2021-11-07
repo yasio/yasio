@@ -535,6 +535,8 @@ private:
   YASIO__DECL void set_host(cxx17::string_view host);
   YASIO__DECL void set_port(u_short port);
 
+  void clear_mutable_flags() { properties_ &= 0x00ffffff; }
+
   // -1 indicate failed, connection will be closed
   YASIO__DECL int __builtin_decode_len(void* d, int n);
 
@@ -544,7 +546,7 @@ private:
   ** bit[1-8] mask & kinds
   ** bit[9-16] flags
   ** bit[17-24] byte1 of private flags
-  ** bit[25~32] byte2 of private flags
+  ** bit[25~32] byte2 of private flags (mutable)
   */
   uint32_t properties_ = 0;
 

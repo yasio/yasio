@@ -752,7 +752,6 @@ void io_service::start(event_cb_t cb)
 {
   if (state_ == io_service::state::IDLE)
   {
-    this->stop_flag_   = 0;
     auto& global_state = yasio__shared_globals();
     if (!this->options_.print_)
       this->options_.print_ = global_state.cprint_;
@@ -824,7 +823,7 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
   options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
   register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
-  // Create channels
+  // create channels
   create_channels(channel_eps, channel_count);
 
 #if !defined(YASIO_HAVE_CARES)
@@ -841,15 +840,12 @@ void io_service::finalize()
     std::unique_lock<cxx17::shared_mutex> lck(*life_mutex_);
     life_token_.reset();
 #endif
-
     destroy_channels();
-
     unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
 
     options_.on_event_ = nullptr;
     options_.resolv_   = nullptr;
 
-    /// purge transport pool memory
     for (auto o : tpool_)
       ::operator delete(o);
     tpool_.clear();
@@ -1002,7 +998,7 @@ void io_service::process_channels(fd_set* fds_array)
 
         switch (static_cast<io_base::state>(ctx->state_))
         {
-          case io_base::state::OPENING:
+          case io_base::state::CONNECTING:
             do_connect_completion(ctx, fds_array);
             break;
           case io_base::state::RESOLVING:
@@ -1068,10 +1064,9 @@ bool io_service::is_open(int index) const
   auto ctx = channel_at(index);
   return ctx != nullptr && ctx->state_ == io_base::state::OPENED;
 }
-void io_service::open(size_t index, int kind)
+bool io_service::open(size_t index, int kind)
 {
   assert((kind > 0 && kind <= 0xff) && ((kind & (kind - 1)) != 0));
-
   auto ctx = channel_at(index);
   if (ctx != nullptr)
   {
@@ -1080,9 +1075,9 @@ void io_service::open(size_t index, int kind)
       ctx->socktype_ = SOCK_STREAM;
     else if (yasio__testbits(kind, YCM_UDP))
       ctx->socktype_ = SOCK_DGRAM;
-
-    open_internal(ctx);
+    return open_internal(ctx);
   }
+  return false;
 }
 io_channel* io_service::channel_at(size_t index) const { return (index < channels_.size()) ? channels_[index] : nullptr; }
 void io_service::handle_close(transport_handle_t thandle)
@@ -1167,7 +1162,7 @@ void io_service::do_connect(io_channel* ctx)
   if (ctx->socket_->is_open())
     cleanup_io(ctx);
 
-  ctx->state_ = io_base::state::OPENING;
+  ctx->state_ = io_base::state::CONNECTING;
   auto& ep    = ctx->remote_eps_[0];
   YASIO_KLOGD("[index: %d] connecting server %s(%s):%u...", ctx->index_, ctx->remote_host_.c_str(), ep.ip().c_str(), ctx->remote_port_);
   if (ctx->socket_->open(ep.af(), ctx->socktype_))
@@ -1227,8 +1222,8 @@ void io_service::do_connect(io_channel* ctx)
 
 void io_service::do_connect_completion(io_channel* ctx, fd_set* fds_array)
 {
-  assert(ctx->state_ == io_base::state::OPENING && yasio__testbits(ctx->properties_, YCM_TCP) && yasio__testbits(ctx->properties_, YCM_CLIENT));
-  if (ctx->state_ == io_base::state::OPENING)
+  assert(ctx->state_ == io_base::state::CONNECTING);
+  if (ctx->state_ == io_base::state::CONNECTING)
   {
 #if !defined(YASIO_SSL_BACKEND)
     int error = -1;
@@ -1267,7 +1262,7 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set* fds_array)
     else
       do_ssl_handshake(ctx);
 
-    if (ctx->state_ != io_base::state::OPENING)
+    if (ctx->state_ != io_base::state::CONNECTING)
       ctx->timer_.cancel(*this);
 #endif
   }
@@ -1838,10 +1833,8 @@ bool io_service::do_read(transport_handle_t transport, fd_set* fds_array)
           break;
         }
       }
-      else
-      { // process incompleted pdu
+      else // process incompleted pdu
         unpack(transport, transport->expected_size_ - static_cast<int>(transport->expected_packet_.size()), n, 0);
-      }
     }
     else
     { // n < 0, regard as connection should close
@@ -1918,12 +1911,12 @@ void io_service::remove_timer(highp_timer* timer)
     }
   }
 }
-void io_service::open_internal(io_channel* ctx)
+bool io_service::open_internal(io_channel* ctx)
 {
-  if (ctx->state_ == io_base::state::OPENING)
-  { // in-opening, do nothing
-    YASIO_KLOGD("[index: %d] the channel is in opening!", ctx->index_);
-    return;
+  if (ctx->state_ == io_base::state::CONNECTING || ctx->state_ == io_base::state::RESOLVING)
+  {
+    YASIO_KLOGD("[index: %d] the channel open operation is in progress!", ctx->index_);
+    return false;
   }
 
   yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
@@ -1937,6 +1930,7 @@ void io_service::open_internal(io_channel* ctx)
   this->channel_ops_mtx_.unlock();
 
   this->interrupt();
+  return true;
 }
 bool io_service::shutdown_internal(transport_handle_t transport)
 {
@@ -2002,7 +1996,6 @@ int io_service::do_select(fd_set* fdsa, highp_time_t wait_duration)
   YASIO_KLOGV("[core] socket.select max_nfds_:%d waiting... %ld milliseconds", max_nfds_, waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
   int retval = ::select(this->max_nfds_, &(fdsa[read_op]), &(fdsa[write_op]), nullptr, &waitd_tv);
   YASIO_KLOGV("[core] socket.select waked up, retval=%d", retval);
-
   return retval;
 }
 highp_time_t io_service::get_timeout(highp_time_t usec)

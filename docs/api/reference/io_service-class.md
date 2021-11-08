@@ -1,6 +1,6 @@
 ---
 title: "yasio::inet::io_service Class"
-date: "12/11/2020"
+date: "8/11/2021"
 f1_keywords: ["io_service", "yasio/io_service", ]
 helpviewer_keywords: []
 ---
@@ -30,6 +30,7 @@ namespace yasio { inline namespace inet { class io_service; } }
 |[io_service::stop](#stop)|停止网络服务|
 |[io_service::is_running](#is_running)|判断网络服务是否运行中|
 |[io_service::is_stopping](#is_stopping)|判断网络服务是否停止中|
+|[io_service::open](#open)|打开信道|
 |[io_service::close](#close)|关闭传输会话|
 |[io_service::is_open](#is_open)|检测信道或会话是否打开|
 |[io_service::dispatch](#dispatch)|分派网络事件|
@@ -172,7 +173,7 @@ bool is_stopping() const
 打开信道。
 
 ```cpp
-void open(size_t cindex, int kind);
+bool open(size_t cindex, int kind);
 ```
 
 ### 参数
@@ -182,6 +183,10 @@ void open(size_t cindex, int kind);
 
 *kind*<br/>
 信道类型。
+
+### 返回值
+
+`true`: 信道打开操作请求成功，`false`: 信道正在打开过程中。
 
 ### 注意
 

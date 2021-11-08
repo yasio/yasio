@@ -3,7 +3,8 @@ yasio-3.37.7
 1. Fix connnect maybe always failed with error `-26` when last domain name resolving failed
 2. Fix `xxsocket::strerror` incorrect for `MinGW`
 3. Add `UWP` ci
-4. Other code improvements
+4. Improve io_service::stop flow, thanks to **@koobin**
+5. Other code improvements
   
   
 yasio-3.37.6

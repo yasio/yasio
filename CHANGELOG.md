@@ -1,3 +1,11 @@
+yasio-3.37.7
+  
+1. Fix connnect maybe always failed with error `-26` when last domain name resolving failed
+2. Fix `xxsocket::strerror` incorrect for `MinGW`
+3. Add `UWP` ci
+4. Other code improvements
+  
+  
 yasio-3.37.6
   
 1. Add option `YOPT_S_DNS_LIST` to set custom dns servers build with c-ares

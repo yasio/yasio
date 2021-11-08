@@ -563,7 +563,7 @@ private:
   u_short remote_port_ = 0;
 
   // The last domain name resolved time in microseconds for dns cache support
-  highp_time_t resolved_time_ = 0;
+  highp_time_t last_resolved_time_ = 0;
 
   int index_;
   int socktype_ = 0;

@@ -1922,13 +1922,12 @@ bool io_service::open_internal(io_channel* ctx)
   this->interrupt();
   return true;
 }
-bool io_service::shutdown_internal(transport_handle_t transport)
+void io_service::shutdown_internal(transport_handle_t transport)
 {
   if (transport->error_ == 0)
     transport->error_ = yasio::errc::shutdown_by_localhost;
   if (yasio__testbits(transport->ctx_->properties_, YCM_TCP))
-    return transport->socket_->shutdown() == 0;
-  return false;
+    transport->socket_->shutdown();
 }
 bool io_service::close_internal(io_channel* ctx)
 {

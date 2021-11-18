@@ -1112,7 +1112,7 @@ private:
   YASIO__DECL bool close_internal(io_channel*);
 
   // shutdown a tcp-connection if possible
-  YASIO__DECL bool shutdown_internal(transport_handle_t);
+  YASIO__DECL void shutdown_internal(transport_handle_t);
 
   // supporting server
   YASIO__DECL void do_accept(io_channel*);

@@ -1,3 +1,9 @@
+yasio-3.37.8
+  
+1. **Fix trasnport reuse problem**
+2. Unify transport address print format
+  
+  
 yasio-3.37.7
   
 1. Fix connnect maybe always failed with error `-26` when last domain name resolving failed

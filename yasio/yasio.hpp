@@ -712,7 +712,7 @@ protected:
   // Sets the underlying layer socket io primitives.
   YASIO__DECL virtual void set_primitives();
 
-  YASIO__DECL io_transport(io_channel* ctx, xxsocket_ptr& s);
+  YASIO__DECL io_transport(io_channel* ctx, xxsocket_ptr&& s);
 
   bool is_valid() const { return ctx_ != nullptr; }
 
@@ -734,12 +734,12 @@ class YASIO_API io_transport_tcp : public io_transport {
   friend class io_service;
 
 public:
-  io_transport_tcp(io_channel* ctx, xxsocket_ptr& s);
+  io_transport_tcp(io_channel* ctx, xxsocket_ptr&& s);
 };
 #if defined(YASIO_SSL_BACKEND)
 class io_transport_ssl : public io_transport_tcp {
 public:
-  YASIO__DECL io_transport_ssl(io_channel* ctx, xxsocket_ptr& s);
+  YASIO__DECL io_transport_ssl(io_channel* ctx, xxsocket_ptr&& s);
   YASIO__DECL void set_primitives() override;
 
 #  if defined(YASIO_SSL_BACKEND)
@@ -754,7 +754,7 @@ class YASIO_API io_transport_udp : public io_transport {
   friend class io_service;
 
 public:
-  YASIO__DECL io_transport_udp(io_channel* ctx, xxsocket_ptr& s);
+  YASIO__DECL io_transport_udp(io_channel* ctx, xxsocket_ptr&& s);
   YASIO__DECL ~io_transport_udp();
 
   YASIO__DECL ip::endpoint remote_endpoint() const override;
@@ -784,7 +784,7 @@ protected:
 #if defined(YASIO_HAVE_KCP)
 class io_transport_kcp : public io_transport_udp {
 public:
-  YASIO__DECL io_transport_kcp(io_channel* ctx, xxsocket_ptr& s);
+  YASIO__DECL io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s);
   YASIO__DECL ~io_transport_kcp();
   ikcpcb* internal_object() { return kcp_; }
 
@@ -1084,12 +1084,12 @@ private:
   YASIO__DECL void destroy_ares_channel();
 #endif
 
-  void handle_connect_succeed(io_channel* ctx, xxsocket_ptr& socket) { handle_connect_succeed(allocate_transport(ctx, socket)); }
+  void handle_connect_succeed(io_channel* ctx, xxsocket_ptr s) { handle_connect_succeed(allocate_transport(ctx, std::move(s))); }
   YASIO__DECL void handle_connect_succeed(transport_handle_t);
   YASIO__DECL void handle_connect_failed(io_channel*, int ec);
   YASIO__DECL void notify_connect_succeed(transport_handle_t);
 
-  YASIO__DECL transport_handle_t allocate_transport(io_channel*, xxsocket_ptr&);
+  YASIO__DECL transport_handle_t allocate_transport(io_channel*, xxsocket_ptr&&);
   YASIO__DECL void deallocate_transport(transport_handle_t);
 
   YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);

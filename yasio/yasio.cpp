@@ -342,10 +342,10 @@ int io_channel::__builtin_decode_len(void* d, int n)
   return n;
 }
 // -------------------- io_transport ---------------------
-io_transport::io_transport(io_channel* ctx, xxsocket_ptr& s) : ctx_(ctx)
+io_transport::io_transport(io_channel* ctx, xxsocket_ptr&& s) : ctx_(ctx)
 {
   this->state_  = io_base::state::OPENED;
-  this->socket_ = s;
+  this->socket_ = std::move(s);
 #if !defined(YASIO_MINIFY_EVENT)
   this->ud_.ptr = nullptr;
 #endif
@@ -463,10 +463,10 @@ void io_transport::set_primitives()
   this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
 }
 // -------------------- io_transport_tcp ---------------------
-inline io_transport_tcp::io_transport_tcp(io_channel* ctx, xxsocket_ptr& s) : io_transport(ctx, s) {}
+inline io_transport_tcp::io_transport_tcp(io_channel* ctx, xxsocket_ptr&& s) : io_transport(ctx, std::forward<xxsocket_ptr>(s)) {}
 // ----------------------- io_transport_ssl ----------------
 #if defined(YASIO_SSL_BACKEND)
-io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr& s) : io_transport_tcp(ctx, s), ssl_(std::move(ctx->ssl_))
+io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr&& s) : io_transport_tcp(ctx, std::forward<xxsocket_ptr>(s)), ssl_(std::move(ctx->ssl_))
 {
   yasio__clearbits(ctx->properties_, YCPF_SSL_HANDSHAKING);
 }
@@ -556,7 +556,7 @@ void io_transport_ssl::set_primitives()
 }
 #endif
 // ----------------------- io_transport_udp ----------------
-io_transport_udp::io_transport_udp(io_channel* ctx, xxsocket_ptr& s) : io_transport(ctx, s) {}
+io_transport_udp::io_transport_udp(io_channel* ctx, xxsocket_ptr&& s) : io_transport(ctx, std::forward<xxsocket_ptr>(s)) {}
 io_transport_udp::~io_transport_udp() {}
 ip::endpoint io_transport_udp::remote_endpoint() const { return !connected_ ? this->peer_ : socket_->peer_endpoint(); }
 const ip::endpoint& io_transport_udp::ensure_destination() const
@@ -652,7 +652,7 @@ int io_transport_udp::handle_input(const char* buf, int bytes_transferred, int& 
 
 #if defined(YASIO_HAVE_KCP)
 // ----------------------- io_transport_kcp ------------------
-io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr& s) : io_transport_udp(ctx, s)
+io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_transport_udp(ctx, std::forward<xxsocket_ptr>(s))
 {
   this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
@@ -1736,7 +1736,7 @@ void io_service::notify_connect_succeed(transport_handle_t t)
               t->local_endpoint().to_string().c_str(), t->remote_endpoint().to_string().c_str());
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, 0, t));
 }
-transport_handle_t io_service::allocate_transport(io_channel* ctx, xxsocket_ptr& s)
+transport_handle_t io_service::allocate_transport(io_channel* ctx, xxsocket_ptr&& s)
 {
   transport_handle_t transport;
   void* vp;
@@ -1754,22 +1754,22 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, xxsocket_ptr&
 #if defined(YASIO_SSL_BACKEND)
       if (yasio__testbits(ctx->properties_, YCM_SSL))
       {
-        transport = new (vp) io_transport_ssl(ctx, s);
+        transport = new (vp) io_transport_ssl(ctx, std::forward<xxsocket_ptr>(s));
         break;
       }
 #endif
-      transport = new (vp) io_transport_tcp(ctx, s);
+      transport = new (vp) io_transport_tcp(ctx, std::forward<xxsocket_ptr>(s));
     }
     else // udp like transport
     {
 #if defined(YASIO_HAVE_KCP)
       if (yasio__testbits(ctx->properties_, YCM_KCP))
       {
-        transport = new (vp) io_transport_kcp(ctx, s);
+        transport = new (vp) io_transport_kcp(ctx, std::forward<xxsocket_ptr>(s));
         break;
       }
 #endif
-      transport = new (vp) io_transport_udp(ctx, s);
+      transport = new (vp) io_transport_udp(ctx, std::forward<xxsocket_ptr>(s));
     }
   } while (false);
   transport->set_primitives();

@@ -24,7 +24,7 @@
   
 **[简体中文](README.md)**
   
-**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows & linux & apple & android & win10-universal.  
+**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows, macos, ios, android, linux, freebsd and other unix-like systems.
 
 ## Showcase
 * [Place Girls](http://hcsj.c4connect.co.jp/): A popular mobile game published on jp.

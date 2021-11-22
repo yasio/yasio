@@ -145,7 +145,7 @@ private:
 template <typename _Cont = std::vector<char>>
 class dynamic_buffer_span {
 public:
-  using implementation_type = typename _Cont;
+  using implementation_type = _Cont;
   implementation_type& get_implementation() { return *this->outs_; }
   const implementation_type& get_implementation() const { return *this->impl_; }
 

@@ -188,17 +188,17 @@ private:
 };
 
 template <typename _ConvertTraits, typename _BufferType = fixed_buffer_span>
-class basic_obstream_span_any {
+class binary_writer_impl {
 public:
   using convert_traits_type        = _ConvertTraits;
   using buffer_type                = _BufferType;
   using buffer_implementation_type = typename buffer_type::implementation_type;
-  using my_type                    = basic_obstream_span_any<convert_traits_type, buffer_type>;
+  using my_type                    = binary_writer_impl<convert_traits_type, buffer_type>;
 
   static const size_t npos = -1;
 
-  basic_obstream_span_any(buffer_type* outs) : outs_(outs) {}
-  ~basic_obstream_span_any() {}
+  binary_writer_impl(buffer_type* outs) : outs_(outs) {}
+  ~binary_writer_impl() {}
 
   void push8()
   {
@@ -389,10 +389,10 @@ private:
 protected:
   buffer_type* outs_;
   std::stack<size_t> offset_stack_;
-}; // CLASS basic_obstream_span_any
+}; // CLASS binary_writer_impl
 
-using fixed_obstream_span      = basic_obstream_span_any<convert_traits<network_convert_tag>, yasio::fixed_buffer_span>;
-using fast_fixed_obstream_span = basic_obstream_span_any<convert_traits<host_convert_tag>, yasio::fixed_buffer_span>;
+using fixed_obstream_span      = binary_writer_impl<convert_traits<network_convert_tag>, fixed_buffer_span>;
+using fast_fixed_obstream_span = binary_writer_impl<convert_traits<host_convert_tag>, fixed_buffer_span>;
 
 using obstream_view      = fixed_obstream_span;
 using fast_obstream_view = fast_fixed_obstream_span;
@@ -402,8 +402,8 @@ template <typename _ConvertTraits, size_t _Extent = dynamic_extent>
 class basic_obstream;
 
 template <typename _ConvertTraits>
-class basic_obstream<_ConvertTraits, dynamic_extent> : public basic_obstream_span_any<_ConvertTraits, dynamic_buffer<>> {
-  using super_type = basic_obstream_span_any<_ConvertTraits, dynamic_buffer<>>;
+class basic_obstream<_ConvertTraits, dynamic_extent> : public binary_writer_impl<_ConvertTraits, dynamic_buffer<>> {
+  using super_type = binary_writer_impl<_ConvertTraits, dynamic_buffer<>>;
   using my_type    = basic_obstream<_ConvertTraits, dynamic_extent>;
 
 public:
@@ -441,8 +441,8 @@ protected:
 };
 
 template <typename _ConvertTraits, size_t _Extent>
-class basic_obstream : public basic_obstream_span_any<_ConvertTraits, fixed_buffer<_Extent>> {
-  using super_type = basic_obstream_span_any<_ConvertTraits, fixed_buffer<_Extent>>;
+class basic_obstream : public binary_writer_impl<_ConvertTraits, fixed_buffer<_Extent>> {
+  using super_type = binary_writer_impl<_ConvertTraits, fixed_buffer<_Extent>>;
 
 public:
   using buffer_type = typename super_type::buffer_type;
@@ -465,8 +465,8 @@ template <typename _ConvertTraits, typename _Cont = std::vector<char>>
 class basic_obstream_span;
 
 template <typename _ConvertTraits, typename _Cont>
-class basic_obstream_span : public basic_obstream_span_any<_ConvertTraits, dynamic_buffer_span<_Cont>> {
-  using super_type = basic_obstream_span_any<_ConvertTraits, dynamic_buffer_span<_Cont>>;
+class basic_obstream_span : public binary_writer_impl<_ConvertTraits, dynamic_buffer_span<_Cont>> {
+  using super_type = binary_writer_impl<_ConvertTraits, dynamic_buffer_span<_Cont>>;
   using my_type    = basic_obstream_span<_ConvertTraits, _Cont>;
 
 public:
@@ -474,29 +474,29 @@ public:
   basic_obstream_span(_Cont& outs) : super_type(&span_), span_(&outs) {}
 
 protected:
-  yasio::dynamic_buffer_span<_Cont> span_;
+  buffer_type span_;
 };
 
 template <typename _ConvertTraits>
-class basic_obstream_span<_ConvertTraits, fixed_buffer_span> : public basic_obstream_span_any<_ConvertTraits, fixed_buffer_span> {
-  using super_type = basic_obstream_span_any<_ConvertTraits, fixed_buffer_span>;
+class basic_obstream_span<_ConvertTraits, fixed_buffer_span> : public binary_writer_impl<_ConvertTraits, fixed_buffer_span> {
+  using super_type = binary_writer_impl<_ConvertTraits, fixed_buffer_span>;
   using my_type    = basic_obstream_span<_ConvertTraits, fixed_buffer_span>;
 
 public:
   using buffer_type = typename super_type::buffer_type;
 
   template <size_t _Extent>
-  basic_obstream_span(std::array<char, _Extent>& buf) : super_type(&span_), span_(buf)
+  basic_obstream_span(std::array<char, _Extent>& fb) : super_type(&span_), span_(fb)
   {}
 
   template <size_t _Extent>
-  basic_obstream_span(char (&buf)[_Extent]) : super_type(&span_), span_(buf)
+  basic_obstream_span(char (&fb)[_Extent]) : super_type(&span_), span_(fb)
   {}
 
-  basic_obstream_span(char* buf, size_t n) : super_type(&span_), span_(buf, n) {}
+  basic_obstream_span(char* fb, size_t extent) : super_type(&span_), span_(fb, extent) {}
 
 protected:
-  fixed_buffer_span span_;
+  buffer_type span_;
 };
 
 template <typename _Cont>

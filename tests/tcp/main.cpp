@@ -187,6 +187,17 @@ void yasioTest()
 #else
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v8 << "\n";
 #endif
+
+  std::vector<char> vecbuf;
+  std::string strbuf;
+  std::array<char, 16> arrbuf;
+  char raw_arrbuf[16];
+  yasio::obstream_span<std::vector<char>>{vecbuf}.write_bytes("hello world!");
+  yasio::obstream_span<std::string>{strbuf}.write_bytes("hello world!");
+  yasio::obstream_span<yasio::fixed_buffer_span>{arrbuf}.write_bytes("hello world!");
+  yasio::obstream_span<yasio::fixed_buffer_span>{raw_arrbuf}.write_bytes("hello world!");
+
+
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 
   resolv_fn_t resolv = [&](std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port) {

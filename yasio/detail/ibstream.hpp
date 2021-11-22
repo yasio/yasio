@@ -118,29 +118,29 @@ struct read_ix_helper<_Stream, int64_t> {
 } // namespace detail
 
 template <typename _Traits>
-class basic_ibstream_view {
+class binary_reader_impl {
 public:
   using convert_traits_type = _Traits;
-  using this_type           = basic_ibstream_view<_Traits>;
-  basic_ibstream_view() { this->reset("", 0); }
-  basic_ibstream_view(const void* data, size_t size) { this->reset(data, size); }
+  using this_type           = binary_reader_impl<_Traits>;
+  binary_reader_impl() { this->reset("", 0); }
+  binary_reader_impl(const void* data, size_t size) { this->reset(data, size); }
 
   template <typename _BufferType>
-  basic_ibstream_view(const basic_obstream_span_any<_Traits, _BufferType>* obs)
+  binary_reader_impl(const binary_writer_impl<_Traits, _BufferType>* obs)
   {
     this->reset(obs->data(), obs->length());
   }
 
   template <typename _BufferType>
-  basic_ibstream_view(const basic_obstream_span_any<_Traits, _BufferType>* obs, ptrdiff_t offset)
+  binary_reader_impl(const binary_writer_impl<_Traits, _BufferType>* obs, ptrdiff_t offset)
   {
     this->reset(obs->data(), obs->length());
     this->advance(offset);
   }
-  basic_ibstream_view(const basic_ibstream_view&) = delete;
-  basic_ibstream_view(basic_ibstream_view&&)      = delete;
+  binary_reader_impl(const binary_reader_impl&) = delete;
+  binary_reader_impl(binary_reader_impl&&)      = delete;
 
-  ~basic_ibstream_view() {}
+  ~binary_reader_impl() {}
 
   void reset(const void* data, size_t size)
   {
@@ -148,8 +148,8 @@ public:
     last_         = first_ + size;
   }
 
-  basic_ibstream_view& operator=(const basic_ibstream_view&) = delete;
-  basic_ibstream_view& operator=(basic_ibstream_view&&) = delete;
+  binary_reader_impl& operator=(const binary_reader_impl&) = delete;
+  binary_reader_impl& operator=(binary_reader_impl&&) = delete;
 
   /* read 7bit encoded variant integer value
   ** @dotnet BinaryReader.Read7BitEncodedInt(64)
@@ -253,6 +253,13 @@ public:
     return {};
   }
 
+  cxx17::string_view range_view(size_t start, size_t end)
+  {
+    if (start <= end && (first_ + end) <= last_)
+      return cxx17::string_view{first_ + start, first_ + end};
+    return cxx17::string_view{};
+  }
+
 protected:
   // will throw std::out_of_range
   const char* consume(size_t size)
@@ -274,11 +281,11 @@ protected:
 
 /// --------------------- CLASS ibstream ---------------------
 template <typename _Traits>
-class basic_ibstream : public basic_ibstream_view<_Traits> {
+class basic_ibstream : public binary_reader_impl<_Traits> {
 public:
   basic_ibstream() {}
-  basic_ibstream(std::vector<char> blob) : basic_ibstream_view<_Traits>(), blob_(std::move(blob)) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }
-  basic_ibstream(const basic_obstream<_Traits>* obs) : basic_ibstream_view<_Traits>(), blob_(obs->buffer())
+  basic_ibstream(std::vector<char> blob) : binary_reader_impl<_Traits>(), blob_(std::move(blob)) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }
+  basic_ibstream(const basic_obstream<_Traits>* obs) : binary_reader_impl<_Traits>(), blob_(obs->buffer())
   {
     this->reset(blob_.data(), static_cast<int>(blob_.size()));
   }
@@ -307,10 +314,10 @@ protected:
   std::vector<char> blob_;
 };
 
-using ibstream_view = basic_ibstream_view<convert_traits<network_convert_tag>>;
+using ibstream_view = binary_reader_impl<convert_traits<network_convert_tag>>;
 using ibstream      = basic_ibstream<convert_traits<network_convert_tag>>;
 
-using fast_ibstream_view = basic_ibstream_view<convert_traits<host_convert_tag>>;
+using fast_ibstream_view = binary_reader_impl<convert_traits<host_convert_tag>>;
 using fast_ibstream      = basic_ibstream<convert_traits<host_convert_tag>>;
 
 } // namespace yasio

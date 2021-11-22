@@ -168,7 +168,7 @@ public:
 
   void resize(size_t newsize) { outs_->resize(newsize); }
   void reserve(size_t capacity) { outs_->reserve(capacity); }
-  void shrink_to_fit(){};
+  void shrink_to_fit() { outs_->shrink_to_fit(); };
   void clear() { outs_->clear(); }
   char* data() { return outs_->data(); }
   size_t length() const { return outs_->size(); }

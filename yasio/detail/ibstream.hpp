@@ -123,8 +123,9 @@ public:
   using convert_traits_type = _Traits;
   using this_type           = binary_reader_impl<_Traits>;
   binary_reader_impl() { this->reset("", 0); }
+  binary_reader_impl(const std::vector<char>& d) { this->reset(d); }
+  binary_reader_impl(const cxx17::string_view& d) { this->reset(d); }
   binary_reader_impl(const void* data, size_t size) { this->reset(data, size); }
-
   template <typename _BufferType>
   binary_reader_impl(const binary_writer_impl<_Traits, _BufferType>* obs)
   {
@@ -142,6 +143,8 @@ public:
 
   ~binary_reader_impl() {}
 
+  void reset(const std::vector<char>& d) { reset(d.data(), d.size()); }
+  void reset(const cxx17::string_view& d) { reset(d.data(), d.length()); }
   void reset(const void* data, size_t size)
   {
     first_ = ptr_ = static_cast<const char*>(data);
@@ -208,6 +211,7 @@ public:
   const char* data() const { return first_; }
 
   void advance(ptrdiff_t offset) { ptr_ += offset; }
+  void advance_v() { advance(read_ix<int>()); }
   ptrdiff_t tell() const { return ptr_ - first_; }
   ptrdiff_t seek(ptrdiff_t offset, int whence)
   {

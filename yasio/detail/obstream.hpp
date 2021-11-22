@@ -184,7 +184,7 @@ public:
   dynamic_buffer() : dynamic_buffer_span<_Cont>(&impl_) {}
 
 private:
-  implementation_type impl_;
+  _Cont impl_;
 };
 
 template <typename _ConvertTraits, typename _BufferType = fixed_buffer_span>

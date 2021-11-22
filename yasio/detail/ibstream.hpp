@@ -256,7 +256,7 @@ public:
   cxx17::string_view range_view(size_t start, size_t end)
   {
     if (start <= end && (first_ + end) <= last_)
-      return cxx17::string_view{first_ + start, first_ + end};
+      return cxx17::string_view{first_ + start, end - start};
     return cxx17::string_view{};
   }
 

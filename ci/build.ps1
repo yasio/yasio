@@ -1,6 +1,6 @@
 # Install latest cmake version for appveyor ci
 if (!($env:GITHUB_CI -eq "true")) {
-    $cmake_ver="3.21.3"
+    $cmake_ver="3.22.0"
     curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
     Expand-Archive -Path cmake-$cmake_ver-windows-x86_64.zip -DestinationPath .\
     $cmake_bin = (Resolve-Path .\cmake-$cmake_ver-windows-x86_64\bin).Path

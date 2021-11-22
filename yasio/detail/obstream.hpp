@@ -391,6 +391,12 @@ protected:
   std::stack<size_t> offset_stack_;
 }; // CLASS basic_obstream_span_any
 
+using fixed_obstream_span      = basic_obstream_span_any<convert_traits<network_convert_tag>, yasio::fixed_buffer_span>;
+using fast_fixed_obstream_span = basic_obstream_span_any<convert_traits<host_convert_tag>, yasio::fixed_buffer_span>;
+
+using obstream_view      = fixed_obstream_span;
+using fast_obstream_view = fast_fixed_obstream_span;
+
 // -------- basic_obstream
 template <typename _ConvertTraits, size_t _Extent = dynamic_extent>
 class basic_obstream;
@@ -448,11 +454,11 @@ protected:
 
 template <size_t _Extent>
 using obstream_any = basic_obstream<convert_traits<network_convert_tag>, _Extent>;
-using obstream     = obstream_any<dynamic_extent>;
-
 template <size_t _Extent>
 using fast_obstream_any = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
-using fast_obstream     = fast_obstream_any<dynamic_extent>;
+
+using obstream      = obstream_any<dynamic_extent>;
+using fast_obstream = fast_obstream_any<dynamic_extent>;
 
 //-------- basic_obstream_span
 template <typename _ConvertTraits, typename _Cont = std::vector<char>>
@@ -493,24 +499,10 @@ protected:
   fixed_buffer_span span_;
 };
 
-using fixed_obstream_span      = basic_obstream_span_any<convert_traits<network_convert_tag>, yasio::fixed_buffer_span>;
-using fast_fixed_obstream_span = basic_obstream_span_any<convert_traits<host_convert_tag>, yasio::fixed_buffer_span>;
-
-using obstream_view      = fixed_obstream_span;
-using fast_obstream_view = fast_fixed_obstream_span;
-
 template <typename _Cont>
 using obstream_span = basic_obstream_span<convert_traits<network_convert_tag>, _Cont>;
 template <typename _Cont>
 using fast_obstream_span = basic_obstream_span<convert_traits<host_convert_tag>, _Cont>;
-
-template <size_t _Extent>
-using obstream_any = basic_obstream<convert_traits<network_convert_tag>, _Extent>;
-template <size_t _Extent>
-using fast_obstream_any = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
-
-using obstream      = obstream_any<dynamic_extent>;
-using fast_obstream = fast_obstream_any<dynamic_extent>;
 
 } // namespace yasio
 

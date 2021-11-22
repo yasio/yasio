@@ -32,9 +32,11 @@ namespace yasio
 {
 namespace detail
 {
-template <typename _Stream, typename _Intty> struct read_ix_helper {};
+template <typename _Stream, typename _Intty>
+struct read_ix_helper {};
 
-template <typename _Stream> struct read_ix_helper<_Stream, int32_t> {
+template <typename _Stream>
+struct read_ix_helper<_Stream, int32_t> {
   static int32_t read_ix(_Stream* stream)
   {
     // Unlike writing, we can't delegate to the 64-bit read on
@@ -75,7 +77,8 @@ template <typename _Stream> struct read_ix_helper<_Stream, int32_t> {
   }
 };
 
-template <typename _Stream> struct read_ix_helper<_Stream, int64_t> {
+template <typename _Stream>
+struct read_ix_helper<_Stream, int64_t> {
   static int64_t read_ix(_Stream* stream)
   {
     uint64_t result = 0;
@@ -114,18 +117,22 @@ template <typename _Stream> struct read_ix_helper<_Stream, int64_t> {
 };
 } // namespace detail
 
-template <typename _Traits> class basic_ibstream_view {
+template <typename _Traits>
+class basic_ibstream_view {
 public:
   using convert_traits_type = _Traits;
   using this_type           = basic_ibstream_view<_Traits>;
   basic_ibstream_view() { this->reset("", 0); }
   basic_ibstream_view(const void* data, size_t size) { this->reset(data, size); }
 
-  template<typename _BufferType>
-  basic_ibstream_view(const basic_obstream_view<_Traits, _BufferType>* obs) { this->reset(obs->data(), obs->length()); }
+  template <typename _BufferType>
+  basic_ibstream_view(const basic_obstream_span_any<_Traits, _BufferType>* obs)
+  {
+    this->reset(obs->data(), obs->length());
+  }
 
   template <typename _BufferType>
-  basic_ibstream_view(const basic_obstream_view<_Traits, _BufferType>* obs, ptrdiff_t offset)
+  basic_ibstream_view(const basic_obstream_span_any<_Traits, _BufferType>* obs, ptrdiff_t offset)
   {
     this->reset(obs->data(), obs->length());
     this->advance(offset);
@@ -147,7 +154,11 @@ public:
   /* read 7bit encoded variant integer value
   ** @dotnet BinaryReader.Read7BitEncodedInt(64)
   */
-  template <typename _Intty> _Intty read_ix() { return detail::read_ix_helper<this_type, _Intty>::read_ix(this); }
+  template <typename _Intty>
+  _Intty read_ix()
+  {
+    return detail::read_ix_helper<this_type, _Intty>::read_ix(this);
+  }
 
   int read_varint(int size)
   {
@@ -220,15 +231,21 @@ public:
     return ptr_ - first_;
   }
 
-  template <typename _Nty> inline _Nty read() { return sread<_Nty>(consume(sizeof(_Nty))); }
-  template <typename _Nty> static _Nty sread(const void* ptr)
+  template <typename _Nty>
+  inline _Nty read()
+  {
+    return sread<_Nty>(consume(sizeof(_Nty)));
+  }
+  template <typename _Nty>
+  static _Nty sread(const void* ptr)
   {
     _Nty value;
     ::memcpy(&value, ptr, sizeof(value));
     return convert_traits_type::template from<_Nty>(value);
   }
 
-  template <typename _LenT> inline cxx17::string_view read_v_fx()
+  template <typename _LenT>
+  inline cxx17::string_view read_v_fx()
   {
     _LenT n = this->read<_LenT>();
     if (n > 0)
@@ -256,7 +273,8 @@ protected:
 };
 
 /// --------------------- CLASS ibstream ---------------------
-template <typename _Traits> class basic_ibstream : public basic_ibstream_view<_Traits> {
+template <typename _Traits>
+class basic_ibstream : public basic_ibstream_view<_Traits> {
 public:
   basic_ibstream() {}
   basic_ibstream(std::vector<char> blob) : basic_ibstream_view<_Traits>(), blob_(std::move(blob)) { this->reset(blob_.data(), static_cast<int>(blob_.size())); }

@@ -800,7 +800,7 @@ void io_service::handle_stop()
     if (std::this_thread::get_id() == this->worker_id_)
     {
       if (yasio__testbits(this->stop_flag_, YSTF_FINALIZE))
-        std::terminate();
+        std::terminate(); // we don't want, but...
       xxsocket::set_last_errno(EAGAIN);
       return;
     }

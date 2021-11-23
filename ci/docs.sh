@@ -11,6 +11,6 @@ for (( i=0; i<${rel_count}; ++i )); do
   mike deploy ${rel_arr[$i]}
 done
 
-git checkout main
+git checkout dev
 mike deploy latest
 mike set-default ${rel_arr[$rel_count-1]} --push

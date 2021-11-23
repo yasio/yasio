@@ -5,8 +5,11 @@
 # Required
 version: 2
 
+# Set the version of Python and other tools you might need
 build:
-  image: testing
+  os: ubuntu-20.04
+  tools:
+    python: "3.9"
 
 # Build documentation in the docs/ directory with Sphinx
 #sphinx:
@@ -21,7 +24,6 @@ formats: all
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
-  version: 3.9
   install:
     - requirements: docs/prerequisites.txt
     - requirements: docs/requirements.txt

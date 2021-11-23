@@ -1,9 +1,9 @@
-cffi
-pytest-runner
+mkdocs-material>=7.2.6
+cffi==1.14.6
+pytest-runner==5.3.1
 WeasyPrint==53.0
-mkdocs-material>=6.2.3
+mkdocs-pdf-export-plugin>=0.5.9
+mkdocs-minify-plugin>=0.3.0
 mike>=1.0.0
 mkdocs-git-revision-date-localized-plugin
-mkdocs-pdf-export-plugin
-mkdocs-minify-plugin
 mkdocs-redirects>=1.0

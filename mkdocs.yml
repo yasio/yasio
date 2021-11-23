@@ -3,7 +3,7 @@ site_name: yasio
 repo_url: https://github.com/yasio/yasio
 repo_name: GitHub
 edit_uri: edit/main/docs
-copyright: Copyright &copy; 2012 - 2021 yasio.org.
+copyright: Copyright &copy; 2021 Bytedance Inc.
 theme:
   name: material
   language: en

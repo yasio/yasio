@@ -102,10 +102,12 @@ enum
   YEM_POLLERR = 4,
 };
 
-enum
-{ // op mask
-  YOPM_OPEN  = 1,
-  YOPM_CLOSE = 1 << 1,
+enum : uint8_t
+{ // op masks and stop flags
+  YOPM_OPEN     = 1,
+  YOPM_CLOSE    = 1 << 1,
+  YSTF_STOP     = 1 << 2,
+  YSTF_FINALIZE = 1 << 3
 };
 
 enum
@@ -744,8 +746,7 @@ io_service::io_service(const std::vector<io_hostent>& channel_eps)
 io_service::io_service(const io_hostent* channel_eps, int channel_count) { this->initialize(channel_eps, channel_count); }
 io_service::~io_service()
 {
-  if (this->stop_flag_) // still in stopping?
-    this->handle_stop();
+  this->do_stop(YSTF_FINALIZE);
   this->finalize();
 }
 void io_service::start(event_cb_t cb)
@@ -773,11 +774,14 @@ void io_service::start(event_cb_t cb)
     }
   }
 }
-void io_service::stop()
+void io_service::stop() { do_stop(YSTF_STOP); }
+void io_service::do_stop(uint8_t flags)
 {
+  if (this->state_ <= io_service::state::IDLE)
+    return;
   if (!this->stop_flag_)
   {
-    this->stop_flag_ = YOPM_CLOSE;
+    this->stop_flag_ = flags;
     if (this->state_ == io_service::state::RUNNING)
     {
       for (auto c : channels_)
@@ -795,6 +799,8 @@ void io_service::handle_stop()
   {
     if (std::this_thread::get_id() == this->worker_id_)
     {
+      if (yasio__testbits(this->stop_flag_, YSTF_FINALIZE))
+        std::terminate();
       xxsocket::set_last_errno(EAGAIN);
       return;
     }

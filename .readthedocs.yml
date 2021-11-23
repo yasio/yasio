@@ -12,6 +12,7 @@ build:
     python: "3.9"
   apt_packages:
     - libjpeg-dev
+    - libopenjp2-7-dev
 
 # Build documentation in the docs/ directory with Sphinx
 #sphinx:

@@ -5,6 +5,7 @@
 !!! attention "注意"
 
     - `yasio::obstream` 等价于 `yasio::obstream_any<yasio::dynamic_extent>`
+    - 自3.39.0起，新增`obstream_span`可序列化到`std::string`或`std::vector<char>`，请查看示例[序列化到stl容器](#serialize_to_stl)
     - 自3.37.5起，新增`obstream_any`类模板具备序列化已知大小的小块栈内存能力，请查看示例: [使用栈空间序列化](#serialize_on_stack)
     - 自3.35.0起，优化为类模板basic_obstream实现，体现了C++模板强大的代码复用能力。
 
@@ -24,6 +25,11 @@ template <size_t _Extent>
 using fast_obstream_any = basic_obstream<convert_traits<host_convert_tag>, _Extent>;
 using fast_obstream     = fast_obstream_any<dynamic_extent>;
 }
+
+template <typename _Cont>
+using obstream_span = basic_obstream_span<convert_traits<network_convert_tag>, _Cont>;
+template <typename _Cont>
+using fast_obstream_span = basic_obstream_span<convert_traits<host_convert_tag>, _Cont>;
 ```
 
 ## 成员
@@ -324,7 +330,6 @@ int main( )
 
 ### 注意事项
 
-- 对应不转换字节序版本，加前缀 `fast_` 即可, 例如: `fast_obstream_any`
 - 序列化过程中，当 `fixed_buffer` 检测到内存空间不足时会抛出 `std::out_of_range` 异常
 
 ### obstream_any用法
@@ -333,49 +338,86 @@ int main( )
 
 int main() {
     yasio::obstream_any<128> obs; // 使用栈空间, 注意不要太大，防止栈空间溢出
-    obs.push(sizeof(u_short));
+    auto where = obs.push<uint16_t>();
     obs.write(3.141592654);
     obs.write(1.17723f);
     obs.write_ix<int32_t>(20201125);
     obs.write_ix<int64_t>(-9223372036854775807);
-    obs.pop(sizeof(u_short));
+    obs.pop<uint16_t>(where);
     return 0;
 }
 ```
 
-### obstream_view + fixed_buffer用法
+### obstream_span + std::array用法
 
 ```cpp
 #include "yasio/obstream.hpp"
 
 int main() {
-    yasio::fixed_buffer<128> fb; // 使用栈空间, 注意不要太大，防止栈空间溢出
-    yasio::obstream_view obs(&fb);
-    obs.push(sizeof(u_short));
+    std::array<char, 128> fb; // 使用栈空间, 注意不要太大，防止栈空间溢出
+    yasio::obstream_span<yasio::fixed_buffer_span> obs(fb);
+    auto where = obs.push<uint16_t>();
     obs.write(3.141592654);
     obs.write(1.17723f);
     obs.write_ix<int32_t>(20201125);
     obs.write_ix<int64_t>(-9223372036854775807);
-    obs.pop(sizeof(u_short));
+    obs.pop<uint16_t>(where);
     return 0;
 }
 ```
 
-### obstream_view + fixed_buffer_view + char[]用法
+### obstream_span + char[]用法
 
 ```cpp
 #include "yasio/obstream.hpp"
 
 int main() {
     char raw_fb[128]; // 使用栈空间, 注意不要太大，防止栈空间溢出
-    yasio::fixed_buffer_view fb(raw_fb);
-    yasio::obstream_view obs(&fb);
-    obs.push(sizeof(u_short));
+    yasio::obstream_span<yasio::fixed_buffer_span> obs(raw_fb);
+    auto where = obs.push<uint16_t>();
     obs.write(3.141592654);
     obs.write(1.17723f);
     obs.write_ix<int32_t>(20201125);
     obs.write_ix<int64_t>(-9223372036854775807);
-    obs.pop(sizeof(u_short));
+    obs.pop<uint16_t>(where);
+    return 0;
+}
+```
+
+## <a name="serialize_to_stl"></a> 序列化到std::vector<char>和std::string
+
+### obstream_span + std::vector<char>用法
+
+```cpp
+#include "yasio/obstream.hpp"
+
+int main() {
+    std::vector<char> buf;
+    yasio::obstream_span<std::vector<char>> obs(buf);
+    auto where = obs.push<uint16_t>();
+    obs.write(3.141592654);
+    obs.write(1.17723f);
+    obs.write_ix<int32_t>(20201125);
+    obs.write_ix<int64_t>(-9223372036854775807);
+    obs.pop<uint16_t>(where);
+    return 0;
+}
+```
+
+### obstream_span + std::string用法
+
+```cpp
+#include "yasio/obstream.hpp"
+
+int main() {
+    std::string buf;
+    yasio::obstream_span<std::string> obs(buf);
+    auto where = obs.push<uint16_t>();
+    obs.write(3.141592654);
+    obs.write(1.17723f);
+    obs.write_ix<int32_t>(20201125);
+    obs.write_ix<int64_t>(-9223372036854775807);
+    obs.pop<uint16_t>(where);
     return 0;
 }
 ```

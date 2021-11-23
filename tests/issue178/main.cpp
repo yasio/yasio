@@ -21,21 +21,20 @@ int main()
       case YEK_CONNECT_RESPONSE: {
         if (event->cindex() == 0)
         {
-          printf("A client is income, status=%d, %lld, combine 2 packet and send to client!\n",
-                 event->status(), event->timestamp());
+          printf("A client is income, status=%d, %lld, combine 2 packet and send to client!\n", event->status(), event->timestamp());
 
           // send 2 packet
           obstream obs1;
-          obs1.push32();
+          auto where = obs1.push<uint32_t>();
           for (auto i = 0; i < 119 - 4; ++i)
             obs1.write_byte(i + 1);
-          obs1.pop32(static_cast<uint32_t>(obs1.length()));
+          obs1.pop<uint32_t>(where, static_cast<uint32_t>(obs1.length()));
 
           obstream obs2;
-          obs2.push32();
+          where = obs2.push<uint32_t>();
           for (auto i = 0; i < 104 - 4; ++i)
             obs2.write_byte(i + 1);
-          obs2.pop32(static_cast<uint32_t>(obs2.length()));
+          obs2.pop<uint32_t>(where, static_cast<uint32_t>(obs2.length()));
 
           // merge 2 packets
           obs1.write_bytes(obs2.data(), static_cast<int>(obs2.length()));
@@ -53,9 +52,7 @@ int main()
   service.open(0, YCK_TCP_SERVER);              // open server
 
   delay_timer.expires_from_now(std::chrono::seconds(1));
-  delay_timer.async_wait_once(service, [](io_service& service) {
-    service.open(1, YCK_TCP_CLIENT);
-  });
+  delay_timer.async_wait_once(service, [](io_service& service) { service.open(1, YCK_TCP_CLIENT); });
 
   getchar();
   return 0;

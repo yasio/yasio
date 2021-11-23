@@ -41,7 +41,7 @@ server:start(function(event)
                     value4 = 301.32,
                     value6 = 13883.197,
                     uname = "halx99",
-                    passwd = "x-studio Pro is a powerful IDE!"
+                    passwd = "x-studio is a powerful IDE!"
                 }
                 local obs = proto.e101(msg)
    

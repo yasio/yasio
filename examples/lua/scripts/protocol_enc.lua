@@ -10,7 +10,7 @@ local proto = require 'protocol_dec'
 
 proto.e101 = function(msg)
     -- begin message encode.
-    local obs = proto.begin_encode(proto.numbers.CID_SIMPLE1);
+    local obs,len_pos = proto.begin_encode(proto.numbers.CID_SIMPLE1);
 
     -- encode message fields.
     obs:write_i8(msg.id);
@@ -23,7 +23,7 @@ proto.e101 = function(msg)
     obs:write_v(msg.passwd);
 
     -- finish message encode.
-    obs:pop32(obs:length()); -- finish encode
+    obs:pop32(len_pos, obs:length()); -- finish encode
 
     return obs;
 end

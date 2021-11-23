@@ -123,6 +123,12 @@ SOFTWARE.
 // #define YASIO_NO_USER_TIMER 1
 
 /*
+** Uncomment or add compiler flag -DYASIO_OBS_BUILTIN_STACK to enable obstream builtin stack
+** for push/pop operations, by default disabled for performance purpose
+*/
+// #define YASIO_OBS_BUILTIN_STACK 1
+
+/*
 ** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and
 ** follow 3 lines code will be removed
 */

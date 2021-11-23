@@ -8,13 +8,13 @@ local obstream = yasio.obstream
 
 proto.begin_encode = function (id)
     local obs = obstream.new()
-    obs:push32() -- alloc length field
+    local where = obs:push32() -- alloc length field
     obs:write_u16(id) -- command_id
     obs:write_u16(1) -- version
     obs:write_i32(0) -- reserved
     obs:write_i32(0) -- reserved2 low
     obs:write_i32(0) -- reserved2 high
-    return obs
+    return obs,where
 end
 
 proto.begin_decode = function(ibs)

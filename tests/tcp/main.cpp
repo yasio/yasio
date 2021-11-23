@@ -161,7 +161,7 @@ void yasioTest()
 #endif
 
   yasio::obstream obs;
-  obs.push(sizeof(u_short));
+  auto where = obs.push<int>();
   obs.write(3.141592654);
   obs.write(1.17723f);
   obs.write_ix<int32_t>(20201125);
@@ -170,7 +170,7 @@ void yasioTest()
   obs.write(static_cast<fp16_t>(3.85f));
 #endif
   obs.write_varint(23123, 3);
-  obs.pop(sizeof(u_short));
+  obs.pop<int>(where);
 
   yasio::ibstream_view ibs(&obs);
   auto r0 = ibs.read_varint(sizeof(u_short)); // length: uint24

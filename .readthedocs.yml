@@ -5,11 +5,13 @@
 # Required
 version: 2
 
-# Set the version of Python and other tools you might need
+# Set the version of Python and other tools you might need libjpeg-dev
 build:
   os: ubuntu-20.04
   tools:
     python: "3.9"
+  apt_packages:
+    - libjpeg-dev
 
 # Build documentation in the docs/ directory with Sphinx
 #sphinx:

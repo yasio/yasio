@@ -1002,18 +1002,15 @@ void io_service::process_channels(fd_set* fds_array)
           ctx->state_ = io_base::state::RESOLVING;
         }
 
-        switch (static_cast<io_base::state>(ctx->state_))
+        if (ctx->state_ == io_base::state::RESOLVING)
         {
-          case io_base::state::CONNECTING:
-            do_connect_completion(ctx, fds_array);
-            break;
-          case io_base::state::RESOLVING:
-            if (do_resolve(ctx) == 0)
-              do_connect(ctx);
-            else if (ctx->error_ != EINPROGRESS)
-              handle_connect_failed(ctx, ctx->error_);
-            break;
+          if (do_resolve(ctx) == 0)
+            do_connect(ctx);
+          else if (ctx->error_ != EINPROGRESS)
+            handle_connect_failed(ctx, ctx->error_);
         }
+        else if (ctx->state_ == io_base::state::CONNECTING)
+          do_connect_completion(ctx, fds_array);
         finish = ctx->error_ != EINPROGRESS;
       }
       else if (yasio__testbits(ctx->properties_, YCM_SERVER))

@@ -169,7 +169,7 @@ uint8_t值。
 
 ### 注意
 
-本函数等价于 [ibstream_view::read<uint8_t>](#read)
+本函数等价于 [`ibstream_view::read<uint8_t>`](#read)
 
 
 ## <a name="read_bytes"></a> ibstream_view::read_bytes

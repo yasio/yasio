@@ -3,7 +3,7 @@
 
 using namespace yasio;
 
-io_service* gservice = nullptr;
+io_service* gservice = nullptr; // the weak pointer
 void handle_signal(int sig)
 {
   if (gservice && sig == 2)
@@ -63,6 +63,7 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
         {
           printf("[%lld] stop server done, status=%d\n", ev->timestamp(), ev->status());
           server.stop(); // stop could call self thread
+          gservice = nullptr; // service will stop, clear gservice weak pointer
         }
         break;
     }

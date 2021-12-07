@@ -1,3 +1,8 @@
+yasio-3.39.1
+  
+1. Don't output transport object address
+  
+  
 yasio-3.39.0
   
 1. Improve binary reader and writer, the push/pop API was broken, use -DYASIO_OBS_BUILTIN_STACK=1 for compatible with previous release

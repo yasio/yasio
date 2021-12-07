@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -37,9 +37,9 @@ SOFTWARE.
 #include "yasio/detail/ref_ptr.hpp"
 
 // A workaround to fix compile issue caused by `CCPlatformMacros.h` doesn't handle `__has_attribute` it properly
-#  if !__has_attribute(format)
-#    undef __has_attribute
-#  endif
+#if !__has_attribute(format)
+#  undef __has_attribute
+#endif
 #include "cocos2d.h"
 #include "scripting/js-bindings/manual/cocos2d_specifics.hpp"
 using namespace yasio;
@@ -48,19 +48,19 @@ using namespace cocos2d;
 namespace yasio_jsb
 {
 
-#define YASIO_DEFINE_REFERENCE_CLASS                                                               \
-private:                                                                                           \
-  unsigned int referenceCount_;                                                                    \
-                                                                                                   \
-public:                                                                                            \
-  void retain() { ++referenceCount_; }                                                             \
-  void release()                                                                                   \
-  {                                                                                                \
-    --referenceCount_;                                                                             \
-    if (referenceCount_ == 0)                                                                      \
-      delete this;                                                                                 \
-  }                                                                                                \
-                                                                                                   \
+#define YASIO_DEFINE_REFERENCE_CLASS                                                                                                                           \
+private:                                                                                                                                                       \
+  unsigned int referenceCount_;                                                                                                                                \
+                                                                                                                                                               \
+public:                                                                                                                                                        \
+  void retain() { ++referenceCount_; }                                                                                                                         \
+  void release()                                                                                                                                               \
+  {                                                                                                                                                            \
+    --referenceCount_;                                                                                                                                         \
+    if (referenceCount_ == 0)                                                                                                                                  \
+      delete this;                                                                                                                                             \
+  }                                                                                                                                                            \
+                                                                                                                                                               \
 private:
 
 namespace stimer
@@ -72,8 +72,7 @@ namespace stimer
 typedef void* TIMER_ID;
 typedef std::function<void()> vcallback_t;
 
-struct TimerObject
-{
+struct TimerObject {
   TimerObject(vcallback_t&& callback) : callback_(std::move(callback)), referenceCount_(1) {}
 
   vcallback_t callback_;
@@ -95,8 +94,7 @@ static TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
     std::string key = StringUtils::format("STMR#%p", timerId);
 
     Director::getInstance()->getScheduler()->schedule(
-        [timerObj](
-            float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
+        [timerObj](float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
         STIMER_TARGET_VALUE, interval, n - 1, 0, false, key);
@@ -115,8 +113,7 @@ TIMER_ID delay(float delay, vcallback_t callback)
 
     std::string key = StringUtils::format("STMR#%p", timerId);
     Director::getInstance()->getScheduler()->schedule(
-        [timerObj](
-            float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
+        [timerObj](float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
         STIMER_TARGET_VALUE, 0, 0, delay, false, key);
@@ -131,14 +128,10 @@ static void kill(TIMER_ID timerId)
   std::string key = StringUtils::format("STMR#%p", timerId);
   Director::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
-void clear()
-{
-  Director::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
-}
+void clear() { Director::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE); }
 } // namespace stimer
 
-class string_view_adapter
-{
+class string_view_adapter {
 public:
   string_view_adapter() : _data(nullptr), _size(0), _need_free(false) {}
   ~string_view_adapter()
@@ -177,10 +170,7 @@ public:
 
   bool empty() const { return _data != nullptr && _size > 0; }
 
-  operator cxx17::string_view() const
-  {
-    return cxx17::string_view(_data != nullptr ? _data : "", _size);
-  }
+  operator cxx17::string_view() const { return cxx17::string_view(_data != nullptr ? _data : "", _size); }
 
   void clear()
   {
@@ -224,8 +214,7 @@ bool jsval_to_hostent(JSContext* ctx, JS::HandleValue vp, inet::io_hostent* ret)
   JS::RootedValue jsport(ctx);
   JS::RootedValue jsip(ctx);
   uint16_t port;
-  bool ok = vp.isObject() && JS_ValueToObject(ctx, vp, &tmp) &&
-            JS_GetProperty(ctx, tmp, "port", &jsport) && JS_GetProperty(ctx, tmp, "host", &jsip) &&
+  bool ok = vp.isObject() && JS_ValueToObject(ctx, vp, &tmp) && JS_GetProperty(ctx, tmp, "port", &jsport) && JS_GetProperty(ctx, tmp, "host", &jsip) &&
             JS::ToUint16(ctx, jsport, &port);
 
   JSB_PRECONDITION3(ok, ctx, false, "Error processing arguments");
@@ -235,8 +224,7 @@ bool jsval_to_hostent(JSContext* ctx, JS::HandleValue vp, inet::io_hostent* ret)
   return true;
 }
 
-bool jsval_to_std_vector_hostent(JSContext* ctx, JS::HandleValue vp,
-                                 std::vector<inet::io_hostent>* ret)
+bool jsval_to_std_vector_hostent(JSContext* ctx, JS::HandleValue vp, std::vector<inet::io_hostent>* ret)
 {
   JS::RootedObject jsobj(ctx);
   bool ok = vp.isObject() && JS_ValueToObject(ctx, vp, &jsobj);
@@ -268,23 +256,24 @@ bool jsval_to_std_vector_hostent(JSContext* ctx, JS::HandleValue vp,
   return true;
 }
 
-template <typename T> static bool jsb_yasio__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
+template <typename T>
+static bool jsb_yasio__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
 {
   JS::CallArgs args          = JS::CallArgsFromVp(argc, vp);
   bool ok                    = true;
-  auto cobj                  = new (std::nothrow) T();
+  auto cobj                  = new T();
   js_type_class_t* typeClass = js_get_type_from_native<T>(cobj);
 
   // link the native object with the javascript object
-  JS::RootedObject jsobj(ctx,
-                         jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<T>::s_name()));
+  JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<T>::s_name()));
   args.rval().set(OBJECT_TO_JSVAL(jsobj));
   if (JS_HasProperty(ctx, jsobj, "_ctor", &ok) && ok)
     ScriptingCore::getInstance()->executeFunctionWithOwner(OBJECT_TO_JSVAL(jsobj), "_ctor", args);
   return true;
 }
 
-template <typename T> static void jsb_yasio__dtor(JSFreeOp* fop, JSObject* obj)
+template <typename T>
+static void jsb_yasio__dtor(JSFreeOp* fop, JSObject* obj)
 {
   CCLOG("jsbindings: finalizing JS object %p(%s)", obj, TypeTest<T>::s_name());
   js_proxy_t* nproxy;
@@ -312,14 +301,14 @@ template <typename T> static void jsb_yasio__dtor(JSFreeOp* fop, JSObject* obj)
   }
 }
 
-template <typename T> static jsval jsb_yasio_to_jsval(JSContext* ctx, std::unique_ptr<T> value)
+template <typename T>
+static jsval jsb_yasio_to_jsval(JSContext* ctx, std::unique_ptr<T> value)
 {
   auto cobj                  = value.release();
   js_type_class_t* typeClass = js_get_type_from_native<T>(cobj);
 
   // link the native object with the javascript object
-  JS::RootedObject jsobj(ctx,
-                         jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<T>::s_name()));
+  JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<T>::s_name()));
 
   return OBJECT_TO_JSVAL(jsobj);
 }
@@ -329,8 +318,7 @@ static jsval jsb_yasio_to_jsval(JSContext* ctx, io_transport* value)
   js_type_class_t* typeClass = js_get_type_from_native<io_transport>(value);
 
   // link the native object with the javascript object
-  JS::RootedObject jsobj(
-      ctx, jsb_create_weak_jsobject(ctx, value, typeClass, TypeTest<io_transport>::s_name()));
+  JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, value, typeClass, TypeTest<io_transport>::s_name()));
 
   return OBJECT_TO_JSVAL(jsobj);
 }
@@ -364,7 +352,7 @@ bool jsb_yasio_setTimeout(JSContext* ctx, uint32_t argc, jsval* vp)
       CC_BREAK_IF((JS_TypeOfValue(ctx, arg0) != JSTYPE_FUNCTION));
 
       JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
-      auto func = std::make_shared<JSFunctionWrapper>(ctx, jstarget, arg0, args.thisv());
+      auto func                               = std::make_shared<JSFunctionWrapper>(ctx, jstarget, arg0, args.thisv());
       yasio_jsb::stimer::vcallback_t callback = [=]() {
         JS::RootedValue rval(ctx);
         bool succeed = func->invoke(0, nullptr, &rval);
@@ -383,8 +371,7 @@ bool jsb_yasio_setTimeout(JSContext* ctx, uint32_t argc, jsval* vp)
     }
   } while (false);
 
-  JS_ReportError(ctx, "jsb_yasio_setTimeout: wrong number of arguments: %d, was expecting %d", argc,
-                 0);
+  JS_ReportError(ctx, "jsb_yasio_setTimeout: wrong number of arguments: %d, was expecting %d", argc, 0);
   return false;
 }
 
@@ -400,7 +387,7 @@ bool jsb_yasio_setInterval(JSContext* ctx, uint32_t argc, jsval* vp)
       CC_BREAK_IF((JS_TypeOfValue(ctx, arg0) != JSTYPE_FUNCTION));
 
       JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
-      auto func = std::make_shared<JSFunctionWrapper>(ctx, jstarget, arg0, args.thisv());
+      auto func                               = std::make_shared<JSFunctionWrapper>(ctx, jstarget, arg0, args.thisv());
       yasio_jsb::stimer::vcallback_t callback = [=]() {
         JS::RootedValue rval(ctx);
         bool succeed = func->invoke(0, nullptr, &rval);
@@ -412,16 +399,14 @@ bool jsb_yasio_setInterval(JSContext* ctx, uint32_t argc, jsval* vp)
 
       double interval = 0;
       JS::ToNumber(ctx, arg1, &interval);
-      auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval,
-                                             std::move(callback));
+      auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval, std::move(callback));
 
       args.rval().set(PRIVATE_TO_JSVAL(timerId));
       return true;
     }
   } while (false);
 
-  JS_ReportError(ctx, "jsb_yasio_setInterval: wrong number of arguments: %d, was expecting %d",
-                 argc, 0);
+  JS_ReportError(ctx, "jsb_yasio_setInterval: wrong number of arguments: %d, was expecting %d", argc, 0);
   return false;
 }
 
@@ -442,8 +427,7 @@ bool jsb_yasio_killTimer(JSContext* ctx, uint32_t argc, jsval* vp)
     }
   } while (false);
 
-  JS_ReportError(ctx, "jsb_yasio_setTimeout: wrong number of arguments: %d, was expecting %d", argc,
-                 0);
+  JS_ReportError(ctx, "jsb_yasio_setTimeout: wrong number of arguments: %d, was expecting %d", argc, 0);
   return false;
 }
 
@@ -680,30 +664,28 @@ void js_register_yasio_ibstream(JSContext* ctx, JS::HandleObject global)
 
   static JSPropertySpec properties[] = {JS_PS_END};
 
-  static JSFunctionSpec funcs[] = {
-      JS_FN("read_bool", js_yasio_ibstream_read_bool, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_ix", js_yasio_ibstream_read_ix, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_i8", js_yasio_ibstream_read<int8_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_i16", js_yasio_ibstream_read<int16_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_i32", js_yasio_ibstream_read<int32_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_u8", js_yasio_ibstream_read_ux<uint8_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_u16", js_yasio_ibstream_read_ux<uint16_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_u32", js_yasio_ibstream_read_ux<uint32_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_i64", js_yasio_ibstream_read_dx<int64_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_f", js_yasio_ibstream_read_dx<float>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_lf", js_yasio_ibstream_read_dx<double>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_v", js_yasio_ibstream_read_v, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("read_bytes", js_yasio_ibstream_read_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("seek", js_yasio_ibstream_seek, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("length", js_yasio_ibstream_length, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FS_END};
+  static JSFunctionSpec funcs[] = {JS_FN("read_bool", js_yasio_ibstream_read_bool, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_ix", js_yasio_ibstream_read_ix, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_i8", js_yasio_ibstream_read<int8_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_i16", js_yasio_ibstream_read<int16_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_i32", js_yasio_ibstream_read<int32_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_u8", js_yasio_ibstream_read_ux<uint8_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_u16", js_yasio_ibstream_read_ux<uint16_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_u32", js_yasio_ibstream_read_ux<uint32_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_i64", js_yasio_ibstream_read_dx<int64_t>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_f", js_yasio_ibstream_read_dx<float>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_lf", js_yasio_ibstream_read_dx<double>, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_v", js_yasio_ibstream_read_v, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("read_bytes", js_yasio_ibstream_read_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("seek", js_yasio_ibstream_seek, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("length", js_yasio_ibstream_length, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_ibstream_prototype =
-      JS_InitClass(ctx, global, JS::NullPtr(), jsb_ibstream_class, nullptr, 0, properties, funcs,
-                   nullptr, // no static properties
-                   st_funcs);
+  jsb_ibstream_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_ibstream_class, nullptr, 0, properties, funcs,
+                                        nullptr, // no static properties
+                                        st_funcs);
 
   // add the proto and JSClass to the type->js info hash table
   JS::RootedObject proto(ctx, jsb_ibstream_prototype);
@@ -725,21 +707,20 @@ static bool jsb_yasio_obstream__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
   yasio::obstream* cobj = nullptr;
   if (argc == 0)
   {
-    cobj = new (std::nothrow) yasio::obstream();
+    cobj = new yasio::obstream();
   }
   else
   {
     auto arg0 = args.get(0);
     if (arg0.isInt32())
-      cobj = new (std::nothrow) yasio::obstream(arg0.toInt32());
+      cobj = new yasio::obstream(arg0.toInt32());
     else
-      cobj = new (std::nothrow) yasio::obstream();
+      cobj = new yasio::obstream();
   }
   js_type_class_t* typeClass = js_get_type_from_native<yasio::obstream>(cobj);
 
   // link the native object with the javascript object
-  JS::RootedObject jsobj(
-      ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<yasio::obstream>::s_name()));
+  JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<yasio::obstream>::s_name()));
   args.rval().set(OBJECT_TO_JSVAL(jsobj));
   if (JS_HasProperty(ctx, jsobj, "_ctor", &ok) && ok)
     ScriptingCore::getInstance()->executeFunctionWithOwner(OBJECT_TO_JSVAL(jsobj), "_ctor", args);
@@ -1146,8 +1127,7 @@ bool js_yasio_obstream_sub(JSContext* ctx, uint32_t argc, jsval* vp)
     js_type_class_t* typeClass = js_get_type_from_native<yasio::obstream>(subobj);
 
     // link the native object with the javascript object
-    JS::RootedObject jsobj(
-        ctx, jsb_create_weak_jsobject(ctx, subobj, typeClass, TypeTest<yasio::obstream>::s_name()));
+    JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, subobj, typeClass, TypeTest<yasio::obstream>::s_name()));
     args.rval().set(OBJECT_TO_JSVAL(jsobj));
 
     return true;
@@ -1173,32 +1153,30 @@ void js_register_yasio_obstream(JSContext* ctx, JS::HandleObject global)
 
   static JSPropertySpec properties[] = {JS_PS_END};
 
-  static JSFunctionSpec funcs[] = {
-      JS_FN("push32", js_yasio_obstream_push32, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("push16", js_yasio_obstream_push16, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("push8", js_yasio_obstream_push8, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("pop32", js_yasio_obstream_pop32, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("pop16", js_yasio_obstream_pop16, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("pop8", js_yasio_obstream_pop8, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_bool", js_yasio_obstream_write_bool, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_ix", js_yasio_obstream_write_ix, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_i8", js_yasio_obstream_write_i8, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_i16", js_yasio_obstream_write_i16, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_i32", js_yasio_obstream_write_i32, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_i64", js_yasio_obstream_write_i64, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_f", js_yasio_obstream_write_f, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_lf", js_yasio_obstream_write_lf, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_v", js_yasio_obstream_write_v, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_bytes", js_yasio_obstream_write_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("length", js_yasio_obstream_length, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("sub", js_yasio_obstream_sub, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FS_END};
+  static JSFunctionSpec funcs[] = {JS_FN("push32", js_yasio_obstream_push32, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("push16", js_yasio_obstream_push16, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("push8", js_yasio_obstream_push8, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("pop32", js_yasio_obstream_pop32, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("pop16", js_yasio_obstream_pop16, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("pop8", js_yasio_obstream_pop8, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_bool", js_yasio_obstream_write_bool, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_ix", js_yasio_obstream_write_ix, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_i8", js_yasio_obstream_write_i8, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_i16", js_yasio_obstream_write_i16, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_i32", js_yasio_obstream_write_i32, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_i64", js_yasio_obstream_write_i64, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_f", js_yasio_obstream_write_f, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_lf", js_yasio_obstream_write_lf, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_v", js_yasio_obstream_write_v, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_bytes", js_yasio_obstream_write_bytes, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("length", js_yasio_obstream_length, 0, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("sub", js_yasio_obstream_sub, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
   // JS::RootedObject parentProto(ctx, jsb_cocos2d_Ref_prototype);
-  jsb_obstream_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_obstream_class,
-                                        jsb_yasio_obstream__ctor, 0, properties, funcs,
+  jsb_obstream_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_obstream_class, jsb_yasio_obstream__ctor, 0, properties, funcs,
                                         nullptr, // no static properties
                                         st_funcs);
 
@@ -1234,10 +1212,9 @@ void js_register_yasio_transport(JSContext* ctx, JS::HandleObject global)
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_transport_prototype =
-      JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_class, nullptr, 0, properties, funcs,
-                   nullptr, // no static properties
-                   st_funcs);
+  jsb_transport_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_transport_class, nullptr, 0, properties, funcs,
+                                         nullptr, // no static properties
+                                         st_funcs);
 
   // add the proto and JSClass to the type->js info hash table
   JS::RootedObject proto(ctx, jsb_transport_prototype);
@@ -1310,8 +1287,7 @@ bool js_yasio_io_event_packet(JSContext* ctx, uint32_t argc, jsval* vp)
       copy = args[1].toBoolean();
     if (!raw)
     {
-      std::unique_ptr<yasio::ibstream> ibs(!copy ? new yasio::ibstream(std::move(packet))
-                                                 : new yasio::ibstream(packet));
+      std::unique_ptr<yasio::ibstream> ibs(!copy ? new yasio::ibstream(std::move(packet)) : new yasio::ibstream(packet));
       args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, std::move(ibs)));
     }
     else
@@ -1415,10 +1391,9 @@ void js_register_yasio_io_event(JSContext* ctx, JS::HandleObject global)
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_io_event_prototype =
-      JS_InitClass(ctx, global, JS::NullPtr(), jsb_io_event_class, nullptr, 0, properties, funcs,
-                   nullptr, // no static properties
-                   st_funcs);
+  jsb_io_event_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_io_event_class, nullptr, 0, properties, funcs,
+                                        nullptr, // no static properties
+                                        st_funcs);
 
   // add the proto and JSClass to the type->js info hash table
   JS::RootedObject proto(ctx, jsb_io_event_prototype);
@@ -1447,39 +1422,29 @@ static bool jsb_yasio_io_service__ctor(JSContext* ctx, uint32_t argc, jsval* vp)
     {
       std::vector<inet::io_hostent> hostents;
       jsval_to_std_vector_hostent(ctx, arg0, &hostents);
-      cobj = new (std::nothrow) io_service(!hostents.empty() ? &hostents.front() : nullptr,
-                                           std::max(1, (int)hostents.size()));
+      cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr, std::max(1, (int)hostents.size()));
     }
     else if (arg0.isObject())
     {
       inet::io_hostent ioh;
       jsval_to_hostent(ctx, arg0, &ioh);
-      cobj = new (std::nothrow) io_service(&ioh, 1);
+      cobj = new io_service(&ioh, 1);
     }
     else if (arg0.isNumber())
-      cobj = new (std::nothrow) io_service(args.get(0).toInt32());
+      cobj = new io_service(args.get(0).toInt32());
   }
   else
   {
-    cobj = new (std::nothrow) io_service();
+    cobj = new io_service();
   }
 
-  if (cobj != nullptr)
-  {
-    js_type_class_t* typeClass = js_get_type_from_native<io_service>(cobj);
+  js_type_class_t* typeClass = js_get_type_from_native<io_service>(cobj);
 
-    // link the native object with the javascript object
-    JS::RootedObject jsobj(
-        ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<io_service>::s_name()));
-    args.rval().set(OBJECT_TO_JSVAL(jsobj));
-    if (JS_HasProperty(ctx, jsobj, "_ctor", &ok) && ok)
-      ScriptingCore::getInstance()->executeFunctionWithOwner(OBJECT_TO_JSVAL(jsobj), "_ctor", args);
-  }
-  else
-  {
-    args.rval().setNull();
-  }
-  return false;
+  // link the native object with the javascript object
+  JS::RootedObject jsobj(ctx, jsb_create_weak_jsobject(ctx, cobj, typeClass, TypeTest<io_service>::s_name()));
+  args.rval().set(OBJECT_TO_JSVAL(jsobj));
+  if (JS_HasProperty(ctx, jsobj, "_ctor", &ok) && ok)
+    ScriptingCore::getInstance()->executeFunctionWithOwner(OBJECT_TO_JSVAL(jsobj), "_ctor", args);
 }
 
 bool js_yasio_io_service_start(JSContext* ctx, uint32_t argc, jsval* vp)
@@ -1713,12 +1678,11 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
         case YOPT_C_LFBFD_PARAMS:
-          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
-                              args[4].toInt32(), args[5].toInt32());
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(), args[4].toInt32(), args[5].toInt32());
           break;
         case YOPT_S_EVENT_CB: {
           JS::RootedObject jstarget(ctx, args.thisv().toObjectOrNull());
-          auto func = std::make_shared<JSFunctionWrapper>(ctx, jstarget, args[1], args.thisv());
+          auto func              = std::make_shared<JSFunctionWrapper>(ctx, jstarget, args[1], args.thisv());
           io_event_cb_t callback = [=](inet::event_ptr event) {
             JSB_AUTOCOMPARTMENT_WITH_GLOBAL_OBJCET
             jsval jevent = jsb_yasio_to_jsval(ctx, std::move(event));
@@ -1824,8 +1788,7 @@ bool js_yasio_io_service_write_to(JSContext* ctx, uint32_t argc, jsval* vp)
       sva.set(arg1, ctx, &unrecognized_object);
       if (!sva.empty())
       {
-        cobj->write_to(transport, std::vector<char>(sva.data(), sva.data() + sva.size()),
-                       ip::endpoint{ip.data(), port});
+        cobj->write_to(transport, std::vector<char>(sva.data(), sva.data() + sva.size()), ip::endpoint{ip.data(), port});
       }
       else if (unrecognized_object)
       {
@@ -1862,22 +1825,20 @@ void js_register_yasio_io_service(JSContext* ctx, JS::HandleObject global)
 
   static JSPropertySpec properties[] = {JS_PS_END};
 
-  static JSFunctionSpec funcs[] = {
-      JS_FN("start", js_yasio_io_service_start, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("stop", js_yasio_io_service_stop, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("dispatch", js_yasio_io_service_dispatch, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write", js_yasio_io_service_write, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FN("write_to", js_yasio_io_service_write_to, 4, JSPROP_PERMANENT | JSPROP_ENUMERATE),
-      JS_FS_END};
+  static JSFunctionSpec funcs[] = {JS_FN("start", js_yasio_io_service_start, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("stop", js_yasio_io_service_stop, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("open", js_yasio_io_service_open, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("close", js_yasio_io_service_close, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("is_open", js_yasio_io_service_is_open, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("dispatch", js_yasio_io_service_dispatch, 1, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("set_option", js_yasio_io_service_set_option, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write", js_yasio_io_service_write, 2, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FN("write_to", js_yasio_io_service_write_to, 4, JSPROP_PERMANENT | JSPROP_ENUMERATE),
+                                   JS_FS_END};
 
   static JSFunctionSpec st_funcs[] = {JS_FS_END};
 
-  jsb_io_service_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_io_service_class,
-                                          jsb_yasio_io_service__ctor, 0, properties, funcs,
+  jsb_io_service_prototype = JS_InitClass(ctx, global, JS::NullPtr(), jsb_io_service_class, jsb_yasio_io_service__ctor, 0, properties, funcs,
                                           nullptr, // no static properties
                                           st_funcs);
 
@@ -1911,8 +1872,8 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   // ##-- yasio enums
   JS::RootedValue __jsvalIntVal(ctx);
 
-#define YASIO_SET_INT_PROP(name, value)                                                            \
-  __jsvalIntVal = INT_TO_JSVAL(value);                                                             \
+#define YASIO_SET_INT_PROP(name, value)                                                                                                                        \
+  __jsvalIntVal = INT_TO_JSVAL(value);                                                                                                                         \
   JS_SetProperty(ctx, yasio, name, __jsvalIntVal)
 #define YASIO_EXPORT_ENUM(v) YASIO_SET_INT_PROP(#v, v)
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);

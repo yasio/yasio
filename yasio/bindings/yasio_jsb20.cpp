@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -35,27 +35,27 @@ SOFTWARE.
 #include "yasio/detail/ref_ptr.hpp"
 
 #if __has_include(<cocos/bindings/jswrapper/SeApi.h>) || defined(YASIO_CREATOR_30_OR_LATER)
-#include "cocos/bindings/jswrapper/SeApi.h"
-#include "cocos/bindings/manual/jsb_conversions.h"
-#include "cocos/bindings/manual/jsb_global.h"
-#include "cocos/platform/Application.h"
-#include "cocos/base/Scheduler.h"
-#include "cocos/base/StringUtil.h"
+#  include "cocos/bindings/jswrapper/SeApi.h"
+#  include "cocos/bindings/manual/jsb_conversions.h"
+#  include "cocos/bindings/manual/jsb_global.h"
+#  include "cocos/platform/Application.h"
+#  include "cocos/base/Scheduler.h"
+#  include "cocos/base/StringUtil.h"
 using namespace cc;
 #else
 // A workaround to fix compile issue caused by `CCLog.h` doesn't handle `__has_attribute` it properly
 #  if !__has_attribute(format)
 #    undef __has_attribute
 #  endif
-#include "cocos/scripting/js-bindings/jswrapper/SeApi.h"
-#include "cocos/scripting/js-bindings/manual/jsb_conversions.hpp"
-#include "cocos/scripting/js-bindings/manual/jsb_global.h"
-#include "cocos/platform/CCApplication.h"
-#include "cocos/base/CCScheduler.h"
-#include "cocos2d.h"
+#  include "cocos/scripting/js-bindings/jswrapper/SeApi.h"
+#  include "cocos/scripting/js-bindings/manual/jsb_conversions.hpp"
+#  include "cocos/scripting/js-bindings/manual/jsb_global.h"
+#  include "cocos/platform/CCApplication.h"
+#  include "cocos/base/CCScheduler.h"
+#  include "cocos2d.h"
 using namespace cocos2d;
-#define StringUtil StringUtils
-#define CC_LOG_DEBUG CCLOG
+#  define StringUtil StringUtils
+#  define CC_LOG_DEBUG CCLOG
 #endif
 
 using namespace yasio;
@@ -63,19 +63,19 @@ using namespace yasio;
 namespace yasio_jsb
 {
 
-#define YASIO_DEFINE_REFERENCE_CLASS                                                               \
-private:                                                                                           \
-  unsigned int referenceCount_;                                                                    \
-                                                                                                   \
-public:                                                                                            \
-  void retain() { ++referenceCount_; }                                                             \
-  void release()                                                                                   \
-  {                                                                                                \
-    --referenceCount_;                                                                             \
-    if (referenceCount_ == 0)                                                                      \
-      delete this;                                                                                 \
-  }                                                                                                \
-                                                                                                   \
+#define YASIO_DEFINE_REFERENCE_CLASS                                                                                                                           \
+private:                                                                                                                                                       \
+  unsigned int referenceCount_;                                                                                                                                \
+                                                                                                                                                               \
+public:                                                                                                                                                        \
+  void retain() { ++referenceCount_; }                                                                                                                         \
+  void release()                                                                                                                                               \
+  {                                                                                                                                                            \
+    --referenceCount_;                                                                                                                                         \
+    if (referenceCount_ == 0)                                                                                                                                  \
+      delete this;                                                                                                                                             \
+  }                                                                                                                                                            \
+                                                                                                                                                               \
 private:
 
 namespace stimer
@@ -87,8 +87,7 @@ namespace stimer
 typedef void* TIMER_ID;
 typedef std::function<void(void)> vcallback_t;
 
-struct TimerObject
-{
+struct TimerObject {
   TimerObject(vcallback_t&& callback) : callback_(std::move(callback)), referenceCount_(1) {}
 
   vcallback_t callback_;
@@ -110,8 +109,7 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
     std::string key = StringUtil::format("STMR#%p", timerId);
 
     Application::getInstance()->getScheduler()->schedule(
-        [timerObj](
-            float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
+        [timerObj](float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
         STIMER_TARGET_VALUE, interval, n - 1, 0, false, key);
@@ -130,8 +128,7 @@ TIMER_ID delay(float delay, vcallback_t callback)
 
     std::string key = StringUtil::format("STMR#%p", timerId);
     Application::getInstance()->getScheduler()->schedule(
-        [timerObj](
-            float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
+        [timerObj](float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
         STIMER_TARGET_VALUE, 0, 0, delay, false, key);
@@ -146,10 +143,7 @@ void kill(TIMER_ID timerId)
   std::string key = StringUtil::format("STMR#%p", timerId);
   Application::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
-void clear()
-{
-  Application::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE);
-}
+void clear() { Application::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE); }
 } // namespace stimer
 } // namespace yasio_jsb
 
@@ -222,8 +216,7 @@ bool jsb_yasio_setInterval(se::State& s)
 
       float interval = 0;
       seval_to_float(arg1, &interval);
-      auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval,
-                                             std::move(callback));
+      auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval, std::move(callback));
 
       s.rval().setNumber((double)(int64_t)timerId);
       return true;
@@ -339,21 +332,22 @@ cxx17::string_view seval_to_string_view(const se::Value& v, bool* unrecognized_o
 
 //////////////////// common template functions //////////////
 
-template <typename T> static bool jsb_yasio__ctor(se::State& s)
+template <typename T>
+static bool jsb_yasio__ctor(se::State& s)
 {
-  auto cobj = new (std::nothrow) T();
+  auto cobj = new T();
   s.thisObject()->setPrivateData(cobj);
   se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
   return true;
 }
 
-template <typename T> static bool jsb_yasio__dtor(se::State& s)
+template <typename T>
+static bool jsb_yasio__dtor(se::State& s)
 {
   auto iter = se::NonRefNativePtrCreatedByCtorMap::find(s.nativeThisObject());
   if (iter != se::NonRefNativePtrCreatedByCtorMap::end())
   {
-    CC_LOG_DEBUG("jsbindings: finalizing JS object(created by ctor) %p(%s)", s.nativeThisObject(),
-          typeid(T).name());
+    CC_LOG_DEBUG("jsbindings: finalizing JS object(created by ctor) %p(%s)", s.nativeThisObject(), typeid(T).name());
     se::NonRefNativePtrCreatedByCtorMap::erase(iter);
     T* cobj = reinterpret_cast<T*>(s.nativeThisObject());
     delete cobj;
@@ -363,8 +357,7 @@ template <typename T> static bool jsb_yasio__dtor(se::State& s)
     auto iter2 = se::NativePtrToObjectMap::find(s.nativeThisObject());
     if (iter2 != se::NativePtrToObjectMap::end())
     {
-      CC_LOG_DEBUG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(),
-            typeid(T).name());
+      CC_LOG_DEBUG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(), typeid(T).name());
       T* cobj = reinterpret_cast<T*>(s.nativeThisObject());
       delete cobj;
     }
@@ -404,7 +397,8 @@ static bool js_yasio_ibstream_read_ix(se::State& s)
 SE_BIND_FUNC(js_yasio_ibstream_read_ix)
 
 // for int8_t, int16_t, int32_t
-template <typename T> static bool js_yasio_ibstream_read(se::State& s)
+template <typename T>
+static bool js_yasio_ibstream_read(se::State& s)
 {
   yasio::ibstream* cobj = (yasio::ibstream*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -423,7 +417,8 @@ SE_BIND_FUNC(js_yasio_ibstream_read_i16)
 SE_BIND_FUNC(js_yasio_ibstream_read_i32)
 
 // for uint8_t, uint16_t, uint32_t
-template <typename T> static bool js_yasio_ibstream_read_ux(se::State& s)
+template <typename T>
+static bool js_yasio_ibstream_read_ux(se::State& s)
 {
   yasio::ibstream* cobj = (yasio::ibstream*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -442,7 +437,8 @@ SE_BIND_FUNC(js_yasio_ibstream_read_u16)
 SE_BIND_FUNC(js_yasio_ibstream_read_u32)
 
 // for int64_t, float, double
-template <typename T> static bool js_yasio_ibstream_read_dx(se::State& s)
+template <typename T>
+static bool js_yasio_ibstream_read_dx(se::State& s)
 {
   yasio::ibstream* cobj = (yasio::ibstream*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -564,8 +560,7 @@ void js_register_yasio_ibstream(se::Object* obj)
 {
   auto cls = se::Class::create("ibstream", obj, nullptr, nullptr);
 
-#define DEFINE_IBSTREAM_FUNC(funcName)                                                             \
-  cls->defineFunction(#funcName, _SE(js_yasio_ibstream_##funcName))
+#define DEFINE_IBSTREAM_FUNC(funcName) cls->defineFunction(#funcName, _SE(js_yasio_ibstream_##funcName))
 
   DEFINE_IBSTREAM_FUNC(read_bool);
   DEFINE_IBSTREAM_FUNC(read_ix);
@@ -604,15 +599,15 @@ static bool jsb_yasio_obstream__ctor(se::State& s)
   yasio::obstream* cobj = nullptr;
   if (argc == 0)
   {
-    cobj = new (std::nothrow) yasio::obstream();
+    cobj = new yasio::obstream();
   }
   else
   {
     auto arg0 = args[0];
     if (arg0.isNumber())
-      cobj = new (std::nothrow) yasio::obstream(arg0.toUint32());
+      cobj = new yasio::obstream(arg0.toUint32());
     else
-      cobj = new (std::nothrow) yasio::obstream();
+      cobj = new yasio::obstream();
   }
 
   s.thisObject()->setPrivateData(cobj);
@@ -763,7 +758,8 @@ static bool js_yasio_obstream_write_ix(se::State& s)
 }
 SE_BIND_FUNC(js_yasio_obstream_write_ix)
 
-template <typename T> static bool js_yasio_obstream_write(se::State& s)
+template <typename T>
+static bool js_yasio_obstream_write(se::State& s)
 {
   auto cobj = (yasio::obstream*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -783,7 +779,8 @@ SE_BIND_FUNC(js_yasio_obstream_write_i8)
 SE_BIND_FUNC(js_yasio_obstream_write_i16)
 SE_BIND_FUNC(js_yasio_obstream_write_i32)
 
-template <typename T> static bool js_yasio_obstream_write_dx(se::State& s)
+template <typename T>
+static bool js_yasio_obstream_write_dx(se::State& s)
 {
   auto cobj = (yasio::obstream*)s.nativeThisObject();
   SE_PRECONDITION2(cobj, false, ": Invalid Native Object");
@@ -890,7 +887,7 @@ bool js_yasio_obstream_sub(se::State& s)
       count = args[1].toInt32();
     }
 
-    auto subobj = new (std::nothrow) yasio::obstream(cobj->sub(offset, count));
+    auto subobj = new yasio::obstream(cobj->sub(offset, count));
     native_ptr_to_seval<yasio::obstream>(subobj, &s.rval());
 
     return true;
@@ -903,8 +900,7 @@ SE_BIND_FUNC(js_yasio_obstream_sub)
 
 void js_register_yasio_obstream(se::Object* obj)
 {
-#define DEFINE_OBSTREAM_FUNC(funcName)                                                             \
-  cls->defineFunction(#funcName, _SE(js_yasio_obstream_##funcName))
+#define DEFINE_OBSTREAM_FUNC(funcName) cls->defineFunction(#funcName, _SE(js_yasio_obstream_##funcName))
   auto cls = se::Class::create("obstream", obj, nullptr, _SE(jsb_yasio_obstream__ctor));
 
   DEFINE_OBSTREAM_FUNC(push32);
@@ -996,8 +992,7 @@ bool js_yasio_io_event_packet(se::State& s)
     if (argc >= 2)
       copy = args[1].toBoolean();
     if (!raw)
-      native_ptr_to_seval<yasio::ibstream>(
-          !copy ? new yasio::ibstream(std::move(packet)) : new yasio::ibstream(packet), &s.rval());
+      native_ptr_to_seval<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(packet)) : new yasio::ibstream(packet), &s.rval());
     else
     {
       se::HandleObject dataObj(se::Object::createArrayBufferObject(packet.data(), packet.size()));
@@ -1056,8 +1051,7 @@ SE_BIND_FUNC(js_yasio_io_event_timestamp)
 
 void js_register_yasio_io_event(se::Object* obj)
 {
-#define DEFINE_IO_EVENT_FUNC(funcName)                                                             \
-  cls->defineFunction(#funcName, _SE(js_yasio_io_event_##funcName))
+#define DEFINE_IO_EVENT_FUNC(funcName) cls->defineFunction(#funcName, _SE(js_yasio_io_event_##funcName))
 
   auto cls = se::Class::create("io_event", obj, nullptr, nullptr);
 
@@ -1096,8 +1090,7 @@ static bool jsb_yasio_io_service__ctor(se::State& s)
       {
         std::vector<inet::io_hostent> hostents;
         seval_to_std_vector_hostent(arg0, &hostents);
-        cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr,
-                              (std::max)((int)hostents.size(), 1));
+        cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr, (std::max)((int)hostents.size(), 1));
       }
       else
       {
@@ -1110,15 +1103,10 @@ static bool jsb_yasio_io_service__ctor(se::State& s)
       cobj = new io_service(arg0.toInt32());
   }
   else
-    cobj = new (std::nothrow) io_service();
+    cobj = new io_service();
 
-  if (cobj != nullptr)
-  {
-    s.thisObject()->setPrivateData(cobj);
-    se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
-  }
-  else
-    s.rval().setNull();
+  s.thisObject()->setPrivateData(cobj);
+  se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
   return true;
 }
 
@@ -1315,19 +1303,16 @@ bool js_yasio_io_service_set_option(se::State& s)
         case YOPT_C_ENABLE_MCAST:
         case YOPT_C_LOCAL_ENDPOINT:
         case YOPT_C_REMOTE_ENDPOINT:
-          service->set_option(opt, args[1].toInt32(), args[2].toString().c_str(),
-                              args[3].toInt32());
+          service->set_option(opt, args[1].toInt32(), args[2].toString().c_str(), args[3].toInt32());
           break;
         case YOPT_C_MOD_FLAGS:
-          service->set_option(opt, args[1].toInt32(), args[2].toInt32(),
-                              args[3].toInt32());
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
         case YOPT_S_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
         case YOPT_C_LFBFD_PARAMS:
-          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(),
-                              args[4].toInt32(), args[5].toInt32());
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(), args[4].toInt32(), args[5].toInt32());
           break;
         case YOPT_S_EVENT_CB: {
           se::Value jsThis(s.thisObject());
@@ -1425,8 +1410,7 @@ bool js_yasio_io_service_write_to(se::State& s)
         bool unrecognized_object = false;
         auto data                = seval_to_string_view(arg1, &unrecognized_object);
         if (!data.empty())
-          cobj->write_to(transport, std::vector<char>(data.data(), data.data() + data.size()),
-                         ip::endpoint{ip.data(), port});
+          cobj->write_to(transport, std::vector<char>(data.data(), data.data() + data.size()), ip::endpoint{ip.data(), port});
         else if (unrecognized_object)
         {
           yasio::obstream* obs = nullptr;
@@ -1447,8 +1431,7 @@ SE_BIND_FUNC(js_yasio_io_service_write_to)
 
 void js_register_yasio_io_service(se::Object* obj)
 {
-#define DEFINE_IO_SERVICE_FUNC(funcName)                                                           \
-  cls->defineFunction(#funcName, _SE(js_yasio_io_service_##funcName))
+#define DEFINE_IO_SERVICE_FUNC(funcName) cls->defineFunction(#funcName, _SE(js_yasio_io_service_##funcName))
   auto cls = se::Class::create("io_service", obj, nullptr, _SE(jsb_yasio_io_service__ctor));
 
   DEFINE_IO_SERVICE_FUNC(set_option);
@@ -1498,8 +1481,8 @@ bool jsb_register_yasio(se::Object* obj)
 
   // ##-- yasio enums
   se::Value __jsvalIntVal;
-#define YASIO_SET_INT_PROP(name, value)                                                            \
-  __jsvalIntVal.setInt32(value);                                                                   \
+#define YASIO_SET_INT_PROP(name, value)                                                                                                                        \
+  __jsvalIntVal.setInt32(value);                                                                                                                               \
   yasio->setProperty(name, __jsvalIntVal)
 #define YASIO_EXPORT_ENUM(v) YASIO_SET_INT_PROP(#v, v)
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);

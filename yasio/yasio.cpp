@@ -38,7 +38,6 @@ SOFTWARE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include "yasio/detail/thread_name.hpp"
 
 #if defined(YASIO_SSL_BACKEND)

@@ -27,7 +27,7 @@ SOFTWARE.
 */
 
 /*
-** yasio_ni v2: The yasio native interface for interop, match OpenNSM2(The Unity C# wrapper of yasio)
+** yasio_ni v2: The yasio native interface for interop, match with `yasio/yasio_unity`
 */
 #include <array>
 #include <string.h>

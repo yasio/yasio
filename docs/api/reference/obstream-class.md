@@ -151,7 +151,7 @@ void write_byte(uint8_t value);
 
 ### 注意
 
-此函数功能等价于 [obstream::write<uint8_t>](#write)
+此函数功能等价于 [`obstream::write<uint8_t>`](#write)
 
 
 ## <a name="write_bytes"></a> obstream::write_bytes

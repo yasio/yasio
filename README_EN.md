@@ -1,6 +1,6 @@
 <p align="center"><a href="https://yasio.github.io/yasio" target="_blank" rel="noopener noreferrer"><img width="160" src="docs/assets/images/logo.png" alt="yasio logo"></a></p>
 
-# *YASIO* - *Y*et another *A*synchronous *S*ocket *I*/*O*.
+# *YASIO* - *Y*et *A*nother *S*ocket *I*/*O* library.
 
 [![Android Build Status](https://github.com/yasio/yasio/workflows/android/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aandroid)
 [![iOS Build Status](https://github.com/yasio/yasio/workflows/ios/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aios)

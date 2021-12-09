@@ -22,10 +22,10 @@ option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set(LINUX TRUE)
     if(ANDROID)
         set(SYSTEM_STRING "Android")
     else()
-        set(LINUX TRUE)
         set(SYSTEM_STRING "Linux")
     endif()
 endif()
@@ -73,10 +73,16 @@ include_directories(
     ${THIRDPART_INC}
 )
 
-### openssl support
+if(BUILD_SHARED_LIBS AND LINUX)
+   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -fPIC")
+endif()
+
+### ssl support
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
+   message(STATUS "Build with openssl support")
    add_subdirectory(thirdparty/openssl)
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
+    message(STATUS "Build with mbedtls support")
     include_directories("${PROJECT_SOURCE_DIR}/thirdparty/mbedtls/include")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
     set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
@@ -88,9 +94,6 @@ if (YASIO_HAVE_CARES)
     set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
-    if(LINUX AND BUILD_SHARED_LIBS)
-        set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -O3 -fPIC")
-    endif()
     add_subdirectory(thirdparty/c-ares)
     set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
 endif()
@@ -232,28 +235,32 @@ if (BUILD_SHARED_LIBS)
         )
 endif()
 
-macro(ConfigTargetDepends target_name)
-    # config ssl dll or lib
+macro(yasio_link_ssl_libraries target_name)
     if (YASIO_SSL_BACKEND EQUAL 1)
         if (UNIX)
             target_link_libraries (${target_name} OpenSSL::SSL OpenSSL::Crypto dl)
         else ()
             target_link_libraries (${target_name} OpenSSL::SSL OpenSSL::Crypto)
         endif()
-
-        if (MSVC)
-            get_property(SSL_DLL_PATH TARGET OpenSSL::SSL PROPERTY IMPORTED_LOCATION)
-            get_property(CRYPTO_DLL_PATH TARGET OpenSSL::Crypto PROPERTY IMPORTED_LOCATION)
-            add_custom_command(TARGET ${target_name}
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${SSL_DLL_PATH}
-                ${CRYPTO_DLL_PATH}
-                $<TARGET_FILE_DIR:${target_name}>
-            )
-        endif()
     elseif(YASIO_SSL_BACKEND EQUAL 2)
         target_link_libraries(${target_name} mbedtls mbedcrypto mbedx509)
     endif()
+endmacro()
+
+macro(yasio_config_app_depends target_name)
+    yasio_link_ssl_libraries(${target_name})
+    
+    # copy openssl dlls
+    if (MSVC AND YASIO_SSL_BACKEND EQUAL 1)
+        get_property(SSL_DLL_PATH TARGET OpenSSL::SSL PROPERTY IMPORTED_LOCATION)
+        get_property(CRYPTO_DLL_PATH TARGET OpenSSL::Crypto PROPERTY IMPORTED_LOCATION)
+        add_custom_command(TARGET ${target_name}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${SSL_DLL_PATH}
+            ${CRYPTO_DLL_PATH}
+            $<TARGET_FILE_DIR:${target_name}>
+        )
+    endif ()
     
     # copy yasio.dll
     if(BUILD_SHARED_LIBS AND WIN32)
@@ -315,9 +322,6 @@ endif()
 if(OPENSSL_INCLUDE_DIR)
    set(YASIO_SSL_BACKEND 1)
    target_include_directories(${yasio_target_name} PRIVATE "${OPENSSL_INCLUDE_DIR}")
-   if(BUILD_SHARED_LIBS AND (ANDROID OR LINUX))
-       target_link_libraries (${yasio_target_name} OpenSSL::SSL OpenSSL::crypto)
-   endif()
 endif()
 
 # checking build system have c-ares
@@ -326,7 +330,7 @@ if(CARES_INCLUDE_DIR AND YASIO_HAVE_CARES)
    target_link_libraries(${yasio_target_name} c-ares)
 endif()
 
-if (ANDROID AND BUILD_SHARED_LIBS)
+if (BUILD_SHARED_LIBS AND ANDROID)
     message(STATUS "CMAKE_STRIP=${CMAKE_STRIP}")
     add_custom_command(TARGET ${yasio_target_name} POST_BUILD
         COMMAND mkdir -p ${PROJECT_BINARY_DIR}/stripped && ${CMAKE_STRIP} ${PROJECT_BINARY_DIR}/libyasio.so -o ${PROJECT_BINARY_DIR}/stripped/libyasio.so
@@ -347,6 +351,14 @@ if(YASIO_BUILD_WITH_LUA)
         target_include_directories(${yasio_target_name} PUBLIC ${LUA_INCLUDE_DIR})
         target_link_libraries(${yasio_target_name} ${LUA_LIBRARIES})
         set(YASIO_USE_PREBUILT_LUA TRUE)
+    endif()
+endif()
+
+# link libraries for yasio_core when BUILD_SHARED_LIBS=TRUE
+if(BUILD_SHARED_LIBS)
+    yasio_link_ssl_libraries(${yasio_target_name})
+    if(NOT WIN32)
+        target_link_libraries(${yasio_target_name} pthread)
     endif()
 endif()
 

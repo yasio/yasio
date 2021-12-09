@@ -47,4 +47,4 @@ if(MSVC)
         )
 endif()
 
-ConfigTargetDepends(${target_name})
+yasio_config_app_depends(${target_name})

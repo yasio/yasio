@@ -19,4 +19,4 @@ endif()
 target_link_libraries (${target_name} ${SSLTEST_LDLIBS})
 
 # link ssl stubs
-ConfigTargetDepends(${target_name})
+yasio_config_app_depends(${target_name})

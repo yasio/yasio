@@ -10,6 +10,7 @@ on:
       - CMakeLists.txt
       - .github/workflows/linux-ci.yml
       - ci/**/*
+      - extensions/**/*
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

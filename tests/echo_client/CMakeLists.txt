@@ -19,4 +19,4 @@ endif()
 
 target_link_libraries (${target_name} ${ECHO_CLIENT_LDLIBS})
 
-ConfigTargetDepends(${target_name})
+yasio_config_app_depends(${target_name})

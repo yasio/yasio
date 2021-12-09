@@ -9,7 +9,7 @@ yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基�
         - Visual Studio 2013+
         - GCC4.7+
         - xcode9+
-        - 其他支持 C++11,14,17 的编译器
+        - 其他支持 C++11+ 的编译器
 
     - 架构: x86, x64, ARM等。
     - 操作系统: Windows, macOS, Linux, FreeBSD, iOS, Android等。

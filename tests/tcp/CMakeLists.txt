@@ -11,12 +11,4 @@ include_directories ("${TCPTEST_INC_DIR}")
 
 add_executable (${target_name} ${TCPTEST_SRC}) 
 
-if (WIN32)
-    set (TCPTEST_LDLIBS yasio)
-else ()
-    set (TCPTEST_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${TCPTEST_LDLIBS})
-
 yasio_config_app_depends(${target_name})

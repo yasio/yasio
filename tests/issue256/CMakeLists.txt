@@ -10,12 +10,4 @@ include_directories ("${ISSUE256_INC_DIR}")
 
 add_executable (${target_name} ${ISSUE256_SRC}) 
 
-if (WIN32)
-    set (ISSUE256_LDLIBS yasio)
-else ()
-    set (ISSUE256_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${ISSUE256_LDLIBS})
-
 yasio_config_app_depends(${target_name})

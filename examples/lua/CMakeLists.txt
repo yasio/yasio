@@ -22,14 +22,6 @@ add_executable (${target_name}
 ) 
 
 if (MSVC)
-    set (EXAMPLE_LUA_LDLIBS yasio)
-else ()
-    set (EXAMPLE_LUA_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${EXAMPLE_LUA_LDLIBS})
-
-if (MSVC)
     set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${target_name}>")
 endif ()
 

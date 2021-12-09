@@ -12,12 +12,4 @@ include_directories ("${SPEEDTEST_INC_DIR}")
 
 add_executable (${target_name} ${SPEEDTEST_SRC}) 
 
-if (WIN32)
-    set (SPEEDTEST_LDLIBS yasio)
-else ()
-    set (SPEEDTEST_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${SPEEDTEST_LDLIBS})
-
 yasio_config_app_depends(${target_name})

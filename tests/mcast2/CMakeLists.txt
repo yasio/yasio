@@ -10,12 +10,4 @@ include_directories ("${MCASTTEST2_INC_DIR}")
 
 add_executable (${target_name} ${MCASTTEST2_SRC}) 
 
-if (WIN32)
-    set (MCASTTEST2_LDLIBS yasio)
-else ()
-    set (MCASTTEST2_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${MCASTTEST2_LDLIBS})
-
 yasio_config_app_depends(${target_name})

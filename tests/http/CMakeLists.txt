@@ -10,12 +10,6 @@ include_directories ("${HTTPTEST_INC_DIR}")
 
 add_executable (${target_name} ${HTTPTEST_SRC}) 
 
-if (WIN32)
-    set (HTTPTEST_LDLIBS yasio yasio_http)
-else ()
-    set (HTTPTEST_LDLIBS yasio yasio_http pthread)
-endif()
-
-target_link_libraries (${target_name} ${HTTPTEST_LDLIBS})
-
 yasio_config_app_depends(${target_name})
+
+target_link_libraries (${target_name} yasio_http)

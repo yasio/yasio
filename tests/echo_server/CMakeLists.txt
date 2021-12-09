@@ -10,12 +10,4 @@ include_directories ("${ECHO_SERVER_INC_DIR}")
 
 add_executable (${target_name} ${ECHO_SERVER_SRC}) 
 
-if (WIN32)
-    set (ECHO_SERVER_LDLIBS yasio)
-else ()
-    set (ECHO_SERVER_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${ECHO_SERVER_LDLIBS})
-
 yasio_config_app_depends(${target_name})

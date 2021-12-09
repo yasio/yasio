@@ -11,12 +11,4 @@ include_directories ("${ECHO_CLIENT_INC_DIR}")
 
 add_executable (${target_name} ${ECHO_CLIENT_SRC}) 
 
-if (WIN32)
-    set (ECHO_CLIENT_LDLIBS yasio)
-else ()
-    set (ECHO_CLIENT_LDLIBS yasio pthread)
-endif()
-
-target_link_libraries (${target_name} ${ECHO_CLIENT_LDLIBS})
-
 yasio_config_app_depends(${target_name})

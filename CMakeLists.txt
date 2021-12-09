@@ -248,6 +248,12 @@ macro(yasio_link_ssl_libraries target_name)
 endmacro()
 
 macro(yasio_config_app_depends target_name)
+
+    target_link_libraries(${target_name} ${yasio_target_name})
+    if (NOT WIN32)
+        target_link_libraries(${target_name} pthread)
+    endif()
+    
     yasio_link_ssl_libraries(${target_name})
     
     # copy openssl dlls

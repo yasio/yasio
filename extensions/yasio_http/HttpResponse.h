@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <map>
 #include <unordered_map>
+#include <algorithm>
 #include "yasio_http/HttpRequest.h"
 #include "yasio_http/Uri.h"
 #include "yasio_http/llhttp/llhttp.h"

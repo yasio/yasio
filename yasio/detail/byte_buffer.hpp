@@ -27,7 +27,7 @@ SOFTWARE.
 */
 
 /* The byte_buffer concepts
-   a. The memory model same with std::string, std::vector<char>
+   a. The memory model is similar to to std::vector<char>, std::string
    b. use c realloc/free to manage memory
    c. implemented operations:
       - resize(without fill)

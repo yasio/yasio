@@ -34,7 +34,6 @@ SOFTWARE.
       - detach(stl not support)
       - stl likes: insert, reserve, front, begin, end, push_back and etc.
 */
-
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
@@ -53,7 +52,6 @@ public:
   using pointer       = _Elem*;
   using const_pointer = const _Elem*;
   using size_type     = size_t;
-
   basic_byte_buffer() {}
   basic_byte_buffer(size_t capacity) { reserve(capacity); }
   basic_byte_buffer(const _Elem* first, const _Elem* last) { assign(first, last); }
@@ -65,12 +63,9 @@ public:
     memset(&rhs, 0, sizeof(rhs));
   }
   basic_byte_buffer(const std::vector<_Elem>& rhs) { assign(rhs.data(), rhs.data() + rhs.size()); }
-
   ~basic_byte_buffer() { _Tidy(); }
-
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
-
   basic_byte_buffer& assign(const _Elem* first, const _Elem* last)
   {
     ptrdiff_t count = last - first;
@@ -87,23 +82,22 @@ public:
     std::swap(_Myend, rhs._Myend);
     return *this;
   }
-  void insert(_Elem* where, const void* first, const void* last)
+  void insert(_Elem* where, const _Elem* first, const _Elem* last)
   {
-    ptrdiff_t count = (const _Elem*)last - (const _Elem*)first;
+    ptrdiff_t count = last - first;
     if (count > 0)
     {
-      auto offset   = where - this->begin();
-      auto cur_size = this->size();
+      auto insertion_pos = where - this->begin();
+      auto cur_size      = this->size();
       resize(cur_size + count);
-
-      if (offset >= static_cast<ptrdiff_t>(cur_size))
-        memcpy(_Myfirst + cur_size, first, count);
-      else if (offset >= 0)
+      if (insertion_pos >= static_cast<ptrdiff_t>(cur_size))
+        memcpy(this->begin() + cur_size, first, count);
+      else if (insertion_pos >= 0)
       {
-        auto ptr = this->begin() + offset;
-        auto to  = ptr + count;
-        memmove(to, ptr, this->end() - to);
-        memcpy(ptr, first, count);
+        where        = this->begin() + insertion_pos;
+        auto move_to = where + count;
+        memmove(move_to, where, this->end() - move_to);
+        memcpy(where, first, count);
       }
     }
   }
@@ -114,7 +108,7 @@ public:
   }
   _Elem& front()
   {
-    if (!empty())
+    if (!this->empty())
       return *_Myfirst;
     else
       throw std::out_of_range("byte_buffer: out of range!");
@@ -127,7 +121,7 @@ public:
   const_pointer data() const noexcept { return _Myfirst; }
   void reserve(size_t new_cap)
   {
-    if (capacity() < new_cap)
+    if (this->capacity() < new_cap)
     {
       auto cur_size = this->size();
       _Reset_cap(new_cap);
@@ -137,16 +131,15 @@ public:
   _Elem* resize(size_t new_size, _Elem val)
   {
     auto cur_size = this->size();
-    resize(new_size);
+    auto ptr      = resize(new_size);
     if (cur_size < new_size)
-      memset(_Myfirst + cur_size, val, new_size - cur_size);
-    return _Myfirst;
+      memset(ptr + cur_size, val, new_size - cur_size);
+    return ptr;
   }
   _Elem* resize(size_t new_size)
   {
     if (this->capacity() < new_size)
       _Reset_cap(new_size * 3 / 2);
-
     _Mylast = _Myfirst + new_size;
     return _Myfirst;
   }

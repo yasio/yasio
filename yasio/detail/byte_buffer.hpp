@@ -54,7 +54,7 @@ public:
   using size_type     = size_t;
   basic_byte_buffer() {}
   basic_byte_buffer(size_t capacity) { reserve(capacity); }
-  basic_byte_buffer(const _Elem* first, const _Elem* last) { assign(first, last); }
+  basic_byte_buffer(const void* first, const void* last) { assign(first, last); }
   basic_byte_buffer(size_t size, _Elem val) { resize(size, val); }
   basic_byte_buffer(const basic_byte_buffer& rhs) { assign(rhs.begin(), rhs.end()); };
   basic_byte_buffer(basic_byte_buffer&& rhs) noexcept
@@ -66,9 +66,9 @@ public:
   ~basic_byte_buffer() { _Tidy(); }
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
-  basic_byte_buffer& assign(const _Elem* first, const _Elem* last)
+  basic_byte_buffer& assign(const void* first, const void* last)
   {
-    ptrdiff_t count = last - first;
+    ptrdiff_t count = (const _Elem*)last - (const _Elem*)first;
     if (count > 0)
       memcpy(resize(count), first, count);
     else
@@ -82,9 +82,9 @@ public:
     std::swap(_Myend, rhs._Myend);
     return *this;
   }
-  void insert(_Elem* where, const _Elem* first, const _Elem* last)
+  void insert(_Elem* where, const void* first, const void* last)
   {
-    ptrdiff_t count = last - first;
+    ptrdiff_t count = (const _Elem*)last - (const _Elem*)first;
     if (count > 0)
     {
       auto insertion_pos = where - this->begin();

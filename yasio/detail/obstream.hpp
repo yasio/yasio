@@ -156,7 +156,7 @@ public:
   void write_bytes(const void* d, int n)
   {
     if (n > 0)
-      outs_->insert(outs_->end(), static_cast<_Cont::const_pointer>(d), static_cast<_Cont::const_pointer>(d) + n);
+      outs_->insert(outs_->end(), static_cast<const uint8_t*>(d), static_cast<const uint8_t*>(d) + n);
   }
   size_t write_bytes(size_t offset, const void* d, int n)
   {

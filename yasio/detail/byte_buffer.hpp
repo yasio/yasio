@@ -138,8 +138,21 @@ public:
     if (old_size < new_size)
       memset(_Myfirst + old_size, val, new_size - old_size);
   }
-  void resize(size_t new_size) { _Ensure(new_size * 3 / 2, new_size); }
-  void reserve(size_t new_cap) { _Ensure(new_cap, this->size()); }
+  void resize(size_t new_size) 
+  {
+    if (this->capacity() < new_size)
+      _Reset_cap(new_size * 3 / 2);
+    _Mylast = _Myfirst + new_size;
+  }
+  void reserve(size_t new_cap) 
+  {
+    if (this->capacity() < new_cap)
+    {
+      auto cur_size = this->size();
+      _Reset_cap(new_cap);
+      _Mylast = _Myfirst + cur_size;
+    }
+  }
   void resize_fit(size_t new_size) 
   { 
     if (this->capacity() != new_size)

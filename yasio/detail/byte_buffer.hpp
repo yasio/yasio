@@ -1,4 +1,3 @@
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // A multi-platform support c++11 library with focus on asynchronous socket I/O for any
 // client application.
@@ -59,7 +58,7 @@ public:
   basic_byte_buffer(const _Elem* first, const _Elem* last) { assign(first, last); }
   basic_byte_buffer(size_t size, _Elem val) { resize(size, val); }
   basic_byte_buffer(const basic_byte_buffer& rhs) { assign(rhs.begin(), rhs.end()); };
-  basic_byte_buffer(basic_byte_buffer&& rhs)
+  basic_byte_buffer(basic_byte_buffer&& rhs) noexcept
   {
     memcpy(this, &rhs, sizeof(rhs));
     memset(&rhs, 0, sizeof(rhs));
@@ -69,7 +68,7 @@ public:
   ~basic_byte_buffer() { _Tidy(); }
 
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
-  basic_byte_buffer& operator=(basic_byte_buffer&& rhs) { return this->swap(rhs); }
+  basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
 
   basic_byte_buffer& assign(const _Elem* first, const _Elem* last)
   {
@@ -80,7 +79,7 @@ public:
       clear();
     return *this;
   }
-  basic_byte_buffer& swap(basic_byte_buffer& rhs)
+  basic_byte_buffer& swap(basic_byte_buffer& rhs) noexcept
   {
     std::swap(_Myfirst, rhs._Myfirst);
     std::swap(_Mylast, rhs._Mylast);
@@ -119,12 +118,12 @@ public:
     else
       throw std::out_of_range("byte_buffer: out of range!");
   }
-  _Elem* begin() { return _Myfirst; }
-  _Elem* end() { return _Mylast; }
-  const _Elem* begin() const { return _Myfirst; }
-  const _Elem* end() const { return _Mylast; }
-  pointer data() { return _Myfirst; }
-  const_pointer data() const { return _Myfirst; }
+  _Elem* begin() noexcept { return _Myfirst; }
+  _Elem* end() noexcept { return _Mylast; }
+  const _Elem* begin() const noexcept { return _Myfirst; }
+  const _Elem* end() const noexcept { return _Mylast; }
+  pointer data() noexcept { return _Myfirst; }
+  const_pointer data() const noexcept { return _Myfirst; }
   void reserve(size_t new_cap)
   {
     if (capacity() < new_cap)
@@ -146,13 +145,13 @@ public:
     _Mylast = _Myfirst + new_size;
     return _Myfirst;
   }
-  size_t capacity() const { return _Myend - _Myfirst; }
-  size_t size() const { return _Mylast - _Myfirst; }
-  void clear() { _Mylast = _Myfirst; }
-  bool empty() const { return _Mylast == _Myfirst; }
+  size_t capacity() const noexcept { return _Myend - _Myfirst; }
+  size_t size() const noexcept { return _Mylast - _Myfirst; }
+  void clear() noexcept { _Mylast = _Myfirst; }
+  bool empty() const noexcept { return _Mylast == _Myfirst; }
   void shrink_to_fit() { _Reset_cap(size()); }
   template <typename _TSIZE>
-  _Elem* detach(_TSIZE& out_size)
+  _Elem* detach(_TSIZE& out_size) noexcept
   {
     auto ptr = _Myfirst;
     out_size = static_cast<_TSIZE>(this->size());

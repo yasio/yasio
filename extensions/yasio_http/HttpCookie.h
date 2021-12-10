@@ -32,10 +32,23 @@
 #include <string>
 #include <vector>
 
-namespace yasio_ext {
+#include "yasio/cxx17/string_view.hpp"
+
+namespace yasio_ext
+{
 
 namespace network
 {
+#if YASIO__HAS_CXX14
+using namespace cxx17::string_view_literals;
+#  define _mksv(a) a ""_sv
+#else
+template <size_t _N>
+inline cxx17::string_view _mksv(const char (&str)[_N])
+{
+  return cxx17::string_view{str, _N - 1};
+}
+#endif
 
 class Uri;
 struct CookieInfo
@@ -102,9 +115,9 @@ private:
     std::string _cookieFileName;
     std::vector<CookieInfo> _cookies;
 };
-}  // namespace network
 
-}
+} // namespace network
+} // namespace yasio_ext
 
 /// @endcond
 #endif /* HTTP_COOKIE_H */

@@ -39,11 +39,6 @@ namespace yasio_ext {
 
 namespace network {
 
-template<size_t _N>
-inline cxx17::string_view to_sv(const char (&str)[_N]) {
-    return cxx17::string_view {str, _N - 1};
-}
-
 static HttpClient* _httpClient = nullptr; // pointer to singleton
 
 template <typename _Cont, typename _Fty>
@@ -282,11 +277,11 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event) {
                     obs.write_bytes(header);
                     obs.write_bytes("\r\n");
 
-                    if (cxx20::ic::starts_with(cxx17::string_view{header}, to_sv("User-Agent:")))
+                    if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("User-Agent:")))
                         headerFlags |= HeaderFlag::UESR_AGENT;
-                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, to_sv("Content-Type:")))
+                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Content-Type:")))
                         headerFlags |= HeaderFlag::CONTENT_TYPE;
-                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, to_sv("Accept:")))
+                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Accept:")))
                         headerFlags |= HeaderFlag::ACCEPT;
                 }
             }

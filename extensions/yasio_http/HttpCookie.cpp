@@ -77,7 +77,6 @@ void HttpCookie::readFile()
                 return;
             int count = 0;
             CookieInfo cookieInfo;
-            using namespace cxx17;
             xsbase::fast_split(s, e - s, '\t', [&,this](char* ss, char* ee) {
                 auto ch = *ee; // store
                 *ee     = '\0';
@@ -90,7 +89,7 @@ void HttpCookie::readFile()
                         cookieInfo.path.assign(ss, ee - ss);
                         break;
                     case SECURE_INDEX:
-                        cookieInfo.secure = cxx17::string_view { ss, (size_t)(ee - ss) } == "TRUE"_sv;
+                        cookieInfo.secure = cxx17::string_view{ss, (size_t)(ee - ss)} == _mksv("TRUE");
                         break;
                     case EXPIRES_INDEX:
                         cookieInfo.expires = static_cast<time_t>(strtoll(ss, nullptr, 10));
@@ -192,20 +191,20 @@ bool HttpCookie::updateOrAddCookie(const std::string& cookie, const Uri& uri)
             });
 
             using namespace cxx17;
-            if (cxx20::ic::iequals(key, "domain"_sv))
+            if (cxx20::ic::iequals(key, _mksv("domain")))
             {
                 if (!value.empty())
                     info.domain.assign(value.data(), value.length());
             }
-            else if (cxx20::ic::iequals(key, "path"_sv))
+            else if (cxx20::ic::iequals(key, _mksv("path")))
             {
                 if (!value.empty())
                     info.path.assign(value.data(), value.length());
             }
-            else if (cxx20::ic::iequals(key, "expires"_sv))
+            else if (cxx20::ic::iequals(key, _mksv("expires")))
             {
                 std::string expires_ctime(!value.empty() ? value.data() : "", value.length());
-                if (cxx20::ends_with(expires_ctime, " GMT"_sv))
+                if (cxx20::ends_with(expires_ctime, _mksv(" GMT")))
                     expires_ctime.resize(expires_ctime.length() - sizeof(" GMT") + 1);
                 if (expires_ctime.empty())
                     return;
@@ -231,7 +230,7 @@ bool HttpCookie::updateOrAddCookie(const std::string& cookie, const Uri& uri)
                         info.expires = mktime(&dt);
                 }
             }
-            else if (cxx20::ic::iequals(key, "secure"_sv)) {
+            else if (cxx20::ic::iequals(key, _mksv("secure"))) {
                 info.secure = true;
             }
         }

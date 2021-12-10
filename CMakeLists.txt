@@ -36,7 +36,7 @@ endif()
 
 if (WIN32)
     if (NOT MINGW)
-        add_compile_options(" /Bv")
+        add_compile_options(/GF /Bv)
         add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     else()
         add_definitions(-D__STDC_FORMAT_MACROS)

@@ -42,10 +42,12 @@ SOFTWARE.
 #include <memory>
 #include <vector>
 #include <exception>
+#include <type_traits>
 #include "yasio/compiler/feature_test.hpp"
 
 namespace yasio
 {
+constexpr std::true_type shrink{};
 template <typename _Elem>
 class basic_byte_buffer final {
   static_assert(sizeof(_Elem) == 1, "The basic_byte_buffer only accept type which is char or unsigned char!");
@@ -65,7 +67,7 @@ public:
     memset(&rhs, 0, sizeof(rhs));
   }
   basic_byte_buffer(const std::vector<_Elem>& rhs) { assign(rhs.data(), rhs.data() + rhs.size()); }
-  ~basic_byte_buffer() { _Tidy(); }
+  ~basic_byte_buffer() { clear(shrink); }
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
   basic_byte_buffer& assign(const void* first, const void* last)
@@ -121,15 +123,10 @@ public:
   const _Elem* end() const noexcept { return _Mylast; }
   pointer data() noexcept { return _Myfirst; }
   const_pointer data() const noexcept { return _Myfirst; }
-  void reserve(size_t new_cap)
-  {
-    if (this->capacity() < new_cap)
-    {
-      auto cur_size = this->size();
-      _Reset_cap(new_cap);
-      _Mylast = _Myfirst + cur_size;
-    }
-  }
+  size_t capacity() const noexcept { return _Myend - _Myfirst; }
+  size_t size() const noexcept { return _Mylast - _Myfirst; }
+  void clear() noexcept { _Mylast = _Myfirst; }
+  bool empty() const noexcept { return _Mylast == _Myfirst; }
   _Elem* resize(size_t new_size, _Elem val)
   {
     auto cur_size = this->size();
@@ -138,28 +135,16 @@ public:
       memset(ptr + cur_size, val, new_size - cur_size);
     return ptr;
   }
-  _Elem* resize(size_t new_size)
-  {
-    _Ensure_cap(new_size * 3 / 2);
-    _Mylast = _Myfirst + new_size;
-    return _Myfirst;
-  }
-  _Elem* resize_fit(size_t new_size)
-  {
-    _Ensure_cap(new_size);
-    _Mylast = _Myfirst + new_size;
-    return _Myfirst;
-  }
-  size_t capacity() const noexcept { return _Myend - _Myfirst; }
-  size_t size() const noexcept { return _Mylast - _Myfirst; }
-  void clear() noexcept { _Mylast = _Myfirst; }
-  bool empty() const noexcept { return _Mylast == _Myfirst; }
-  void shrink_to_fit() { _Reset_cap(this->size()); }
+  _Elem* resize(size_t new_size) { return _Ensure_cap(new_size * 3 / 2, new_size); }
+  void reserve(size_t new_cap) { _Ensure_cap(this->size(), new_cap); }
+  _Elem* resize(size_t new_size, std::true_type /*shrink*/) { return _Reset_cap(new_size, new_size); }
+  void clear(std::true_type /*shrink*/) { resize(0, shrink); }
+  void shrink_to_fit() { resize(this->size(), shrink); }
   void attach(void* ptr, size_t len) noexcept
   {
     if (ptr)
     {
-      _Tidy();
+      clear(shrink);
       _Myfirst = (_Elem*)ptr;
       _Myend = _Mylast = _Myfirst + len;
     }
@@ -174,38 +159,24 @@ public:
   }
 
 private:
-  void _Tidy()
-  {
-    clear();
-    shrink_to_fit();
-  }
-  void _Ensure_cap(size_t new_cap)
+  _Elem* _Ensure_cap(size_t new_cap, size_t new_size)
   {
     if (this->capacity() < new_cap)
-      _Reset_cap(new_cap);
-  }
-  void _Reset_cap(size_t new_cap)
-  {
-    if (new_cap > 0)
-    {
-      auto new_blk = (_Elem*)realloc(_Myfirst, new_cap);
-      if (new_blk)
-      {
-        _Myfirst = new_blk;
-        _Myend   = _Myfirst + new_cap;
-      }
-      else
-        throw std::bad_alloc{};
-    }
+      _Reset_cap(new_cap, new_size);
     else
-    {
-      if (_Myfirst != nullptr)
-      {
-        free(_Myfirst);
-        _Myfirst = nullptr;
-      }
-      _Myend = _Myfirst;
-    }
+      _Mylast = _Myfirst + new_size;
+    return _Myfirst;
+  }
+  _Elem* _Reset_cap(size_t new_cap, size_t new_size)
+  {
+    auto new_block = (_Elem*)realloc(_Myfirst, new_cap);
+    if (new_block || 0 == new_cap)
+      _Myfirst = new_block;
+    else
+      throw std::bad_alloc{};
+    _Myend  = _Myfirst + new_cap;
+    _Mylast = _Myfirst + new_size;
+    return _Myfirst;
   }
 
 private:

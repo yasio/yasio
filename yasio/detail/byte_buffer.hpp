@@ -48,6 +48,7 @@ namespace yasio
 template <typename _Elem>
 class basic_byte_buffer final {
   static_assert(sizeof(_Elem) == 1, "The basic_byte_buffer only accept type which is char or unsigned char!");
+
 public:
   using pointer       = _Elem*;
   using const_pointer = const _Elem*;
@@ -92,11 +93,11 @@ public:
     if (count > 0)
     {
       auto offset   = where - this->begin();
-      auto old_size = size();
-      resize(old_size + count);
+      auto cur_size = this->size();
+      resize(cur_size + count);
 
-      if (offset >= static_cast<ptrdiff_t>(old_size))
-        memcpy(_Myfirst + old_size, first, count);
+      if (offset >= static_cast<ptrdiff_t>(cur_size))
+        memcpy(_Myfirst + cur_size, first, count);
       else if (offset >= 0)
       {
         auto ptr = this->begin() + offset;
@@ -108,8 +109,8 @@ public:
   }
   void push_back(_Elem v)
   {
-    auto old_size                  = size();
-    resize(old_size + 1)[old_size] = v;
+    auto cur_size                  = this->size();
+    resize(cur_size + 1)[cur_size] = v;
   }
   _Elem& front()
   {
@@ -127,14 +128,18 @@ public:
   void reserve(size_t new_cap)
   {
     if (capacity() < new_cap)
+    {
+      auto cur_size = this->size();
       _Reset_cap(new_cap);
+      _Mylast = _Myfirst + cur_size;
+    }
   }
   _Elem* resize(size_t new_size, _Elem val)
   {
-    auto old_size = size();
+    auto cur_size = this->size();
     resize(new_size);
-    if (old_size < new_size)
-      memset(_Myfirst + old_size, val, new_size - old_size);
+    if (cur_size < new_size)
+      memset(_Myfirst + cur_size, val, new_size - cur_size);
     return _Myfirst;
   }
   _Elem* resize(size_t new_size)
@@ -149,7 +154,7 @@ public:
   size_t size() const noexcept { return _Mylast - _Myfirst; }
   void clear() noexcept { _Mylast = _Myfirst; }
   bool empty() const noexcept { return _Mylast == _Myfirst; }
-  void shrink_to_fit() { _Reset_cap(size()); }
+  void shrink_to_fit() { _Reset_cap(this->size()); }
   template <typename _TSIZE>
   _Elem* detach(_TSIZE& out_size) noexcept
   {
@@ -176,7 +181,7 @@ private:
         _Myend   = _Myfirst + new_cap;
       }
       else
-        throw std::bad_alloc();
+        throw std::bad_alloc("byte_buffer: bad_alloc!");
     }
     else
     {

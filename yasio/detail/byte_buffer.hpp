@@ -31,6 +31,7 @@ SOFTWARE.
    b. use c realloc/free to manage memory
    c. implemented operations:
       - resize(without fill)
+      - resize_fit
       - attach/detach(stl not support)
       - stl likes: insert, reserve, front, begin, end, push_back and etc.
 */
@@ -138,8 +139,13 @@ public:
   }
   _Elem* resize(size_t new_size)
   {
-    if (this->capacity() < new_size)
-      _Reset_cap(new_size * 3 / 2);
+    _Ensure_cap(new_size * 3 / 2);
+    _Mylast = _Myfirst + new_size;
+    return _Myfirst;
+  }
+  _Elem* resize_fit(size_t new_size)
+  {
+    _Ensure_cap(new_size);
     _Mylast = _Myfirst + new_size;
     return _Myfirst;
   }
@@ -171,6 +177,11 @@ private:
   {
     clear();
     shrink_to_fit();
+  }
+  void _Ensure_cap(size_t new_cap)
+  {
+    if (this->capacity() < new_cap)
+      _Reset_cap(new_cap);
   }
   void _Reset_cap(size_t new_cap)
   {

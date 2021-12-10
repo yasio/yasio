@@ -71,11 +71,8 @@ public:
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
   basic_byte_buffer& assign(const void* first, const void* last)
   {
-    ptrdiff_t count = (const _Elem*)last - (const _Elem*)first;
-    if (count > 0)
-      memcpy(resize(count), first, count);
-    else
-      clear();
+    clear();
+    insert(this->end(), first, last);
     return *this;
   }
   basic_byte_buffer& swap(basic_byte_buffer& rhs) noexcept
@@ -91,10 +88,10 @@ public:
     if (count > 0)
     {
       auto insertion_pos = where - this->begin();
-      auto cur_size      = this->size();
-      resize(cur_size + count);
-      if (insertion_pos >= static_cast<ptrdiff_t>(cur_size))
-        memcpy(this->begin() + cur_size, first, count);
+      auto old_size      = this->size();
+      resize(old_size + count);
+      if (insertion_pos >= static_cast<ptrdiff_t>(old_size))
+        memcpy(this->begin() + old_size, first, count);
       else if (insertion_pos >= 0)
       {
         where        = this->begin() + insertion_pos;
@@ -134,17 +131,21 @@ public:
   void clear() noexcept { _Mylast = _Myfirst; }
   void shrink_to_fit() { resize_fit(this->size()); }
   bool empty() const noexcept { return _Mylast == _Myfirst; }
-  _Elem* resize(size_t new_size, _Elem val)
+  void resize(size_t new_size, _Elem val)
   {
-    auto cur_size = this->size();
-    auto ptr      = resize(new_size);
-    if (cur_size < new_size)
-      memset(ptr + cur_size, val, new_size - cur_size);
-    return ptr;
+    auto old_size = this->size();
+    resize(old_size);
+    if (old_size < new_size)
+      memset(ptr + old_size, val, new_size - old_size);
   }
-  _Elem* resize(size_t new_size) { return _Ensure_cap(new_size * 3 / 2, new_size); }
-  void reserve(size_t new_cap) { _Ensure_cap(this->size(), new_cap); }
-  _Elem* resize_fit(size_t new_size) { return _Reset_cap(new_size, new_size); }
+  void resize(size_t new_size) { _Ensure(new_size * 3 / 2, new_size); }
+  void reserve(size_t new_cap) { _Ensure(new_cap, this->size()); }
+  void resize_fit(size_t new_size) 
+  { 
+    if (this->capacity() != new_size)
+      _Reset_cap(new_size);
+    _Mylast = _Myfirst + new_size;
+  }
   void attach(void* ptr, size_t len) noexcept
   {
     if (ptr)
@@ -164,15 +165,13 @@ public:
   }
 
 private:
-  _Elem* _Ensure_cap(size_t new_cap, size_t new_size)
+  void _Ensure(size_t new_cap, size_t new_size)
   {
     if (this->capacity() < new_cap)
-      _Reset_cap(new_cap, new_size);
-    else
-      _Mylast = _Myfirst + new_size;
-    return _Myfirst;
+      _Reset_cap(new_cap);
+    _Mylast = _Myfirst + new_size;
   }
-  _Elem* _Reset_cap(size_t new_cap, size_t new_size)
+  void _Reset_cap(size_t new_cap)
   {
     auto new_block = (_Elem*)realloc(_Myfirst, new_cap);
     if (new_block || 0 == new_cap)
@@ -180,8 +179,6 @@ private:
     else
       throw std::bad_alloc{};
     _Myend  = _Myfirst + new_cap;
-    _Mylast = _Myfirst + new_size;
-    return _Myfirst;
   }
 
 private:

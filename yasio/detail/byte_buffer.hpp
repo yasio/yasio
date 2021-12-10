@@ -144,6 +144,12 @@ public:
       _Reset_cap(new_size * 3 / 2);
     _Mylast = _Myfirst + new_size;
   }
+  void resize_fit(size_t new_size) 
+  { 
+    if (this->capacity() != new_size)
+      _Reset_cap(new_size);
+    _Mylast = _Myfirst + new_size;
+  }
   void reserve(size_t new_cap) 
   {
     if (this->capacity() < new_cap)
@@ -152,12 +158,6 @@ public:
       _Reset_cap(new_cap);
       _Mylast = _Myfirst + cur_size;
     }
-  }
-  void resize_fit(size_t new_size) 
-  { 
-    if (this->capacity() != new_size)
-      _Reset_cap(new_size);
-    _Mylast = _Myfirst + new_size;
   }
   void attach(void* ptr, size_t len) noexcept
   {
@@ -178,12 +178,6 @@ public:
   }
 
 private:
-  void _Ensure(size_t new_cap, size_t new_size)
-  {
-    if (this->capacity() < new_cap)
-      _Reset_cap(new_cap);
-    _Mylast = _Myfirst + new_size;
-  }
   void _Reset_cap(size_t new_cap)
   {
     auto new_block = (_Elem*)realloc(_Myfirst, new_cap);

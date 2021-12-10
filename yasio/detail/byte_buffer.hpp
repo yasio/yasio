@@ -31,7 +31,7 @@ SOFTWARE.
    b. use c realloc/free to manage memory
    c. implemented operations:
       - resize(without fill)
-      - detach(stl not support)
+      - attach/detach(stl not support)
       - stl likes: insert, reserve, front, begin, end, push_back and etc.
 */
 #pragma once
@@ -53,9 +53,9 @@ public:
   using const_pointer = const _Elem*;
   using size_type     = size_t;
   basic_byte_buffer() {}
-  basic_byte_buffer(size_t capacity) { reserve(capacity); }
-  basic_byte_buffer(const void* first, const void* last) { assign(first, last); }
+  explicit basic_byte_buffer(size_t capacity) { reserve(capacity); }
   basic_byte_buffer(size_t size, _Elem val) { resize(size, val); }
+  basic_byte_buffer(const void* first, const void* last) { assign(first, last); }
   basic_byte_buffer(const basic_byte_buffer& rhs) { assign(rhs.begin(), rhs.end()); };
   basic_byte_buffer(basic_byte_buffer&& rhs) noexcept
   {
@@ -148,11 +148,20 @@ public:
   void clear() noexcept { _Mylast = _Myfirst; }
   bool empty() const noexcept { return _Mylast == _Myfirst; }
   void shrink_to_fit() { _Reset_cap(this->size()); }
+  void attach(void* ptr, size_t len) noexcept
+  {
+    if (ptr)
+    {
+      _Tidy();
+      _Myfirst = (_Elem*)ptr;
+      _Myend = _Mylast = _Myfirst + len;
+    }
+  }
   template <typename _TSIZE>
-  _Elem* detach(_TSIZE& out_size) noexcept
+  _Elem* detach(_TSIZE& len) noexcept
   {
     auto ptr = _Myfirst;
-    out_size = static_cast<_TSIZE>(this->size());
+    len      = static_cast<_TSIZE>(this->size());
     memset(this, 0, sizeof(*this));
     return ptr;
   }

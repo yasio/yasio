@@ -137,9 +137,9 @@ public:
   }
   _Elem* resize(size_t new_size) { return _Ensure_cap(new_size * 3 / 2, new_size); }
   void reserve(size_t new_cap) { _Ensure_cap(this->size(), new_cap); }
-  _Elem* resize(size_t new_size, std::true_type /*shrink*/) { return _Reset_cap(new_size, new_size); }
-  void clear(std::true_type /*shrink*/) { resize(0, shrink); }
-  void shrink_to_fit() { resize(this->size(), shrink); }
+  _Elem* resize_fit(size_t new_size) { return _Reset_cap(new_size, new_size); }
+  void clear(std::true_type /*shrink*/) { resize_fit(0); }
+  void shrink_to_fit() { resize_fit(this->size()); }
   void attach(void* ptr, size_t len) noexcept
   {
     if (ptr)

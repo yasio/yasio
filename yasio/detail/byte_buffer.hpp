@@ -47,7 +47,6 @@ SOFTWARE.
 
 namespace yasio
 {
-constexpr std::true_type shrink{};
 template <typename _Elem>
 class basic_byte_buffer final {
   static_assert(sizeof(_Elem) == 1, "The basic_byte_buffer only accept type which is char or unsigned char!");
@@ -67,7 +66,7 @@ public:
     memset(&rhs, 0, sizeof(rhs));
   }
   basic_byte_buffer(const std::vector<_Elem>& rhs) { assign(rhs.data(), rhs.data() + rhs.size()); }
-  ~basic_byte_buffer() { clear(shrink); }
+  ~basic_byte_buffer() { resize_fit(0); }
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
   basic_byte_buffer& assign(const void* first, const void* last)
@@ -107,13 +106,20 @@ public:
   }
   void push_back(_Elem v)
   {
-    auto cur_size                  = this->size();
-    resize(cur_size + 1)[cur_size] = v;
+    resize(this->size() + 1);
+    *(_Mylast - 1) = v;
   }
   _Elem& front()
   {
     if (!this->empty())
       return *_Myfirst;
+    else
+      throw std::out_of_range("byte_buffer: out of range!");
+  }
+  _Elem& back()
+  {
+    if (!this->empty())
+      return *(_Mylast - 1);
     else
       throw std::out_of_range("byte_buffer: out of range!");
   }
@@ -126,6 +132,7 @@ public:
   size_t capacity() const noexcept { return _Myend - _Myfirst; }
   size_t size() const noexcept { return _Mylast - _Myfirst; }
   void clear() noexcept { _Mylast = _Myfirst; }
+  void shrink_to_fit() { resize_fit(this->size()); }
   bool empty() const noexcept { return _Mylast == _Myfirst; }
   _Elem* resize(size_t new_size, _Elem val)
   {
@@ -138,13 +145,11 @@ public:
   _Elem* resize(size_t new_size) { return _Ensure_cap(new_size * 3 / 2, new_size); }
   void reserve(size_t new_cap) { _Ensure_cap(this->size(), new_cap); }
   _Elem* resize_fit(size_t new_size) { return _Reset_cap(new_size, new_size); }
-  void clear(std::true_type /*shrink*/) { resize_fit(0); }
-  void shrink_to_fit() { resize_fit(this->size()); }
   void attach(void* ptr, size_t len) noexcept
   {
     if (ptr)
     {
-      clear(shrink);
+      resize_fit(0);
       _Myfirst = (_Elem*)ptr;
       _Myend = _Mylast = _Myfirst + len;
     }

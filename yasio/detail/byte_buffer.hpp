@@ -181,7 +181,7 @@ private:
         _Myend   = _Myfirst + new_cap;
       }
       else
-        throw std::bad_alloc("byte_buffer: bad_alloc!");
+        throw std::bad_alloc{};
     }
     else
     {

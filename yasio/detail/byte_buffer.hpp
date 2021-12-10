@@ -136,7 +136,7 @@ public:
     auto old_size = this->size();
     resize(old_size);
     if (old_size < new_size)
-      memset(ptr + old_size, val, new_size - old_size);
+      memset(_Myfirst + old_size, val, new_size - old_size);
   }
   void resize(size_t new_size) { _Ensure(new_size * 3 / 2, new_size); }
   void reserve(size_t new_cap) { _Ensure(new_cap, this->size()); }

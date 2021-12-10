@@ -42,6 +42,7 @@ SOFTWARE.
 #include <memory>
 #include <vector>
 #include <exception>
+#include "yasio/compiler/feature_test.hpp"
 
 namespace yasio
 {

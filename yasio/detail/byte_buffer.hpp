@@ -48,13 +48,15 @@ namespace yasio
 {
 template <typename _Elem>
 class basic_byte_buffer final {
+  static_assert(sizeof(_Elem) == 1, "The basic_byte_buffer only accept type which is char or unsigned char!");
 public:
   using pointer       = _Elem*;
   using const_pointer = const _Elem*;
   using size_type     = size_t;
 
   basic_byte_buffer() {}
-  basic_byte_buffer(const _Elem* start, const _Elem* end) { assign(start, end); }
+  basic_byte_buffer(size_t capacity) { reserve(capacity); }
+  basic_byte_buffer(const _Elem* first, const _Elem* last) { assign(first, last); }
   basic_byte_buffer(size_t size, _Elem val) { resize(size, val); }
   basic_byte_buffer(const basic_byte_buffer& rhs) { assign(rhs.begin(), rhs.end()); };
   basic_byte_buffer(basic_byte_buffer&& rhs)
@@ -69,25 +71,25 @@ public:
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) { return this->swap(rhs); }
 
-  basic_byte_buffer& assign(const _Elem* start, const _Elem* end)
+  basic_byte_buffer& assign(const _Elem* first, const _Elem* last)
   {
-    ptrdiff_t count = end - start;
+    ptrdiff_t count = last - first;
     if (count > 0)
-      memcpy(resize(count), start, count);
+      memcpy(resize(count), first, count);
     else
       clear();
     return *this;
   }
   basic_byte_buffer& swap(basic_byte_buffer& rhs)
   {
-    std::swap(_buf, rhs._buf);
-    std::swap(_size, rhs._size);
-    std::swap(_capacity, rhs._capacity);
+    std::swap(_Myfirst, rhs._Myfirst);
+    std::swap(_Mylast, rhs._Mylast);
+    std::swap(_Myend, rhs._Myend);
     return *this;
   }
-  void insert(_Elem* where, const void* start, const void* end)
+  void insert(_Elem* where, const void* first, const void* last)
   {
-    size_t count = (const _Elem*)end - (const _Elem*)start;
+    ptrdiff_t count = (const _Elem*)last - (const _Elem*)first;
     if (count > 0)
     {
       auto offset   = where - this->begin();
@@ -95,13 +97,13 @@ public:
       resize(old_size + count);
 
       if (offset >= static_cast<ptrdiff_t>(old_size))
-        memcpy(_buf + old_size, start, count);
+        memcpy(_Myfirst + old_size, first, count);
       else if (offset >= 0)
       {
         auto ptr = this->begin() + offset;
         auto to  = ptr + count;
         memmove(to, ptr, this->end() - to);
-        memcpy(ptr, start, count);
+        memcpy(ptr, first, count);
       }
     }
   }
@@ -113,51 +115,47 @@ public:
   _Elem& front()
   {
     if (!empty())
-      return *_buf;
+      return *_Myfirst;
     else
       throw std::out_of_range("byte_buffer: out of range!");
   }
-  _Elem* begin() { return _buf; }
-  _Elem* end() { return _buf ? _buf + _size : nullptr; }
-  const _Elem* begin() const { return _buf; }
-  const _Elem* end() const { return _buf ? _buf + _size : nullptr; }
-  pointer data() { return _buf; }
-  const_pointer data() const { return _buf; }
-  void reserve(size_t capacity)
+  _Elem* begin() { return _Myfirst; }
+  _Elem* end() { return _Mylast; }
+  const _Elem* begin() const { return _Myfirst; }
+  const _Elem* end() const { return _Mylast; }
+  pointer data() { return _Myfirst; }
+  const_pointer data() const { return _Myfirst; }
+  void reserve(size_t new_cap)
   {
-    if (_capacity < capacity)
-      _Reset_cap(capacity);
+    if (capacity() < new_cap)
+      _Reset_cap(new_cap);
   }
   _Elem* resize(size_t new_size, _Elem val)
   {
     auto old_size = size();
-    auto new_buf  = resize(new_size);
+    resize(new_size);
     if (old_size < new_size)
-      memset(new_buf + old_size, val, new_size - old_size);
-    return new_buf;
+      memset(_Myfirst + old_size, val, new_size - old_size);
+    return _Myfirst;
   }
-  _Elem* resize(size_t size)
+  _Elem* resize(size_t new_size)
   {
-    if (_size > size)
-      _size = size;
-    else
-    {
-      if (_capacity < size)
-        _Reset_cap(size * 3 / 2);
+    if (this->capacity() < new_size)
+      _Reset_cap(new_size * 3 / 2);
 
-      _size = size;
-    }
-    return _buf;
+    _Mylast = _Myfirst + new_size;
+    return _Myfirst;
   }
-  size_t size() const { return _size; }
-  void clear() { _size = 0; }
-  bool empty() const { return _size == 0; }
+  size_t capacity() const { return _Myend - _Myfirst; }
+  size_t size() const { return _Mylast - _Myfirst; }
+  void clear() { _Mylast = _Myfirst; }
+  bool empty() const { return _Mylast == _Myfirst; }
   void shrink_to_fit() { _Reset_cap(size()); }
   template <typename _TSIZE>
-  _Elem* detach(_TSIZE& size)
+  _Elem* detach(_TSIZE& out_size)
   {
-    auto ptr = _buf;
-    size     = static_cast<_TSIZE>(_size);
+    auto ptr = _Myfirst;
+    out_size = static_cast<_TSIZE>(this->size());
     memset(this, 0, sizeof(*this));
     return ptr;
   }
@@ -168,34 +166,34 @@ private:
     clear();
     shrink_to_fit();
   }
-  void _Reset_cap(size_t capacity)
+  void _Reset_cap(size_t new_cap)
   {
-    if (capacity > 0)
+    if (new_cap > 0)
     {
-      auto new_blk = (_Elem*)realloc(_buf, capacity);
+      auto new_blk = (_Elem*)realloc(_Myfirst, new_cap);
       if (new_blk)
       {
-        _buf      = new_blk;
-        _capacity = capacity;
+        _Myfirst = new_blk;
+        _Myend   = _Myfirst + new_cap;
       }
       else
         throw std::bad_alloc();
     }
     else
     {
-      if (_buf != nullptr)
+      if (_Myfirst != nullptr)
       {
-        free(_buf);
-        _buf = nullptr;
+        free(_Myfirst);
+        _Myfirst = nullptr;
       }
-      _capacity = 0;
+      _Myend = _Myfirst;
     }
   }
 
 private:
-  _Elem* _buf      = nullptr;
-  size_t _size     = 0;
-  size_t _capacity = 0;
+  _Elem* _Myfirst = nullptr;
+  _Elem* _Mylast  = nullptr;
+  _Elem* _Myend   = nullptr;
 };
 using sbyte_buffer = basic_byte_buffer<char>;
 using byte_buffer  = basic_byte_buffer<uint8_t>;

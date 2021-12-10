@@ -134,7 +134,7 @@ public:
   void resize(size_t new_size, _Elem val)
   {
     auto old_size = this->size();
-    resize(old_size);
+    resize(new_size);
     if (old_size < new_size)
       memset(_Myfirst + old_size, val, new_size - old_size);
   }

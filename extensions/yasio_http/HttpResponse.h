@@ -95,9 +95,9 @@ public:
 
     /**
      * Get the http response data.
-     * @return std::vector<char>* the pointer that point to the _responseData.
+     * @return yasio::sbyte_buffer* the pointer that point to the _responseData.
      */
-    std::vector<char>* getResponseData()
+    yasio::sbyte_buffer* getResponseData()
     {
         return &_responseData;
     }
@@ -144,8 +144,8 @@ private:
         return _finished;
     }
 
-    void handleInput(const std::vector<char>& data) {
-        enum llhttp_errno err = llhttp_execute(&_context, data.data(), data.size());
+    void handleInput(const yasio::sbyte_buffer& sb) {
+        enum llhttp_errno err = llhttp_execute(&_context, sb.data(), sb.size());
         if (err != HPE_OK) {
             _finished = true;
         }
@@ -241,7 +241,7 @@ protected:
 
     Uri                 _requestUri;
     bool                _finished = false;       /// to indicate if the http request is successful simply
-    std::vector<char>   _responseData;  /// the returned raw data. You can also dump it as a string
+    yasio::sbyte_buffer _responseData; /// the returned raw data. You can also dump it as a string
     std::string         _currentHeader;
     std::string         _currentHeaderValue;
     ResponseHeaderMap   _responseHeaders; /// the returned raw header data. You can also dump it as a string

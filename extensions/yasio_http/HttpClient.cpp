@@ -273,16 +273,15 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event) {
             int headerFlags = 0;
             auto& headers = request->getHeaders();
             if (!headers.empty()) {
-                using namespace cxx17; // for string_view literal
                 for (auto& header : headers) {
                     obs.write_bytes(header);
                     obs.write_bytes("\r\n");
 
-                    if (cxx20::ic::starts_with(cxx17::string_view{header}, "User-Agent:"_sv))
+                    if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("User-Agent:")))
                         headerFlags |= HeaderFlag::UESR_AGENT;
-                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, "Content-Type:"_sv))
+                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Content-Type:")))
                         headerFlags |= HeaderFlag::CONTENT_TYPE;
-                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, "Accept:"_sv))
+                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Accept:")))
                         headerFlags |= HeaderFlag::ACCEPT;
                 }
             }

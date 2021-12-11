@@ -399,6 +399,11 @@ endmacro()
 
 yasio_config_lib_options(${yasio_target_name})
 
+# see also: https://docs.microsoft.com/en-us/visualstudio/debugger/create-custom-views-of-native-objects
+if (MSVC_IDE)
+  target_sources(${yasio_target_name} PRIVATE yasio/yasio.natvis)
+endif()
+
 # The tests & examples
 if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     add_subdirectory(tests/tcp)

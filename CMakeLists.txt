@@ -358,6 +358,10 @@ if(YASIO_BUILD_WITH_LUA)
         target_link_libraries(${yasio_target_name} ${LUA_LIBRARIES})
         set(YASIO_USE_PREBUILT_LUA TRUE)
     endif()
+
+    if(MSVC)
+        target_compile_options(${yasio_target_name} PRIVATE /bigobj)
+    endif()
 endif()
 
 # link libraries for yasio_core when BUILD_SHARED_LIBS=TRUE

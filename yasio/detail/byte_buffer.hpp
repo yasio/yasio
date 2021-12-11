@@ -81,19 +81,19 @@ public:
   }
   void insert(_Elem* where, const void* first, const void* last)
   {
-    ptrdiff_t count = (const _Elem*)last - (const _Elem*)first;
+    auto count = (const _Elem*)last - (const _Elem*)first;
     if (count > 0)
     {
-      auto insertion_pos = where - this->begin();
-      auto old_size      = this->size();
+      auto insertion_pos = where - _Myfirst;
+      auto old_size      = _Mylast - _Myfirst;
       resize(old_size + count);
-      if (insertion_pos >= static_cast<ptrdiff_t>(old_size))
-        memcpy(this->begin() + old_size, first, count);
+      if (insertion_pos >= old_size)
+        memcpy(_Myfirst + old_size, first, count);
       else if (insertion_pos >= 0)
       {
-        where        = this->begin() + insertion_pos;
+        where        = _Myfirst + insertion_pos;
         auto move_to = where + count;
-        memmove(move_to, where, this->end() - move_to);
+        memmove(move_to, where, _Mylast - move_to);
         memcpy(where, first, count);
       }
     }

@@ -47,8 +47,8 @@ struct default_allocator {
   static void* reallocate(void* oldBlock, size_t /*oldSize*/, size_t newSize) { return ::realloc(oldBlock, newSize); }
 };
 template <typename _Elem, typename _Alloc = default_allocator> class basic_byte_buffer final {
-  static_assert(std::is_same_v<_Elem, char> || std::is_same_v<_Elem, unsigned char>, "The basic_byte_buffer only accept type which is char or unsigned char!");
-
+  static_assert(std::is_same<_Elem, char>::value || std::is_same<_Elem, unsigned char>::value,
+                "The basic_byte_buffer only accept type which is char or unsigned char!");
 public:
   using pointer       = _Elem*;
   using const_pointer = const _Elem*;

@@ -55,8 +55,10 @@ public:
   using const_pointer = const _Elem*;
   using size_type     = size_t;
   basic_byte_buffer() {}
-  explicit basic_byte_buffer(size_t capacity) { reserve(capacity); }
-  basic_byte_buffer(size_t size, _Elem val) { resize(size, val); }
+  explicit basic_byte_buffer(size_t count) { resize(count); }
+  basic_byte_buffer(size_t count, _Elem val) { resize(count, val); }
+  basic_byte_buffer(size_t count, std::true_type /*fit?*/) { resize_fit(count); }
+  basic_byte_buffer(size_t count, _Elem val, std::true_type /*fit?*/) { resize_fit(count, val); }
   basic_byte_buffer(const void* first, const void* last) { assign(first, last); }
   basic_byte_buffer(const basic_byte_buffer& rhs) { assign(rhs.begin(), rhs.end()); };
   basic_byte_buffer(basic_byte_buffer&& rhs) noexcept
@@ -143,6 +145,13 @@ public:
     if (this->capacity() < new_size)
       _Reallocate_exactly(new_size * 3 / 2);
     _Mylast = _Myfirst + new_size;
+  }
+  void resize_fit(size_t new_size, _Elem val)
+  {
+    auto old_size = this->size();
+    resize_fit(new_size);
+    if (old_size < new_size)
+      memset(_Myfirst + old_size, val, new_size - old_size);
   }
   void resize_fit(size_t new_size)
   {

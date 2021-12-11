@@ -37,8 +37,9 @@ The byte_buffer concepts:
 #include <string.h>
 #include <memory>
 #include <vector>
-#include <exception>
 #include <type_traits>
+#include <exception>
+#include <stdexcept>
 #include "yasio/compiler/feature_test.hpp"
 
 namespace yasio

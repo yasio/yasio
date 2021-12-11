@@ -24,18 +24,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-*/
 
-/* The byte_buffer concepts
+The byte_buffer concepts:
    a. The memory model is similar to to std::vector<char>, std::string
    b. Use c realloc to manage memory
-   c. Implemented operations:
-      - resize(without fill)
-      - resize_fit
-      - attach/detach(stl not support)
-      - stl likes: insert, reserve, front, begin, end, push_back and etc.
+   c. Implemented operations: resize(without fill), resize_fit, attach/detach(stl not support)
 */
-#pragma once
+#ifndef YASIO__BYTE_BUFFER_HPP
+#define YASIO__BYTE_BUFFER_HPP
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -66,7 +62,7 @@ public:
     memset(&rhs, 0, sizeof(rhs));
   }
   basic_byte_buffer(const std::vector<_Elem>& rhs) { assign(rhs.data(), rhs.data() + rhs.size()); }
-  ~basic_byte_buffer() { resize_fit(0); }
+  ~basic_byte_buffer() { shrink_to_fit(0); }
   basic_byte_buffer& operator=(const basic_byte_buffer& rhs) { return assign(rhs.begin(), rhs.end()); }
   basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept { return this->swap(rhs); }
   basic_byte_buffer& assign(const void* first, const void* last)
@@ -130,7 +126,7 @@ public:
   size_t capacity() const noexcept { return _Myend - _Myfirst; }
   size_t size() const noexcept { return _Mylast - _Myfirst; }
   void clear() noexcept { _Mylast = _Myfirst; }
-  void shrink_to_fit() { resize_fit(this->size()); }
+  void shrink_to_fit() { shrink_to_fit(this->size()); }
   bool empty() const noexcept { return _Mylast == _Myfirst; }
   void resize(size_t new_size, _Elem val)
   {
@@ -146,6 +142,12 @@ public:
     _Mylast = _Myfirst + new_size;
   }
   void resize_fit(size_t new_size)
+  {
+    if (this->capacity() < new_size)
+      _Reallocate_exactly(new_size);
+    _Mylast = _Myfirst + new_size;
+  }
+  void shrink_to_fit(size_t new_size)
   {
     if (this->capacity() != new_size)
       _Reallocate_exactly(new_size);
@@ -164,7 +166,7 @@ public:
   {
     if (ptr)
     {
-      resize_fit(0);
+      shrink_to_fit(0);
       _Myfirst = (_Elem*)ptr;
       _Myend = _Mylast = _Myfirst + len;
     }
@@ -189,7 +191,6 @@ private:
     _Myend = _Myfirst + new_cap;
   }
 
-private:
   _Elem* _Myfirst = nullptr;
   _Elem* _Mylast  = nullptr;
   _Elem* _Myend   = nullptr;
@@ -197,3 +198,4 @@ private:
 using sbyte_buffer = basic_byte_buffer<char>;
 using byte_buffer  = basic_byte_buffer<uint8_t>;
 } // namespace yasio
+#endif

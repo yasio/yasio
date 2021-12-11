@@ -1733,7 +1733,7 @@ bool js_yasio_io_service_write(JSContext* ctx, uint32_t argc, jsval* vp)
       sva.set(arg1, ctx, &unrecognized_object);
       if (!sva.empty())
       {
-        cobj->write(transport, std::vector<char>(sva.data(), sva.data() + sva.size()));
+        cobj->write(transport, yasio::sbyte_buffer(sva.data(), sva.data() + sva.size()));
       }
       else if (unrecognized_object)
       {
@@ -1788,7 +1788,7 @@ bool js_yasio_io_service_write_to(JSContext* ctx, uint32_t argc, jsval* vp)
       sva.set(arg1, ctx, &unrecognized_object);
       if (!sva.empty())
       {
-        cobj->write_to(transport, std::vector<char>(sva.data(), sva.data() + sva.size()), ip::endpoint{ip.data(), port});
+        cobj->write_to(transport, yasio::sbyte_buffer(sva.data(), sva.data() + sva.size()), ip::endpoint{ip.data(), port});
       }
       else if (unrecognized_object)
       {

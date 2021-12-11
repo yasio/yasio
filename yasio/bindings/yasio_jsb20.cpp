@@ -1367,7 +1367,7 @@ bool js_yasio_io_service_write(se::State& s)
         bool unrecognized_object = false;
         auto data                = seval_to_string_view(arg1, &unrecognized_object);
         if (!data.empty())
-          cobj->write(transport, std::vector<char>(data.data(), data.data() + data.size()));
+          cobj->write(transport, yasio::sbyte_buffer(data.data(), data.data() + data.size()));
         else if (unrecognized_object)
         {
           yasio::obstream* obs = nullptr;
@@ -1410,7 +1410,7 @@ bool js_yasio_io_service_write_to(se::State& s)
         bool unrecognized_object = false;
         auto data                = seval_to_string_view(arg1, &unrecognized_object);
         if (!data.empty())
-          cobj->write_to(transport, std::vector<char>(data.data(), data.data() + data.size()), ip::endpoint{ip.data(), port});
+          cobj->write_to(transport, yasio::sbyte_buffer(data.data(), data.data() + data.size()), ip::endpoint{ip.data(), port});
         else if (unrecognized_object)
         {
           yasio::obstream* obs = nullptr;

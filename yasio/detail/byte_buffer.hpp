@@ -53,6 +53,7 @@ public:
   using pointer       = _Elem*;
   using const_pointer = const _Elem*;
   using size_type     = size_t;
+  using value_type    = _Elem;
   basic_byte_buffer() {}
   explicit basic_byte_buffer(size_t count) { resize(count); }
   basic_byte_buffer(size_t count, std::true_type /*fit?*/) { resize_fit(count); }

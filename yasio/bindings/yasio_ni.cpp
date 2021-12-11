@@ -215,10 +215,7 @@ YASIO_NI_API int yasio_write(void* service_ptr, void* thandle, const unsigned ch
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
-  {
-    std::vector<char> buf(bytes, bytes + len);
-    return service->write(reinterpret_cast<transport_handle_t>(thandle), std::move(buf));
-  }
+    return service->write(reinterpret_cast<transport_handle_t>(thandle), yasio::sbyte_buffer(bytes, bytes + len, std::true_type()));
   return -1;
 }
 YASIO_NI_API int yasio_write_ob(void* service_ptr, void* thandle, void* obs_ptr)

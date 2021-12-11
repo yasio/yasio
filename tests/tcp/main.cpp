@@ -76,7 +76,7 @@ static bool icmp_ping(const char* host, const std::chrono::microseconds& wtimeou
   u_short id                  = std::rand() % (std::numeric_limits<unsigned short>::max)();
   static uint16_t s_seqno     = 0;
   static const int s_icmp_mtu = 1472;
-  std::vector<char> icmp_request;
+  yasio::sbyte_buffer icmp_request;
 
   cxx17::string_view userdata = "yasio-3.37.6";
 
@@ -188,11 +188,11 @@ void yasioTest()
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v8 << "\n";
 #endif
 
-  std::vector<char> vecbuf;
+  yasio::sbyte_buffer vecbuf;
   std::string strbuf;
   std::array<char, 16> arrbuf;
   char raw_arrbuf[16];
-  yasio::obstream_span<std::vector<char>>{vecbuf}.write_bytes("hello world!");
+  yasio::obstream_span<yasio::sbyte_buffer>{vecbuf}.write_bytes("hello world!");
   yasio::obstream_span<std::string>{strbuf}.write_bytes("hello world!");
   yasio::obstream_span<yasio::fixed_buffer_span>{arrbuf}.write_bytes("hello world!");
   yasio::obstream_span<yasio::fixed_buffer_span>{raw_arrbuf}.write_bytes("hello world!");

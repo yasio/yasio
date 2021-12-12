@@ -74,12 +74,6 @@ public:
     _Assign_range(first, last);
     return *this;
   }
-  template <typename _Iter> basic_byte_buffer& assign(const _Iter first, const _Iter last, std::true_type /*fit*/)
-  {
-    clear();
-    _Assign_range(first, last, std::true_type{});
-    return *this;
-  }
   basic_byte_buffer& swap(basic_byte_buffer& rhs) noexcept
   {
     char _Tmp[sizeof(rhs)];

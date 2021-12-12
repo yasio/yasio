@@ -1,4 +1,4 @@
-yasio-3.39.1
+yasio-3.39.2
   
   1. Use `byte_buffer` instead `std::vector<char>`
   2. Add extension `yasio_http` implementation

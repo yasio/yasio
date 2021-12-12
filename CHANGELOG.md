@@ -1,7 +1,12 @@
 yasio-3.39.1
   
+  1. Use `byte_buffer` instead `std::vector<char>`
+  2. Add extension `yasio_http` implementation
+  
+  
+yasio-3.39.1
+  
 1. Don't output transport object address
-2. Use byte_buffer instead `std::vector<char>`
   
   
 yasio-3.39.0

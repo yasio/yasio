@@ -128,11 +128,8 @@ enum
 
   /// below is byte2 of private flags (25~32) are mutable, and will be cleared automatically when connect flow done.
 
-  /* whether the name resolve in progress */
-  YCPF_NAME_RESOLVING = 1 << 25,
-
   /* whether ssl client in handshaking */
-  YCPF_SSL_HANDSHAKING = 1 << 26,
+  YCPF_SSL_HANDSHAKING = 1 << 25,
 };
 
 namespace
@@ -1459,7 +1456,6 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
     YASIO_KLOGE("[index: %d] ares_getaddrinfo_cb: resolve %s failed, status=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), status,
                 ::ares_strerror(status));
   }
-  yasio__clearbits(ctx->properties_, YCPF_NAME_RESOLVING);
   current_service.interrupt();
 }
 void io_service::process_ares_requests(fd_set* fds_array)
@@ -2041,7 +2037,7 @@ int io_service::do_resolve(io_channel* ctx)
 {
   if (yasio__testbits(ctx->properties_, YCPF_HOST_DIRTY))
   {
-    yasio__clearbits(ctx->properties_, YCPF_HOST_DIRTY);
+    yasio__clearbits(ctx->properties_, YCPF_HOST_DIRTY | YCPF_NEEDS_RESOLVE);
     ctx->remote_eps_.clear();
     ip::endpoint ep;
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
@@ -2057,13 +2053,11 @@ int io_service::do_resolve(io_channel* ctx)
     else
       yasio__setbits(ctx->properties_, YCPF_NEEDS_RESOLVE);
   }
-
   if (yasio__testbits(ctx->properties_, YCPF_PORT_DIRTY))
   {
     yasio__clearbits(ctx->properties_, YCPF_PORT_DIRTY);
-    if (!ctx->remote_eps_.empty())
-      for (auto& ep : ctx->remote_eps_)
-        ep.port(ctx->remote_port_);
+    for (auto& ep : ctx->remote_eps_)
+      ep.port(ctx->remote_port_);
   }
 
   if (!ctx->remote_eps_.empty())
@@ -2081,9 +2075,7 @@ int io_service::do_resolve(io_channel* ctx)
 
   if (!ctx->remote_host_.empty())
   {
-    if (ctx->error_ == yasio::errc::resolve_host_failed)
-      return -1;
-    if (!yasio__testbits(ctx->properties_, YCPF_NAME_RESOLVING))
+    if (!ctx->error_)
       start_resolve(ctx);
   }
   else
@@ -2093,7 +2085,6 @@ int io_service::do_resolve(io_channel* ctx)
 void io_service::start_resolve(io_channel* ctx)
 {
   ctx->last_resolved_reuse_ = 0;
-  yasio__setbits(ctx->properties_, YCPF_NAME_RESOLVING);
   ctx->set_last_errno(EINPROGRESS);
   YASIO_KLOGD("[index: %d] resolving %s", ctx->index_, ctx->remote_host_.c_str());
 #if defined(YASIO_ENABLE_ARES_PROFILER)
@@ -2135,7 +2126,6 @@ void io_service::start_resolve(io_channel* ctx)
     }
     else
       YASIO_KLOGE("[index: %d] resolve %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
-    yasio__clearbits(ctx->properties_, YCPF_NAME_RESOLVING);
     this->interrupt();
   });
   async_resolv_thread.detach();

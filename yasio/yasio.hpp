@@ -565,8 +565,11 @@ private:
   */
   u_short remote_port_ = 0;
 
-  // The last domain name resolved time in microseconds for dns cache support
+  // The last resolved address time in microseconds for dns cache support
   highp_time_t last_resolved_time_ = 0;
+
+  // The last resolved address reuse times
+  unsigned int last_resolved_reuse_ = 0;
 
   int index_;
   int socktype_ = 0;
@@ -631,7 +634,7 @@ public:
   io_send_op(sbyte_buffer&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
 
-  size_t offset_;            // read pos from sending buffer
+  size_t offset_;       // read pos from sending buffer
   sbyte_buffer buffer_; // sending data buffer
   completion_cb_t handler_;
 
@@ -1074,12 +1077,8 @@ private:
 
 #if defined(YASIO_HAVE_CARES)
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
-  void ares_work_started() { ++ares_outstanding_work_; }
-  void ares_work_finished()
-  {
-    if (ares_outstanding_work_ > 0)
-      --ares_outstanding_work_;
-  }
+  YASIO__DECL void ares_work_started();
+  YASIO__DECL void ares_work_finished();
   YASIO__DECL void process_ares_requests(fd_set* fds_array);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();

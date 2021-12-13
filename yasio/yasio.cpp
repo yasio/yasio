@@ -2081,6 +2081,8 @@ int io_service::do_resolve(io_channel* ctx)
 
   if (!ctx->remote_host_.empty())
   {
+    if (ctx->error_ == yasio::errc::resolve_host_failed)
+      return -1;
     if (!yasio__testbits(ctx->properties_, YCPF_NAME_RESOLVING))
       start_resolve(ctx);
   }

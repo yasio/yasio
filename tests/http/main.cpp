@@ -10,7 +10,7 @@
 using namespace yasio;
 using namespace yasio_ext::network;
 
-#define CHROME_UA "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+#define CHROME_UA "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
 
 void yasioTest()
 {

@@ -49,7 +49,7 @@ function build_linux()
     echo "run test issue201 on linux..."
     build_linux/tests/issue201/issue201
     
-    echo "run test http on linux...
+    echo "run test http on linux..."
     build_linux/tests/http/httptest
     
     exit 0

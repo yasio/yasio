@@ -2,6 +2,7 @@ yasio-3.39.2
   
   1. Use `byte_buffer` instead `std::vector<char>`
   2. Add extension `yasio_http` implementation
+  3. Fix query will defunct when name server dirty
   
   
 yasio-3.39.1

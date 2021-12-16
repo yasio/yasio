@@ -80,7 +80,7 @@ int passive() const
 获取事件携带的消息包
 
 ```cpp
-std::vector<char>& packet()
+yasio::sbyte_buffer& packet()
 ```
 
 ## 返回值

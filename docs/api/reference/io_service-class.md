@@ -281,7 +281,7 @@ yasio_shared_service()->dispatch(128);
 ```cpp
 int write(
     transport_handle_t thandle,
-    std::vector<char> buffer,
+    yasio::sbyte_buffer buffer,
     io_completion_cb_t completion_handler = nullptr
 );
 ```
@@ -314,7 +314,7 @@ int write(
 ```cpp
 int write_to(
     transport_handle_t thandle,
-    std::vector<char> buffer,
+    yasio::sbyte_buffer buffer,
     const ip::endpoint& to,
     io_completion_cb_t completion_handler = nullptr
 );

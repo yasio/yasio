@@ -232,9 +232,9 @@ size_t length() const;
 获取流内部缓冲区。
 
 ```cpp
-const std::vector<char>& buffer() const;
+const yasio::sbyte_buffer& buffer() const;
 
-std::vector<char>& buffer();
+yasio::sbyte_buffer& buffer();
 ```
 
 ### 返回值

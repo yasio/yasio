@@ -301,7 +301,7 @@ using fast_ibstream = basic_ibstream<endian::host_convert_tag>;
 构造一个 `ibstream` 对象。
 
 ```cpp
-ibstream(std::vector<char> blob);
+ibstream(yasio::sbyte_buffer blob);
 
 ibstream(const obstream* obs);
 ```

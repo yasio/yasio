@@ -39,6 +39,97 @@ namespace yasio_ext {
 
 namespace network {
 
+// Convert ASCII hex digit to a nibble (four bits, 0 - 15).
+//
+// Use unsigned to avoid signed overflow UB.
+inline unsigned char hex2nibble(unsigned char c)
+{
+  if (c >= '0' && c <= '9')
+  {
+    return c - '0';
+  }
+  else if (c >= 'a' && c <= 'f')
+  {
+    return 10 + (c - 'a');
+  }
+  else if (c >= 'A' && c <= 'F')
+  {
+    return 10 + (c - 'A');
+  }
+  return 0;
+}
+
+// Convert a nibble ASCII hex digit
+inline unsigned char nibble2hex(unsigned char c, unsigned char a = 'a') { return ((c) < 0xa ? ((c) + '0') : ((c) + a - 10)); }
+
+// Convert ASCII hex string (two characters) to byte.
+//
+// E.g., "0B" => 0x0B, "af" => 0xAF.
+inline char hex2char(const char* p) { return hex2nibble((uint8_t)p[0]) << 4 | hex2nibble(p[1]); }
+
+// Convert byte to ASCII hex string (two characters).
+inline char* char2hex(char* p, unsigned char c, unsigned char a = 'a')
+{
+  p[0] = nibble2hex(c >> 4, a);
+  p[1] = nibble2hex(c & (uint8_t)0xf, a);
+  return p;
+}
+
+std::string HttpClient::urlEncode(cxx17::string_view s)
+{
+  std::string encoded;
+  if (!s.empty())
+  {
+    encoded.reserve(s.length() * 3 / 2);
+    for (const char c : s)
+    {
+      if (isalnum((uint8_t)c) || c == '-' || c == '_' || c == '.' || c == '~')
+      {
+        encoded.push_back(c);
+      }
+      else
+      {
+        encoded.push_back('%');
+
+        char hex[2];
+        encoded.append(char2hex(hex, c, 'A'), sizeof(hex));
+      }
+    }
+  }
+  return encoded;
+}
+
+std::string HttpClient::urlDecode(cxx17::string_view st)
+{
+  std::string decoded;
+  if (!st.empty())
+  {
+    const char* s       = st.data();
+    const size_t length = st.length();
+    decoded.reserve(length * 2 / 3);
+    for (unsigned int i = 0; i < length; ++i)
+    {
+      if (!s[i])
+        break;
+
+      if (s[i] == '%')
+      {
+        decoded.push_back(hex2char(s + i + 1));
+        i = i + 2;
+      }
+      else if (s[i] == '+')
+      {
+        decoded.push_back(' ');
+      }
+      else
+      {
+        decoded.push_back(s[i]);
+      }
+    }
+  }
+  return decoded;
+}
+
 static HttpClient* _httpClient = nullptr; // pointer to singleton
 
 template <typename _Cont, typename _Fty>
@@ -271,18 +362,18 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event) {
                 };
             };
             int headerFlags = 0;
-            auto& headers = request->getHeaders();
+            auto& headers   = request->getHeaders();
             if (!headers.empty()) {
                 for (auto& header : headers) {
-                    obs.write_bytes(header);
-                    obs.write_bytes("\r\n");
-
-                    if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("User-Agent:")))
-                        headerFlags |= HeaderFlag::UESR_AGENT;
-                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Content-Type:")))
-                        headerFlags |= HeaderFlag::CONTENT_TYPE;
-                    else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Accept:")))
-                        headerFlags |= HeaderFlag::ACCEPT;
+                  obs.write_bytes(header);
+                  obs.write_bytes("\r\n");
+                
+                  if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("User-Agent:")))
+                    headerFlags |= HeaderFlag::UESR_AGENT;
+                  else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Content-Type:")))
+                    headerFlags |= HeaderFlag::CONTENT_TYPE;
+                  else if (cxx20::ic::starts_with(cxx17::string_view{header}, _mksv("Accept:")))
+                    headerFlags |= HeaderFlag::ACCEPT;
                 }
             }
 
@@ -307,7 +398,7 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event) {
 
                 char strContentLength[128] = {0};
                 auto requestData           = request->getRequestData();
-                auto requestDataSize       = request->getRequestDataSize();
+                auto requestDataSize       = request->getRequestDataSize(); 
                 sprintf(strContentLength, "Content-Length: %d\r\n\r\n", static_cast<int>(requestDataSize));
                 obs.write_bytes(strContentLength);
 

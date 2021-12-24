@@ -50,9 +50,6 @@
 namespace yasio_ext {
 
 namespace network {
-
-
-
 /** Singleton that handles asynchronous http requests.
  *
  * Once the request completed, a callback will issued in main thread when it provided during make request.
@@ -209,6 +206,15 @@ public:
     * on the caller thread
     */
     void tick();
+
+    /*
+     * The urlEncode API
+     * Perform urlEncode for query params always
+     * Perform urlEncode for post data when content-type is: application/x-www-form-urlencoded
+     */
+    static std::string urlEncode(cxx17::string_view s);
+
+    static std::string urlDecode(cxx17::string_view st);
         
 private:
     HttpClient();

@@ -1,5 +1,5 @@
 /****************************************************************************
- Copyright (c) 2020-2021 Simdsoft Limited.
+ Copyright (c) 2020-2022 Simdsoft Limited.
 
  https://simdsoft.com
 
@@ -57,9 +57,8 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
                        _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrchr(_Ptr, delim)))
+  for (auto _Ptr = internal::xstrchr(s, delim); _Ptr != nullptr; _Ptr = internal::xstrchr(_Ptr, delim))
   {
     if (_Ptr >= _End)
       break;
@@ -79,9 +78,8 @@ inline void fast_split(_CStr s, size_t slen,
                        _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrstr(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrstr(s, delims); _Ptr != nullptr; _Ptr = internal::xstrstr(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;
@@ -101,10 +99,9 @@ inline void fast_split_of(_CStr s, size_t slen,
                           const typename std::remove_pointer<_CStr>::type* delims, _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
   auto _Delim = delims[0];
-  while ((_Ptr = internal::xstrpbrk(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrpbrk(s, delims); _Ptr != nullptr; _Ptr = internal::xstrpbrk(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;
@@ -130,9 +127,8 @@ inline void fast_split_brkif(_CStr s, size_t slen, typename std::remove_pointer<
                              _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrchr(_Ptr, delim)))
+  for (auto _Ptr = internal::xstrchr(s, delim); _Ptr != nullptr; _Ptr = internal::xstrchr(_Ptr, delim))
   {
     if (_Ptr >= _End)
       break;
@@ -153,9 +149,8 @@ inline void fast_split_brkif(_CStr s, size_t slen,
                              _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrstr(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrstr(s, delims); _Ptr != nullptr; _Ptr = internal::xstrstr(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;
@@ -177,10 +172,9 @@ inline void fast_split_of_brkif(_CStr s, size_t slen,
                                 const typename std::remove_pointer<_CStr>::type* delims, _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
   auto _Delim = delims[0];
-  while ((_Ptr = internal::xstrpbrk(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrpbrk(s, delims); _Ptr != nullptr; _Ptr = internal::xstrpbrk(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;
@@ -289,9 +283,8 @@ inline void fast_split(_CStr s, size_t slen, typename std::remove_pointer<_CStr>
                        _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrchr(_Ptr, delim)))
+  for (auto _Ptr = internal::xstrchr(s, delim); _Ptr != nullptr; _Ptr = internal::xstrchr(_Ptr, delim))
   {
     if (_Ptr >= _End)
       break;
@@ -311,9 +304,8 @@ inline void fast_split(_CStr s, size_t slen,
                        _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrstr(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrstr(s, delims); _Ptr != nullptr; _Ptr = internal::xstrstr(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;
@@ -333,10 +325,9 @@ inline void fast_split_of(_CStr s, size_t slen,
                           const typename std::remove_pointer<_CStr>::type* delims, _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
   auto _Delim = delims[0];
-  while ((_Ptr = internal::xstrpbrk(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrpbrk(s, delims); _Ptr != nullptr; _Ptr = internal::xstrpbrk(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;
@@ -362,9 +353,8 @@ inline void fast_split_brkif(_CStr s, size_t slen, typename std::remove_pointer<
                              _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrchr(_Ptr, delim)))
+  for (auto _Ptr = internal::xstrchr(s, delim); _Ptr != nullptr; _Ptr = internal::xstrchr(_Ptr, delim))
   {
     if (_Ptr >= _End)
       break;
@@ -385,9 +375,8 @@ inline void fast_split_brkif(_CStr s, size_t slen,
                              _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
-  while ((_Ptr = internal::xstrstr(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrstr(s, delim); _Ptr != nullptr; _Ptr = internal::xstrstr(_Ptr, delim))
   {
     if (_Ptr >= _End)
       break;
@@ -409,10 +398,9 @@ inline void fast_split_of_brkif(_CStr s, size_t slen,
                                 const typename std::remove_pointer<_CStr>::type* delims, _Fn func)
 {
   auto _Start = s; // the start of every string
-  auto _Ptr   = s; // source string iterator
   auto _End   = s + slen;
   auto _Delim = delims[0];
-  while ((_Ptr = internal::xstrpbrk(_Ptr, delims)))
+  for (auto _Ptr = internal::xstrpbrk(s, delims); _Ptr != nullptr; _Ptr = internal::xstrpbrk(_Ptr, delims))
   {
     if (_Ptr >= _End)
       break;

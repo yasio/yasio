@@ -24,14 +24,14 @@ if ($env:GITHUB_CI -eq "true") {
        }
     
        if ($env:UWP -eq "true") {
-           cmake -A $archName -B build -DCMAKE_SYSTEM_NAME=WindowsStore "-DCMAKE_SYSTEM_VERSION=10.0" -DBUILD_SHARED_LIBS=ON -DYAISO_BUILD_NI=ON
+           cmake -A $archName -B build -DCMAKE_SYSTEM_NAME=WindowsStore "-DCMAKE_SYSTEM_VERSION=10.0" -DBUILD_SHARED_LIBS=ON -DYAISO_BUILD_NI=ON  -DYASIO_SSL_BACKEND=0
        }
        else {
            cmake -A $archName -B build -DYASIO_SSL_BACKEND=1
        }
     }
     else { # Generate mingw
-        cmake -G "MinGW Makefiles" -B build
+        cmake -G "MinGW Makefiles" -B build -DYASIO_SSL_BACKEND=0
     }
 }
 else { # Generate vs2013 on appveyor ci

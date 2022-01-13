@@ -205,6 +205,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
           case YOPT_C_LOCAL_PORT:
           case YOPT_C_REMOTE_PORT:
           case YOPT_C_KCP_CONV:
+          case YOPT_C_UNPACK_NO_BSWAP:
             service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
             break;
           case YOPT_C_ENABLE_MCAST:
@@ -309,6 +310,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_UNPACK_NO_BSWAP);
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);
@@ -612,6 +614,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                                  case YOPT_C_LOCAL_PORT:
                                  case YOPT_C_REMOTE_PORT:
                                  case YOPT_C_KCP_CONV:
+                                 case YOPT_C_UNPACK_NO_BSWAP:
                                    service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                                    break;
                                  case YOPT_C_ENABLE_MCAST:
@@ -703,6 +706,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_UNPACK_NO_BSWAP);
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);

@@ -243,6 +243,10 @@ enum
   // params: index:int, conv:int
   YOPT_C_KCP_CONV,
 
+  // Whether never perform bswap for length field
+  // params: index:int, no_bswap:int(0)
+  YOPT_C_UNPACK_NO_BSWAP,
+
   // Change 4-tuple association for io_transport_udp
   // params: transport:transport_handle_t
   // remarks: only works for udp client transport
@@ -589,6 +593,7 @@ private:
     int length_field_length    = 4;               // 1,2,3,4
     int length_adjustment      = 0;
     int initial_bytes_to_strip = 0;
+    int no_bswap               = 0;
   } uparams_;
   decode_len_fn_t decode_len_;
 

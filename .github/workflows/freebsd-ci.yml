@@ -39,8 +39,8 @@ jobs:
           pkg install -y cmake
           pkg install -y python3
           pkg search perl5
-          # pkg install -y perl5.34-5.34.0
-          pkg_add -v -r perl
+          pkg install -y perl5.34-5.34.0
+          pkg install -y unifi5
           perl --version
         run: |
           echo Building on freebsd...

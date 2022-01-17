@@ -63,6 +63,13 @@ public:                                                                         
                                                                                                                                                                \
 private:
 
+enum
+{
+  BUFFER_DEFAULT,
+  BUFFER_RAW,
+  BUFFER_FAST,
+};
+
 namespace stimer
 {
 // The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
@@ -1279,25 +1286,17 @@ bool js_yasio_io_event_packet(JSContext* ctx, uint32_t argc, jsval* vp)
 
   if (!packet.empty())
   {
-    bool raw  = false;
-    bool copy = false;
-    if (argc >= 1)
-      raw = args[0].toBoolean();
-    if (argc >= 1)
-      copy = args[1].toBoolean();
-    if (!raw)
+    int buffer_type = argc >= 1 ? args[0].toInt32() : yasio_jsb::BUFFER_DEFAULT;
+    switch (buffer_type)
     {
-      std::unique_ptr<yasio::ibstream> ibs(!copy ? new yasio::ibstream(std::move(packet)) : new yasio::ibstream(packet));
-      args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, std::move(ibs)));
-    }
-    else
-    {
-      args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, packet.data(), packet.size()));
-      if (!copy)
-      {
-        packet.clear();
-        packet.shrink_to_fit();
-      }
+      case lyasio::BUFFER_RAW:
+        args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, packet.data(), packet.size()));
+        break;
+      case lyasio::BUFFER_FAST:
+        args.rval().set(jsb_yasio_to_jsval<yasio::fast_ibstream>(ctx, cxx17::make_unique<yasio::fast_ibstream>(yasio::forward_packet((yasio::packet_t&&)packet))));
+        break;
+      default:
+        args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, cxx17::make_unique<yasio::ibstream>(yasio::forward_packet((yasio::packet_t&&)packet))));
     }
   }
   else
@@ -1915,4 +1914,9 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);
+
+  using namespace yasio_jsb;
+  YASIO_EXPORT_ENUM(BUFFER_DEFAULT);
+  YASIO_EXPORT_ENUM(BUFFER_RAW);
+  YASIO_EXPORT_ENUM(BUFFER_FAST);
 }

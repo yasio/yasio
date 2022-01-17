@@ -78,6 +78,13 @@ public:                                                                         
                                                                                                                                                                \
 private:
 
+enum
+{
+  BUFFER_DEFAULT,
+  BUFFER_RAW,
+  BUFFER_FAST,
+};
+
 namespace stimer
 {
 // The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
@@ -985,23 +992,21 @@ bool js_yasio_io_event_packet(se::State& s)
 
   if (!packet.empty())
   {
-    bool raw  = false;
-    bool copy = false;
+    int buffer_type = yasio_jsb::BUFFER_DEFAULT;
     if (argc >= 1)
-      raw = args[0].toBoolean();
-    if (argc >= 2)
-      copy = args[1].toBoolean();
-    if (!raw)
-      native_ptr_to_seval<yasio::ibstream>(!copy ? new yasio::ibstream(std::move(packet)) : new yasio::ibstream(packet), &s.rval());
-    else
     {
-      se::HandleObject dataObj(se::Object::createArrayBufferObject(packet.data(), packet.size()));
-      s.rval().setObject(dataObj);
-      if (!copy)
-      {
-        packet.clear();
-        packet.shrink_to_fit();
-      }
+      buffer_type = args[0].toInt32();
+    }
+    switch (buffer_type)
+    {
+      case yasio_jsb::BUFFER_RAW:
+        s.rval().setObject(se::HandleObject(se::Object::createArrayBufferObject(packet.data(), packet.size())));
+        break;
+      case yasio_jsb::BUFFER_FAST:
+        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet&&)packet)), &s.rval());
+        break;
+      default:
+        native_ptr_to_seval<yasio::ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet&&)packet)), &s.rval());
     }
   }
   else
@@ -1528,5 +1533,10 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);
+
+  using namespace yasio_jsb;
+  YASIO_EXPORT_ENUM(BUFFER_DEFAULT);
+  YASIO_EXPORT_ENUM(BUFFER_RAW);
+  YASIO_EXPORT_ENUM(BUFFER_FAST);
   return true;
 }

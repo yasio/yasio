@@ -81,8 +81,9 @@ function _M:ctor(count)
             local requestItem = self.requests[cindex]
             if requestItem == nil then return end
             if t == yasio.YEK_PACKET then
-                local ibs = ev:packet()
-                requestItem.responseData = requestItem.responseData .. ibs:to_string()
+                print(string.format("yasio.BUFFER_RAW=%d", yasio.BUFFER_RAW))
+                local str = ev:packet(yasio.BUFFER_RAW)
+                requestItem.responseData = requestItem.responseData .. str
             elseif(t == yasio.YEK_CONNECT_RESPONSE) then -- connect responseType
                 if(ev:status() == 0) then
                     local transport = ev:transport()

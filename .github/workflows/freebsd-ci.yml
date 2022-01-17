@@ -38,6 +38,7 @@ jobs:
         prepare: |
           pkg install -y cmake
           pkg install -y python3
+          pkg search perl5
         run: |
           echo Building on freebsd...
           cmake -G "Unix Makefiles" -S . -Bbuild

@@ -38,6 +38,12 @@ jobs:
         prepare: |
           pkg install -y cmake
           pkg install -y python3
+          pkg search perl5
+          # will install at /usr/local/bin, and the executable file name is perl5.34.0
+          pkg install -y perl5.34-5.34.0
+          # for cmake happy to find perl
+          cp /usr/local/bin/perl5.34.0 /usr/local/bin/perl
+          perl --version
         run: |
           echo Building on freebsd...
           cmake -G "Unix Makefiles" -S . -Bbuild

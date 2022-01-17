@@ -35,7 +35,9 @@ jobs:
       with:
         envs: 'TRAVIS_OS_NAME BUILD_TARGET'
         usesh: true
-        prepare: pkg install -y cmake
+        prepare: |
+          pkg install -y cmake
+          pkg install -y python3
         run: |
           echo Building on freebsd...
           cmake -G "Unix Makefiles" -S . -Bbuild

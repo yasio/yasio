@@ -34,6 +34,16 @@ using namespace yasio;
 
 namespace lyasio
 {
+enum
+{
+  BUFFER_DEFAULT,
+  BUFFER_NO_BSWAP,
+  BUFFER_RAW,
+};
+
+// The packet flags return to script
+// enum YPACK_TYPE_IBS
+
 template <typename _Stream>
 static void obstream_write_v(_Stream* obs, cxx17::string_view val, int length_field_bits)
 {
@@ -154,14 +164,26 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
 #  endif
   yasio_lib.new_usertype<io_event>(
       "io_event", "kind", &io_event::kind, "status", &io_event::status, "passive", [](io_event* e) { return !!e->passive(); }, "packet",
-      [](io_event* ev, sol::variadic_args args) {
-        bool copy = false;
+      [](io_event* ev, sol::variadic_args args, sol::this_state s) {
+        sol::state_view L(s);
+        int buffer_type = lyasio::BUFFER_DEFAULT;
         if (args.size() >= 2)
-          copy = args[1];
+          buffer_type = args[1];
         auto& pkt = ev->packet();
-        return !is_packet_empty(pkt)
-                   ? std::unique_ptr<yasio::ibstream>(!copy ? new yasio::ibstream(forward_packet((packet_t &&) pkt)) : new yasio::ibstream(forward_packet(pkt)))
-                   : std::unique_ptr<yasio::ibstream>{};
+        if (pkt.empty())
+          return sol::make_object(L, sol::lua_nil);
+        switch (buffer_type)
+        {
+          case lyasio::BUFFER_NO_BSWAP:
+            return sol::make_object(L, cxx14::make_unique<yasio::fast_ibstream>(forward_packet((packet_t &&) pkt)));
+            break;
+          case lyasio::BUFFER_RAW:
+            return sol::make_object(L, cxx17::string_view{pkt.data(), pkt.size()});
+            break;
+          case lyasio::BUFFER_DEFAULT:
+          default:
+            return sol::make_object(L, cxx14::make_unique<yasio::ibstream>(forward_packet((packet_t &&) pkt)));
+        }
       },
       "cindex", &io_event::cindex, "transport", &io_event::transport
 #  if !defined(YASIO_MINIFY_EVENT)
@@ -326,6 +348,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);
+
+  using namespace lyasio;
+  YASIO_EXPORT_ENUM(BUFFER_DEFAULT);
+  YASIO_EXPORT_ENUM(BUFFER_NO_BSWAP);
+  YASIO_EXPORT_ENUM(BUFFER_RAW);
 
   return yasio_lib.push(); /* return 'yasio' table */
 }

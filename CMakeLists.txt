@@ -174,18 +174,7 @@ if (APPLE)
            ${THIRDPART_SRC}
         )
         
-        macro(set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE XCODE_RELVERSION)
-            set(XCODE_RELVERSION_I "${XCODE_RELVERSION}")
-            if(XCODE_RELVERSION_I STREQUAL "All")
-                set_property(TARGET ${TARGET} PROPERTY
-                XCODE_ATTRIBUTE_${XCODE_PROPERTY} "${XCODE_VALUE}")
-            else()
-               set_property(TARGET ${TARGET} PROPERTY
-               XCODE_ATTRIBUTE_${XCODE_PROPERTY}[variant=${XCODE_RELVERSION_I}] "${XCODE_VALUE}")
-            endif()
-        endmacro(set_xcode_property)
-        
-        set_xcode_property (${yasio_target_name} IPHONEOS_DEPLOYMENT_TARGET "7.0" "all")
+        set_xcode_property (${yasio_target_name} IPHONEOS_DEPLOYMENT_TARGET "7.0")
     else ()
         # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
         if (BUILD_SHARED_LIBS)

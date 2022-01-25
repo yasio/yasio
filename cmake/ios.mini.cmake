@@ -62,3 +62,13 @@ if("${lowercase_CMAKE_OSX_SYSROOT}" MATCHES "iphonesimulator")
 else()
     set(CMAKE_SYSTEM_PROCESSOR arm64)
 endif()
+
+# This little function lets you set any XCode specific property, refer to: ios.toolchain.cmake
+function(set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE)
+    if (ARGC LESS 4 OR ARGV3 STREQUAL "All")
+        set_property(TARGET ${TARGET} PROPERTY XCODE_ATTRIBUTE_${XCODE_PROPERTY} ${XCODE_VALUE})
+    else()
+        set(XCODE_RELVERSION ${ARGV3})
+        set_property(TARGET ${TARGET} PROPERTY XCODE_ATTRIBUTE_${XCODE_PROPERTY}[variant=${XCODE_RELVERSION}] "${XCODE_VALUE}")
+    endif()
+endfunction()

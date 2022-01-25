@@ -1,6 +1,6 @@
 # A multi-platform support c++11 library with focus on asynchronous socket I/O for any client application.
 #
-# Copyright (c) 2012-2021 HALX99.
+# Copyright (c) 2012-2022 HALX99.
 #
 # Licensed under the MIT License (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 # http://opensource.org/licenses/MIT

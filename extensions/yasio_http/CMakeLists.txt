@@ -5,6 +5,6 @@ FILE(GLOB_RECURSE YASIO_HTTP_SOURCES *.h;*.cpp;*.c)
 
 add_library(${target_name} STATIC ${YASIO_HTTP_SOURCES})
 
-target_link_libraries (${target_name} yasio)
+yasio_config_app_depends(${target_name})
 
 target_include_directories(${target_name} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include")

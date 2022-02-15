@@ -55,20 +55,6 @@ function build_linux()
     exit 0
 }
 
-function build_freebsd()
-{
-    echo "Building freebsd..."
-    cd $YASIO_ROOT/build
-    mkdir -p build_freebsd
-    cmake .. -G "Unix Makefiles" -Bbuild_freebsd -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=0 -DYASIO_HAVE_CARES=ON
-    cmake --build build_freebsd -- -j `nproc`
-    
-    echo "run test issue201 on freebsd..."
-    build_freebsd/tests/issue201/issue201
-    
-    exit 0
-}
-
 function build_android()
 {
     echo "Building android..."
@@ -86,9 +72,6 @@ cmake --version
 if [ $BUILD_TARGET == "linux" ]
 then
     build_linux
-elif [ $BUILD_TARGET == "freebsd" ]
-then
-    build_freebsd
 elif [ $BUILD_TARGET == "osx" ]
 then
     build_osx

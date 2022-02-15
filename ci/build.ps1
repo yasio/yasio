@@ -1,6 +1,6 @@
 # Install latest cmake version for appveyor ci
 if (!($env:GITHUB_CI -eq "true")) {
-    $cmake_ver="3.22.0"
+    $cmake_ver="3.22.2"
     curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
     Expand-Archive -Path cmake-$cmake_ver-windows-x86_64.zip -DestinationPath .\
     $cmake_bin = (Resolve-Path .\cmake-$cmake_ver-windows-x86_64\bin).Path
@@ -27,11 +27,11 @@ if ($env:GITHUB_CI -eq "true") {
            cmake -A $archName -B build -DCMAKE_SYSTEM_NAME=WindowsStore "-DCMAKE_SYSTEM_VERSION=10.0" -DBUILD_SHARED_LIBS=ON -DYAISO_BUILD_NI=ON  -DYASIO_SSL_BACKEND=0
        }
        else {
-           cmake -A $archName -B build -DYASIO_SSL_BACKEND=1
+           cmake -A $archName -B build
        }
     }
     else { # Generate mingw
-        cmake -G "MinGW Makefiles" -B build -DYASIO_SSL_BACKEND=0
+        cmake -G "MinGW Makefiles" -B build
     }
 }
 else { # Generate vs2013 on appveyor ci

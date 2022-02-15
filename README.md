@@ -52,9 +52,8 @@ g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest
 
 ## 使用CMake编译yasio的测试程序和示例程序
 ```sh
-git clone https://github.com/yasio/yasio
+git clone --recursive https://github.com/yasio/yasio
 cd yasio
-git submodule update --init --recursive
 
 # 如果是macOS Xcode, 这里命令应该换成：cmake -B build -GXcode
 cmake -B build

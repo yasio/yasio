@@ -1,3 +1,17 @@
+yasio-3.39.3
+  
+  1. Improve `byte_buffer` stl compatible
+  2. Add option `YOPT_C_UNPACK_NO_BSWAP`
+  3. Add `urlEncode/urlDecode` to extension `yasio_http`
+  3. Improve extension `yasio_http` as unreal engine plugin
+  4. Fix missing retrun statement in `cxx17::string_view` hasher template
+  5. Change lua script io_event.packet(bool) to io_event:packet(bufferType)
+      - yasio.BUFFER_DEFAULT: take packet as native yasio::ibstream
+      - yasio.BUFFER_NO_BSWAP: take packet as natvie yasio::fast_ibstream without byte order convert
+      - yasio.BUFFER_RAW: take packet as lua string
+  6. CMake: Set default ssl backend to mbedtls
+  
+  
 yasio-3.39.2
   
   1. Use `byte_buffer` instead `std::vector<char>`

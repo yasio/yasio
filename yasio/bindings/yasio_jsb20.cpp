@@ -1316,7 +1316,7 @@ bool js_yasio_io_service_set_option(se::State& s)
         case YOPT_S_TCP_KEEPALIVE:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
           break;
-        case YOPT_C_LFBFD_PARAMS:
+        case YOPT_C_UNPACK_PARAMS:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(), args[4].toInt32(), args[5].toInt32());
           break;
         case YOPT_S_EVENT_CB: {
@@ -1507,7 +1507,8 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YOPT_S_DNS_QUERIES_TIMEOUT);
   YASIO_EXPORT_ENUM(YOPT_S_TCP_KEEPALIVE);
   YASIO_EXPORT_ENUM(YOPT_S_EVENT_CB);
-  YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_UNPACK_PARAMS);
+  YASIO_EXPORT_ENUM(YOPT_C_LFBFD_PARAMS); // alias for YOPT_C_UNPACK_PARAMS
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_HOST);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_PORT);
   YASIO_EXPORT_ENUM(YOPT_C_LOCAL_ENDPOINT);

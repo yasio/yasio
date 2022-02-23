@@ -51,7 +51,7 @@ int main()
     }
   });
   service.set_option(YOPT_S_CONNECT_TIMEOUT, 5);
-  service.set_option(YOPT_C_LFBFD_PARAMS, 0, 65535, 3, 4, 7);
+  service.set_option(YOPT_C_UNPACK_PARAMS, 0, 65535, 3, 4, 7);
   service.set_option(YOPT_C_LFBFD_IBTS, 0, 7);  // Sets initial bytes to strip
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // disable event queue
   service.open(0, YCK_UDP_CLIENT);              // open udp client

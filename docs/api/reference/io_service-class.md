@@ -501,7 +501,7 @@ int main(){
     //           timestamp:int32_t
     //           crc16:int16_t
     //    packet.data
-    service->set_option(YOPT_C_LFBFD_PARAMS,
+    service->set_option(YOPT_C_UNPACK_PARAMS,
                         0,     // channelIndex, the channel index
                         65535, // maxFrameLength, max packet size
                         2,     // lenghtFieldOffset, the offset of length field
@@ -512,7 +512,7 @@ int main(){
     // for application protocol without length field, just sets length field size to -1.
     // then io_service will dispatch any packet received from server immediately,
     // such as http request, this is default behavior of channel.
-    service->set_option(YOPT_C_LFBFD_PARAMS, 1, 65535, -1, 0, 0);
+    service->set_option(YOPT_C_UNPACK_PARAMS, 1, 65535, -1, 0, 0);
     return 0;
 }
 ```

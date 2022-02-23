@@ -27,7 +27,7 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
   deadline_timer timer;
   timer.expires_from_now(std::chrono::seconds(1));
   timer.async_wait_once(server, [channel_kind](io_service& server) {
-    server.set_option(YOPT_C_LFBFD_PARAMS, 0, 65535, -1, 0, 0);
+    server.set_option(YOPT_C_UNPACK_PARAMS, 0, 65535, -1, 0, 0);
     server.open(0, channel_kind);
   });
   server.start([&, channel_kind](event_ptr ev) {

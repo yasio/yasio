@@ -21,6 +21,14 @@ option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
+function(yasio_config_target_outdir target)
+    set_target_properties(${target} PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+endfunction()
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(LINUX TRUE)
     if(ANDROID)
@@ -88,6 +96,9 @@ elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
     set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
     add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/mbedtls)
+    yasio_config_target_outdir(mbedtls)
+    yasio_config_target_outdir(mbedcrypto)
+    yasio_config_target_outdir(mbedx509)
 endif()
 
 ### c-ares support
@@ -97,6 +108,7 @@ if (YASIO_HAVE_CARES)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
     add_subdirectory(thirdparty/c-ares)
     set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
+    yasio_config_target_outdir(c-ares)
 endif()
 
 ### The yasio core library project
@@ -202,6 +214,8 @@ else ( ) # linux/win32/android
         ${THIRDPART_SRC}
     )
 endif ( )
+
+yasio_config_target_outdir(${yasio_target_name})
     
 if ( WIN32 AND NOT CYGWIN )
     target_link_libraries(${yasio_target_name}
@@ -338,9 +352,7 @@ if(YASIO_BUILD_WITH_LUA)
     find_package(Lua "5.1.0")
     if(NOT LUA_FOUND)
         add_subdirectory(yasio/bindings/lua)
-        set_target_properties(plainlua PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-        )
+        yasio_config_target_outdir(plainlua)
         target_link_libraries(${yasio_target_name} plainlua)
         set(YASIO_USE_PREBUILT_LUA FALSE)
     else()
@@ -429,6 +441,7 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     # httptest
     add_subdirectory(extensions/yasio_http)
     yasio_config_lib_options(yasio_http)
+    yasio_config_target_outdir(yasio_http)
 
     add_subdirectory(tests/http)
 endif ()

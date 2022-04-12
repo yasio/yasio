@@ -12,12 +12,6 @@ on:
       - ci/**/*
       - extensions/**/*
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  TRAVIS_OS_NAME: freebsd
-  BUILD_TARGET: freebsd
-  BUILD_TYPE: Release
-
 jobs:
   build:
     # The CMake configure and build commands are platform agnostic and should work equally
@@ -31,18 +25,18 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Build
-      uses: vmactions/freebsd-vm@v0.1.5
+      uses: vmactions/freebsd-vm@v0.1.6
       with:
-        envs: 'TRAVIS_OS_NAME BUILD_TARGET'
         usesh: true
         prepare: |
           pkg install -y cmake
           pkg install -y python3
-          pkg search perl5
-          # will install at /usr/local/bin, and the executable file name is perl5.34.0
-          pkg install -y perl5.34-5.34.0
+          # install perl5.34.x, localtion: /usr/local/bin
+          set perl5_34=`pkg search perl5.34`
+          set perl5_34=$perl5_34
+          pkg install -y $perl5_34
           # for cmake happy to find perl
-          cp /usr/local/bin/perl5.34.0 /usr/local/bin/perl
+          cp /usr/local/bin/$perl5_34 /usr/local/bin/perl
           perl --version
         run: |
           echo Building on freebsd...

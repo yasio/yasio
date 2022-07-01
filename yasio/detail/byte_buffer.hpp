@@ -48,7 +48,7 @@ namespace yasio
 struct default_allocator {
   static void* reallocate(void* old_block, size_t /*old_size*/, size_t new_size) { return ::realloc(old_block, new_size); }
 };
-template <typename _Elem, typename _Alloc = default_allocator> class basic_byte_buffer final {
+template <typename _Elem, typename _Alloc = default_allocator> class basic_byte_buffer {
   static_assert(std::is_same<_Elem, char>::value || std::is_same<_Elem, unsigned char>::value,
                 "The basic_byte_buffer only accept type which is char or unsigned char!");
 public:

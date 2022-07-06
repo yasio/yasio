@@ -103,7 +103,12 @@ public:
   template <typename _Cont>
   basic_byte_buffer& operator+=(const _Cont& rhs)
   {
-    return this->append(std::cbegin(rhs), std::cend(rhs));
+    return this->append(std::begin(rhs), std::end(rhs));
+  }
+  basic_byte_buffer& operator+=(const _Elem& rhs)
+  {
+    this->push_back(rhs);
+    return *this;
   }
   template <typename _Iter>
   void assign(const _Iter first, const _Iter last)

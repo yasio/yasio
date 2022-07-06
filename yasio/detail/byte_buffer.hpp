@@ -173,6 +173,23 @@ public:
     resize(this->size() + 1);
     *(_Mylast - 1) = v;
   }
+  void erase(_Elem* first, _Elem* last)
+  {
+    auto my_len     = size();
+    auto diff      = std::distance(first, last);
+    auto erase_pos = static_cast<size_t>(first - _Myfirst);
+    if (diff > 0 && erase_pos < my_len)
+    {
+      auto move_to     = _Myfirst + erase_pos;
+      auto move_from   = (std::min)(move_to + diff, _Mylast);
+      auto erase_count = (move_from - move_to);
+      if (erase_count > 0)
+      {
+        std::copy_n(move_from, _Mylast - move_from, move_to);
+        resize(my_len - erase_count);
+      }
+    }
+  }
   _Elem& front()
   {
     if (!this->empty())
@@ -248,6 +265,18 @@ public:
     throw std::out_of_range("byte_buffer: out of range!");
   }
   _Elem& operator[](size_t index)
+  {
+    if (index < this->size())
+      return _Myfirst[index];
+    throw std::out_of_range("byte_buffer: out of range!");
+  }
+  const _Elem& at(size_t index) const
+  {
+    if (index < this->size())
+      return _Myfirst[index];
+    throw std::out_of_range("byte_buffer: out of range!");
+  }
+  _Elem& at(size_t index)
   {
     if (index < this->size())
       return _Myfirst[index];

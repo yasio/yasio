@@ -100,6 +100,11 @@ public:
     this->swap(rhs);
     return *this;
   }
+  template <typename _Cont>
+  basic_byte_buffer& operator+=(const _Cont& rhs) noexcept
+  {
+    return this->append(std::cbegin(rhs), std::cend(rhs));
+  }
   template <typename _Iter>
   void assign(const _Iter first, const _Iter last)
   {
@@ -156,19 +161,22 @@ public:
     }
   }
   template <typename _Iter>
-  void append(_Iter first, const _Iter last)
+  basic_byte_buffer& append(_Iter first, const _Iter last)
   {
-    append_n(first, std::distance(first, last));
+    return append_n(first, std::distance(first, last));
   }
   template <typename _Iter>
-  void append_n(_Iter first, ptrdiff_t count)
+  basic_byte_buffer& append_n(_Iter first, ptrdiff_t count)
   {
-    if (count > 0)
+    if (count > 1)
     {
       auto old_size = _Mylast - _Myfirst;
       resize(old_size + count);
       std::copy_n(first, count, _Myfirst + old_size);
     }
+    else if (count == 1)
+      push_back(static_cast<_Elem>(*first));
+    return *this;
   }
   void push_back(_Elem v)
   {

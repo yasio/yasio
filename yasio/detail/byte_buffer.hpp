@@ -101,7 +101,7 @@ public:
     return *this;
   }
   template <typename _Cont>
-  basic_byte_buffer& operator+=(const _Cont& rhs) noexcept
+  basic_byte_buffer& operator+=(const _Cont& rhs)
   {
     return this->append(std::cbegin(rhs), std::cend(rhs));
   }

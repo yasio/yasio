@@ -55,10 +55,12 @@ class basic_byte_buffer {
                 "The basic_byte_buffer only accept type which is char or unsigned char!");
 
 public:
-  using pointer       = _Elem*;
-  using const_pointer = const _Elem*;
-  using size_type     = size_t;
-  using value_type    = _Elem;
+  using pointer        = _Elem*;
+  using const_pointer  = const _Elem*;
+  using size_type      = size_t;
+  using value_type     = _Elem;
+  using iterator       = _Elem*;
+  using const_iterator = const _Elem*;
   basic_byte_buffer() {}
   explicit basic_byte_buffer(size_t count) { resize(count); }
   basic_byte_buffer(size_t count, std::true_type /*fit*/) { resize_fit(count); }
@@ -134,7 +136,7 @@ public:
     insert((std::min)(_Myfirst + offset, _Mylast), first, last);
   }
   template <typename _Iter>
-  void insert(_Elem* where, _Iter first, const _Iter last)
+  void insert(iterator where, _Iter first, const _Iter last)
   {
     if (where == _Mylast)
       append(first, last);
@@ -173,22 +175,10 @@ public:
     resize(this->size() + 1);
     *(_Mylast - 1) = v;
   }
-  void erase(_Elem* first, _Elem* last)
+  void erase(iterator first, iterator last)
   {
-    auto my_len     = size();
-    auto diff      = std::distance(first, last);
-    auto erase_pos = static_cast<size_t>(first - _Myfirst);
-    if (diff > 0 && erase_pos < my_len)
-    {
-      auto move_to     = _Myfirst + erase_pos;
-      auto move_from   = (std::min)(move_to + diff, _Mylast);
-      auto erase_count = (move_from - move_to);
-      if (erase_count > 0)
-      {
-        std::copy_n(move_from, _Mylast - move_from, move_to);
-        resize(my_len - erase_count);
-      }
-    }
+    _Verify_range(first, last);
+    _Mylast = std::move(last, _Mylast, first);
   }
   _Elem& front()
   {
@@ -203,10 +193,10 @@ public:
     throw std::out_of_range("byte_buffer: out of range!");
   }
   static constexpr size_t max_size() noexcept { return (std::numeric_limits<ptrdiff_t>::max)(); }
-  _Elem* begin() noexcept { return _Myfirst; }
-  _Elem* end() noexcept { return _Mylast; }
-  const _Elem* begin() const noexcept { return _Myfirst; }
-  const _Elem* end() const noexcept { return _Mylast; }
+  iterator begin() noexcept { return _Myfirst; }
+  iterator end() noexcept { return _Mylast; }
+  const_iterator begin() const noexcept { return _Myfirst; }
+  const_iterator end() const noexcept { return _Mylast; }
   pointer data() noexcept { return _Myfirst; }
   const_pointer data() const noexcept { return _Myfirst; }
   size_t capacity() const noexcept { return _Myend - _Myfirst; }
@@ -330,6 +320,12 @@ private:
     }
     else
       throw std::bad_alloc{};
+  }
+  void _Verify_range(iterator first, iterator last)
+  {
+    auto expr = (first <= last) && first >= _Myfirst && last <= _Mylast;
+    if (!expr)
+      throw std::out_of_range("byte_buffer: out of range!");
   }
   _Elem* _Myfirst = nullptr;
   _Elem* _Mylast  = nullptr;

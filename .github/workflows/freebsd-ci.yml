@@ -18,14 +18,14 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: macos-10.15
+    runs-on: macos-12
 
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
     - name: Build
-      uses: vmactions/freebsd-vm@v0.1.6
+      uses: vmactions/freebsd-vm@main
       with:
         usesh: true
         prepare: |

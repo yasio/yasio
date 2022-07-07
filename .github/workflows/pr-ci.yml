@@ -108,13 +108,13 @@ jobs:
           ci/build.sh
   build-freebsd:
     name: build-freebsd
-    runs-on: macos-10.15
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: 'recursive'
       - name: Build
-        uses: vmactions/freebsd-vm@v0.1.6
+        uses: vmactions/freebsd-vm@main
         with:
           usesh: true
           prepare: |

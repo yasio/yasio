@@ -59,8 +59,8 @@ namespace yasio
                                                         \
   } while (false)
 
-template <class _Ty>
-static constexpr bool is_integral_v = std::is_integral<_Ty>::value;
+template <bool _Test, class _Ty = void>
+using enable_if_t = typename ::std::enable_if<_Test, _Ty>::type;
 
 struct default_allocator {
   static void* reallocate(void* old_block, size_t /*old_size*/, size_t new_size)
@@ -107,12 +107,12 @@ public:
     assign(rhs, std::true_type{});
   }
   basic_byte_buffer(basic_byte_buffer&& rhs) noexcept { assign(std::move(rhs)); }
-  template <typename _Ty, std::enable_if_t<is_integral_v<_Ty>, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_integral<_Ty>::value, int> = 0>
   basic_byte_buffer(std::initializer_list<_Ty> rhs)
   {
     assign(rhs);
   }
-  template <typename _Ty, std::enable_if_t<is_integral_v<_Ty>, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_integral<_Ty>::value, int> = 0>
   basic_byte_buffer(std::initializer_list<_Ty> rhs, std::true_type /*fit*/)
   {
     assign(rhs, std::true_type{});
@@ -154,12 +154,12 @@ public:
     _Assign_range(rhs.begin(), rhs.end(), std::true_type{});
   }
   void assign(basic_byte_buffer&& rhs) { _Assign_rv(std::move(rhs)); }
-  template <typename _Ty, std::enable_if_t<is_integral_v<_Ty>, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_integral<_Ty>::value, int> = 0>
   void assign(std::initializer_list<_Ty> rhs)
   {
     _Assign_range((iterator)rhs.begin(), (iterator)rhs.end());
   }
-  template <typename _Ty, std::enable_if_t<is_integral_v<_Ty>, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_integral<_Ty>::value, int> = 0>
   void assign(std::initializer_list<_Ty> rhs, std::true_type /*fit*/)
   {
     _Assign_range((iterator)rhs.begin(), (iterator)rhs.end(), std::true_type{});

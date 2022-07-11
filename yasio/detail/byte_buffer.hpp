@@ -187,8 +187,7 @@ public:
         if (count > 1)
         {
           auto old_size = _Mylast - _Myfirst;
-          resize(old_size + count);
-          std::copy_n(ifirst, count, _Myfirst + old_size);
+          std::copy_n(ifirst, count, resize(old_size + count) + old_size);
         }
         else if (count == 1)
           push_back(static_cast<value_type>(*ifirst));

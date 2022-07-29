@@ -40,7 +40,7 @@
   - [yasio_unreal](https://github.com/yasio/yasio_unreal)：yasio的UnrealEngine插件。
   - [sluaunreal](https://github.com/yasio/sluaunreal)：集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua)：集成到Tencent的UnLua。
-* [adxe](https://github.com/adxeproject/adxe)：作为adxe游戏引擎的网络解决方案。
+* [axis-project](https://github.com/axis-project/axis)：作为axis游戏引擎的网络解决方案。
 
 ## 文档
 * [https://yasio.github.io/yasio](https://yasio.github.io/yasio)

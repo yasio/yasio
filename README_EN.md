@@ -41,7 +41,7 @@
   - [yasio_unreal](https://github.com/yasio/yasio_unreal): The yasio UnrealEngine plugin
   - [sluaunreal](https://github.com/yasio/sluaunreal): Integrate to Tencent's sluaunreal(A lua bindings solution for UE4)
   - [UnLua](https://github.com/yasio/UnLua): Integrate to Tencent's sluaunreal(Yet another lua bindings solution for UE4)
-* [axis-project](https://github.com/axis-project/axis): Use as tcp/udp asynchronous socket solution of game engine `axis`
+* [axys](https://github.com/axys1/axys): Use as tcp/udp asynchronous socket solution of game engine `axys`
 
 ## Docomentation
 * [https://yasio.github.io/en](https://yasio.github.io/en)

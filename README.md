@@ -40,7 +40,7 @@
   - [yasio_unreal](https://github.com/yasio/yasio_unreal)：yasio的UnrealEngine插件。
   - [sluaunreal](https://github.com/yasio/sluaunreal)：集成到Tencent的sluaunreal。
   - [UnLua](https://github.com/yasio/UnLua)：集成到Tencent的UnLua。
-* [axys](https://github.com/axys1/axys)：作为`axys`游戏引擎的网络解决方案。
+* [axmol](https://github.com/axmolengine/axmol)：作为`axmol`游戏引擎的网络解决方案。
 
 ## 文档
 * [https://yasio.github.io/yasio](https://yasio.github.io/yasio)

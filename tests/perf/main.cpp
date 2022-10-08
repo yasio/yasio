@@ -22,7 +22,7 @@ int main()
       count += pv[j];
     }
   }
-  YASIO_LOG("xxpodv --> count: %lld, cost: %lf(s)\n", count
+  YASIO_LOG("xxpodv --> count: %lld, cost: %lf(s)\n", count, 
            (yasio::highp_clock() - start) / (double)std::micro::den);
   
   YASIO_LOG("Testing pod_vector");
@@ -37,7 +37,7 @@ int main()
       count += pv[j];
     }
   }
-  YASIO_LOG("axpodv --> count: %lld, cost: %lf(s)\n", count
+  YASIO_LOG("axpodv --> count: %lld, cost: %lf(s)\n", count, 
            (yasio::highp_clock() - start) / (double)std::micro::den);
    
   return 0;

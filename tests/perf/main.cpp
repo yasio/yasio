@@ -17,6 +17,7 @@ int main()
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
     xx::PodVector<int> pv;
+    pv.Reserve(1000);
     for (int j = 0; j < 1000; ++j) {
       pv.Emplace(j);
     }
@@ -49,6 +50,7 @@ int main()
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
     std::vector<int> pv;
+    pv.reserve(1000);
     for (int j = 0; j < 1000; ++j) {
       pv.emplace_back(j);
     }

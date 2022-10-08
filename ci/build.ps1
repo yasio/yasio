@@ -45,3 +45,7 @@ else { # Generate vs2013 on appveyor ci
 
 # Build
 cmake --build build --config $env:BUILD_TYPE
+
+if ($env:BUILD_ARCH -eq "x64") {
+    ls -R ".\build"
+}

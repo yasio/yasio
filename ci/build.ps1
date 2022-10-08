@@ -44,10 +44,11 @@ else { # Generate vs2013 on appveyor ci
 }
 
 # Build
-cmake --build build --config $env:BUILD_TYPE
+cmake --build build --config $env:BUILD_TYPE --target perftest
 
 if ($env:BUILD_ARCH -eq "x64") {
     if (!($env:UWP -eq "true")) {
+        echo 'Runing perftest ...'
         .\build\tests\perf\Release\perftest.exe
     }
 }

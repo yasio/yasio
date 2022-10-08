@@ -32,6 +32,7 @@ int main()
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
     ax::pod_vector<int> pv;
+    pv.reserve(1000);
     for (int j = 0; j < 1000; ++j) {
       pv.emplace(j);
     }

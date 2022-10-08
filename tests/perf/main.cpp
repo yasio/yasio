@@ -14,7 +14,7 @@ int main()
   count = 0;
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
-    PodVector<int> pv;
+    xx::PodVector<int> pv;
     for (int j = 0; j < 1000; ++j) {
       pv.Emplace(j);
     }

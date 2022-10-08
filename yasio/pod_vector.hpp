@@ -98,7 +98,8 @@ public:
     template <typename... _Args>
     _Ty& emplace(_Args&&... args) noexcept
     {
-        return *new (resize(this->size() + 1)) _Ty(std::forward<_Args>(args)...);
+        this->reserve(this->size() + 1);
+        return *new (_Mylast++) _Ty(std::forward<_Args>(args)...);
     }
 
     void reserve(size_t new_cap)
@@ -111,14 +112,12 @@ public:
         }
     }
 
-    // return address of new last element
-    pointer resize(size_t new_size)
+    void resize(size_t new_size)
     {
         auto old_cap = this->capacity();
         if (old_cap < new_size)
             _Reallocate_exactly((std::max)(old_cap + old_cap / 2, new_size));
         _Mylast = _Myfirst + new_size;
-        return _Mylast - 1;
     }
 
     _Ty& operator[](size_t idx) { return _Myfirst[idx]; }

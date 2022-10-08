@@ -12,7 +12,8 @@ int main()
 {
   int64_t count, start;
 
-  printf("Testing xx_pod_vector\n");
+for (int k = 0; k < 5; ++k) {
+  printf("Testing xx_pod_vector...");
   count = 0;
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
@@ -25,10 +26,10 @@ int main()
       count += pv[j];
     }
   }
-  printf("xxpodv --> count: %lld, cost: %lf(s)\n", count, 
+  printf("--> count: %lld, cost: %lf(s)\n", count, 
            (yasio::highp_clock() - start) / (double)std::micro::den);
   
-  printf("\nTesting pod_vector\n");
+  printf("\nTesting ax_pod_vector...");
   count = 0;
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
@@ -41,11 +42,11 @@ int main()
       count += pv[j];
     }
   }
-  printf("axpodv --> count: %lld, cost: %lf(s)\n", count, 
+  printf("--> count: %lld, cost: %lf(s)\n", count, 
            (yasio::highp_clock() - start) / (double)std::micro::den);
    
 
-  printf("\nTesting std_vector\n");
+  printf("\nTesting std_vector...");
   count = 0;
   start = yasio::highp_clock();
   for(int i = 0; i < 100000; ++i) {
@@ -58,7 +59,8 @@ int main()
       count += pv[j];
     }
   }
-  printf("stdv --> count: %lld, cost: %lf(s)\n", count, 
+  printf("--> count: %lld, cost: %lf(s)\n", count, 
            (yasio::highp_clock() - start) / (double)std::micro::den);
+}
   return 0;
 }

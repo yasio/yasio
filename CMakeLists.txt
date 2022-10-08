@@ -417,7 +417,7 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     if(YASIO_HAVE_KCP)
         add_subdirectory(tests/speed)
     endif()
-    add_subdirectory(tests/perf)
+    
     add_subdirectory(tests/issue166)
     add_subdirectory(tests/issue178)
     add_subdirectory(tests/issue201)
@@ -446,6 +446,8 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     yasio_config_target_outdir(yasio_http)
 
     add_subdirectory(tests/http)
+
+    add_subdirectory(tests/perf)
 endif ()
 
 ### Sets startup project for vs .sln

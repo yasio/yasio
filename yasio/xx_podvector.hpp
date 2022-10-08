@@ -86,5 +86,8 @@ namespace xx {
 			Reserve(len + 1);
 			return *new (&buf[len++]) T(std::forward<Args>(args)...);
 		}
+
+                T& operator[](size_t idx) { return buf[idx]; }
+                const T& operator[](size_t idx) const { return buf[idx]; }
 	};
 }

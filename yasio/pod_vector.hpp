@@ -98,8 +98,11 @@ public:
     template <typename... _Args>
     _Ty& emplace(_Args&&... args) noexcept
     {
-        this->reserve(this->size() + 1);
+      if (_Mylast != _Myend)
         return *new (_Mylast++) _Ty(std::forward<_Args>(args)...);
+
+      _Reallocate_exactly(this->size() + 1);
+      return *new (_Mylast++) _Ty(std::forward<_Args>(args)...);
     }
 
     void reserve(size_t new_cap)

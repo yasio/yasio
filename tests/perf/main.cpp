@@ -17,6 +17,8 @@ int main()
   for (int k = 0; k < 3; ++k)
   {
     printf("######## Test round %d ######### \n", k + 1);
+
+    /* xx pod vector */
     printf("Testing xx_pod_vector...");
     count = 0;
     start = yasio::highp_clock();
@@ -36,7 +38,8 @@ int main()
     printf("--> count: %lld, cost: %lf(s)\n", count,
            (yasio::highp_clock() - start) / (double)std::micro::den);
 
-    printf("\nTesting ax_pod_vector...");
+    /* ax pod vector */
+    printf("Testing ax_pod_vector...");
     count = 0;
     start = yasio::highp_clock();
     for (int i = 0; i < NUM_TIMES; ++i)
@@ -55,7 +58,9 @@ int main()
     printf("--> count: %lld, cost: %lf(s)\n", count,
            (yasio::highp_clock() - start) / (double)std::micro::den);
 
-    printf("\nTesting std_vector...");
+    
+    /* std vector */
+    printf("Testing std_vector...");
     count = 0;
     start = yasio::highp_clock();
     for (int i = 0; i < NUM_TIMES; ++i)

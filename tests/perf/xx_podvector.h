@@ -12,6 +12,8 @@ namespace xx {
 		T* buf;
 		size_t len, cap;
 
+		int realloc_hits = 0;
+
 		PodVector(PodVector const& o) = delete;
 		PodVector& operator=(PodVector const& o) = delete;
 		explicit PodVector(size_t const& cap_ = 0, size_t const& len_ = 0) : buf(cap_ == 0 ? nullptr : Alloc(cap_)), cap(cap_), len(len_) {}
@@ -60,6 +62,7 @@ namespace xx {
 				memcpy(newBuf, buf, len * sizeof(T));
 				delete[](char*)buf;
 				buf = newBuf;
+                ++realloc_hits;
 			}
 			else {
 				buf = (T*)realloc(buf, cap * sizeof(T));

@@ -11,4 +11,16 @@
       </ArrayItems>
     </Expand>
   </Type>
+
+  <Type Name="ax::pod_vector&lt;*&gt;">
+    <DisplayString>{{ size={_Mylast - _Myfirst} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
+      <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
+      <ArrayItems>
+        <Size>_Mylast - _Myfirst</Size>
+        <ValuePointer>_Myfirst</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
 </AutoVisualizer>

@@ -36,7 +36,7 @@ int main()
     for (int i = 0; i < NUM_TIMES; ++i)
     {
       xx::PodVector<int> pv;
-      // pv.Reserve(1000);
+      pv.Reserve(1000);
       for (int j = 0; j < 1000; ++j)
       {
         pv.Emplace(j);
@@ -45,7 +45,7 @@ int main()
       {
         count += pv[j];
       }
-      realloc_hints = pv.realloc_hits;
+      // realloc_hints = pv.realloc_hits;
     }
     printf("--> count: %lld, cost: %lf(s), realloc_hits: %d\n", count,
            (yasio::highp_clock() - start) / (double)std::micro::den, realloc_hints);
@@ -58,7 +58,7 @@ int main()
     for (int i = 0; i < NUM_TIMES; ++i)
     {
       ax::pod_vector<int> pv;
-      //pv.reserve(1000);
+      pv.reserve(1000);
       for (int j = 0; j < 1000; ++j)
       {
         pv.emplace_back(j);
@@ -79,7 +79,7 @@ int main()
     for (int i = 0; i < NUM_TIMES; ++i)
     {
       std::vector<int> pv;
-      // pv.reserve(1000);
+      pv.reserve(1000);
       for (int j = 0; j < 1000; ++j)
       {
         pv.emplace_back(j);

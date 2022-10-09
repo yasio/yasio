@@ -88,9 +88,6 @@ int main()
       {
         count += pv[j];
       }
-
-      pv.clear();
-      pv.shrink_to_fit();
     }
 
     printf("--> count: %lld, cost: %lf(s)\n", count,

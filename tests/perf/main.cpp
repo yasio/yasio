@@ -12,13 +12,15 @@ int main()
 {
   int64_t count, start;
 
+  constexpr int NUM_TIMES = 1000000;
+
   for (int k = 0; k < 3; ++k)
   {
     printf("######## Test round %d ######### \n", k + 1);
     printf("Testing xx_pod_vector...");
     count = 0;
     start = yasio::highp_clock();
-    for (int i = 0; i < 100000; ++i)
+    for (int i = 0; i < NUM_TIMES; ++i)
     {
       xx::PodVector<int> pv;
       pv.Reserve(1000);
@@ -37,7 +39,7 @@ int main()
     printf("\nTesting ax_pod_vector...");
     count = 0;
     start = yasio::highp_clock();
-    for (int i = 0; i < 100000; ++i)
+    for (int i = 0; i < NUM_TIMES; ++i)
     {
       ax::pod_vector<int> pv;
       pv.reserve(1000);
@@ -56,7 +58,7 @@ int main()
     printf("\nTesting std_vector...");
     count = 0;
     start = yasio::highp_clock();
-    for (int i = 0; i < 100000; ++i)
+    for (int i = 0; i < NUM_TIMES; ++i)
     {
       std::vector<int> pv;
       pv.reserve(1000);

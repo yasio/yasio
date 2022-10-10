@@ -166,10 +166,9 @@ public:
   }
   void swap(basic_byte_buffer& rhs) noexcept
   {
-    char _Tmp[sizeof(rhs)];
-    memcpy(_Tmp, &rhs, sizeof(rhs));
-    memcpy(&rhs, this, sizeof(rhs));
-    memcpy(this, _Tmp, sizeof(_Tmp));
+    std::swap(_Myfirst, rhs._Myfirst);
+    std::swap(_Mylast, rhs._Mylast);
+    std::swap(_Myend, rhs._Myend);
   }
   template <typename _Iter>
   iterator insert(iterator _Where, _Iter first, const _Iter last)
@@ -348,8 +347,10 @@ private:
   }
   void _Assign_rv(basic_byte_buffer&& rhs)
   {
-    memcpy(this, &rhs, sizeof(rhs));
-    memset(&rhs, 0, sizeof(rhs));
+    _Myfirst     = rhs._Myfirst;
+    _Mylast      = rhs._Mylast;
+    _Myend       = rhs._Myend;
+    rhs._Myfirst = rhs._Mylast = rhs._Myend = nullptr;
   }
   void _Reallocate_exactly(size_t new_cap)
   {

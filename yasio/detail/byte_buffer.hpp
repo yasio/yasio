@@ -123,7 +123,7 @@ public:
   {
     assign(rhs, std::true_type{});
   }
-  basic_byte_buffer(basic_byte_buffer&& rhs) noexcept { assign(std::move(rhs)); }
+  basic_byte_buffer(basic_byte_buffer&& rhs) YASIO__NOEXCEPT { assign(std::move(rhs)); }
   template <typename _Ty, enable_if_t<std::is_integral<_Ty>::value, int> = 0>
   basic_byte_buffer(std::initializer_list<_Ty> rhs)
   {
@@ -140,7 +140,7 @@ public:
     assign(rhs);
     return *this;
   }
-  basic_byte_buffer& operator=(basic_byte_buffer&& rhs) noexcept
+  basic_byte_buffer& operator=(basic_byte_buffer&& rhs) YASIO__NOEXCEPT
   {
     this->swap(rhs);
     return *this;
@@ -181,7 +181,7 @@ public:
   {
     _Assign_range((iterator)rhs.begin(), (iterator)rhs.end(), std::true_type{});
   }
-  void swap(basic_byte_buffer& rhs) noexcept
+  void swap(basic_byte_buffer& rhs) YASIO__NOEXCEPT
   {
     std::swap(_Myfirst, rhs._Myfirst);
     std::swap(_Mylast, rhs._Mylast);
@@ -259,17 +259,20 @@ public:
     _YASIO_VERIFY_RANGE(_Myfirst < _Mylast, "byte_buffer: out of range!");
     return *(_Mylast - 1);
   }
-  static constexpr size_type max_size() noexcept { return (std::numeric_limits<ptrdiff_t>::max)(); }
-  iterator begin() noexcept { return _Myfirst; }
-  iterator end() noexcept { return _Mylast; }
-  const_iterator begin() const noexcept { return _Myfirst; }
-  const_iterator end() const noexcept { return _Mylast; }
-  pointer data() noexcept { return _Myfirst; }
-  const_pointer data() const noexcept { return _Myfirst; }
-  size_type capacity() const noexcept { return static_cast<size_type>(_Myend - _Myfirst); }
-  size_type size() const noexcept { return static_cast<size_type>(_Mylast - _Myfirst); }
-  void clear() noexcept { _Mylast = _Myfirst; }
-  bool empty() const noexcept { return _Mylast == _Myfirst; }
+  static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT
+  {
+    return (std::numeric_limits<ptrdiff_t>::max)();
+  }
+  iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
+  iterator end() YASIO__NOEXCEPT { return _Mylast; }
+  const_iterator begin() const YASIO__NOEXCEPT { return _Myfirst; }
+  const_iterator end() const YASIO__NOEXCEPT { return _Mylast; }
+  pointer data() YASIO__NOEXCEPT { return _Myfirst; }
+  const_pointer data() const YASIO__NOEXCEPT { return _Myfirst; }
+  size_type capacity() const YASIO__NOEXCEPT { return static_cast<size_type>(_Myend - _Myfirst); }
+  size_type size() const YASIO__NOEXCEPT { return static_cast<size_type>(_Mylast - _Myfirst); }
+  void clear() YASIO__NOEXCEPT { _Mylast = _Myfirst; }
+  bool empty() const YASIO__NOEXCEPT { return _Mylast == _Myfirst; }
 
   const_reference operator[](size_type index) const { return this->at(index); }
   reference operator[](size_type index) { return this->at(index); }
@@ -346,7 +349,7 @@ public:
    *   yasio::byte_buffer::allocator_type::deallocate(rawbuf, rawbufCapacity);
    *
    */
-  pointer release_pointer() noexcept
+  pointer release_pointer() YASIO__NOEXCEPT
   {
     auto ptr = _Myfirst;
     _Myfirst = nullptr;
@@ -399,7 +402,7 @@ private:
   {
     // given _Oldcapacity and _Newsize, calculate geometric growth
     const size_type _Oldcapacity = capacity();
-    constexpr auto _Max          = max_size();
+    YASIO__CONSTEXPR auto _Max   = max_size();
 
     if (_Oldcapacity > _Max - _Oldcapacity / 2)
       return _Max; // geometric growth would overflow
@@ -411,7 +414,7 @@ private:
 
     return _Geometric; // geometric growth is sufficient
   }
-  void _Tidy() noexcept
+  void _Tidy() YASIO__NOEXCEPT
   { // free all storage
     if (_Myfirst)
     { // destroy and deallocate old array

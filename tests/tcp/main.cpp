@@ -152,7 +152,7 @@ void yasioTest()
   yes      = cxx20::starts_with(std::string{"hello world"}, "hello");
   yes      = cxx20::starts_with(std::string{"hello world"}, std::string{"hello"});
   yes      = cxx20::starts_with(std::string{"hello world"}, (int)'h');
-#if YASIO__HAS_FULL_CXX11
+#if YASIO__HAS_CXX14
   yes      = cxx20::starts_with("hello world"_sv, (int)'h');
   yes      = cxx20::starts_with("hello world"_sv, "hello");
   yes      = cxx20::starts_with("hello world", "hello"_sv);

@@ -28,22 +28,25 @@ SOFTWARE.
 #ifndef YASIO__FEATURE_TEST_HPP
 #define YASIO__FEATURE_TEST_HPP
 
-// Tests whether compiler has fully c++11 support
+// Includes msvc basic system headers for compiler feature tests
 // About preprocessor '_MSC_VER', please see:
 // https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
-#if defined(_MSC_VER)
-#  if _MSC_VER < 1900
-#    define noexcept throw()
-#    define YASIO__HAS_FULL_CXX11 0
-#  else
-#    define YASIO__HAS_FULL_CXX11 1
-#    if _MSC_VER > 1900 // VS2017 or later
-#      include <vcruntime.h>
-#      include <sdkddkver.h>
-#    endif
-#  endif
+#if defined(_MSC_VER) && _MSC_VER > 1900
+#  include <vcruntime.h>
+#  include <sdkddkver.h>
+#endif
+
+// Tests whether compiler has(fully) c++11 support and keywords workaround for msvc
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
+#  define YASIO__HAS_CXX11 1
+#  define YASIO__NS_INLINE inline
+#  define YASIO__CONSTEXPR constexpr
+#  define YASIO__NOEXCEPT noexcept
 #else
-#  define YASIO__HAS_FULL_CXX11 1
+#  define YASIO__HAS_CXX11 0
+#  define YASIO__NS_INLINE
+#  define YASIO__CONSTEXPR const
+#  define YASIO__NOEXCEPT throw()
 #endif
 
 // Tests whether compiler has c++14 support
@@ -81,19 +84,6 @@ SOFTWARE.
 #endif   // C++20 features check
 #if !defined(YASIO__HAS_CXX20)
 #  define YASIO__HAS_CXX20 0
-#endif
-
-// Workaround for compiler without fully c++11 support, such as vs2013
-#if YASIO__HAS_FULL_CXX11
-#  define YASIO__HAS_NS_INLINE 1
-#  define YASIO__NS_INLINE inline
-#else
-#  define YASIO__HAS_NS_INLINE 0
-#  define YASIO__NS_INLINE
-#  if defined(constexpr)
-#    undef constexpr
-#  endif
-#  define constexpr const
 #endif
 
 // Unix domain socket feature test

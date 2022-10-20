@@ -20,7 +20,7 @@ jobs:
       BUILD_ARCH: ${{ matrix.arch }}
       TOOLCHAIN: 'msvc'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - uses: ilammy/msvc-dev-cmd@v1.9.0
@@ -39,7 +39,7 @@ jobs:
     env:
       TOOLCHAIN: 'mingw'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - uses: msys2/setup-msys2@v2
@@ -55,7 +55,7 @@ jobs:
       TRAVIS_OS_NAME: linux
       BUILD_TARGET: linux
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build
@@ -71,7 +71,7 @@ jobs:
       PYENV_VERSION: 2.7.18
       NDK_VER: r16b
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build
@@ -85,7 +85,7 @@ jobs:
       TRAVIS_OS_NAME: osx
       BUILD_TARGET: osx
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build
@@ -99,7 +99,7 @@ jobs:
       TRAVIS_OS_NAME: osx
       BUILD_TARGET: ios
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build
@@ -110,7 +110,7 @@ jobs:
     name: build-freebsd
     runs-on: macos-12
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build

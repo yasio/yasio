@@ -114,7 +114,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        uses: vmactions/freebsd-vm@v0.2.9
+        uses: vmactions/freebsd-vm@main
         with:
           usesh: true
           prepare: |

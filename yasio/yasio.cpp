@@ -1283,7 +1283,7 @@ void io_service::do_connect_completion(io_channel* ctx)
   {
     int error = -1;
 #if !defined(YASIO_SSL_BACKEND)
-    if (FD_ISSET(ctx->socket_->native_handle(), &fds_array[write_op]) || FD_ISSET(ctx->socket_->native_handle(), &fds_array[read_op]))
+    if (pollfd_isset(ctx->socket_->native_handle(), POLLIN | POLLOUT))
     {
       if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
       {

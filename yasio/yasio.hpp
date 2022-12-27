@@ -1070,8 +1070,6 @@ private:
 
   YASIO__DECL highp_time_t get_timeout(highp_time_t usec);
 
-  YASIO__DECL int poll_wait(highp_time_t wait_duration, socket_native_type* ares_socks);
-
   YASIO__DECL int do_resolve(io_channel* ctx);
   YASIO__DECL void do_connect(io_channel*);
   YASIO__DECL void do_connect_completion(io_channel*);

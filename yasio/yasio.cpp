@@ -921,7 +921,7 @@ void io_service::run()
         ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
       }
 #endif
-      int retval = revents.poll_wait(static_cast<int>(wait_duration / 1000));
+      int retval = revents.poll_wait(wait_duration);
       //YASIO_KLOGV("[core] poll waiting... %ld milliseconds", waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
       //int retval = ::poll(this->pollfds.data(), this->pollfds.size(), static_cast<int>(wait_duration / 1000));
       //YASIO_KLOGV("[core] poll waked up, retval=%d", retval);

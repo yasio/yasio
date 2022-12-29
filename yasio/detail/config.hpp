@@ -129,6 +129,11 @@ SOFTWARE.
 // #define YASIO_OBS_BUILTIN_STACK 1
 
 /*
+** Uncomment or add compiler flag -DYASIO_DISABLE_POLL to use socket.select for all platforms
+*/
+// #define YASIO_DISABLE_POLL 1
+
+/*
 ** Workaround for 'vs2013 without full c++11 support', in the future, drop vs2013 support and
 ** follow 3 lines code will be removed
 */

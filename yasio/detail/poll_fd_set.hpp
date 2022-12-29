@@ -3,7 +3,7 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// detail/poll_event_registry.hpp
+// detail/poll_fd_set.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2022 HALX99 (halx99 at live dot com)

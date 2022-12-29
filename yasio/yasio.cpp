@@ -892,7 +892,7 @@ void io_service::run()
   // The core event loop
   this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
 
-  poll_fd_set revents; // file_descriptor_set
+  fd_set_adapter revents; // file_descriptor_set
 
   do
   {
@@ -965,7 +965,7 @@ void io_service::run()
 
   this->state_ = io_service::state::AT_EXITING;
 }
-void io_service::process_transports(poll_fd_set& revents)
+void io_service::process_transports(fd_set_adapter& revents)
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
@@ -987,7 +987,7 @@ void io_service::process_transports(poll_fd_set& revents)
     iter = transports_.erase(iter);
   }
 }
-void io_service::process_channels(poll_fd_set& revents)
+void io_service::process_channels(fd_set_adapter& revents)
 {
   if (!this->channel_ops_.empty())
   {
@@ -1201,7 +1201,7 @@ void io_service::do_connect(io_channel* ctx)
     this->handle_connect_failed(ctx, xxsocket::get_last_errno());
 }
 
-void io_service::do_connect_completion(io_channel* ctx, poll_fd_set& fd_set)
+void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
 {
   assert(ctx->state_ == io_base::state::CONNECTING);
   if (ctx->state_ == io_base::state::CONNECTING)
@@ -1442,7 +1442,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-void io_service::process_ares_requests(socket_native_type* socks, int count, poll_fd_set& revents)
+void io_service::process_ares_requests(socket_native_type* socks, int count, fd_set_adapter& revents)
 {
   if (this->ares_outstanding_work_ > 0)
   {
@@ -1579,7 +1579,7 @@ void io_service::do_accept(io_channel* ctx)
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx, 1));
 #endif
 }
-void io_service::do_accept_completion(io_channel* ctx, poll_fd_set& revents)
+void io_service::do_accept_completion(io_channel* ctx, fd_set_adapter& revents)
 {
   if (ctx->state_ == io_base::state::OPENED)
   {
@@ -1770,7 +1770,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx));
 }
-bool io_service::do_read(transport_handle_t transport, poll_fd_set& revents)
+bool io_service::do_read(transport_handle_t transport, fd_set_adapter& revents)
 {
   bool ret = false;
   do

@@ -48,7 +48,7 @@ SOFTWARE.
 #include "yasio/detail/utils.hpp"
 #include "yasio/detail/errc.hpp"
 #include "yasio/detail/byte_buffer.hpp"
-#include "yasio/detail/poll_fd_set.hpp"
+#include "yasio/detail/fd_set_adapter.hpp"
 #include "yasio/cxx17/memory.hpp"
 #include "yasio/cxx17/string_view.hpp"
 #include "yasio/xxsocket.hpp"
@@ -1063,8 +1063,8 @@ private:
 
   YASIO__DECL bool open_internal(io_channel*);
 
-  YASIO__DECL void process_transports(poll_fd_set& revents);
-  YASIO__DECL void process_channels(poll_fd_set& revents);
+  YASIO__DECL void process_transports(fd_set_adapter& revents);
+  YASIO__DECL void process_channels(fd_set_adapter& revents);
   YASIO__DECL void process_timers();
 
   YASIO__DECL void interrupt();
@@ -1073,7 +1073,7 @@ private:
 
   YASIO__DECL int do_resolve(io_channel* ctx);
   YASIO__DECL void do_connect(io_channel*);
-  YASIO__DECL void do_connect_completion(io_channel*, poll_fd_set& fd_set);
+  YASIO__DECL void do_connect_completion(io_channel*, fd_set_adapter& fd_set);
 
 #if defined(YASIO_SSL_BACKEND)
   YASIO__DECL void init_ssl_context();
@@ -1085,7 +1085,7 @@ private:
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
-  YASIO__DECL void process_ares_requests(socket_native_type* socks, int count, poll_fd_set& revents);
+  YASIO__DECL void process_ares_requests(socket_native_type* socks, int count, fd_set_adapter& revents);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();
   YASIO__DECL void destroy_ares_channel();
@@ -1105,7 +1105,7 @@ private:
   // The major non-blocking event-loop
   YASIO__DECL void run(void);
 
-  YASIO__DECL bool do_read(transport_handle_t, poll_fd_set& revents);
+  YASIO__DECL bool do_read(transport_handle_t, fd_set_adapter& revents);
   bool do_write(transport_handle_t transport) { return transport->do_write(this->wait_duration_); }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
@@ -1128,7 +1128,7 @@ private:
 
   // supporting server
   YASIO__DECL void do_accept(io_channel*);
-  YASIO__DECL void do_accept_completion(io_channel*, poll_fd_set& revents);
+  YASIO__DECL void do_accept_completion(io_channel*, fd_set_adapter& revents);
 
   YASIO__DECL static const char* strerror(int error);
 
@@ -1171,7 +1171,7 @@ private:
   // the next wait duration for socket.select
   highp_time_t wait_duration_;
 
-  poll_fd_set fd_set_;
+  fd_set_adapter fd_set_;
 
   // options
   struct __unnamed_options {

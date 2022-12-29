@@ -3,7 +3,7 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// detail/poll_reactor.hpp
+// detail/select_fd_set.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2022 HALX99 (halx99 at live dot com)

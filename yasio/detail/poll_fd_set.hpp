@@ -25,7 +25,7 @@ public:
     return *this;
   }
 
-  int poll_wait(long long timeout_usec) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), timeout_usec / 1000); }
+  int do_poll(long long wait_duration) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), wait_duration / 1000); }
 
   int has_events(socket_native_type fd, int events) const
   {

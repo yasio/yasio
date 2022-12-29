@@ -1,3 +1,8 @@
+yasio-3.39.5
+  
+  1. Fix no callback when resolve domain failed by `getaddrinfo`
+
+
 yasio-3.39.4
   
   1. Fix process order

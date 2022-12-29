@@ -2124,7 +2124,10 @@ void io_service::start_query(io_channel* ctx)
 #  endif
     }
     else
+    {
+      ctx->set_last_errno(yasio::errc::resolve_host_failed);
       YASIO_KLOGE("[index: %d] query %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
+    }
     this->interrupt();
   });
   async_resolv_thread.detach();

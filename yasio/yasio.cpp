@@ -1216,7 +1216,7 @@ void io_service::do_connect_completion(io_channel* ctx, poll_fd_set& fd_set)
       if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
       {
         // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
-        unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
+        unregister_descriptor(ctx->socket_->native_handle(), socket_event::write);
         handle_connect_succeed(ctx, ctx->socket_);
       }
       else

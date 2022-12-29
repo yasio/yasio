@@ -25,9 +25,11 @@ public:
     return *this;
   }
 
-  int do_poll(long long wait_duration) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), wait_duration / 1000); }
+  void reset() { this->fd_set_.clear(); }
 
-  int has_events(socket_native_type fd, int events) const
+  int poll_io(timeval& waitd_tv) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000); }
+
+  int is_set(socket_native_type fd, int events) const
   {
     int underlying_events = 0;
     if (events & socket_event::read)
@@ -40,9 +42,7 @@ public:
     return it != this->fd_set_.end() ? (it->revents & underlying_events) : 0;
   }
 
-  void reset() { this->fd_set_.clear(); }
-
-  void register_descriptor(socket_native_type fd, int events)
+  void set(socket_native_type fd, int events)
   {
     int underlying_flags = 0;
     if (yasio__testbits(events, socket_event::read))
@@ -56,7 +56,7 @@ public:
     pollfd_mod(this->fd_set_, fd, underlying_flags, 0);
   }
 
-  void deregister_descriptor(socket_native_type fd, int events)
+  void unset(socket_native_type fd, int events)
   {
     int underlying_flags = 0;
     if (yasio__testbits(events, socket_event::read))

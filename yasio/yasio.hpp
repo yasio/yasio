@@ -1063,8 +1063,8 @@ private:
 
   YASIO__DECL bool open_internal(io_channel*);
 
-  YASIO__DECL void process_transports(fd_set_adapter& revents);
-  YASIO__DECL void process_channels(fd_set_adapter& revents);
+  YASIO__DECL void process_transports(fd_set_adapter& fd_set);
+  YASIO__DECL void process_channels(fd_set_adapter& fd_set);
   YASIO__DECL void process_timers();
 
   YASIO__DECL void interrupt();
@@ -1085,7 +1085,7 @@ private:
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
-  YASIO__DECL void process_ares_requests(socket_native_type* socks, int count, fd_set_adapter& revents);
+  YASIO__DECL void process_ares_requests(socket_native_type* socks, int count, fd_set_adapter& fd_set);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();
   YASIO__DECL void destroy_ares_channel();
@@ -1100,12 +1100,12 @@ private:
   YASIO__DECL void deallocate_transport(transport_handle_t);
 
   YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);
-  YASIO__DECL void unregister_descriptor(const socket_native_type fd, int flags);
+  YASIO__DECL void deregister_descriptor(const socket_native_type fd, int flags);
 
   // The major non-blocking event-loop
   YASIO__DECL void run(void);
 
-  YASIO__DECL bool do_read(transport_handle_t, fd_set_adapter& revents);
+  YASIO__DECL bool do_read(transport_handle_t, fd_set_adapter& fd_set);
   bool do_write(transport_handle_t transport) { return transport->do_write(this->wait_duration_); }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
@@ -1128,7 +1128,7 @@ private:
 
   // supporting server
   YASIO__DECL void do_accept(io_channel*);
-  YASIO__DECL void do_accept_completion(io_channel*, fd_set_adapter& revents);
+  YASIO__DECL void do_accept_completion(io_channel*, fd_set_adapter& fd_set);
 
   YASIO__DECL static const char* strerror(int error);
 

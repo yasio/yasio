@@ -21,6 +21,14 @@ class select_fd_set {
 public:
   select_fd_set() { reset(); }
 
+  void reset()
+  {
+    FD_ZERO(&fd_set_[read_op]);
+    FD_ZERO(&fd_set_[write_op]);
+    FD_ZERO(&fd_set_[except_op]);
+    max_nfds_ = 0;
+  }
+
   select_fd_set& operator=(select_fd_set& rhs)
   {
     ::memcpy(this->fd_set_, rhs.fd_set_, sizeof(rhs.fd_set_));
@@ -28,13 +36,12 @@ public:
     return *this;
   }
 
-  int do_poll(long long wait_duration)
+  int poll_io(timeval& waitd_tv)
   {
-    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
     return ::select(this->max_nfds_, &(fd_set_[read_op]), &(fd_set_[write_op]), nullptr, &waitd_tv);
   }
 
-  int has_events(socket_native_type fd, int events) const
+  int is_set(socket_native_type fd, int events) const
   {
     int retval = 0;
     if (events & socket_event::read)
@@ -46,15 +53,7 @@ public:
     return retval;
   }
 
-  void reset()
-  {
-    FD_ZERO(&fd_set_[read_op]);
-    FD_ZERO(&fd_set_[write_op]);
-    FD_ZERO(&fd_set_[except_op]);
-    max_nfds_ = 0;
-  }
-
-  void register_descriptor(socket_native_type fd, int events)
+  void set(socket_native_type fd, int events)
   {
     if (yasio__testbits(events, socket_event::read))
       FD_SET(fd, &(fd_set_[read_op]));
@@ -69,7 +68,7 @@ public:
       max_nfds_ = static_cast<int>(fd) + 1;
   }
 
-  void deregister_descriptor(socket_native_type fd, int events)
+  void unset(socket_native_type fd, int events)
   {
     if (yasio__testbits(events, socket_event::read))
       FD_CLR(fd, &(fd_set_[read_op]));

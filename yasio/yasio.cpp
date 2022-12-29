@@ -1211,7 +1211,7 @@ void io_service::do_connect_completion(io_channel* ctx, poll_fd_set& fd_set)
   {
     int error = -1;
 #if !defined(YASIO_SSL_BACKEND)
-    if (pollfd_isset(ctx->socket_->native_handle(), POLLIN | POLLOUT))
+    if (fd_set.has_events(ctx->socket_->native_handle(), socket_event::readwrite))
     {
       if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
       {

@@ -7,7 +7,6 @@
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2022 HALX99 (halx99 at live dot com)
-
 #pragma once
 #include <vector>
 #include "yasio/detail/socket.hpp"

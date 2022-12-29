@@ -8,8 +8,6 @@
 //
 // Copyright (c) 2012-2022 HALX99 (halx99 at live dot com)
 
-// see also: https://github.com/chriskohlhoff/asio
-//
 #pragma once
 
 #include "yasio/detail/config.hpp"

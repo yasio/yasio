@@ -228,4 +228,20 @@ inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
 
 #define YASIO_ADDR_ANY(af) (af == AF_INET ? "0.0.0.0" : "::")
 
+namespace yasio
+{
+YASIO__NS_INLINE
+namespace inet
+{
+struct socket_event {
+  enum
+  { // event mask
+    read  = 1,
+    write = 2,
+    error = 4,
+    readwrite = read | write,
+  };
+};
+}
+} // namespace yasio
 #endif

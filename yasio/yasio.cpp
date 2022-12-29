@@ -76,11 +76,6 @@ SOFTWARE.
 #  define YASIO_KLOGV(format, ...) YASIO_KLOG_CP(YLOG_V, format, ##__VA_ARGS__)
 #endif
 
-#define yasio__setbits(x, m) ((x) |= (m))
-#define yasio__clearbits(x, m) ((x) &= ~(m))
-#define yasio__testbits(x, m) ((x) & (m))
-#define yasio__setlobyte(x, v) ((x) = ((x) & ~((decltype(x))0xff)) | (v))
-
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 6320 6322 4996)
@@ -94,12 +89,6 @@ namespace inet
 {
 namespace
 {
-enum
-{ // event mask
-  YEM_POLLIN  = 1,
-  YEM_POLLOUT = 2,
-  YEM_POLLERR = 4,
-};
 
 enum : uint8_t
 { // op masks and stop flags
@@ -188,23 +177,6 @@ static yasio__global_state& yasio__shared_globals(const print_fn2_t& prt = nullp
 {
   static yasio__global_state __global_state(prt);
   return __global_state;
-}
-static void pollfd_mod(socket_native_type fd, std::vector<pollfd>& fds, int add_flags, int remove_flags)
-{
-  auto it = std::find_if(fds.begin(), fds.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
-  if (it != fds.end())
-  {
-    it->events |= add_flags;
-    it->events &= ~remove_flags;
-    if (it->events == 0)
-      fds.erase(it);
-  }
-  else
-  {
-    auto combined_flags = add_flags & ~remove_flags;
-    if (combined_flags)
-      fds.push_back(pollfd{fd, static_cast<short>(combined_flags), 0});
-  }
 }
 } // namespace
 
@@ -403,7 +375,7 @@ bool io_transport::do_write(highp_time_t& wait_duration)
       { // system kernel buffer full
         if (!pollout_registerred_)
         {
-          get_service().register_descriptor(socket_->native_handle(), YEM_POLLOUT);
+          get_service().register_descriptor(socket_->native_handle(), socket_event::write);
           pollout_registerred_ = true;
         }
       }
@@ -412,7 +384,7 @@ bool io_transport::do_write(highp_time_t& wait_duration)
     }
     if (no_wevent && pollout_registerred_)
     {
-      get_service().unregister_descriptor(socket_->native_handle(), YEM_POLLOUT);
+      get_service().unregister_descriptor(socket_->native_handle(), socket_event::write);
       pollout_registerred_ = false;
     }
     ret = true;
@@ -833,7 +805,7 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
     channel_count = 1;
 
   options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
-  register_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
+  register_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
   // create channels
   create_channels(channel_eps, channel_count);
@@ -853,7 +825,7 @@ void io_service::finalize()
     life_token_.reset();
 #endif
     destroy_channels();
-    unregister_descriptor(interrupter_.read_descriptor(), YEM_POLLIN);
+    unregister_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
     options_.on_event_ = nullptr;
     options_.resolv_   = nullptr;
@@ -919,13 +891,16 @@ void io_service::run()
 
   // The core event loop
   this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
+
+  poll_fd_set revents; // file_descriptor_set
+
   do
   {
     auto wait_duration   = get_timeout(this->wait_duration_); // Gets current wait duration
     this->wait_duration_ = YASIO_MAX_WAIT_DURATION;           // Reset next wait duration
     if (wait_duration > 0)
     {
-      this->pollfds    = this->pollfd_registry_;
+      revents = this->fd_set_;
       timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if defined(YASIO_HAVE_CARES)
       if (this->ares_outstanding_work_ > 0)
@@ -938,7 +913,7 @@ void io_service::run()
           {
             auto fd = ares_socks[i];
             ++ares_socks_count;
-            pollfd_mod(fd, POLLIN | POLLOUT, 0, false);
+            revents.register_descriptor(fd, socket_event::readwrite);
           }
           else
             break;
@@ -946,9 +921,10 @@ void io_service::run()
         ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
       }
 #endif
-      YASIO_KLOGV("[core] poll waiting... %ld milliseconds", waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
-      int retval = ::poll(this->pollfds.data(), this->pollfds.size(), static_cast<int>(wait_duration / 1000));
-      YASIO_KLOGV("[core] poll waked up, retval=%d", retval);
+      int retval = revents.poll_wait(static_cast<int>(wait_duration / 1000));
+      //YASIO_KLOGV("[core] poll waiting... %ld milliseconds", waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
+      //int retval = ::poll(this->pollfds.data(), this->pollfds.size(), static_cast<int>(wait_duration / 1000));
+      //YASIO_KLOGV("[core] poll waked up, retval=%d", retval);
       if (retval < 0)
       {
         int ec = xxsocket::get_last_errno();
@@ -960,7 +936,7 @@ void io_service::run()
 
       if (retval == 0)
         YASIO_KLOGV("[core] %s", "do_select is timeout, process_timers()");
-      else if (pollfd_isset(this->interrupter_.read_descriptor(), POLLIN))
+      else if (revents.has_events(this->interrupter_.read_descriptor(), socket_event::read))
       { // Reset the interrupter.
         if (!interrupter_.reset())
           interrupter_.recreate();
@@ -970,14 +946,14 @@ void io_service::run()
 
 #if defined(YASIO_HAVE_CARES)
     // process possible async resolve requests.
-    process_ares_requests(ares_socks, ares_socks_count);
+    process_ares_requests(ares_socks, ares_socks_count, revents);
 #endif
 
     // process active transports
-    process_transports();
+    process_transports(revents);
 
     // process active channels
-    process_channels();
+    process_channels(revents);
 
     // process timeout timers
     process_timers();
@@ -992,13 +968,13 @@ void io_service::run()
 
   this->state_ = io_service::state::AT_EXITING;
 }
-void io_service::process_transports()
+void io_service::process_transports(poll_fd_set& revents)
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    bool ok        = (do_read(transport) && do_write(transport));
+    bool ok        = (do_read(transport, revents) && do_write(transport));
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_ | this->stop_flag_;
@@ -1014,7 +990,7 @@ void io_service::process_transports()
     iter = transports_.erase(iter);
   }
 }
-void io_service::process_channels()
+void io_service::process_channels(poll_fd_set& revents)
 {
   if (!this->channel_ops_.empty())
   {
@@ -1040,7 +1016,7 @@ void io_service::process_channels()
             handle_connect_failed(ctx, ctx->error_);
         }
         else if (ctx->state_ == io_base::state::CONNECTING)
-          do_connect_completion(ctx);
+          do_connect_completion(ctx, revents);
         finish = ctx->error_ != EINPROGRESS;
       }
       else if (yasio__testbits(ctx->properties_, YCM_SERVER))
@@ -1053,7 +1029,7 @@ void io_service::process_channels()
 
         finish = (ctx->state_ != io_base::state::OPENED);
         if (!finish)
-          do_accept_completion(ctx);
+          do_accept_completion(ctx, revents);
         else
           ctx->bytes_transferred_ = 0;
       }
@@ -1128,57 +1104,9 @@ void io_service::handle_close(transport_handle_t thandle)
     cleanup_channel(ctx, false);
   }
 }
-void io_service::register_descriptor(const socket_native_type fd, int flags)
-{
-  int underlying_flags = 0;
-  if (yasio__testbits(flags, YEM_POLLIN))
-    underlying_flags |= POLLIN;
+void io_service::register_descriptor(const socket_native_type fd, int flags) { this->fd_set_.register_descriptor(fd, flags); }
+void io_service::unregister_descriptor(const socket_native_type fd, int flags) { this->fd_set_.deregister_descriptor(fd, flags); }
 
-  if (yasio__testbits(flags, YEM_POLLOUT))
-    underlying_flags |= POLLOUT;
-
-  if (yasio__testbits(flags, YEM_POLLERR))
-    underlying_flags |= POLLERR;
-  pollfd_mod(fd, underlying_flags, 0);
-}
-void io_service::unregister_descriptor(const socket_native_type fd, int flags)
-{
-  int underlying_flags = 0;
-  if (yasio__testbits(flags, YEM_POLLIN))
-    underlying_flags |= POLLIN;
-
-  if (yasio__testbits(flags, YEM_POLLOUT))
-    underlying_flags |= POLLOUT;
-
-  if (yasio__testbits(flags, YEM_POLLERR))
-    underlying_flags |= POLLERR;
-
-  pollfd_mod(fd, 0, underlying_flags);
-}
-void io_service::pollfd_mod(socket_native_type fd, int add_flags, int remove_flags, bool use_registry)
-{
-  auto& fds = use_registry ? this->pollfd_registry_ : this->pollfds;
-  auto it   = std::find_if(fds.begin(), fds.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
-  if (it != fds.end())
-  {
-    // POLLIN
-    it->events |= add_flags;
-    it->events &= ~remove_flags;
-    if (it->events == 0)
-      fds.erase(it);
-  }
-  else
-  {
-    auto combined_flags = add_flags & ~remove_flags;
-    if (combined_flags)
-      fds.push_back(pollfd{fd, static_cast<short>(combined_flags), 0});
-  }
-}
-int io_service::pollfd_isset(socket_native_type fd, int flags) const
-{
-  auto it = std::find_if(this->pollfds.begin(), this->pollfds.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
-  return it != this->pollfds.end() ? (it->revents & flags) : 0;
-}
 int io_service::write(transport_handle_t transport, dynamic_buffer_t buffer, completion_cb_t handler)
 {
   if (transport && transport->is_open())
@@ -1258,7 +1186,7 @@ void io_service::do_connect(io_channel* ctx)
       else
       {
         ctx->set_last_errno(EINPROGRESS);
-        register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
+        register_descriptor(ctx->socket_->native_handle(), socket_event::readwrite);
         ctx->timer_.expires_from_now(std::chrono::microseconds(options_.connect_timeout_));
         ctx->timer_.async_wait_once(*this, [ctx](io_service& thiz) {
           if (ctx->state_ != io_base::state::OPENED)
@@ -1268,7 +1196,7 @@ void io_service::do_connect(io_channel* ctx)
     }
     else if (ret == 0)
     { // connect server successful immediately.
-      register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
+      register_descriptor(ctx->socket_->native_handle(), socket_event::read);
       handle_connect_succeed(ctx, ctx->socket_);
     } // !!!NEVER GO HERE
   }
@@ -1276,7 +1204,7 @@ void io_service::do_connect(io_channel* ctx)
     this->handle_connect_failed(ctx, xxsocket::get_last_errno());
 }
 
-void io_service::do_connect_completion(io_channel* ctx)
+void io_service::do_connect_completion(io_channel* ctx, poll_fd_set& fd_set)
 {
   assert(ctx->state_ == io_base::state::CONNECTING);
   if (ctx->state_ == io_base::state::CONNECTING)
@@ -1298,12 +1226,12 @@ void io_service::do_connect_completion(io_channel* ctx)
 #else
     if (!yasio__testbits(ctx->properties_, YCPF_SSL_HANDSHAKING))
     {
-      if (pollfd_isset(ctx->socket_->native_handle(), POLLIN | POLLOUT))
+      if (fd_set.has_events(ctx->socket_->native_handle(), socket_event::readwrite))
       {
         if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
         {
           // The nonblocking tcp handshake complete, remove write event avoid high-CPU occupation
-          unregister_descriptor(ctx->socket_->native_handle(), YEM_POLLOUT);
+          unregister_descriptor(ctx->socket_->native_handle(), socket_event::write);
           if (!yasio__testbits(ctx->properties_, YCM_SSL))
             handle_connect_succeed(ctx, ctx->socket_);
           else
@@ -1517,14 +1445,14 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-void io_service::process_ares_requests(socket_native_type* socks, int count)
+void io_service::process_ares_requests(socket_native_type* socks, int count, poll_fd_set& revents)
 {
   if (this->ares_outstanding_work_ > 0)
   {
     for (auto i = 0; i < count; ++i)
     {
       auto fd = socks[i];
-      ::ares_process_fd(this->ares_, pollfd_isset(fd, POLLIN) ? fd : ARES_SOCKET_BAD, pollfd_isset(fd, POLLOUT) ? fd : ARES_SOCKET_BAD);
+      ::ares_process_fd(this->ares_, revents.has_events(fd, socket_event::read) ? fd : ARES_SOCKET_BAD, revents.has_events(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
     }
   }
 }
@@ -1638,7 +1566,7 @@ void io_service::do_accept(io_channel* ctx)
         ctx->join_multicast_group();
       ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
     }
-    register_descriptor(ctx->socket_->native_handle(), YEM_POLLIN);
+    register_descriptor(ctx->socket_->native_handle(), socket_event::read);
     YASIO_KLOGD("[index: %d] open server succeed, socket.fd=%d listening at %s...", ctx->index_, (int)ctx->socket_->native_handle(), ep.to_string().c_str());
     error = 0;
   } while (false);
@@ -1654,12 +1582,12 @@ void io_service::do_accept(io_channel* ctx)
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx, 1));
 #endif
 }
-void io_service::do_accept_completion(io_channel* ctx)
+void io_service::do_accept_completion(io_channel* ctx, poll_fd_set& revents)
 {
   if (ctx->state_ == io_base::state::OPENED)
   {
     int error = 0;
-    if (pollfd_isset(ctx->socket_->native_handle(), POLLIN) && ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
+    if (revents.has_events(ctx->socket_->native_handle(), socket_event::read) && ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
     {
       if (yasio__testbits(ctx->properties_, YCM_TCP))
       {
@@ -1768,7 +1696,7 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
       static_cast<io_transport_udp*>(transport)->confgure_remote(ctx->remote_eps_[0]);
   }
   else
-    register_descriptor(connection->native_handle(), YEM_POLLIN);
+    register_descriptor(connection->native_handle(), socket_event::read);
   if (yasio__testbits(ctx->properties_, YCM_TCP))
   {
 #if defined(SO_NOSIGPIPE)
@@ -1845,7 +1773,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
   handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx));
 }
-bool io_service::do_read(transport_handle_t transport)
+bool io_service::do_read(transport_handle_t transport, poll_fd_set& revents)
 {
   bool ret = false;
   do
@@ -1853,7 +1781,7 @@ bool io_service::do_read(transport_handle_t transport)
     if (!transport->socket_->is_open())
       break;
     int error  = 0;
-    int revent = pollfd_isset(transport->socket_->native_handle(), POLLIN | POLLHUP | POLLERR | POLLNVAL);
+    int revent = revents.has_events(transport->socket_->native_handle(), socket_event::read | socket_event::error);
     int n      = transport->do_read(revent, error, this->wait_duration_);
     if (n >= 0)
     {
@@ -2059,7 +1987,7 @@ bool io_service::cleanup_io(io_base* obj, bool clear_mask)
     obj->opmask_ = 0;
   if (obj->socket_->is_open())
   {
-    unregister_descriptor(obj->socket_->native_handle(), YEM_POLLIN | YEM_POLLOUT);
+    unregister_descriptor(obj->socket_->native_handle(), socket_event::readwrite);
     obj->socket_->close();
     return true;
   }

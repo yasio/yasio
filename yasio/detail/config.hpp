@@ -192,7 +192,7 @@ SOFTWARE.
 /*
 **  The yasio version macros
 */
-#define YASIO_VERSION_NUM 0x033905
+#define YASIO_VERSION_NUM 0x033906
 
 /*
 ** The macros used by io_service.
@@ -231,5 +231,15 @@ SOFTWARE.
 // The yasio ssl client PIN for server to recognize
 #define YASIO_SSL_PIN "yasio_ssl_client"
 #define YASIO_SSL_PIN_LEN (sizeof(YASIO_SSL_PIN) - 1)
+
+
+/*
+** yasio bitop macros
+*/
+
+#define yasio__setbits(x, m) ((x) |= (m))
+#define yasio__clearbits(x, m) ((x) &= ~(m))
+#define yasio__testbits(x, m) ((x) & (m))
+#define yasio__setlobyte(x, v) ((x) = ((x) & ~((decltype(x))0xff)) | (v))
 
 #endif

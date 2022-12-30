@@ -31,7 +31,7 @@ function build_ios()
     # cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DYASIO_SSL_BACKEND=1 -DYASIO_HAVE_CARES=ON
     # cmake official cross-compiling doesn't works on latest macOS 10.15 + xcode11
     # https://cmake.org/cmake/help/v3.17/manual/cmake-toolchains.7.html?highlight=iphoneos#cross-compiling-for-ios-tvos-or-watchos
-    cmake .. -GXcode -Bbuild_ios "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.mini.cmake" "-DCMAKE_OSX_ARCHITECTURES=armv7;arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_HAVE_CARES=ON
+    cmake .. -GXcode -Bbuild_ios "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.mini.cmake" "-DCMAKE_OSX_ARCHITECTURES=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_HAVE_CARES=ON
     cmake --build build_ios --config Release
     
     exit 0

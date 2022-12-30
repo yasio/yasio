@@ -60,11 +60,32 @@ if (NOT DEFINED YASIO_HAVE_HALF_FLOAT)
     set(YASIO_HAVE_HALF_FLOAT ON)
 endif()
 
-if (NOT CXX_STD)
-    set(CXX_STD 11)
+# --- The C++ standard
+if (NOT MSVC)
+    if (NOT CXX_STD)
+        set(CXX_STD 11)
+    endif()
+    set(CMAKE_CXX_STANDARD ${CXX_STD})
+else()
+    if (CXX_STD)
+        set(CMAKE_CXX_STANDARD ${CXX_STD})
+    else()
+        set(CXX_STD latest)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
+    endif()
 endif()
 
-MARK_AS_ADVANCED(YASIO_PROJECT_DIR)
+message(STATUS "Building yasio with C++${CXX_STD} support")
+
+# The compiler flags
+if(BUILD_SHARED_LIBS AND LINUX)
+   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -fPIC")
+endif()
+
+if ( IOS )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
+endif ()
 
 set (YASIO_USE_PREBUILT_LUA FALSE)
 
@@ -81,10 +102,6 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${THIRDPART_INC}
 )
-
-if(BUILD_SHARED_LIBS AND LINUX)
-   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -fPIC")
-endif()
 
 ### ssl support
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
@@ -217,7 +234,7 @@ endif ( )
 
 yasio_config_target_outdir(${yasio_target_name})
     
-if ( WIN32 AND NOT CYGWIN )
+if ( WIN32 )
     target_link_libraries(${yasio_target_name}
         ws2_32
         ${THIRDPART_LIB} 
@@ -291,44 +308,6 @@ macro(yasio_config_app_depends target_name)
         endif()
     endif()
 endmacro()
-
-# --- The compiler flags
-message(STATUS "Building yasio with C++${CXX_STD} support")
-if ( IOS )
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
-endif ()
-if (NOT WIN32 OR CYGWIN)
-    if(CXX_STD EQUAL 20)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
-    elseif(CXX_STD EQUAL 17)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-        if ( IOS )
-            # Aligned deallocation function of type 'void (void *, std::align_val_t) noexcept' is only available on iOS 11 or newer
-            # most of time, low level malloc will alloc a aligned address for new operator,
-            # so it's ok to add -faligned-allocation, certainly, still need find a ios9.0 device
-            # to test does it works well?
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-allocation")
-        endif()
-    elseif(CXX_STD EQUAL 14)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
-    else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    endif()
-else()
-    if(CXX_STD EQUAL 20)
-        # target_compile_features(${yasio_target_name} PUBLIC cxx_std_20) works
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++20")
-    elseif(CXX_STD EQUAL 17)
-        # target_compile_features(${yasio_target_name} PUBLIC cxx_std_17) works
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
-    elseif(CXX_STD EQUAL 14)
-        # target_compile_features(${yasio_target_name} PUBLIC cxx_std_14) not works
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++14")
-    else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
-    endif()
-endif()
 
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR)

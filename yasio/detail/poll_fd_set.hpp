@@ -70,6 +70,8 @@ public:
     pollfd_mod(this->fd_set_, fd, 0, underlying_events);
   }
 
+  int max_descriptor() const { return -1; }
+
 protected:
   static void pollfd_mod(std::vector<pollfd>& fdset, socket_native_type fd, int add_events, int remove_events)
   {

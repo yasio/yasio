@@ -26,19 +26,18 @@ public:
     FD_ZERO(&fd_set_[read_op]);
     FD_ZERO(&fd_set_[write_op]);
     FD_ZERO(&fd_set_[except_op]);
-    max_nfds_ = 0;
+    max_descriptor_ = 0;
   }
 
   select_fd_set& operator=(select_fd_set& rhs)
   {
     ::memcpy(this->fd_set_, rhs.fd_set_, sizeof(rhs.fd_set_));
-    max_nfds_ = rhs.max_nfds_;
+    max_descriptor_ = rhs.max_descriptor_;
     return *this;
   }
 
   int poll_io(timeval& waitd_tv)
-  {
-    return ::select(this->max_nfds_, &(fd_set_[read_op]), &(fd_set_[write_op]), nullptr, &waitd_tv);
+  { return ::select(this->max_descriptor_, &(fd_set_[read_op]), &(fd_set_[write_op]), nullptr, &waitd_tv);
   }
 
   int is_set(socket_native_type fd, int events) const
@@ -64,8 +63,8 @@ public:
     if (yasio__testbits(events, socket_event::error))
       FD_SET(fd, &(fd_set_[except_op]));
 
-    if (max_nfds_ < static_cast<int>(fd) + 1)
-      max_nfds_ = static_cast<int>(fd) + 1;
+    if (max_descriptor_ < static_cast<int>(fd) + 1)
+      max_descriptor_ = static_cast<int>(fd) + 1;
   }
 
   void unset(socket_native_type fd, int events)
@@ -80,6 +79,8 @@ public:
       FD_CLR(fd, &(fd_set_[except_op]));
   }
 
+  int max_descriptor() const { return max_descriptor_; }
+
 protected:
   enum
   {
@@ -89,7 +90,7 @@ protected:
     max_ops,
   };
   fd_set fd_set_[max_ops];
-  int max_nfds_ = 0;
+  int max_descriptor_ = 0;
 };
 } // namespace inet
 } // namespace yasio

@@ -914,14 +914,14 @@ void io_service::run()
       if (retval < 0)
       {
         int ec = xxsocket::get_last_errno();
-        YASIO_KLOGI("[core] do_select failed, ec=%d, detail:%s\n", ec, io_service::strerror(ec));
+        YASIO_KLOGI("[core] poll_io failed, max_fd=%d ec=%d, detail:%s\n", fd_set.max_descriptor(), ec, io_service::strerror(ec));
         if (ec != EBADF)
           continue; // Try again.
         break;
       }
 
       if (retval == 0)
-        YASIO_KLOGV("[core] %s", "do_select is timeout, process_timers()");
+        YASIO_KLOGV("%s", "[core] poll_io timeout");
       else if (fd_set.is_set(this->interrupter_.read_descriptor(), socket_event::read))
       { // Reset the interrupter.
         if (!interrupter_.reset())

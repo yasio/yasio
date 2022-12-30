@@ -8,7 +8,8 @@
 [![MinGW Build Status](https://github.com/yasio/yasio/workflows/mingw/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Amingw)
 [![Linux Build Status](https://github.com/yasio/yasio/workflows/linux/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Alinux)
 [![macOS Build Status](https://github.com/yasio/yasio/workflows/osx/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aosx)
-[![FreeBSD Build Status](https://github.com/yasio/yasio/workflows/freebsd/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Afreebsd)  
+[![FreeBSD Build Status](https://github.com/yasio/yasio/workflows/freebsd/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Afreebsd)
+[![codeql](https://github.com/yasio/yasio/workflows/codeql/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Acodeql)  
 
 [![Latest Release](https://img.shields.io/github/v/release/yasio/yasio?include_prereleases&label=release)](../../releases/latest)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)

@@ -910,7 +910,9 @@ void io_service::run()
         ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
       }
 #endif
+      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
       int retval = fd_set.poll_io(waitd_tv);
+      YASIO_KLOGV("[core] poll_io waked up, retval=%d", retval);
       if (retval < 0)
       {
         int ec = xxsocket::get_last_errno();

@@ -6,12 +6,12 @@ using namespace yasio::inet;
 
 int main()
 {
-
+  const int reserve_socks_count = 1024;
   // reserve 1024 socket.fds for test io service when fd greater than 1024
   std::vector<xxsocket> socks;
-  socks.resize(1024);
-  for (int i = 0; i < 1024; ++i)
-    socks[i].open();
+  socks.resize(reserve_socks_count);
+  for (auto& sock : socks)
+    sock.open();
 
   deadline_timer timer     = {};
   yasio::io_service service = {};

@@ -790,6 +790,9 @@ void io_service::handle_stop()
     this->worker_.join();
   }
 
+  if (this->state_ != state::AT_EXITING)
+    return;
+
   if (this->options_.deferred_event_ && !this->events_.empty())
     this->dispatch((std::numeric_limits<int>::max)());
   clear_transports();
@@ -901,7 +904,8 @@ void io_service::run()
       fd_set           = this->fd_set_;
       timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if defined(YASIO_HAVE_CARES)
-      if (ares_outstanding_work_) {
+      if (ares_outstanding_work_)
+      {
         ares_socks_count = register_ares_fds(ares_socks, fd_set);
         ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
       }
@@ -1429,7 +1433,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
 }
 int io_service::register_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set)
 {
-  int count = 0;
+  int count   = 0;
   int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
   for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
   {

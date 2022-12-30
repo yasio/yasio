@@ -21,9 +21,9 @@ int main()
   timer.async_wait_once(service, [](io_service& svc) { 
 	  svc.stop();
   });
-  printf("%s", "===>The service will stop after 3 seconds ...\n");
+  printf("%s", "===>The service will stop after 3 seconds ...\n\n");
   service.start([](event_ptr&& ev) {});
-  printf("%s", "===>The service stopped.\n");
+  printf("%s", "\n===>The service stopped.\n");
 
   // cleanup reserved socket.fds
   for (auto& sock : socks)

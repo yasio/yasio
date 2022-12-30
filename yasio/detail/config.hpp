@@ -238,14 +238,4 @@ SOFTWARE.
 #define YASIO_SSL_PIN "yasio_ssl_client"
 #define YASIO_SSL_PIN_LEN (sizeof(YASIO_SSL_PIN) - 1)
 
-
-/*
-** yasio bitop macros
-*/
-
-#define yasio__setbits(x, m) ((x) |= (m))
-#define yasio__clearbits(x, m) ((x) &= ~(m))
-#define yasio__testbits(x, m) ((x) & (m))
-#define yasio__setlobyte(x, v) ((x) = ((x) & ~((decltype(x))0xff)) | (v))
-
 #endif

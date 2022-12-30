@@ -228,6 +228,11 @@ inline bool IN6_IS_ADDR_GLOBAL(const in6_addr* a)
 
 #define YASIO_ADDR_ANY(af) (af == AF_INET ? "0.0.0.0" : "::")
 
+#define yasio__setbits(x, m) ((x) |= (m))
+#define yasio__clearbits(x, m) ((x) &= ~(m))
+#define yasio__testbits(x, m) ((x) & (m))
+#define yasio__setlobyte(x, v) ((x) = ((x) & ~((decltype(x))0xff)) | (v))
+
 namespace yasio
 {
 YASIO__NS_INLINE

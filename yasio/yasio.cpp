@@ -902,7 +902,7 @@ void io_service::run()
       timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if defined(YASIO_HAVE_CARES)
       if (ares_outstanding_work_) {
-        ares_socks_count = set_ares_fds(ares_socks, fd_set);
+        ares_socks_count = register_ares_fds(ares_socks, fd_set);
         ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
       }
 #endif
@@ -1427,7 +1427,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-int io_service::set_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set)
+int io_service::register_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set)
 {
   int count = 0;
   int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);

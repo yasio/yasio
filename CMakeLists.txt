@@ -401,6 +401,7 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_HAVE_HALF_FLOAT)
     yasio_config_pred(${target_name} YASIO_ENABLE_PASSIVE_EVENT)
     yasio_config_pred(${target_name} YASIO_NO_JNI_ONLOAD)
+    yasio_config_pred(${target_name} YASIO_DISABLE_POLL)
 endmacro()
 
 yasio_config_lib_options(${yasio_target_name})

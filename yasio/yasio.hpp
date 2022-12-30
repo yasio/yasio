@@ -1100,8 +1100,8 @@ private:
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, xxsocket_ptr&&);
   YASIO__DECL void deallocate_transport(transport_handle_t);
 
-  YASIO__DECL void register_descriptor(const socket_native_type fd, int flags);
-  YASIO__DECL void deregister_descriptor(const socket_native_type fd, int flags);
+  YASIO__DECL void register_descriptor(const socket_native_type fd, int events);
+  YASIO__DECL void deregister_descriptor(const socket_native_type fd, int events);
 
   // The major non-blocking event-loop
   YASIO__DECL void run(void);

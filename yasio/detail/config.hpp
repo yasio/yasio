@@ -97,7 +97,7 @@ SOFTWARE.
 // #define YASIO_ENABLE_UDS 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_NT_COMPAT_GAI for earlier versions of Windows XP
+** Uncomment or add compiler flag -DYASIO_NT_COMPAT_GAI for compatible with Windows XP
 ** see: https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo
 */
 // #define YASIO_NT_COMPAT_GAI 1
@@ -130,6 +130,7 @@ SOFTWARE.
 
 /*
 ** Uncomment or add compiler flag -DYASIO_DISABLE_POLL to use socket.select for all platforms
+** If you need support Windows XP, you need disable poll
 */
 // #define YASIO_DISABLE_POLL 1
 

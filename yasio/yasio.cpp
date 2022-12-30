@@ -1083,8 +1083,8 @@ void io_service::handle_close(transport_handle_t thandle)
     cleanup_channel(ctx, false);
   }
 }
-void io_service::register_descriptor(const socket_native_type fd, int flags) { this->fd_set_.set(fd, flags); }
-void io_service::deregister_descriptor(const socket_native_type fd, int flags) { this->fd_set_.unset(fd, flags); }
+void io_service::register_descriptor(const socket_native_type fd, int events) { this->fd_set_.set(fd, events); }
+void io_service::deregister_descriptor(const socket_native_type fd, int events) { this->fd_set_.unset(fd, events); }
 
 int io_service::write(transport_handle_t transport, dynamic_buffer_t buffer, completion_cb_t handler)
 {

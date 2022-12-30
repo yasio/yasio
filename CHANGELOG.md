@@ -1,3 +1,10 @@
+yasio-3.39.6
+  
+  1. Reimplement reactor backends: select, poll
+  2. Now the default reactor backend is poll
+  3. Add compiler flag `YASIO_DISABLE_POLL` for switching to socket.select as same with previous releases
+  
+  
 yasio-3.39.5
   
   1. Fix no callback when resolve domain failed by `getaddrinfo`

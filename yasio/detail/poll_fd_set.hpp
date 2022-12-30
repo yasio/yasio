@@ -43,50 +43,49 @@ public:
 
   void set(socket_native_type fd, int events)
   {
-    int underlying_flags = 0;
+    int underlying_events = 0;
     if (yasio__testbits(events, socket_event::read))
-      underlying_flags |= POLLIN;
+      underlying_events |= POLLIN;
 
     if (yasio__testbits(events, socket_event::write))
-      underlying_flags |= POLLOUT;
+      underlying_events |= POLLOUT;
 
     if (yasio__testbits(events, socket_event::error))
-      underlying_flags |= POLLERR;
-    pollfd_mod(this->fd_set_, fd, underlying_flags, 0);
+      underlying_events |= POLLERR;
+    pollfd_mod(this->fd_set_, fd, underlying_events, 0);
   }
 
   void unset(socket_native_type fd, int events)
   {
-    int underlying_flags = 0;
+    int underlying_events = 0;
     if (yasio__testbits(events, socket_event::read))
-      underlying_flags |= POLLIN;
+      underlying_events |= POLLIN;
 
     if (yasio__testbits(events, socket_event::write))
-      underlying_flags |= POLLOUT;
+      underlying_events |= POLLOUT;
 
     if (yasio__testbits(events, socket_event::error))
-      underlying_flags |= POLLERR;
+      underlying_events |= POLLERR;
 
-    pollfd_mod(this->fd_set_, fd, 0, underlying_flags);
+    pollfd_mod(this->fd_set_, fd, 0, underlying_events);
   }
 
 protected:
-  static void pollfd_mod(std::vector<pollfd>& fdset, socket_native_type fd, int add_flags, int remove_flags)
+  static void pollfd_mod(std::vector<pollfd>& fdset, socket_native_type fd, int add_events, int remove_events)
   {
     auto it = std::find_if(fdset.begin(), fdset.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
     if (it != fdset.end())
     {
-      // POLLIN
-      it->events |= add_flags;
-      it->events &= ~remove_flags;
+      it->events |= add_events;
+      it->events &= ~remove_events;
       if (it->events == 0)
         fdset.erase(it);
     }
     else
     {
-      auto combined_flags = add_flags & ~remove_flags;
-      if (combined_flags)
-        fdset.push_back(pollfd{fd, static_cast<short>(combined_flags), 0});
+      auto events = add_events & ~remove_events;
+      if (events)
+        fdset.push_back(pollfd{fd, static_cast<short>(events), 0});
     }
   }
 

@@ -901,7 +901,10 @@ void io_service::run()
       fd_set           = this->fd_set_;
       timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if defined(YASIO_HAVE_CARES)
-      ares_socks_count = ares_set_fds(ares_socks, fd_set, waitd_tv);
+      if (ares_outstanding_work_) {
+        ares_socks_count = set_ares_fds(ares_socks, fd_set);
+        ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
+      }
 #endif
       int retval = fd_set.poll_io(waitd_tv);
       if (retval < 0)
@@ -1424,24 +1427,20 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-int io_service::ares_set_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set, timeval& waitd_tv)
+int io_service::set_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set)
 {
   int count = 0;
-  if (this->ares_outstanding_work_ > 0)
+  int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
+  for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
   {
-    int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
-    for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
+    if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
     {
-      if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
-      {
-        auto fd = ares_socks[i];
-        ++count;
-        fd_set.set(fd, socket_event::readwrite);
-      }
-      else
-        break;
+      auto fd = ares_socks[i];
+      ++count;
+      fd_set.set(fd, socket_event::readwrite);
     }
-    ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
+    else
+      break;
   }
   return count;
 }

@@ -1,7 +1,7 @@
 #include "yasio/yasio.hpp"
 #include <iostream>
 
-#if defined(__linux__)
+#if !defined(_WIN32)
 #  include <sys/resource.h>
 #endif
 
@@ -10,7 +10,7 @@ using namespace yasio::inet;
 
 int main()
 {
-#if defined(__linux__)
+#if !defined(_WIN32)
   static const int required_fd_limit = 4096;
   struct rlimit rlim {};
   int ret = getrlimit(RLIMIT_NOFILE, &rlim);

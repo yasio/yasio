@@ -1577,7 +1577,7 @@ void io_service::do_accept(io_channel* ctx)
     ctx->state_ = io_base::state::CLOSED;
   }
 #if defined(YASIO_ENABLE_PASSIVE_EVENT)
-  handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx, 1));
+  this->fire_event(ctx->index_, YEK_ON_OPEN, error, ctx, 1);
 #endif
 }
 void io_service::do_accept_completion(io_channel* ctx, fd_set_adapter& fd_set)
@@ -1769,7 +1769,6 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
 {
   cleanup_channel(ctx);
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
-  // handle_event(cxx14::make_unique<io_event>(ctx->index_, YEK_ON_OPEN, error, ctx));
   fire_event(ctx->index_, YEK_ON_OPEN, error, ctx);
 }
 bool io_service::do_read(transport_handle_t transport, fd_set_adapter& fd_set)

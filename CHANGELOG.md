@@ -1,3 +1,12 @@
+yasio-3.39.7
+  
+  1. Add forward event support fire packet event, new option: `YOPT_S_FORWARD_EVENT`,  after enable forward event: 
+
+      - Use `event->packet_view()` receive packet event
+      - No upack
+      - No deferred event
+  
+  
 yasio-3.39.6
   
   1. Reimplement reactor backends: select, poll

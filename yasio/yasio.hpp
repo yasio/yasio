@@ -843,13 +843,17 @@ inline io_packet::pointer packet_data(packet_t& pkt) { return pkt->data(); }
 inline io_packet::size_type packet_len(packet_t& pkt) { return pkt->size(); }
 #endif
 
-struct io_packet_view {
+class io_packet_view {
+public:
+  io_packet_view() = default;
+  io_packet_view(char* d, int n) : data_(d), size_(n) {}
   char* data() { return this->data_; }
   const char* data() const { return this->data_; }
   size_t size() const { return this->size_; }
 
-  char* data_ = nullptr;
-  int size_   = 0;
+private:
+  char* data_  = nullptr;
+  size_t size_ = 0;
 };
 
 /*

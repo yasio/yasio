@@ -26,3 +26,4 @@ ignored/*.*
 /**/.DS_Store
 /site
 /_site
+*.xsxproj

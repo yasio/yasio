@@ -6,7 +6,7 @@
 // detail/fd_set_adapter.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2012-2022 HALX99 (halx99 at live dot com)
+// Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
 
 #pragma once
 

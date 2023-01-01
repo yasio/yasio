@@ -6,7 +6,7 @@
 // detail/poll_fd_set.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2012-2022 HALX99 (halx99 at live dot com)
+// Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
 #pragma once
 #include <vector>
 #include "yasio/detail/socket.hpp"

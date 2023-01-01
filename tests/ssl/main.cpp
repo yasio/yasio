@@ -23,11 +23,13 @@ void yasioTest()
 
   int max_request_count = 3;
 
+  service.set_option(YOPT_S_FORWARD_EVENT, 1);
+
   service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
       case YEK_PACKET: {
-        auto packet = std::move(event->packet());
+        auto packet = event->packet_view();
         total_bytes_transferred += static_cast<int>(packet.size());
         fwrite(packet.data(), packet.size(), 1, stdout);
         fflush(stdout);

@@ -525,7 +525,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
 
   return -1;
 }
-void io_transport_ssl::shutdown_ssl()
+void io_transport_ssl::do_ssl_shutdown()
 {
   if (ssl_)
     yasio__ssl_shutdown(ssl_);
@@ -1183,8 +1183,10 @@ void io_service::handle_close(transport_handle_t thandle)
   YASIO_KLOGD("[index: %d] the connection #%u is lost, ec=%d, where=%d, detail:%s", ctx->index_, thandle->id_, ec, (int)thandle->error_stage_,
               io_service::strerror(ec));
   this->fire_event(thandle->cindex(), YEK_ON_CLOSE, ec, thandle);
+#if defined(YASIO_SSL_BACKEND)
   if (yasio__testbits(ctx->properties_, YCM_SSL))
-    static_cast<io_transport_ssl*>(thandle)->shutdown_ssl();
+    static_cast<io_transport_ssl*>(thandle)->do_ssl_shutdown();
+#endif
   if (yasio__testbits(ctx->properties_, YCM_TCP) && ec == yasio::errc::shutdown_by_localhost)
     thandle->socket_->shutdown();
   cleanup_io(thandle);
@@ -1307,20 +1309,20 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
 #if defined(YASIO_SSL_BACKEND)
 SSL_CTX* io_service::get_ssl_context(bool client) const
 {
-  yasio__ssl_options sslopt{options_.cafile_.c_str(), options_.crtfile_.c_str(), options_.keyfile_.c_str(), true};
+
   if (client)
   {
     if (ssl_ctx_pair_.client_)
       return ssl_ctx_pair_.client_;
-    sslopt.client = true;
-    return (ssl_ctx_pair_.client_ = yasio___ssl_ctx_new(sslopt, nullptr));
+    yasio__ssl_options opts{options_.cafile_.c_str(), nullptr, true};
+    return (ssl_ctx_pair_.client_ = yasio___ssl_ctx_new(opts));
   }
   else
   {
     if (ssl_ctx_pair_.server_)
       return ssl_ctx_pair_.server_;
-    sslopt.client = false;
-    return (ssl_ctx_pair_.server_ = yasio___ssl_ctx_new(sslopt, ssl_ctx_pair_.client_));
+    yasio__ssl_options opts{options_.crtfile_.c_str(), options_.keyfile_.c_str(), false};
+    return (ssl_ctx_pair_.server_ = yasio___ssl_ctx_new(opts));
   }
 }
 void io_service::release_ssl_context()
@@ -1328,8 +1330,7 @@ void io_service::release_ssl_context()
   if (ssl_ctx_pair_.client_)
   {
     yasio__ssl_ctx_free(ssl_ctx_pair_.client_);
-    if (ssl_ctx_pair_.server_ != ssl_ctx_pair_.client_) // openssl can share one context for tls client/server
-      yasio__ssl_ctx_free(ssl_ctx_pair_.server_);
+    yasio__ssl_ctx_free(ssl_ctx_pair_.server_);
   }
 }
 #endif
@@ -2190,10 +2191,12 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_FORWARD_EVENT:
       options_.forward_event_ = !!va_arg(ap, int);
       break;
+#if defined(YASIO_SSL_BACKEND)
     case YOPT_S_SSL_CERT:
       options_.crtfile_ = va_arg(ap, const char*);
       options_.keyfile_ = va_arg(ap, const char*);
       break;
+#endif
     case YOPT_C_UNPACK_PARAMS: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)

@@ -737,7 +737,7 @@ public:
   YASIO__DECL io_transport_ssl(io_channel* ctx, xxsocket_ptr&& s);
   YASIO__DECL void set_primitives() override;
 
-  YASIO__DECL void shutdown_ssl();
+  YASIO__DECL void do_ssl_shutdown();
 
 protected:
   YASIO__DECL int do_ssl_handshake(int& error);

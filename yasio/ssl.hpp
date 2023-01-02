@@ -46,7 +46,6 @@ SOFTWARE.
 struct ssl_ctx_st {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_entropy_context entropy;
-  mbedtls_x509_crt cacert;
   mbedtls_x509_crt cert;
   mbedtls_pk_context pkey;
   mbedtls_ssl_config conf;
@@ -57,14 +56,12 @@ struct ssl_st : public mbedtls_ssl_context {
 #endif
 
 struct yasio__ssl_options {
-  /*yasio__ssl_options(const char* ca, const char* cert, const char* keyfile, bool client = true) {}*/
-  const char* cafile_;
   const char* crtfile_;
   const char* keyfile_;
   bool client;
 };
 
-YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& options, ssl_ctx_st* share);
+YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& opts);
 YASIO__DECL void yasio__ssl_ctx_free(ssl_ctx_st*& ctx);
 
 YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client);

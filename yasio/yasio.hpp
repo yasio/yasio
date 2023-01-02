@@ -184,8 +184,6 @@ enum
   // params:
   //   crtfile: const char*
   //   keyfile: const char*
-  // reamrks:
-  //   when forward event enabled, the option YOPT_S_DEFERRED_EVENT was ignored
   YOPT_S_SSL_CERT,
 
   // Sets channel length field based frame decode function, native C++ ONLY

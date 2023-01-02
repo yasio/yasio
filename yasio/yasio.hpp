@@ -483,37 +483,6 @@ public:
   unsigned int id() const { return id_; }
 };
 
-#if defined(YASIO_SSL_BACKEND)
-class ssl_auto_handle {
-public:
-  ssl_auto_handle() : ssl_(nullptr) {}
-  ~ssl_auto_handle() { destroy(); }
-  ssl_auto_handle(ssl_auto_handle&& rhs) : ssl_(rhs.release()) {}
-  ssl_auto_handle& operator=(ssl_auto_handle&& rhs)
-  {
-    this->reset(rhs.release());
-    return *this;
-  }
-  SSL* release()
-  {
-    auto tmp = ssl_;
-    ssl_     = nullptr;
-    return tmp;
-  }
-  void reset(SSL* ssl)
-  {
-    if (ssl_)
-      destroy();
-    ssl_ = ssl;
-  }
-  operator SSL*() { return ssl_; }
-  YASIO__DECL void destroy();
-
-protected:
-  SSL* ssl_ = nullptr;
-};
-#endif
-
 class YASIO_API io_channel : public io_base {
   friend class io_service;
   friend class io_transport;
@@ -524,6 +493,7 @@ class YASIO_API io_channel : public io_base {
 
 public:
   io_service& get_service() const { return service_; }
+  YASIO__DECL SSL_CTX* get_ssl_context() const;
   int index() const { return index_; }
   u_short remote_port() const { return remote_port_; }
   YASIO__DECL std::string format_destination() const;
@@ -635,10 +605,6 @@ private:
 
 #if defined(YASIO_HAVE_KCP)
   int kcp_conv_ = 0;
-#endif
-
-#if defined(YASIO_SSL_BACKEND)
-  ssl_auto_handle ssl_;
 #endif
 };
 
@@ -760,10 +726,12 @@ public:
   YASIO__DECL io_transport_ssl(io_channel* ctx, xxsocket_ptr&& s);
   YASIO__DECL void set_primitives() override;
 
-#  if defined(YASIO_SSL_BACKEND)
+  YASIO__DECL void do_ssl_handshake();
+
+  YASIO__DECL void shutdown_ssl();
 protected:
-  ssl_auto_handle ssl_;
-#  endif
+  YASIO__DECL void on_ssl_connected();
+  SSL* ssl_ = nullptr;
 };
 #else
 class io_transport_ssl {};
@@ -959,6 +927,9 @@ class YASIO_API io_service // lgtm [cpp/class-many-fields]
   friend class io_transport_tcp;
   friend class io_transport_udp;
   friend class io_transport_kcp;
+#if defined(YASIO_SSL_BACKEND)
+  friend class io_transport_ssl;
+#endif
   friend class io_channel;
 
 public:
@@ -1107,7 +1078,6 @@ private:
 #if defined(YASIO_SSL_BACKEND)
   YASIO__DECL void init_ssl_context();
   YASIO__DECL void cleanup_ssl_context();
-  YASIO__DECL void do_ssl_handshake(io_channel*);
 #endif
 
 #if defined(YASIO_HAVE_CARES)
@@ -1124,7 +1094,7 @@ private:
   void handle_connect_succeed(io_channel* ctx, xxsocket_ptr s) { handle_connect_succeed(allocate_transport(ctx, std::move(s))); }
   YASIO__DECL void handle_connect_succeed(transport_handle_t);
   YASIO__DECL void handle_connect_failed(io_channel*, int ec);
-  YASIO__DECL void notify_connect_succeed(transport_handle_t);
+  YASIO__DECL void start_transport(transport_handle_t);
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, xxsocket_ptr&&);
   YASIO__DECL void deallocate_transport(transport_handle_t);
@@ -1165,9 +1135,6 @@ private:
   YASIO__DECL void destroy_channels(); // destroy all channels
   YASIO__DECL void clear_transports(); // clear all transports
   YASIO__DECL bool close_internal(io_channel*);
-
-  // shutdown a tcp-connection if possible
-  YASIO__DECL void shutdown_internal(transport_handle_t);
 
   // supporting server
   YASIO__DECL void do_accept(io_channel*);

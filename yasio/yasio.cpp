@@ -495,8 +495,6 @@ int io_transport_ssl::do_ssl_handshake(int& error)
       ec = xxsocket::get_last_errno();
       YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ctx_->index_, ret, status, ec, xxsocket::strerror(error));
     }
-    // if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
-    //   get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
     error = yasio::errc::ssl_handshake_failed; // emit ssl handshake failed, continue handle close flow
   }
   else
@@ -522,8 +520,6 @@ int io_transport_ssl::do_ssl_handshake(int& error)
         ::mbedtls_strerror(ret, errstring, sizeof(errstring));
         YASIO_KLOGE("[index: %d] mbedtls_ssl_handshake_step fail with ret=%d, detail:%s", ctx_->index_, ret, errstring);
         error = yasio::errc::ssl_handshake_failed;
-        // if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
-        //   get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
     }
   }
 #  endif

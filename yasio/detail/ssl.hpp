@@ -197,7 +197,7 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
     {
       // --- load server private key
       if (yasio__valid_str(opts.keyfile_) &&
-          (ret = ::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr, nullptr, nullptr /*mbedtls_ctr_drbg_random, &ctx->ctr_drbg*/)) != 0)
+          (ret = ::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr, mbedtls_ctr_drbg_random, &ctx->ctr_drbg)) != 0)
       {
         YASIO_LOG("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
         break;

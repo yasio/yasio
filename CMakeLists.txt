@@ -70,8 +70,14 @@ else()
     if (CXX_STD)
         set(CMAKE_CXX_STANDARD ${CXX_STD})
     else()
-        set(CXX_STD latest)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
+        include(CheckCXXCompilerFlag)
+        check_cxx_compiler_flag("/std:c++latest" YASIO_HAVE_CXX_LATEST)
+        if (YASIO_HAVE_CXX_LATEST)
+            set(CXX_STD latest)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
+        else()
+            set(CXX_STD 11)
+        endif()
     endif()
 endif()
 
@@ -310,9 +316,8 @@ macro(yasio_config_app_depends target_name)
 endmacro()
 
 # checking build system have openssl
-if(OPENSSL_INCLUDE_DIR)
-   set(YASIO_SSL_BACKEND 1)
-   target_include_directories(${yasio_target_name} PRIVATE "${OPENSSL_INCLUDE_DIR}")
+if(OPENSSL_INCLUDE_DIR AND (YASIO_SSL_BACKEND EQUAL 1))
+    target_include_directories(${yasio_target_name} PRIVATE "${OPENSSL_INCLUDE_DIR}")
 endif()
 
 # checking build system have c-ares

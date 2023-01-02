@@ -57,10 +57,11 @@ struct ssl_st : public mbedtls_ssl_context {
 #endif
 
 struct yasio__ssl_options {
-  const char* cafile_  = nullptr;
-  const char* crtfile_ = nullptr;
-  const char* keyfile_ = nullptr;
-  bool client          = true;
+  /*yasio__ssl_options(const char* ca, const char* cert, const char* keyfile, bool client = true) {}*/
+  const char* cafile_;
+  const char* crtfile_;
+  const char* keyfile_;
+  bool client;
 };
 
 YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& options, ssl_ctx_st* share);

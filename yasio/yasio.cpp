@@ -1305,7 +1305,7 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
 #if defined(YASIO_SSL_BACKEND)
 SSL_CTX* io_service::get_ssl_context(bool client) const
 {
-  yasio__ssl_options sslopt{options_.cafile_.c_str(), options_.crtfile_.c_str(), options_.keyfile_.c_str()};
+  yasio__ssl_options sslopt{options_.cafile_.c_str(), options_.crtfile_.c_str(), options_.keyfile_.c_str(), true};
   if (client)
   {
     if (ssl_ctx_pair_.client_)

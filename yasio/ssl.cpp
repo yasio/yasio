@@ -34,6 +34,7 @@ SOFTWARE.
 
 #include "yasio/detail/socket.hpp"
 #include "yasio/detail/logging.hpp"
+#include "yasio/cxx17/string_view.hpp"
 
 #define yasio__valid_str(str) (str && *str)
 

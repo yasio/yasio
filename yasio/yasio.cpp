@@ -497,8 +497,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
     }
     // if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
     //   get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
-    error = yasio::errc::ssl_handshake_failed;
-    this->get_service().interrupt(); // next frame
+    error = yasio::errc::ssl_handshake_failed; // emit ssl handshake failed, continue handle close flow
   }
   else
     on_ssl_connected();
@@ -1188,21 +1187,30 @@ bool io_service::open(size_t index, int kind)
 io_channel* io_service::channel_at(size_t index) const { return (index < channels_.size()) ? channels_[index] : nullptr; }
 void io_service::handle_close(transport_handle_t thandle)
 {
-  auto ctx = thandle->ctx_;
-  auto ec  = thandle->error_;
-  // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
-  YASIO_KLOGD("[index: %d] the connection #%u is lost, ec=%d, where=%d, detail:%s", ctx->index_, thandle->id_, ec, (int)thandle->error_stage_,
-              io_service::strerror(ec));
-  this->fire_event(thandle->cindex(), YEK_ON_CLOSE, ec, thandle);
+  auto ctx          = thandle->ctx_;
+  auto error        = thandle->error_;
+  const bool client = yasio__testbits(ctx->properties_, YCM_CLIENT);
+
+  if (thandle->state_ == io_base::state::OPENED)
+  { // @Because we can't retrive peer endpoint when connect reset by peer, so use id to trace.
+    YASIO_KLOGD("[index: %d] the connection #%u is lost, ec=%d, where=%d, detail:%s", ctx->index_, thandle->id_, error, (int)thandle->error_stage_,
+                io_service::strerror(error));
+    this->fire_event(ctx->index(), YEK_ON_CLOSE, error, thandle);
+  }
+  else if (client && error == yasio::errc::ssl_handshake_failed)
+  {
+    YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
+    this->fire_event(ctx->index(), YEK_ON_OPEN, error, ctx);
+  }
 #if defined(YASIO_SSL_BACKEND)
   if (yasio__testbits(ctx->properties_, YCM_SSL))
     static_cast<io_transport_ssl*>(thandle)->do_ssl_shutdown();
 #endif
-  if (yasio__testbits(ctx->properties_, YCM_TCP) && ec == yasio::errc::shutdown_by_localhost)
+  if (yasio__testbits(ctx->properties_, YCM_TCP) && error == yasio::errc::shutdown_by_localhost)
     thandle->socket_->shutdown();
   cleanup_io(thandle);
   deallocate_transport(thandle);
-  if (yasio__testbits(ctx->properties_, YCM_CLIENT))
+  if (client)
   {
     yasio__clearbits(ctx->opmask_, YOPM_CLOSE);
     cleanup_channel(ctx, false);
@@ -1320,8 +1328,8 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
 #if defined(YASIO_SSL_BACKEND)
 SSL_CTX* io_service::init_ssl_context(ssl_role role)
 {
-  auto ctx = role == YSSL_CLIENT ? yssl_ctx_new(yssl_options{options_.cafile_.c_str(), nullptr, true})
-                                      : yssl_ctx_new(yssl_options{options_.crtfile_.c_str(), options_.keyfile_.c_str(), false});
+  auto ctx         = role == YSSL_CLIENT ? yssl_ctx_new(yssl_options{options_.cafile_.c_str(), nullptr, true})
+                                         : yssl_ctx_new(yssl_options{options_.crtfile_.c_str(), options_.keyfile_.c_str(), false});
   ssl_roles_[role] = ctx;
   return ctx;
 }

@@ -747,7 +747,7 @@ public:
   YASIO__DECL void do_ssl_shutdown();
 
 protected:
-  YASIO__DECL int do_ssl_handshake(int& error);
+  YASIO__DECL int do_ssl_handshake(int& error); // always invoke at do_read
   YASIO__DECL void on_ssl_connected();
   SSL* ssl_ = nullptr;
 };

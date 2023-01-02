@@ -213,7 +213,7 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
     return ctx;
   } while (false);
 
-  yasio__ssl_ctx_free(ctx);
+  yssl_ctx_free(ctx);
 
   return nullptr;
 }

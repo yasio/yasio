@@ -193,11 +193,16 @@ YASIO__DECL void yasio__ssl_ctx_free(ssl_ctx_st*& ctx)
   ctx = nullptr;
 }
 
-YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx)
+YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
   auto ssl = new ssl_st();
   ::mbedtls_ssl_init(ssl);
   ::mbedtls_ssl_setup(ssl, &ctx->conf);
+
+  // ssl_set_fd
+  ssl->bio.fd = fd;
+  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, nullptr /*  rev_timeout() */);
+  ::mbedtls_ssl_set_hostname(ssl, hostname);
   return ssl;
 }
 YASIO__DECL void yasio__ssl_shutdown(ssl_st*& ssl)
@@ -206,15 +211,6 @@ YASIO__DECL void yasio__ssl_shutdown(ssl_st*& ssl)
   ::mbedtls_ssl_free(ssl);
   delete ssl;
   ssl = nullptr;
-}
-
-YASIO__DECL void yasio__ssl_prepare_handshake(ssl_st* ssl, int fd, const char* hostname, bool client)
-{
-  // ssl_set_fd
-  ssl->bio.fd = fd;
-  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, nullptr /*  rev_timeout() */);
-
-  ::mbedtls_ssl_set_hostname(ssl, hostname);
 }
 #else
 #  error "yasio - Unsupported ssl backend provided!"

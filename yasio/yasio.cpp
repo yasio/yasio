@@ -203,7 +203,9 @@ io_channel::io_channel(io_service& service, int index) : io_base(), service_(ser
   index_      = index;
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
+#if defined(YASIO_SSL_BACKEND)
 SSL_CTX* io_channel::get_ssl_context(bool client) const { return service_.get_ssl_context(client); }
+#endif
 const print_fn2_t& io_channel::__get_cprint() const { return get_service().options_.print_; }
 std::string io_channel::format_destination() const
 {

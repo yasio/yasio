@@ -42,7 +42,7 @@ SOFTWARE.
 #include "yasio/detail/signal_blocker.hpp"
 
 #if defined(YASIO_SSL_BACKEND)
-#  include "yasio/ssl.hpp"
+#  include "yasio/detail/ssl.hpp"
 #endif
 
 #if defined(YASIO_HAVE_KCP)

@@ -137,10 +137,8 @@ list (APPEND YASIO_CORE
     yasio/cxx17/string_view.hpp
     yasio/xxsocket.hpp
     yasio/yasio.hpp
-    yasio/ssl.hpp
     yasio/xxsocket.cpp
     yasio/yasio.cpp
-    yasio/ssl.cpp
 )
 
 if (YASIO_HAVE_KCP)

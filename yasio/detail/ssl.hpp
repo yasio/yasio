@@ -26,15 +26,51 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef YASIO__SSL_CPP
-#define YASIO__SSL_CPP
-#if !defined(YASIO_HEADER_ONLY)
-#  include "yasio/ssl.hpp"
+#ifndef YASIO__SSL_HPP
+#define YASIO__SSL_HPP
+
+#include "yasio/detail/config.hpp"
+
+#if YASIO_SSL_BACKEND == 1 // OpenSSL
+#  include <openssl/bio.h>
+#  include <openssl/ssl.h>
+#  include <openssl/err.h>
+#elif YASIO_SSL_BACKEND == 2 // mbedtls
+#  define MBEDTLS_ALLOW_PRIVATE_ACCESS
+#  include "mbedtls/net_sockets.h"
+#  include "mbedtls/debug.h"
+#  include "mbedtls/ssl.h"
+#  include "mbedtls/entropy.h"
+#  include "mbedtls/ctr_drbg.h"
+#  include "mbedtls/error.h"
+struct ssl_ctx_st {
+  mbedtls_ctr_drbg_context ctr_drbg;
+  mbedtls_entropy_context entropy;
+  mbedtls_x509_crt cert;
+  mbedtls_pk_context pkey;
+  mbedtls_ssl_config conf;
+};
+struct ssl_st : public mbedtls_ssl_context {
+  mbedtls_net_context bio;
+};
 #endif
 
-#include "yasio/detail/socket.hpp"
-#include "yasio/detail/logging.hpp"
-#include "yasio/cxx17/string_view.hpp"
+#if defined(YASIO_SSL_BACKEND)
+struct yssl_options {
+  const char* crtfile_;
+  const char* keyfile_;
+  bool client;
+};
+
+YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts);
+YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx);
+
+YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client);
+YASIO__DECL void yssl_shutdown(ssl_st*&);
+#endif
+
+///////////////////////////////////////////////////////////////////
+// --- Implement common yasio ssl api with different ssl backends
 
 #define yasio__valid_str(str) (str && *str)
 

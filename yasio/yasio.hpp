@@ -180,6 +180,14 @@ enum
   //   when forward event enabled, the option YOPT_S_DEFERRED_EVENT was ignored
   YOPT_S_FORWARD_EVENT,
 
+  // Set ssl server cert and private key file
+  // params:
+  //   crtfile: const char*
+  //   keyfile: const char*
+  // reamrks:
+  //   when forward event enabled, the option YOPT_S_DEFERRED_EVENT was ignored
+  YOPT_S_SSL_CERT,
+
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
   YOPT_C_UNPACK_FN = 101,
@@ -292,6 +300,7 @@ enum
   YCK_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
   YCK_KCP_SERVER = YCM_KCP | YCM_SERVER | YCM_UDP,
   YCK_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
+  YCK_SSL_SERVER = YCM_SSL | YCM_SERVER | YCM_TCP,
 };
 
 // channel flags
@@ -493,7 +502,9 @@ class YASIO_API io_channel : public io_base {
 
 public:
   io_service& get_service() const { return service_; }
-  YASIO__DECL SSL_CTX* get_ssl_context() const;
+#if defined(YASIO_SSL_BACKEND)
+  YASIO__DECL SSL_CTX* get_ssl_context(bool client) const;
+#endif
   int index() const { return index_; }
   u_short remote_port() const { return remote_port_; }
   YASIO__DECL std::string format_destination() const;
@@ -683,7 +694,7 @@ protected:
     return 0;
   }
 
-  YASIO__DECL int call_read(void* data, int size, int& error);
+  YASIO__DECL int call_read(void* data, int size, int revent, int& error);
   YASIO__DECL int call_write(io_send_op*, int& error);
   YASIO__DECL void complete_op(io_send_op*, int error);
 
@@ -709,7 +720,7 @@ protected:
   io_channel* ctx_;
 
   std::function<int(const void*, int, const ip::endpoint*)> write_cb_;
-  std::function<int(void*, int)> read_cb_;
+  std::function<int(void*, int, int, int&)> read_cb_;
 
   privacy::concurrent_queue<send_op_ptr> send_queue_;
 };
@@ -726,10 +737,10 @@ public:
   YASIO__DECL io_transport_ssl(io_channel* ctx, xxsocket_ptr&& s);
   YASIO__DECL void set_primitives() override;
 
-  YASIO__DECL void do_ssl_handshake();
-
   YASIO__DECL void shutdown_ssl();
+
 protected:
+  YASIO__DECL int do_ssl_handshake(int& error);
   YASIO__DECL void on_ssl_connected();
   SSL* ssl_ = nullptr;
 };
@@ -1076,8 +1087,8 @@ private:
   YASIO__DECL void do_connect_completion(io_channel*, fd_set_adapter& fd_set);
 
 #if defined(YASIO_SSL_BACKEND)
-  YASIO__DECL void init_ssl_context();
-  YASIO__DECL void cleanup_ssl_context();
+  YASIO__DECL SSL_CTX* get_ssl_context(bool client) const;
+  YASIO__DECL void release_ssl_context();
 #endif
 
 #if defined(YASIO_HAVE_CARES)
@@ -1215,8 +1226,12 @@ private:
     print_fn2_t print_;
 
 #if defined(YASIO_SSL_BACKEND)
-    // The full path cacert(.pem) file for ssl verifaction
+    // SSL client, the full path cacert(.pem) file for ssl verifaction
     std::string cafile_;
+
+    // SSL server
+    std::string crtfile_;
+    std::string keyfile_;
 #endif
 
 #if defined(YASIO_HAVE_CARES)
@@ -1229,7 +1244,11 @@ private:
   // The stop flag to notify all transports needs close
   uint8_t stop_flag_ = 0;
 #if defined(YASIO_SSL_BACKEND)
-  SSL_CTX* ssl_ctx_ = nullptr;
+  struct ssl_context_pair {
+    SSL_CTX* client_ = nullptr;
+    SSL_CTX* server_ = nullptr;
+  };
+  mutable ssl_context_pair ssl_ctx_pair_;
 #endif
 #if defined(YASIO_HAVE_CARES)
   ares_channel ares_         = nullptr; // the ares handle for non blocking io dns resolve support

@@ -42,7 +42,7 @@ SOFTWARE.
 #include "yasio/detail/signal_blocker.hpp"
 
 #if defined(YASIO_SSL_BACKEND)
-#  include "yasio/detail/ssl.hpp"
+#  include "yasio/ssl.hpp"
 #endif
 
 #if defined(YASIO_HAVE_KCP)
@@ -140,7 +140,10 @@ struct yasio__global_state {
 #if defined(YASIO_SSL_BACKEND) && YASIO_SSL_BACKEND == 1
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(LIBRESSL_VERSION_NUMBER)
     if (OPENSSL_init_ssl(0, nullptr) == 1)
+    {
       yasio__setbits(this->init_flags_, INITF_SSL);
+      ERR_clear_error();
+    }
 #  endif
 #endif
 #if defined(YASIO_HAVE_CARES)
@@ -200,7 +203,7 @@ io_channel::io_channel(io_service& service, int index) : io_base(), service_(ser
   index_      = index;
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
-SSL_CTX* io_channel::get_ssl_context() const { return service_.ssl_ctx_; }
+SSL_CTX* io_channel::get_ssl_context(bool client) const { return service_.get_ssl_context(client); }
 const print_fn2_t& io_channel::__get_cprint() const { return get_service().options_.print_; }
 std::string io_channel::format_destination() const
 {
@@ -328,7 +331,7 @@ int io_transport::write(dynamic_buffer_t&& buffer, completion_cb_t&& handler)
   get_service().interrupt();
   return n;
 }
-int io_transport::do_read(int revent, int& error, highp_time_t&) { return revent ? this->call_read(buffer_ + offset_, sizeof(buffer_) - offset_, error) : 0; }
+int io_transport::do_read(int revent, int& error, highp_time_t&) { return this->call_read(buffer_ + offset_, sizeof(buffer_) - offset_, revent, error); }
 bool io_transport::do_write(highp_time_t& wait_duration)
 {
   bool ret = false;
@@ -374,9 +377,9 @@ bool io_transport::do_write(highp_time_t& wait_duration)
 
   return ret;
 }
-int io_transport::call_read(void* data, int size, int& error)
+int io_transport::call_read(void* data, int size, int revent, int& error)
 {
-  int n = read_cb_(data, size);
+  int n = read_cb_(data, size, revent, error);
   if (n > 0)
   {
     ctx_->bytes_transferred_ += n;
@@ -384,7 +387,6 @@ int io_transport::call_read(void* data, int size, int& error)
   }
   if (n < 0)
   {
-    error = xxsocket::get_last_errno();
     if (xxsocket::not_recv_error(error))
       return (error = 0); // status ok, clear error
     return n;
@@ -430,30 +432,35 @@ void io_transport::complete_op(io_send_op* op, int error)
 void io_transport::set_primitives()
 {
   this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) { return socket_->send(data, len); };
-  this->read_cb_  = [=](void* data, int len) { return socket_->recv(data, len, 0); };
+  this->read_cb_  = [=](void* data, int len, int revent, int& error) {
+    if (revent)
+    {
+      int n = socket_->recv(data, len, 0);
+      if (n < 0)
+        error = xxsocket::get_last_errno();
+      return n;
+    }
+
+    error = EWOULDBLOCK;
+    return -1;
+  };
 }
 // -------------------- io_transport_tcp ---------------------
 inline io_transport_tcp::io_transport_tcp(io_channel* ctx, xxsocket_ptr&& s) : io_transport(ctx, std::forward<xxsocket_ptr>(s)) {}
 // ----------------------- io_transport_ssl ----------------
 #if defined(YASIO_SSL_BACKEND)
-io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr&& s) : io_transport_tcp(ctx, std::forward<xxsocket_ptr>(s))
+io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr&& sock) : io_transport_tcp(ctx, std::forward<xxsocket_ptr>(sock))
 {
   this->state_ = io_base::state::CONNECTING; // for ssl, inital state shoud be connecing for ssl handshake
-#  if YASIO_SSL_BACKEND == 1
-  auto ssl = ::SSL_new(ctx->get_ssl_context());
-  ::SSL_set_fd(ssl, static_cast<int>(ctx->socket_->native_handle()));
-  ::SSL_set_connect_state(ssl);
-  ::SSL_set_tlsext_host_name(ssl, ctx->remote_host_.c_str());
-#  elif YASIO_SSL_BACKEND == 2
-  auto ssl = ::mbedtls_ssl_new(ctx->get_ssl_context());
-  ::mbedtls_ssl_set_fd(ssl, static_cast<int>(ctx->socket_->native_handle()));
-  ::mbedtls_ssl_set_hostname(ssl, ctx->remote_host_.c_str());
-#  endif
-  this->ssl_ = ssl;
+  bool client  = yasio__testbits(ctx->properties_, YCM_CLIENT);
+  this->ssl_   = yasio__ssl_new(ctx->get_ssl_context(client), static_cast<int>(this->socket_->native_handle()), ctx->remote_host_.c_str(), client);
 }
-void io_transport_ssl::do_ssl_handshake()
+int io_transport_ssl::do_ssl_handshake(int& error)
 {
+  error = EWOULDBLOCK;
+
 #  if YASIO_SSL_BACKEND == 1
+  ERR_clear_error();
   int ret = ::SSL_do_handshake(ssl_);
   if (ret != 1)
   {
@@ -463,36 +470,36 @@ void io_transport_ssl::do_ssl_handshake()
     the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
     */
     if (status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE)
-      return;
+      return -1;
 #    if defined(SSL_ERROR_WANT_ASYNC)
     if (status == SSL_ERROR_WANT_ASYNC)
-      return;
+      return -1;
 #    endif
-    int error = static_cast<int>(ERR_get_error());
-    if (error)
+    int ec = static_cast<int>(ERR_get_error());
+    if (ec)
     {
       char errstring[256] = {0};
-      ERR_error_string_n(error, errstring, sizeof(errstring));
-      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,error=%X, detail:%s", ctx_->index_, ret, error, errstring);
+      ERR_error_string_n(ec, errstring, sizeof(errstring));
+      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,error=%X, detail:%s, fd=%d", ctx_->index_, ret, ec, errstring, (int)socket_->native_handle());
     }
     else
     {
-      error = xxsocket::get_last_errno();
-      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ctx_->index_, ret, status, error, xxsocket::strerror(error));
+      ec = xxsocket::get_last_errno();
+      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ctx_->index_, ret, status, ec, xxsocket::strerror(error));
     }
-    shutdown_ssl();
-    if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
-      get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
+    // if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
+    //   get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
+    error = yasio::errc::ssl_handshake_failed;
+    this->get_service().interrupt(); // next frame
   }
   else
     on_ssl_connected();
 #  elif YASIO_SSL_BACKEND == 2
-  auto ssl = static_cast<SSL*>(ctx->ssl_);
-  int ret  = ::mbedtls_ssl_handshake_step(ssl);
+  int ret = ::mbedtls_ssl_handshake_step(ssl_);
   if (ret == 0)
   {
-    if (ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER)
-      interrupt();
+    if (ssl_->state != MBEDTLS_SSL_HANDSHAKE_OVER)
+      get_service().interrupt();
     else // mbedtls_ssl_get_verify_result return 0 when valid cacert provided
       on_ssl_connected();
   }
@@ -506,85 +513,78 @@ void io_transport_ssl::do_ssl_handshake()
         break; // Nothing need to do
       default:
         ::mbedtls_strerror(ret, errstring, sizeof(errstring));
-        YASIO_KLOGE("[index: %d] mbedtls_ssl_handshake_step fail with ret=%d, detail:%s", ctx->index_, ret, errstring);
-        shutdown_ssl();
-        if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
-          get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
+        YASIO_KLOGE("[index: %d] mbedtls_ssl_handshake_step fail with ret=%d, detail:%s", ctx_->index_, ret, errstring);
+        error = yasio::errc::ssl_handshake_failed;
+        // if (yasio__testbits(ctx_->properties_, YCM_CLIENT)) // server we don't fire client on open event because it's passive accept
+        //   get_service().handle_connect_failed(ctx_, yasio::errc::ssl_handshake_failed);
     }
   }
 #  endif
+
+  return -1;
 }
 void io_transport_ssl::shutdown_ssl()
 {
   if (ssl_)
-  {
-#  if YASIO_SSL_BACKEND == 1
-    ::SSL_shutdown(ssl_);
-    ::SSL_free(ssl_);
-#  elif YASIO_SSL_BACKEND == 2
-    ::mbedtls_ssl_close_notify(ssl_);
-    ::mbedtls_ssl_free(ssl_);
-    delete ssl_;
-#  endif
-    ssl_ = nullptr;
-  }
+    yasio__ssl_shutdown(ssl_);
 }
 void io_transport_ssl::set_primitives()
 {
-  this->read_cb_ = [=](void* /*data*/, int /*len*/) {
-    do_ssl_handshake();
-    xxsocket::set_last_errno(EWOULDBLOCK);
-    return -1;
-  };
+  this->read_cb_ = [=](void* /*data*/, int /*len*/, int /*revent*/, int& error) { return do_ssl_handshake(error); };
 }
 void io_transport_ssl::on_ssl_connected()
 {
   this->state_   = io_base::state::OPENED;
-  this->read_cb_ = [=](void* data, int len) {
+  this->read_cb_ = [=](void* data, int len, int revent, int& error) {
+    if (revent)
+    {
 #  if YASIO_SSL_BACKEND == 1
-    ERR_clear_error();
-    int n = ::SSL_read(ssl_, data, len);
-    if (n > 0)
+      ERR_clear_error();
+      int n = ::SSL_read(ssl_, data, len);
+      if (n > 0)
+        return n;
+      int status = SSL_get_error(ssl_, n);
+      switch (status)
+      {
+        case SSL_ERROR_ZERO_RETURN: // n=0, the upper caller will regards as eof
+          break;
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_WRITE:
+          /* The operation did not complete; the same TLS/SSL I/O function
+             should be called again later. This is basically an EWOULDBLOCK
+             equivalent. */
+          error = EWOULDBLOCK;
+          break;
+        default:
+          error = xxsocket::get_last_errno();
+          if (!error)
+            error = yasio::errc::ssl_read_failed;
+      }
       return n;
-    int error = SSL_get_error(ssl_, n);
-    switch (error)
-    {
-      case SSL_ERROR_ZERO_RETURN: // n=0, the upper caller will regards as eof
-        break;
-      case SSL_ERROR_WANT_READ:
-      case SSL_ERROR_WANT_WRITE:
-        /* The operation did not complete; the same TLS/SSL I/O function
-           should be called again later. This is basically an EWOULDBLOCK
-           equivalent. */
-        if (xxsocket::get_last_errno() != EWOULDBLOCK)
-          xxsocket::set_last_errno(EWOULDBLOCK);
-        break;
-      default:
-        xxsocket::set_last_errno(yasio::errc::ssl_read_failed);
-    }
-    return n;
 #  elif YASIO_SSL_BACKEND == 2
-    auto ssl = static_cast<SSL*>(ssl_);
-    int n    = ::mbedtls_ssl_read(ssl, static_cast<uint8_t*>(data), len);
-    if (n > 0)
+      auto ssl = static_cast<SSL*>(ssl_);
+      int n    = ::mbedtls_ssl_read(ssl, static_cast<uint8_t*>(data), len);
+      if (n > 0)
+        return n;
+      switch (n)
+      {
+        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
+          n = 0;
+        case 0:
+          ::mbedtls_ssl_close_notify(ssl);
+          break;
+        case MBEDTLS_ERR_SSL_WANT_READ:
+        case MBEDTLS_ERR_SSL_WANT_WRITE:
+          error = EWOULDBLOCK;
+          break;
+        default:
+          error = yasio::errc::ssl_read_failed;
+      }
       return n;
-    switch (n)
-    {
-      case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
-        n = 0;
-      case 0:
-        ::mbedtls_ssl_close_notify(ssl);
-        break;
-      case MBEDTLS_ERR_SSL_WANT_READ:
-      case MBEDTLS_ERR_SSL_WANT_WRITE:
-        if (xxsocket::get_last_errno() != EWOULDBLOCK)
-          xxsocket::set_last_errno(EWOULDBLOCK);
-        break;
-      default:
-        xxsocket::set_last_errno(yasio::errc::ssl_read_failed);
-    }
-    return n;
 #  endif
+    }
+    error = EWOULDBLOCK;
+    return -1;
   };
   this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
 #  if YASIO_SSL_BACKEND == 1
@@ -622,7 +622,7 @@ void io_transport_ssl::on_ssl_connected()
     return -1;
   };
 
-  YASIO_KLOGD("[index: %d] the ssl connection #%u <%s> --> <%s> is established.", ctx_->index_, this->id_, this->local_endpoint().to_string().c_str(),
+  YASIO_KLOGD("[index: %d] the connection #%u <%s> --> <%s> is established.", ctx_->index_, this->id_, this->local_endpoint().to_string().c_str(),
               this->remote_endpoint().to_string().c_str());
   get_service().fire_event(ctx_->index_, YEK_ON_OPEN, 0, this);
 }
@@ -707,12 +707,19 @@ void io_transport_udp::set_primitives()
       }
       return n;
     };
-    this->read_cb_ = [=](void* data, int len) {
-      ip::endpoint peer;
-      int n = socket_->recvfrom(data, len, peer);
-      if (n > 0)
-        this->peer_ = peer;
-      return n;
+    this->read_cb_ = [=](void* data, int len, int revent, int& error) {
+      if (revent)
+      {
+        ip::endpoint peer;
+        int n = socket_->recvfrom(data, len, peer);
+        if (n > 0)
+          this->peer_ = peer;
+        if (n < 0)
+          error = xxsocket::get_last_errno();
+        return n;
+      }
+      error = EWOULDBLOCK;
+      return -1;
     };
   }
 }
@@ -749,7 +756,7 @@ int io_transport_kcp::write(dynamic_buffer_t&& buffer, completion_cb_t&& /*handl
 }
 int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duration)
 {
-  int n = revent ? this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), error) : 0;
+  int n = this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), revent, error);
   if (n > 0)
     this->handle_input(rawbuf_.data(), n, error, wait_duration);
   if (!error)
@@ -970,7 +977,7 @@ void io_service::run()
   yasio::set_thread_name("yasio");
 
 #if defined(YASIO_SSL_BACKEND)
-  init_ssl_context();
+  get_ssl_context(true); // init client ssl
 #endif
 #if defined(YASIO_HAVE_CARES)
   recreate_ares_channel();
@@ -1040,7 +1047,7 @@ void io_service::run()
   destroy_ares_channel();
 #endif
 #if defined(YASIO_SSL_BACKEND)
-  cleanup_ssl_context();
+  release_ssl_context();
 #endif
 
   this->state_ = io_service::state::AT_EXITING;
@@ -1296,84 +1303,31 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
   }
 }
 #if defined(YASIO_SSL_BACKEND)
-void io_service::init_ssl_context()
+SSL_CTX* io_service::get_ssl_context(bool client) const
 {
-#  if YASIO_SSL_BACKEND == 1
-#    if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
-  auto req_method = ::TLS_client_method();
-#    else
-  auto req_method = ::SSLv23_client_method();
-#    endif
-  ssl_ctx_ = ::SSL_CTX_new(req_method);
-
-#    if defined(SSL_MODE_RELEASE_BUFFERS)
-  ::SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_RELEASE_BUFFERS);
-#    endif
-
-  ::SSL_CTX_set_mode(ssl_ctx_, SSL_MODE_ENABLE_PARTIAL_WRITE);
-  if (!this->options_.cafile_.empty())
+  yasio__ssl_options sslopt{options_.cafile_.c_str(), options_.crtfile_.c_str(), options_.keyfile_.c_str()};
+  if (client)
   {
-    if (::SSL_CTX_load_verify_locations(ssl_ctx_, this->options_.cafile_.c_str(), nullptr) == 1)
-    {
-      ::SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ssl_ctx_));
-#    if OPENSSL_VERSION_NUMBER >= 0x10101000L
-      ::SSL_CTX_set_post_handshake_auth(ssl_ctx_, 1);
-#    endif
-#    if defined(X509_V_FLAG_PARTIAL_CHAIN)
-      /* Have intermediate certificates in the trust store be treated as
-         trust-anchors, in the same way as self-signed root CA certificates
-         are. This allows users to verify servers using the intermediate cert
-         only, instead of needing the whole chain. */
-      X509_STORE_set_flags(SSL_CTX_get_cert_store(ssl_ctx_), X509_V_FLAG_PARTIAL_CHAIN);
-#    endif
-    }
-    else
-      YASIO_KLOGE("[global] load ca certifaction file failed!");
+    if (ssl_ctx_pair_.client_)
+      return ssl_ctx_pair_.client_;
+    sslopt.client = true;
+    return (ssl_ctx_pair_.client_ = yasio___ssl_ctx_new(sslopt, nullptr));
   }
   else
-    SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_NONE, nullptr);
-#  elif YASIO_SSL_BACKEND == 2
-  ssl_ctx_ = new SSL_CTX();
-  ::mbedtls_ssl_config_init(&ssl_ctx_->conf);
-  ::mbedtls_x509_crt_init(&ssl_ctx_->cacert);
-  ::mbedtls_ctr_drbg_init(&ssl_ctx_->ctr_drbg);
-  ::mbedtls_entropy_init(&ssl_ctx_->entropy);
-  cxx17::string_view pers{YASIO_SSL_PIN, YASIO_SSL_PIN_LEN};
-  int ret = ::mbedtls_ctr_drbg_seed(&ssl_ctx_->ctr_drbg, ::mbedtls_entropy_func, &ssl_ctx_->entropy, (const unsigned char*)pers.data(), pers.length());
-  if (ret != 0)
-    YASIO_KLOGE("mbedtls_ctr_drbg_seed fail with ret=%d", ret);
-
-  int authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
-  if (!this->options_.cafile_.empty()) // the cafile_ must be full path
   {
-    if ((ret = ::mbedtls_x509_crt_parse_file(&ssl_ctx_->cacert, this->options_.cafile_.c_str())) == 0)
-      authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
-    else
-      YASIO_KLOGE("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
+    if (ssl_ctx_pair_.server_)
+      return ssl_ctx_pair_.server_;
+    sslopt.client = false;
+    return (ssl_ctx_pair_.server_ = yasio___ssl_ctx_new(sslopt, ssl_ctx_pair_.client_));
   }
-
-  if ((ret = ::mbedtls_ssl_config_defaults(&ssl_ctx_->conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-    YASIO_KLOGE("mbedtls_ssl_config_defaults fail with ret=%d", ret);
-
-  ::mbedtls_ssl_conf_authmode(&ssl_ctx_->conf, authmode);
-  ::mbedtls_ssl_conf_ca_chain(&ssl_ctx_->conf, &ssl_ctx_->cacert, nullptr);
-  ::mbedtls_ssl_conf_rng(&ssl_ctx_->conf, ::mbedtls_ctr_drbg_random, &ssl_ctx_->ctr_drbg);
-#  endif
 }
-void io_service::cleanup_ssl_context()
+void io_service::release_ssl_context()
 {
-  if (ssl_ctx_)
+  if (ssl_ctx_pair_.client_)
   {
-#  if YASIO_SSL_BACKEND == 1
-    SSL_CTX_free((SSL_CTX*)ssl_ctx_);
-#  elif YASIO_SSL_BACKEND == 2
-    ::mbedtls_x509_crt_free(&ssl_ctx_->cacert);
-    ::mbedtls_ssl_config_free(&ssl_ctx_->conf);
-    ::mbedtls_ctr_drbg_free(&ssl_ctx_->ctr_drbg);
-    ::mbedtls_entropy_free(&ssl_ctx_->entropy);
-    delete ssl_ctx_;
-#  endif
-    ssl_ctx_ = nullptr;
+    yasio__ssl_ctx_free(ssl_ctx_pair_.client_);
+    if (ssl_ctx_pair_.server_ != ssl_ctx_pair_.client_) // openssl can share one context for tls client/server
+      yasio__ssl_ctx_free(ssl_ctx_pair_.server_);
   }
 }
 #endif
@@ -1581,6 +1535,8 @@ void io_service::do_accept_completion(io_channel* ctx, fd_set_adapter& fd_set)
       {
         socket_native_type sockfd{invalid_socket};
         error = ctx->socket_->accept_n(sockfd);
+
+        auto fff = xxsocket::test_nonblocking(sockfd);
         if (error == 0)
           handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
         else // The non-blocking tcp accept failed can be ignored.
@@ -1710,10 +1666,8 @@ void io_service::start_transport(transport_handle_t t)
                 t->remote_endpoint().to_string().c_str());
     this->fire_event(ctx->index_, YEK_ON_OPEN, 0, t);
   }
-  else // handeshake
-  {
-    static_cast<io_transport_ssl*>(t)->do_ssl_handshake();
-  }
+  else if (yasio__testbits(ctx->properties_, YCM_CLIENT))
+    this->interrupt();
 }
 transport_handle_t io_service::allocate_transport(io_channel* ctx, xxsocket_ptr&& s)
 {
@@ -2225,8 +2179,18 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       options_.dns_dirty_    = true;
       break;
 #endif
+    case YOPT_S_EVENT_CB:
+      options_.on_event_ = *va_arg(ap, event_cb_t*);
+      break;
+    case YOPT_S_DEFER_EVENT_CB:
+      options_.on_defer_event_ = *va_arg(ap, defer_event_cb_t*);
+      break;
     case YOPT_S_FORWARD_EVENT:
       options_.forward_event_ = !!va_arg(ap, int);
+      break;
+    case YOPT_S_SSL_CERT:
+      options_.crtfile_ = va_arg(ap, const char*);
+      options_.keyfile_ = va_arg(ap, const char*);
       break;
     case YOPT_C_UNPACK_PARAMS: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
@@ -2251,12 +2215,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
         channel->uparams_.no_bswap = va_arg(ap, int);
       break;
     }
-    case YOPT_S_EVENT_CB:
-      options_.on_event_ = *va_arg(ap, event_cb_t*);
-      break;
-    case YOPT_S_DEFER_EVENT_CB:
-      options_.on_defer_event_ = *va_arg(ap, defer_event_cb_t*);
-      break;
     case YOPT_C_LFBFD_FN: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)

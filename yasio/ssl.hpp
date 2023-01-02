@@ -29,41 +29,48 @@ SOFTWARE.
 #ifndef YASIO__SSL_HPP
 #define YASIO__SSL_HPP
 
-#if YASIO_SSL_BACKEND == 1 // OpenSSL
-#  include <openssl/bio.h>
-#  include <openssl/ssl.h>
-#  include <openssl/err.h>
-#elif YASIO_SSL_BACKEND == 2 // mbedtls
-#  define MBEDTLS_ALLOW_PRIVATE_ACCESS
-#  include "mbedtls/net_sockets.h"
-#  include "mbedtls/debug.h"
-#  include "mbedtls/ssl.h"
-#  include "mbedtls/entropy.h"
-#  include "mbedtls/ctr_drbg.h"
-#  include "mbedtls/error.h"
+#include "yasio/detail/config.hpp"
+
+#  if YASIO_SSL_BACKEND == 1 // OpenSSL
+#    include <openssl/bio.h>
+#    include <openssl/ssl.h>
+#    include <openssl/err.h>
+#  elif YASIO_SSL_BACKEND == 2 // mbedtls
+#    define MBEDTLS_ALLOW_PRIVATE_ACCESS
+#    include "mbedtls/net_sockets.h"
+#    include "mbedtls/debug.h"
+#    include "mbedtls/ssl.h"
+#    include "mbedtls/entropy.h"
+#    include "mbedtls/ctr_drbg.h"
+#    include "mbedtls/error.h"
 struct ssl_ctx_st {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_entropy_context entropy;
   mbedtls_x509_crt cacert;
+  mbedtls_x509_crt cert;
+  mbedtls_pk_context pkey;
   mbedtls_ssl_config conf;
 };
 struct ssl_st : public mbedtls_ssl_context {
   mbedtls_net_context bio;
 };
-inline ssl_st* mbedtls_ssl_new(ssl_ctx_st* ctx)
-{
-  auto ssl = new ssl_st();
-  ::mbedtls_ssl_init(ssl);
-  ::mbedtls_ssl_setup(ssl, &ctx->conf);
-  return ssl;
-}
-inline void mbedtls_ssl_set_fd(ssl_st* ssl, int fd)
-{
-  ssl->bio.fd = fd;
-  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, nullptr /*  rev_timeout() */);
-}
-#else
-#  error "yasio - Unsupported ssl backend provided!"
+#endif
+
+struct yasio__ssl_options {
+  const char* cafile_  = nullptr;
+  const char* crtfile_ = nullptr;
+  const char* keyfile_ = nullptr;
+  bool client          = true;
+};
+
+YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& options, ssl_ctx_st* share);
+YASIO__DECL void yasio__ssl_ctx_free(ssl_ctx_st*& ctx);
+
+YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client);
+YASIO__DECL void yasio__ssl_shutdown(ssl_st*&);
+
+#if defined(YASIO_HEADER_ONLY)
+#include "yasio/ssl.cpp"// lgtm [cpp/include-non-header]
 #endif
 
 #endif

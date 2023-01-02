@@ -238,4 +238,7 @@ SOFTWARE.
 #define YASIO_SSL_PIN "yasio_ssl_client"
 #define YASIO_SSL_PIN_LEN (sizeof(YASIO_SSL_PIN) - 1)
 
+#define YASIO_SSL_PON "yasio_ssl_server"
+#define YASIO_SSL_PON_LEN (sizeof(YASIO_SSL_PON) - 1)
+
 #endif

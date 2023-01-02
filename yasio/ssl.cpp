@@ -39,7 +39,7 @@ SOFTWARE.
 #define yasio__valid_str(str) (str && *str)
 
 #if YASIO_SSL_BACKEND == 1 // OpenSSL
-YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& opts)
+YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
 {
   auto ctx = ::SSL_CTX_new(opts.client ? ::SSLv23_client_method() : SSLv23_server_method());
 
@@ -86,12 +86,12 @@ YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& opts)
   return ctx;
 }
 
-YASIO__DECL void yasio__ssl_ctx_free(ssl_ctx_st*& ctx)
+YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
 {
   ::SSL_CTX_free((SSL_CTX*)ctx);
   ctx = nullptr;
 }
-YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
+YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
   auto ssl = ::SSL_new(ctx);
   ::SSL_set_fd(ssl, fd);
@@ -104,14 +104,14 @@ YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname
     ::SSL_set_accept_state(ssl);
   return ssl;
 }
-YASIO__DECL void yasio__ssl_shutdown(ssl_st*& ssl)
+YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
 {
   ::SSL_shutdown(ssl);
   ::SSL_free(ssl);
   ssl = nullptr;
 }
 #elif YASIO_SSL_BACKEND == 2 // mbedtls
-YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& opts)
+YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
 {
   auto ctx = new ssl_ctx_st();
   ::mbedtls_ctr_drbg_init(&ctx->ctr_drbg);
@@ -182,7 +182,7 @@ YASIO__DECL ssl_ctx_st* yasio___ssl_ctx_new(yasio__ssl_options& opts)
   return nullptr;
 }
 
-YASIO__DECL void yasio__ssl_ctx_free(ssl_ctx_st*& ctx)
+YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
 {
   if (!ctx)
     return;
@@ -196,7 +196,7 @@ YASIO__DECL void yasio__ssl_ctx_free(ssl_ctx_st*& ctx)
   ctx = nullptr;
 }
 
-YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
+YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
   auto ssl = new ssl_st();
   ::mbedtls_ssl_init(ssl);
@@ -208,7 +208,7 @@ YASIO__DECL ssl_st* yasio__ssl_new(ssl_ctx_st* ctx, int fd, const char* hostname
   ::mbedtls_ssl_set_hostname(ssl, hostname);
   return ssl;
 }
-YASIO__DECL void yasio__ssl_shutdown(ssl_st*& ssl)
+YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
 {
   ::mbedtls_ssl_close_notify(ssl);
   ::mbedtls_ssl_free(ssl);

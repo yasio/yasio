@@ -381,6 +381,13 @@ typedef sbyte_buffer dynamic_buffer_t;
 
 inline dynamic_buffer_t make_dynamic_buffer(const void* p, size_t n) { return dynamic_buffer_t{(const char*)p, (const char*)p + n, std::true_type{}}; }
 
+// the ssl role
+enum ssl_role
+{
+  YSSL_CLIENT,
+  YSSL_SERVER,
+};
+
 struct io_hostent {
   io_hostent() = default;
   io_hostent(cxx17::string_view ip, u_short port) : host_(cxx17::svtos(ip)), port_(port) {}
@@ -1087,8 +1094,8 @@ private:
   YASIO__DECL void do_connect_completion(io_channel*, fd_set_adapter& fd_set);
 
 #if defined(YASIO_SSL_BACKEND)
-  YASIO__DECL SSL_CTX* get_ssl_context(bool client) const;
-  YASIO__DECL void release_ssl_context();
+  YASIO__DECL SSL_CTX* init_ssl_context(ssl_role role);
+  YASIO__DECL void cleanup_ssl_context(ssl_role role);
 #endif
 
 #if defined(YASIO_HAVE_CARES)
@@ -1244,11 +1251,7 @@ private:
   // The stop flag to notify all transports needs close
   uint8_t stop_flag_ = 0;
 #if defined(YASIO_SSL_BACKEND)
-  struct ssl_context_pair {
-    SSL_CTX* client_ = nullptr;
-    SSL_CTX* server_ = nullptr;
-  };
-  mutable ssl_context_pair ssl_ctx_pair_;
+  SSL_CTX* ssl_roles_[2];
 #endif
 #if defined(YASIO_HAVE_CARES)
   ares_channel ares_         = nullptr; // the ares handle for non blocking io dns resolve support

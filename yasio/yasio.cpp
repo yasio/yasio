@@ -204,7 +204,13 @@ io_channel::io_channel(io_service& service, int index) : io_base(), service_(ser
   decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 #if defined(YASIO_SSL_BACKEND)
-SSL_CTX* io_channel::get_ssl_context(bool client) const { return service_.get_ssl_context(client); }
+SSL_CTX* io_channel::get_ssl_context(bool client) const
+{
+  if (client)
+    return service_.ssl_roles_[YSSL_CLIENT];
+  auto& ctx = service_.ssl_roles_[YSSL_SERVER];
+  return (ctx) ? ctx : service_.init_ssl_context(YSSL_SERVER);
+}
 #endif
 const print_fn2_t& io_channel::__get_cprint() const { return get_service().options_.print_; }
 std::string io_channel::format_destination() const
@@ -455,7 +461,7 @@ io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr&& sock) : io_tr
 {
   this->state_ = io_base::state::CONNECTING; // for ssl, inital state shoud be connecing for ssl handshake
   bool client  = yasio__testbits(ctx->properties_, YCM_CLIENT);
-  this->ssl_   = yasio__ssl_new(ctx->get_ssl_context(client), static_cast<int>(this->socket_->native_handle()), ctx->remote_host_.c_str(), client);
+  this->ssl_   = yssl_new(ctx->get_ssl_context(client), static_cast<int>(this->socket_->native_handle()), ctx->remote_host_.c_str(), client);
 }
 int io_transport_ssl::do_ssl_handshake(int& error)
 {
@@ -528,7 +534,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
 void io_transport_ssl::do_ssl_shutdown()
 {
   if (ssl_)
-    yasio__ssl_shutdown(ssl_);
+    yssl_shutdown(ssl_);
 }
 void io_transport_ssl::set_primitives()
 {
@@ -901,6 +907,10 @@ void io_service::handle_stop()
 }
 void io_service::initialize(const io_hostent* channel_eps, int channel_count)
 {
+#if defined(YASIO_SSL_BACKEND)
+  ssl_roles_[YSSL_CLIENT] = ssl_roles_[YSSL_SERVER] = nullptr;
+#endif
+
   // at least one channel
   if (channel_count < 1)
     channel_count = 1;
@@ -979,7 +989,7 @@ void io_service::run()
   yasio::set_thread_name("yasio");
 
 #if defined(YASIO_SSL_BACKEND)
-  get_ssl_context(true); // init client ssl
+  init_ssl_context(YSSL_CLIENT); // by default, init ssl client context
 #endif
 #if defined(YASIO_HAVE_CARES)
   recreate_ares_channel();
@@ -1049,7 +1059,8 @@ void io_service::run()
   destroy_ares_channel();
 #endif
 #if defined(YASIO_SSL_BACKEND)
-  release_ssl_context();
+  cleanup_ssl_context(YSSL_CLIENT);
+  cleanup_ssl_context(YSSL_SERVER);
 #endif
 
   this->state_ = io_service::state::AT_EXITING;
@@ -1307,31 +1318,18 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
   }
 }
 #if defined(YASIO_SSL_BACKEND)
-SSL_CTX* io_service::get_ssl_context(bool client) const
+SSL_CTX* io_service::init_ssl_context(ssl_role role)
 {
-
-  if (client)
-  {
-    if (ssl_ctx_pair_.client_)
-      return ssl_ctx_pair_.client_;
-    yasio__ssl_options opts{options_.cafile_.c_str(), nullptr, true};
-    return (ssl_ctx_pair_.client_ = yasio___ssl_ctx_new(opts));
-  }
-  else
-  {
-    if (ssl_ctx_pair_.server_)
-      return ssl_ctx_pair_.server_;
-    yasio__ssl_options opts{options_.crtfile_.c_str(), options_.keyfile_.c_str(), false};
-    return (ssl_ctx_pair_.server_ = yasio___ssl_ctx_new(opts));
-  }
+  auto ctx = role == YSSL_CLIENT ? yssl_ctx_new(yssl_options{options_.cafile_.c_str(), nullptr, true})
+                                      : yssl_ctx_new(yssl_options{options_.crtfile_.c_str(), options_.keyfile_.c_str(), false});
+  ssl_roles_[role] = ctx;
+  return ctx;
 }
-void io_service::release_ssl_context()
+void io_service::cleanup_ssl_context(ssl_role role)
 {
-  if (ssl_ctx_pair_.client_)
-  {
-    yasio__ssl_ctx_free(ssl_ctx_pair_.client_);
-    yasio__ssl_ctx_free(ssl_ctx_pair_.server_);
-  }
+  auto& ctx = ssl_roles_[role];
+  if (ctx)
+    yssl_ctx_free(ctx);
 }
 #endif
 #if defined(YASIO_HAVE_CARES)

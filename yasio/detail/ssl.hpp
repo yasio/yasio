@@ -37,12 +37,14 @@ SOFTWARE.
 #  include <openssl/err.h>
 #elif YASIO_SSL_BACKEND == 2 // mbedtls
 #  define MBEDTLS_ALLOW_PRIVATE_ACCESS
+extern "C" {
 #  include "mbedtls/net_sockets.h"
 #  include "mbedtls/debug.h"
 #  include "mbedtls/ssl.h"
 #  include "mbedtls/entropy.h"
 #  include "mbedtls/ctr_drbg.h"
 #  include "mbedtls/error.h"
+}
 struct ssl_ctx_st {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_entropy_context entropy;
@@ -167,7 +169,7 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
 
     // rgn engine
     cxx17::string_view pers = opts.client ? cxx17::string_view{YASIO_SSL_PIN, YASIO_SSL_PIN_LEN} : cxx17::string_view{YASIO_SSL_PON, YASIO_SSL_PON_LEN};
-    ret                 = ::mbedtls_ctr_drbg_seed(&ctx->ctr_drbg, ::mbedtls_entropy_func, &ctx->entropy, (const unsigned char*)pers.data(), pers.length());
+    ret                     = ::mbedtls_ctr_drbg_seed(&ctx->ctr_drbg, ::mbedtls_entropy_func, &ctx->entropy, (const unsigned char*)pers.data(), pers.length());
     if (ret != 0)
     {
       YASIO_LOG("mbedtls_ctr_drbg_seed fail with ret=%d", ret);

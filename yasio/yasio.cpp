@@ -331,7 +331,7 @@ io_transport::io_transport(io_channel* ctx, xxsocket_ptr&& s) : ctx_(ctx)
 #endif
 }
 const print_fn2_t& io_transport::__get_cprint() const { return ctx_->get_service().options_.print_; }
-int io_transport::write(dynamic_buffer_t&& buffer, completion_cb_t&& handler)
+int io_transport::write(sbyte_buffer&& buffer, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
@@ -682,11 +682,11 @@ void io_transport_udp::disconnect()
   connected_ = false;
   set_primitives();
 }
-int io_transport_udp::write(dynamic_buffer_t&& buffer, completion_cb_t&& handler)
+int io_transport_udp::write(sbyte_buffer&& buffer, completion_cb_t&& handler)
 {
   return connected_ ? io_transport::write(std::move(buffer), std::move(handler)) : write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
-int io_transport_udp::write_to(dynamic_buffer_t&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
+int io_transport_udp::write_to(sbyte_buffer&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -1215,7 +1215,7 @@ void io_service::handle_close(transport_handle_t thandle)
 void io_service::register_descriptor(const socket_native_type fd, int events) { this->fd_set_.set(fd, events); }
 void io_service::deregister_descriptor(const socket_native_type fd, int events) { this->fd_set_.unset(fd, events); }
 
-int io_service::write(transport_handle_t transport, dynamic_buffer_t buffer, completion_cb_t handler)
+int io_service::write(transport_handle_t transport, sbyte_buffer buffer, completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write(std::move(buffer), std::move(handler)) : 0;
@@ -1225,7 +1225,7 @@ int io_service::write(transport_handle_t transport, dynamic_buffer_t buffer, com
     return -1;
   }
 }
-int io_service::write_to(transport_handle_t transport, dynamic_buffer_t buffer, const ip::endpoint& to, completion_cb_t handler)
+int io_service::write_to(transport_handle_t transport, sbyte_buffer buffer, const ip::endpoint& to, completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write_to(std::move(buffer), to, std::move(handler)) : 0;

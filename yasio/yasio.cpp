@@ -572,7 +572,6 @@ void io_transport_ssl::on_ssl_connected()
       {
         case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
           n = 0;
-          [[fallthrough]];
         case 0:
           ::mbedtls_ssl_close_notify(ssl);
           break;

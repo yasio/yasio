@@ -43,6 +43,7 @@ SOFTWARE.
 #  include "mbedtls/entropy.h"
 #  include "mbedtls/ctr_drbg.h"
 #  include "mbedtls/error.h"
+#  include "mbedtls/version.h"
 struct ssl_ctx_st {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_entropy_context entropy;
@@ -196,11 +197,17 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
     else
     {
       // --- load server private key
-      if (yasio__valid_str(opts.keyfile_) &&
-          (ret = ::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr, mbedtls_ctr_drbg_random, &ctx->ctr_drbg)) != 0)
+      if (yasio__valid_str(opts.keyfile_))
       {
-        YASIO_LOG("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
-        break;
+#  if MBEDTLS_VERSION_MAJOR >= 3
+        if (::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr, mbedtls_ctr_drbg_random, &ctx->ctr_drbg) != 0)
+#  else
+        if (::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr) != 0)
+#  endif
+        {
+          YASIO_LOG("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
+          break;
+        }
       }
       ::mbedtls_ssl_conf_ca_chain(&ctx->conf, ctx->cert.next, nullptr);
       if ((ret = mbedtls_ssl_conf_own_cert(&ctx->conf, &ctx->cert, &ctx->pkey)) != 0)

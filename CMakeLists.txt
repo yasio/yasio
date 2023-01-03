@@ -21,6 +21,33 @@ option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
+
+# --- The C/C++ standard
+if (NOT MSVC)
+    if (NOT CXX_STD)
+        set(CXX_STD 11)
+    endif()
+    set(CMAKE_CXX_STANDARD ${CXX_STD})
+else()
+    if (CXX_STD)
+        set(CMAKE_CXX_STANDARD ${CXX_STD})
+    else()
+        include(CheckCXXCompilerFlag)
+        check_cxx_compiler_flag("/std:c++latest" YASIO_HAVE_CXX_LATEST)
+        if (YASIO_HAVE_CXX_LATEST)
+            set(CXX_STD latest)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
+        else()
+            set(CXX_STD 11)
+        endif()
+    endif()
+endif()
+
+set (CMAKE_C_STANDARD 99)
+set (CMAKE_C_STANDARD_REQUIRED ON)
+
+message(STATUS "Building yasio with C++${CXX_STD} support")
+
 function(yasio_config_target_outdir target)
     set_target_properties(${target} PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -59,29 +86,6 @@ endif()
 if (NOT DEFINED YASIO_HAVE_HALF_FLOAT)
     set(YASIO_HAVE_HALF_FLOAT ON)
 endif()
-
-# --- The C++ standard
-if (NOT MSVC)
-    if (NOT CXX_STD)
-        set(CXX_STD 11)
-    endif()
-    set(CMAKE_CXX_STANDARD ${CXX_STD})
-else()
-    if (CXX_STD)
-        set(CMAKE_CXX_STANDARD ${CXX_STD})
-    else()
-        include(CheckCXXCompilerFlag)
-        check_cxx_compiler_flag("/std:c++latest" YASIO_HAVE_CXX_LATEST)
-        if (YASIO_HAVE_CXX_LATEST)
-            set(CXX_STD latest)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest")
-        else()
-            set(CXX_STD 11)
-        endif()
-    endif()
-endif()
-
-message(STATUS "Building yasio with C++${CXX_STD} support")
 
 # The compiler flags
 if(BUILD_SHARED_LIBS AND LINUX)

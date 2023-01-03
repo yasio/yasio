@@ -1110,7 +1110,7 @@ private:
   void handle_connect_succeed(io_channel* ctx, xxsocket_ptr s) { handle_connect_succeed(allocate_transport(ctx, std::move(s))); }
   YASIO__DECL void handle_connect_succeed(transport_handle_t);
   YASIO__DECL void handle_connect_failed(io_channel*, int ec);
-  YASIO__DECL void start_transport(transport_handle_t);
+  YASIO__DECL void active_transport(transport_handle_t);
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, xxsocket_ptr&&);
   YASIO__DECL void deallocate_transport(transport_handle_t);

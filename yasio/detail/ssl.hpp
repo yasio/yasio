@@ -202,7 +202,7 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
         YASIO_LOG("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
         break;
       }
-      mbedtls_ssl_conf_ca_chain(&ctx->conf, ctx->cert.next, NULL);
+      ::mbedtls_ssl_conf_ca_chain(&ctx->conf, ctx->cert.next, nullptr);
       if ((ret = mbedtls_ssl_conf_own_cert(&ctx->conf, &ctx->cert, &ctx->pkey)) != 0)
       {
         YASIO_LOG("mbedtls_ssl_conf_own_cert with ret=-0x%x", (unsigned int)-ret);

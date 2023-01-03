@@ -1540,8 +1540,6 @@ void io_service::do_accept_completion(io_channel* ctx, fd_set_adapter& fd_set)
       {
         socket_native_type sockfd{invalid_socket};
         error = ctx->socket_->accept_n(sockfd);
-
-        auto fff = xxsocket::test_nonblocking(sockfd);
         if (error == 0)
           handle_connect_succeed(ctx, std::make_shared<xxsocket>(sockfd));
         else // The non-blocking tcp accept failed can be ignored.
@@ -1619,7 +1617,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);
       if (user_route)
-        start_transport(transport);
+        active_transport(transport);
       else
         handle_connect_succeed(transport);
       return transport;
@@ -1656,9 +1654,9 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
       connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
   }
 
-  start_transport(transport);
+  active_transport(transport);
 }
-void io_service::start_transport(transport_handle_t t)
+void io_service::active_transport(transport_handle_t t)
 {
   auto ctx = t->ctx_;
   auto& s  = t->socket_;

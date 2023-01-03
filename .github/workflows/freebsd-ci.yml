@@ -31,9 +31,9 @@ jobs:
         prepare: |
           pkg install -y cmake
           pkg install -y python3
-          pkg install -y py39-pip
           # required by mbedtls-3.3.0
-          pip install jsonschema jinja2 
+          pkg install -y py39-pip
+          pip install jsonschema jinja2
           # install perl5.34.x, localtion: /usr/local/bin
           set perl_pkg_name=`pkg search perl5 | cut -d' ' -f1`
           pkg install -y $perl_pkg_name

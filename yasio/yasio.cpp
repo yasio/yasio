@@ -744,12 +744,12 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_trans
     if (yasio__min_wait_duration == 0)
       return t->write_cb_(buf, len, std::addressof(t->ensure_destination()));
     // Enqueue to transport queue
-    return t->io_transport_udp::write(dynamic_buffer_t{buf, buf + len}, nullptr);
+    return t->io_transport_udp::write(sbyte_buffer{buf, buf + len}, nullptr);
   });
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 
-int io_transport_kcp::write(dynamic_buffer_t&& buffer, completion_cb_t&& /*handler*/)
+int io_transport_kcp::write(sbyte_buffer&& buffer, completion_cb_t&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   int len    = static_cast<int>(buffer.size());

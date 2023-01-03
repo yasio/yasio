@@ -635,13 +635,13 @@ public:
   // Disable copy constructor
   YASIO__DECL xxsocket(const xxsocket&) = delete;
   // Construct with a exist socket, it will replace the source
-  YASIO__DECL xxsocket(xxsocket&&);
+  YASIO__DECL xxsocket(xxsocket&&) YASIO__NOEXCEPT;
 
-  YASIO__DECL xxsocket& operator=(socket_native_type handle);
+  YASIO__DECL xxsocket& operator=(socket_native_type handle) YASIO__NOEXCEPT;
   // Disable copy assign operator
   YASIO__DECL xxsocket& operator=(const xxsocket&) = delete;
   // Construct with a exist socket, it will replace the source
-  YASIO__DECL xxsocket& operator=(xxsocket&&);
+  YASIO__DECL xxsocket& operator=(xxsocket&&) YASIO__NOEXCEPT;
 
   // See also as function: open
   YASIO__DECL xxsocket(int af, int type, int protocol);

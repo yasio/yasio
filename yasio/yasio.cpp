@@ -243,7 +243,6 @@ void io_channel::join_multicast_group()
       case AF_INET6:
         socket_->set_optval(IPPROTO_IPV6, IP_MULTICAST_IF, multiif_.in6_.sin6_scope_id);
         break;
-      default:;
     }
 
     int loopback = yasio__testbits(properties_, YCPF_MCAST_LOOPBACK) ? 1 : 0;
@@ -573,6 +572,7 @@ void io_transport_ssl::on_ssl_connected()
       {
         case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
           n = 0;
+          [[fallthrough]];
         case 0:
           ::mbedtls_ssl_close_notify(ssl);
           break;

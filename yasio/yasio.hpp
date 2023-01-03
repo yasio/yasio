@@ -389,7 +389,7 @@ enum ssl_role
 struct io_hostent {
   io_hostent() = default;
   io_hostent(cxx17::string_view ip, u_short port) : host_(cxx17::svtos(ip)), port_(port) {}
-  io_hostent(io_hostent&& rhs) : host_(std::move(rhs.host_)), port_(rhs.port_) {}
+  io_hostent(io_hostent&& rhs) YASIO__NOEXCEPT : host_(std::move(rhs.host_)), port_(rhs.port_) {}
   io_hostent(const io_hostent& rhs) : host_(rhs.host_), port_(rhs.port_) {}
   void set_ip(cxx17::string_view ip) { cxx17::assign(host_, ip); }
   const std::string& get_ip() const { return host_; }

@@ -362,17 +362,17 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
 
 xxsocket::xxsocket(void) : fd(invalid_socket) {}
 xxsocket::xxsocket(socket_native_type h) : fd(h) {}
-xxsocket::xxsocket(xxsocket&& right) : fd(invalid_socket) { swap(right); }
+xxsocket::xxsocket(xxsocket&& right) YASIO__NOEXCEPT : fd(invalid_socket) { swap(right); }
 xxsocket::xxsocket(int af, int type, int protocol) : fd(invalid_socket) { open(af, type, protocol); }
 xxsocket::~xxsocket(void) { close(); }
 
-xxsocket& xxsocket::operator=(socket_native_type handle)
+xxsocket& xxsocket::operator=(socket_native_type handle) YASIO__NOEXCEPT
 {
   if (!this->is_open())
     this->fd = handle;
   return *this;
 }
-xxsocket& xxsocket::operator=(xxsocket&& right) { return swap(right); }
+xxsocket& xxsocket::operator=(xxsocket&& right) YASIO__NOEXCEPT { return swap(right); }
 
 xxsocket& xxsocket::swap(xxsocket& rhs)
 {
@@ -960,7 +960,7 @@ struct ws2_32_gc {
   ws2_32_gc(void)
   {
     WSADATA dat = {0};
-    WSAStartup(0x0202, &dat);
+    (void)WSAStartup(0x0202, &dat);
   }
   ~ws2_32_gc(void) { WSACleanup(); }
 };

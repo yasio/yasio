@@ -303,6 +303,7 @@ void xxsocket::traverse_local_address(std::function<bool(const ip::endpoint&)> h
 
   endpoint ep;
   int iret = getaddrinfo(hostname, nullptr, &hint, &ailist);
+  (void)iret;
   if (ailist != nullptr)
   {
     for (auto aip = ailist; aip != nullptr; aip = aip->ai_next)
@@ -550,7 +551,7 @@ int xxsocket::connect_n(socket_native_type s, const endpoint& ep, const std::chr
   if (ret == 0)
     goto done; /* connect completed immediately */
 
-  if ((ret = xxsocket::select(s, &rset, &wset, nullptr, wtimeout)) <= 0)
+  if (xxsocket::select(s, &rset, &wset, nullptr, wtimeout) <= 0)
     error = xxsocket::get_last_errno();
   else if ((FD_ISSET(s, &rset) || FD_ISSET(s, &wset)))
   { /* Everythings are ok */

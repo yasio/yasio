@@ -1022,6 +1022,7 @@ public:
   YASIO__DECL static bool not_recv_error(int error);
 
   YASIO__DECL static const char* strerror(int error);
+  YASIO__DECL static const char* strerror_r(int error, char* buf, size_t buflen);
   YASIO__DECL static const char* gai_strerror(int error);
 
   /// <summary>

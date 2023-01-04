@@ -63,11 +63,28 @@ struct yssl_options {
   bool client;
 };
 
+// The ssl error mask (1 << 31)
+#  define YSSL_ERR_MASK 0x80000000
+
 YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts);
 YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx);
 
 YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client);
 YASIO__DECL void yssl_shutdown(ssl_st*&);
+
+/**
+* @returns
+*   0: succeed
+*   other: use yssl_strerror(ret & YSSL_ERROR_MASK, ...) get error message
+*    - ec can bb
+       - EWOULDBLOCK: status ok, repeat call next time
+*      - yasio::errc::ssl_handshake_failed: failed
+*/
+YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& ec);
+YASIO__DECL const char* yssl_strerror(ssl_st* ssl, int sslerr, char* buf, size_t buflen);
+
+YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& ec);
+YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& ec);
 #endif
 
 ///////////////////////////////////////////////////////////////////
@@ -75,189 +92,10 @@ YASIO__DECL void yssl_shutdown(ssl_st*&);
 
 #define yasio__valid_str(str) (str && *str)
 
-#if YASIO_SSL_BACKEND == 1 // OpenSSL
-YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
-{
-  auto ctx = ::SSL_CTX_new(opts.client ? ::SSLv23_client_method() : SSLv23_server_method());
-
-  auto mode = SSL_CTX_get_mode(ctx);
-#  if defined(SSL_MODE_RELEASE_BUFFERS)
-  mode |= SSL_MODE_RELEASE_BUFFERS;
-#  endif
-
-  ::SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE | mode);
-
-  if (opts.client)
-  {
-    if (yasio__valid_str(opts.crtfile_))
-    {
-      if (::SSL_CTX_load_verify_locations(ctx, opts.crtfile_, nullptr) == 1)
-      {
-        ::SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, ::SSL_CTX_get_verify_callback(ctx));
-#  if OPENSSL_VERSION_NUMBER >= 0x10101000L
-        ::SSL_CTX_set_post_handshake_auth(ctx, 1);
-#  endif
-#  if defined(X509_V_FLAG_PARTIAL_CHAIN)
-        /* Have intermediate certificates in the trust store be treated as
-           trust-anchors, in the same way as self-signed root CA certificates
-           are. This allows users to verify servers using the intermediate cert
-           only, instead of needing the whole chain. */
-        X509_STORE_set_flags(SSL_CTX_get_cert_store(ctx), X509_V_FLAG_PARTIAL_CHAIN);
-#  endif
-      }
-      else
-        YASIO_LOG("[global] load ca certifaction file failed!");
-    }
-    else
-      SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
-  }
-  else
-  {
-    if (yasio__valid_str(opts.crtfile_) && ::SSL_CTX_use_certificate_file(ctx, opts.crtfile_, SSL_FILETYPE_PEM) <= 0)
-      YASIO_LOG("[gobal] load server cert file failed!");
-
-    if (yasio__valid_str(opts.keyfile_) && ::SSL_CTX_use_PrivateKey_file(ctx, opts.keyfile_, SSL_FILETYPE_PEM) <= 0)
-      YASIO_LOG("[gobal] load server private key file failed!");
-  }
-
-  return ctx;
-}
-
-YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
-{
-  ::SSL_CTX_free((SSL_CTX*)ctx);
-  ctx = nullptr;
-}
-YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
-{
-  auto ssl = ::SSL_new(ctx);
-  ::SSL_set_fd(ssl, fd);
-  if (client)
-  {
-    ::SSL_set_connect_state(ssl);
-    ::SSL_set_tlsext_host_name(ssl, hostname);
-  }
-  else
-    ::SSL_set_accept_state(ssl);
-  return ssl;
-}
-YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
-{
-  ::SSL_shutdown(ssl);
-  ::SSL_free(ssl);
-  ssl = nullptr;
-}
+#if YASIO_SSL_BACKEND == 1 // openssl
+#  include "yasio/detail/openssl.inl"
 #elif YASIO_SSL_BACKEND == 2 // mbedtls
-YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
-{
-  auto ctx = new ssl_ctx_st();
-  ::mbedtls_ctr_drbg_init(&ctx->ctr_drbg);
-  ::mbedtls_entropy_init(&ctx->entropy);
-  ::mbedtls_ssl_config_init(&ctx->conf);
-  ::mbedtls_x509_crt_init(&ctx->cert);
-  ::mbedtls_pk_init(&ctx->pkey);
-
-  do
-  {
-
-    int ret = 0;
-    // ssl role
-    if ((ret = ::mbedtls_ssl_config_defaults(&ctx->conf, opts.client ? MBEDTLS_SSL_IS_CLIENT : MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM,
-                                             MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-      YASIO_LOG("mbedtls_ssl_config_defaults fail with ret=%d", ret);
-
-    // rgn engine
-    cxx17::string_view pers = opts.client ? cxx17::string_view{YASIO_SSL_PIN, YASIO_SSL_PIN_LEN} : cxx17::string_view{YASIO_SSL_PON, YASIO_SSL_PON_LEN};
-    ret                     = ::mbedtls_ctr_drbg_seed(&ctx->ctr_drbg, ::mbedtls_entropy_func, &ctx->entropy, (const unsigned char*)pers.data(), pers.length());
-    if (ret != 0)
-    {
-      YASIO_LOG("mbedtls_ctr_drbg_seed fail with ret=%d", ret);
-      break;
-    }
-    ::mbedtls_ssl_conf_rng(&ctx->conf, ::mbedtls_ctr_drbg_random, &ctx->ctr_drbg);
-
-    // --- load cert
-    int authmode = MBEDTLS_SSL_VERIFY_OPTIONAL;
-    if (yasio__valid_str(opts.crtfile_)) // the cafile_ must be full path
-    {
-      if ((ret = ::mbedtls_x509_crt_parse_file(&ctx->cert, opts.crtfile_)) == 0)
-        authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
-      else
-      {
-        YASIO_LOG("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
-        break;
-      }
-    }
-
-    if (opts.client)
-    {
-      ::mbedtls_ssl_conf_authmode(&ctx->conf, authmode);
-      ::mbedtls_ssl_conf_ca_chain(&ctx->conf, &ctx->cert, nullptr);
-    }
-    else
-    {
-      // --- load server private key
-      if (yasio__valid_str(opts.keyfile_))
-      {
-#  if MBEDTLS_VERSION_MAJOR >= 3
-        if (::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr, mbedtls_ctr_drbg_random, &ctx->ctr_drbg) != 0)
-#  else
-        if (::mbedtls_pk_parse_keyfile(&ctx->pkey, opts.keyfile_, nullptr) != 0)
-#  endif
-        {
-          YASIO_LOG("mbedtls_x509_crt_parse_file with ret=-0x%x", (unsigned int)-ret);
-          break;
-        }
-      }
-      ::mbedtls_ssl_conf_ca_chain(&ctx->conf, ctx->cert.next, nullptr);
-      if ((ret = mbedtls_ssl_conf_own_cert(&ctx->conf, &ctx->cert, &ctx->pkey)) != 0)
-      {
-        YASIO_LOG("mbedtls_ssl_conf_own_cert with ret=-0x%x", (unsigned int)-ret);
-        break;
-      }
-    }
-
-    return ctx;
-  } while (false);
-
-  yssl_ctx_free(ctx);
-
-  return nullptr;
-}
-
-YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
-{
-  if (!ctx)
-    return;
-  ::mbedtls_pk_free(&ctx->pkey);
-  ::mbedtls_x509_crt_free(&ctx->cert);
-  ::mbedtls_ssl_config_free(&ctx->conf);
-  ::mbedtls_entropy_free(&ctx->entropy);
-  ::mbedtls_ctr_drbg_free(&ctx->ctr_drbg);
-
-  delete ctx;
-  ctx = nullptr;
-}
-
-YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
-{
-  auto ssl = new ssl_st();
-  ::mbedtls_ssl_init(ssl);
-  ::mbedtls_ssl_setup(ssl, &ctx->conf);
-
-  // ssl_set_fd
-  ssl->bio.fd = fd;
-  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, nullptr /*  rev_timeout() */);
-  ::mbedtls_ssl_set_hostname(ssl, hostname);
-  return ssl;
-}
-YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
-{
-  ::mbedtls_ssl_close_notify(ssl);
-  ::mbedtls_ssl_free(ssl);
-  delete ssl;
-  ssl = nullptr;
-}
+#  include "yasio/detail/mbedtls.inl"
 #else
 #  error "yasio - Unsupported ssl backend provided!"
 #endif

@@ -942,6 +942,20 @@ const char* xxsocket::strerror(int error)
 #endif
 }
 
+const char* xxsocket::strerror_r(int error, char* buf, size_t buflen)
+{
+#if defined(_WIN32)
+  ZeroMemory(buf, buflen);
+  ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,
+                   error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
+                   buf, static_cast<DWORD>(buflen), nullptr);
+
+  return buf;
+#else
+  return ::strerror_r(error, buf, buflen);
+#endif
+}
+
 const char* xxsocket::gai_strerror(int error)
 {
 #if defined(_WIN32)

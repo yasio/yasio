@@ -190,10 +190,13 @@ void highp_timer::cancel(io_service& service)
 }
 
 /// io_send_op
-int io_send_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n, nullptr); }
+int io_send_op::perform(io_transport* transport, const void* buf, int n, int& error) { return transport->write_cb_(buf, n, nullptr, error); }
 
 /// io_sendto_op
-int io_sendto_op::perform(io_transport* transport, const void* buf, int n) { return transport->write_cb_(buf, n, std::addressof(destination_)); }
+int io_sendto_op::perform(io_transport* transport, const void* buf, int n, int& error)
+{
+  return transport->write_cb_(buf, n, std::addressof(destination_), error);
+}
 
 /// io_channel
 io_channel::io_channel(io_service& service, int index) : io_base(), service_(service)
@@ -407,7 +410,7 @@ int io_transport::call_read(void* data, int size, int revent, int& error)
 }
 int io_transport::call_write(io_send_op* op, int& error)
 {
-  int n = op->perform(this, op->buffer_.data() + op->offset_, static_cast<int>(op->buffer_.size() - op->offset_));
+  int n = op->perform(this, op->buffer_.data() + op->offset_, static_cast<int>(op->buffer_.size() - op->offset_), error);
   if (n > 0)
   {
     // #performance: change offset only, remain data will be send at next frame.
@@ -417,7 +420,6 @@ int io_transport::call_write(io_send_op* op, int& error)
   }
   else if (n < 0)
   {
-    error = xxsocket::get_last_errno();
     if (xxsocket::not_send_error(error))
       n = 0;
     else if (yasio__testbits(ctx_->properties_, YCM_UDP))
@@ -438,11 +440,16 @@ void io_transport::complete_op(io_send_op* op, int error)
 }
 void io_transport::set_primitives()
 {
-  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) { return socket_->send(data, len); };
-  this->read_cb_  = [=](void* data, int len, int revent, int& error) {
+  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*, int& error) {
+    int n = socket_->send(data, len);
+    if (n < 0)
+      error = xxsocket::get_last_errno();
+    return n;
+  };
+  this->read_cb_ = [=](void* data, int len, int revent, int& error) {
     if (revent)
     {
-      int n = socket_->recv(data, len, 0);
+      int n = socket_->recv(data, len);
       if (n < 0)
         error = xxsocket::get_last_errno();
       return n;
@@ -464,65 +471,41 @@ io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr&& sock) : io_tr
 }
 int io_transport_ssl::do_ssl_handshake(int& error)
 {
-  error = EWOULDBLOCK;
+  int ret = yssl_do_handshake(ssl_, error);
+  if (ret == 0) // handshake succeed
+  {             // because we invoke handshake in call_read, so we emit EWOULDBLOCK to mark ssl transport status `ok`
+    this->state_   = io_base::state::OPENED;
+    this->read_cb_ = [=](void* data, int len, int revent, int& error) {
+      if (revent)
+        return yssl_read(ssl_, data, len, error);
+      error = EWOULDBLOCK;
+      return -1;
+    };
+    this->write_cb_ = [=](const void* data, int len, const ip::endpoint*, int& error) { return yssl_write(ssl_, data, len, error); };
 
-#  if YASIO_SSL_BACKEND == 1
-  ERR_clear_error();
-  int ret = ::SSL_do_handshake(ssl_);
-  if (ret != 1)
-  {
-    int status = ::SSL_get_error(ssl_, ret);
-    /*
-    When using a non-blocking socket, nothing is to be done, but select() can be used to check for
-    the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
-    */
-    if (status == SSL_ERROR_WANT_READ || status == SSL_ERROR_WANT_WRITE)
-      return -1;
-#    if defined(SSL_ERROR_WANT_ASYNC)
-    if (status == SSL_ERROR_WANT_ASYNC)
-      return -1;
-#    endif
-    int ec = static_cast<int>(ERR_get_error());
-    if (ec)
-    {
-      char errstring[256] = {0};
-      ERR_error_string_n(ec, errstring, sizeof(errstring));
-      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,error=%X, detail:%s, fd=%d", ctx_->index_, ret, ec, errstring, (int)socket_->native_handle());
-    }
-    else
-    {
-      ec = xxsocket::get_last_errno();
-      YASIO_KLOGE("[index: %d] SSL_do_handshake fail with ret=%d,status=%d, error=%d, detail:%s", ctx_->index_, ret, status, ec, xxsocket::strerror(error));
-    }
-    error = yasio::errc::ssl_handshake_failed; // emit ssl handshake failed, continue handle close flow
+    YASIO_KLOGD("[index: %d] the connection #%u <%s> --> <%s> is established.", ctx_->index_, this->id_, this->local_endpoint().to_string().c_str(),
+                this->remote_endpoint().to_string().c_str());
+    get_service().fire_event(ctx_->index_, YEK_ON_OPEN, 0, this);
+
+    error = EWOULDBLOCK;
   }
   else
-    on_ssl_connected();
-#  elif YASIO_SSL_BACKEND == 2
-  int ret = ::mbedtls_ssl_handshake_step(ssl_);
-  if (ret == 0)
   {
-    if (ssl_->state != MBEDTLS_SSL_HANDSHAKE_OVER)
+    if (error == EWOULDBLOCK)
       get_service().interrupt();
-    else // mbedtls_ssl_get_verify_result return 0 when valid cacert provided
-      on_ssl_connected();
-  }
-  else
-  {
-    char errstring[256] = {0};
-    switch (ret)
-    {
-      case MBEDTLS_ERR_SSL_WANT_READ:
-      case MBEDTLS_ERR_SSL_WANT_WRITE:
-        break; // Nothing need to do
-      default:
-        ::mbedtls_strerror(ret, errstring, sizeof(errstring));
-        YASIO_KLOGE("[index: %d] mbedtls_ssl_handshake_step fail with ret=%d, detail:%s", ctx_->index_, ret, errstring);
-        error = yasio::errc::ssl_handshake_failed;
+    else
+    { // handshake failed, print reason
+      char buf[256] = {0};
+      YASIO_KLOGE("[index: %d] do_ssl_handshake fail with ret=%d, detail:%s", ctx_->index_, ret,
+                  yasio__testbits(static_cast<int>(ret), YSSL_ERR_MASK) ? yssl_strerror(ssl_, ret, buf, sizeof(buf)) : xxsocket::strerror_r(ret, buf, sizeof(buf)));
+      if (yasio__testbits(ctx_->properties_, YCM_CLIENT))
+      {
+        YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx_->index_, ctx_->format_destination().c_str(), error,
+                    io_service::strerror(error));
+        get_service().fire_event(ctx_->index(), YEK_ON_OPEN, error, ctx_);
+      }
     }
   }
-#  endif
-
   return -1;
 }
 void io_transport_ssl::do_ssl_shutdown()
@@ -533,100 +516,6 @@ void io_transport_ssl::do_ssl_shutdown()
 void io_transport_ssl::set_primitives()
 {
   this->read_cb_ = [=](void* /*data*/, int /*len*/, int /*revent*/, int& error) { return do_ssl_handshake(error); };
-}
-void io_transport_ssl::on_ssl_connected()
-{
-  this->state_   = io_base::state::OPENED;
-  this->read_cb_ = [=](void* data, int len, int revent, int& error) {
-    if (revent)
-    {
-#  if YASIO_SSL_BACKEND == 1
-      ERR_clear_error();
-      int n = ::SSL_read(ssl_, data, len);
-      if (n > 0)
-        return n;
-      int status = SSL_get_error(ssl_, n);
-      switch (status)
-      {
-        case SSL_ERROR_ZERO_RETURN: // n=0, the upper caller will regards as eof
-          break;
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-          /* The operation did not complete; the same TLS/SSL I/O function
-             should be called again later. This is basically an EWOULDBLOCK
-             equivalent. */
-          error = EWOULDBLOCK;
-          break;
-        default:
-          error = xxsocket::get_last_errno();
-          if (!error)
-            error = yasio::errc::ssl_read_failed;
-      }
-      return n;
-#  elif YASIO_SSL_BACKEND == 2
-      auto ssl = static_cast<SSL*>(ssl_);
-      int n    = ::mbedtls_ssl_read(ssl, static_cast<uint8_t*>(data), len);
-      if (n > 0)
-        return n;
-      switch (n)
-      {
-        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
-          n = 0;
-        case 0:
-          ::mbedtls_ssl_close_notify(ssl);
-          break;
-        case MBEDTLS_ERR_SSL_WANT_READ:
-        case MBEDTLS_ERR_SSL_WANT_WRITE:
-          error = EWOULDBLOCK;
-          break;
-        default:
-          error = yasio::errc::ssl_read_failed;
-      }
-      return n;
-#  endif
-    }
-    error = EWOULDBLOCK;
-    return -1;
-  };
-  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*) {
-#  if YASIO_SSL_BACKEND == 1
-    ERR_clear_error();
-    int n = ::SSL_write(ssl_, data, len);
-    if (n > 0)
-      return n;
-
-    int error = SSL_get_error(ssl_, n);
-    switch (error)
-    {
-      case SSL_ERROR_WANT_READ:
-      case SSL_ERROR_WANT_WRITE:
-        if (xxsocket::get_last_errno() != EWOULDBLOCK)
-          xxsocket::set_last_errno(EWOULDBLOCK);
-        break;
-      default:
-        xxsocket::set_last_errno(yasio::errc::ssl_write_failed);
-    }
-#  elif YASIO_SSL_BACKEND == 2
-    int n = ::mbedtls_ssl_write(static_cast<SSL*>(ssl_), static_cast<const uint8_t*>(data), len);
-    if (n > 0)
-      return n;
-    switch (n)
-    {
-      case MBEDTLS_ERR_SSL_WANT_READ:
-      case MBEDTLS_ERR_SSL_WANT_WRITE:
-        if (xxsocket::get_last_errno() != EWOULDBLOCK)
-          xxsocket::set_last_errno(EWOULDBLOCK);
-        break;
-      default:
-        xxsocket::set_last_errno(yasio::errc::ssl_write_failed);
-    }
-#  endif
-    return -1;
-  };
-
-  YASIO_KLOGD("[index: %d] the connection #%u <%s> --> <%s> is established.", ctx_->index_, this->id_, this->local_endpoint().to_string().c_str(),
-              this->remote_endpoint().to_string().c_str());
-  get_service().fire_event(ctx_->index_, YEK_ON_OPEN, 0, this);
 }
 #endif
 // ----------------------- io_transport_udp ----------------
@@ -698,12 +587,12 @@ void io_transport_udp::set_primitives()
     io_transport::set_primitives();
   else
   {
-    this->write_cb_ = [=](const void* data, int len, const ip::endpoint* destination) {
+    this->write_cb_ = [=](const void* data, int len, const ip::endpoint* destination, int& error) {
       assert(destination);
       int n = socket_->sendto(data, len, *destination);
       if (n < 0)
       {
-        auto error = xxsocket::get_last_errno();
+        error = xxsocket::get_last_errno();
         if (!xxsocket::not_send_error(error))
           YASIO_KLOGW("[index: %d] write udp socket failed, ec=%d, detail:%s", this->cindex(), error, io_service::strerror(error));
       }
@@ -741,7 +630,10 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_trans
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
     if (yasio__min_wait_duration == 0)
-      return t->write_cb_(buf, len, std::addressof(t->ensure_destination()));
+    {
+      int ignored_ec = 0;
+      return t->write_cb_(buf, len, std::addressof(t->ensure_destination()), ignored_ec);
+    }
     // Enqueue to transport queue
     return t->io_transport_udp::write(sbyte_buffer{buf, buf + len}, nullptr);
   });
@@ -1191,11 +1083,6 @@ void io_service::handle_close(transport_handle_t thandle)
     YASIO_KLOGD("[index: %d] the connection #%u is lost, ec=%d, where=%d, detail:%s", ctx->index_, thandle->id_, error, (int)thandle->error_stage_,
                 io_service::strerror(error));
     this->fire_event(ctx->index(), YEK_ON_CLOSE, error, thandle);
-  }
-  else if (client && error == yasio::errc::ssl_handshake_failed)
-  {
-    YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
-    this->fire_event(ctx->index(), YEK_ON_OPEN, error, ctx);
   }
 #if defined(YASIO_SSL_BACKEND)
   if (yasio__testbits(ctx->properties_, YCM_SSL))

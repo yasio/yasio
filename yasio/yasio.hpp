@@ -297,8 +297,8 @@ enum
   YCK_UDP_SERVER = YCM_UDP | YCM_SERVER,
   YCK_KCP_CLIENT = YCM_KCP | YCM_CLIENT | YCM_UDP,
   YCK_KCP_SERVER = YCM_KCP | YCM_SERVER | YCM_UDP,
-  YCK_SSL_CLIENT = YCM_SSL | YCM_CLIENT | YCM_TCP,
-  YCK_SSL_SERVER = YCM_SSL | YCM_SERVER | YCM_TCP,
+  YCK_SSL_CLIENT = YCK_TCP_CLIENT | YCM_SSL,
+  YCK_SSL_SERVER = YCK_TCP_SERVER | YCM_SSL,
 };
 
 // channel flags
@@ -630,7 +630,7 @@ public:
   sbyte_buffer buffer_; // sending data buffer
   completion_cb_t handler_;
 
-  YASIO__DECL virtual int perform(transport_handle_t transport, const void* buf, int n);
+  YASIO__DECL virtual int perform(transport_handle_t transport, const void* buf, int n, int& error);
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
@@ -644,7 +644,7 @@ public:
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
-  YASIO__DECL int perform(transport_handle_t transport, const void* buf, int n) override;
+  YASIO__DECL int perform(transport_handle_t transport, const void* buf, int n, int& error) override;
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
   DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
 #endif
@@ -720,7 +720,7 @@ protected:
 
   io_channel* ctx_;
 
-  std::function<int(const void*, int, const ip::endpoint*)> write_cb_;
+  std::function<int(const void*, int, const ip::endpoint*, int&)> write_cb_;
   std::function<int(void*, int, int, int&)> read_cb_;
 
   privacy::concurrent_queue<send_op_ptr> send_queue_;
@@ -742,7 +742,6 @@ public:
 
 protected:
   YASIO__DECL int do_ssl_handshake(int& error); // always invoke at do_read
-  YASIO__DECL void on_ssl_connected();
   SSL* ssl_ = nullptr;
 };
 #else

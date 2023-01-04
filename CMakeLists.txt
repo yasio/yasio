@@ -139,7 +139,7 @@ if (YASIO_HAVE_CARES)
 endif()
 
 ### The yasio core library project
-file(GLOB_RECURSE YASIO_CORE yasio/detail/*.hpp)
+file(GLOB_RECURSE YASIO_CORE yasio/detail/*.hpp;yasio/detail/*.inl)
 list (APPEND YASIO_CORE
     yasio/compiler/feature_test.hpp
     yasio/cxx17/memory.hpp

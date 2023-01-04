@@ -4,7 +4,7 @@
  Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
  Copyright (c) 2021 Bytedance Inc.
 
- https://adxe.org
+ https://axmolengine.github.io/
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,36 +36,40 @@
 #include <atomic>
 
 #include "yasio/detail/byte_buffer.hpp"
+#include "yasio/stl/string_view.hpp"
 
 /**
  * @addtogroup network
  * @{
  */
 
-namespace yasio_ext {
+namespace yasio_ext
+{
 
-namespace network {
+namespace network
+{
 
 class HttpClient;
 class HttpResponse;
 
-class TSRefCountedObject {
+class TSRefCountedObject
+{
 
 public:
-  TSRefCountedObject() { _refCount = 1; }
-  virtual ~TSRefCountedObject() {}
+    TSRefCountedObject() { _refCount = 1; }
+    virtual ~TSRefCountedObject() {}
 
-  void retain() { ++_refCount; }
+    void retain() { ++_refCount; }
 
-  void release()
-  {
-    --_refCount;
-    if (_refCount == 0)
-      delete this;
-  }
+    void release()
+    {
+        --_refCount;
+        if (_refCount == 0)
+            delete this;
+    }
 
 protected:
-  std::atomic_uint _refCount;
+    std::atomic_uint _refCount;
 };
 
 /**
@@ -76,10 +80,12 @@ protected:
  * @lua NA
  */
 
-typedef std::function<void(HttpClient*, HttpResponse*)> ccHttpRequestCallback; 
+typedef std::function<void(HttpClient*, HttpResponse*)> ccHttpRequestCallback;
 
-class HttpRequest : public TSRefCountedObject {
+class HttpRequest : public TSRefCountedObject
+{
     friend class HttpClient;
+
 public:
     /**
      * The HttpRequest type enum used in the HttpRequest::setRequestType.
@@ -100,17 +106,10 @@ public:
          new/retain/release still works, which means you need to release it manually
          Please refer to HttpRequestTest.cpp to find its usage.
      */
-    HttpRequest()
-        : _requestType(Type::UNKNOWN)
-        , _pCallback(nullptr)
-        , _pUserData(nullptr)
-    {
-    }
+    HttpRequest() : _requestType(Type::UNKNOWN), _pCallback(nullptr), _pUserData(nullptr) {}
 
     /** Destructor. */
-    virtual ~HttpRequest()
-    {
-    }
+    virtual ~HttpRequest() {}
 
     // setter/getters for properties
 
@@ -119,20 +118,14 @@ public:
      *
      * @param type the request type.
      */
-    void setRequestType(Type type)
-    {
-        _requestType = type;
-    }
+    void setRequestType(Type type) { _requestType = type; }
 
     /**
      * Get the request type of HttpRequest object.
      *
      * @return HttpRequest::Type.
      */
-    Type getRequestType() const
-    {
-        return _requestType;
-    }
+    Type getRequestType() const { return _requestType; }
 
     /**
      * Set the url address of HttpRequest object.
@@ -140,20 +133,14 @@ public:
      *
      * @param url the string object.
      */
-    void setUrl(const std::string& url)
-    {
-        _url = url;
-    }
+    void setUrl(cxx17::string_view url) { cxx17::assign(_url, url); }
 
     /**
      * Get the url address of HttpRequest object.
      *
      * @return const char* the pointer of _url.
      */
-    const std::string& getUrl() const
-    {
-        return _url;
-    }
+    cxx17::string_view getUrl() const { return _url; }
 
     /**
      * Set the request data of HttpRequest object.
@@ -161,10 +148,7 @@ public:
      * @param buffer the buffer of request data, it support binary data.
      * @param len    the size of request data.
      */
-    void setRequestData(const char* buffer, size_t len)
-    {
-        _requestData.assign(buffer, buffer + len);
-    }
+    void setRequestData(const char* buffer, size_t len) { _requestData.assign(buffer, buffer + len); }
 
     /**
      * Get the request data pointer of HttpRequest object.
@@ -173,7 +157,7 @@ public:
      */
     char* getRequestData()
     {
-        if(!_requestData.empty())
+        if (!_requestData.empty())
             return _requestData.data();
 
         return nullptr;
@@ -184,10 +168,7 @@ public:
      *
      * @return ssize_t the size of request data
      */
-    size_t getRequestDataSize() const
-    {
-        return _requestData.size();
-    }
+    size_t getRequestDataSize() const { return _requestData.size(); }
 
     /**
      * Set a string tag to identify your request.
@@ -195,10 +176,7 @@ public:
      *
      * @param tag the string object.
      */
-    void setTag(const std::string& tag)
-    {
-        _tag = tag;
-    }
+    void setTag(cxx17::string_view tag) { cxx17::assign(_tag, tag); }
 
     /**
      * Get the string tag to identify the request.
@@ -206,10 +184,7 @@ public:
      *
      * @return const char* the pointer of _tag
      */
-    const char* getTag() const
-    {
-        return _tag.c_str();
-    }
+    const char* getTag() const { return _tag.c_str(); }
 
     /**
      * Set user-customed data of HttpRequest object.
@@ -218,10 +193,7 @@ public:
      *
      * @param pUserData the string pointer
      */
-    void setUserData(void* pUserData)
-    {
-        _pUserData = pUserData;
-    }
+    void setUserData(void* pUserData) { _pUserData = pUserData; }
 
     /**
      * Get the user-customed data pointer which were pre-setted.
@@ -229,69 +201,53 @@ public:
      *
      * @return void* the pointer of user-customed data.
      */
-    void* getUserData() const
-    {
-        return _pUserData;
-    }
-    
+    void* getUserData() const { return _pUserData; }
+
     /**
      * Set response callback function of HttpRequest object.
      * When response come back, we would call _pCallback to process response data.
      *
      * @param callback the ccHttpRequestCallback function.
      */
-    void setResponseCallback(const ccHttpRequestCallback& callback)
-    {
-        _pCallback = callback;
-    }
-    
+    void setResponseCallback(const ccHttpRequestCallback& callback) { _pCallback = callback; }
 
     /**
      * Get ccHttpRequestCallback callback function.
      *
      * @return const ccHttpRequestCallback& ccHttpRequestCallback callback function.
      */
-    const ccHttpRequestCallback& getCallback() const
-    {
-        return _pCallback;
-    }
+    const ccHttpRequestCallback& getCallback() const { return _pCallback; }
 
     /**
      * Set custom-defined headers.
      *
      * @param headers The string vector of custom-defined headers.
      */
-    void setHeaders(const std::vector<std::string>& headers)
-    {
-        _headers = headers;
-    }
+    void setHeaders(const std::vector<std::string>& headers) { _headers = headers; }
 
     /**
      * Get custom headers.
      *
      * @return std::vector<std::string> the string vector of custom-defined headers.
      */
-    const std::vector<std::string>& getHeaders() const
-    {
-        return _headers;
-    }
+    const std::vector<std::string>& getHeaders() const { return _headers; }
 
     void setHosts(std::vector<std::string> hosts) { _hosts = std::move(hosts); }
     const std::vector<std::string>& getHosts() const { return _hosts; }
 
 private:
-    void setSync(bool sync) {
+    void setSync(bool sync)
+    {
         if (sync)
             _syncState = std::make_shared<std::promise<HttpResponse*>>();
         else
             _syncState.reset();
     }
 
-    std::shared_ptr<std::promise<HttpResponse*>> getSyncState() {
-        return _syncState;
-    }
+    std::shared_ptr<std::promise<HttpResponse*>> getSyncState() { return _syncState; }
 
-    HttpResponse* wait() {
+    HttpResponse* wait()
+    {
         if (_syncState)
             return _syncState->get_future().get();
         return nullptr;
@@ -299,24 +255,23 @@ private:
 
 protected:
     // properties
-    Type                        _requestType;    /// kHttpRequestGet, kHttpRequestPost or other enums
-    std::string                 _url;            /// target url that this request is sent to
-    yasio::sbyte_buffer         _requestData;    /// used for POST
-    std::string                 _tag;            /// user defined tag, to identify different requests in response callback
-    ccHttpRequestCallback       _pCallback;      /// C++11 style callbacks
-    void*                       _pUserData;      /// You can add your customed data here
-    std::vector<std::string>    _headers;        /// custom http headers
-    std::vector<std::string>    _hosts;
+    Type _requestType;                  /// kHttpRequestGet, kHttpRequestPost or other enums
+    std::string _url;                   /// target url that this request is sent to
+    yasio::sbyte_buffer _requestData;   /// used for POST
+    std::string _tag;                   /// user defined tag, to identify different requests in response callback
+    ccHttpRequestCallback _pCallback;   /// C++11 style callbacks
+    void* _pUserData;                   /// You can add your customed data here
+    std::vector<std::string> _headers;  /// custom http headers
+    std::vector<std::string> _hosts;
 
     std::shared_ptr<std::promise<HttpResponse*>> _syncState;
 };
 
-}
+}  // namespace network
 
-}
+}  // namespace yasio_ext
 
 // end group
 /// @}
 
-#endif //__HTTP_REQUEST_H__
-
+#endif  //__HTTP_REQUEST_H__

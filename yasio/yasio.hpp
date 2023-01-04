@@ -49,12 +49,12 @@ SOFTWARE.
 #include "yasio/detail/errc.hpp"
 #include "yasio/detail/byte_buffer.hpp"
 #include "yasio/detail/fd_set_adapter.hpp"
-#include "yasio/cxx17/memory.hpp"
-#include "yasio/cxx17/string_view.hpp"
+#include "yasio/stl/memory.hpp"
+#include "yasio/stl/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
 #if !defined(YASIO_HAVE_CARES)
-#  include "yasio/cxx17/shared_mutex.hpp"
+#  include "yasio/stl/shared_mutex.hpp"
 #endif
 
 #if defined(YASIO_HAVE_KCP)

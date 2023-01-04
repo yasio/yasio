@@ -189,6 +189,7 @@ YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err)
     case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY: // n=0, the upper caller will regards as eof
       n = 0;
     case 0:
+      err = yasio::xxsocket::get_last_errno();
       ::mbedtls_ssl_close_notify(ssl);
       break;
     case MBEDTLS_ERR_SSL_WANT_READ:

@@ -9,5 +9,5 @@ include_directories ("${HTTPTEST_SRC_DIR}")
 include_directories ("${HTTPTEST_INC_DIR}")
 
 add_executable (${target_name} ${HTTPTEST_SRC})
+yasio_config_http_app_depends(${target_name})
 
-target_link_libraries (${target_name} yasio_http)

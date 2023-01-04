@@ -3,7 +3,7 @@
  Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
  Copyright (c) 2021 Bytedance Inc.
 
- https://adxe.org
+ https://axmolengine.github.io/
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-#include "yasio/cxx17/string_view.hpp"
+#include "yasio/stl/string_view.hpp"
 
 namespace yasio_ext
 {
@@ -41,19 +41,19 @@ namespace network
 {
 #if YASIO__HAS_CXX14
 using namespace cxx17::string_view_literals;
-#  define _mksv(a) a ""_sv
+#    define _mksv(a) a ""_sv
 #else
 template <size_t _N>
 inline cxx17::string_view _mksv(const char (&str)[_N])
 {
-  return cxx17::string_view{str, _N - 1};
+    return cxx17::string_view{str, _N - 1};
 }
 #endif
 
 class Uri;
 struct CookieInfo
 {
-    CookieInfo() = default;
+    CookieInfo()                  = default;
     CookieInfo(const CookieInfo&) = default;
     CookieInfo(CookieInfo&& rhs)
         : domain(std::move(rhs.domain))
@@ -101,7 +101,7 @@ public:
     void readFile();
 
     void writeFile();
-    void setCookieFileName(const std::string& fileName);
+    void setCookieFileName(cxx17::string_view fileName);
 
     const std::vector<CookieInfo>* getCookies() const;
     const CookieInfo* getMatchCookie(const Uri& uri) const;
@@ -109,15 +109,15 @@ public:
 
     // Check match cookies for http request
     std::string checkAndGetFormatedMatchCookies(const Uri& uri);
-    bool updateOrAddCookie(const std::string& cookie, const Uri& uri);
+    bool updateOrAddCookie(const cxx17::string_view& cookie, const Uri& uri);
 
 private:
     std::string _cookieFileName;
     std::vector<CookieInfo> _cookies;
 };
 
-} // namespace network
-} // namespace yasio_ext
+}  // namespace network
+}  // namespace yasio_ext
 
 /// @endcond
 #endif /* HTTP_COOKIE_H */

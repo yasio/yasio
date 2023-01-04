@@ -21,6 +21,7 @@ option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)
 option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # --- The C/C++ standard
 if (NOT MSVC)
@@ -142,9 +143,9 @@ endif()
 file(GLOB_RECURSE YASIO_CORE yasio/detail/*.hpp;yasio/detail/*.inl)
 list (APPEND YASIO_CORE
     yasio/compiler/feature_test.hpp
-    yasio/cxx17/memory.hpp
-    yasio/cxx17/shared_mutex.hpp
-    yasio/cxx17/string_view.hpp
+    yasio/stl/memory.hpp
+    yasio/stl/shared_mutex.hpp
+    yasio/stl/string_view.hpp
     yasio/xxsocket.hpp
     yasio/yasio.hpp
     yasio/xxsocket.cpp
@@ -278,8 +279,7 @@ macro(yasio_link_ssl_libraries target_name)
     endif()
 endmacro()
 
-macro(yasio_config_app_depends target_name)
-
+macro(yasio_config_lib_depends target_name)
     target_link_libraries(${target_name} ${yasio_target_name})
     if (NOT WIN32)
         target_link_libraries(${target_name} pthread)
@@ -318,6 +318,21 @@ macro(yasio_config_app_depends target_name)
         endif()
     endif()
 endmacro()
+
+macro(yasio_config_app_folder target_name)
+    set_target_properties(${target_name} PROPERTIES 
+        FOLDER "apps")
+endmacro()
+
+macro(yasio_config_app_depends target_name)
+    yasio_config_lib_depends(${target_name})
+    yasio_config_app_folder(${target_name})
+endmacro(yasio_config_app_depends)
+
+macro(yasio_config_http_app_depends target_name)
+    yasio_config_app_depends(${target_name})
+    target_link_libraries (${target_name} yasio_http)
+endmacro(yasio_config_app_depends)
 
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR AND (YASIO_SSL_BACKEND EQUAL 1))
@@ -431,8 +446,17 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     
     include_directories("extensions")
     
+    # llhttp for extensions: yasio_http, ...
+    if (NOT BUILD_SHARED_LIBS)
+      set (BUILD_SHARED_LIBS FALSE CACHE BOOL "")
+      set (BUILD_STATIC_LIBS TRUE CACHE BOOL "")
+    endif()
+    add_subdirectory(thirdparty/llhttp)
+
     # httptest
     add_subdirectory(extensions/yasio_http)
+    target_link_libraries(yasio_http llhttp::llhttp)
+    target_include_directories(yasio_http PUBLIC "thirdparty/llhttp/include")
     yasio_config_lib_options(yasio_http)
     yasio_config_target_outdir(yasio_http)
 

@@ -122,7 +122,10 @@ enum
 namespace
 {
 // the minimal wait duration for select
-static highp_time_t yasio__min_wait_duration = 0LL;
+static highp_time_t yasio__min_wait_usec = 0LL;
+// By default we will wait no longer than 5 minutes. This will ensure that
+// any changes to the system clock are detected after no longer than this.
+static const highp_time_t yasio__max_wait_usec = 5 * 60 * 1000 * 1000LL;
 // the max transport alloc size
 static const size_t yasio__max_tsize = (std::max)({sizeof(io_transport_tcp), sizeof(io_transport_udp), sizeof(io_transport_ssl), sizeof(io_transport_kcp)});
 } // namespace
@@ -136,7 +139,7 @@ struct yasio__global_state {
   {
     auto __get_cprint = [&]() -> const print_fn2_t& { return custom_print; };
     // for single core CPU, we set minimal wait duration to 10us by default
-    yasio__min_wait_duration = std::thread::hardware_concurrency() > 1 ? 0LL : YASIO_MIN_WAIT_DURATION;
+    yasio__min_wait_usec = std::thread::hardware_concurrency() > 1 ? 0LL : 10LL;
 #if defined(YASIO_SSL_BACKEND) && YASIO_SSL_BACKEND == 1
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(LIBRESSL_VERSION_NUMBER)
     if (OPENSSL_init_ssl(0, nullptr) == 1)
@@ -375,7 +378,7 @@ bool io_transport::do_write(highp_time_t& wait_duration)
         }
       }
       else
-        wait_duration = yasio__min_wait_duration;
+        wait_duration = yasio__min_wait_usec;
     }
     if (no_wevent && pollout_registerred_)
     {
@@ -628,7 +631,7 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_trans
   ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
-    if (yasio__min_wait_duration == 0)
+    if (yasio__min_wait_usec == 0)
     {
       int ignored_ec = 0;
       return t->write_cb_(buf, len, std::addressof(t->ensure_destination()), ignored_ec);
@@ -656,7 +659,7 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duratio
   { // !important, should always try to call ikcp_recv when no error occured.
     n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
     if (n > 0) // If got data from kcp, don't wait
-      wait_duration = yasio__min_wait_duration;
+      wait_duration = yasio__min_wait_usec;
     else if (n < 0)
       n = 0; // EAGAIN/EWOULDBLOCK
   }
@@ -682,7 +685,7 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
   ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);
   this->check_timeout(wait_duration); // call ikcp_check
-  if (yasio__min_wait_duration == 0)
+  if (yasio__min_wait_usec == 0)
     return true;
   // Call super do_write to perform low layer socket.send
   // benefit of transport queue:
@@ -696,7 +699,7 @@ void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
   auto expire_time      = ::ikcp_check(kcp_, current);
   highp_time_t duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
   if (duration < 0)
-    duration = yasio__min_wait_duration;
+    duration = yasio__min_wait_usec;
   if (wait_duration > duration)
     wait_duration = duration;
 }
@@ -796,6 +799,8 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
   ssl_roles_[YSSL_CLIENT] = ssl_roles_[YSSL_SERVER] = nullptr;
 #endif
 
+  this->wait_duration_ = yasio__max_wait_usec;
+
   // at least one channel
   if (channel_count < 1)
     channel_count = 1;
@@ -879,7 +884,6 @@ void io_service::run()
 #if defined(YASIO_HAVE_CARES)
   recreate_ares_channel();
   ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM] = {0};
-  int ares_socks_count                          = 0;
 #endif
 
   // Call once at startup
@@ -887,24 +891,23 @@ void io_service::run()
 
   // The core event loop
   fd_set_adapter fd_set; // The temp file descriptor set
-  this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
+
   do
   {
     auto wait_duration   = get_timeout(this->wait_duration_); // Gets current wait duration
-    this->wait_duration_ = YASIO_MAX_WAIT_DURATION;           // Reset next wait duration
-    if (wait_duration > 0)
-    {
-      fd_set           = this->fd_set_;
-      timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    this->wait_duration_ = yasio__max_wait_usec;              // Reset next wait duration
+
+    fd_set           = this->fd_set_;
+    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if defined(YASIO_HAVE_CARES)
-      if (ares_outstanding_work_)
-      {
-        ares_socks_count = register_ares_fds(ares_socks, fd_set);
-        ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
-      }
+    auto ares_nfds = set_ares_fds(ares_socks, fd_set, waitd_tv);
 #endif
-      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
-      int retval = fd_set.poll_io(waitd_tv);
+
+    const int waitd_ms = static_cast<int>(waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
+    if (waitd_ms > 0)
+    {
+      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_ms);
+      int retval = fd_set.poll_io(waitd_ms);
       YASIO_KLOGV("[core] poll_io waked up, retval=%d", retval);
       if (retval < 0)
       {
@@ -927,7 +930,7 @@ void io_service::run()
 
 #if defined(YASIO_HAVE_CARES)
     // process possible async resolve requests.
-    process_ares_requests(ares_socks, ares_socks_count, fd_set);
+    process_ares_fds(ares_socks, ares_nfds, fd_set);
 #endif
 
     // process active transports
@@ -1259,28 +1262,32 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-int io_service::register_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set)
+int io_service::set_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set, timeval& waitd_tv)
 {
-  int count   = 0;
-  int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
-  for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
+  int count = 0;
+  if (ares_outstanding_work_)
   {
-    if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
+    int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
+    for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
     {
-      auto fd = ares_socks[i];
-      ++count;
-      fd_set.set(fd, socket_event::readwrite);
+      if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
+      {
+        auto fd = ares_socks[i];
+        ++count;
+        fd_set.set(fd, socket_event::readwrite);
+      }
+      else
+        break;
     }
-    else
-      break;
+    ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
   }
   return count;
 }
-void io_service::process_ares_requests(socket_native_type* socks, int count, fd_set_adapter& fd_set)
+void io_service::process_ares_fds(socket_native_type* socks, int nfds, fd_set_adapter& fd_set)
 {
   if (this->ares_outstanding_work_ > 0)
   {
-    for (auto i = 0; i < count; ++i)
+    for (auto i = 0; i < nfds; ++i)
     {
       auto fd = socks[i];
       ::ares_process_fd(this->ares_, fd_set.is_set(fd, socket_event::read) ? fd : ARES_SOCKET_BAD,
@@ -1675,7 +1682,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     if (offset > 0)
     { /* move remain data to head of buffer and hold 'offset'. */
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, offset);
-      this->wait_duration_ = yasio__min_wait_duration;
+      this->wait_duration_ = yasio__min_wait_usec;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve it.
     YASIO_KLOGV("[index: %d] received a properly packet from peer, packet size:%d", transport->cindex(), transport->expected_size_);

@@ -1095,8 +1095,8 @@ private:
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
-  YASIO__DECL int set_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set, timeval& waitd_tv);
-  YASIO__DECL void process_ares_fds(socket_native_type* socks, int count, fd_set_adapter& fd_set);
+  YASIO__DECL int do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, timeval& waitd_tv);
+  YASIO__DECL void do_ares_process_fds(socket_native_type* socks, int count, fd_set_adapter& fd_set);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();
   YASIO__DECL void destroy_ares_channel();

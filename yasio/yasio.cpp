@@ -900,7 +900,14 @@ void io_service::run()
     fd_set           = this->fd_set_;
     timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
 #if defined(YASIO_HAVE_CARES)
-    auto ares_nfds = set_ares_fds(ares_socks, fd_set, waitd_tv);
+    /**
+     * retrieves the set of file descriptors which the calling application should poll io,
+     * after poll_io, for ares invoke flow, refer to:
+     * https://c-ares.org/ares_fds.html
+     * https://c-ares.org/ares_timeout.html
+     * https://c-ares.org/ares_process_fd.html
+     */
+    auto ares_nfds = do_ares_fds(ares_socks, fd_set, waitd_tv);
 #endif
 
     const int waitd_ms = static_cast<int>(waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
@@ -929,8 +936,8 @@ void io_service::run()
     }
 
 #if defined(YASIO_HAVE_CARES)
-    // process possible async resolve requests.
-    process_ares_fds(ares_socks, ares_nfds, fd_set);
+    // process events for name resolution.
+    do_ares_process_fds(ares_socks, ares_nfds, fd_set);
 #endif
 
     // process active transports
@@ -1262,37 +1269,39 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-int io_service::set_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set, timeval& waitd_tv)
+int io_service::do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, timeval& waitd_tv)
 {
-  int count = 0;
+  int nfds = 0;
   if (ares_outstanding_work_)
   {
-    int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
+    int bitmask = ::ares_getsock(this->ares_, socks, ARES_GETSOCK_MAXNUM);
     for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
     {
-      if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
+      int events = socket_event::null;
+      if (ARES_GETSOCK_READABLE(bitmask, i))
+        events |= socket_event::read;
+      if (ARES_GETSOCK_WRITABLE(bitmask, i))
+        events |= socket_event::write;
+      if (events)
       {
-        auto fd = ares_socks[i];
-        ++count;
-        fd_set.set(fd, socket_event::readwrite);
+        ++nfds;
+        fd_set.set(socks[i], events);
       }
       else
         break;
     }
-    ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
+
+    if (nfds)
+      ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
   }
-  return count;
+  return nfds;
 }
-void io_service::process_ares_fds(socket_native_type* socks, int nfds, fd_set_adapter& fd_set)
+void io_service::do_ares_process_fds(socket_native_type* socks, int nfds, fd_set_adapter& fd_set)
 {
-  if (this->ares_outstanding_work_ > 0)
+  for (auto i = 0; i < nfds; ++i)
   {
-    for (auto i = 0; i < nfds; ++i)
-    {
-      auto fd = socks[i];
-      ::ares_process_fd(this->ares_, fd_set.is_set(fd, socket_event::read) ? fd : ARES_SOCKET_BAD,
-                        fd_set.is_set(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
-    }
+    auto fd = socks[i];
+    ::ares_process_fd(this->ares_, fd_set.is_set(fd, socket_event::read) ? fd : ARES_SOCKET_BAD, fd_set.is_set(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
   }
 }
 void io_service::recreate_ares_channel()

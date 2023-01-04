@@ -197,7 +197,7 @@ void HttpClient::enableCookies(cxx17::string_view cookieFile)
 void HttpClient::setSSLVerification(cxx17::string_view caFile)
 {
     std::lock_guard<std::recursive_mutex> lock(_sslCaFileMutex);
-    _sslCaFilename = caFile;
+    cxx17::assign(_sslCaFilename, caFile);
     _service->set_option(yasio::YOPT_S_SSL_CACERT, _sslCaFilename.c_str());
 }
 

@@ -161,14 +161,11 @@ YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& err)
 }
 YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err)
 {
-
   ERR_clear_error();
   int n = ::SSL_read(ssl, data, static_cast<int>(len));
   if (n > 0)
     return n;
   int sslerr = ::SSL_get_error(ssl, n);
-  if (sslerr == SSL_ERROR_ZERO_RETURN || ERR_peek_error() == 0) // peer shutdown SSL cleanly
-    return 0;
   switch (sslerr)
   {
     case SSL_ERROR_WANT_READ:
@@ -178,13 +175,12 @@ YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err)
           equivalent. */
       err = EWOULDBLOCK;
       break;
-    case SSL_ERROR_SYSCALL:
-      err = yasio::xxsocket::get_last_errno();
-      break;
     default:
-      err = yasio::errc::ssl_read_failed;
+      err = sslerr == SSL_ERROR_SYSCALL ? yasio::xxsocket::get_last_errno() : yasio::errc::ssl_read_failed;
+      if (sslerr == SSL_ERROR_ZERO_RETURN || ERR_peek_error() == 0) // peer closed connection in SSL handshake
+        return 0;
   }
-  return n;
+  return -1;
 }
 #endif
 

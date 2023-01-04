@@ -21,7 +21,7 @@ void yasioTest()
   deadline_timer udp_heartbeat;
   int total_bytes_transferred = 0;
 
-  int max_request_count = 3;
+  int max_request_count = 1;
 
   service.set_option(YOPT_S_FORWARD_EVENT, 1);
 

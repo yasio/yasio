@@ -947,7 +947,8 @@ const char* xxsocket::strerror_r(int error, char* buf, size_t buflen)
 
   return buf;
 #else
-  return ::strerror_r(error, buf, buflen);
+  (void)::strerror_r(error, buf, buflen);
+  return buf;
 #endif
 }
 

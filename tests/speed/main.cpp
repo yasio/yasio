@@ -18,13 +18,13 @@ using namespace yasio;
 Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 */
 
+#define SPEEDTEST_VIA_SSL 0
+
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
 #  define SPEEDTEST_VIA_UDS 1 // Now only support TCP/SOCK_STREAM
 #else
 #  define SPEEDTEST_VIA_UDS 0
 #endif
-
-#define SPEEDTEST_VIA_SSL 0
 
 #define SPEEDTEST_PROTO_TCP 1
 #define SPEEDTEST_PROTO_UDP 2

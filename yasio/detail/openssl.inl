@@ -30,6 +30,10 @@ SOFTWARE.
 #define YASIO__OPENSSL_INL
 
 #if YASIO_SSL_BACKEND == 1 // OpenSSL
+
+// The ssl error mask (1 << 31), a little hack, but works
+#  define YSSL_ERR_MASK 0x80000000
+
 YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
 {
   auto ctx = ::SSL_CTX_new(opts.client ? ::SSLv23_client_method() : SSLv23_server_method());
@@ -101,7 +105,7 @@ YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
   ::SSL_free(ssl);
   ssl = nullptr;
 }
-YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& ec)
+YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& err)
 {
   ERR_clear_error();
   int ret = ::SSL_do_handshake(ssl);
@@ -115,60 +119,70 @@ YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& ec)
   */
   if (sslerr == SSL_ERROR_WANT_READ || sslerr == SSL_ERROR_WANT_WRITE)
   {
-    ec = EWOULDBLOCK;
+    err = EWOULDBLOCK;
     return -1;
   }
 
   /* ssl handshake fail */
-  ec = yasio::errc::ssl_handshake_failed; // emit ssl handshake failed, continue handle close flow
-  return (sslerr != SSL_ERROR_SYSCALL) ? (static_cast<int>(ERR_get_error()) | YSSL_ERR_MASK) : yasio::xxsocket::get_last_errno();
+  err = yasio::errc::ssl_handshake_failed; // emit ssl handshake failed, continue handle close flow
+  return (sslerr != SSL_ERROR_SYSCALL) ? static_cast<int>(ERR_get_error() | YSSL_ERR_MASK) : yasio::xxsocket::get_last_errno();
 }
 YASIO__DECL const char* yssl_strerror(ssl_st* ssl, int sslerr, char* buf, size_t buflen)
 {
-  ::ERR_error_string_n((unsigned int)sslerr & ~YSSL_ERR_MASK, buf, buflen);
+  if (yasio__testbits(sslerr, YSSL_ERR_MASK))
+    ::ERR_error_string_n((unsigned int)sslerr & ~YSSL_ERR_MASK, buf, buflen);
+  else
+    yasio::xxsocket::strerror_r(sslerr, buf, buflen);
   return buf;
 }
-YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& ec)
+YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& err)
 {
   ERR_clear_error();
   int n = ::SSL_write(ssl, data, static_cast<int>(len));
   if (n > 0)
     return n;
 
-  int error = SSL_get_error(ssl, n);
-  switch (error)
+  int sslerr = ::SSL_get_error(ssl, n);
+  if (sslerr == SSL_ERROR_ZERO_RETURN)
+  { // SSL_ERROR_SYSCALL
+    err = yasio::xxsocket::get_last_errno();
+    return 0;
+  }
+  switch (sslerr)
   {
     case SSL_ERROR_WANT_READ:
     case SSL_ERROR_WANT_WRITE:
-      ec = EWOULDBLOCK;
+      err = EWOULDBLOCK;
       break;
     default:
-      ec = yasio::errc::ssl_write_failed;
+      err = yasio::errc::ssl_write_failed;
   }
   return -1;
 }
-YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& ec)
+YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err)
 {
+
   ERR_clear_error();
   int n = ::SSL_read(ssl, data, static_cast<int>(len));
   if (n > 0)
     return n;
-  int status = SSL_get_error(ssl, n);
-  switch (status)
+  int sslerr = ::SSL_get_error(ssl, n);
+  if (sslerr == SSL_ERROR_ZERO_RETURN || ERR_peek_error() == 0) // peer shutdown SSL cleanly
+    return 0;
+  switch (sslerr)
   {
-    case SSL_ERROR_ZERO_RETURN: // n=0, the upper caller will regards as eof
-      break;
     case SSL_ERROR_WANT_READ:
     case SSL_ERROR_WANT_WRITE:
       /* The operation did not complete; the same TLS/SSL I/O function
           should be called again later. This is basically an EWOULDBLOCK
           equivalent. */
-      ec = EWOULDBLOCK;
+      err = EWOULDBLOCK;
+      break;
+    case SSL_ERROR_SYSCALL:
+      err = yasio::xxsocket::get_last_errno();
       break;
     default:
-      ec = yasio::xxsocket::get_last_errno(); // get underlying error code
-      if (!ec)
-        ec = yasio::errc::ssl_read_failed;
+      err = yasio::errc::ssl_read_failed;
   }
   return n;
 }

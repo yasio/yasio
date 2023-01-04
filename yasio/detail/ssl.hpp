@@ -63,9 +63,6 @@ struct yssl_options {
   bool client;
 };
 
-// The ssl error mask (1 << 31)
-#  define YSSL_ERR_MASK 0x80000000
-
 YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts);
 YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx);
 
@@ -76,15 +73,15 @@ YASIO__DECL void yssl_shutdown(ssl_st*&);
 * @returns
 *   0: succeed
 *   other: use yssl_strerror(ret & YSSL_ERROR_MASK, ...) get error message
-*    - ec can bb
+*    - err can bb
        - EWOULDBLOCK: status ok, repeat call next time
 *      - yasio::errc::ssl_handshake_failed: failed
 */
-YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& ec);
+YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& err);
 YASIO__DECL const char* yssl_strerror(ssl_st* ssl, int sslerr, char* buf, size_t buflen);
 
-YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& ec);
-YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& ec);
+YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& err);
+YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err);
 #endif
 
 ///////////////////////////////////////////////////////////////////

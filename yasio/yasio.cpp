@@ -496,8 +496,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
     else
     { // handshake failed, print reason
       char buf[256] = {0};
-      YASIO_KLOGE("[index: %d] do_ssl_handshake fail with ret=%d, detail:%s", ctx_->index_, ret,
-                  yasio__testbits(static_cast<int>(ret), YSSL_ERR_MASK) ? yssl_strerror(ssl_, ret, buf, sizeof(buf)) : xxsocket::strerror_r(ret, buf, sizeof(buf)));
+      YASIO_KLOGE("[index: %d] do_ssl_handshake fail with %s", ctx_->index_, yssl_strerror(ssl_, ret, buf, sizeof(buf)));
       if (yasio__testbits(ctx_->properties_, YCM_CLIENT))
       {
         YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx_->index_, ctx_->format_destination().c_str(), error,

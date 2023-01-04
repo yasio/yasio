@@ -137,7 +137,7 @@ YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
   delete ssl;
   ssl = nullptr;
 }
-YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& ec)
+YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& err)
 {
   int ret = ::mbedtls_ssl_handshake_step(ssl);
   switch (ret)
@@ -145,24 +145,25 @@ YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& ec)
     case 0:
       if (ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER)
         return 0;
-      ec = EWOULDBLOCK;
+      err = EWOULDBLOCK;
       ret = -1;
       break;
     case MBEDTLS_ERR_SSL_WANT_READ:
     case MBEDTLS_ERR_SSL_WANT_WRITE:
-      ec = EWOULDBLOCK;
+      err = EWOULDBLOCK;
       break; // Nothing need to do
     default:
-      ec = yasio::errc::ssl_handshake_failed;
+      err = yasio::errc::ssl_handshake_failed;
   }
-  return static_cast<int>((unsigned int)-ret | YSSL_ERR_MASK);
+  return ret;
 }
 const char* yssl_strerror(ssl_st* ssl, int sslerr, char* buf, size_t buflen)
 {
-  ::mbedtls_strerror(-static_cast<int>((unsigned int)sslerr & ~YSSL_ERR_MASK), buf, buflen);
+  int n = snprintf(buf, buflen, "error:%d:", sslerr);
+  ::mbedtls_strerror(sslerr, buf + n, buflen - n);
   return buf;
 }
-YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& ec)
+YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& err)
 {
   int n = ::mbedtls_ssl_write(ssl, static_cast<const uint8_t*>(data), len);
   if (n > 0)
@@ -171,14 +172,14 @@ YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& ec)
   {
     case MBEDTLS_ERR_SSL_WANT_READ:
     case MBEDTLS_ERR_SSL_WANT_WRITE:
-      ec = EWOULDBLOCK;
+      err = EWOULDBLOCK;
       break;
     default:
-      ec = yasio::errc::ssl_write_failed;
+      err = yasio::errc::ssl_write_failed;
   }
   return -1;
 }
-YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& ec)
+YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err)
 {
   int n = ::mbedtls_ssl_read(ssl, static_cast<uint8_t*>(data), len);
   if (n > 0)
@@ -192,10 +193,10 @@ YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& ec)
       break;
     case MBEDTLS_ERR_SSL_WANT_READ:
     case MBEDTLS_ERR_SSL_WANT_WRITE:
-      ec = EWOULDBLOCK;
+      err = EWOULDBLOCK;
       break;
     default:
-      ec = yasio::errc::ssl_read_failed;
+      err = yasio::errc::ssl_read_failed;
   }
   return n;
 }

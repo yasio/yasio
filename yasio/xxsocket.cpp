@@ -931,12 +931,7 @@ const char* xxsocket::strerror(int error)
 {
 #if defined(_WIN32)
   static char error_msg[256];
-  ZeroMemory(error_msg, sizeof(error_msg));
-  ::FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK /* remove line-end charactors \r\n */, NULL,
-                   error, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), // english language
-                   error_msg, sizeof(error_msg), nullptr);
-
-  return error_msg;
+  return xxsocket::strerror_r(error, error_msg, sizeof(error_msg));
 #else
   return ::strerror(error);
 #endif

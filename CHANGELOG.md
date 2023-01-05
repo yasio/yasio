@@ -9,6 +9,8 @@ yasio-3.39.7
  
       - `YOPT_S_SSL_CERT`: to specific ssl server `cert` and `private_key` files
       - `YCK_SSL_SERVER`: open a channel as ssl server, notes: require specific valid `cert` and `private_key` file with option `YOPT_S_SSL_CERT`
+  3. Improve c-ares integration
+  4. Improve extesion `yasio_http`, move it's dependent `llhttp` to `thirdparty` and managed by git submodule
   
   
 yasio-3.39.6

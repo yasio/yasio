@@ -75,7 +75,7 @@ cmake --build build --config Debug
 * Support [CocosCreator jsb2.0](https://github.com/yasio/inettester)
 * Support [Unity3D](https://github.com/yasio/yasio_unity)
 * Support [Unreal Engine](https://github.com/yasio/yasio_unreal)
-* Support ssl client with OpenSSL/MbedTLS
+* Support ssl client/server with OpenSSL/MbedTLS
 * Support async resolve with c-ares
 * Support header only with ```YASIO_HEAD_ONLY=1``` set at config.hpp or compiler flags
 * Support Unix Domain Socket

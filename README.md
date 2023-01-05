@@ -55,7 +55,7 @@ git clone --recursive https://github.com/yasio/yasio
 cd yasio
 
 # 如果是macOS Xcode, 这里命令应该换成：cmake -B build -GXcode
-cmake -B build
+cmake -B builddfsfdsf
 
 # 使用CMake命令行编译, 如果需要调试，则使用相应平台IDE打开即可:
 # a. Windows：使用VisualStudio打开build/yasio.sln
@@ -67,7 +67,7 @@ cmake --build build --config Debug
 
 ## 特性：
 * 支持TCP，UDP，KCP传输，且API是统一的。
-* 支持TCP粘包处理，业务完全不必关心。
+* 支持TCP粘包处理，业务完全不必关心。ds
 * 支持组播。
 * 支持IPv4/IPv6或者苹果IPv6_only网络。
 * 支持处理多个连接的所有网络事件。
@@ -77,7 +77,7 @@ cmake --build build --config Debug
 * 支持[CocosCreator jsb2.0绑定](https://github.com/yasio/inettester)。
 * 支持[Unity3D](https://github.com/yasio/yasio_unity)。
 * 支持[虚幻引擎](https://github.com/yasio/yasio_unreal)。
-* 支持SSL客户端，基于OpenSSL/MbedTLS。
+* 支持SSL客户端/服务端, 基于OpenSSL/MbedTLS。
 * 支持非阻塞域名解析，基于c-ares。
 * 支持Header Only集成方式，只需要定义编译预处理器宏```YASIO_HEAD_ONLY=1```即可。
 * 支持Unix Domain Socket。

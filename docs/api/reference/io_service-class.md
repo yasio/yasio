@@ -203,6 +203,7 @@ bool open(size_t cindex, int kind);
 - `YCK_KCP_CLIENT`
 - `YCK_KCP_SERVER`
 - `YCK_SSL_CLIENT`
+- `YCK_SSL_SERVER`: 必须在启动io_service前通过选项`YOPT_S_SSL_CERT`设置有效的证书和私钥文件才能正常工作。
 
 
 ## <a name="close"></a> io_service::close

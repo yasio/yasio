@@ -17,3 +17,4 @@
 |*YASIO_DISABLE_OBJECT_POOL*|是否禁用对象池的使用，默认启用。|
 |*YASIO_DISABLE_CONCURRENT_SINGLETON*|是否禁用并发单利类模板。|
 |*YASIO_ENABLE_PASSIVE_EVENT*|是否启用服务端信道open/close事件产生，默认关闭。|
+|*YASIO_DISABLE_POLL*|是否禁用`poll`，默认启用。自3.39.6，底层多路io复用模型使用`poll`，如需继续使用`select`模型，定义此预处理器即可|

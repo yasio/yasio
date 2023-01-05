@@ -332,7 +332,7 @@ endmacro(yasio_config_app_depends)
 macro(yasio_config_http_app_depends target_name)
     yasio_config_app_depends(${target_name})
     target_link_libraries (${target_name} yasio_http)
-endmacro(yasio_config_app_depends)
+endmacro(yasio_config_http_app_depends)
 
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR AND (YASIO_SSL_BACKEND EQUAL 1))

@@ -125,7 +125,10 @@ enum
 namespace
 {
 // the minimal wait duration for select
-static highp_time_t yasio__min_wait_duration = 0LL;
+static highp_time_t yasio__min_wait_usec = 0LL;
+// By default we will wait no longer than 5 minutes. This will ensure that
+// any changes to the system clock are detected after no longer than this.
+static const highp_time_t yasio__max_wait_usec = 5 * 60 * 1000 * 1000LL;
 // the max transport alloc size
 static const size_t yasio__max_tsize = (std::max)({sizeof(io_transport_tcp), sizeof(io_transport_udp), sizeof(io_transport_ssl), sizeof(io_transport_kcp)});
 } // namespace
@@ -139,7 +142,7 @@ struct yasio__global_state {
   {
     auto __get_cprint = [&]() -> const print_fn2_t& { return custom_print; };
     // for single core CPU, we set minimal wait duration to 10us by default
-    yasio__min_wait_duration = std::thread::hardware_concurrency() > 1 ? 0LL : YASIO_MIN_WAIT_DURATION;
+    yasio__min_wait_usec = std::thread::hardware_concurrency() > 1 ? 0LL : 10LL;
 #if defined(YASIO_SSL_BACKEND) && YASIO_SSL_BACKEND == 1
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(LIBRESSL_VERSION_NUMBER)
     if (OPENSSL_init_ssl(0, nullptr) == 1)
@@ -251,7 +254,6 @@ void io_channel::join_multicast_group()
       case AF_INET6:
         socket_->set_optval(IPPROTO_IPV6, IP_MULTICAST_IF, multiif_.in6_.sin6_scope_id);
         break;
-      default:;
     }
 
     int loopback = yasio__testbits(properties_, YCPF_MCAST_LOOPBACK) ? 1 : 0;
@@ -340,7 +342,7 @@ io_transport::io_transport(io_channel* ctx, xxsocket_ptr&& s) : ctx_(ctx)
 #endif
 }
 const print_fn2_t& io_transport::__get_cprint() const { return ctx_->get_service().options_.print_; }
-int io_transport::write(dynamic_buffer_t&& buffer, completion_cb_t&& handler)
+int io_transport::write(sbyte_buffer&& buffer, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
@@ -381,7 +383,7 @@ bool io_transport::do_write(highp_time_t& wait_duration)
         }
       }
       else
-        wait_duration = yasio__min_wait_duration;
+        wait_duration = yasio__min_wait_usec;
     }
     if (no_wevent && pollout_registerred_)
     {
@@ -593,11 +595,11 @@ void io_transport_udp::disconnect()
   connected_ = false;
   set_primitives();
 }
-int io_transport_udp::write(dynamic_buffer_t&& buffer, completion_cb_t&& handler)
+int io_transport_udp::write(sbyte_buffer&& buffer, completion_cb_t&& handler)
 {
   return connected_ ? io_transport::write(std::move(buffer), std::move(handler)) : write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
-int io_transport_udp::write_to(dynamic_buffer_t&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
+int io_transport_udp::write_to(sbyte_buffer&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -645,15 +647,15 @@ io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_trans
   ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
-    if (yasio__min_wait_duration == 0)
+    if (yasio__min_wait_usec == 0)
       return t->write_cb_(buf, len, std::addressof(t->ensure_destination()));
     // Enqueue to transport queue
-    return t->io_transport_udp::write(dynamic_buffer_t{buf, buf + len}, nullptr);
+    return t->io_transport_udp::write(sbyte_buffer{buf, buf + len}, nullptr);
   });
 }
 io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 
-int io_transport_kcp::write(dynamic_buffer_t&& buffer, completion_cb_t&& /*handler*/)
+int io_transport_kcp::write(sbyte_buffer&& buffer, completion_cb_t&& /*handler*/)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   int len    = static_cast<int>(buffer.size());
@@ -670,7 +672,7 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duratio
   { // !important, should always try to call ikcp_recv when no error occured.
     n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
     if (n > 0) // If got data from kcp, don't wait
-      wait_duration = yasio__min_wait_duration;
+      wait_duration = yasio__min_wait_usec;
     else if (n < 0)
       n = 0; // EAGAIN/EWOULDBLOCK
   }
@@ -696,7 +698,7 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
   ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
   ::ikcp_flush(kcp_);
   this->check_timeout(wait_duration); // call ikcp_check
-  if (yasio__min_wait_duration == 0)
+  if (yasio__min_wait_usec == 0)
     return true;
   // Call super do_write to perform low layer socket.send
   // benefit of transport queue:
@@ -710,7 +712,7 @@ void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
   auto expire_time      = ::ikcp_check(kcp_, current);
   highp_time_t duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
   if (duration < 0)
-    duration = yasio__min_wait_duration;
+    duration = yasio__min_wait_usec;
   if (wait_duration > duration)
     wait_duration = duration;
 }
@@ -747,6 +749,7 @@ void io_service::start(event_cb_t cb)
     if (!options_.no_new_thread_)
     {
       signal_blocker sb;
+      (void)sb;
       this->worker_    = std::thread(&io_service::run, this);
       this->worker_id_ = worker_.get_id();
     }
@@ -805,6 +808,9 @@ void io_service::handle_stop()
 }
 void io_service::initialize(const io_hostent* channel_eps, int channel_count)
 {
+
+  this->wait_duration_ = yasio__max_wait_usec;
+
   // at least one channel
   if (channel_count < 1)
     channel_count = 1;
@@ -888,7 +894,6 @@ void io_service::run()
 #if defined(YASIO_HAVE_CARES)
   recreate_ares_channel();
   ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM] = {0};
-  int ares_socks_count                          = 0;
 #endif
 
   // Call once at startup
@@ -896,24 +901,31 @@ void io_service::run()
 
   // The core event loop
   fd_set_adapter fd_set; // The temp file descriptor set
-  this->wait_duration_ = YASIO_MAX_WAIT_DURATION;
+
   do
   {
-    auto wait_duration   = get_timeout(this->wait_duration_); // Gets current wait duration
-    this->wait_duration_ = YASIO_MAX_WAIT_DURATION;           // Reset next wait duration
-    if (wait_duration > 0)
-    {
-      fd_set           = this->fd_set_;
-      timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    fd_set = this->fd_set_;
+
+    const auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
 #if defined(YASIO_HAVE_CARES)
-      if (ares_outstanding_work_)
-      {
-        ares_socks_count = register_ares_fds(ares_socks, fd_set);
-        ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
-      }
+    /**
+     * retrieves the set of file descriptors which the calling application should poll io,
+     * after poll_io, for ares invoke flow, refer to:
+     * https://c-ares.org/ares_fds.html
+     * https://c-ares.org/ares_timeout.html
+     * https://c-ares.org/ares_process_fd.html
+     */
+    timeval waitd_tv    = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
+    auto ares_nfds      = do_ares_fds(ares_socks, fd_set, waitd_tv);
+    const auto waitd_ms = static_cast<int>(waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::milli::den);
+#else
+    const auto waitd_ms = static_cast<int>(waitd_usec / std::milli::den);
 #endif
-      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
-      int retval = fd_set.poll_io(waitd_tv);
+
+    if (waitd_ms > 0)
+    {
+      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_ms);
+      int retval = fd_set.poll_io(waitd_ms);
       YASIO_KLOGV("[core] poll_io waked up, retval=%d", retval);
       if (retval < 0)
       {
@@ -935,8 +947,8 @@ void io_service::run()
     }
 
 #if defined(YASIO_HAVE_CARES)
-    // process possible async resolve requests.
-    process_ares_requests(ares_socks, ares_socks_count, fd_set);
+    // process events for name resolution.
+    do_ares_process_fds(ares_socks, ares_nfds, fd_set);
 #endif
 
     // process active transports
@@ -1097,7 +1109,7 @@ void io_service::handle_close(transport_handle_t thandle)
 void io_service::register_descriptor(const socket_native_type fd, int events) { this->fd_set_.set(fd, events); }
 void io_service::deregister_descriptor(const socket_native_type fd, int events) { this->fd_set_.unset(fd, events); }
 
-int io_service::write(transport_handle_t transport, dynamic_buffer_t buffer, completion_cb_t handler)
+int io_service::write(transport_handle_t transport, sbyte_buffer buffer, completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write(std::move(buffer), std::move(handler)) : 0;
@@ -1107,7 +1119,7 @@ int io_service::write(transport_handle_t transport, dynamic_buffer_t buffer, com
     return -1;
   }
 }
-int io_service::write_to(transport_handle_t transport, dynamic_buffer_t buffer, const ip::endpoint& to, completion_cb_t handler)
+int io_service::write_to(transport_handle_t transport, sbyte_buffer buffer, const ip::endpoint& to, completion_cb_t handler)
 {
   if (transport && transport->is_open())
     return !buffer.empty() ? transport->write_to(std::move(buffer), to, std::move(handler)) : 0;
@@ -1435,33 +1447,39 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.interrupt();
 }
-int io_service::register_ares_fds(socket_native_type* ares_socks, fd_set_adapter& fd_set)
+int io_service::do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, timeval& waitd_tv)
 {
-  int count   = 0;
-  int bitmask = ::ares_getsock(this->ares_, ares_socks, ARES_GETSOCK_MAXNUM);
-  for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
+  int nfds = 0;
+  if (ares_outstanding_work_)
   {
-    if (ARES_GETSOCK_READABLE(bitmask, i) || ARES_GETSOCK_WRITABLE(bitmask, i))
+    int bitmask = ::ares_getsock(this->ares_, socks, ARES_GETSOCK_MAXNUM);
+    for (int i = 0; i < ARES_GETSOCK_MAXNUM; ++i)
     {
-      auto fd = ares_socks[i];
-      ++count;
-      fd_set.set(fd, socket_event::readwrite);
+      int events = socket_event::null;
+      if (ARES_GETSOCK_READABLE(bitmask, i))
+        events |= socket_event::read;
+      if (ARES_GETSOCK_WRITABLE(bitmask, i))
+        events |= socket_event::write;
+      if (events)
+      {
+        ++nfds;
+        fd_set.set(socks[i], events);
+      }
+      else
+        break;
     }
-    else
-      break;
+
+    if (nfds)
+      ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
   }
-  return count;
+  return nfds;
 }
-void io_service::process_ares_requests(socket_native_type* socks, int count, fd_set_adapter& fd_set)
+void io_service::do_ares_process_fds(socket_native_type* socks, int nfds, fd_set_adapter& fd_set)
 {
-  if (this->ares_outstanding_work_ > 0)
+  for (auto i = 0; i < nfds; ++i)
   {
-    for (auto i = 0; i < count; ++i)
-    {
-      auto fd = socks[i];
-      ::ares_process_fd(this->ares_, fd_set.is_set(fd, socket_event::read) ? fd : ARES_SOCKET_BAD,
-                        fd_set.is_set(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
-    }
+    auto fd = socks[i];
+    ::ares_process_fd(this->ares_, fd_set.is_set(fd, socket_event::read) ? fd : ARES_SOCKET_BAD, fd_set.is_set(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
   }
 }
 void io_service::recreate_ares_channel()
@@ -1839,7 +1857,7 @@ void io_service::unpack(transport_handle_t transport, int bytes_expected, int by
     if (offset > 0)
     { /* move remain data to head of buffer and hold 'offset'. */
       ::memmove(transport->buffer_, transport->buffer_ + bytes_expected, offset);
-      this->wait_duration_ = yasio__min_wait_duration;
+      this->wait_duration_ = yasio__min_wait_usec;
     }
     // move properly pdu to ready queue, the other thread who care about will retrieve it.
     YASIO_KLOGV("[index: %d] received a properly packet from peer, packet size:%d", transport->cindex(), transport->expected_size_);
@@ -1961,6 +1979,8 @@ void io_service::process_timers()
 }
 highp_time_t io_service::get_timeout(highp_time_t usec)
 {
+  this->wait_duration_ = yasio__max_wait_usec; // Reset next wait duration per frame
+
   if (this->timer_queue_.empty())
     return usec;
 

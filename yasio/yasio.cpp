@@ -1309,10 +1309,18 @@ void io_service::recreate_ares_channel()
   if (ares_)
     destroy_ares_channel();
 
+  int optmask          = ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/;
   ares_options options = {};
   options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::milli::den);
   options.tries        = this->options_.dns_queries_tries_;
-  int status           = ::ares_init_options(&ares_, &options, ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/);
+#  if defined(__linux__) && !defined(__ANDROID__)
+  if (yasio::is_regular_file(YASIO_SYSTEMD_RESOLV_PATH))
+  {
+    options.resolvconf_path = strndup(YASIO_SYSTEMD_RESOLV_PATH, YASIO_SYSTEMD_RESOLV_PATH_LEN);
+    optmask |= ARES_OPT_RESOLVCONF;
+  }
+#  endif
+  int status = ::ares_init_options(&ares_, &options, optmask);
   if (status == ARES_SUCCESS)
   {
     YASIO_KLOGD("[c-ares] create channel succeed");

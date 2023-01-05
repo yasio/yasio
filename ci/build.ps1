@@ -1,5 +1,6 @@
 # Install latest cmake version for appveyor ci
-if (!($env:GITHUB_CI -eq "true")) {
+# refer to: https://docs.github.com/en/actions/learn-github-actions/environment-variables
+if (!($env:GITHUB_ACTIONS -eq "true")) {
     $cmake_ver="3.25.1"
     curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
     Expand-Archive -Path cmake-$cmake_ver-windows-x86_64.zip -DestinationPath .\
@@ -12,7 +13,7 @@ cmake --version
 # Generate
 echo "env:BUILD_ARCH=$env:BUILD_ARCH, env:UWP=$env:UWP"
 
-if ($env:GITHUB_CI -eq "true") {
+if ($env:GITHUB_ACTIONS -eq "true") {
     if ($env:TOOLCHAIN -eq "msvc") { # Generate vs2019 on github ci
        # Determine arch name
        $archName=""

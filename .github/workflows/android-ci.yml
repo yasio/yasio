@@ -14,10 +14,8 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  TRAVIS_OS_NAME: linux
   BUILD_TARGET: android
   BUILD_TYPE: Release
-  PYENV_VERSION: 2.7.18
   NDK_VER: r19c # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
 
 jobs:
@@ -28,6 +26,16 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        arch:
+          - armeabi-v7a
+          - arm64-v8a
+          - x86
+          - x86_64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+      
     steps:
     - uses: actions/checkout@v3
       with:

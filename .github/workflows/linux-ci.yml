@@ -14,7 +14,6 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  TRAVIS_OS_NAME: linux
   BUILD_TARGET: linux
   BUILD_TYPE: Release
 

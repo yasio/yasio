@@ -50,7 +50,7 @@ jobs:
         run: ci\build.ps1
   build-linux:
     name: build-linux
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       TRAVIS_OS_NAME: linux
       BUILD_TARGET: linux
@@ -64,7 +64,7 @@ jobs:
           ci/build.sh
   build-android:
     name: build-android
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       TRAVIS_OS_NAME: linux
       BUILD_TARGET: android
@@ -108,7 +108,7 @@ jobs:
           ci/build.sh
   build-freebsd:
     name: build-freebsd
-    runs-on: macos-12
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
         with:

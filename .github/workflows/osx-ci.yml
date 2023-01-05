@@ -14,7 +14,6 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  TRAVIS_OS_NAME: osx
   BUILD_TARGET: osx
   BUILD_TYPE: Release
 

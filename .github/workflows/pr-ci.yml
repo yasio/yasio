@@ -4,7 +4,6 @@ on: [pull_request]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  GITHUB_CI: 'true'
   BUILD_TYPE: Release
 
 jobs:
@@ -50,9 +49,8 @@ jobs:
         run: ci\build.ps1
   build-linux:
     name: build-linux
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
-      TRAVIS_OS_NAME: linux
       BUILD_TARGET: linux
     steps:
       - uses: actions/checkout@v3
@@ -64,12 +62,19 @@ jobs:
           ci/build.sh
   build-android:
     name: build-android
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - armeabi-v7a
+          - arm64-v8a
+          - x86
+          - x86_64
     env:
-      TRAVIS_OS_NAME: linux
+      BUILD_ARCH: ${{ matrix.arch }}
       BUILD_TARGET: android
-      PYENV_VERSION: 2.7.18
-      NDK_VER: r16b
+      # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
+      NDK_VER: r19c
     steps:
       - uses: actions/checkout@v3
         with:
@@ -82,7 +87,6 @@ jobs:
     name: build-osx
     runs-on: macos-latest
     env:
-      TRAVIS_OS_NAME: osx
       BUILD_TARGET: osx
     steps:
       - uses: actions/checkout@v3
@@ -96,7 +100,6 @@ jobs:
     name: build-ios
     runs-on: macos-latest
     env:
-      TRAVIS_OS_NAME: osx
       BUILD_TARGET: ios
     steps:
       - uses: actions/checkout@v3

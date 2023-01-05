@@ -26,6 +26,7 @@ namespace yasio { inline namespace inet { class io_event; } }
 |[io_event::status](#status)|获取事件状态|
 |[io_event::passive](#passive)|检查是否是被动事件|
 |[io_event::packet](#packet)|获取事件消息包|
+|[io_event::packet_view](#packet_view)|获取事件消息包view|
 |[io_event::timestamp](#timestamp)|获取事件时间戳|
 |[io_event::transport](#transport)|获取事件传输会话|
 |[io_event::transport_id](#transport_id)|获取事件传输会话ID|
@@ -81,6 +82,18 @@ int passive() const
 
 ```cpp
 yasio::sbyte_buffer& packet()
+```
+
+## 返回值
+
+消息数据的view。
+
+## <a name="packet_view"></a> io_event::packet_view
+
+获取事件携带的消息数据view，仅当io_service设置`YOPT_S_FORWARD_EVENT`时有效。此数据在事件回调结束后会失效，业务应及时保存。
+
+```cpp
+packet_view_t packet_view()
 ```
 
 ## 返回值

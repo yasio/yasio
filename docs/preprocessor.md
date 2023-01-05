@@ -1,6 +1,6 @@
 # yasio 宏定义
 
-以下宏定义可以控制 `yasio` 库的某些行为，可以在 [yasio/detail/config.hpp](https://github.com/yasio/yasio/blob/master/yasio/detail/config.hpp) 定义或者在编译器预处理器定义
+以下宏定义可以控制 `yasio` 库的某些行为，可以在 [yasio/detail/config.hpp](https://github.com/yasio/yasio/blob/dev/yasio/detail/config.hpp) 定义或者在编译器预处理器定义
 
 |Name|Description|
 |----------|-----------------|
@@ -13,7 +13,7 @@
 |*YASIO_NT_COMPAT_GAI*|是否启用Windows XP系统下使用 `getaddrinfo` API支持。|
 |*YASIO_USE_SPSC_QUEUE*|是否使用SPSC(单生产者单消费者)队列，<br/>仅当只有一个线程调用io_service::write时放可启用，默认关闭。|
 |*YASIO_USE_SHARED_PACKET*|是否使用 `std::shared_ptr` 包装网络包，使其能在多线程之间共享，默认关闭。|
-|*YASIO_HAVE_HALF_FLOAT*|是否启用半精度浮点数支持，依赖 [half.hpp](https://github.com/yasio/external/blob/master/half/half.hpp)。|
+|*YASIO_HAVE_HALF_FLOAT*|是否启用半精度浮点数支持，依赖 [half.hpp](https://github.com/yasio/thirdparty/blob/master/half/half.hpp)。|
 |*YASIO_DISABLE_OBJECT_POOL*|是否禁用对象池的使用，默认启用。|
 |*YASIO_DISABLE_CONCURRENT_SINGLETON*|是否禁用并发单利类模板。|
 |*YASIO_ENABLE_PASSIVE_EVENT*|是否启用服务端信道open/close事件产生，默认关闭。|

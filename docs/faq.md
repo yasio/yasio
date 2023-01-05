@@ -2,6 +2,15 @@
 
 ## 重点问题解答
 
+??? question "do_select failed, ec=22, detail:Invalid argument"
+    
+    - 原因: 
+        - macOS/ios/tvos平台，`socket.max_fd + 1`直大于`FD_SETSIZE(1024)`
+        - Windows平台工作成长，限制的是`select`能够监听的文件描述符数量，但不受`socket.max_fd + 1`限制
+        - linux平台，受到文件描述符`socket.max_fd + 1`限制，超过会立即返回1，但实际上无数据可读
+        - freebsd平台，立即返回1，即使有数据可读，`is_set`判断始终返回false
+    解决办法: 升级至3.39.6+版本，使用`poll`，不再受到任何限制
+
 ??? question "在iOS 14+设备上连接本地局域网主机任意端口号报错：ec=65, detail:No route to host"
 
     - 解决方案: 打开你的iPhone【设置】【隐私】【本地网络】找到你的应用，开启即可。
@@ -48,7 +57,7 @@
     - 原因: 数据包太大，macOS系统UDP发送缓冲区默认为 `9126` 字节。
     - 解决方案: 通过socket选项将UDP发送缓冲区设置大一点，例如:
         - xxsocket接口设置方式为: `sock_udp.set_optval(SOL_SOCKET, SO_SNDBUF, (int)65535);`
-        - io_service设置方式请参见: https://github.com/yasio/yasio/blob/master/tests/speed/main.cpp#L223
+        - io_service设置方式请参见: https://github.com/yasio/yasio/blob/dev/tests/speed/main.cpp#L223
 
 ??? question "io_service schedule 可以多个任务吗？"
 

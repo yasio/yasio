@@ -12,6 +12,7 @@ io_service支持的所有选项。
 |----------|-----------------|
 |*YOPT_S_DEFER_EVENT_CB*|Set defer event callback<br/>params: callback:defer_event_cb_t<br/>remarks:<br/>a. User can do custom packet resolve at network thread, such as decompress and crc check.<br/>b. Return true, io_service will continue enque to event queue.<br/>c. Return false, io_service will drop the event.|
 |*YOPT_S_DEFERRED_EVENT*|Set whether deferred dispatch event, default is: 1<br/>params: deferred_event:int(1)|
+|*YOPT_S_FORWARD_EVENT*|Set whether fast forward event to up layer, default is: 0<br/>params: forward_event:int(1)|
 |*YOPT_S_RESOLV_FN*|Set custom resolve function, native C++ ONLY<br/>params: func:resolv_fn_t*|
 |*YOPT_S_PRINT_FN*|Set custom print function native C++ ONLY<br/>parmas: func:print_fn_t<br/>remarks: you must ensure thread safe of it|
 |*YOPT_S_PRINT_FN2*|Set custom print function with log level<br/>parmas: func:print_fn2_t<br/>you must ensure thread safe of it|
@@ -19,6 +20,7 @@ io_service支持的所有选项。
 |*YOPT_S_TCP_KEEPALIVE*|Set tcp keepalive in seconds, probes is tries.<br/>params: idle:int(7200), interal:int(75), probes:int(10)|
 |*YOPT_S_NO_NEW_THREAD*|Don't start a new thread to run event loop.<br/>params: value:int(0)|
 |*YOPT_S_SSL_CACERT*|Sets ssl verification cert, if empty, don't verify.<br/>params: path:const char*|
+|*YOPT_S_SSL_CERT*|Sets ssl server cert and private key, if empty, the ssl server doesn't work.<br/>params: cert_file:const char*<br/>params: key_file:const char*|
 |*YOPT_S_CONNECT_TIMEOUT*|Set connect timeout in seconds.<br/>params: connect_timeout:int(10)|
 |*YOPT_S_CONNECT_TIMEOUTMS*|Set connect timeout in milliseconds.<br/>params: connect_timeout:int(10000)|
 |*YOPT_S_DNS_CACHE_TIMEOUT*|Set dns cache timeout in seconds.<br/>params: dns_cache_timeout : int(600)|

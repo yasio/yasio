@@ -70,6 +70,7 @@ namespace yasio { inline namespace inet { class xxsocket; } }
 |[xxsocket::get_last_errno](#get_last_errno)|获取最近socket错误码|
 |[xxsocket::set_last_errno](#set_last_errno)|设置最近socket错误码|
 |[xxsocket::strerror](#strerror)|将socket错误码转换为字符串|
+|[xxsocket::strerror_r](#strerror_r)|将socket错误码转换为字符串，线程安全|
 |[xxsocket::gai_strerror](#gai_strerror)|将getaddrinfo返回值转换为字符串|
 |[xxsocket::resolve](#resolve)|解析域名|
 |[xxsocket::resolve_v4](#resolve_v4)|解析域名包含的ipv4地址|
@@ -1158,6 +1159,30 @@ static const char* strerror(int error);
 
 *error*<br/>
 错误码。
+
+### 返回值
+
+错误信息的字符串。
+
+## <a name="strerror_r"></a> xxsocket::strerror_r
+
+将错误码转换为字符串，功能和`xxsocket::strerror`一样，但此函数线程安全的。
+
+```cpp
+static const char* strerror_r(int error, char *buf, size_t buflen);
+```
+
+### 参数
+
+*error*<br/>
+错误码。
+
+*buf*<br/>
+接受错误信息字符串的缓冲区
+
+*buflen*<br/>
+接受错误信息字符串的缓冲区大小
+
 
 ### 返回值
 

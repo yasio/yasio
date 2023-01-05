@@ -115,23 +115,23 @@ yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基�
     _G.yservice = service -- Store service to global table as a singleton instance
     ```
 
-## [测试](https://github.com/yasio/yasio/tree/master/tests) & [示例](https://github.com/yasio/yasio/tree/master/tests)
+## [测试](https://github.com/yasio/yasio/tree/dev/tests) & [示例](https://github.com/yasio/yasio/tree/dev/tests)
 
 !!! attention "注意"
 
     运行Lua示例程序，会打印异常信息 `yasio - ibstream_view::consume out of range!`，这是示例程序里故意写的，请不必在意。
 
 * 测试:
-    * [echo_server](https://github.com/yasio/yasio/tree/master/tests/echo_server): TCP/UDP/KCP 回射服务器
-    * [echo_client](https://github.com/yasio/yasio/tree/master/tests/echo_client): TCP/UDP/KCP 回射客户端
-    * [ssltest](https://github.com/yasio/yasio/tree/master/tests/ssl): SSL测试客户端, 请求github.com主页并打印返回数据
-    * [tcptest](https://github.com/yasio/yasio/tree/master/tests/tcp): TCP测试程序
-    * [speedtest](https://github.com/yasio/yasio/tree/master/tests/speed): TCP,UDP,KCP 本机传输速率测试程序
-    * [mcast](https://github.com/yasio/yasio/tree/master/tests/mcast): 组播测试程序
+    * [echo_server](https://github.com/yasio/yasio/tree/dev/tests/echo_server): TCP/UDP/KCP 回射服务器
+    * [echo_client](https://github.com/yasio/yasio/tree/dev/tests/echo_client): TCP/UDP/KCP 回射客户端
+    * [ssltest](https://github.com/yasio/yasio/tree/dev/tests/ssl): SSL测试客户端, 请求github.com主页并打印返回数据
+    * [tcptest](https://github.com/yasio/yasio/tree/dev/tests/tcp): TCP测试程序
+    * [speedtest](https://github.com/yasio/yasio/tree/dev/tests/speed): TCP,UDP,KCP 本机传输速率测试程序
+    * [mcast](https://github.com/yasio/yasio/tree/dev/tests/mcast): 组播测试程序
 
 * 示例:
     * [ftp_server](https://github.com/yasio/ftp_server): 基于yasio实现的仅支持下载的ftp服务器，[点击](ftp://ftp.yasio.org/) 访问。
-    * [lua](https://github.com/yasio/yasio/tree/master/examples/lua): Lua示例程序，包含简易的并发http请求，TCP拆包参数设置示例代码
+    * [lua](https://github.com/yasio/yasio/tree/dev/examples/lua): Lua示例程序，包含简易的并发http请求，TCP拆包参数设置示例代码
     * [xlua](https://github.com/yasio/xLua): xlua集成案例
     * [yasio_unreal](https://github.com/yasio/yasio_unreal): yasio的虚幻引擎插件
 

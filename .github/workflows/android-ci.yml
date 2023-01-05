@@ -18,7 +18,7 @@ env:
   BUILD_TARGET: android
   BUILD_TYPE: Release
   PYENV_VERSION: 2.7.18
-  NDK_VER: r16b
+  NDK_VER: r19c # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
 
 jobs:
   build:

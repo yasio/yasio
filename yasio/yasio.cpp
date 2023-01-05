@@ -894,11 +894,9 @@ void io_service::run()
 
   do
   {
-    auto wait_duration   = get_timeout(this->wait_duration_); // Gets current wait duration
-    this->wait_duration_ = yasio__max_wait_usec;              // Reset next wait duration
+    fd_set = this->fd_set_;
 
-    fd_set           = this->fd_set_;
-    timeval waitd_tv = {(decltype(timeval::tv_sec))(wait_duration / 1000000), (decltype(timeval::tv_usec))(wait_duration % 1000000)};
+    const auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
 #if defined(YASIO_HAVE_CARES)
     /**
      * retrieves the set of file descriptors which the calling application should poll io,
@@ -907,10 +905,13 @@ void io_service::run()
      * https://c-ares.org/ares_timeout.html
      * https://c-ares.org/ares_process_fd.html
      */
-    auto ares_nfds = do_ares_fds(ares_socks, fd_set, waitd_tv);
+    timeval waitd_tv    = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
+    auto ares_nfds      = do_ares_fds(ares_socks, fd_set, waitd_tv);
+    const auto waitd_ms = static_cast<int>(waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::milli::den);
+#else
+    const auto waitd_ms = static_cast<int>(waitd_usec / std::milli::den);
 #endif
 
-    const int waitd_ms = static_cast<int>(waitd_tv.tv_sec * 1000 + waitd_tv.tv_usec / 1000);
     if (waitd_ms > 0)
     {
       YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_ms);
@@ -1806,6 +1807,8 @@ void io_service::process_timers()
 }
 highp_time_t io_service::get_timeout(highp_time_t usec)
 {
+  this->wait_duration_ = yasio__max_wait_usec; // Reset next wait duration per frame
+
   if (this->timer_queue_.empty())
     return usec;
 

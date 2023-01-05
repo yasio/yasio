@@ -1,0 +1,6 @@
+#pragma once
+
+// the cacert.pem in certs/ is download from https://curl.se/ca/cacert.pem and append content of server.crt to it
+#define SSLTEST_CACERT R"(@SSLTEST_CACERT@)"
+#define SSLTEST_CERT R"(@SSLTEST_CERT@)"
+#define SSLTEST_PKEY R"(@SSLTEST_PKEY@)"

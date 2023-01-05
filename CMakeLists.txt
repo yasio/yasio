@@ -442,6 +442,11 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
 
     if(YASIO_SSL_BACKEND)
         add_subdirectory(tests/ssl)
+        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem" SSLTEST_CACERT)
+        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server.crt" SSLTEST_CERT)
+        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server.key" SSLTEST_PKEY)
+        configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_CURRENT_LIST_DIR}/build/sslcerts.hpp" @ONLY)
+        target_include_directories(ssltest PRIVATE "${CMAKE_CURRENT_LIST_DIR}/build")
     endif()
     
     include_directories("extensions")

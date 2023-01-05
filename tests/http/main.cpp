@@ -45,6 +45,10 @@ void yasioTest()
 
 int main(int, char**)
 {
+#if defined(_WIN32)
+  SetConsoleOutputCP(CP_UTF8);
+#endif
+
   yasioTest();
 
   return 0;

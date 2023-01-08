@@ -36,6 +36,7 @@ void yasioTest()
   service.set_option(YOPT_S_FORWARD_EVENT, 1);
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
+  service.set_option(YOPT_C_MOD_FLAGS, SSLTEST_CHANNEL_SERVER, YCF_REUSEADDR, 0);
 
   yasio::sbyte_buffer http_resp_data;
 

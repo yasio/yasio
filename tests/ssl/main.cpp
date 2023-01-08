@@ -59,7 +59,7 @@ void yasioTest()
             service.close(event->transport());
             break;
           case SSLTEST_CHANNEL_SERVER:
-            fprintf(stdout, "==> ssl client: recv message '%s' from client\n", std::string{packet.data(), packet.size()}.c_str());
+            fprintf(stdout, "==> ssl server: recv message '%s' from client\n", std::string{packet.data(), packet.size()}.c_str());
             fflush(stdout);
             break;
         }

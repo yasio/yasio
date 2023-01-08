@@ -1220,8 +1220,8 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
 #if defined(YASIO_SSL_BACKEND)
 SSL_CTX* io_service::init_ssl_context(ssl_role role)
 {
-  auto ctx         = role == YSSL_CLIENT ? yssl_ctx_new(yssl_options{options_.cafile_.c_str(), nullptr, true})
-                                         : yssl_ctx_new(yssl_options{options_.crtfile_.c_str(), options_.keyfile_.c_str(), false});
+  auto ctx         = role == YSSL_CLIENT ? yssl_ctx_new(yssl_options{yasio__c_str(options_.cafile_), nullptr, true})
+                                         : yssl_ctx_new(yssl_options{yasio__c_str(options_.crtfile_), yasio__c_str(options_.keyfile_), false});
   ssl_roles_[role] = ctx;
   return ctx;
 }

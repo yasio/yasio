@@ -23,6 +23,10 @@ option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if (NOT DEFINED CMAKE_BUILD_TYPE)
+    set (CMAKE_BUILD_TYPE Debug)
+endif()
+
 # --- The C/C++ standard
 if (NOT MSVC)
     if (NOT CXX_STD)
@@ -442,9 +446,9 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
 
     if(YASIO_SSL_BACKEND)
         add_subdirectory(tests/ssl)
-        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem" SSLTEST_CACERT)
-        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server.crt" SSLTEST_CERT)
-        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server.key" SSLTEST_PKEY)
+        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem,${CMAKE_CURRENT_LIST_DIR}/certs/ca-cer.pem" SSLTEST_CACERT)
+        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-cer.pem" SSLTEST_CERT)
+        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-prk.pem" SSLTEST_PKEY)
         configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_CURRENT_LIST_DIR}/build/sslcerts.hpp" @ONLY)
         target_include_directories(ssltest PRIVATE "${CMAKE_CURRENT_LIST_DIR}/build")
     endif()

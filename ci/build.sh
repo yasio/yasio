@@ -40,11 +40,14 @@ function build_linux()
 
     cmake --build build -- -j `nproc`
     
-    echo "run test issue201 on linux..."
+    echo "run issue201 on linux..."
     build/tests/issue201/issue201
     
-    echo "run test http on linux..."
+    echo "run httptest on linux..."
     build/tests/http/httptest
+
+    echo "run ssltest on linux..."
+    build/tests/ssl/ssltest
     
     exit 0
 }

@@ -48,5 +48,5 @@ else { # Generate vs2013 on appveyor ci
 cmake --build build --config $env:BUILD_TYPE
 
 echo "run icmptest on windows ..."
-Invoke-Expression -Command ".\build_vc12\tests\icmp\$env:BUILD_TYPE\icmptest.exe"
+Invoke-Expression -Command ".\build\tests\icmp\$env:BUILD_TYPE\icmptest.exe"
 

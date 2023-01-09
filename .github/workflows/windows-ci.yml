@@ -16,7 +16,7 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   TOOLCHAIN: 'msvc'
-  PING_HOST: www.microsoft.com
+  PING_HOST: github.com
 
 jobs:
   build:

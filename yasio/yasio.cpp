@@ -1916,9 +1916,11 @@ void io_service::start_query(io_channel* ctx)
 #endif
 #if !defined(YASIO_HAVE_CARES)
   // init async name query thread state
+  auto resolving_host                           = ctx->remote_host_;
+  auto resolving_port                           = ctx->remote_port_;
   std::weak_ptr<cxx17::shared_mutex> weak_mutex = life_mutex_;
   std::weak_ptr<life_token> life_token          = life_token_;
-  std::thread async_resolv_thread([this, life_token, weak_mutex, resolving_host = ctx->remote_host_, resolving_port = ctx->remote_port_, ctx] {
+  std::thread async_resolv_thread([this, life_token, weak_mutex, resolving_host, resolving_port, ctx] {
     // check life token
     if (life_token.use_count() < 1)
       return;

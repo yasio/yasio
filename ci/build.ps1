@@ -46,3 +46,6 @@ else { # Generate vs2013 on appveyor ci
 
 # Build
 cmake --build build --config $env:BUILD_TYPE
+
+echo "run icmptest on windows ..."
+.\build\tests\icmp\$env:BUILD_TYPE\icmptest

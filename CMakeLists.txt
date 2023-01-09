@@ -423,6 +423,7 @@ endif()
 # The tests & examples
 if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     add_subdirectory(tests/tcp)
+    add_subdirectory(tests/icmp)
     add_subdirectory(tests/mcast)
     if(YASIO_HAVE_KCP)
         add_subdirectory(tests/speed)

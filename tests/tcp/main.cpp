@@ -93,8 +93,8 @@ void yasioTest()
       case YEK_PACKET: {
         auto packet = std::move(event->packet());
         total_bytes_transferred += static_cast<int>(packet.size());
-        fwrite(packet.data(), packet.size(), 1, stdout);
-        fflush(stdout);
+        // fwrite(packet.data(), packet.size(), 1, stdout);
+        // fflush(stdout);
         break;
       }
       case YEK_CONNECT_RESPONSE:

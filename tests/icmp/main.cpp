@@ -234,8 +234,9 @@ int main(int argc, char** argv)
   schk.close();
 
   const std::string remote_ip = endpoints[0].ip();
-  fprintf(stdout, "Ping %s [%s] with %d bytes of data:\n", host, remote_ip.c_str(),
-          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1));
+  fprintf(stdout, "Ping %s [%s] with %d bytes of data(%s):\n", host, remote_ip.c_str(),
+          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1),
+          socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
 
   for (int i = 0; i < max_times; ++i)
   {

@@ -96,6 +96,8 @@ const char* strerror(int ec)
 {
   switch (ec)
   {
+    case ETIMEOUT:
+      return "request timed out.";
     case checksum_fail:
       return "icmp: check sum fail!";
     case type_mismatch:

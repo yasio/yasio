@@ -41,7 +41,7 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - uses: ilammy/msvc-dev-cmd@v1.10.0
+    - uses: ilammy/msvc-dev-cmd@v1.12.0
       with: 
         arch: ${{ env.BUILD_ARCH }}
         uwp: ${{ env.UWP }}

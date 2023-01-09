@@ -47,7 +47,7 @@ else { # Generate vs2013 on appveyor ci
 # Build
 cmake --build build --config $env:BUILD_TYPE
 
-if (($env:TOOLCHAIN -ne 'mingw') -and ($env:UWP -eq "true")) {
+if (($env:TOOLCHAIN -ne 'mingw') -and ($env:UWP -ne "true")) {
     echo "run icmptest on windows ..."
     Invoke-Expression -Command ".\build\tests\icmp\$env:BUILD_TYPE\icmptest.exe"
 }

@@ -11,7 +11,7 @@ if (!($env:GITHUB_ACTIONS -eq "true")) {
 cmake --version
 
 # Generate
-echo "env:BUILD_ARCH=$env:BUILD_ARCH, env:UWP=$env:UWP"
+echo "env:BUILD_ARCH=$env:BUILD_ARCH, env:UWP=$env:UWP, env:BUILD_TYPE=$env:BUILD_TYPE"
 
 if ($env:GITHUB_ACTIONS -eq "true") {
     if ($env:TOOLCHAIN -eq "msvc") { # Generate vs2019 on github ci

@@ -146,6 +146,7 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
   obs.write_bytes(body);
 
   auto icmp_request = std::move(obs.buffer());
+  const size_t ip_pkt_len = sizeof(ip_hdr_st) + icmp_request.size();
 
   int n = s.sendto(icmp_request.data(), static_cast<int>(icmp_request.size()), endpoint);
   if (n < 0 && !xxsocket::not_send_error(ec = xxsocket::get_last_errno()))
@@ -161,14 +162,8 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
 
     const char* icmp_raw = nullptr;
     yasio::ibstream_view ibs;
-    if (socktype == SOCK_RAW)
+    if (n == ip_pkt_len)
     { // icmp via SOCK_RAW
-      if (n < sizeof(ip_hdr_st) + sizeof(icmp_hdr_st))
-      {
-        ec = yasio::errc::invalid_packet;
-        return -1;
-      }
-
       // parse ttl and check ip checksum
       ibs.reset(buf, sizeof(ip_hdr_st));
       ibs.advance(offsetof(ip_hdr_st, TTL));

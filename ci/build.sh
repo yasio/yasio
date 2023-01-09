@@ -18,7 +18,7 @@ function build_osx()
     ./build/tests/issue384/Release/issue384
 
     echo "run test icmp on osx ..."
-    ./build/tests/icmp/Release/icmptest
+    ./build/tests/icmp/Release/icmptest $PING_HOST
     
     exit 0
 }
@@ -53,7 +53,7 @@ function build_linux()
     build/tests/ssl/ssltest
 
     echo "run icmp test on linux..."
-    build/tests/icmp/icmptest
+    build/tests/icmp/icmptest $PING_HOST
     
     exit 0
 }

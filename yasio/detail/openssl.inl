@@ -54,7 +54,12 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
       yssl_splitpath(opts.crtfile_, [&](char* first, char* last) {
         yssl_split_term null_term(last);
 
+#  if defined(OPENSSL_VERSION_MAJOR) && (OPENSSL_VERSION_MAJOR >= 3)
+        /* OpenSSL 3.0.0 has deprecated SSL_CTX_load_verify_locations */
+        bool ok = ::SSL_CTX_load_verify_file(ctx, first) == 1;
+#  else
         bool ok = ::SSL_CTX_load_verify_locations(ctx, first, nullptr) == 1;
+#  endif
         if (!ok)
         {
           ++fail_count;

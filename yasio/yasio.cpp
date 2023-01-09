@@ -207,7 +207,7 @@ io_channel::io_channel(io_service& service, int index) : io_base(), service_(ser
   socket_     = std::make_shared<xxsocket>();
   state_      = io_base::state::CLOSED;
   index_      = index;
-  decode_len_ = [=](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
+  decode_len_ = [this](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 #if defined(YASIO_SSL_BACKEND)
 SSL_CTX* io_channel::get_ssl_context(bool client) const
@@ -443,13 +443,13 @@ void io_transport::complete_op(io_send_op* op, int error)
 }
 void io_transport::set_primitives()
 {
-  this->write_cb_ = [=](const void* data, int len, const ip::endpoint*, int& error) {
+  this->write_cb_ = [this](const void* data, int len, const ip::endpoint*, int& error) {
     int n = socket_->send(data, len);
     if (n < 0)
       error = xxsocket::get_last_errno();
     return n;
   };
-  this->read_cb_ = [=](void* data, int len, int revent, int& error) {
+  this->read_cb_ = [this](void* data, int len, int revent, int& error) {
     if (revent)
     {
       int n = socket_->recv(data, len);
@@ -478,13 +478,13 @@ int io_transport_ssl::do_ssl_handshake(int& error)
   if (ret == 0) // handshake succeed
   {             // because we invoke handshake in call_read, so we emit EWOULDBLOCK to mark ssl transport status `ok`
     this->state_   = io_base::state::OPENED;
-    this->read_cb_ = [=](void* data, int len, int revent, int& error) {
+    this->read_cb_ = [this](void* data, int len, int revent, int& error) {
       if (revent)
         return yssl_read(ssl_, data, len, error);
       error = EWOULDBLOCK;
       return -1;
     };
-    this->write_cb_ = [=](const void* data, int len, const ip::endpoint*, int& error) { return yssl_write(ssl_, data, len, error); };
+    this->write_cb_ = [this](const void* data, int len, const ip::endpoint*, int& error) { return yssl_write(ssl_, data, len, error); };
 
     YASIO_KLOGD("[index: %d] the connection #%u <%s> --> <%s> is established.", ctx_->index_, this->id_, this->local_endpoint().to_string().c_str(),
                 this->remote_endpoint().to_string().c_str());
@@ -517,7 +517,7 @@ void io_transport_ssl::do_ssl_shutdown()
 }
 void io_transport_ssl::set_primitives()
 {
-  this->read_cb_ = [=](void* /*data*/, int /*len*/, int /*revent*/, int& error) { return do_ssl_handshake(error); };
+  this->read_cb_ = [this](void* /*data*/, int /*len*/, int /*revent*/, int& error) { return do_ssl_handshake(error); };
 }
 #endif
 // ----------------------- io_transport_udp ----------------
@@ -589,7 +589,7 @@ void io_transport_udp::set_primitives()
     io_transport::set_primitives();
   else
   {
-    this->write_cb_ = [=](const void* data, int len, const ip::endpoint* destination, int& error) {
+    this->write_cb_ = [this](const void* data, int len, const ip::endpoint* destination, int& error) {
       assert(destination);
       int n = socket_->sendto(data, len, *destination);
       if (n < 0)
@@ -600,7 +600,7 @@ void io_transport_udp::set_primitives()
       }
       return n;
     };
-    this->read_cb_ = [=](void* data, int len, int revent, int& error) {
+    this->read_cb_ = [this](void* data, int len, int revent, int& error) {
       if (revent)
       {
         ip::endpoint peer;
@@ -805,7 +805,7 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
   if (channel_count < 1)
     channel_count = 1;
 
-  options_.resolv_ = [=](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
+  options_.resolv_ = [this](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
   register_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
   // create channels
@@ -1916,11 +1916,9 @@ void io_service::start_query(io_channel* ctx)
 #endif
 #if !defined(YASIO_HAVE_CARES)
   // init async name query thread state
-  std::string resolving_host                    = ctx->remote_host_;
-  u_short resolving_port                        = ctx->remote_port_;
   std::weak_ptr<cxx17::shared_mutex> weak_mutex = life_mutex_;
   std::weak_ptr<life_token> life_token          = life_token_;
-  std::thread async_resolv_thread([=] {
+  std::thread async_resolv_thread([this, life_token, weak_mutex, resolving_host = ctx->remote_host_, resolving_port = ctx->remote_port_, ctx] {
     // check life token
     if (life_token.use_count() < 1)
       return;

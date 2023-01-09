@@ -32,12 +32,15 @@ void yasioTest()
   {
     if (response->getResponseCode() == 200)
     {
-      printf("request succeed.\n\n");
       auto responseData = response->getResponseData();
-      fwrite(responseData->data(), responseData->size(), 1, stdout);
+      // fwrite(responseData->data(), responseData->size(), 1, stdout);
+      printf("===>request succeed\n");
     }
     else
-      printf("request failed with %d", response->getResponseCode());
+      printf("===>request failed with %d\n", response->getResponseCode());
+    printf("%s", "===>response headers:\n");
+    for (auto& header : response->getResponseHeaders())
+      printf("\t%s: %s\n", header.first.c_str(), header.second.c_str());
     response->release();
   }
   HttpClient::destroyInstance();

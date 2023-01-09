@@ -18,6 +18,7 @@ jobs:
     env:
       BUILD_ARCH: ${{ matrix.arch }}
       TOOLCHAIN: 'msvc'
+      BUILD_TYPE: Release
     steps:
       - uses: actions/checkout@v3
         with:
@@ -37,6 +38,7 @@ jobs:
         - { sys: mingw32, env: i686 }
     env:
       TOOLCHAIN: 'mingw'
+      BUILD_TYPE: Release
     steps:
       - uses: actions/checkout@v3
         with:

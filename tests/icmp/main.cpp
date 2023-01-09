@@ -96,7 +96,7 @@ const char* strerror(int ec)
 {
   switch (ec)
   {
-    case ETIMEOUT:
+    case ETIMEDOUT:
       return "request timed out.";
     case checksum_fail:
       return "icmp: check sum fail!";
@@ -246,7 +246,7 @@ int main(int argc, char** argv)
     if (n > 0)
       fprintf(stdout, "Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
     else
-      fprintf(stderr, "Ping %s fail, ec=%d, detail: %s\n", host, error, yasio::icmp::strerror(error));
+      fprintf(stderr, "Ping %s [%a] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
   }
   return 0;
 }

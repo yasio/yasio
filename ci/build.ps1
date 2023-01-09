@@ -11,7 +11,7 @@ if (!($env:GITHUB_ACTIONS -eq "true")) {
 cmake --version
 
 # Generate
-echo "env:BUILD_ARCH=$env:BUILD_ARCH, env:UWP=$env:UWP"
+echo "env:BUILD_ARCH=$env:BUILD_ARCH, env:UWP=$env:UWP, env:BUILD_TYPE=$env:BUILD_TYPE"
 
 if ($env:GITHUB_ACTIONS -eq "true") {
     if ($env:TOOLCHAIN -eq "msvc") { # Generate vs2019 on github ci
@@ -47,6 +47,8 @@ else { # Generate vs2013 on appveyor ci
 # Build
 cmake --build build --config $env:BUILD_TYPE
 
-echo "run icmptest on windows ..."
-Invoke-Expression -Command ".\build\tests\icmp\$env:BUILD_TYPE\icmptest.exe"
+if (($env:TOOLCHAIN -ne 'mingw') -and ($env:UWP -ne "true")) {
+    echo "run icmptest on windows ..."
+    Invoke-Expression -Command ".\build\tests\icmp\$env:BUILD_TYPE\icmptest.exe"
+}
 

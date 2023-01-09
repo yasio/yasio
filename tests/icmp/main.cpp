@@ -103,14 +103,13 @@ const char* strerror(int ec)
     case identifier_mismatch:
       return "icmp: identifier mismatch!";
     default:
-      return xxsocket::strerror(ec);
+      return yasio::io_service::strerror(ec);
   }
 }
 } // namespace icmp
 } // namespace yasio
 
-static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microseconds& wtimeout, uint8_t& ttl, ip::endpoint& peer,
-                     int& ec)
+static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, uint8_t& ttl, ip::endpoint& peer, int& ec)
 {
   enum
   {
@@ -121,7 +120,6 @@ static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microsecon
 
   xxsocket s;
 
-  const int socktype = SOCK_RAW;
   if (!s.open(endpoint.af(), socktype, IPPROTO_ICMP))
   {
     ec = xxsocket::get_last_errno();
@@ -161,38 +159,57 @@ static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microsecon
     char buf[128];
     int n = s.recvfrom(buf, sizeof(buf), peer);
 
-    if (n > sizeof(ip_hdr_st) + sizeof(icmp_hdr_st))
-    {
-      yasio::ibstream_view ibs(buf, sizeof(ip_hdr_st));
+    const char* icmp_raw = nullptr;
+    yasio::ibstream_view ibs;
+    if (socktype == SOCK_RAW)
+    { // icmp via SOCK_RAW
+      if (n < sizeof(ip_hdr_st) + sizeof(icmp_hdr_st))
+      {
+        ec = yasio::errc::invalid_packet;
+        return -1;
+      }
+
+      // parse ttl and check ip checksum
+      ibs.reset(buf, sizeof(ip_hdr_st));
       ibs.advance(offsetof(ip_hdr_st, TTL));
-      ttl                  = ibs.read_byte();
-      const char* icmp_raw = (buf + sizeof(ip_hdr_st));
-      u_short sum          = ip_chksum((uint8_t*)icmp_raw, n - sizeof(ip_hdr_st));
+      ttl         = ibs.read_byte();
+      icmp_raw    = (buf + sizeof(ip_hdr_st));
+      u_short sum = ip_chksum((uint8_t*)icmp_raw, n - sizeof(ip_hdr_st));
 
       if (sum != 0)
         return yasio::icmp::checksum_fail; // checksum failed
-
-      icmp_hdr_st hdr;
-      ibs.reset(icmp_raw, sizeof(icmp_hdr_st));
-      hdr.type  = ibs.read<uint8_t>();
-      hdr.code  = ibs.read<uint8_t>();
-      hdr.sum   = ibs.read<uint16_t>();
-      hdr.id    = ibs.read<uint16_t>();
-      hdr.seqno = ibs.read<int16_t>();
-      if (hdr.type != icmp_echo_reply)
-      {
-        ec = yasio::icmp::errc::type_mismatch;
-        return -1; // not echo reply
-      }
-      if (hdr.id != get_identifier())
-      {
-        ec = yasio::icmp::errc::identifier_mismatch;
-        return -1; // id not equals
-      }
-      return n;
     }
-    ec = yasio::errc::invalid_packet;
-    return -1; // ip packet incorrect
+    else
+    { // icmp via SOCK_DGRAM
+      if (n < sizeof(icmp_hdr_st))
+      {
+        ec = yasio::errc::invalid_packet;
+        return -1;
+      }
+      icmp_raw = buf;
+      ttl      = 0;
+    }
+
+    icmp_hdr_st reply_hdr;
+    ibs.reset(icmp_raw, sizeof(icmp_hdr_st));
+    reply_hdr.type  = ibs.read<uint8_t>();
+    reply_hdr.code  = ibs.read<uint8_t>();
+    uint16_t sum    = ibs.read<uint16_t>();
+    reply_hdr.id    = ibs.read<uint16_t>();
+    reply_hdr.seqno = ibs.read<int16_t>();
+    icmp_checksum(reply_hdr, buf + sizeof(icmp_hdr_st), buf + n);
+    if (reply_hdr.type != icmp_echo_reply)
+    {
+      ec = yasio::icmp::errc::type_mismatch;
+      return -1; // not echo reply
+    }
+
+    if (socktype == SOCK_RAW && reply_hdr.id != hdr.id)
+    {
+      ec = yasio::icmp::errc::identifier_mismatch;
+      return -1; // id not equals
+    }
+    return n;
   }
 
   ec = ec == 0 ? ETIMEDOUT : xxsocket::get_last_errno();
@@ -201,7 +218,7 @@ static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microsecon
 
 int main(int argc, char** argv)
 {
-  const char* host = argc > 1 ? argv[1] : ICMPTEST_PIN_HOST;
+  const char* host    = argc > 1 ? argv[1] : ICMPTEST_PIN_HOST;
   const int max_times = argc > 2 ? atoi(argv[2]) : 4;
 
   std::vector<ip::endpoint> endpoints;
@@ -212,8 +229,13 @@ int main(int argc, char** argv)
     return -1;
   }
 
+  xxsocket schk;
+  const int socktype = schk.open(AF_INET, SOCK_RAW, IPPROTO_ICMP) ? SOCK_RAW : SOCK_DGRAM;
+  schk.close();
+
   const std::string remote_ip = endpoints[0].ip();
-  fprintf(stdout, "Ping %s [%s] with %d bytes of data:\n", host, remote_ip.c_str(), static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1));
+  fprintf(stdout, "Ping %s [%s] with %d bytes of data:\n", host, remote_ip.c_str(),
+          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1));
 
   for (int i = 0; i < max_times; ++i)
   {
@@ -222,7 +244,7 @@ int main(int argc, char** argv)
     int error   = 0;
 
     auto start_ms = yasio::clock();
-    int n         = icmp_ping(endpoints[0], std::chrono::seconds(3), ttl, peer, error);
+    int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), ttl, peer, error);
     if (n > 0)
       fprintf(stdout, "Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
     else

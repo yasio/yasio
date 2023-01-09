@@ -8,6 +8,10 @@
 
 cmake_minimum_required(VERSION 3.13.0)
 
+if (NOT DEFINED CMAKE_BUILD_TYPE)
+    set (CMAKE_BUILD_TYPE Debug)
+endif()
+
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0048 NEW)
 
@@ -22,10 +26,6 @@ option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-if (NOT DEFINED CMAKE_BUILD_TYPE)
-    set (CMAKE_BUILD_TYPE Debug)
-endif()
 
 # --- The C/C++ standard
 if (NOT MSVC)

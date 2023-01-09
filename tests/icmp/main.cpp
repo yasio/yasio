@@ -120,11 +120,8 @@ static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microsecon
   };
 
   xxsocket s;
-#if defined(_WIN32)
-  int socktype = SOCK_RAW;
-#else
-  int socktype = SOCK_DGRAM;
-#endif
+
+  const int socktype = SOCK_RAW;
   if (!s.open(endpoint.af(), socktype, IPPROTO_ICMP))
   {
     ec = xxsocket::get_last_errno();
@@ -184,7 +181,7 @@ static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microsecon
       hdr.seqno = ibs.read<int16_t>();
       if (hdr.type != icmp_echo_reply)
       {
-        yasio::icmp::errc::type_mismatch;
+        ec = yasio::icmp::errc::type_mismatch;
         return -1; // not echo reply
       }
       if (hdr.id != get_identifier())
@@ -202,17 +199,23 @@ static int icmp_ping(const ip::endpoint& endpoint, const std::chrono::microsecon
   return -1; // timeout
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+  const char* host = argc > 1 ? argv[1] : ICMPTEST_PIN_HOST;
+  const int max_times = argc > 2 ? atoi(argv[2]) : 4;
+
   std::vector<ip::endpoint> endpoints;
-  xxsocket::resolve(endpoints, ICMPTEST_PIN_HOST, 0);
+  xxsocket::resolve(endpoints, host, 0);
   if (endpoints.empty())
   {
-    fprintf(stderr, "Ping request could not find host %s. Please check the name and try again.\n", ICMPTEST_PIN_HOST);
+    fprintf(stderr, "Ping request could not find host %s. Please check the name and try again.\n", host);
     return -1;
   }
 
-  for (int i = 0; i < 4; ++i)
+  const std::string remote_ip = endpoints[0].ip();
+  fprintf(stdout, "Ping %s [%s] with %d bytes of data:\n", host, remote_ip.c_str(), static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1));
+
+  for (int i = 0; i < max_times; ++i)
   {
     ip::endpoint peer;
     uint8_t ttl = 0;
@@ -221,9 +224,9 @@ int main(int, char**)
     auto start_ms = yasio::clock();
     int n         = icmp_ping(endpoints[0], std::chrono::seconds(3), ttl, peer, error);
     if (n > 0)
-      printf("Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
+      fprintf(stdout, "Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
     else
-      printf("Ping %s fail, ec=%d, detail: ", ICMPTEST_PIN_HOST, error, yasio::icmp::strerror(error));
+      fprintf(stderr, "Ping %s fail, ec=%d, detail: %s\n", host, error, yasio::icmp::strerror(error));
   }
   return 0;
 }

@@ -16,6 +16,9 @@ function build_osx()
     
     echo "run test issue384 on osx ..."
     ./build/tests/issue384/Release/issue384
+
+    echo "run test icmp on osx ..."
+    ./build/tests/icmp/Release/icmptest
     
     exit 0
 }
@@ -48,6 +51,9 @@ function build_linux()
 
     echo "run ssltest on linux..."
     build/tests/ssl/ssltest
+
+    echo "run icmp test on linux..."
+    build/tests/icmp/icmptest
     
     exit 0
 }

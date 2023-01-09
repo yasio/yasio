@@ -40,4 +40,7 @@ jobs:
         run: |
           echo Building on freebsd...
           cmake -G "Unix Makefiles" -S . -Bbuild
-          cmake --build build
+          cmake --build build --config Release
+          echo run test icmp on freebsd...
+          ./build/tests/icmp/icmptest
+

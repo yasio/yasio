@@ -114,7 +114,8 @@ const char* strerror(int ec)
 } // namespace icmp
 } // namespace yasio
 
-static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, uint8_t& ttl, ip::endpoint& peer, int& ec)
+static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, ip::endpoint& peer, icmp_hdr_st& reply_hdr,
+                     uint8_t& ttl, int& ec)
 {
   enum
   {
@@ -133,21 +134,35 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
 
   static uint16_t s_seqno = 0;
 
-  cxx17::string_view body = ICMPTEST_PIN; //"yasio-3.37.6";
+  cxx17::string_view body = ICMPTEST_PIN;
 
-  icmp_hdr_st hdr;
-  hdr.id    = get_identifier();
-  hdr.type  = icmp_echo;
-  hdr.seqno = ++s_seqno;
-  hdr.code  = 0;
-  icmp_checksum(hdr, body.begin(), body.end());
+  icmp_hdr_st req_hdr = {0};
+
+  req_hdr.type  = icmp_echo;
+  req_hdr.seqno = ++s_seqno;
+  req_hdr.code  = 0;
+
+  if (socktype == SOCK_RAW)
+  {
+    req_hdr.id = get_identifier();
+    icmp_checksum(req_hdr, body.begin(), body.end());
+  }
+  else
+  {
+    /**
+     * SOCK_DGRAM
+     * This allows you to only send ICMP echo requests,
+     * The kernel will handle it specially (match request/responses, fill in the checksum and identifier).
+     */
+    ;
+  }
 
   yasio::obstream obs;
-  obs.write(hdr.type);
-  obs.write(hdr.code);
-  obs.write(hdr.sum);
-  obs.write(hdr.id);
-  obs.write(hdr.seqno);
+  obs.write(req_hdr.type);
+  obs.write(req_hdr.code);
+  obs.write(req_hdr.sum);
+  obs.write(req_hdr.id);
+  obs.write(req_hdr.seqno);
   obs.write_bytes(body);
 
   auto icmp_request       = std::move(obs.buffer());
@@ -190,7 +205,6 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
       ttl      = 0;
     }
 
-    icmp_hdr_st reply_hdr;
     ibs.reset(icmp_raw, sizeof(icmp_hdr_st));
     reply_hdr.type  = ibs.read<uint8_t>();
     reply_hdr.code  = ibs.read<uint8_t>();
@@ -204,12 +218,15 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
       return -1; // not echo reply
     }
 
-    if (socktype == SOCK_RAW && reply_hdr.id != hdr.id)
+    if (socktype == SOCK_RAW)
     {
-      ec = yasio::icmp::errc::identifier_mismatch;
-      return -1; // id not equals
-    }
-    if (reply_hdr.seqno != hdr.seqno)
+      if (reply_hdr.id != req_hdr.id)
+      {
+        ec = yasio::icmp::errc::identifier_mismatch;
+        return -1; // id not equals
+      }
+    } // else: SOCK_DGRAM, because the kernel will refill the identifer, so don't check it
+    if (reply_hdr.seqno != req_hdr.seqno)
     {
       ec = yasio::icmp::errc::sequence_number_mismatch;
       return -1;
@@ -242,16 +259,18 @@ int main(int argc, char** argv)
   fprintf(stdout, "Ping %s [%s] with %d bytes of data(%s):\n", host, remote_ip.c_str(),
           static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1), socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
 
+  icmp_hdr_st reply_hdr;
   for (int i = 0; i < max_times; ++i)
   {
     ip::endpoint peer;
-    uint8_t ttl = 0;
-    int error   = 0;
+    uint8_t ttl      = 0;
+    int error        = 0;
 
-    auto start_ms = yasio::clock();
-    int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), ttl, peer, error);
+    auto start_ms = yasio::highp_clock();
+    int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), peer, reply_hdr, ttl, error);
     if (n > 0)
-      fprintf(stdout, "Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
+      fprintf(stdout, "Reply from %s: bytes=%d icmp_seq=%u ttl=%u id=%u time=%.1lfms\n", peer.ip().c_str(), n, static_cast<unsigned int>(reply_hdr.seqno),
+              static_cast<unsigned int>(ttl), static_cast<unsigned int>(reply_hdr.id), (yasio::highp_clock() - start_ms) / 1000.0);
     else
       fprintf(stderr, "Ping %s [%s] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
   }

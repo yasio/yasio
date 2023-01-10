@@ -748,8 +748,6 @@ void io_service::start(event_cb_t cb)
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
     {
-      signal_blocker sb;
-      (void)sb;
       this->worker_    = std::thread(&io_service::run, this);
       this->worker_id_ = worker_.get_id();
     }

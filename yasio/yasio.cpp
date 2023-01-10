@@ -39,7 +39,6 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "yasio/detail/thread_name.hpp"
-#include "yasio/detail/signal_blocker.hpp"
 
 #if defined(YASIO_SSL_BACKEND)
 #  include "yasio/detail/ssl.hpp"
@@ -735,8 +734,6 @@ void io_service::start(event_cb_t cb)
     this->state_ = io_service::state::RUNNING;
     if (!options_.no_new_thread_)
     {
-      signal_blocker sb;
-      (void)sb;
       this->worker_    = std::thread(&io_service::run, this);
       this->worker_id_ = worker_.get_id();
     }

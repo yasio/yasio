@@ -1,3 +1,9 @@
+/******************************************************************
+* Notes: 
+* GitHub hosts Linux and Windows runners on Standard_DS2_v2 virtual machines in Microsoft Azure with the GitHub Actions runner application installed.
+* And due to security policy Azure blocks ICMP by default. Hence, you cannot get ICMP answer in workflow.
+*   refer to: https://github.com/orgs/community/discussions/26184
+*/
 #include <stdint.h>
 #include <thread>
 #include "yasio/yasio.hpp"

@@ -287,6 +287,7 @@ int main(int argc, char** argv)
               static_cast<unsigned int>(ttl), static_cast<unsigned int>(reply_hdr.id), (yasio::highp_clock() - start_ms) / 1000.0);
     else
       fprintf(stderr, "Ping %s [%s] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   return 0;
 }

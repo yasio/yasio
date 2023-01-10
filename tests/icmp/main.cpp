@@ -91,6 +91,7 @@ enum errc
   checksum_fail = -201,
   type_mismatch,
   identifier_mismatch,
+  sequence_number_mismatch,
 };
 const char* strerror(int ec)
 {
@@ -99,11 +100,13 @@ const char* strerror(int ec)
     case ETIMEDOUT:
       return "request timed out.";
     case checksum_fail:
-      return "icmp: check sum fail!";
+      return "icmp: check sum fail.";
     case type_mismatch:
-      return "icmp: type mismatch!";
+      return "icmp: type mismatch.";
     case identifier_mismatch:
-      return "icmp: identifier mismatch!";
+      return "icmp: identifier mismatch.";
+    case sequence_number_mismatch:
+      return "icmp: sequence number mismatch.";
     default:
       return yasio::io_service::strerror(ec);
   }
@@ -147,7 +150,7 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
   obs.write(hdr.seqno);
   obs.write_bytes(body);
 
-  auto icmp_request = std::move(obs.buffer());
+  auto icmp_request       = std::move(obs.buffer());
   const size_t ip_pkt_len = sizeof(ip_hdr_st) + icmp_request.size();
 
   int n = s.sendto(icmp_request.data(), static_cast<int>(icmp_request.size()), endpoint);
@@ -206,6 +209,11 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
       ec = yasio::icmp::errc::identifier_mismatch;
       return -1; // id not equals
     }
+    if (reply_hdr.seqno != hdr.seqno)
+    {
+      ec = yasio::icmp::errc::sequence_number_mismatch;
+      return -1;
+    }
     return n;
   }
 
@@ -217,8 +225,6 @@ int main(int argc, char** argv)
 {
   const char* host    = argc > 1 ? argv[1] : ICMPTEST_PIN_HOST;
   const int max_times = argc > 2 ? atoi(argv[2]) : 4;
-  
-  printf("===>host: %s\n\n", host);
 
   std::vector<ip::endpoint> endpoints;
   xxsocket::resolve(endpoints, host, 0);
@@ -234,8 +240,7 @@ int main(int argc, char** argv)
 
   const std::string remote_ip = endpoints[0].ip();
   fprintf(stdout, "Ping %s [%s] with %d bytes of data(%s):\n", host, remote_ip.c_str(),
-          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1),
-          socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
+          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1), socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
 
   for (int i = 0; i < max_times; ++i)
   {
@@ -248,7 +253,7 @@ int main(int argc, char** argv)
     if (n > 0)
       fprintf(stdout, "Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
     else
-      fprintf(stderr, "Ping %s [%a] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
+      fprintf(stderr, "Ping %s [%s] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
   }
   return 0;
 }

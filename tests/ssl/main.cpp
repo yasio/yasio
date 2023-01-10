@@ -103,8 +103,8 @@ void yasioTest()
       case YEK_ON_CLOSE:
         if (++done_count == SSLTEST_MAX_CHANNELS)
         {
-          fprintf(stdout, "===> http client: response %d bytes from www server:\n\n", http_client_bytes_transferred);
-          fwrite(http_resp_data.data(), http_resp_data.size(), 1, stdout);
+          fprintf(stdout, "===> http client: response %d bytes from www server.\n\n", http_client_bytes_transferred);
+          // fwrite(http_resp_data.data(), http_resp_data.size(), 1, stdout);
           fflush(stdout);
           service.stop();
         }

@@ -1,3 +1,9 @@
+/******************************************************************
+ * Notes:
+ * GitHub hosts Linux and Windows runners on Standard_DS2_v2 virtual machines in Microsoft Azure with the GitHub Actions runner application installed.
+ * And due to security policy Azure blocks ICMP by default. Hence, you cannot get ICMP answer in workflow.
+ *   refer to: https://github.com/orgs/community/discussions/26184
+ */
 #include <stdint.h>
 #include <thread>
 #include "yasio/yasio.hpp"
@@ -91,17 +97,22 @@ enum errc
   checksum_fail = -201,
   type_mismatch,
   identifier_mismatch,
+  sequence_number_mismatch,
 };
 const char* strerror(int ec)
 {
   switch (ec)
   {
+    case ETIMEDOUT:
+      return "request timed out.";
     case checksum_fail:
-      return "icmp: check sum fail!";
+      return "icmp: check sum fail.";
     case type_mismatch:
-      return "icmp: type mismatch!";
+      return "icmp: type mismatch.";
     case identifier_mismatch:
-      return "icmp: identifier mismatch!";
+      return "icmp: identifier mismatch.";
+    case sequence_number_mismatch:
+      return "icmp: sequence number mismatch.";
     default:
       return yasio::io_service::strerror(ec);
   }
@@ -109,7 +120,8 @@ const char* strerror(int ec)
 } // namespace icmp
 } // namespace yasio
 
-static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, uint8_t& ttl, ip::endpoint& peer, int& ec)
+static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, ip::endpoint& peer, icmp_hdr_st& reply_hdr,
+                     uint8_t& ttl, int& ec)
 {
   enum
   {
@@ -128,24 +140,39 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
 
   static uint16_t s_seqno = 0;
 
-  cxx17::string_view body = ICMPTEST_PIN; //"yasio-3.37.6";
+  cxx17::string_view body = ICMPTEST_PIN;
 
-  icmp_hdr_st hdr;
-  hdr.id    = get_identifier();
-  hdr.type  = icmp_echo;
-  hdr.seqno = ++s_seqno;
-  hdr.code  = 0;
-  icmp_checksum(hdr, body.begin(), body.end());
+  icmp_hdr_st req_hdr = {0};
+
+  req_hdr.type  = icmp_echo;
+  req_hdr.seqno = ++s_seqno;
+  req_hdr.code  = 0;
+
+#if !defined(__linux__)
+  req_hdr.id = get_identifier();
+  icmp_checksum(req_hdr, body.begin(), body.end());
+#else
+  /** Linux:
+   * SOCK_DGRAM
+   * This allows you to only send ICMP echo requests,
+   * The kernel will handle it specially (match request/responses, fill in the checksum and identifier).
+   */
+  if (socktype == SOCK_RAW)
+  {
+    req_hdr.id = get_identifier();
+    icmp_checksum(req_hdr, body.begin(), body.end());
+  }
+#endif
 
   yasio::obstream obs;
-  obs.write(hdr.type);
-  obs.write(hdr.code);
-  obs.write(hdr.sum);
-  obs.write(hdr.id);
-  obs.write(hdr.seqno);
+  obs.write(req_hdr.type);
+  obs.write(req_hdr.code);
+  obs.write(req_hdr.sum);
+  obs.write(req_hdr.id);
+  obs.write(req_hdr.seqno);
   obs.write_bytes(body);
 
-  auto icmp_request = std::move(obs.buffer());
+  auto icmp_request       = std::move(obs.buffer());
   const size_t ip_pkt_len = sizeof(ip_hdr_st) + icmp_request.size();
 
   int n = s.sendto(icmp_request.data(), static_cast<int>(icmp_request.size()), endpoint);
@@ -185,7 +212,6 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
       ttl      = 0;
     }
 
-    icmp_hdr_st reply_hdr;
     ibs.reset(icmp_raw, sizeof(icmp_hdr_st));
     reply_hdr.type  = ibs.read<uint8_t>();
     reply_hdr.code  = ibs.read<uint8_t>();
@@ -199,10 +225,25 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
       return -1; // not echo reply
     }
 
-    if (socktype == SOCK_RAW && reply_hdr.id != hdr.id)
+#if !defined(__linux__)
+    if (reply_hdr.id != req_hdr.id)
     {
       ec = yasio::icmp::errc::identifier_mismatch;
       return -1; // id not equals
+    }
+#else
+    // SOCK_DGRAM on Linux: kernel handle to fill identifier, so don't check
+    // if socktype == SOCK_DGRAM
+    if (socktype == SOCK_RAW && reply_hdr.id != req_hdr.id)
+    {
+      ec = yasio::icmp::errc::identifier_mismatch;
+      return -1; // id not equals
+    }
+#endif
+    if (reply_hdr.seqno != req_hdr.seqno)
+    {
+      ec = yasio::icmp::errc::sequence_number_mismatch;
+      return -1;
     }
     return n;
   }
@@ -230,21 +271,23 @@ int main(int argc, char** argv)
 
   const std::string remote_ip = endpoints[0].ip();
   fprintf(stdout, "Ping %s [%s] with %d bytes of data(%s):\n", host, remote_ip.c_str(),
-          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1),
-          socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
+          static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1), socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
 
+  icmp_hdr_st reply_hdr;
   for (int i = 0; i < max_times; ++i)
   {
     ip::endpoint peer;
     uint8_t ttl = 0;
     int error   = 0;
 
-    auto start_ms = yasio::clock();
-    int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), ttl, peer, error);
+    auto start_ms = yasio::highp_clock();
+    int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), peer, reply_hdr, ttl, error);
     if (n > 0)
-      fprintf(stdout, "Reply from %s: bytes=%d time=%dms TTL=%u\n", peer.ip().c_str(), n, static_cast<int>(yasio::clock() - start_ms), ttl);
+      fprintf(stdout, "Reply from %s: bytes=%d icmp_seq=%u ttl=%u id=%u time=%.1lfms\n", peer.ip().c_str(), n, static_cast<unsigned int>(reply_hdr.seqno),
+              static_cast<unsigned int>(ttl), static_cast<unsigned int>(reply_hdr.id), (yasio::highp_clock() - start_ms) / 1000.0);
     else
-      fprintf(stderr, "Ping %s fail, ec=%d, detail: %s\n", host, error, yasio::icmp::strerror(error));
+      fprintf(stderr, "Ping %s [%s] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   return 0;
 }

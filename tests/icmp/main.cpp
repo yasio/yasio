@@ -1,9 +1,9 @@
 /******************************************************************
-* Notes: 
-* GitHub hosts Linux and Windows runners on Standard_DS2_v2 virtual machines in Microsoft Azure with the GitHub Actions runner application installed.
-* And due to security policy Azure blocks ICMP by default. Hence, you cannot get ICMP answer in workflow.
-*   refer to: https://github.com/orgs/community/discussions/26184
-*/
+ * Notes:
+ * GitHub hosts Linux and Windows runners on Standard_DS2_v2 virtual machines in Microsoft Azure with the GitHub Actions runner application installed.
+ * And due to security policy Azure blocks ICMP by default. Hence, you cannot get ICMP answer in workflow.
+ *   refer to: https://github.com/orgs/community/discussions/26184
+ */
 #include <stdint.h>
 #include <thread>
 #include "yasio/yasio.hpp"
@@ -148,20 +148,21 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
   req_hdr.seqno = ++s_seqno;
   req_hdr.code  = 0;
 
+#if !defined(__linux__)
+  req_hdr.id = get_identifier();
+  icmp_checksum(req_hdr, body.begin(), body.end());
+#else
+  /** Linux:
+   * SOCK_DGRAM
+   * This allows you to only send ICMP echo requests,
+   * The kernel will handle it specially (match request/responses, fill in the checksum and identifier).
+   */
   if (socktype == SOCK_RAW)
   {
     req_hdr.id = get_identifier();
     icmp_checksum(req_hdr, body.begin(), body.end());
   }
-  else
-  {
-    /**
-     * SOCK_DGRAM
-     * This allows you to only send ICMP echo requests,
-     * The kernel will handle it specially (match request/responses, fill in the checksum and identifier).
-     */
-    ;
-  }
+#endif
 
   yasio::obstream obs;
   obs.write(req_hdr.type);
@@ -224,14 +225,21 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
       return -1; // not echo reply
     }
 
-    if (socktype == SOCK_RAW)
+#if !defined(__linux__)
+    if (reply_hdr.id != req_hdr.id)
     {
-      if (reply_hdr.id != req_hdr.id)
-      {
-        ec = yasio::icmp::errc::identifier_mismatch;
-        return -1; // id not equals
-      }
-    } // else: SOCK_DGRAM, because the kernel will refill the identifer, so don't check it
+      ec = yasio::icmp::errc::identifier_mismatch;
+      return -1; // id not equals
+    }
+#else
+    // SOCK_DGRAM on Linux: kernel handle to fill identifier, so don't check
+    // if socktype == SOCK_DGRAM
+    if (socktype == SOCK_RAW && reply_hdr.id != req_hdr.id)
+    {
+      ec = yasio::icmp::errc::identifier_mismatch;
+      return -1; // id not equals
+    }
+#endif
     if (reply_hdr.seqno != req_hdr.seqno)
     {
       ec = yasio::icmp::errc::sequence_number_mismatch;
@@ -269,8 +277,8 @@ int main(int argc, char** argv)
   for (int i = 0; i < max_times; ++i)
   {
     ip::endpoint peer;
-    uint8_t ttl      = 0;
-    int error        = 0;
+    uint8_t ttl = 0;
+    int error   = 0;
 
     auto start_ms = yasio::highp_clock();
     int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), peer, reply_hdr, ttl, error);

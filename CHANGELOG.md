@@ -14,6 +14,7 @@ yasio-3.39.7
   4. Improve c-ares integration
   5. Improve extesion `yasio_http`, move it's dependent `llhttp` to `thirdparty` and managed by git submodule
   6. Remove `signal_blocker` when create service thread
+  7. Fix c++20 compiler warnings
   
   
 yasio-3.39.6

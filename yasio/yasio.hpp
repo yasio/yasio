@@ -344,7 +344,6 @@ class io_transport;
 class io_transport_tcp; // tcp client/server
 class io_transport_ssl; // ssl client
 class io_transport_udp; // udp client/server
-class io_transport_kcp; // kcp client/server
 class io_service;
 
 // recommand user always use transport_handle_t, in the future, it's maybe void* or intptr_t
@@ -499,7 +498,6 @@ class YASIO_API io_channel : public io_base {
   friend class io_transport_tcp;
   friend class io_transport_ssl;
   friend class io_transport_udp;
-  friend class io_transport_kcp;
 
 public:
   io_service& get_service() const { return service_; }
@@ -620,14 +618,47 @@ private:
 #endif
 };
 
+class io_send_buffer {
+public:
+  explicit io_send_buffer(yasio::sbyte_buffer&& mutable_buffer)
+  {
+    mutable_buffer_ = std::move(mutable_buffer);
+    data_           = mutable_buffer_.data();
+    size_           = mutable_buffer_.size();
+  }
+  io_send_buffer(const char* const_buffer, size_t const_buffer_size)
+  {
+    data_ = const_buffer;
+    size_ = const_buffer_size;
+  }
+  io_send_buffer(const io_send_buffer&) = delete;
+  io_send_buffer(io_send_buffer&& rhs) YASIO__NOEXCEPT
+  {
+    mutable_buffer_ = std::move(rhs.mutable_buffer_);
+    data_           = rhs.data_;
+    size_           = rhs.size_;
+  }
+
+  bool empty() const { return size_ == 0; }
+
+  const char* data() const { return data_; }
+  size_t size() const { return size_; }
+
+private:
+  yasio::sbyte_buffer mutable_buffer_;
+
+  const char* data_;
+  size_t size_;
+};
+
 // for tcp transport only
 class YASIO_API io_send_op {
 public:
-  io_send_op(sbyte_buffer&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
+  io_send_op(io_send_buffer&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
 
   size_t offset_;       // read pos from sending buffer
-  sbyte_buffer buffer_; // sending data buffer
+  io_send_buffer buffer_; // sending data buffer
   completion_cb_t handler_;
 
   YASIO__DECL virtual int perform(transport_handle_t transport, const void* buf, int n, int& error);
@@ -640,7 +671,7 @@ public:
 // for udp transport only
 class YASIO_API io_sendto_op : public io_send_op {
 public:
-  io_sendto_op(sbyte_buffer&& buffer, completion_cb_t&& handler, const ip::endpoint& destination)
+  io_sendto_op(io_send_buffer&& buffer, completion_cb_t&& handler, const ip::endpoint& destination)
       : io_send_op(std::move(buffer), std::move(handler)), destination_(destination)
   {}
 
@@ -686,10 +717,10 @@ protected:
   YASIO__DECL const print_fn2_t& __get_cprint() const;
 
   // Call at user thread
-  YASIO__DECL virtual int write(sbyte_buffer&&, completion_cb_t&&);
+  YASIO__DECL virtual int write(io_send_buffer&&, completion_cb_t&&);
 
   // Call at user thread
-  virtual int write_to(sbyte_buffer&&, const ip::endpoint&, completion_cb_t&&)
+  virtual int write_to(io_send_buffer&&, const ip::endpoint&, completion_cb_t&&)
   {
     YASIO_LOG("[warning] io_transport doesn't support 'write_to' operation!");
     return 0;
@@ -760,8 +791,8 @@ protected:
   YASIO__DECL void connect();
   YASIO__DECL void disconnect();
 
-  YASIO__DECL int write(sbyte_buffer&&, completion_cb_t&&) override;
-  YASIO__DECL int write_to(sbyte_buffer&&, const ip::endpoint&, completion_cb_t&&) override;
+  YASIO__DECL int write(io_send_buffer&&, completion_cb_t&&) override;
+  YASIO__DECL int write_to(io_send_buffer&&, const ip::endpoint&, completion_cb_t&&) override;
 
   YASIO__DECL void set_primitives() override;
 
@@ -778,30 +809,6 @@ protected:
   mutable ip::endpoint destination_; // for sendto only, stable
   bool connected_ = false;
 };
-#if defined(YASIO_HAVE_KCP)
-class io_transport_kcp : public io_transport_udp {
-public:
-  YASIO__DECL io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s);
-  YASIO__DECL ~io_transport_kcp();
-  ikcpcb* internal_object() { return kcp_; }
-
-protected:
-  YASIO__DECL int write(sbyte_buffer&&, completion_cb_t&&) override;
-
-  YASIO__DECL int do_read(int revent, int& error, highp_time_t& wait_duration) override;
-  YASIO__DECL bool do_write(highp_time_t& wait_duration) override;
-
-  YASIO__DECL int handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration) override;
-
-  YASIO__DECL void check_timeout(highp_time_t& wait_duration) const;
-
-  sbyte_buffer rawbuf_; // the low level raw buffer
-  ikcpcb* kcp_;
-  std::recursive_mutex send_mtx_;
-};
-#else
-class io_transport_kcp {};
-#endif
 
 using io_packet = sbyte_buffer;
 #if !defined(YASIO_USE_SHARED_PACKET)
@@ -937,7 +944,6 @@ class YASIO_API io_service // lgtm [cpp/class-many-fields]
   friend class io_transport;
   friend class io_transport_tcp;
   friend class io_transport_udp;
-  friend class io_transport_kcp;
 #if defined(YASIO_SSL_BACKEND)
   friend class io_transport_ssl;
 #endif
@@ -1016,16 +1022,18 @@ public:
   **        'thandle': the transport to write, could be tcp/udp/kcp
   **        'buf': the data to write
   **        'len': the data len
-  **        'handler': send finish callback, only works for TCP transport
+  **        'handler': send finish callback
   ** remark:
   **        + TCP/UDP: Use queue to store user message, flush at io_service thread
   **        + KCP: Use queue provided by kcp internal, flush at io_service thread
   */
   int write(transport_handle_t thandle, const void* buf, size_t len, completion_cb_t completion_handler = nullptr)
   {
-    return write(thandle, sbyte_buffer{(const char*)buf, (const char*)buf + len, std::true_type{}}, std::move(completion_handler));
+    return write(thandle, sbyte_buffer{(const char*)buf, (const char*)buf + len, std::true_type{}},
+                 std::move(completion_handler));
   }
   YASIO__DECL int write(transport_handle_t thandle, sbyte_buffer buffer, completion_cb_t completion_handler = nullptr);
+  YASIO__DECL int forward(transport_handle_t thandle, const void* buf, size_t len, completion_cb_t completion_handler);
 
   /*
    ** Summary: Write data to unconnected UDP transport with specified address.
@@ -1039,6 +1047,7 @@ public:
     return write_to(thandle, sbyte_buffer{(const char*)buf, (const char*)buf + len, std::true_type{}}, to, std::move(completion_handler));
   }
   YASIO__DECL int write_to(transport_handle_t thandle, sbyte_buffer buffer, const ip::endpoint& to, completion_cb_t completion_handler = nullptr);
+  YASIO__DECL int forward_to(transport_handle_t thandle, const void* buf, size_t len, const ip::endpoint& to, completion_cb_t completion_handler);
 
   // The highp_timer support, !important, the callback is called on the thread of io_service
   YASIO__DECL highp_timer_ptr schedule(const std::chrono::microseconds& duration, timer_cb_t);

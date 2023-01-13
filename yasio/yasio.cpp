@@ -126,7 +126,7 @@ static highp_time_t yasio__min_wait_usec = 0LL;
 // any changes to the system clock are detected after no longer than this.
 static const highp_time_t yasio__max_wait_usec = 5 * 60 * 1000 * 1000LL;
 // the max transport alloc size
-static const size_t yasio__max_tsize = (std::max)({sizeof(io_transport_tcp), sizeof(io_transport_udp), sizeof(io_transport_ssl), sizeof(io_transport_kcp)});
+static const size_t yasio__max_tsize = (std::max)({sizeof(io_transport_tcp), sizeof(io_transport_udp), sizeof(io_transport_ssl)});
 } // namespace
 struct yasio__global_state {
   enum
@@ -336,7 +336,7 @@ io_transport::io_transport(io_channel* ctx, xxsocket_ptr&& s) : ctx_(ctx)
 #endif
 }
 const print_fn2_t& io_transport::__get_cprint() const { return ctx_->get_service().options_.print_; }
-int io_transport::write(sbyte_buffer&& buffer, completion_cb_t&& handler)
+int io_transport::write(io_send_buffer&& buffer, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
@@ -571,11 +571,11 @@ void io_transport_udp::disconnect()
   connected_ = false;
   set_primitives();
 }
-int io_transport_udp::write(sbyte_buffer&& buffer, completion_cb_t&& handler)
+int io_transport_udp::write(io_send_buffer&& buffer, completion_cb_t&& handler)
 {
   return connected_ ? io_transport::write(std::move(buffer), std::move(handler)) : write_to(std::move(buffer), ensure_destination(), std::move(handler));
 }
-int io_transport_udp::write_to(sbyte_buffer&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
+int io_transport_udp::write_to(io_send_buffer&& buffer, const ip::endpoint& to, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
@@ -620,89 +620,6 @@ int io_transport_udp::handle_input(const char* data, int bytes_transferred, int&
   get_service().fire_event(this->cindex(), io_packet{data, data + bytes_transferred}, this);
   return bytes_transferred;
 }
-
-#if defined(YASIO_HAVE_KCP)
-// ----------------------- io_transport_kcp ------------------
-io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_transport_udp(ctx, std::forward<xxsocket_ptr>(s))
-{
-  this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
-  this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
-  ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
-  ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
-    auto t = (io_transport_kcp*)user;
-    if (yasio__min_wait_usec == 0)
-    {
-      int ignored_ec = 0;
-      return t->write_cb_(buf, len, std::addressof(t->ensure_destination()), ignored_ec);
-    }
-    // Enqueue to transport queue
-    return t->io_transport_udp::write(sbyte_buffer{buf, buf + len}, nullptr);
-  });
-}
-io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
-
-int io_transport_kcp::write(sbyte_buffer&& buffer, completion_cb_t&& /*handler*/)
-{
-  std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-  int len    = static_cast<int>(buffer.size());
-  int retval = ::ikcp_send(kcp_, buffer.data(), len);
-  get_service().interrupt();
-  return retval == 0 ? len : retval;
-}
-int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duration)
-{
-  int n = this->call_read(&rawbuf_.front(), static_cast<int>(rawbuf_.size()), revent, error);
-  if (n > 0)
-    this->handle_input(rawbuf_.data(), n, error, wait_duration);
-  if (!error)
-  { // !important, should always try to call ikcp_recv when no error occured.
-    n = ::ikcp_recv(kcp_, buffer_ + offset_, sizeof(buffer_) - offset_);
-    if (n > 0) // If got data from kcp, don't wait
-      wait_duration = yasio__min_wait_usec;
-    else if (n < 0)
-      n = 0; // EAGAIN/EWOULDBLOCK
-  }
-  return n;
-}
-int io_transport_kcp::handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration)
-{
-  // ikcp in event always in service thread, so no need to lock
-  if (0 == ::ikcp_input(kcp_, buf, len))
-  {
-    this->check_timeout(wait_duration); // call ikcp_check
-    return len;
-  }
-
-  // simply regards -1,-2,-3 as error and trigger connection lost event.
-  error = yasio::errc::invalid_packet;
-  return -1;
-}
-bool io_transport_kcp::do_write(highp_time_t& wait_duration)
-{
-  std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-
-  ::ikcp_update(kcp_, static_cast<IUINT32>(::yasio::clock()));
-  ::ikcp_flush(kcp_);
-  this->check_timeout(wait_duration); // call ikcp_check
-  if (yasio__min_wait_usec == 0)
-    return true;
-  // Call super do_write to perform low layer socket.send
-  // benefit of transport queue:
-  // a. cache udp data if kernel buffer full
-  // b. lower packet lose, but may reduce transfer performance and large memory use
-  return io_transport_udp::do_write(wait_duration);
-}
-void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
-{
-  auto current          = static_cast<IUINT32>(::yasio::clock());
-  auto expire_time      = ::ikcp_check(kcp_, current);
-  highp_time_t duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
-  if (duration < 0)
-    duration = yasio__min_wait_usec;
-  if (wait_duration > duration)
-    wait_duration = duration;
-}
-#endif
 
 // ------------------------ io_service ------------------------
 void io_service::init_globals(const yasio::inet::print_fn2_t& prt) { yasio__shared_globals(prt).cprint_ = prt; }
@@ -1111,7 +1028,17 @@ void io_service::deregister_descriptor(const socket_native_type fd, int events) 
 int io_service::write(transport_handle_t transport, sbyte_buffer buffer, completion_cb_t handler)
 {
   if (transport && transport->is_open())
-    return !buffer.empty() ? transport->write(std::move(buffer), std::move(handler)) : 0;
+    return !buffer.empty() ? transport->write(io_send_buffer{std::move(buffer)}, std::move(handler)) : 0;
+  else
+  {
+    YASIO_KLOGE("write failed, the connection not ok!");
+    return -1;
+  }
+}
+int io_service::forward(transport_handle_t transport, const void* buf, size_t len, completion_cb_t handler)
+{
+  if (transport && transport->is_open())
+    return len != 0 ? transport->write(io_send_buffer{(const char*)buf, len}, std::move(handler)) : 0;
   else
   {
     YASIO_KLOGE("write failed, the connection not ok!");
@@ -1121,7 +1048,17 @@ int io_service::write(transport_handle_t transport, sbyte_buffer buffer, complet
 int io_service::write_to(transport_handle_t transport, sbyte_buffer buffer, const ip::endpoint& to, completion_cb_t handler)
 {
   if (transport && transport->is_open())
-    return !buffer.empty() ? transport->write_to(std::move(buffer), to, std::move(handler)) : 0;
+    return !buffer.empty() ? transport->write_to(io_send_buffer{std::move(buffer)}, to, std::move(handler)) : 0;
+  else
+  {
+    YASIO_KLOGE("write_to failed, the connection not ok!");
+    return -1;
+  }
+}
+int io_service::forward_to(transport_handle_t transport, const void* buf, size_t len, const ip::endpoint& to, completion_cb_t handler)
+{
+  if (transport && transport->is_open())
+    return len != 0 ? transport->write_to(io_send_buffer{(const char*)buf, len}, to, std::move(handler)) : 0;
   else
   {
     YASIO_KLOGE("write_to failed, the connection not ok!");
@@ -1605,13 +1542,6 @@ transport_handle_t io_service::allocate_transport(io_channel* ctx, xxsocket_ptr&
     }
     else // udp like transport
     {
-#if defined(YASIO_HAVE_KCP)
-      if (yasio__testbits(ctx->properties_, YCM_KCP))
-      {
-        transport = new (vp) io_transport_kcp(ctx, std::forward<xxsocket_ptr>(s));
-        break;
-      }
-#endif
       transport = new (vp) io_transport_udp(ctx, std::forward<xxsocket_ptr>(s));
     }
   } while (false);

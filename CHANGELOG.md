@@ -5,6 +5,7 @@ yasio-3.39.7
       - Use `event->packet_view()` receive packet event
       - No upack
       - No deferred event
+      - No GC alloc
   2. Refactor ssl backends, add follow new option and channel kind
  
       - `YOPT_S_SSL_CERT`: to specific ssl server `cert` and `private_key` files

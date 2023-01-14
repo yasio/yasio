@@ -44,11 +44,11 @@ SOFTWARE.
 #  include "yasio/detail/ssl.hpp"
 #endif
 
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
 #  include "kcp/ikcp.h"
 #endif
 
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
 #  include "yasio/detail/ares.hpp"
 #endif
 
@@ -148,7 +148,7 @@ struct yasio__global_state {
     }
 #  endif
 #endif
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     int ares_status = ::ares_library_init(ARES_LIB_INIT_ALL);
     if (ares_status == 0)
       yasio__setbits(init_flags_, INITF_CARES);
@@ -167,7 +167,7 @@ struct yasio__global_state {
   }
   ~yasio__global_state()
   {
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     if (yasio__testbits(this->init_flags_, INITF_CARES))
       ::ares_library_cleanup();
 #endif
@@ -725,7 +725,7 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
   // create channels
   create_channels(channel_eps, channel_count);
 
-#if !defined(YASIO_HAVE_CARES)
+#if !defined(YASIO_USE_CARES)
   life_mutex_ = std::make_shared<cxx17::shared_mutex>();
   life_token_ = std::make_shared<life_token>();
 #endif
@@ -735,7 +735,7 @@ void io_service::finalize()
 {
   if (this->state_ == io_service::state::IDLE)
   {
-#if !defined(YASIO_HAVE_CARES)
+#if !defined(YASIO_USE_CARES)
     std::unique_lock<cxx17::shared_mutex> lck(*life_mutex_);
     life_token_.reset();
 #endif
@@ -795,7 +795,7 @@ void io_service::run()
 #if defined(YASIO_SSL_BACKEND)
   init_ssl_context(YSSL_CLIENT); // by default, init ssl client context
 #endif
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
   recreate_ares_channel();
   ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM] = {0};
 #endif
@@ -811,7 +811,7 @@ void io_service::run()
     fd_set = this->fd_set_;
 
     const auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     /**
      * retrieves the set of file descriptors which the calling application should poll io,
      * after poll_io, for ares invoke flow, refer to:
@@ -850,7 +850,7 @@ void io_service::run()
       }
     }
 
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     // process events for name resolution.
     do_ares_process_fds(ares_socks, ares_nfds, fd_set);
 #endif
@@ -865,7 +865,7 @@ void io_service::run()
     process_timers();
   } while (!this->stop_flag_ || !this->transports_.empty());
 
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
   destroy_ares_channel();
 #endif
 #if defined(YASIO_SSL_BACKEND)
@@ -1166,7 +1166,7 @@ void io_service::cleanup_ssl_context(ssl_role role)
     yssl_ctx_free(ctx);
 }
 #endif
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
 void io_service::ares_work_started() { ++ares_outstanding_work_; }
 void io_service::ares_work_finished()
 {
@@ -1841,7 +1841,7 @@ void io_service::start_query(io_channel* ctx)
 #if defined(YASIO_ENABLE_ARES_PROFILER)
   ctx->query_start_time_ = highp_clock();
 #endif
-#if !defined(YASIO_HAVE_CARES)
+#if !defined(YASIO_USE_CARES)
   // init async name query thread state
   auto resolving_host                           = ctx->remote_host_;
   auto resolving_port                           = ctx->remote_port_;
@@ -1903,7 +1903,7 @@ void io_service::update_dns_status()
   if (this->options_.dns_dirty_)
   {
     this->options_.dns_dirty_ = false;
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     recreate_ares_channel();
 #endif
     for (auto channel : this->channels_)
@@ -2015,7 +2015,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_DNS_DIRTY:
       options_.dns_dirty_ = true;
       break;
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     case YOPT_S_DNS_LIST:
       options_.name_servers_ = va_arg(ap, const char*);
       options_.dns_dirty_    = true;
@@ -2144,7 +2144,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       }
       break;
     }
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
     case YOPT_C_KCP_CONV: {
       auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
       if (channel)

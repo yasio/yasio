@@ -31,11 +31,10 @@ Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 #define SPEEDTEST_PROTO_KCP 3
 
 #if SPEEDTEST_VIA_SSL
-#define SPEEDTEST_SSL_MASK YCM_SSL
+#  define SPEEDTEST_SSL_MASK YCM_SSL
 #else
 #  define SPEEDTEST_SSL_MASK 0
 #endif
-
 
 #define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_TCP
 
@@ -133,12 +132,14 @@ static void print_speed_detail(double interval, double time_elapsed)
   }
 }
 
+#if defined(YASIO_ENABLE_KCP)
 void setup_kcp_transfer(transport_handle_t handle)
 {
   auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
   ::ikcp_setmtu(kcp_handle, YASIO_SZ(63, k));
   ::ikcp_wndsize(kcp_handle, 4096, 8192);
 }
+#endif
 
 // The transport rely on low level proto UDP/TCP
 void ll_send_repeated(io_service* service, transport_handle_t thandle, obstream* obs)
@@ -156,7 +157,7 @@ void ll_send_repeated(io_service* service, transport_handle_t thandle, obstream*
   };
 
   if (time_elapsed < s_send_limit_time)
-    service->write(thandle, obs->buffer(), cb);
+    service->forward(thandle, obs->data(), obs->length(), cb);
 }
 
 void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream* obs)
@@ -183,7 +184,7 @@ void start_sender(io_service& service)
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
-  
+
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
 
   service.start([&](event_ptr event) {
@@ -207,6 +208,7 @@ void start_sender(io_service& service)
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
           }
+#if defined(YASIO_ENABLE_KCP)
           if (SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP)
           {
             setup_kcp_transfer(thandle);
@@ -214,6 +216,9 @@ void start_sender(io_service& service)
           }
           else
             ll_send_repeated(&service, thandle, &obs);
+#else
+          ll_send_repeated(&service, thandle, &obs);
+#endif
         }
         break;
       case YEK_CONNECTION_LOST:
@@ -242,11 +247,12 @@ void start_receiver(io_service& service)
   static long long time_start   = yasio::highp_clock<>();
   static double last_print_time = 0;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
+  service.set_option(YOPT_S_FORWARD_EVENT, 1);
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
       case YEK_PACKET: {
-        s_recv_total_bytes += event->packet().size();
+        s_recv_total_bytes += event->packet_view().size();
         auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
         s_recv_speed      = s_recv_total_bytes / time_elapsed;
         break;
@@ -263,8 +269,10 @@ void start_receiver(io_service& service)
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
           }
+#if defined(YAISO_ENABLE_KCP)
           if (SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP)
             setup_kcp_transfer(event->transport());
+#endif
           printf("The sender connected...\n");
         }
         break;

@@ -53,11 +53,11 @@ SOFTWARE.
 #include "yasio/stl/string_view.hpp"
 #include "yasio/xxsocket.hpp"
 
-#if !defined(YASIO_HAVE_CARES)
+#if !defined(YASIO_USE_CARES)
 #  include "yasio/stl/shared_mutex.hpp"
 #endif
 
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
 typedef struct IKCPCB ikcpcb;
 #endif
 
@@ -66,7 +66,7 @@ typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_st SSL;
 #endif
 
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
 typedef struct ares_channeldata* ares_channel;
 typedef struct ares_addrinfo ares_addrinfo;
 #endif
@@ -613,7 +613,7 @@ private:
 
   unsigned int connect_id_ = 0;
 
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
   int kcp_conv_ = 0;
 #endif
 };
@@ -1102,7 +1102,7 @@ private:
   YASIO__DECL void cleanup_ssl_context(ssl_role role);
 #endif
 
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
@@ -1243,7 +1243,7 @@ private:
     std::string keyfile_;
 #endif
 
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
     std::string name_servers_;
 #endif
   } options_;
@@ -1255,7 +1255,7 @@ private:
 #if defined(YASIO_SSL_BACKEND)
   SSL_CTX* ssl_roles_[2];
 #endif
-#if defined(YASIO_HAVE_CARES)
+#if defined(YASIO_USE_CARES)
   ares_channel ares_         = nullptr; // the ares handle for non blocking io dns resolve support
   int ares_outstanding_work_ = 0;
 #else

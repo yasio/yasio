@@ -8,6 +8,8 @@
 
 #include "kcp/ikcp.h"
 
+#include "sslcerts.hpp"
+
 #if defined(_MSC_VER)
 #  pragma comment(lib, "Winmm.lib")
 #endif
@@ -53,7 +55,7 @@ namespace speedtest
 {
 enum
 {
-  RECEIVER_PORT = 3001,
+  RECEIVER_PORT = 3002,
   SENDER_PORT   = RECEIVER_PORT,
 #  if !SPEEDTEST_VIA_UDS
   RECEIVER_CHANNEL_KIND = YCK_TCP_SERVER | SPEEDTEST_SSL_MASK,
@@ -186,7 +188,7 @@ void start_sender(io_service& service)
   obs.write_bytes(buffer, PER_PACKET_SIZE);
 
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
-
+  service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -248,6 +250,8 @@ void start_receiver(io_service& service)
   static double last_print_time = 0;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
   service.set_option(YOPT_S_FORWARD_EVENT, 1);
+  service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
+  service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
   service.start([&](event_ptr event) {
     switch (event->kind())
     {

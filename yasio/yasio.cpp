@@ -1421,7 +1421,7 @@ void io_service::do_accept(io_channel* ctx)
       ctx->buffer_.resize(YASIO_INET_BUFFER_SIZE);
     }
     register_descriptor(ctx->socket_->native_handle(), socket_event::read);
-    YASIO_KLOGD("[index: %d] open server succeed, socket.fd=%d listening at %s...", ctx->index_, (int)ctx->socket_->native_handle(), ep.to_string().c_str());
+    YASIO_KLOGI("[index: %d] open server succeed, socket.fd=%d listening at %s...", ctx->index_, (int)ctx->socket_->native_handle(), ep.to_string().c_str());
     error = 0;
   } while (false);
 

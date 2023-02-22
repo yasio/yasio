@@ -1831,7 +1831,7 @@ bool io_service::cleanup_channel(io_channel* ctx, bool clear_mask)
 {
   ctx->clear_mutable_flags();
   bool bret = cleanup_io(ctx, clear_mask);
-#if defined(YAISO_ENABLE_PASSIVE_EVENT)
+#if defined(YASIO_ENABLE_PASSIVE_EVENT)
   if (bret && yasio__testbits(ctx->properties_, YCM_SERVER))
     this->fire_event(ctx->index_, YEK_ON_CLOSE, 0, ctx, 1);
 #endif

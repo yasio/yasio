@@ -34,9 +34,10 @@ jobs:
           # required by mbedtls-3.3.0
           pkg install -y py39-pip
           pip install jsonschema jinja2
-          # install perl5.34.x, localtion: /usr/local/bin
-          set perl_pkg_name=`pkg search perl5 | cut -d' ' -f1`
-          pkg install -y $perl_pkg_name
+          # install perl5, localtion: /usr/local/bin
+          pkg search perl5
+          pkg search perl5 | cut -d' ' -f1 | head -n 1 | xargs pkg install -y
+          perl -v
         run: |
           echo Building on freebsd...
           cmake -G "Unix Makefiles" -S . -Bbuild

@@ -173,6 +173,7 @@ YASIO_NI_API void yasio_set_option(void* service_ptr, int opt, const char* pszAr
     case YOPT_C_LOCAL_PORT:
     case YOPT_C_REMOTE_PORT:
     case YOPT_C_KCP_CONV:
+    case YOPT_C_UNPACK_NO_BSWAP:
       service->set_option(opt, svtoi(args[0]), svtoi(args[1]));
       break;
     case YOPT_C_ENABLE_MCAST:

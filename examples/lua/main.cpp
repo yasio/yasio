@@ -2,10 +2,10 @@
 #include "yasio/bindings/lyasio.hpp"
 #include "yasio/stl/string_view.hpp"
 #if YASIO__HAS_CXX14
-#  if !YASIO__HAS_CXX20
-#    include "sol2/sol.hpp"
-#  else
+#  if YASIO__HAS_CXX17 // use sol2-3.x
 #    include "sol/sol.hpp"
+#  else
+#    include "sol2/sol.hpp" // use sol2-2.x
 #  endif
 #else
 #  include "kaguya/kaguya.hpp"

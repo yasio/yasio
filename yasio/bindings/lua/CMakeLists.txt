@@ -1,6 +1,7 @@
 set(target_name plainlua)
 
-set(LUA_SRC_PATH ${PROJECT_SOURCE_DIR}/thirdparty/lua)
+get_filename_component(LUA_SRC_PATH ../../../thirdparty/lua ABSOLUTE)
+message(STATUS "LUA_SRC_PATH=${LUA_SRC_PATH}")
 
 file(GLOB LUA_SRC_FILES 
     "${LUA_SRC_PATH}/*.c")

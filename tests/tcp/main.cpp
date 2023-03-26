@@ -17,8 +17,6 @@ void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{HTTP_TEST_HOST, 80}};
 
- 
-
   using namespace cxx17;
   bool yes = cxx20::starts_with("hello world", "hello");
   yes      = cxx20::starts_with("hello world", (int)'h');
@@ -38,8 +36,8 @@ void yasioTest()
   auto where = obs.push<int>();
   obs.write(3.141592654);
   obs.write(1.17723f);
-  obs.write_ix<int32_t>(20201125);
-  obs.write_ix<int64_t>(-9223372036854775807);
+  obs.write_ix(20201125);
+  obs.write_ix(-9223372036854775807);
 #if defined(YASIO_HAVE_HALF_FLOAT)
   obs.write(static_cast<fp16_t>(3.85f));
 #endif
@@ -47,7 +45,7 @@ void yasioTest()
   obs.pop<int>(where);
 
   yasio::ibstream_view ibs(&obs);
-  auto r0 = ibs.read_varint(sizeof(u_short)); // length: uint24
+  auto r0 = ibs.read<int>();
   auto r1 = ibs.read<double>();
   auto f1 = ibs.read<float>();
   auto v5 = ibs.read_ix<int32_t>();

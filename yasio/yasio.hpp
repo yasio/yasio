@@ -57,10 +57,6 @@ SOFTWARE.
 #  include "yasio/stl/shared_mutex.hpp"
 #endif
 
-#if defined(YASIO_ENABLE_KCP)
-typedef struct IKCPCB ikcpcb;
-#endif
-
 #if defined(YASIO_SSL_BACKEND)
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_st SSL;
@@ -617,10 +613,6 @@ private:
   long long bytes_transferred_ = 0;
 
   unsigned int connect_id_ = 0;
-
-#if defined(YASIO_ENABLE_KCP)
-  int kcp_conv_ = 0;
-#endif
 };
 
 class io_send_buffer {

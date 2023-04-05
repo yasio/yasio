@@ -156,12 +156,6 @@ list (APPEND YASIO_CORE
     yasio/yasio.cpp
 )
 
-if (YASIO_ENABLE_KCP)
-  set(YASIO_CORE ${YASIO_CORE} 
-    ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
-  )
-endif()
-
 if (YAISO_BUILD_NI)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/yasio_ni.cpp
@@ -186,7 +180,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
   )
 endif()
 
-if(YASIO_ENABLE_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_USE_CARES OR YASIO_ENABLE_HALF_FLOAT)
+if(YASIO_BUILD_WITH_LUA OR YASIO_USE_CARES OR YASIO_ENABLE_HALF_FLOAT)
     include_directories("${PROJECT_SOURCE_DIR}/thirdparty")
 endif()
 
@@ -402,7 +396,6 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_DISABLE_OBJECT_POOL)
     yasio_config_pred(${target_name} YASIO_ENABLE_ARES_PROFILER)
     yasio_config_pred(${target_name} YASIO_USE_CARES)
-    yasio_config_pred(${target_name} YASIO_ENABLE_KCP)
     yasio_config_option(${target_name} YASIO_SSL_BACKEND "${YASIO_SSL_BACKEND}")
     yasio_config_pred(${target_name} YASIO_ENABLE_UDS)
     yasio_config_pred(${target_name} YASIO_NT_COMPAT_GAI)

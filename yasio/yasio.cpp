@@ -44,10 +44,6 @@ SOFTWARE.
 #  include "yasio/detail/ssl.hpp"
 #endif
 
-#if defined(YASIO_ENABLE_KCP)
-#  include "kcp/ikcp.h"
-#endif
-
 #if defined(YASIO_USE_CARES)
 #  include "yasio/detail/ares.hpp"
 #endif

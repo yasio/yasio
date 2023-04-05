@@ -249,7 +249,7 @@ void start_receiver(io_service& service)
   static long long time_start   = yasio::highp_clock<>();
   static double last_print_time = 0;
   service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
-  service.set_option(YOPT_S_FORWARD_EVENT, 1);
+  service.set_option(YOPT_S_AUTO_DISPATCH, 1);
   service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
   service.start([&](event_ptr event) {

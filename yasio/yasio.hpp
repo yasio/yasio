@@ -174,11 +174,9 @@ enum
   //  b. IPv6 addresses with ports require square brackets [fe80::1%lo0]:53
   YOPT_S_DNS_LIST,
 
-  // Set whether forward event without GC alloc
-  // params: forward: int(0)
-  // reamrks:
-  //   when forward event enabled, the option YOPT_S_DEFERRED_EVENT was ignored
-  YOPT_S_FORWARD_EVENT,
+  // Whether enable auto dispatch event on io_service thread, default: 0
+  // params: auto_dispatch: int(1)
+  YOPT_S_AUTO_DISPATCH,
 
   // Set ssl server cert and private key file
   // params:
@@ -186,6 +184,11 @@ enum
   //   keyfile: const char*
   YOPT_S_SSL_CERT,
 
+  // Set whether forward packet without GC alloc
+  // params: forward: int(0)
+  // reamrks:
+  //   when forward packet enabled, the packet will always dispach when recv data from OS kernel immediately,
+  //   even through the option YOPT_S_DEFERRED_EVENT was enabled
   YOPT_S_FORWARD_PACKET,
 
   // Sets channel length field based frame decode function, native C++ ONLY
@@ -659,7 +662,7 @@ public:
   io_send_op(io_send_buffer&& buffer, completion_cb_t&& handler) : offset_(0), buffer_(std::move(buffer)), handler_(std::move(handler)) {}
   virtual ~io_send_op() {}
 
-  size_t offset_;       // read pos from sending buffer
+  size_t offset_;         // read pos from sending buffer
   io_send_buffer buffer_; // sending data buffer
   completion_cb_t handler_;
 
@@ -998,7 +1001,8 @@ public:
   // should call at the thread who care about async io
   // events(CONNECT_RESPONSE,CONNECTION_LOST,PACKET), such cocos2d-x opengl or
   // any other game engines' render thread.
-  YASIO__DECL void dispatch(int max_count = 128);
+  // returns: The remain events in queue
+  YASIO__DECL size_t dispatch(int max_count = 128);
 
   // set option, see enum YOPT_XXX
   YASIO__DECL void set_option(int opt, ...);
@@ -1031,8 +1035,7 @@ public:
   */
   int write(transport_handle_t thandle, const void* buf, size_t len, completion_cb_t completion_handler = nullptr)
   {
-    return write(thandle, sbyte_buffer{(const char*)buf, (const char*)buf + len, std::true_type{}},
-                 std::move(completion_handler));
+    return write(thandle, sbyte_buffer{(const char*)buf, (const char*)buf + len, std::true_type{}}, std::move(completion_handler));
   }
   YASIO__DECL int write(transport_handle_t thandle, sbyte_buffer buffer, completion_cb_t completion_handler = nullptr);
   YASIO__DECL int forward(transport_handle_t thandle, const void* buf, size_t len, completion_cb_t completion_handler);
@@ -1090,6 +1093,7 @@ private:
   YASIO__DECL void process_transports(fd_set_adapter& fd_set);
   YASIO__DECL void process_channels(fd_set_adapter& fd_set);
   YASIO__DECL void process_timers();
+  YASIO__DECL void process_deferred_events();
 
   YASIO__DECL void interrupt();
 
@@ -1142,7 +1146,7 @@ private:
   inline void fire_event(_Types&&... args)
   {
     auto event = cxx14::make_unique<io_event>(std::forward<_Types>(args)...);
-    if (options_.deferred_event_ && !options_.forward_event_)
+    if (options_.deferred_event_)
     {
       if (options_.on_defer_event_ && !options_.on_defer_event_(event))
         return;
@@ -1222,7 +1226,7 @@ private:
     bool deferred_event_ = true;
     defer_event_cb_t on_defer_event_;
 
-    bool forward_event_  = false; // since v3.39.7
+    bool auto_dispatch_  = false;  // since v3.39.8
     bool forward_packet_ = false; // since v3.39.8
 
     // tcp keepalive settings

@@ -468,6 +468,10 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     yasio_config_lib_options(yasio_http)
     yasio_config_target_outdir(yasio_http)
 
+    add_subdirectory(extensions/yasio_kcp)
+    yasio_config_lib_options(yasio_kcp)
+    yasio_config_target_outdir(yasio_kcp)
+
     add_subdirectory(tests/http)
 endif ()
 

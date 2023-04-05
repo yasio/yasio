@@ -783,10 +783,11 @@ void io_service::clear_transports()
   }
   transports_.clear();
 }
-void io_service::dispatch(int max_count)
+size_t io_service::dispatch(int max_count)
 {
   if (options_.on_event_)
     this->events_.consume(max_count, options_.on_event_);
+  return this->events_.count();
 }
 void io_service::run()
 {
@@ -863,6 +864,9 @@ void io_service::run()
 
     // process timeout timers
     process_timers();
+
+    // process deferred events if auto dispatch enabled
+    process_deferred_events();
   } while (!this->stop_flag_ || !this->transports_.empty());
 
 #if defined(YASIO_USE_CARES)
@@ -1574,7 +1578,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set_adapter& fd_set)
     int n      = transport->do_read(revent, error, this->wait_duration_);
     if (n >= 0)
     {
-      if (!options_.forward_event_ && !options_.forward_packet_)
+      if (!options_.forward_packet_)
       {
         YASIO_KLOGV("[index: %d] do_read status ok, bytes transferred: %d, buffer used: %d", transport->cindex(), n, n + transport->offset_);
         if (transport->expected_size_ == -1)
@@ -1739,6 +1743,11 @@ void io_service::process_timers()
   }
   if (n)
     sort_timers();
+}
+void io_service::process_deferred_events()
+{
+  if (options_.auto_dispatch_ && dispatch() > 0)
+    this->wait_duration_ = yasio__min_wait_usec;
 }
 highp_time_t io_service::get_timeout(highp_time_t usec)
 {
@@ -2027,8 +2036,8 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_DEFER_EVENT_CB:
       options_.on_defer_event_ = *va_arg(ap, defer_event_cb_t*);
       break;
-    case YOPT_S_FORWARD_EVENT:
-      options_.forward_event_ = !!va_arg(ap, int);
+    case YOPT_S_AUTO_DISPATCH:
+      options_.auto_dispatch_ = !!va_arg(ap, int);
       break;
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);

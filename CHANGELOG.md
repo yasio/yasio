@@ -1,3 +1,14 @@
+yasio-3.39.8
+
+  1. Remove unsafe option: `YOPT_S_FORWARD_EVENT`,  may cause internal channel behavior incorrect.
+  2. Add forward packet event support, new option: `YOPT_S_FORWARD_PACKET`,  after enable forward packet: 
+
+      - Use `event->packet_view()` receive packet event
+      - No upack
+      - No deferred packet
+      - No GC alloc
+  
+  
 yasio-3.39.7
   
   1. Add forward event support fire packet event, new option: `YOPT_S_FORWARD_EVENT`,  after enable forward event: 

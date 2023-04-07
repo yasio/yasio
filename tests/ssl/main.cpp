@@ -33,7 +33,7 @@ void yasioTest()
 
   int done_count = 0;
 
-  service.set_option(YOPT_S_FORWARD_EVENT, 1);
+  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
   service.set_option(YOPT_C_MOD_FLAGS, SSLTEST_CHANNEL_SERVER, YCF_REUSEADDR, 0);

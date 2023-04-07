@@ -174,11 +174,6 @@ enum
   //  b. IPv6 addresses with ports require square brackets [fe80::1%lo0]:53
   YOPT_S_DNS_LIST,
 
-  // Set whether forward event without GC alloc
-  // params: forward: int(0)
-  // reamrks:
-  //   when forward event enabled, the option YOPT_S_DEFERRED_EVENT was ignored
-  YOPT_S_FORWARD_EVENT,
 
   // Set ssl server cert and private key file
   // params:

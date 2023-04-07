@@ -2097,9 +2097,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_DEFER_EVENT_CB:
       options_.on_defer_event_ = *va_arg(ap, defer_event_cb_t*);
       break;
-    case YOPT_S_FORWARD_EVENT:
-      options_.forward_event_ = !!va_arg(ap, int);
-      break;
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);
       break;

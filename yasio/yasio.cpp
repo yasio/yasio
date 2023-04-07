@@ -2038,9 +2038,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);
       break;
-    case YOPT_S_FORWARD_PACKET:
-      options_.forward_packet_ = !!va_arg(ap, int);
-      break;
 #if defined(YASIO_SSL_BACKEND)
     case YOPT_S_SSL_CERT:
       options_.crtfile_ = va_arg(ap, const char*);

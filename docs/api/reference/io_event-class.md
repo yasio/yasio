@@ -90,7 +90,7 @@ yasio::sbyte_buffer& packet()
 
 ## <a name="packet_view"></a> io_event::packet_view
 
-获取事件携带的消息数据view，仅当io_service设置`YOPT_S_FORWARD_EVENT`时有效。此数据在事件回调结束后会失效，业务应及时保存。
+获取事件携带的消息数据view，仅当io_service设置`YOPT_S_FORWARD_PACKET`时有效。此数据在事件回调结束后会失效，业务应及时保存。
 
 ```cpp
 packet_view_t packet_view()

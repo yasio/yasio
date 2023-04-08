@@ -219,6 +219,18 @@ YASIO_NI_API int yasio_write(void* service_ptr, void* thandle, const unsigned ch
     return service->write(reinterpret_cast<transport_handle_t>(thandle), yasio::sbyte_buffer(bytes, bytes + len, std::true_type{}));
   return -1;
 }
+YASIO_NI_API int yasio_forward(void* service_ptr, void* thandle, void* bufferHandle, const unsigned char*(YASIO_INTEROP_DECL* pfnLockBuffer)(void* bufferHandle, int* bufferDataLen), void(YASIO_INTEROP_DECL* pfnUnlockBuffer)(void* bufferHandle))
+{
+  auto service = reinterpret_cast<io_service*>(service_ptr);
+  if (service) {
+    int len = 0;
+    auto bytes = pfnLockBuffer(bufferHandle, &len);
+    return service->forward(reinterpret_cast<transport_handle_t>(thandle), bytes, len, [bufferHandle,pfnUnlockBuffer](int,size_t){
+      pfnUnlockBuffer(bufferHandle);
+    });
+  }
+  return -1;
+}
 YASIO_NI_API int yasio_write_ob(void* service_ptr, void* thandle, void* obs_ptr)
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);

@@ -38,7 +38,7 @@ void yasioTest()
   obs.write(1.17723f);
   obs.write_ix(20201125);
   obs.write_ix(-9223372036854775807);
-#if defined(YASIO_HAVE_HALF_FLOAT)
+#if defined(YASIO_ENABLE_HALF_FLOAT)
   obs.write(static_cast<fp16_t>(3.85f));
 #endif
   obs.write_varint(23123, 3);
@@ -50,11 +50,11 @@ void yasioTest()
   auto f1 = ibs.read<float>();
   auto v5 = ibs.read_ix<int32_t>();
   auto v6 = ibs.read_ix<int64_t>();
-#if defined(YASIO_HAVE_HALF_FLOAT)
+#if defined(YASIO_ENABLE_HALF_FLOAT)
   auto v7 = static_cast<float>(ibs.read<fp16_t>());
 #endif
   auto v8 = ibs.read_varint(3); // uint24
-#if defined(YASIO_HAVE_HALF_FLOAT)
+#if defined(YASIO_ENABLE_HALF_FLOAT)
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v7 << ", " << v8 << "\n";
 #else
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v8 << "\n";

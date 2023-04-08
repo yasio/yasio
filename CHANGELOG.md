@@ -1,3 +1,24 @@
+yasio-4.0.0
+  
+  1. Exclude kcp implemention from core.
+  2. Add support forward packet on both send and recv stages.
+  3. Add option: `YOPT_S_AUTO_DISPATCH`, whether auto dispatch deferred events in service thread,
+  if not, the behavior same with previous releases, call needs invoke `io_service::dispatch` to dispatch
+  events in caller thread.
+  4. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`
+  
+  
+yasio-3.39.8
+
+  1. Remove unsafe option: `YOPT_S_FORWARD_EVENT`,  may cause internal channel behavior incorrect.
+  2. Add forward packet event support, new option: `YOPT_S_FORWARD_PACKET`,  after enable forward packet: 
+
+      - Use `event->packet_view()` receive packet event
+      - No upack
+      - No deferred packet
+      - No GC alloc
+  
+  
 yasio-3.39.7
   
   1. Add forward event support fire packet event, new option: `YOPT_S_FORWARD_EVENT`,  after enable forward event: 

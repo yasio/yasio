@@ -27,7 +27,7 @@ SOFTWARE.
 */
 
 #define YASIO_HEADER_ONLY 1
-#define YASIO_HAVE_KCP 1
+#define YASIO_ENABLE_KCP 1
 #define YASIO_OBS_BUILTIN_STACK 1
 
 #include "yasio/bindings/yasio_jsb.hpp"
@@ -1879,7 +1879,7 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_UDP_SERVER);
-#if defined(YASIO_HAVE_KCP)
+#if defined(YASIO_ENABLE_KCP)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #endif

@@ -88,8 +88,8 @@ if (NOT DEFINED YASIO_SSL_BACKEND)
     set(YASIO_SSL_BACKEND 2)
 endif()
 
-if (NOT DEFINED YASIO_HAVE_HALF_FLOAT)
-    set(YASIO_HAVE_HALF_FLOAT ON)
+if (NOT DEFINED YASIO_ENABLE_HALF_FLOAT)
+    set(YASIO_ENABLE_HALF_FLOAT ON)
 endif()
 
 # The compiler flags
@@ -134,7 +134,7 @@ elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
 endif()
 
 ### c-ares support
-if (YASIO_HAVE_CARES)
+if (YASIO_USE_CARES)
     set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
     set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
     set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
@@ -155,12 +155,6 @@ list (APPEND YASIO_CORE
     yasio/xxsocket.cpp
     yasio/yasio.cpp
 )
-
-if (YASIO_HAVE_KCP)
-  set(YASIO_CORE ${YASIO_CORE} 
-    ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
-  )
-endif()
 
 if (YAISO_BUILD_NI)
   set(YASIO_CORE ${YASIO_CORE} 
@@ -186,7 +180,7 @@ if(ANDROID AND CARES_INCLUDE_DIR)
   )
 endif()
 
-if(YASIO_HAVE_KCP OR YASIO_BUILD_WITH_LUA OR YASIO_HAVE_CARES OR YASIO_HAVE_HALF_FLOAT)
+if(YASIO_BUILD_WITH_LUA OR YASIO_USE_CARES OR YASIO_ENABLE_HALF_FLOAT)
     include_directories("${PROJECT_SOURCE_DIR}/thirdparty")
 endif()
 
@@ -344,7 +338,7 @@ if(OPENSSL_INCLUDE_DIR AND (YASIO_SSL_BACKEND EQUAL 1))
 endif()
 
 # checking build system have c-ares
-if(CARES_INCLUDE_DIR AND YASIO_HAVE_CARES)
+if(CARES_INCLUDE_DIR AND YASIO_USE_CARES)
    target_include_directories(${yasio_target_name} PRIVATE "${CARES_INCLUDE_DIR}")
    target_link_libraries(${yasio_target_name} c-ares)
 endif()
@@ -401,13 +395,12 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_USE_SHARED_PACKET)
     yasio_config_pred(${target_name} YASIO_DISABLE_OBJECT_POOL)
     yasio_config_pred(${target_name} YASIO_ENABLE_ARES_PROFILER)
-    yasio_config_pred(${target_name} YASIO_HAVE_CARES)
-    yasio_config_pred(${target_name} YASIO_HAVE_KCP)
+    yasio_config_pred(${target_name} YASIO_USE_CARES)
     yasio_config_option(${target_name} YASIO_SSL_BACKEND "${YASIO_SSL_BACKEND}")
     yasio_config_pred(${target_name} YASIO_ENABLE_UDS)
     yasio_config_pred(${target_name} YASIO_NT_COMPAT_GAI)
     yasio_config_pred(${target_name} YASIO_MINIFY_EVENT)
-    yasio_config_pred(${target_name} YASIO_HAVE_HALF_FLOAT)
+    yasio_config_pred(${target_name} YASIO_ENABLE_HALF_FLOAT)
     yasio_config_pred(${target_name} YASIO_ENABLE_PASSIVE_EVENT)
     yasio_config_pred(${target_name} YASIO_NO_JNI_ONLOAD)
     yasio_config_pred(${target_name} YASIO_DISABLE_POLL)
@@ -425,9 +418,7 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/icmp)
     add_subdirectory(tests/mcast)
-    if(YASIO_HAVE_KCP)
-        add_subdirectory(tests/speed)
-    endif()
+    add_subdirectory(tests/speed)
     add_subdirectory(tests/issue166)
     add_subdirectory(tests/issue178)
     add_subdirectory(tests/issue201)
@@ -450,8 +441,8 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem,${CMAKE_CURRENT_LIST_DIR}/certs/ca-cer.pem" SSLTEST_CACERT)
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-cer.pem" SSLTEST_CERT)
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-prk.pem" SSLTEST_PKEY)
-        configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_CURRENT_LIST_DIR}/build/sslcerts.hpp" @ONLY)
-        target_include_directories(ssltest PRIVATE "${CMAKE_CURRENT_LIST_DIR}/build")
+        # ${CMAKE_BINARY_DIR} will be set include for all targets by cmake auto
+        configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/sslcerts.hpp" @ONLY)
     endif()
     
     include_directories("extensions")
@@ -469,6 +460,10 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     target_include_directories(yasio_http PUBLIC "thirdparty/llhttp/include")
     yasio_config_lib_options(yasio_http)
     yasio_config_target_outdir(yasio_http)
+
+    add_subdirectory(extensions/yasio_kcp)
+    yasio_config_lib_options(yasio_kcp)
+    yasio_config_target_outdir(yasio_kcp)
 
     add_subdirectory(tests/http)
 endif ()

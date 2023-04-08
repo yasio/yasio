@@ -8,7 +8,9 @@
 
 #include "kcp/ikcp.h"
 
+#if YASIO_SSL_BACKEND != 0
 #include "sslcerts.hpp"
+#endif
 
 #if defined(_MSC_VER)
 #  pragma comment(lib, "Winmm.lib")

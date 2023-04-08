@@ -441,9 +441,8 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem,${CMAKE_CURRENT_LIST_DIR}/certs/ca-cer.pem" SSLTEST_CACERT)
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-cer.pem" SSLTEST_CERT)
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-prk.pem" SSLTEST_PKEY)
-        configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/certs/sslcerts.hpp" @ONLY)
-        target_include_directories(ssltest PRIVATE "${CMAKE_BINARY_DIR}/certs")
-        target_include_directories(speedtest PRIVATE "${CMAKE_BINARY_DIR}/certs")
+        # ${CMAKE_BINARY_DIR} will be set include for all targets by cmake auto
+        configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/sslcerts.hpp" @ONLY)
     endif()
     
     include_directories("extensions")

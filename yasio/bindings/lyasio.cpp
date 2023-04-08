@@ -110,7 +110,7 @@ static void register_obstream(sol::table& lib, const char* usertype)
       &_Stream::template write<int16_t>, "write_i32", &_Stream::template write<int32_t>, "write_i64", &_Stream::template write<int64_t>, "write_u8",
       &_Stream::template write<uint8_t>, "write_u16", &_Stream::template write<uint16_t>, "write_u32", &_Stream::template write<uint32_t>, "write_u64",
       &_Stream::template write<uint64_t>,
-#  if defined(YASIO_HAVE_HALF_FLOAT)
+#  if defined(YASIO_ENABLE_HALF_FLOAT)
       "write_f16", &_Stream::template write<fp16_t>,
 #  endif
       "write_f", &_Stream::template write<float>, "write_lf", &_Stream::template write<double>, "write_v",
@@ -133,7 +133,7 @@ static void register_ibstream(sol::table& lib, const char* usertype)
       &_Stream::template read<int16_t>, "read_i32", &_Stream::template read<int32_t>, "read_i64", &_Stream::template read<int64_t>, "read_u8",
       &_Stream::template read<uint8_t>, "read_u16", &_Stream::template read<uint16_t>, "read_u32", &_Stream::template read<uint32_t>, "read_u64",
       &_Stream::template read<uint64_t>,
-#  if defined(YASIO_HAVE_HALF_FLOAT)
+#  if defined(YASIO_ENABLE_HALF_FLOAT)
       "read_f16", &_Stream::template read<fp16_t>,
 #  endif
       "read_f", &_Stream::template read<float>, "read_lf", &_Stream::template read<double>, "read_v",
@@ -300,7 +300,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_UDP_SERVER);
-#  if defined(YASIO_HAVE_KCP)
+#  if defined(YASIO_ENABLE_KCP)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #  endif
@@ -445,7 +445,7 @@ struct lua_type_traits<std::vector<yasio::inet::io_hostent>> {
     return 1;
   }
 };
-#  if defined(YASIO_HAVE_HALF_FLOAT)
+#  if defined(YASIO_ENABLE_HALF_FLOAT)
 template <>
 struct lua_type_traits<fp16_t> {
   typedef fp16_t get_type;
@@ -508,7 +508,7 @@ static void register_obstream(kaguya::LuaTable& lib, const char* usertype, const
           .addFunction("write_u16", &_BaseStream::template write<uint16_t>)
           .addFunction("write_u32", &_BaseStream::template write<uint32_t>)
           .addFunction("write_u64", &_BaseStream::template write<uint64_t>)
-#  if defined(YASIO_HAVE_HALF_FLOAT)
+#  if defined(YASIO_ENABLE_HALF_FLOAT)
           .addFunction("write_f16", &_BaseStream::template write<fp16_t>)
 #  endif
           .addFunction("write_f", &_BaseStream::template write<float>)
@@ -540,7 +540,7 @@ static void register_ibstream(kaguya::LuaTable& lib, const char* usertype, const
                              .addFunction("read_u16", &_StreamView::template read<uint16_t>)
                              .addFunction("read_u32", &_StreamView::template read<uint32_t>)
                              .addFunction("read_u64", &_StreamView::template read<uint64_t>)
-#  if defined(YASIO_HAVE_HALF_FLOAT)
+#  if defined(YASIO_ENABLE_HALF_FLOAT)
                              .addFunction("read_f16", &_Stream::template read<fp16_t>)
 #  endif
                              .addFunction("read_f", &_StreamView::template read<float>)
@@ -732,7 +732,7 @@ end
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_UDP_SERVER);
-#  if defined(YASIO_HAVE_KCP)
+#  if defined(YASIO_ENABLE_KCP)
   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
 #  endif

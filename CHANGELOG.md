@@ -5,6 +5,7 @@ yasio-4.0.0
   3. Add option: `YOPT_S_AUTO_DISPATCH`, whether auto dispatch deferred events in service thread,
   if not, the behavior same with previous releases, call needs invoke `io_service::dispatch` to dispatch
   events in caller thread.
+  4. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`
   
   
 yasio-3.39.8

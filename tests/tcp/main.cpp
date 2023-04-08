@@ -38,7 +38,7 @@ void yasioTest()
   obs.write(1.17723f);
   obs.write_ix(20201125);
   obs.write_ix(-9223372036854775807);
-#if defined(YASIO_HAVE_HALF_FLOAT)
+#if defined(YASIO_ENABLE_HALF_FLOAT)
   obs.write(static_cast<fp16_t>(3.85f));
 #endif
   obs.write_varint(23123, 3);

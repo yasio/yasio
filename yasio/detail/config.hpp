@@ -65,7 +65,7 @@ SOFTWARE.
 // #define YASIO_ENABLE_ARES_PROFILER 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_HAVE_CARES to use c-ares to perform async resolve
+** Uncomment or add compiler flag -DYASIO_USE_CARES to use c-ares to perform async resolve
 */
 // #define YASIO_USE_CARES 1
 
@@ -99,9 +99,9 @@ SOFTWARE.
 // #define YASIO_MINIFY_EVENT 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_HAVE_HALF_FLOAT to enable half-precision floating-point support
+** Uncomment or add compiler flag -DYASIO_ENABLE_HALF_FLOAT to enable half-precision floating-point support
 */
-// #define YASIO_HAVE_HALF_FLOAT 1
+// #define YASIO_ENABLE_HALF_FLOAT 1
 
 /*
 ** Uncomment or add compiler flag -DYASIO_ENABLE_PASSIVE_EVENT to enable server channel open/close event

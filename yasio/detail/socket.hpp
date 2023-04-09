@@ -65,7 +65,11 @@ typedef int socklen_t;
 #  include <sys/ioctl.h>
 #  include <netdb.h>
 #  include <sys/types.h>
+#if defined(__EMSCRIPTEN__)
+#  include <poll.h>
+#else
 #  include <sys/poll.h>
+#endif
 #  if defined(__linux__)
 #    include <sys/epoll.h>
 #  endif

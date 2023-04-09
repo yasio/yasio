@@ -58,8 +58,8 @@ SOFTWARE.
 #endif
 
 #if defined(YASIO_SSL_BACKEND)
-typedef struct ssl_ctx_st SSL_CTX;
-typedef struct ssl_st SSL;
+typedef struct ssl_ctx_st yssl_ctx_st;
+struct yssl_st;
 #endif
 
 #if defined(YASIO_USE_CARES)
@@ -503,7 +503,7 @@ class YASIO_API io_channel : public io_base {
 public:
   io_service& get_service() const { return service_; }
 #if defined(YASIO_SSL_BACKEND)
-  YASIO__DECL SSL_CTX* get_ssl_context(bool client) const;
+  YASIO__DECL yssl_ctx_st* get_ssl_context(bool client) const;
 #endif
   int index() const { return index_; }
   u_short remote_port() const { return remote_port_; }
@@ -770,7 +770,7 @@ public:
 
 protected:
   YASIO__DECL int do_ssl_handshake(int& error); // always invoke at do_read
-  SSL* ssl_ = nullptr;
+  yssl_st* ssl_ = nullptr;
 };
 #else
 class io_transport_ssl {};
@@ -1096,7 +1096,7 @@ private:
   YASIO__DECL void do_connect_completion(io_channel*, fd_set_adapter& fd_set);
 
 #if defined(YASIO_SSL_BACKEND)
-  YASIO__DECL SSL_CTX* init_ssl_context(ssl_role role);
+  YASIO__DECL yssl_ctx_st* init_ssl_context(ssl_role role);
   YASIO__DECL void cleanup_ssl_context(ssl_role role);
 #endif
 
@@ -1257,7 +1257,7 @@ private:
   // The stop flag to notify all transports needs close
   uint8_t stop_flag_ = 0;
 #if defined(YASIO_SSL_BACKEND)
-  SSL_CTX* ssl_roles_[2];
+  yssl_ctx_st* ssl_roles_[2];
 #endif
 #if defined(YASIO_USE_CARES)
   ares_channel ares_         = nullptr; // the ares handle for non blocking io dns resolve support

@@ -860,8 +860,10 @@ void xxsocket::close(int shut_how)
 {
   if (is_open())
   {
+#if !defined(__EMSCRIPTEN__)
     if (shut_how >= 0)
-      ::shutdown(this->fd, shut_how);
+     ::shutdown(this->fd, shut_how);
+#endif
     ::closesocket(this->fd);
     this->fd = invalid_socket;
   }

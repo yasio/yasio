@@ -205,7 +205,7 @@ io_channel::io_channel(io_service& service, int index) : io_base(), service_(ser
   decode_len_ = [this](void* ptr, int len) { return this->__builtin_decode_len(ptr, len); };
 }
 #if defined(YASIO_SSL_BACKEND)
-SSL_CTX* io_channel::get_ssl_context(bool client) const
+yssl_ctx_st* io_channel::get_ssl_context(bool client) const
 {
   if (client)
     return service_.ssl_roles_[YSSL_CLIENT];
@@ -1152,7 +1152,7 @@ void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
   }
 }
 #if defined(YASIO_SSL_BACKEND)
-SSL_CTX* io_service::init_ssl_context(ssl_role role)
+yssl_ctx_st* io_service::init_ssl_context(ssl_role role)
 {
   auto ctx         = role == YSSL_CLIENT ? yssl_ctx_new(yssl_options{yasio__c_str(options_.cafile_), nullptr, true})
                                          : yssl_ctx_new(yssl_options{yasio__c_str(options_.crtfile_), yasio__c_str(options_.keyfile_), false});

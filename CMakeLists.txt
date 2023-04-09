@@ -52,6 +52,7 @@ set (CMAKE_C_STANDARD 99)
 set (CMAKE_C_STANDARD_REQUIRED ON)
 
 message(STATUS "Building yasio with C++${CXX_STD} support")
+message(STATUS "CMAKE_SYSTEM_NAME=" "${CMAKE_SYSTEM_NAME}")
 
 function(yasio_config_target_outdir target)
     set_target_properties(${target} PROPERTIES
@@ -119,6 +120,12 @@ include_directories(
 )
 
 ### ssl support
+
+# force use openssl for wasm
+if ((NOT YASIO_SSL_BACKEND EQUAL 0) AND (CMAKE_SYSTEM_NAME MATCHES "Emscripten"))
+   set (YASIO_SSL_BACKEND 1)
+endif()
+
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    message(STATUS "Build with openssl support")
    add_subdirectory(thirdparty/openssl)
@@ -334,6 +341,7 @@ endmacro(yasio_config_http_app_depends)
 
 # checking build system have openssl
 if(OPENSSL_INCLUDE_DIR AND (YASIO_SSL_BACKEND EQUAL 1))
+    message(STATUS "OPENSSL_INCLUDE_DIR=" ${OPENSSL_INCLUDE_DIR})
     target_include_directories(${yasio_target_name} PRIVATE "${OPENSSL_INCLUDE_DIR}")
 endif()
 

@@ -31,9 +31,9 @@ SOFTWARE.
 
 #if YASIO_SSL_BACKEND == 2
 
-YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
+YASIO__DECL yssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
 {
-  auto ctx = new ssl_ctx_st();
+  auto ctx = new yssl_ctx_st();
   ::mbedtls_ctr_drbg_init(&ctx->ctr_drbg);
   ::mbedtls_entropy_init(&ctx->entropy);
   ::mbedtls_ssl_config_init(&ctx->conf);
@@ -111,7 +111,7 @@ YASIO__DECL ssl_ctx_st* yssl_ctx_new(const yssl_options& opts)
   return ctx;
 }
 
-YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
+YASIO__DECL void yssl_ctx_free(yssl_ctx_st*& ctx)
 {
   if (!ctx)
     return;
@@ -125,9 +125,9 @@ YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
   ctx = nullptr;
 }
 
-YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
+YASIO__DECL yssl_st* yssl_new(yssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
-  auto ssl = new ssl_st();
+  auto ssl = new yssl_st();
   ::mbedtls_ssl_init(ssl);
   ::mbedtls_ssl_setup(ssl, &ctx->conf);
 
@@ -138,14 +138,14 @@ YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool
     ::mbedtls_ssl_set_hostname(ssl, hostname);
   return ssl;
 }
-YASIO__DECL void yssl_shutdown(ssl_st*& ssl)
+YASIO__DECL void yssl_shutdown(yssl_st*& ssl)
 {
   ::mbedtls_ssl_close_notify(ssl);
   ::mbedtls_ssl_free(ssl);
   delete ssl;
   ssl = nullptr;
 }
-YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& err)
+YASIO__DECL int yssl_do_handshake(yssl_st* ssl, int& err)
 {
   int ret = ::mbedtls_ssl_handshake_step(ssl);
   switch (ret)
@@ -165,13 +165,13 @@ YASIO__DECL int yssl_do_handshake(ssl_st* ssl, int& err)
   }
   return ret;
 }
-const char* yssl_strerror(ssl_st* ssl, int sslerr, char* buf, size_t buflen)
+const char* yssl_strerror(yssl_st* ssl, int sslerr, char* buf, size_t buflen)
 {
   int n = snprintf(buf, buflen, "error:%d:", sslerr);
   ::mbedtls_strerror(sslerr, buf + n, buflen - n);
   return buf;
 }
-YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& err)
+YASIO__DECL int yssl_write(yssl_st* ssl, const void* data, size_t len, int& err)
 {
   int n = ::mbedtls_ssl_write(ssl, static_cast<const uint8_t*>(data), len);
   if (n > 0)
@@ -187,7 +187,7 @@ YASIO__DECL int yssl_write(ssl_st* ssl, const void* data, size_t len, int& err)
   }
   return -1;
 }
-YASIO__DECL int yssl_read(ssl_st* ssl, void* data, size_t len, int& err)
+YASIO__DECL int yssl_read(yssl_st* ssl, void* data, size_t len, int& err)
 {
   int n = ::mbedtls_ssl_read(ssl, static_cast<uint8_t*>(data), len);
   if (n > 0)

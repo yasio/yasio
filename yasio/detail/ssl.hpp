@@ -36,13 +36,18 @@ SOFTWARE.
 #  include <openssl/ssl.h>
 #  include <openssl/err.h>
 typedef struct ssl_ctx_st yssl_ctx_st;
+#  if defined(YASIO_USE_OPENSSL_BIO)
 struct yssl_st {
   ssl_st* session;
-#  if defined(YASIO_USE_OPENSSL_BIO)
   int fd;
   BIO_METHOD* bmth;
-#  endif
 };
+#    define yssl_unwrap(ssl) ssl->session
+#  else
+typedef struct ssl_st yssl_st;
+#    define yssl_unwrap(ssl) ssl
+#  endif
+
 #elif YASIO_SSL_BACKEND == 2 // mbedtls
 #  define MBEDTLS_ALLOW_PRIVATE_ACCESS
 #  include "mbedtls/net_sockets.h"

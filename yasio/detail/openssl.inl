@@ -201,48 +201,47 @@ YASIO__DECL BIO_METHOD* yssl_bio_method_create(void)
 #  endif
 YASIO__DECL yssl_st* yssl_new(yssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
-  auto ssl = new yssl_st;
-
-  auto session = ::SSL_new(ctx);
-  ssl->session = session;
+  auto ssl = ::SSL_new(ctx);
 #  if defined(YASIO_USE_OPENSSL_BIO)
-  ssl->fd   = fd;
-  ssl->bmth = yssl_bio_method_create();
-  auto bio  = ::BIO_new(ssl->bmth);
-  ::BIO_set_data(bio, ssl);
-  ::SSL_set_bio(session, bio, bio);
+  auto yssl = new yssl_st{ssl, fd, yssl_bio_method_create()};
+  auto bio  = ::BIO_new(yssl->bmth);
+  ::BIO_set_data(bio, yssl);
+  ::SSL_set_bio(ssl, bio, bio);
 #  else
   ::SSL_set_fd(ssl, fd);
 #  endif
   if (client)
   {
-    ::SSL_set_connect_state(session);
-    ::SSL_set_tlsext_host_name(session, hostname);
+    ::SSL_set_connect_state(ssl);
+    ::SSL_set_tlsext_host_name(ssl, hostname);
   }
   else
-    ::SSL_set_accept_state(session);
-
+    ::SSL_set_accept_state(ssl);
+#  if defined(YASIO_USE_OPENSSL_BIO)
+  return yssl;
+#  else
   return ssl;
+#  endif
 }
 YASIO__DECL void yssl_shutdown(yssl_st*& ssl)
 {
-  ::SSL_shutdown(ssl->session);
-  ::SSL_free(ssl->session);
+  ::SSL_shutdown(yssl_unwrap(ssl));
+  ::SSL_free(yssl_unwrap(ssl));
 #  if defined(YASIO_USE_OPENSSL_BIO)
   if (ssl->bmth)
     ::BIO_meth_free(ssl->bmth);
-#  endif
   delete ssl;
+#  endif
   ssl = nullptr;
 }
 YASIO__DECL int yssl_do_handshake(yssl_st* ssl, int& err)
 {
   ERR_clear_error();
-  int ret = ::SSL_do_handshake(ssl->session);
+  int ret = ::SSL_do_handshake(yssl_unwrap(ssl));
   if (ret == 1) // handshake succeed
     return 0;
 
-  int sslerr = ::SSL_get_error(ssl->session, ret);
+  int sslerr = ::SSL_get_error(yssl_unwrap(ssl), ret);
   /*
   When using a non-blocking socket, nothing is to be done, but select() can be used to check for
   the required condition: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
@@ -268,11 +267,11 @@ YASIO__DECL const char* yssl_strerror(yssl_st* /*ssl*/, int sslerr, char* buf, s
 YASIO__DECL int yssl_write(yssl_st* ssl, const void* data, size_t len, int& err)
 {
   ERR_clear_error();
-  int n = ::SSL_write(ssl->session, data, static_cast<int>(len));
+  int n = ::SSL_write(yssl_unwrap(ssl), data, static_cast<int>(len));
   if (n > 0)
     return n;
 
-  int sslerr = ::SSL_get_error(ssl->session, n);
+  int sslerr = ::SSL_get_error(yssl_unwrap(ssl), n);
   if (sslerr == SSL_ERROR_ZERO_RETURN)
   { // SSL_ERROR_SYSCALL
     err = yasio::xxsocket::get_last_errno();
@@ -292,10 +291,10 @@ YASIO__DECL int yssl_write(yssl_st* ssl, const void* data, size_t len, int& err)
 YASIO__DECL int yssl_read(yssl_st* ssl, void* data, size_t len, int& err)
 {
   ERR_clear_error();
-  int n = ::SSL_read(ssl->session, data, static_cast<int>(len));
+  int n = ::SSL_read(yssl_unwrap(ssl), data, static_cast<int>(len));
   if (n > 0)
     return n;
-  int sslerr = ::SSL_get_error(ssl->session, n);
+  int sslerr = ::SSL_get_error(yssl_unwrap(ssl), n);
   switch (sslerr)
   {
     case SSL_ERROR_WANT_READ:

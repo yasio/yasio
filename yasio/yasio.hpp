@@ -59,7 +59,11 @@ SOFTWARE.
 
 #if defined(YASIO_SSL_BACKEND)
 typedef struct ssl_ctx_st yssl_ctx_st;
+#  if YASIO_SSL_BACKEND == 2 || defined(YASIO_USE_OPENSSL_BIO)
 struct yssl_st;
+#  else
+typedef struct ssl_st yssl_st;
+#  endif
 #endif
 
 #if defined(YASIO_USE_CARES)
@@ -1218,7 +1222,7 @@ private:
     bool deferred_event_ = true;
     defer_event_cb_t on_defer_event_;
 
-    bool auto_dispatch_  = false;  // since v3.39.8
+    bool auto_dispatch_  = false; // since v3.39.8
     bool forward_packet_ = false; // since v3.39.8
 
     // tcp keepalive settings

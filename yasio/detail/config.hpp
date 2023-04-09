@@ -123,7 +123,7 @@ SOFTWARE.
 ** Uncomment or add compiler flag -DYASIO_DISABLE_POLL to use socket.select for all platforms
 ** If you need support Windows XP, you need disable poll
 */
-#define YASIO_DISABLE_POLL 1
+// #define YASIO_DISABLE_POLL 1
 
 /*
 ** Uncomment or add compiler flag -DYASIO_USE_OPENSSL_BIO to use openssl bio when YASIO_SSL_BACKEND=1

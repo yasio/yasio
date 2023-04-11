@@ -1753,14 +1753,14 @@ highp_time_t io_service::get_timeout(highp_time_t usec)
     return usec;
 
   std::lock_guard<std::recursive_mutex> lck(this->timer_queue_mtx_);
-  auto earliest = timer_queue_.back().first;
-
-  // microseconds
-  auto duration = earliest->wait_duration();
-  if (std::chrono::microseconds(usec) > duration)
-    return duration.count();
-  else
-    return usec;
+  if (!this->timer_queue_.empty())
+  {
+    // microseconds
+    auto duration = timer_queue_.back().first->wait_duration();
+    if (std::chrono::microseconds(usec) > duration)
+      usec = duration.count();
+  }
+  return usec;
 }
 bool io_service::cleanup_channel(io_channel* ctx, bool clear_mask)
 {

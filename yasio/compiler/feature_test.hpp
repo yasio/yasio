@@ -92,7 +92,7 @@ SOFTWARE.
 #  define YASIO__HAS_UDS 0
 #endif
 
-#if (defined(__ANDROID_API__) && __ANDROID_API__ >= 21) || defined(__linux__)
+#if defined(__linux__) && !defined(__ANDROID__) || (defined(__ANDROID_API__) && __ANDROID_API__ >= 21)
 #  define YASIO__HAS_PPOLL 1
 #else
 #  define YASIO__HAS_PPOLL 0

@@ -814,7 +814,7 @@ void io_service::run()
   do
   {
     fd_set                = this->fd_set_;
-    const auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
+    auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
 #if defined(YASIO_USE_CARES)
     /**
      * retrieves the set of file descriptors which the calling application should poll io,
@@ -825,15 +825,13 @@ void io_service::run()
      */
     timeval waitd_tv    = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
     auto ares_nfds      = do_ares_fds(ares_socks, fd_set, waitd_tv);
-    const auto waitd_ms = static_cast<int>(waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::milli::den);
-#else
-    const auto waitd_ms = static_cast<int>(waitd_usec / std::milli::den);
+    waitd_usec          = waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::micro::den;
 #endif
 
-    if (waitd_ms > 0)
+    if (waitd_usec > 0)
     {
-      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %ld milliseconds", fd_set.max_descriptor(), waitd_ms);
-      int retval = fd_set.poll_io(waitd_ms);
+      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %.3f milliseconds", fd_set.max_descriptor(), waitd_usec / static_cast<float>(std::milli::den));
+      int retval = fd_set.poll_io(waitd_usec);
       YASIO_KLOGV("[core] poll_io waked up, retval=%d", retval);
       if (retval < 0)
       {

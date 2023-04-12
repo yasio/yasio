@@ -37,9 +37,9 @@ public:
     return *this;
   }
 
-  int poll_io(int waitd_ms)
+  int poll_io(int64_t waitd_us)
   {
-    timeval waitd_tv = {(decltype(timeval::tv_sec))(waitd_ms / std::milli::den), (decltype(timeval::tv_usec))(waitd_ms % std::milli::den)};
+    timeval waitd_tv = {(decltype(timeval::tv_sec))(waitd_us / std::micro::den), (decltype(timeval::tv_usec))(waitd_us % std::micro::den)};
     return ::select(this->max_descriptor_, &(fd_set_[read_op]), &(fd_set_[write_op]), nullptr, &waitd_tv);
   }
 

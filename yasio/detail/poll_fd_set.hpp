@@ -26,7 +26,7 @@ public:
 
   void reset() { this->fd_set_.clear(); }
 
-  int poll_io(int wait_ms) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), wait_ms); }
+  int poll_io(int64_t waitd_us) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), static_cast<int>(waitd_us / std::milli::den)); }
 
   int is_set(socket_native_type fd, int events) const
   {

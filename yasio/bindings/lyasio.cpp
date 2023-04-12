@@ -277,8 +277,8 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   lyasio::register_ibstream<ibstream, ibstream_view, obstream>(yasio_lib, "ibstream");
   lyasio::register_ibstream<fast_ibstream, fast_ibstream_view, fast_obstream>(yasio_lib, "fast_ibstream");
 
-  yasio_lib["highp_clock"] = &highp_clock<steady_clock_t>;
-  yasio_lib["highp_time"]  = &highp_clock<system_clock_t>;
+  yasio_lib["highp_clock"] = &highp_clock<yasio::steady_clock_t>;
+  yasio_lib["highp_time"]  = &highp_clock<yasio::system_clock_t>;
 
   yasio_lib["unwrap_ptr"] = [](lua_State* L) -> int {
     auto& pkt  = *(packet_t*)lua_touserdata(L, 1);
@@ -295,7 +295,7 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   };
 
   // ##-- yasio enums
-#  define YASIO_EXPORT_ENUM(v) yasio_lib[#  v] = v
+#  define YASIO_EXPORT_ENUM(v) yasio_lib[#v] = v
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);
@@ -467,9 +467,9 @@ namespace lyasio
 {
 #  define kaguya_obstream_class(_Stream, _BaseStream) kaguya::UserdataMetatable<_Stream, _BaseStream>().setConstructors<_Stream(), _Stream(size_t)>()
 #  define kaguya_obstream_base_class(_BaseStream) kaguya::UserdataMetatable<_BaseStream>().setConstructors<_BaseStream(_BaseStream::buffer_type*)>()
-#  define kaguya_ibstream_view_class(_StreamView, _OStream)                                                                                                    \
+#  define kaguya_ibstream_view_class(_StreamView, _OStream) \
     kaguya::UserdataMetatable<_StreamView>().setConstructors<_StreamView(), _StreamView(const void*, size_t), _StreamView(const _OStream*)>()
-#  define kaguya_ibstream_class(_Stream, _StreamView, _OStream)                                                                                                \
+#  define kaguya_ibstream_class(_Stream, _StreamView, _OStream) \
     kaguya::UserdataMetatable<_Stream, _StreamView>().setConstructors<_Stream(yasio::sbyte_buffer), _Stream(const _OStream*)>()
 
 template <typename _Stream, typename _BaseStream>
@@ -709,8 +709,8 @@ end
                                                                               kaguya_ibstream_class(fast_ibstream, fast_ibstream_view, fast_obstream),
                                                                               kaguya_ibstream_view_class(fast_ibstream_view, fast_obstream));
 
-  yasio_lib.setField("highp_clock", &highp_clock<steady_clock_t>);
-  yasio_lib.setField("highp_time", &highp_clock<system_clock_t>);
+  yasio_lib.setField("highp_clock", &highp_clock<yasio::steady_clock_t>);
+  yasio_lib.setField("highp_time", &highp_clock<yasio::system_clock_t>);
 
   yasio_lib.setField("unwrap_ptr", [](lua_State* L) -> int {
     auto& pkt  = *(packet_t*)lua_touserdata(L, 1);
@@ -727,7 +727,7 @@ end
   });
 
   // ##-- yasio enums
-#  define YASIO_EXPORT_ENUM(v) yasio_lib[#  v] = v
+#  define YASIO_EXPORT_ENUM(v) yasio_lib[#v] = v
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);

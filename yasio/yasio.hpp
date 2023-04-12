@@ -428,10 +428,10 @@ public:
   YASIO__DECL void cancel(io_service& service);
 
   // Check if timer is expired?
-  bool expired() const { return this->wait_duration().count() <= 0; }
+  bool expired(io_service& service) const { return this->wait_duration(service).count() <= 0; }
 
   // Gets wait duration of timer.
-  std::chrono::microseconds wait_duration() const { return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ - steady_clock_t::now()); }
+  YASIO__DECL std::chrono::microseconds wait_duration(io_service& service) const;
 
   std::chrono::microseconds duration_                  = {};
   std::chrono::time_point<steady_clock_t> expire_time_ = {};
@@ -1169,10 +1169,15 @@ private:
   /* For log macro only */
   inline const print_fn2_t& __get_cprint() const { return options_.print_; }
 
+  void update_time() { this->time_ = std::chrono::steady_clock::now(); }
+
 private:
   state state_ = state::UNINITIALIZED; // The service state
   std::thread worker_;
   std::thread::id worker_id_;
+
+  /* The current time according to the event loop. in msecs. */
+  std::chrono::time_point<steady_clock_t> time_;
 
   privacy::concurrent_queue<event_ptr, true> events_;
 
@@ -1187,7 +1192,7 @@ private:
   // select interrupter
   select_interrupter interrupter_;
 
-  // timer support timer_pair
+  // timer support timer_pair, back is earliest expire timer
   std::vector<timer_impl_t> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
 

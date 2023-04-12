@@ -187,8 +187,13 @@ static yasio__global_state& yasio__shared_globals(const print_fn2_t& prt = nullp
 void highp_timer::async_wait(io_service& service, timer_cb_t cb) { service.schedule_timer(this, std::move(cb)); }
 void highp_timer::cancel(io_service& service)
 {
-  if (!expired())
+  if (!expired(service))
     service.remove_timer(this);
+}
+
+std::chrono::microseconds highp_timer::wait_duration(io_service& service) const
+{
+  return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ - service.time_);
 }
 
 /// io_send_op
@@ -889,10 +894,12 @@ void io_service::run()
   // The core event loop
   fd_set_adapter fd_set; // The temp file descriptor set
 
+  // Init time for 1st loop
+  update_time();
+
   do
   {
-    fd_set = this->fd_set_;
-
+    fd_set                = this->fd_set_;
     const auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
 #if defined(YASIO_HAVE_CARES)
     /**
@@ -932,6 +939,8 @@ void io_service::run()
         --retval;
       }
     }
+
+    update_time();
 
 #if defined(YASIO_HAVE_CARES)
     // process events for name resolution.
@@ -1791,7 +1800,7 @@ void io_service::process_timers()
   while (!this->timer_queue_.empty())
   {
     auto timer_ctl = timer_queue_.back().first;
-    if (timer_ctl->expired())
+    if (timer_ctl->expired(*this))
     {
       // fetch timer
       auto timer_impl = std::move(timer_queue_.back());
@@ -1821,7 +1830,7 @@ highp_time_t io_service::get_timeout(highp_time_t usec)
   if (!this->timer_queue_.empty())
   {
     // microseconds
-    auto duration = timer_queue_.back().first->wait_duration();
+    auto duration = timer_queue_.back().first->wait_duration(*this);
     if (std::chrono::microseconds(usec) > duration)
       usec = duration.count();
   }

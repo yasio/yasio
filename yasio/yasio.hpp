@@ -407,10 +407,10 @@ public:
   void expires_from_now(const std::chrono::microseconds& duration)
   {
     this->duration_    = duration;
-    this->expire_time_ = steady_clock_t::now() + this->duration_;
+    this->expire_time_ = yasio::steady_clock_t::now() + this->duration_;
   }
 
-  void expires_from_now() { this->expire_time_ = steady_clock_t::now() + this->duration_; }
+  void expires_from_now() { this->expire_time_ = yasio::steady_clock_t::now() + this->duration_; }
 
   // Wait timer timeout once.
   void async_wait_once(io_service& service, timerv_cb_t cb)
@@ -440,8 +440,8 @@ public:
   // Gets wait duration of timer.
   YASIO__DECL std::chrono::microseconds wait_duration(io_service& service) const;
 
-  std::chrono::microseconds duration_                  = {};
-  std::chrono::time_point<steady_clock_t> expire_time_ = {};
+  std::chrono::microseconds duration_                         = {};
+  std::chrono::time_point<yasio::steady_clock_t> expire_time_ = {};
 };
 
 struct YASIO_API io_base {
@@ -1183,7 +1183,7 @@ private:
   /* For log macro only */
   inline const print_fn2_t& __get_cprint() const { return options_.print_; }
 
-  void update_time() { this->time_ = std::chrono::steady_clock::now(); }
+  void update_time() { this->time_ = yasio::steady_clock_t::now(); }
 
 private:
   state state_ = state::UNINITIALIZED; // The service state
@@ -1191,7 +1191,7 @@ private:
   std::thread::id worker_id_;
 
   /* The current time according to the event loop. in msecs. */
-  std::chrono::time_point<steady_clock_t> time_;
+  std::chrono::time_point<yasio::steady_clock_t> time_;
 
   privacy::concurrent_queue<event_ptr, true> events_;
 

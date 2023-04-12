@@ -7,7 +7,7 @@ yasio-3.39.8
       - No upack
       - No deferred packet
       - No GC alloc
-  
+  3. Fix `sort_timers` may cause `std::sort` crash on sort callback when system clock slow  
   
 yasio-3.39.7
   

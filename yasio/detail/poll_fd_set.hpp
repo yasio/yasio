@@ -26,14 +26,15 @@ public:
 
   void reset() { this->fd_set_.clear(); }
 
-#if defined(_WIN32)
-  int poll_io(int64_t waitd_us) { return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), static_cast<int>(waitd_us / std::milli::den)); }
+  int poll_io(int64_t waitd_us)
+  {
+#if YASIO__HAS_PPOLL
+    timespec waitd_tv = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den), (decltype(timespec::tv_nsec))((waitd_us * 1000) % std::nano::den)};
+    return ::ppoll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), &waitd_tv, nullptr);
 #else
-  int poll_io(int64_t waitd_us) { 
-      timespec waitd_tv = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den), (decltype(timespec::tv_nsec))((waitd_us * 1000) % std::nano::den)};
-      return ::ppoll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), &waitd_tv, nullptr);
-}
+    return ::poll(this->fd_set_.data(), static_cast<int>(this->fd_set_.size()), static_cast<int>(waitd_us / std::milli::den));
 #endif
+  }
 
   int is_set(socket_native_type fd, int events) const
   {

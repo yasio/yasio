@@ -1662,7 +1662,7 @@ void io_service::schedule_timer(highp_timer* timer_ctl, timer_cb_t&& timer_cb)
 
   this->sort_timers();
   // If the timer is earliest, wakup
-  if (timer_ctl == this->timer_queue_.rbegin()->first)
+  if (timer_ctl == this->timer_queue_.back().first)
     this->interrupt();
 }
 void io_service::remove_timer(highp_timer* timer)

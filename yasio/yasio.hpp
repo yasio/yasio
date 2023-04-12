@@ -435,7 +435,7 @@ public:
   YASIO__DECL void cancel(io_service& service);
 
   // Check if timer is expired?
-  bool expired() const { return wait_duration().count() <= 0; }
+  bool expired() const { return this->wait_duration().count() <= 0; }
 
   // Gets wait duration of timer.
   std::chrono::microseconds wait_duration() const { return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ - steady_clock_t::now()); }
@@ -1072,7 +1072,7 @@ private:
   void sort_timers()
   {
     std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-              [](const timer_impl_t& lhs, const timer_impl_t& rhs) { return lhs.first->wait_duration() > rhs.first->wait_duration(); });
+              [](const timer_impl_t& lhs, const timer_impl_t& rhs) { return lhs.first->expire_time_ > rhs.first->expire_time_; });
   }
 
   // Start a async domain name query

@@ -179,9 +179,10 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
   if (n < 0 && !xxsocket::not_send_error(ec = xxsocket::get_last_errno()))
     return -1;
 
-  yasio::fd_set_adapter fds;
-  fds.set(s.native_handle(), socket_event::read);
-  int ret = fds.poll_io(static_cast<int>(wtimeout.count() / std::milli::den));
+  yasio::io_watcher watcher;
+  watcher.add_event(s.native_handle(), socket_event::read);
+  int ret = watcher.poll_io(static_cast<int>(wtimeout.count() / std::milli::den));
+  watcher.del_event(s.native_handle(), socket_event::read);
   if (ret > 0)
   {
     char buf[128];

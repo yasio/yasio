@@ -819,7 +819,7 @@ void io_service::run()
      * https://c-ares.org/ares_timeout.html
      * https://c-ares.org/ares_process_fd.html
      */
-    auto ares_nfds   = do_ares_fds(ares_socks, waitd_usec);
+    auto ares_nfds = ares_get_fds(ares_socks, waitd_usec);
 #endif
 
     if (waitd_usec > 0)
@@ -1166,9 +1166,22 @@ void io_service::ares_work_finished()
   if (ares_outstanding_work_ > 0)
     --ares_outstanding_work_;
 }
-void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ares_addrinfo* answerlist)
+void io_service::ares_sock_state_cb(void* data, socket_native_type socket_fd, int readable, int writable)
 {
-  auto ctx              = (io_channel*)arg;
+  auto service = (io_service*)data;
+  int events   = socket_event::null;
+  if (readable)
+    events |= socket_event::read;
+  if (writable)
+    events |= socket_event::write;
+  if (events != 0)
+    service->register_descriptor(socket_fd, events);
+  else
+    service->deregister_descriptor(socket_fd, socket_event::readwrite);
+}
+void io_service::ares_getaddrinfo_cb(void* data, int status, int /*timeouts*/, ares_addrinfo* answerlist)
+{
+  auto ctx              = (io_channel*)data;
   auto& current_service = ctx->get_service();
   current_service.ares_work_finished();
   if (status == ARES_SUCCESS && answerlist != nullptr)
@@ -1197,7 +1210,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.wakeup();
 }
-int io_service::do_ares_fds(socket_native_type* socks, highp_time_t& waitd_usec)
+int io_service::ares_get_fds(socket_native_type* socks, highp_time_t& waitd_usec)
 {
   int nfds = 0;
   if (ares_outstanding_work_)
@@ -1211,10 +1224,7 @@ int io_service::do_ares_fds(socket_native_type* socks, highp_time_t& waitd_usec)
       if (ARES_GETSOCK_WRITABLE(bitmask, i))
         events |= socket_event::write;
       if (events)
-      {
         ++nfds;
-        register_descriptor(socks[i], events);
-      }
       else
         break;
     }
@@ -1235,7 +1245,6 @@ void io_service::do_ares_process_fds(socket_native_type* socks, int nfds)
     auto fd = socks[i];
     ::ares_process_fd(this->ares_, io_watcher_.is_ready(fd, socket_event::read) ? fd : ARES_SOCKET_BAD,
                       io_watcher_.is_ready(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
-    deregister_descriptor(fd, socket_event::readwrite);
   }
 }
 void io_service::recreate_ares_channel()
@@ -1243,10 +1252,12 @@ void io_service::recreate_ares_channel()
   if (ares_)
     destroy_ares_channel();
 
-  int optmask          = ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES /* | ARES_OPT_LOOKUPS*/;
-  ares_options options = {};
-  options.timeout      = static_cast<int>(this->options_.dns_queries_timeout_ / std::milli::den);
-  options.tries        = this->options_.dns_queries_tries_;
+  int optmask                = ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES | ARES_OPT_SOCK_STATE_CB /* | ARES_OPT_LOOKUPS*/;
+  ares_options options       = {};
+  options.timeout            = static_cast<int>(this->options_.dns_queries_timeout_ / std::milli::den);
+  options.tries              = this->options_.dns_queries_tries_;
+  options.sock_state_cb      = io_service::ares_sock_state_cb;
+  options.sock_state_cb_data = this;
 #  if defined(__linux__) && !defined(__ANDROID__)
   if (yasio::is_regular_file(YASIO_SYSTEMD_RESOLV_PATH))
   {

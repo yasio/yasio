@@ -1107,7 +1107,7 @@ private:
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
-  YASIO__DECL int do_ares_fds(socket_native_type* socks, timeval& waitd_tv);
+  YASIO__DECL int do_ares_fds(socket_native_type* socks, highp_time_t& waitd_usec);
   YASIO__DECL void do_ares_process_fds(socket_native_type* socks, int count);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();

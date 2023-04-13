@@ -819,9 +819,7 @@ void io_service::run()
      * https://c-ares.org/ares_timeout.html
      * https://c-ares.org/ares_process_fd.html
      */
-    timeval waitd_tv = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
-    auto ares_nfds   = do_ares_fds(ares_socks, waitd_tv);
-    waitd_usec       = waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::micro::den;
+    auto ares_nfds   = do_ares_fds(ares_socks, waitd_usec);
 #endif
 
     if (waitd_usec > 0)
@@ -1199,7 +1197,7 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
   }
   current_service.wakeup();
 }
-int io_service::do_ares_fds(socket_native_type* socks, timeval& waitd_tv)
+int io_service::do_ares_fds(socket_native_type* socks, highp_time_t& waitd_usec)
 {
   int nfds = 0;
   if (ares_outstanding_work_)
@@ -1222,7 +1220,11 @@ int io_service::do_ares_fds(socket_native_type* socks, timeval& waitd_tv)
     }
 
     if (nfds)
+    {
+      timeval waitd_tv = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
       ::ares_timeout(this->ares_, &waitd_tv, &waitd_tv);
+      waitd_usec = waitd_tv.tv_sec * std::micro::den + waitd_tv.tv_usec;
+    }
   }
   return nfds;
 }

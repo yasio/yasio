@@ -181,7 +181,7 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
 
   yasio::io_watcher watcher;
   watcher.add_event(s.native_handle(), socket_event::read);
-  int ret = watcher.poll_io(static_cast<int>(wtimeout.count() / std::milli::den));
+  int ret = watcher.poll_io(static_cast<int>(wtimeout.count()));
   watcher.del_event(s.native_handle(), socket_event::read);
   if (ret > 0)
   {

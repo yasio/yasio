@@ -161,7 +161,7 @@ private:
      * @param url the actually url to request
      * @param redirect wither redirect
      */
-    bool setLocation(std::string_view url, bool redirect)
+    bool setLocation(cxx17::string_view url, bool redirect)
     {
         if (redirect)
         {

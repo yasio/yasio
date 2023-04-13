@@ -138,23 +138,23 @@ protected:
   epoll_handle_t do_epoll_create()
   {
 #if defined(EPOLL_CLOEXEC)
-    epoll_native_type fd = epoll_create1(EPOLL_CLOEXEC);
+    epoll_handle_t handle = epoll_create1(EPOLL_CLOEXEC);
 #else  // defined(EPOLL_CLOEXEC)
-    epoll_handle_t fd = (epoll_handle_t)-1;
+    epoll_handle_t handle = (epoll_handle_t)-1;
     errno                = EINVAL;
 #endif // defined(EPOLL_CLOEXEC)
 
-    if (fd == (epoll_handle_t)-1 && (errno == EINVAL || errno == ENOSYS))
+    if (handle == (epoll_handle_t)-1 && (errno == EINVAL || errno == ENOSYS))
     {
-      fd = epoll_create(epoll_size);
+      handle = epoll_create(epoll_size);
     }
 
-    if (fd == (epoll_handle_t)-1)
+    if (handle == (epoll_handle_t)-1)
     {
       yasio__throw_error0(errno);
     }
 
-    return fd;
+    return handle;
   }
 
   epoll_handle_t epoll_handle_;

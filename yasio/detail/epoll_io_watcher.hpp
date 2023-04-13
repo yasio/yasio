@@ -3,7 +3,7 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// detail/epoll_io_watcher.hpp, TODO: rename to epoll_io_watcher
+// detail/epoll_io_watcher.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
@@ -135,21 +135,21 @@ protected:
   {
     epoll_size = 20000
   };
-  epoll_native_type do_epoll_create()
+  epoll_handle_t do_epoll_create()
   {
 #if defined(EPOLL_CLOEXEC)
     epoll_native_type fd = epoll_create1(EPOLL_CLOEXEC);
 #else  // defined(EPOLL_CLOEXEC)
-    epoll_native_type fd = (epoll_native_type)-1;
+    epoll_handle_t fd = (epoll_handle_t)-1;
     errno                = EINVAL;
 #endif // defined(EPOLL_CLOEXEC)
 
-    if (fd == (epoll_native_type)-1 && (errno == EINVAL || errno == ENOSYS))
+    if (fd == (epoll_handle_t)-1 && (errno == EINVAL || errno == ENOSYS))
     {
       fd = epoll_create(epoll_size);
     }
 
-    if (fd == (epoll_native_type)-1)
+    if (fd == (epoll_handle_t)-1)
     {
       yasio__throw_error0(errno);
     }
@@ -157,7 +157,7 @@ protected:
     return fd;
   }
 
-  epoll_native_type epoll_handle_;
+  epoll_handle_t epoll_handle_;
   std::map<socket_native_type, int> registered_events_;
   yasio::pod_vector<epoll_event> ready_events_;
   select_interrupter interrupter_;

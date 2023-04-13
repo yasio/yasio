@@ -210,8 +210,8 @@ HttpClient::HttpClient()
     , _clearResponsePredicate(nullptr)
 {
     _service = new yasio::io_service(HttpClient::MAX_CHANNELS);
-    _service->set_option(yasio::YOPT_S_AUTO_DISPATCH, 1);
-    _service->set_option(yasio::YOPT_S_FORWARD_PACKET, 1);
+    _service->set_option(yasio::YOPT_S_FORWARD_PACKET, 1); // forward packet immediately when got data from OS kernel
+    _service->set_option(yasio::YOPT_S_AUTO_DISPATCH, 1); // auto dispatch on io_service worker thread
     _service->set_option(yasio::YOPT_S_DNS_QUERIES_TIMEOUT, 3);
     _service->set_option(yasio::YOPT_S_DNS_QUERIES_TRIES, 1);
     _service->start([=](yasio::event_ptr&& e) { handleNetworkEvent(e.get()); });
@@ -242,11 +242,21 @@ void HttpClient::setDispatchOnWorkThread(bool bVal)
     _dispatchOnWorkThread = bVal;
 }
 
-void HttpClient::tick()
+// Poll and notify main thread if responses exists in queue
+void HttpClient::tickInput()
 {
-    dispatchResponseCallbacks();
-}
+    if (_finishedResponseQueue.unsafe_empty())
+        return;
 
+    auto lck = _finishedResponseQueue.get_lock();
+    if (!_finishedResponseQueue.unsafe_empty())
+    {
+        HttpResponse* response = _finishedResponseQueue.front();
+        _finishedResponseQueue.unsafe_pop_front();
+        lck.unlock();
+        invokeResposneCallbackAndRelease(response);
+    }
+}
 void HttpClient::handleNetworkStatusChanged()
 {
     _service->set_option(YOPT_S_DNS_DIRTY, 1);
@@ -268,7 +278,8 @@ bool HttpClient::send(HttpRequest* request)
         return false;
 
     auto response = new HttpResponse(request);
-    processResponse(response, request->getUrl());
+    response->setLocation(request->getUrl(), false);
+    processResponse(response, -1);
     response->release();
     return true;
 }
@@ -293,18 +304,21 @@ int HttpClient::tryTakeAvailChannel()
     return -1;
 }
 
-void HttpClient::processResponse(HttpResponse* response, cxx17::string_view url)
+void HttpClient::processResponse(HttpResponse* response, int channelIndex)
 {
-    auto channelIndex = tryTakeAvailChannel();
     response->retain();
 
-    if (channelIndex != -1)
+    if (response->validateUri())
     {
-        if (response->prepareForProcess(url))
+        if (channelIndex == -1)
+            channelIndex = tryTakeAvailChannel();
+
+        if (channelIndex != -1)
         {
-            response->_responseHeaders.clear();  // redirect needs clear old response headers
-            auto& requestUri       = response->getRequestUri();
-            auto channelHandle     = _service->channel_at(channelIndex);
+            auto channelHandle = _service->channel_at(channelIndex);
+
+            auto& requestUri = response->getRequestUri();
+
             channelHandle->ud_.ptr = response;
             _service->set_option(YOPT_C_REMOTE_ENDPOINT, channelIndex, requestUri.getHost().data(),
                                  (int)requestUri.getPort());
@@ -314,14 +328,10 @@ void HttpClient::processResponse(HttpResponse* response, cxx17::string_view url)
                 _service->open(channelIndex, YCK_TCP_CLIENT);
         }
         else
-        {
-            finishResponse(response);
-        }
+            _pendingResponseQueue.push_back(response);
     }
     else
-    {
-        _pendingResponseQueue.push_back(response);
-    }
+        finishResponse(response);
 }
 
 void HttpClient::handleNetworkEvent(yasio::io_event* event)
@@ -329,8 +339,7 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event)
     int channelIndex       = event->cindex();
     auto channel           = _service->channel_at(event->cindex());
     HttpResponse* response = (HttpResponse*)channel->ud_.ptr;
-    if (!response)
-        return;
+    assert(response);
 
     bool responseFinished = response->isFinished();
     switch (event->kind())
@@ -472,6 +481,8 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event)
 
 void HttpClient::handleNetworkEOF(HttpResponse* response, yasio::io_channel* channel, int internalErrorCode)
 {
+    channel->ud_.ptr = nullptr;
+
     channel->get_user_timer().cancel(*_service);
     response->updateInternalCode(internalErrorCode);
     auto responseCode = response->getResponseCode();
@@ -480,53 +491,30 @@ void HttpClient::handleNetworkEOF(HttpResponse* response, yasio::io_channel* cha
     case 301:
     case 302:
     case 307:
-        if (response->increaseRedirectCount() < HttpClient::MAX_REDIRECT_COUNT)
+        if (response->tryRedirect())
         {
-            auto iter = response->_responseHeaders.find("location");
-            if (iter != response->_responseHeaders.end())
-            {
-                if (responseCode == 302)
-                    response->getHttpRequest()->setRequestType(HttpRequest::Type::GET);
-                YASIO_LOG("Process url redirect (%d): %s", responseCode, iter->second.c_str());
-                _availChannelQueue.push_front(channel->index());
-                processResponse(response, iter->second);
-                response->release();
-                return;
-            }
+            processResponse(response, channel->index());
+            response->release();
+            break;
         }
-    }
+    default:
+        finishResponse(response);
 
-    finishResponse(response);
+        // try process pending response
+        auto lck = _pendingResponseQueue.get_lock();
+        if (!_pendingResponseQueue.unsafe_empty())
+        {
+            auto pendingResponse = _pendingResponseQueue.unsafe_front();
+            _pendingResponseQueue.unsafe_pop_front();
+            lck.unlock();
 
-    // recycle channel
-    channel->ud_.ptr = nullptr;
-    _availChannelQueue.push_front(channel->index());
-
-    // try process pending response
-    auto lck = _pendingResponseQueue.get_lock();
-    if (!_pendingResponseQueue.unsafe_empty())
-    {
-        auto pendingResponse = _pendingResponseQueue.unsafe_front();
-        _pendingResponseQueue.unsafe_pop_front();
-        lck.unlock();
-
-        processResponse(pendingResponse, pendingResponse->getHttpRequest()->getUrl());
-        pendingResponse->release();
-    }
-}
-
-// Poll and notify main thread if responses exists in queue
-void HttpClient::dispatchResponseCallbacks()
-{
-    if (_finishedResponseQueue.unsafe_empty())
-        return;
-
-    auto YASIO__UNUSED lck = _finishedResponseQueue.get_lock();
-    if (!_finishedResponseQueue.unsafe_empty())
-    {
-        HttpResponse* response = _finishedResponseQueue.front();
-        _finishedResponseQueue.pop_front();
-        invokeResposneCallbackAndRelease(response);
+            processResponse(pendingResponse, channel->index());
+            pendingResponse->release();
+        }
+        else
+        {  // recycle channel
+            _availChannelQueue.push_front(channel->index());
+        }
     }
 }
 

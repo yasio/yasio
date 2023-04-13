@@ -78,7 +78,7 @@ namespace yasio_ext
 namespace network
 {
 
-Uri::Uri() : _isValid(false), _isSecure(false), _hasAuthority(false), _port(0) {}
+Uri::Uri() : _isValid(false), _isSecure(false), _hasAuthority(false), _isCustomPort(false), _port(0) {}
 
 Uri::Uri(const Uri& o)
 {

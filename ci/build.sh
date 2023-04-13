@@ -71,17 +71,13 @@ function build_android()
 
 cmake --version
 
-if [ $BUILD_TARGET == "linux" ]
-then
+if [ $BUILD_TARGET = "linux" ]; then
     build_linux
-elif [ $BUILD_TARGET == "osx" ]
-then
+elif [ $BUILD_TARGET = "osx" ]; then
     build_osx
-elif [ $BUILD_TARGET == "ios" ]
-then
+elif [ $BUILD_TARGET = "ios" ]; then
     build_ios
-elif [ $BUILD_TARGET == "android" ]
-then
+elif [ $BUILD_TARGET = "android" ]; then
     build_android
 else
   exit 0

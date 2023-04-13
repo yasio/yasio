@@ -64,7 +64,6 @@ public:
      * How many requests could be perform concurrency.
      */
     static const int MAX_CHANNELS       = 21;
-    static const int MAX_REDIRECT_COUNT = 3;
 
     /**
      * Get instance of HttpClient.
@@ -206,7 +205,7 @@ public:
      * If setDispatchOnWorkThread(false), you needs to invoke this API to dispatch http response
      * on the caller thread
      */
-    void tick();
+    void tickInput();
 
     /*
      * The urlEncode API
@@ -221,7 +220,7 @@ private:
     HttpClient();
     virtual ~HttpClient();
 
-    void processResponse(HttpResponse* response, cxx17::string_view url);
+    void processResponse(HttpResponse* response, int channelIndex);
 
     int tryTakeAvailChannel();
 
@@ -229,7 +228,7 @@ private:
 
     void handleNetworkEOF(HttpResponse* response, yasio::io_channel* channel, int internalErrorCode);
 
-    void dispatchResponseCallbacks();
+    // void tickInput();
 
     void finishResponse(HttpResponse* response);
 

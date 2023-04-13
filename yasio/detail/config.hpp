@@ -126,12 +126,32 @@ SOFTWARE.
 // #define YASIO_DISABLE_POLL 1
 
 /*
+** Uncomment or add compiler flag -DYASIO_DISABLE_EPOLL to disable epoll
+*/
+// #define YASIO_DISABLE_EPOLL 1
+
+/*
 ** Uncomment or add compiler flag -DYASIO_USE_OPENSSL_BIO to use openssl bio when YASIO_SSL_BACKEND=1
 */
 // #define YASIO_USE_OPENSSL_BIO 1
 
+/*
+** Uncomment or add compiler flag -DYASIO_ENABLE_WEPOLL for windows
+*/
+// #define YASIO_ENABLE_WEPOLL 1
+
 #if defined(__EMSCRIPTEN__) && !defined(YASIO_USE_OPENSSL_BIO)
 #  define YASIO_USE_OPENSSL_BIO 1
+#endif
+
+#if YASIO__HAS_EPOLL
+typedef int epoll_handle_t;
+#define epoll_close close
+#elif defined(_WIN32) && defined(YASIO_ENABLE_WEPOLL)
+#  include "wepoll/wepoll.h"
+#  undef YASIO__HAS_EPOLL
+#  define YASIO__HAS_EPOLL 1
+typedef HANDLE epoll_handle_t;
 #endif
 
 /*

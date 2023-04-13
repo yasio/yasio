@@ -55,6 +55,12 @@ SOFTWARE.
 #  endif
 typedef SOCKET socket_native_type;
 typedef int socklen_t;
+#  if defined(YASIO_ENABLE_WEPOLL)
+#    include "wepoll/wepoll.h"
+#    undef YASIO__HAS_EPOLL
+#    define YASIO__HAS_EPOLL 1
+typedef HANDLE epoll_native_type;
+#  endif
 #  define poll WSAPoll
 #  pragma comment(lib, "ws2_32.lib")
 
@@ -65,11 +71,11 @@ typedef int socklen_t;
 #  include <sys/ioctl.h>
 #  include <netdb.h>
 #  include <sys/types.h>
-#if defined(__EMSCRIPTEN__)
-#  include <poll.h>
-#else
-#  include <sys/poll.h>
-#endif
+#  if defined(__EMSCRIPTEN__)
+#    include <poll.h>
+#  else
+#    include <sys/poll.h>
+#  endif
 #  if defined(__linux__)
 #    include <sys/epoll.h>
 #  endif
@@ -99,6 +105,9 @@ typedef int socklen_t;
 #    define SO_NOSIGPIPE MSG_NOSIGNAL
 #  endif
 typedef int socket_native_type;
+#  if (YASIO__HAS_EPOLL)
+typedef int epoll_native_type;
+#  endif
 #  undef socket
 #endif
 #define SD_NONE -1

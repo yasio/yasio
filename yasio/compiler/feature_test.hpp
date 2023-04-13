@@ -98,6 +98,12 @@ SOFTWARE.
 #  define YASIO__HAS_PPOLL 0
 #endif
 
+#if defined(__linux__)
+#  define YASIO__HAS_EPOLL 1
+#else
+#  define YASIO__HAS_EPOLL 0
+#endif
+
 // Tests whether current OS support route client io event in kernel for udp server
 #if defined(_WIN32)
 #  define YASIO__UDP_KROUTE 0

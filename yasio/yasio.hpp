@@ -43,12 +43,11 @@ SOFTWARE.
 #include "yasio/detail/config.hpp"
 #include "yasio/detail/object_pool.hpp"
 #include "yasio/detail/singleton.hpp"
-#include "yasio/detail/select_interrupter.hpp"
 #include "yasio/detail/concurrent_queue.hpp"
 #include "yasio/detail/utils.hpp"
 #include "yasio/detail/errc.hpp"
 #include "yasio/detail/byte_buffer.hpp"
-#include "yasio/detail/fd_set_adapter.hpp"
+#include "yasio/detail/io_watcher.hpp"
 #include "yasio/stl/memory.hpp"
 #include "yasio/stl/string_view.hpp"
 #include "yasio/xxsocket.hpp"
@@ -1086,18 +1085,18 @@ private:
 
   YASIO__DECL bool open_internal(io_channel*);
 
-  YASIO__DECL void process_transports(fd_set_adapter& fd_set);
-  YASIO__DECL void process_channels(fd_set_adapter& fd_set);
+  YASIO__DECL void process_transports();
+  YASIO__DECL void process_channels();
   YASIO__DECL void process_timers();
   YASIO__DECL void process_deferred_events();
 
-  YASIO__DECL void interrupt();
+  YASIO__DECL void wakeup();
 
   YASIO__DECL highp_time_t get_timeout(highp_time_t usec);
 
   YASIO__DECL int do_resolve(io_channel* ctx);
   YASIO__DECL void do_connect(io_channel*);
-  YASIO__DECL void do_connect_completion(io_channel*, fd_set_adapter& fd_set);
+  YASIO__DECL void do_connect_completion(io_channel*);
 
 #if defined(YASIO_SSL_BACKEND)
   YASIO__DECL yssl_ctx_st* init_ssl_context(ssl_role role);
@@ -1108,8 +1107,8 @@ private:
   YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
-  YASIO__DECL int do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, timeval& waitd_tv);
-  YASIO__DECL void do_ares_process_fds(socket_native_type* socks, int count, fd_set_adapter& fd_set);
+  YASIO__DECL int do_ares_fds(socket_native_type* socks, timeval& waitd_tv);
+  YASIO__DECL void do_ares_process_fds(socket_native_type* socks, int count);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();
   YASIO__DECL void destroy_ares_channel();
@@ -1129,7 +1128,7 @@ private:
   // The major non-blocking event-loop
   YASIO__DECL void run(void);
 
-  YASIO__DECL bool do_read(transport_handle_t, fd_set_adapter& fd_set);
+  YASIO__DECL bool do_read(transport_handle_t);
   bool do_write(transport_handle_t transport) { return transport->do_write(this->wait_duration_); }
   YASIO__DECL void unpack(transport_handle_t, int bytes_expected, int bytes_transferred, int bytes_to_strip);
 
@@ -1167,7 +1166,7 @@ private:
 
   // supporting server
   YASIO__DECL void do_accept(io_channel*);
-  YASIO__DECL void do_accept_completion(io_channel*, fd_set_adapter& fd_set);
+  YASIO__DECL void do_accept_completion(io_channel*);
 
   /*
   ** summary: For udp-server only, make dgram handle to communicate with client
@@ -1203,9 +1202,6 @@ private:
   std::vector<transport_handle_t> transports_;
   std::vector<transport_handle_t> tpool_;
 
-  // select interrupter
-  select_interrupter interrupter_;
-
   // timer support timer_pair, back is earliest expire timer
   std::vector<timer_impl_t> timer_queue_;
   std::recursive_mutex timer_queue_mtx_;
@@ -1213,7 +1209,7 @@ private:
   // the next wait duration for socket.select
   highp_time_t wait_duration_;
 
-  fd_set_adapter fd_set_;
+  io_watcher io_watcher_;
 
   // options
   struct __unnamed_options {

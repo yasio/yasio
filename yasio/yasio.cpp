@@ -341,7 +341,7 @@ int io_transport::write(io_send_buffer&& buffer, completion_cb_t&& handler)
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_send_op>(std::move(buffer), std::move(handler)));
-  get_service().interrupt();
+  get_service().wakeup();
   return n;
 }
 int io_transport::do_read(int revent, int& error, highp_time_t&) { return this->call_read(buffer_ + offset_, sizeof(buffer_) - offset_, revent, error); }
@@ -495,7 +495,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
   else
   {
     if (error == EWOULDBLOCK)
-      get_service().interrupt();
+      get_service().wakeup();
     else
     { // handshake failed, print reason
       char buf[256] = {0};
@@ -580,7 +580,7 @@ int io_transport_udp::write_to(io_send_buffer&& buffer, const ip::endpoint& to, 
 {
   int n = static_cast<int>(buffer.size());
   send_queue_.emplace(cxx14::make_unique<io_sendto_op>(std::move(buffer), std::move(handler), to));
-  get_service().interrupt();
+  get_service().wakeup();
   return n;
 }
 void io_transport_udp::set_primitives()
@@ -676,7 +676,7 @@ void io_service::do_stop(uint8_t flags)
     {
       for (auto c : channels_)
         this->close(c->index());
-      this->interrupt();
+      this->wakeup();
       this->handle_stop();
     }
   }
@@ -721,7 +721,7 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
     channel_count = 1;
 
   options_.resolv_ = [this](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
-  register_descriptor(interrupter_.read_descriptor(), socket_event::read);
+  // register_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
   // create channels
   create_channels(channel_eps, channel_count);
@@ -741,7 +741,7 @@ void io_service::finalize()
     life_token_.reset();
 #endif
     destroy_channels();
-    deregister_descriptor(interrupter_.read_descriptor(), socket_event::read);
+    // deregister_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
     options_.on_event_ = nullptr;
     options_.resolv_   = nullptr;
@@ -805,15 +805,11 @@ void io_service::run()
   // Call once at startup
   this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
 
-  // The core event loop
-  fd_set_adapter fd_set; // The temp file descriptor set
-
   // Init time for 1st loop
   update_time();
 
   do
   {
-    fd_set                = this->fd_set_;
     auto waitd_usec = get_timeout(this->wait_duration_); // Gets current wait duration
 #if defined(YASIO_USE_CARES)
     /**
@@ -823,32 +819,23 @@ void io_service::run()
      * https://c-ares.org/ares_timeout.html
      * https://c-ares.org/ares_process_fd.html
      */
-    timeval waitd_tv    = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
-    auto ares_nfds      = do_ares_fds(ares_socks, fd_set, waitd_tv);
-    waitd_usec          = waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::micro::den;
+    timeval waitd_tv = {(decltype(timeval::tv_sec))(waitd_usec / std::micro::den), (decltype(timeval::tv_usec))(waitd_usec % std::micro::den)};
+    auto ares_nfds   = do_ares_fds(ares_socks, waitd_tv);
+    waitd_usec       = waitd_tv.tv_sec * std::milli::den + waitd_tv.tv_usec / std::micro::den;
 #endif
 
     if (waitd_usec > 0)
     {
-      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %.3f milliseconds", fd_set.max_descriptor(), waitd_usec / static_cast<float>(std::milli::den));
-      int retval = fd_set.poll_io(waitd_usec);
+      YASIO_KLOGV("[core] poll_io max_nfds=%d, waiting... %.3f milliseconds", io_watcher_.max_descriptor(), waitd_usec / static_cast<float>(std::milli::den));
+      int retval = io_watcher_.poll_io(waitd_usec);
       YASIO_KLOGV("[core] poll_io waked up, retval=%d", retval);
       if (retval < 0)
       {
         int ec = xxsocket::get_last_errno();
-        YASIO_KLOGI("[core] poll_io failed, max_fd=%d ec=%d, detail:%s\n", fd_set.max_descriptor(), ec, io_service::strerror(ec));
+        YASIO_KLOGI("[core] poll_io failed, max_fd=%d ec=%d, detail:%s\n", io_watcher_.max_descriptor(), ec, io_service::strerror(ec));
         if (ec != EBADF)
           continue; // Try again.
         break;
-      }
-
-      if (retval == 0)
-        YASIO_KLOGV("%s", "[core] poll_io timeout");
-      else if (fd_set.is_set(this->interrupter_.read_descriptor(), socket_event::read))
-      { // Reset the interrupter.
-        if (!interrupter_.reset())
-          interrupter_.recreate();
-        --retval;
       }
     }
 
@@ -856,14 +843,14 @@ void io_service::run()
 
 #if defined(YASIO_USE_CARES)
     // process events for name resolution.
-    do_ares_process_fds(ares_socks, ares_nfds, fd_set);
+    do_ares_process_fds(ares_socks, ares_nfds);
 #endif
 
     // process active transports
-    process_transports(fd_set);
+    process_transports();
 
     // process active channels
-    process_channels(fd_set);
+    process_channels();
 
     // process timeout timers
     process_timers();
@@ -883,13 +870,13 @@ void io_service::run()
 
   this->state_ = io_service::state::AT_EXITING;
 }
-void io_service::process_transports(fd_set_adapter& fd_set)
+void io_service::process_transports()
 {
   // preform transports
   for (auto iter = transports_.begin(); iter != transports_.end();)
   {
     auto transport = *iter;
-    bool ok        = (do_read(transport, fd_set) && do_write(transport));
+    bool ok        = (do_read(transport) && do_write(transport));
     if (ok)
     {
       int opm = transport->opmask_ | transport->ctx_->opmask_ | this->stop_flag_;
@@ -906,7 +893,7 @@ void io_service::process_transports(fd_set_adapter& fd_set)
     iter = transports_.erase(iter);
   }
 }
-void io_service::process_channels(fd_set_adapter& fd_set)
+void io_service::process_channels()
 {
   if (!this->channel_ops_.empty())
   {
@@ -932,7 +919,7 @@ void io_service::process_channels(fd_set_adapter& fd_set)
             handle_connect_failed(ctx, ctx->error_);
         }
         else if (ctx->state_ == io_base::state::CONNECTING)
-          do_connect_completion(ctx, fd_set);
+          do_connect_completion(ctx);
         finish = ctx->error_ != EINPROGRESS;
       }
       else if (yasio__testbits(ctx->properties_, YCM_SERVER))
@@ -945,7 +932,7 @@ void io_service::process_channels(fd_set_adapter& fd_set)
 
         finish = (ctx->state_ != io_base::state::OPENED);
         if (!finish)
-          do_accept_completion(ctx, fd_set);
+          do_accept_completion(ctx);
         else
           ctx->bytes_transferred_ = 0;
       }
@@ -970,7 +957,7 @@ void io_service::close(int index)
     if (channel->socket_->is_open())
     {
       yasio__setbits(channel->opmask_, YOPM_CLOSE);
-      this->interrupt();
+      this->wakeup();
     }
   }
 }
@@ -979,7 +966,7 @@ void io_service::close(transport_handle_t transport)
   if (!yasio__testbits(transport->opmask_, YOPM_CLOSE))
   {
     yasio__setbits(transport->opmask_, YOPM_CLOSE);
-    this->interrupt();
+    this->wakeup();
   }
 }
 bool io_service::is_open(transport_handle_t transport) const { return transport->is_open(); }
@@ -1030,8 +1017,8 @@ void io_service::handle_close(transport_handle_t thandle)
     cleanup_channel(ctx, false);
   }
 }
-void io_service::register_descriptor(const socket_native_type fd, int events) { this->fd_set_.set(fd, events); }
-void io_service::deregister_descriptor(const socket_native_type fd, int events) { this->fd_set_.unset(fd, events); }
+void io_service::register_descriptor(const socket_native_type fd, int events) { this->io_watcher_.add_event(fd, events); }
+void io_service::deregister_descriptor(const socket_native_type fd, int events) { this->io_watcher_.del_event(fd, events); }
 
 int io_service::write(transport_handle_t transport, sbyte_buffer buffer, completion_cb_t handler)
 {
@@ -1139,12 +1126,12 @@ void io_service::do_connect(io_channel* ctx)
     this->handle_connect_failed(ctx, xxsocket::get_last_errno());
 }
 
-void io_service::do_connect_completion(io_channel* ctx, fd_set_adapter& fd_set)
+void io_service::do_connect_completion(io_channel* ctx)
 {
   assert(ctx->state_ == io_base::state::CONNECTING);
   if (ctx->state_ == io_base::state::CONNECTING)
   {
-    if (fd_set.is_set(ctx->socket_->native_handle(), socket_event::readwrite))
+    if (io_watcher_.is_ready(ctx->socket_->native_handle(), socket_event::readwrite))
     {
       int error = -1;
       if (ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
@@ -1210,9 +1197,9 @@ void io_service::ares_getaddrinfo_cb(void* arg, int status, int /*timeouts*/, ar
     YASIO_KLOGE("[index: %d] ares_getaddrinfo_cb: query %s failed, status=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), status,
                 ::ares_strerror(status));
   }
-  current_service.interrupt();
+  current_service.wakeup();
 }
-int io_service::do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, timeval& waitd_tv)
+int io_service::do_ares_fds(socket_native_type* socks, timeval& waitd_tv)
 {
   int nfds = 0;
   if (ares_outstanding_work_)
@@ -1228,7 +1215,7 @@ int io_service::do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, t
       if (events)
       {
         ++nfds;
-        fd_set.set(socks[i], events);
+        register_descriptor(socks[i], events);
       }
       else
         break;
@@ -1239,12 +1226,14 @@ int io_service::do_ares_fds(socket_native_type* socks, fd_set_adapter& fd_set, t
   }
   return nfds;
 }
-void io_service::do_ares_process_fds(socket_native_type* socks, int nfds, fd_set_adapter& fd_set)
+void io_service::do_ares_process_fds(socket_native_type* socks, int nfds)
 {
   for (auto i = 0; i < nfds; ++i)
   {
     auto fd = socks[i];
-    ::ares_process_fd(this->ares_, fd_set.is_set(fd, socket_event::read) ? fd : ARES_SOCKET_BAD, fd_set.is_set(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
+    ::ares_process_fd(this->ares_, io_watcher_.is_ready(fd, socket_event::read) ? fd : ARES_SOCKET_BAD,
+                      io_watcher_.is_ready(fd, socket_event::write) ? fd : ARES_SOCKET_BAD);
+    deregister_descriptor(fd, socket_event::readwrite);
   }
 }
 void io_service::recreate_ares_channel()
@@ -1381,12 +1370,12 @@ void io_service::do_accept(io_channel* ctx)
   this->fire_event(ctx->index_, YEK_ON_OPEN, error, ctx, 1);
 #endif
 }
-void io_service::do_accept_completion(io_channel* ctx, fd_set_adapter& fd_set)
+void io_service::do_accept_completion(io_channel* ctx)
 {
   if (ctx->state_ == io_base::state::OPENED)
   {
     int error = 0;
-    if (fd_set.is_set(ctx->socket_->native_handle(), socket_event::read) && ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
+    if (io_watcher_.is_ready(ctx->socket_->native_handle(), socket_event::read) && ctx->socket_->get_optval(SOL_SOCKET, SO_ERROR, error) >= 0 && error == 0)
     {
       if (yasio__testbits(ctx->properties_, YCM_TCP))
       {
@@ -1522,7 +1511,7 @@ void io_service::active_transport(transport_handle_t t)
     this->fire_event(ctx->index_, YEK_ON_OPEN, 0, t);
   }
   else if (yasio__testbits(ctx->properties_, YCM_CLIENT))
-    this->interrupt();
+    this->wakeup();
 }
 transport_handle_t io_service::allocate_transport(io_channel* ctx, xxsocket_ptr&& s)
 {
@@ -1570,7 +1559,7 @@ void io_service::handle_connect_failed(io_channel* ctx, int error)
   YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx->index_, ctx->format_destination().c_str(), error, io_service::strerror(error));
   fire_event(ctx->index_, YEK_ON_OPEN, error, ctx);
 }
-bool io_service::do_read(transport_handle_t transport, fd_set_adapter& fd_set)
+bool io_service::do_read(transport_handle_t transport)
 {
   bool ret = false;
   do
@@ -1578,7 +1567,7 @@ bool io_service::do_read(transport_handle_t transport, fd_set_adapter& fd_set)
     if (!transport->socket_->is_open())
       break;
     int error  = 0;
-    int revent = fd_set.is_set(transport->socket_->native_handle(), socket_event::read | socket_event::error);
+    int revent = io_watcher_.is_ready(transport->socket_->native_handle(), socket_event::read | socket_event::error);
     int n      = transport->do_read(revent, error, this->wait_duration_);
     if (n >= 0)
     {
@@ -1671,7 +1660,7 @@ void io_service::schedule_timer(highp_timer* timer_ctl, timer_cb_t&& timer_cb)
   this->sort_timers();
   // If the timer is earliest, wakup
   if (timer_ctl == this->timer_queue_.back().first)
-    this->interrupt();
+    this->wakeup();
 }
 void io_service::remove_timer(highp_timer* timer)
 {
@@ -1683,7 +1672,7 @@ void io_service::remove_timer(highp_timer* timer)
     if (!timer_queue_.empty())
     {
       this->sort_timers();
-      this->interrupt();
+      this->wakeup();
     }
   }
 }
@@ -1705,7 +1694,7 @@ bool io_service::open_internal(io_channel* ctx)
     this->channel_ops_.push_back(ctx);
   this->channel_ops_mtx_.unlock();
 
-  this->interrupt();
+  this->wakeup();
   return true;
 }
 bool io_service::close_internal(io_channel* ctx)
@@ -1893,7 +1882,7 @@ void io_service::start_query(io_channel* ctx)
       ctx->set_last_errno(yasio::errc::resolve_host_failed);
       YASIO_KLOGE("[index: %d] query %s failed, ec=%d, detail:%s", ctx->index_, ctx->remote_host_.c_str(), error, xxsocket::gai_strerror(error));
     }
-    this->interrupt();
+    this->wakeup();
   });
   async_resolv_thread.detach();
 #else
@@ -1931,7 +1920,7 @@ int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostna
     return xxsocket::resolve_v6(endpoints, hostname, port) != 0 ? xxsocket::resolve_v4to6(endpoints, hostname, port) : 0;
   return -1;
 }
-void io_service::interrupt() { interrupter_.interrupt(); }
+void io_service::wakeup() { io_watcher_.wakeup(); }
 const char* io_service::strerror(int error)
 {
   switch (error)

@@ -96,7 +96,7 @@ public:
   int poll_io(int64_t waitd_us)
   {
     ::memset(ready_events_.data(), 0x0, sizeof(epoll_event) * ready_events_.size());
-    int num_events = ::epoll_wait(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), static_cast<int>(waitd_us / 1000));
+    int num_events = ::epoll_wait(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), static_cast<int>(waitd_us / std::milli::den));
 
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
     {

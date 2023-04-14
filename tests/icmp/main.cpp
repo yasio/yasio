@@ -120,7 +120,7 @@ const char* strerror(int ec)
 } // namespace icmp
 } // namespace yasio
 
-static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, ip::endpoint& peer, icmp_hdr_st& reply_hdr,
+static int icmp_ping(yasio::io_watcher& watcher, const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout, ip::endpoint& peer, icmp_hdr_st& reply_hdr,
                      uint8_t& ttl, int& ec)
 {
   enum
@@ -179,7 +179,8 @@ static int icmp_ping(const ip::endpoint& endpoint, int socktype, const std::chro
   if (n < 0 && !xxsocket::not_send_error(ec = xxsocket::get_last_errno()))
     return -1;
 
-  yasio::io_watcher watcher;
+  s.set_nonblocking(true);
+
   watcher.add_event(s.native_handle(), socket_event::read);
   int ret = watcher.poll_io(wtimeout.count());
   watcher.del_event(s.native_handle(), socket_event::read);
@@ -275,6 +276,8 @@ int main(int argc, char** argv)
           static_cast<int>(sizeof(ip_hdr_st) + sizeof(icmp_hdr_st) + sizeof(ICMPTEST_PIN) - 1), socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
 
   icmp_hdr_st reply_hdr;
+
+  yasio::io_watcher watcher;
   for (int i = 0; i < max_times; ++i)
   {
     ip::endpoint peer;
@@ -282,7 +285,7 @@ int main(int argc, char** argv)
     int error   = 0;
 
     auto start_ms = yasio::highp_clock();
-    int n         = icmp_ping(endpoints[0], socktype, std::chrono::seconds(3), peer, reply_hdr, ttl, error);
+    int n         = icmp_ping(watcher, endpoints[0], socktype, std::chrono::seconds(3), peer, reply_hdr, ttl, error);
     if (n > 0)
       fprintf(stdout, "Reply from %s: bytes=%d icmp_seq=%u ttl=%u id=%u time=%.1lfms\n", peer.ip().c_str(), n, static_cast<unsigned int>(reply_hdr.seqno),
               static_cast<unsigned int>(ttl), static_cast<unsigned int>(reply_hdr.id), (yasio::highp_clock() - start_ms) / 1000.0);

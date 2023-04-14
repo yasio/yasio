@@ -24,18 +24,19 @@ class epoll_io_watcher {
 public:
   epoll_io_watcher() : epoll_handle_(do_epoll_create())
   {
+    this->add_event(interrupter_.read_descriptor(), socket_event::read, EPOLLET);
 #if defined(__linux__)
     interrupter_.interrupt();
+    poll_io(1);
 #endif
-    this->add_event(interrupter_.read_descriptor(), socket_event::read);
   }
   ~epoll_io_watcher()
   {
-    this->del_event(interrupter_.read_descriptor(), socket_event::read);
+    this->del_event(interrupter_.read_descriptor(), socket_event::read, EPOLLET);
     epoll_close(epoll_handle_);
   }
 
-  void add_event(socket_native_type fd, int events)
+  void add_event(socket_native_type fd, int events, int flags = 0)
   {
     int prev_events       = registered_events_[fd];
     int underlying_events = prev_events;
@@ -47,6 +48,8 @@ public:
 
     if (yasio__testbits(events, socket_event::error))
       underlying_events |= EPOLLERR;
+
+    underlying_events |= flags;
 
     epoll_event ev = {0, {0}};
     ev.events      = underlying_events;
@@ -60,7 +63,7 @@ public:
     }
   }
 
-  void del_event(socket_native_type fd, int events)
+  void del_event(socket_native_type fd, int events, int flags = 0)
   {
     int underlying_events = registered_events_[fd];
     if (yasio__testbits(events, socket_event::read))
@@ -71,6 +74,8 @@ public:
 
     if (yasio__testbits(events, socket_event::error))
       underlying_events &= ~EPOLLERR;
+
+    underlying_events &= ~flags;
 
     epoll_event ev = {0, {0}};
     ev.events      = underlying_events;
@@ -92,14 +97,15 @@ public:
   {
     ::memset(ready_events_.data(), 0x0, sizeof(epoll_event) * ready_events_.size());
     int num_events = ::epoll_wait(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), static_cast<int>(waitd_us / 1000));
-#if defined(_WIN32)
+
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
     {
+#if defined(_WIN32)
       if (!interrupter_.reset())
         interrupter_.recreate();
+#endif
       --num_events;
     }
-#endif
     return num_events;
   }
 
@@ -141,7 +147,7 @@ protected:
     epoll_handle_t handle = epoll_create1(EPOLL_CLOEXEC);
 #else  // defined(EPOLL_CLOEXEC)
     epoll_handle_t handle = (epoll_handle_t)-1;
-    errno                = EINVAL;
+    errno                 = EINVAL;
 #endif // defined(EPOLL_CLOEXEC)
 
     if (handle == (epoll_handle_t)-1 && (errno == EINVAL || errno == ENOSYS))

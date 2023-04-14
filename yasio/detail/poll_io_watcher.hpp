@@ -54,7 +54,8 @@ public:
   {
     ready_events_ = this->registered_events_;
 #if YASIO__HAS_PPOLL
-    timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den), (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
+    timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
+                        (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
     int num_events   = ::ppoll(this->ready_events_.data(), static_cast<int>(this->ready_events_.size()), &timeout, nullptr);
 #else
     int num_events = ::poll(this->ready_events_.data(), static_cast<int>(this->ready_events_.size()), static_cast<int>(waitd_us / std::milli::den));

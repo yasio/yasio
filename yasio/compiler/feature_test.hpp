@@ -36,6 +36,10 @@ SOFTWARE.
 #  include <sdkddkver.h>
 #endif
 
+#if defined(__linux__)
+#  include <linux/version.h>
+#endif
+
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #  define snprintf sprintf_s
 #endif
@@ -102,6 +106,12 @@ SOFTWARE.
 #  define YASIO__HAS_EPOLL 1
 #else
 #  define YASIO__HAS_EPOLL 0
+#endif
+
+#if defined(__linux__) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0)
+#define YASIO__HAS_EPOLL_PWAIT2 1
+#else
+#define YASIO__HAS_EPOLL_PWAIT2 0
 #endif
 
 // Tests whether current OS support route client io event in kernel for udp server

@@ -96,7 +96,14 @@ public:
   int poll_io(int64_t waitd_us)
   {
     ::memset(ready_events_.data(), 0x0, sizeof(epoll_event) * ready_events_.size());
+
+#if YASIO__HAS_EPOLL_PWAIT2
+    timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
+                        (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
+    int num_events   = ::epoll_pwait2(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), &timeout, nullptr);
+#else
     int num_events = ::epoll_wait(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), static_cast<int>(waitd_us / std::milli::den));
+#endif
 
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
     {

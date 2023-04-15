@@ -24,6 +24,7 @@ class epoll_io_watcher {
 public:
   epoll_io_watcher() : epoll_handle_(do_epoll_create())
   {
+    this->ready_events_.reserve(128);
     this->add_event(interrupter_.read_descriptor(), socket_event::read, EPOLLET);
 #if defined(__linux__)
     interrupter_.interrupt();

@@ -159,8 +159,10 @@ public:
             return !!(events & socket_event::read);
           case EVFILT_WRITE:
             return !!(events & socket_event::write);
+#if defined(EVFILT_EXCEPT)
           case EVFILT_EXCEPT:
             return !!(events & socket_event::error);
+#endif
           default:
             return false;
         }

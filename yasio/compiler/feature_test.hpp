@@ -135,6 +135,8 @@ SOFTWARE.
 #  define YASIO__OS_BSD_LIKE 0
 #endif
 
+#define YASIO__HAS_KQUEUE YASIO__OS_BSD_LIKE
+
 // Test whether sockaddr has member 'sa_len'
 // see also: https://github.com/freebsd/freebsd-src/blob/main/sys/sys/socket.h#L329
 #if YASIO__OS_BSD_LIKE

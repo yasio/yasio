@@ -131,14 +131,19 @@ SOFTWARE.
 // #define YASIO_DISABLE_EPOLL 1
 
 /*
-** Uncomment or add compiler flag -DYASIO_USE_OPENSSL_BIO to use openssl bio when YASIO_SSL_BACKEND=1
+** Uncomment or add compiler flag -DYASIO_DISABLE_KQUEUE to disable kqueue for bsd-like OS
 */
-// #define YASIO_USE_OPENSSL_BIO 1
+// #define YASIO_DISABLE_KQUEUE 1
 
 /*
 ** Uncomment or add compiler flag -DYASIO_ENABLE_WEPOLL for windows
 */
 // #define YASIO_ENABLE_WEPOLL 1
+
+/*
+** Uncomment or add compiler flag -DYASIO_USE_OPENSSL_BIO to use openssl bio when YASIO_SSL_BACKEND=1
+*/
+// #define YASIO_USE_OPENSSL_BIO 1
 
 #if defined(__EMSCRIPTEN__) && !defined(YASIO_USE_OPENSSL_BIO)
 #  define YASIO_USE_OPENSSL_BIO 1

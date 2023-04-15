@@ -153,6 +153,8 @@ public:
       int rfd = static_cast<int>(reinterpret_cast<intptr_t>(ev.udata));
       if (rfd == fd)
       {
+        if (ev.flags & EV_ERROR) 
+            return !!(events & socket_event::error);
         switch (ev.filter)
         {
           case EVFILT_READ:

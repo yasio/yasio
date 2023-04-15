@@ -62,11 +62,13 @@ public:
       ++nkvlist;
     }
 
+#if defined(EVFILT_EXCEPT)
     if (yasio__testbits(events, socket_event::error))
     {
       YASIO_KQUEUE_EV_SET(&kevlist[nkvlist], fd, EVFILT_EXCEPT, EV_ADD, 0, 0, reinterpret_cast<void*>(static_cast<intptr_t>(fd)));
       ++nkvlist;
     }
+#endif
 
     if (nkvlist > 0)
     {
@@ -102,12 +104,14 @@ public:
       ++nkvlist;
     }
 
+#if defined(EVFILT_EXCEPT)
     if (yasio__testbits(events, socket_event::error))
     {
       curr_events &= ~socket_event::error;
       YASIO_KQUEUE_EV_SET(&kevlist[nkvlist], fd, EVFILT_EXCEPT, EV_DELETE, 0, 0, nullptr);
       ++nkvlist;
     }
+#endif
 
     if (nkvlist > 0)
     {

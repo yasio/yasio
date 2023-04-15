@@ -96,21 +96,23 @@ SOFTWARE.
 #  define YASIO__HAS_UDS 0
 #endif
 
+// Tests whether current OS support ppoll
 #if defined(__linux__) && !defined(__ANDROID__) || (defined(__ANDROID_API__) && __ANDROID_API__ >= 21)
 #  define YASIO__HAS_PPOLL 1
 #else
 #  define YASIO__HAS_PPOLL 0
 #endif
 
+// Tests whether current OS support epoll
 #if defined(__linux__)
 #  define YASIO__HAS_EPOLL 1
+#  if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+#    define YASIO__HAS_EPOLL_PWAIT2 1
+#  else
+#    define YASIO__HAS_EPOLL_PWAIT2 0
+#  endif
 #else
 #  define YASIO__HAS_EPOLL 0
-#endif
-
-#if defined(__linux__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0))
-#  define YASIO__HAS_EPOLL_PWAIT2 1
-#else
 #  define YASIO__HAS_EPOLL_PWAIT2 0
 #endif
 

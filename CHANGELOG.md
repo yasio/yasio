@@ -9,6 +9,7 @@ yasio-4.0.0
   4. Add support forward packet on both send and recv stages.
   5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`
   6. Refactor pipe signal suppression
+  7. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue` support
   
   
 yasio-3.39.8

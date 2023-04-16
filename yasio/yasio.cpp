@@ -444,7 +444,7 @@ void io_transport::complete_op(io_send_op* op, int error)
 void io_transport::set_primitives()
 {
   this->write_cb_ = [this](const void* data, int len, const ip::endpoint*, int& error) {
-    int n = socket_->send(data, len);
+    int n = socket_->send(data, len, YASIO_MSG_FLAG);
     if (n < 0)
       error = xxsocket::get_last_errno();
     return n;

@@ -805,8 +805,8 @@ void io_service::run()
   // Call once at startup
   this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
 
-  // Init time for 1st loop
-  update_time();
+  // Update time for 1st loop
+  this->update_time();
 
   do
   {
@@ -837,8 +837,6 @@ void io_service::run()
       }
     }
 
-    update_time();
-
 #if defined(YASIO_USE_CARES)
     // process events for name resolution.
     do_ares_process_fds(ares_socks, ares_nfds);
@@ -850,12 +848,11 @@ void io_service::run()
     // process active channels
     process_channels();
 
-    // process timeout timers
-    process_timers();
-
     // process deferred events if auto dispatch enabled
     process_deferred_events();
 
+    // process timeout timers
+    process_timers();
   } while (!this->stop_flag_ || !this->transports_.empty());
 
 #if defined(YASIO_USE_CARES)
@@ -1722,6 +1719,8 @@ bool io_service::close_internal(io_channel* ctx)
 }
 void io_service::process_timers()
 {
+  this->update_time();
+
   if (this->timer_queue_.empty())
     return;
 
@@ -1748,7 +1747,7 @@ void io_service::process_timers()
       break;
   }
   if (n)
-    sort_timers();
+    this->sort_timers();
 }
 void io_service::process_deferred_events()
 {

@@ -150,8 +150,8 @@ SOFTWARE.
 #endif
 
 #if YASIO__HAS_EPOLL
-typedef int epoll_handle_t;
 #  define epoll_close close
+typedef int epoll_handle_t;
 #elif defined(_WIN32) && defined(YASIO_ENABLE_WEPOLL)
 #  include "wepoll/wepoll.h"
 #  undef YASIO__HAS_EPOLL

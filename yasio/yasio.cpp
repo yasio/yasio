@@ -1496,7 +1496,7 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
     register_descriptor(connection->native_handle(), socket_event::read);
   if (yasio__testbits(ctx->properties_, YCM_TCP))
   {
-#if defined(SO_NOSIGPIPE)
+#if defined(SO_NOSIGPIPE) // BSD-like OS can set socket ignore PIPE
     connection->set_optval(SOL_SOCKET, SO_NOSIGPIPE, (int)1);
 #endif
     // apply tcp keepalive options

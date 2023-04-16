@@ -75,22 +75,6 @@ void yasioTest()
 
     service.stop();
   }
-
-  #if 0
-  time_t duration = 0;
-  while (service.is_running())
-  {
-    service.dispatch();
-    if (duration >= 6000000)
-    {
-      for (auto transport : transports)
-        service.close(transport);
-      break;
-    }
-    duration += 50;
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  }
-  #endif
 }
 
 int main(int, char**)

@@ -82,7 +82,7 @@ static cxx17::string_view ibstream_read_v(_Stream* ibs, int length_field_bits)
 
 #if YASIO__HAS_CXX14
 
-#include "yasio/bindings/yasio_sol.hpp"
+#  include "yasio/bindings/yasio_sol.hpp"
 
 namespace lyasio
 {
@@ -207,7 +207,11 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
                               io_service(!hosts.empty() ? &hosts.front() : nullptr, (std::max)(static_cast<int>(hosts.size()), 1));
                         }),
       sol::meta_function::garbage_collect, sol::destructor([](io_service& memory_from_lua) { memory_from_lua.~io_service(); }), "start",
-      [](io_service* service, sol::function cb) { service->start([=](event_ptr ev) { cb(std::move(ev)); }); }, "stop", &io_service::stop, "set_option",
+      [](io_service* service, sol::function cb) {
+        service->set_option(YOPT_S_NO_DISPATCH, 1); // script doesn't support handle event at network thread
+        service->start([=](event_ptr ev) { cb(std::move(ev)); });
+      },
+      "stop", &io_service::stop, "set_option",
       [](io_service* service, int opt, sol::variadic_args args) {
         switch (opt)
         {
@@ -628,6 +632,7 @@ end
           .addStaticFunction("start",
                              [](io_service* service, kaguya::LuaFunction cb) {
                                io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void { cb(e.get()); };
+                               service->set_option(YOPT_S_NO_DISPATCH, 1); // script doesn't support handle event at network thread
                                service->start(std::move(fnwrap));
                              })
           .addFunction("stop", &io_service::stop)

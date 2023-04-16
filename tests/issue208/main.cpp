@@ -46,7 +46,6 @@ timer_cb_t create_timer_cb()
 int main()
 {
   get_service().set_option(YOPT_C_REMOTE_ENDPOINT, 0, "www.ip138.com", 80);
-  get_service().set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch event at network thread directly
   get_service().start([&](event_ptr&& ev) {
     switch (ev->kind())
     {

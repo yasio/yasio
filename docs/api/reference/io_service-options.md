@@ -10,8 +10,8 @@ io_service支持的所有选项。
 
 |Name|Description|
 |----------|-----------------|
+|*YOPT_S_NO_DISPATCH*|Set whether disable event auto dispatch, default is: 0<br/>params: no_dispatch:int(0)|
 |*YOPT_S_DEFER_EVENT_CB*|Set defer event callback<br/>params: callback:defer_event_cb_t<br/>remarks:<br/>a. User can do custom packet resolve at network thread, such as decompress and crc check.<br/>b. Return true, io_service will continue enque to event queue.<br/>c. Return false, io_service will drop the event.|
-|*YOPT_S_DEFERRED_EVENT*|Set whether deferred dispatch event, default is: 1<br/>params: deferred_event:int(1)|
 |*YOPT_S_FORWARD_PACKET*|Set whether fast forward packet to up layer, default is: 0<br/>params: forward_packet:int(0)|
 |*YOPT_S_RESOLV_FN*|Set custom resolve function, native C++ ONLY<br/>params: func:resolv_fn_t*|
 |*YOPT_S_PRINT_FN*|Set custom print function native C++ ONLY<br/>parmas: func:print_fn_t<br/>remarks: you must ensure thread safe of it|

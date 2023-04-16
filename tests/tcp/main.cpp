@@ -84,7 +84,6 @@ void yasioTest()
   int total_bytes_transferred = 0;
 
   int max_request_count = 1;
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
@@ -145,6 +144,7 @@ void yasioTest()
   ** At windows will close with error: 10054
   */
   service.set_option(YOPT_S_TCP_KEEPALIVE, 5, 10, 2);
+  service.set_option(YOPT_S_NO_DISPATCH, 1);
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
   service.open(0, YCK_TCP_CLIENT); // open http client

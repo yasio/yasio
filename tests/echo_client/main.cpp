@@ -32,7 +32,6 @@ void yasioTest()
 
   int max_request_count = 2;
 
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   service.start([&](event_ptr&& event) {
     switch (event->kind())
     {
@@ -111,7 +110,6 @@ void yasioTest()
   time_t duration = 0;
   while (service.is_running())
   {
-    // service.dispatch();
     if (duration >= 6000000)
     {
       for (auto transport : transports)

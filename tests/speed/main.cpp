@@ -189,7 +189,6 @@ void start_sender(io_service& service)
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
 
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
   service.start([&](event_ptr event) {
     switch (event->kind())
@@ -250,7 +249,6 @@ void start_receiver(io_service& service)
 {
   static long long time_start   = yasio::highp_clock<>();
   static double last_print_time = 0;
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event without queue
   service.set_option(YOPT_S_FORWARD_PACKET, 1);
   service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);

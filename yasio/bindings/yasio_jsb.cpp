@@ -1477,7 +1477,8 @@ bool js_yasio_io_service_start(JSContext* ctx, uint32_t argc, jsval* vp)
           JS_ReportPendingException(ctx);
         }
       };
-
+      // script doesn't support handle event at network thread
+      cobj->set_option(YOPT_S_NO_DISPATCH, 1);
       cobj->start(std::move(fnwrap));
 
       args.rval().setUndefined();

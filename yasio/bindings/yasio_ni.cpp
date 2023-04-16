@@ -140,11 +140,12 @@ YASIO_NI_API void yasio_set_option(void* service_ptr, int opt, const char* pszAr
   // process one arg
   switch (opt)
   {
-    case YOPT_C_DISABLE_MCAST:
+    case YOPT_S_NO_DISPATCH:
     case YOPT_S_CONNECT_TIMEOUT:
     case YOPT_S_DNS_CACHE_TIMEOUT:
     case YOPT_S_DNS_QUERIES_TIMEOUT:
     case YOPT_S_DNS_DIRTY:
+    case YOPT_C_DISABLE_MCAST:
       service->set_option(opt, atoi(pszArgs));
       return;
   }

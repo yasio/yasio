@@ -34,7 +34,6 @@ yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基�
     int main()
     {
         io_service service({"tool.chinaz.com", 80});
-        service.set_option(YOPT_S_DEFERRED_EVENT, 0); // dispatch network event on network thread
         service.start([&](event_ptr&& ev) {
             switch (ev->kind())
             {
@@ -82,6 +81,7 @@ yasio 是一个轻量级跨平台的异步socket库，专注于客户端和基�
     local ip138 = "tool.chinaz.com"
     local service = yasio.io_service.new({host=ip138, port=80})
     local respdata = ""
+    service:set_option(yasio.YOPT_S_NO_DISPATCH, 1);
     service:start(function(ev)
             local k = ev.kind()
             if (k == yasio.YEK_ON_PACKET) then

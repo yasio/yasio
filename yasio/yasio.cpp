@@ -658,7 +658,6 @@ void io_service::start(event_cb_t cb)
     else
     {
       this->worker_id_               = std::this_thread::get_id();
-      this->options_.deferred_event_ = false;
       run();
       handle_stop();
     }
@@ -1751,7 +1750,7 @@ void io_service::process_timers()
 }
 void io_service::process_deferred_events()
 {
-  if (options_.auto_dispatch_ && dispatch() > 0)
+  if (!options_.no_dispatch_ && dispatch() > 0)
     this->wait_duration_ = yasio__min_wait_usec;
 }
 highp_time_t io_service::get_timeout(highp_time_t usec)
@@ -1974,8 +1973,8 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
 {
   switch (opt)
   {
-    case YOPT_S_DEFERRED_EVENT:
-      options_.deferred_event_ = !!va_arg(ap, int);
+    case YOPT_S_NO_DISPATCH:
+      options_.no_dispatch_ = !!va_arg(ap, int);
       break;
     case YOPT_S_TCP_KEEPALIVE:
       options_.tcp_keepalive_.onoff    = 1;
@@ -2040,9 +2039,6 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
       break;
     case YOPT_S_DEFER_EVENT_CB:
       options_.on_defer_event_ = *va_arg(ap, defer_event_cb_t*);
-      break;
-    case YOPT_S_AUTO_DISPATCH:
-      options_.auto_dispatch_ = !!va_arg(ap, int);
       break;
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);

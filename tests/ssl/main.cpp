@@ -33,7 +33,6 @@ void yasioTest()
 
   int done_count = 0;
 
-  service.set_option(YOPT_S_AUTO_DISPATCH, 1); // auto dispatch events on io service worker thread
   service.set_option(YOPT_S_FORWARD_PACKET, 1); // fast forward packet to up layer once got data from OS kernel
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
@@ -130,7 +129,6 @@ void yasioTest()
   time_t duration = 0;
   while (service.is_running())
   {
-    // service.dispatch();
     if (duration >= 6000000)
     {
       for (auto transport : transports)

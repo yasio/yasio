@@ -40,7 +40,6 @@ int main()
   deadline_timer timer      = {};
   yasio::io_service service = {};
   service.set_option(YOPT_S_NO_NEW_THREAD, 1);
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0);
   timer.expires_from_now(std::chrono::seconds(3));
   timer.async_wait_once(service, [](io_service& svc) { svc.stop(); });
   printf("%s", "===>The service will stop after 3 seconds ...\n\n");

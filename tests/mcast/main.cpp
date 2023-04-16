@@ -68,7 +68,7 @@ void yasioMulticastTest(int mcast_role)
   static ip::endpoint my_endpoint;
 
   io_service service(hosts, YASIO_ARRAYSIZE(hosts));
-
+  service.set_option(YOPT_S_NO_DISPATCH, 1);
   service.start([&](event_ptr&& event) {
     auto thandle = event->transport();
     switch (event->kind())

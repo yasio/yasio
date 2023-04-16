@@ -1,4 +1,4 @@
--- yasio 3.39.3 demo
+-- yasio 4.0.0 demo
 local proto = require 'protocol_enc'
 local yasio = require 'yasio' -- constants
 

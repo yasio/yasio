@@ -8,6 +8,7 @@ int main()
 {
   deadline_timer timer     = {};
   yasio::io_service server = {};
+  server.set_option(YOPT_S_NO_DISPATCH, 1);
   server.set_option(YOPT_C_REMOTE_HOST, 0, "127.0.0.1");
   server.set_option(YOPT_C_REMOTE_PORT, 0, 7899);
   server.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 1);
@@ -26,6 +27,7 @@ int main()
   });
 
   yasio::io_service client = {};
+  client.set_option(YOPT_S_NO_DISPATCH, 1);
   client.set_option(YOPT_C_REMOTE_HOST, 0, "127.0.0.1");
   client.set_option(YOPT_C_REMOTE_PORT, 0, 7899);
   client.open(0, YCK_TCP_CLIENT);

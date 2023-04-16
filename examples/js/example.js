@@ -7,6 +7,7 @@ function yasioTest() {
   ];
 
   var yserver = new yasio.io_service(hostents);
+  yserver.set_option(yasio.YOPT_NO_DISPATCH, 1);
   yserver.start(function (event) {
     var kind = event.kind();
     if (kind == yasio.YEK_CONNECT_RESPONSE) {
@@ -53,6 +54,7 @@ function yasioTest() {
   yserver.open(0, yasio.YCK_TCP_SERVER);
 
   var yclient = new yasio.io_service({ host: "127.0.0.1", port: 8081 });
+  yclient.set_option(yasio.YOPT_NO_DISPATCH, 1);
 
   var tsport_c = null;
 

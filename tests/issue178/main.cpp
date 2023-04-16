@@ -48,7 +48,6 @@ int main()
   service.set_option(YOPT_S_CONNECT_TIMEOUT, 5);
   service.set_option(YOPT_C_UNPACK_PARAMS, 1, 65535, 0, 4, 0);
   service.set_option(YOPT_C_LFBFD_IBTS, 1, 4);  // Sets initial bytes to strip
-  service.set_option(YOPT_S_DEFERRED_EVENT, 0); // disable event queue
   service.open(0, YCK_TCP_SERVER);              // open server
 
   delay_timer.expires_from_now(std::chrono::seconds(1));

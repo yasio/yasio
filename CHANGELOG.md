@@ -1,11 +1,13 @@
 yasio-4.0.0
-  
-  1. Exclude kcp implemention from core.
-  2. Add support forward packet on both send and recv stages.
-  3. Add option: `YOPT_S_AUTO_DISPATCH`, whether auto dispatch deferred events in service thread,
-  if not, the behavior same with previous releases, call needs invoke `io_service::dispatch` to dispatch
-  events in caller thread.
-  4. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`
+
+  1. IMPORTANT: Rename `YOPT_S_DEFERRED_EVENT` to `YOPT_S_NO_DISPATCH`, and the default event dispatch behavior was changed,
+  by default, the network thread will always dispatch events at end of event loop. you must set `YOPT_S_NO_DISPATCH` to `1` to 
+  ensure the dispatch behavior match with previous releases.
+  2. The `YOPT_S_DEFER_EVENT_CB` return check changed, return `true` to tell io_service the event already processed, io_service will
+  skip `processed` event, previous releases should return `false`.
+  3. Exclude kcp implemention from core.
+  4. Add support forward packet on both send and recv stages.
+  5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`
   
   
 yasio-3.39.8

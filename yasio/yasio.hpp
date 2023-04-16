@@ -82,9 +82,12 @@ namespace inet
 enum
 { // lgtm [cpp/irregular-enum-init]
 
-  // Set whether deferred dispatch event.
-  // params: deferred_event:int(1)
-  YOPT_S_DEFERRED_EVENT = 1,
+  // Set whether disable internal dispatch, if yes
+  // user must invoke dispatch on thread which care about 
+  // network events, it's useful for game engine update ui
+  // when recv network events.
+  // params: no_dispatch:int(0)
+  YOPT_S_NO_DISPATCH = 1,
 
   // Set custom resolve function, native C++ ONLY.
   // params: func:resolv_fn_t*
@@ -106,7 +109,7 @@ enum
   // remarks: this callback will be invoke at io_service::dispatch caller thread
   YOPT_S_EVENT_CB,
 
-  // Sets callback before defer dispatch event.
+  // Sets callback before enque event to defer queue.
   // params: func:defer_event_cb_t*
   // remarks: this callback invoke at io_service thread
   YOPT_S_DEFER_EVENT_CB,
@@ -173,10 +176,6 @@ enum
   //  b. IPv6 addresses with ports require square brackets [fe80::1%lo0]:53
   YOPT_S_DNS_LIST,
 
-  // Whether enable auto dispatch event on io_service thread, default: 0
-  // params: auto_dispatch: int(1)
-  YOPT_S_AUTO_DISPATCH,
-
   // Set ssl server cert and private key file
   // params:
   //   crtfile: const char*
@@ -186,8 +185,7 @@ enum
   // Set whether forward packet without GC alloc
   // params: forward: int(0)
   // reamrks:
-  //   when forward packet enabled, the packet will always dispach when recv data from OS kernel immediately,
-  //   even through the option YOPT_S_DEFERRED_EVENT was enabled
+  //   when forward packet enabled, the packet will always dispach when recv data from OS kernel immediately
   YOPT_S_FORWARD_PACKET,
 
   // Sets channel length field based frame decode function, native C++ ONLY
@@ -1142,14 +1140,9 @@ private:
   inline void fire_event(_Types&&... args)
   {
     auto event = cxx14::make_unique<io_event>(std::forward<_Types>(args)...);
-    if (options_.deferred_event_)
-    {
-      if (options_.on_defer_event_ && !options_.on_defer_event_(event))
-        return;
-      events_.emplace(std::move(event));
-    }
-    else
-      options_.on_event_(std::move(event));
+    if (options_.on_defer_event_ && options_.on_defer_event_(event))
+      return;
+    events_.emplace(std::move(event));
   }
   template <typename... _Types>
   inline void forward_packet(_Types&&... args)
@@ -1224,7 +1217,7 @@ private:
     bool deferred_event_ = true;
     defer_event_cb_t on_defer_event_;
 
-    bool auto_dispatch_  = false; // since v3.39.8
+    bool no_dispatch_  = false; // since v4.0.0
     bool forward_packet_ = false; // since v3.39.8
 
     // tcp keepalive settings

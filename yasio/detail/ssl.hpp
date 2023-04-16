@@ -80,7 +80,7 @@ YASIO__DECL yssl_ctx_st* yssl_ctx_new(const yssl_options& opts);
 YASIO__DECL void yssl_ctx_free(yssl_ctx_st*& ctx);
 
 YASIO__DECL yssl_st* yssl_new(yssl_ctx_st* ctx, int fd, const char* hostname, bool client);
-YASIO__DECL void yssl_shutdown(yssl_st*&);
+YASIO__DECL void yssl_shutdown(yssl_st*&, bool writable);
 
 /**
 * @returns

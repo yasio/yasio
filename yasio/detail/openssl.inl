@@ -223,7 +223,7 @@ YASIO__DECL yssl_st* yssl_new(yssl_ctx_st* ctx, int fd, const char* hostname, bo
   return ssl;
 #  endif
 }
-YASIO__DECL void yssl_shutdown(yssl_st*& ssl)
+YASIO__DECL void yssl_shutdown(yssl_st*& ssl, bool /*writable*/)
 {
   ::SSL_shutdown(yssl_unwrap(ssl));
   ::SSL_free(yssl_unwrap(ssl));

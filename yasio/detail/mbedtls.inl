@@ -138,9 +138,10 @@ YASIO__DECL yssl_st* yssl_new(yssl_ctx_st* ctx, int fd, const char* hostname, bo
     ::mbedtls_ssl_set_hostname(ssl, hostname);
   return ssl;
 }
-YASIO__DECL void yssl_shutdown(yssl_st*& ssl)
+YASIO__DECL void yssl_shutdown(yssl_st*& ssl, bool writable)
 {
-  ::mbedtls_ssl_close_notify(ssl);
+  if (writable)
+    ::mbedtls_ssl_close_notify(ssl);
   ::mbedtls_ssl_free(ssl);
   delete ssl;
   ssl = nullptr;

@@ -513,7 +513,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
 void io_transport_ssl::do_ssl_shutdown()
 {
   if (ssl_)
-    yssl_shutdown(ssl_);
+    yssl_shutdown(ssl_, this->error_ == yasio::errc::shutdown_by_localhost);
 }
 void io_transport_ssl::set_primitives()
 {
@@ -657,7 +657,7 @@ void io_service::start(event_cb_t cb)
     }
     else
     {
-      this->worker_id_               = std::this_thread::get_id();
+      this->worker_id_ = std::this_thread::get_id();
       run();
       handle_stop();
     }

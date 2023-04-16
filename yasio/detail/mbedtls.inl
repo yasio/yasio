@@ -130,7 +130,7 @@ YASIO__DECL int yssl_mbedtls_send(void *ctx, const unsigned char *buf, size_t le
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     int fd = ((mbedtls_net_context *) ctx)->fd;
 
-    ret = (int) ::send(fd, buf, len, YASIO_MSG_FLAG);
+    ret = (int) yasio::xxsocket::send(fd, buf, len, YASIO_MSG_FLAG);
 
     if (ret < 0) {
         int err = yasio::xxsocket::get_last_errno();

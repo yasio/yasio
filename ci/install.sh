@@ -10,7 +10,7 @@ if [[ "${RUNNER_OS}" == "Linux" && "${BUILD_TARGET}" == "android" ]]; then
     ~/ninja --version
 
     # install ndk
-    if [ "$USE_GH_NDK" = "true"]; then
+    if [ "$USE_GH_NDK" = "true" ]; then
        echo "ndk_root=$ANDROID_NDK" >> $GITHUB_ENV
        echo "Using gh action installed ndk"
     else

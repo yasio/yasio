@@ -12,7 +12,7 @@ yasio-4.0.0
   7. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue` support
   
   
-yasio-3.39.8
+yasio-3.39.9
 
   1. Remove unsafe option: `YOPT_S_FORWARD_EVENT`,  may cause internal channel behavior incorrect.
   2. Add forward packet event support, new option: `YOPT_S_FORWARD_PACKET`,  after enable forward packet: 
@@ -21,7 +21,9 @@ yasio-3.39.8
       - No upack
       - No deferred packet
       - No GC alloc
-  3. Fix `sort_timers` may cause `std::sort` crash on sort callback when system clock slow
+  3. Fix `sort_timers` may cause `std::sort` crash on sort callback when system clock slow  
+  4. Fix typo `YASIO_ENABLE_PASSIVE_EVENT`
+  5. Fix timer queue empty check
   
   
 yasio-3.39.7

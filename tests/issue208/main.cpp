@@ -30,7 +30,7 @@ void start_exprie_timer()
 timer_cb_t create_timer_cb()
 {
   return [](io_service& s) {
-    if (udpHeartTimer->expired(s))
+    if (udpHeartTimer->expired())
     {
       printf("udp timer %lld\n", getTimeStamp());
       start_exprie_timer();

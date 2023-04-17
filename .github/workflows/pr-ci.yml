@@ -58,9 +58,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        run: |
-          ci/install.sh
-          ci/build.sh
+        run: ci/build.sh
   build-android:
     name: build-android
     runs-on: ubuntu-latest
@@ -83,8 +81,8 @@ jobs:
           submodules: 'recursive'
       - name: Build
         run: |
-          ci/install.sh
-          ci/build.sh
+          source ci/install.sh
+          source ci/build.sh
   build-osx:
     name: build-osx
     runs-on: macos-latest
@@ -95,9 +93,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        run: |
-          ci/install.sh
-          ci/build.sh
+        run: ci/build.sh
   build-ios:
     name: build-ios
     runs-on: macos-latest
@@ -108,9 +104,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        run: |
-          ci/install.sh
-          ci/build.sh
+        run: ci/build.sh
   build-freebsd:
     name: build-freebsd
     runs-on: macos-12

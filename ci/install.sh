@@ -29,8 +29,20 @@ if [[ "${RUNNER_OS}" == "Linux" && "${BUILD_TARGET}" == "android" ]]; then
         echo "Using gh action vm installed ndk: $ndk_root"
         echo "ndk_root=$ndk_root" >> $GITHUB_ENV
     else
-        curl -o ~/android-ndk-$NDK_VER-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-$NDK_VER-linux-x86_64.zip
-        unzip -q ~/android-ndk-$NDK_VER-linux-x86_64.zip -d ~
-        echo "ndk_root=~/android-ndk-$NDK_VER-linux-x86_64" >> $GITHUB_ENV
+        suffix=-x86_64
+        if [ "$NDK_VER" \> "r22z" ]; then
+            # since ndk-r23, no arch suffix
+            suffix=
+        fi
+        ndk_package=android-ndk-$NDK_VER-linux$suffix
+        echo "Downloading ndk package $ndk_package ..."
+        curl -o ~/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
+        unzip -q ~/$ndk_package.zip -d ~
+        ndk_root=~/$ndk_package
     fi
+
+    if [ "$GITHUB_ENV" != "" ]; then
+        echo "ndk_root=$ndk_root" >> $GITHUB_ENV
+    fi
+    export ndk_root=$ndk_root
 fi

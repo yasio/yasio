@@ -24,9 +24,9 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
   signal(SIGINT, handle_signal);
 
   // !important, because we set YOPT_S_NO_NEW_THREAD, so need a timer to start server
-  deadline_timer timer;
+  deadline_timer timer(server);
   timer.expires_from_now(std::chrono::seconds(1));
-  timer.async_wait_once(server, [channel_kind](io_service& server) {
+  timer.async_wait_once([channel_kind](io_service& server) {
     server.set_option(YOPT_C_UNPACK_PARAMS, 0, 65535, -1, 0, 0);
     server.open(0, channel_kind);
   });
@@ -55,7 +55,7 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
         {
           timer.expires_from_now(std::chrono::seconds(3));
           auto transport = ev->transport();
-          timer.async_wait_once(server, [transport](io_service& server) { server.close(transport); });
+          timer.async_wait_once([transport](io_service& server) { server.close(transport); });
         }
         break;
       case YEK_ON_CLOSE:

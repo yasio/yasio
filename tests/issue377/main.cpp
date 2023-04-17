@@ -6,8 +6,9 @@ using namespace yasio::inet;
 
 int main()
 {
-  deadline_timer timer     = {};
+  
   yasio::io_service server = {};
+  deadline_timer timer     = {server};
   server.set_option(YOPT_S_NO_DISPATCH, 1);
   server.set_option(YOPT_C_REMOTE_HOST, 0, "127.0.0.1");
   server.set_option(YOPT_C_REMOTE_PORT, 0, 7899);
@@ -19,7 +20,7 @@ int main()
       case YEK_CONNECT_RESPONSE:
         std::cout << "connected.And the connection is disconnected after 3 seconds." << std::endl;
         timer.expires_from_now(std::chrono::seconds(3));
-        timer.async_wait_once(server, [](io_service& server) { server.close(0); });
+        timer.async_wait_once([](io_service& server) { server.close(0); });
         break;
       default:
         break;

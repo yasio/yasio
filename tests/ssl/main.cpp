@@ -27,8 +27,8 @@ void yasioTest()
 
   std::vector<transport_handle_t> transports;
 
-  deadline_timer udpconn_delay;
-  deadline_timer udp_heartbeat;
+  deadline_timer udpconn_delay(service);
+  deadline_timer udp_heartbeat(service);
   int http_client_bytes_transferred = 0;
 
   int done_count = 0;

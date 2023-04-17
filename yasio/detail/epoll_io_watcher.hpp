@@ -15,6 +15,10 @@
 #include "yasio/detail/pod_vector.hpp"
 #include "yasio/detail/select_interrupter.hpp"
 
+#if !defined(__linux__)
+#  define EPOLLET 0
+#endif
+
 namespace yasio
 {
 YASIO__NS_INLINE

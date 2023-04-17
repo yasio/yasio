@@ -25,9 +25,9 @@ void yasioTest()
 
   std::vector<transport_handle_t> transports;
 
-  deadline_timer tcp_send_timer;
-  deadline_timer udp_send_timer;
-  deadline_timer kcp_send_timer;
+  deadline_timer tcp_send_timer(service);
+  deadline_timer udp_send_timer(service);
+  deadline_timer kcp_send_timer(service);
   int total_bytes_transferred = 0;
 
   int max_request_count = 2;
@@ -54,7 +54,7 @@ void yasioTest()
           if (index == 0)
           {
             tcp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
-            tcp_send_timer.async_wait(service, [transport, index](io_service& service) -> bool {
+            tcp_send_timer.async_wait([transport, index](io_service& service) -> bool {
               obstream obs;
               obs.write_bytes("[TCP] Hello, ");
               service.write(transport, std::move(obs.buffer()));
@@ -65,7 +65,7 @@ void yasioTest()
           else if (index == 1)
           {
             udp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
-            udp_send_timer.async_wait(service, [transport, index](io_service& service) -> bool {
+            udp_send_timer.async_wait([transport, index](io_service& service) -> bool {
               obstream obs;
               obs.write_bytes("[UDP] Hello, ");
               service.write(transport, std::move(obs.buffer()));
@@ -76,7 +76,7 @@ void yasioTest()
           else if (index == 2)
           {
             kcp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
-            kcp_send_timer.async_wait(service, [transport, &max_request_count, index](io_service& service) -> bool {
+            kcp_send_timer.async_wait([transport, &max_request_count, index](io_service& service) -> bool {
               obstream obs;
               obs.write_bytes("[KCP] Hello, ");
               service.write(transport, std::move(obs.buffer()));

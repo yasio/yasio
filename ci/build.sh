@@ -61,8 +61,9 @@ function build_linux()
 function build_android()
 {
     echo "Building android..."
+    echo "ndk_root=$ndk_root"
     NINJA_PATH=~/ninja
-    cmake -G "Ninja" -B build -DANDROID_STL=c++_shared -DCMAKE_MAKE_PROGRAM=$NINJA_PATH -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-$NDK_VER/build/cmake/android.toolchain.cmake -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang -DANDROID_ABI=$BUILD_ARCH -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake -G "Ninja" -B build -DANDROID_STL=c++_shared -DCMAKE_MAKE_PROGRAM=$NINJA_PATH -DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang -DANDROID_ABI=$BUILD_ARCH -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
     cmake --build build --target yasio
     cmake --build build --target yasio_http
     

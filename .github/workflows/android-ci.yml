@@ -17,6 +17,7 @@ env:
   BUILD_TARGET: android
   BUILD_TYPE: Release
   NDK_VER: r19c # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
+  USE_GH_NDK: 'true'
 
 jobs:
   build:

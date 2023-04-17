@@ -76,6 +76,7 @@ jobs:
       BUILD_TARGET: android
       # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
       NDK_VER: r19c
+      USE_GH_NDK: 'true'
     steps:
       - uses: actions/checkout@v3
         with:

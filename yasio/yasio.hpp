@@ -174,7 +174,6 @@ enum
   //  b. IPv6 addresses with ports require square brackets [fe80::1%lo0]:53
   YOPT_S_DNS_LIST,
 
-
   // Set ssl server cert and private key file
   // params:
   //   crtfile: const char*
@@ -400,10 +399,10 @@ public:
   void expires_from_now(const std::chrono::microseconds& duration)
   {
     this->duration_    = duration;
-    this->expire_time_ = yasio::steady_clock_t::now() + this->duration_;
+    this->expire_time_ = steady_clock_t::now() + this->duration_;
   }
 
-  void expires_from_now() { this->expire_time_ = yasio::steady_clock_t::now() + this->duration_; }
+  void expires_from_now() { this->expire_time_ = steady_clock_t::now() + this->duration_; }
 
   // Wait timer timeout once.
   void async_wait_once(io_service& service, timerv_cb_t cb)
@@ -428,13 +427,17 @@ public:
   YASIO__DECL void cancel(io_service& service);
 
   // Check if timer is expired?
-  bool expired(io_service& service) const { return this->wait_duration(service).count() <= 0; }
+  bool expired() const { return wait_duration().count() <= 0; }
 
   // Gets wait duration of timer.
-  YASIO__DECL std::chrono::microseconds wait_duration(io_service& service) const;
+  std::chrono::microseconds wait_duration() const { return this->wait_duration(steady_clock_t::now()); }
+  std::chrono::microseconds wait_duration(const std::chrono::time_point<steady_clock_t>& now_time) const
+  {
+    return std::chrono::duration_cast<std::chrono::microseconds>(this->expire_time_ - now_time);
+  }
 
-  std::chrono::microseconds duration_                         = {};
-  std::chrono::time_point<yasio::steady_clock_t> expire_time_ = {};
+  std::chrono::microseconds duration_                  = {};
+  std::chrono::time_point<steady_clock_t> expire_time_ = {};
 };
 
 struct YASIO_API io_base {
@@ -1058,8 +1061,11 @@ private:
   }
   void sort_timers()
   {
-    std::sort(this->timer_queue_.begin(), this->timer_queue_.end(),
-              [](const timer_impl_t& lhs, const timer_impl_t& rhs) { return lhs.first->expire_time_ > rhs.first->expire_time_; });
+    // Must ensure time now stable, otherwise will cause std::sort pass invalid iterator to sort callback
+    const auto now_time = steady_clock_t::now();
+    std::sort(this->timer_queue_.begin(), this->timer_queue_.end(), [&now_time](const timer_impl_t& lhs, const timer_impl_t& rhs) {
+      return lhs.first->wait_duration(now_time) > rhs.first->wait_duration(now_time);
+    });
   }
 
   // Start a async domain name query
@@ -1128,7 +1134,7 @@ private:
   inline void fire_event(_Types&&... args)
   {
     auto event = cxx14::make_unique<io_event>(std::forward<_Types>(args)...);
-    if (options_.deferred_event_ && !options_.forward_event_)
+    if (options_.deferred_event_)
     {
       if (options_.on_defer_event_ && !options_.on_defer_event_(event))
         return;
@@ -1169,15 +1175,10 @@ private:
   /* For log macro only */
   inline const print_fn2_t& __get_cprint() const { return options_.print_; }
 
-  void update_time() { this->time_ = yasio::steady_clock_t::now(); }
-
 private:
   state state_ = state::UNINITIALIZED; // The service state
   std::thread worker_;
   std::thread::id worker_id_;
-
-  /* The current time according to the event loop. in msecs. */
-  std::chrono::time_point<yasio::steady_clock_t> time_;
 
   privacy::concurrent_queue<event_ptr, true> events_;
 
@@ -1213,7 +1214,6 @@ private:
     bool deferred_event_ = true;
     defer_event_cb_t on_defer_event_;
 
-    bool forward_event_  = false; // since v3.39.7
     bool forward_packet_ = false; // since v3.39.8
 
     // tcp keepalive settings

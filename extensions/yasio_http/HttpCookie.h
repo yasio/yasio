@@ -43,10 +43,10 @@ namespace network
 using namespace cxx17::string_view_literals;
 #    define _mksv(a) a ""_sv
 #else
-template <size_t _N>
-inline cxx17::string_view _mksv(const char (&str)[_N])
+template <size_t _Size>
+inline cxx17::string_view _mksv(const char (&str)[_Size])
 {
-    return cxx17::string_view{str, _N - 1};
+    return cxx17::string_view{str, _Size - 1};
 }
 #endif
 

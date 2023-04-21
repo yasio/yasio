@@ -34,6 +34,7 @@ jobs:
           # cmake
           pkgutil -y -i cmake
           # required by mbedtls-3.3.0
+          pip-3.4 install jsonschema jinja2
           pip-3.5 install jsonschema jinja2
           # gcc
           echo y | pkg install gcc

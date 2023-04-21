@@ -116,6 +116,11 @@ SOFTWARE.
 #  define YASIO__HAS_EPOLL_PWAIT2 0
 #endif
 
+// Tests whether current OS support evport
+#if defined(__sun)
+#  define YASIO__HAS_EVPORT  1
+#endif
+
 // Tests whether current OS support route client io event in kernel for udp server
 #if defined(_WIN32)
 #  define YASIO__UDP_KROUTE 0

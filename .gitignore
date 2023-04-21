@@ -27,3 +27,4 @@ ignored/*.*
 /site
 /_site
 *.xsxproj
+/out

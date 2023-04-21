@@ -1,0 +1,53 @@
+name: solaris
+
+on:
+  push:
+    paths:
+      - yasio/**/*
+      - thirdparty/**/*
+      - tests/**/*
+      - examples/**/*
+      - CMakeLists.txt
+      - .github/workflows/solaris-ci.yml
+      - ci/**/*
+      - extensions/**/*
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: macos-12
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Build
+      uses: vmactions/solaris-vm@main
+      with:
+        usesh: true
+        sync: rsync
+        copyback: false
+        prepare: |
+          # cmake
+          pkgutil -y -i cmake
+          # required by mbedtls-3.3.0
+          pip-3.5 install jsonschema jinja2
+          # gcc
+          echo y | pkg install gcc
+          # check tools
+          python3 --version
+          cmake --version
+          gcc --version
+          perl -v
+        run: |
+          echo Building on solaris...
+          cmake -G "Unix Makefiles" -S . -Bbuild
+          cmake --build build --config Release
+          echo run test icmp on solaris ...
+          ./build/tests/icmp/icmptest
+          echo run ssltest on solaris ...
+          ./build/tests/ssl/ssltest
+

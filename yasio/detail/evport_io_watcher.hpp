@@ -3,7 +3,7 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// detail/epoll_io_watcher.hpp
+// detail/evport_io_watcher.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
@@ -34,16 +34,8 @@ namespace inet
 {
 class evport_io_watcher {
 public:
-  evport_io_watcher() : port_handle_(::port_create())
-  {
-    this->ready_events_.reserve(128);
-    this->add_event(interrupter_.read_descriptor(), socket_event::read);
-  }
-  ~evport_io_watcher()
-  {
-    this->del_event(interrupter_.read_descriptor(), socket_event::read);
-    ::close(port_handle_);
-  }
+  evport_io_watcher() : port_handle_(::port_create()) { this->ready_events_.reserve(128); }
+  ~evport_io_watcher() { ::close(port_handle_); }
 
   void add_event(socket_native_type fd, int events)
   {
@@ -112,24 +104,25 @@ public:
      * A file descriptor is associated (or re-associated) with a port using the port_associate(3C) function.
      * refer to: https://docs.oracle.com/cd/E19253-01/816-5168/port-create-3c/index.html
      */
+    int interrupt_hint = 0;
     for (int i = 0; i < num_events; ++i)
     {
+      auto event_source = ready_events_[i].portev_source;
+      if (event_source != PORT_SOURCE_FD)
+      {
+        interrupt_hint = 1;
+        continue;
+      }
       int fd                 = static_cast<int>(ready_events_[i].portev_object);
       auto underlying_events = registered_events_[fd];
       if (underlying_events)
         ::port_associate(port_handle_, PORT_SOURCE_FD, fd, underlying_events, nullptr);
     }
 
-    if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
-    {
-      if (!interrupter_.reset())
-        interrupter_.recreate();
-      --num_events;
-    }
-    return static_cast<int>(num_events);
+    num_events -= interrupt_hint;
   }
 
-  void wakeup() { interrupter_.interrupt(); }
+  void wakeup() { ::port_send(port_handle_, POLLIN, nullptr); }
 
   int is_ready(socket_native_type fd, int events) const
   {
@@ -150,7 +143,6 @@ protected:
   int port_handle_;
   std::map<socket_native_type, int> registered_events_;
   yasio::pod_vector<port_event_t> ready_events_;
-  select_interrupter interrupter_;
 };
 } // namespace inet
 } // namespace yasio

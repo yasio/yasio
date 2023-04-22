@@ -845,11 +845,12 @@ void io_service::run()
     // process active channels
     process_channels();
 
+    // process timeout timers
+    process_timers();
+
     // process deferred events if auto dispatch enabled
     process_deferred_events();
 
-    // process timeout timers
-    process_timers();
   } while (!this->stop_flag_ || !this->transports_.empty());
 
 #if defined(YASIO_USE_CARES)

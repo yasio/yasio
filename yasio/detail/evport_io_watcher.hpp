@@ -119,6 +119,7 @@ public:
         ::port_associate(port_handle_, PORT_SOURCE_FD, fd, underlying_events, nullptr);
     }
 
+    nevents_ = num_events;
     num_events -= interrupt_hint;
   }
 
@@ -143,6 +144,7 @@ protected:
   int port_handle_;
   std::map<socket_native_type, int> registered_events_;
   yasio::pod_vector<port_event_t> ready_events_;
+  uint_t nevents_ = 0;
 };
 } // namespace inet
 } // namespace yasio

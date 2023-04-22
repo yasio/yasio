@@ -28,6 +28,8 @@ jobs:
       uses: vmactions/freebsd-vm@main
       with:
         usesh: true
+        sync: rsync
+        copyback: false
         prepare: |
           pkg install -y cmake
           pkg install -y python3

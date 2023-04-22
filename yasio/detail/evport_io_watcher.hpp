@@ -134,7 +134,8 @@ public:
       underlying_events |= POLLOUT;
     if (events & socket_event::error)
       underlying_events |= (POLLERR | POLLHUP | POLLPRI);
-    auto it = std::find_if(ready_events_.begin(), this->ready_events_.end(), [fd](const port_event_t& ev) { return static_cast<int>(ev.portev_object) == fd; });
+    auto it = std::find_if(ready_events_.begin(), this->ready_events_.begin() + static_cast<int>(nevents_),
+                           [fd](const port_event_t& ev) { return static_cast<int>(ev.portev_object) == fd; });
     return it != this->ready_events_.end() ? (it->portev_events & underlying_events) : 0;
   }
 

@@ -720,7 +720,6 @@ void io_service::initialize(const io_hostent* channel_eps, int channel_count)
     channel_count = 1;
 
   options_.resolv_ = [this](std::vector<ip::endpoint>& eps, const char* host, unsigned short port) { return this->resolve(eps, host, port); };
-  // register_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
   // create channels
   create_channels(channel_eps, channel_count);
@@ -740,7 +739,6 @@ void io_service::finalize()
     life_token_.reset();
 #endif
     destroy_channels();
-    // deregister_descriptor(interrupter_.read_descriptor(), socket_event::read);
 
     options_.on_event_ = nullptr;
     options_.resolv_   = nullptr;
@@ -1065,7 +1063,7 @@ void io_service::do_connect(io_channel* ctx)
   ctx->state_ = io_base::state::CONNECTING;
   auto& ep    = ctx->remote_eps_[0];
   YASIO_KLOGD("[index: %d] connecting server %s(%s):%u...", ctx->index_, ctx->remote_host_.c_str(), ep.ip().c_str(), ctx->remote_port_);
-  if (ctx->socket_->open(ep.af(), ctx->socktype_))
+  if (ctx->socket_->popen(ep.af(), ctx->socktype_))
   {
     int ret = 0;
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
@@ -1085,10 +1083,7 @@ void io_service::do_connect(io_channel* ctx)
     {
       // tcp connect directly, for udp do not need to connect.
       if (yasio__testbits(ctx->properties_, YCM_TCP))
-        ret = xxsocket::connect_n(ctx->socket_->native_handle(), ep);
-      else // udp, we should set non-blocking mode manually
-        ctx->socket_->set_nonblocking(true);
-
+        ret = xxsocket::connect(ctx->socket_->native_handle(), ep);
       // join the multicast group for udp
       if (yasio__testbits(ctx->properties_, YCPF_MCAST))
         ctx->join_multicast_group();
@@ -1333,7 +1328,7 @@ void io_service::do_accept(io_channel* ctx)
   do
   {
     xxsocket::set_last_errno(0);
-    if (!ctx->socket_->open(ep.af(), ctx->socktype_))
+    if (!ctx->socket_->popen(ep.af(), ctx->socktype_))
     {
       where = io_base::error_stage::OPEN_SOCKET;
       break;
@@ -1355,7 +1350,6 @@ void io_service::do_accept(io_channel* ctx)
       break;
     }
 
-    ctx->socket_->set_nonblocking(true);
     ctx->state_ = io_base::state::OPENED;
     if (yasio__testbits(ctx->properties_, YCM_UDP))
     {
@@ -1454,7 +1448,7 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
   }
 
   auto new_sock = std::make_shared<xxsocket>();
-  if (new_sock->open(peer.af(), SOCK_DGRAM))
+  if (new_sock->popen(peer.af(), SOCK_DGRAM))
   {
     if (yasio__testbits(ctx->properties_, YCF_REUSEADDR))
       new_sock->reuse_address(true);
@@ -1462,7 +1456,6 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       new_sock->exclusive_address(false);
     if (new_sock->bind(YASIO_ADDR_ANY(peer.af()), ctx->remote_port_) == 0)
     {
-      new_sock->set_nonblocking(true);
       auto transport = static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(new_sock)));
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);

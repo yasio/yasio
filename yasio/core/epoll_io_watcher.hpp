@@ -55,12 +55,15 @@ public:
 
     if (underlying_events)
     { // add or mod
-      if (::epoll_ctl(epoll_handle_, registered ? EPOLL_CTL_ADD : EPOLL_CTL_MOD, fd, &ev) == 0)
+      if (::epoll_ctl(epoll_handle_, !registered ? EPOLL_CTL_ADD : EPOLL_CTL_MOD, fd, &ev) == 0)
       {
         if (registered)
           it->second = underlying_events;
         else
+        {
           registered_events_[fd] = underlying_events;
+          ready_events_.resize(registered_events_.size());
+        }
       }
     }
     else
@@ -69,6 +72,7 @@ public:
       {
         ::epoll_ctl(epoll_handle_, EPOLL_CTL_DEL, fd, &ev);
         registered_events_.erase(it);
+        ready_events_.resize(registered_events_.size());
       }
     }
   }

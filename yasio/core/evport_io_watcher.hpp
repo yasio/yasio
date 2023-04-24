@@ -52,7 +52,10 @@ public:
         if (registered)
           it->second = underlying_events;
         else
+        {
           registered_events_[fd] = underlying_events;
+          ready_events_.resize(registered_events_.size());
+        }
       }
     }
     else
@@ -61,6 +64,7 @@ public:
       {
         ::port_dissociate(port_handle_, PORT_SOURCE_FD, fd);
         registered_events_.erase(it);
+        ready_events_.resize(registered_events_.size());
       }
     }
   }

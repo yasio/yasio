@@ -29,31 +29,34 @@ public:
     this->add_event(interrupter_.read_descriptor(), socket_event::read);
   }
 
-  void add_event(socket_native_type fd, int events)
+  void mod_event(socket_native_type fd, int add_events, int remove_events)
   {
-    if (yasio__testbits(events, socket_event::read))
-      FD_SET(fd, &(registered_events_[read_op]));
+    if (add_events)
+    {
+      if (yasio__testbits(add_events, socket_event::read))
+        FD_SET(fd, &(registered_events_[read_op]));
 
-    if (yasio__testbits(events, socket_event::write))
-      FD_SET(fd, &(registered_events_[write_op]));
+      if (yasio__testbits(add_events, socket_event::write))
+        FD_SET(fd, &(registered_events_[write_op]));
 
-    if (yasio__testbits(events, socket_event::error))
-      FD_SET(fd, &(registered_events_[except_op]));
+      if (yasio__testbits(add_events, socket_event::error))
+        FD_SET(fd, &(registered_events_[except_op]));
 
-    if (max_descriptor_ < static_cast<int>(fd) + 1)
-      max_descriptor_ = static_cast<int>(fd) + 1;
-  }
+      if (max_descriptor_ < static_cast<int>(fd) + 1)
+        max_descriptor_ = static_cast<int>(fd) + 1;
+    }
 
-  void del_event(socket_native_type fd, int events)
-  {
-    if (yasio__testbits(events, socket_event::read))
-      FD_CLR(fd, &(registered_events_[read_op]));
+    if (remove_events)
+    {
+      if (yasio__testbits(remove_events, socket_event::read))
+        FD_CLR(fd, &(registered_events_[read_op]));
 
-    if (yasio__testbits(events, socket_event::write))
-      FD_CLR(fd, &(registered_events_[write_op]));
+      if (yasio__testbits(remove_events, socket_event::write))
+        FD_CLR(fd, &(registered_events_[write_op]));
 
-    if (yasio__testbits(events, socket_event::error))
-      FD_CLR(fd, &(registered_events_[except_op]));
+      if (yasio__testbits(remove_events, socket_event::error))
+        FD_CLR(fd, &(registered_events_[except_op]));
+    }
   }
 
   int poll_io(int64_t waitd_us)

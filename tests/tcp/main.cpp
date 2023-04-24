@@ -5,9 +5,6 @@
 
 #include "yasio/yasio.hpp"
 
-#include "yasio/detail/ibstream.hpp"
-#include "yasio/detail/obstream.hpp"
-
 using namespace yasio;
 
 #define HTTP_TEST_HOST "tool.chinaz.com"

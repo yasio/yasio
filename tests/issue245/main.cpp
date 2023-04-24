@@ -1,7 +1,5 @@
 #include <iostream>
-#include "yasio/xxsocket.hpp"
 #include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
 
 #ifndef _WIN32
 #  include <sys/time.h>

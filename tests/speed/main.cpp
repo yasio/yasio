@@ -3,8 +3,6 @@
 #include <string.h>
 
 #include "yasio/yasio.hpp"
-#include "yasio/ibstream.hpp"
-#include "yasio/obstream.hpp"
 
 #include "kcp/ikcp.h"
 

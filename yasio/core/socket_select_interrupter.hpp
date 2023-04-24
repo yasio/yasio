@@ -17,7 +17,7 @@
 //
 #ifndef YASIO__SOCKET_SELECT_INTERRUPTER_HPP
 #define YASIO__SOCKET_SELECT_INTERRUPTER_HPP
-#include "yasio/xxsocket.hpp"
+#include "yasio/core/xxsocket.hpp"
 
 namespace yasio
 {

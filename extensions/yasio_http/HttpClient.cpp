@@ -29,7 +29,6 @@
 #include "yasio_http/HttpClient.h"
 #include <errno.h>
 #include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
 
 #undef DELETE  // from winnt.h
 

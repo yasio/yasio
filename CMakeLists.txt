@@ -151,16 +151,10 @@ if (YASIO_USE_CARES)
 endif()
 
 ### The yasio core library project
-file(GLOB_RECURSE YASIO_CORE yasio/detail/*.hpp;yasio/detail/*.inl)
+file(GLOB_RECURSE YASIO_CORE yasio/detail/*.hpp;yasio/detail/*.inl;yasio/core/*.hpp;yasio/core/*.cpp;yasio/stl/*.hpp)
 list (APPEND YASIO_CORE
     yasio/compiler/feature_test.hpp
-    yasio/stl/memory.hpp
-    yasio/stl/shared_mutex.hpp
-    yasio/stl/string_view.hpp
-    yasio/xxsocket.hpp
     yasio/yasio.hpp
-    yasio/xxsocket.cpp
-    yasio/yasio.cpp
 )
 
 if (YAISO_BUILD_NI)

@@ -8,9 +8,6 @@
 #include <thread>
 #include "yasio/yasio.hpp"
 
-#include "yasio/detail/ibstream.hpp"
-#include "yasio/detail/obstream.hpp"
-
 using namespace yasio;
 
 #define ICMPTEST_PIN_HOST "www.ip138.com"

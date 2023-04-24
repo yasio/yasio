@@ -20,11 +20,11 @@
 #include "yasio/compiler/feature_test.hpp"
 
 #if defined(_WIN32)
-#  include "socket_select_interrupter.hpp"
+#  include "yasio/core/socket_select_interrupter.hpp"
 #elif defined(__linux__)
-#  include "eventfd_select_interrupter.hpp"
+#  include "yasio/core/eventfd_select_interrupter.hpp"
 #else
-#  include "pipe_select_interrupter.hpp"
+#  include "yasio/core/pipe_select_interrupter.hpp"
 #endif
 
 namespace yasio

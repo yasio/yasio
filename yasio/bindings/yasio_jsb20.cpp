@@ -30,8 +30,6 @@ SOFTWARE.
 #define YASIO_OBS_BUILTIN_STACK 1
 
 #include "yasio/yasio.hpp"
-#include "yasio/ibstream.hpp"
-#include "yasio/obstream.hpp"
 #include "yasio/detail/ref_ptr.hpp"
 
 #if __has_include(<cocos/bindings/jswrapper/SeApi.h>) || defined(YASIO_CREATOR_30_OR_LATER)

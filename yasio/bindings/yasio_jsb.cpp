@@ -32,8 +32,6 @@ SOFTWARE.
 
 #include "yasio/bindings/yasio_jsb.hpp"
 #include "yasio/yasio.hpp"
-#include "yasio/ibstream.hpp"
-#include "yasio/obstream.hpp"
 #include "yasio/detail/ref_ptr.hpp"
 
 // A workaround to fix compile issue caused by `CCPlatformMacros.h` doesn't handle `__has_attribute` it properly

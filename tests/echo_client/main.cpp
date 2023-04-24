@@ -5,9 +5,6 @@
 
 #include "yasio/yasio.hpp"
 
-#include "yasio/ibstream.hpp"
-#include "yasio/obstream.hpp"
-
 using namespace yasio;
 
 static highp_time_t s_last_send_time[3] = {0};

@@ -3,7 +3,7 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// detail/evport_io_watcher.hpp
+// core/evport_io_watcher.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
@@ -15,7 +15,7 @@
 #include <port.h>
 #include "yasio/detail/socket.hpp"
 #include "yasio/detail/pod_vector.hpp"
-#include "yasio/detail/select_interrupter.hpp"
+#include "yasio/core/select_interrupter.hpp"
 
 /*
  * port_event_t

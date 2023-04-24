@@ -3,9 +3,7 @@
 #include <string.h>
 
 #include "yasio_http/HttpClient.h"
-#include "yasio/xxsocket.hpp"
 #include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
 
 #include <fstream>
 
@@ -22,7 +20,7 @@ void yasioTest()
   auto request = new HttpRequest();
 
   request->setHeaders(std::vector<std::string>{CHROME_UA});
-  request->setUrl("https://www.baidu.com");
+  request->setUrl("https://56.31.23.11");
   request->setRequestType(HttpRequest::Type::GET);
 
   auto response = httpClient->sendSync(request);

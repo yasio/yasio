@@ -1,6 +1,4 @@
 #include "yasio/yasio.hpp"
-#include "yasio/ibstream.hpp"
-#include "yasio/obstream.hpp"
 
 using namespace yasio;
 

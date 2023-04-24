@@ -12,8 +12,6 @@
 #include <string.h>
 
 #include "yasio/yasio.hpp"
-#include "yasio/ibstream.hpp"
-#include "yasio/obstream.hpp"
 
 #define TEST_WITH_IPV6 0
 #define TEST_UDP_ONLY 0

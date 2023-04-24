@@ -3,7 +3,7 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// detail/kqueue_io_watcher.hpp
+// core/kqueue_io_watcher.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
@@ -16,7 +16,7 @@
 #include <map>
 #include "yasio/detail/socket.hpp"
 #include "yasio/detail/pod_vector.hpp"
-#include "yasio/detail/select_interrupter.hpp"
+#include "yasio/core/select_interrupter.hpp"
 
 #if defined(__NetBSD__) && __NetBSD_Version__ < 999001500
 #  define YASIO_KQUEUE_EV_SET(ev, ident, filt, flags, fflags, data, udata) \

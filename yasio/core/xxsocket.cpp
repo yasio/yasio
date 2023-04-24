@@ -33,7 +33,7 @@ SOFTWARE.
 #endif
 
 #if !defined(YASIO_HEADER_ONLY)
-#  include "yasio/xxsocket.hpp"
+#  include "yasio/core/xxsocket.hpp"
 #endif
 
 #include "yasio/detail/utils.hpp"

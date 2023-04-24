@@ -32,7 +32,6 @@ SOFTWARE.
 #include <array>
 #include <string.h>
 #include "yasio/yasio.hpp"
-#include "yasio/obstream.hpp"
 
 #if defined(_WINDLL)
 #  define YASIO_NI_API __declspec(dllexport)

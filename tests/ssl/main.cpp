@@ -16,20 +16,8 @@ enum
   SSLTEST_MAX_CHANNELS
 };
 
-struct A {
-  //virtual ~A() {}
-  int m1 = 0;
-};
-
-struct B : public A {
-  std::vector<int> v = {2023};
-};
-
 void yasioTest()
 {
-  const auto offsetm1 = offsetof(A, m1);
-  const auto offsetm1b = offsetof(B, m1);
-
   yasio::inet::io_hostent endpoints[] = {{"github.com", 443}, {"127.0.0.1", 20231}, {"127.0.0.1", 20231}};
 
   io_service service(endpoints, SSLTEST_MAX_CHANNELS);

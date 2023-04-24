@@ -35,11 +35,11 @@ public:
   kqueue_io_watcher() : kqueue_fd_(kqueue())
   {
     ready_events_.reserve(128);
-    this->add_event(interrupter_.read_descriptor(), socket_event::read);
+    this->register_event(interrupter_.read_descriptor(), socket_event::read);
   }
   ~kqueue_io_watcher()
   {
-    this->del_event(interrupter_.read_descriptor(), socket_event::read);
+    this->deregister_event(interrupter_.read_descriptor(), socket_event::read);
     close(kqueue_fd_);
   }
 

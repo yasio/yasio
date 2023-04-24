@@ -178,10 +178,10 @@ static int icmp_ping(yasio::io_watcher& watcher, const ip::endpoint& endpoint, i
 
   s.set_nonblocking(true);
 
-  watcher.add_event(s.native_handle(), socket_event::read);
+  watcher.mod_event(s.native_handle(), socket_event::read, 0);
   int ret = watcher.poll_io(wtimeout.count());
-  watcher.del_event(s.native_handle(), socket_event::read);
-  if (ret > 0)
+  watcher.mod_event(s.native_handle(), 0, socket_event::read);
+  if (ret > 0 && watcher.is_ready(s.native_handle(), socket_event::read))
   {
     char buf[128];
     int n = s.recvfrom(buf, sizeof(buf), peer);

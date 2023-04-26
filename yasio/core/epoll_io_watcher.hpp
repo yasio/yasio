@@ -29,15 +29,13 @@ public:
   epoll_io_watcher() : epoll_handle_(do_epoll_create())
   {
     this->ready_events_.reserve(128);
-    this->mod_event(interrupter_.read_descriptor(), socket_event::read, 0, EPOLLET);
-#if defined(__linux__)
+    this->mod_event(interrupter_.read_descriptor(), socket_event::read, 0, EPOLLONESHOT);
     interrupter_.interrupt();
     poll_io(1);
-#endif
   }
   ~epoll_io_watcher()
   {
-    this->mod_event(interrupter_.read_descriptor(), 0, socket_event::read, EPOLLET);
+    this->mod_event(interrupter_.read_descriptor(), 0, socket_event::read, EPOLLONESHOT);
     epoll_close(epoll_handle_);
   }
 
@@ -90,26 +88,16 @@ public:
 #endif
     nevents_ = num_events;
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
-    {
-#if defined(_WIN32)
-      if (!interrupter_.reset())
-        interrupter_.recreate();
-#endif
       --num_events;
-    }
     return num_events;
   }
 
   void wakeup()
   {
-#if defined(_WIN32)
-    interrupter_.interrupt();
-#else
     epoll_event ev = {0, {0}};
-    ev.events      = EPOLLIN | EPOLLERR | EPOLLET;
+    ev.events      = EPOLLIN | EPOLLERR | EPOLLONESHOT;
     ev.data.ptr    = &interrupter_;
     epoll_ctl(epoll_handle_, EPOLL_CTL_MOD, interrupter_.read_descriptor(), &ev);
-#endif
   }
 
   int is_ready(socket_native_type fd, int events) const

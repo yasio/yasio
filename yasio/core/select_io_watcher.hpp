@@ -26,7 +26,7 @@ public:
     FD_ZERO(&registered_events_[read_op]);
     FD_ZERO(&registered_events_[write_op]);
     FD_ZERO(&registered_events_[except_op]);
-    this->add_event(interrupter_.read_descriptor(), socket_event::read);
+    this->mod_event(interrupter_.read_descriptor(), socket_event::read, 0);
   }
 
   void mod_event(socket_native_type fd, int add_events, int remove_events)

@@ -55,7 +55,7 @@ git clone --recursive https://github.com/yasio/yasio
 cd yasio
 
 # 如果是macOS Xcode, 这里命令应该换成：cmake -B build -GXcode
-cmake -B builddfsfdsf
+cmake -B build
 
 # 使用CMake命令行编译, 如果需要调试，则使用相应平台IDE打开即可:
 # a. Windows：使用VisualStudio打开build/yasio.sln

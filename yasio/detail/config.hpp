@@ -240,4 +240,14 @@ SOFTWARE.
 #define YASIO_SSL_PON "yasio_ssl_server"
 #define YASIO_SSL_PON_LEN (sizeof(YASIO_SSL_PON) - 1)
 
+// The msg flag for socket.send
+// Linux: MSG_NOSIGNAL as to socket.send flag to ignore SIGPIPE
+// BSDs: use setsockopt SO_NOSIGPIPE to ignore SIGPIPE
+// Refer to: https://linux.die.net/man/2/send
+#if defined(__linux__)
+#  define YASIO_MSG_FLAG MSG_NOSIGNAL
+#else
+#  define YASIO_MSG_FLAG 0
+#endif
+
 #endif

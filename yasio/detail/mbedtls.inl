@@ -125,6 +125,44 @@ YASIO__DECL void yssl_ctx_free(ssl_ctx_st*& ctx)
   ctx = nullptr;
 }
 
+YASIO__DECL int yssl_mbedtls_send(void* ctx, const unsigned char* buf, size_t len)
+{
+  int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+  int fd  = ((mbedtls_net_context*)ctx)->fd;
+
+  ret = yasio::xxsocket::send(fd, buf, static_cast<int>(len), YASIO_MSG_FLAG);
+
+  if (ret < 0)
+  {
+    int err = yasio::xxsocket::get_last_errno();
+    if (err == EWOULDBLOCK || err == EAGAIN)
+    {
+      return MBEDTLS_ERR_SSL_WANT_WRITE;
+    }
+
+#  if (defined(_WIN32) || defined(_WIN32_WCE)) && !defined(EFIX64) && !defined(EFI32)
+    if (WSAGetLastError() == WSAECONNRESET)
+    {
+      return MBEDTLS_ERR_NET_CONN_RESET;
+    }
+#  else
+    if (errno == EPIPE || errno == ECONNRESET)
+    {
+      return MBEDTLS_ERR_NET_CONN_RESET;
+    }
+
+    if (errno == EINTR)
+    {
+      return MBEDTLS_ERR_SSL_WANT_WRITE;
+    }
+#  endif
+
+    return MBEDTLS_ERR_NET_SEND_FAILED;
+  }
+
+  return ret;
+}
+
 YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
   auto ssl = new ssl_st();
@@ -133,7 +171,7 @@ YASIO__DECL ssl_st* yssl_new(ssl_ctx_st* ctx, int fd, const char* hostname, bool
 
   // ssl_set_fd
   ssl->bio.fd = fd;
-  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::mbedtls_net_send, ::mbedtls_net_recv, nullptr /*  rev_timeout() */);
+  ::mbedtls_ssl_set_bio(ssl, &ssl->bio, ::yssl_mbedtls_send, ::mbedtls_net_recv, nullptr /*  rev_timeout() */);
   if (client)
     ::mbedtls_ssl_set_hostname(ssl, hostname);
   return ssl;

@@ -3,9 +3,6 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// core/evport_io_watcher.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
 #pragma once
 #include <vector>
@@ -14,7 +11,7 @@
 
 #include <port.h>
 #include "yasio/detail/socket.hpp"
-#include "yasio/detail/pod_vector.hpp"
+#include "yasio/core/pod_vector.hpp"
 #include "yasio/core/select_interrupter.hpp"
 
 /*

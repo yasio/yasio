@@ -3,9 +3,6 @@
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-// core/epoll_io_watcher.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
 #pragma once
 #include <vector>

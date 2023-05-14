@@ -38,14 +38,14 @@ SOFTWARE.
 #include <functional>
 #include "yasio/detail/sz.hpp"
 #include "yasio/detail/config.hpp"
-#include "yasio/detail/object_pool.hpp"
 #include "yasio/detail/singleton.hpp"
 #include "yasio/detail/concurrent_queue.hpp"
 #include "yasio/detail/utils.hpp"
 #include "yasio/detail/errc.hpp"
-#include "yasio/detail/byte_buffer.hpp"
 #include "yasio/stl/memory.hpp"
 #include "yasio/stl/string_view.hpp"
+#include "yasio/core/object_pool.hpp"
+#include "yasio/core/byte_buffer.hpp"
 #include "yasio/core/xxsocket.hpp"
 #include "yasio/core/io_watcher.hpp"
 
@@ -660,7 +660,7 @@ public:
   YASIO__DECL virtual int perform(transport_handle_t transport, const void* buf, int n, int& error);
 
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
-  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 512)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_send_op, 128)
 #endif
 };
 
@@ -673,7 +673,7 @@ public:
 
   YASIO__DECL int perform(transport_handle_t transport, const void* buf, int n, int& error) override;
 #if !defined(YASIO_DISABLE_OBJECT_POOL)
-  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 512)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(io_sendto_op, 128)
 #endif
   ip::endpoint destination_;
 };
@@ -1101,7 +1101,7 @@ private:
 
 #if defined(YASIO_USE_CARES)
   YASIO__DECL static void ares_getaddrinfo_cb(void* data, int status, int timeouts, ares_addrinfo* answerlist);
-  YASIO__DECL static void ares_sock_state_cb(void *data, socket_native_type socket_fd, int readable, int writable);
+  YASIO__DECL static void ares_sock_state_cb(void* data, socket_native_type socket_fd, int readable, int writable);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
   YASIO__DECL int ares_get_fds(socket_native_type* socks, highp_time_t& waitd_usec);
@@ -1212,7 +1212,7 @@ private:
     bool deferred_event_ = true;
     defer_event_cb_t on_defer_event_;
 
-    bool no_dispatch_  = false; // since v4.0.0
+    bool no_dispatch_    = false; // since v4.0.0
     bool forward_packet_ = false; // since v3.39.8
 
     // tcp keepalive settings

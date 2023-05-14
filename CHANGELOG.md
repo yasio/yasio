@@ -1,3 +1,9 @@
+yasio-3.39.11
+
+  1. Refactor pipe signal suppression.
+  2. Refine fd_set_adapter as io_watcher.
+
+
 yasio-3.39.10
 
   1. Improve object_pool, ensure address of allocated object from pool align with `std::max_align_t`,

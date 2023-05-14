@@ -1,4 +1,4 @@
-#include "yasio/detail/config.hpp"
+#include "yasio/config.hpp"
 
 #if defined(YASIO_INSIDE_UNREAL)
 

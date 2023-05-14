@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////////////
-// A multi-platform support c++11 library with focus on asynchronous socket I/O for any
+// A multi-platform support c++11 library with focus on asynchronous socket I/O for any 
 // client application.
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
@@ -13,8 +13,10 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,14 +25,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__FP16_HPP
-#define YASIO__FP16_HPP
-#include "yasio/detail/config.hpp"
+#ifndef YASIO__ARES_HPP
+#define YASIO__ARES_HPP
 
-#if defined(YASIO_ENABLE_HALF_FLOAT)
-// Includes IEEE 754 16-bit half-precision floating-point library
-#  include "half/half.hpp"
-typedef half_float::half fp16_t;
+extern "C" {
+#include "ares_config.h"
+#include "ares.h"
+extern void (*ares_free)(void* ptr);
+}
+
+#if defined(__ANDROID__)
+#  include "yasio/platform/yasio_jni.hpp"
 #endif
 
 #endif

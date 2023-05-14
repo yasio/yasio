@@ -29,7 +29,7 @@ SOFTWARE.
 #ifndef YASIO__SSL_HPP
 #define YASIO__SSL_HPP
 
-#include "yasio/detail/config.hpp"
+#include "yasio/config.hpp"
 
 #if YASIO_SSL_BACKEND == 1 // OpenSSL
 #  include <openssl/bio.h>
@@ -148,9 +148,9 @@ private:
 };
 
 #if YASIO_SSL_BACKEND == 1 // openssl
-#  include "yasio/core/openssl.inl"
+#  include "yasio/core/openssl_impl.hpp"
 #elif YASIO_SSL_BACKEND == 2 // mbedtls
-#  include "yasio/core/mbedtls.inl"
+#  include "yasio/core/mbedtls_impl.hpp"
 #else
 #  error "yasio - Unsupported ssl backend provided!"
 #endif

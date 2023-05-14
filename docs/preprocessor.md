@@ -1,6 +1,6 @@
 # yasio 宏定义
 
-以下宏定义可以控制 `yasio` 库的某些行为，可以在 [yasio/detail/config.hpp](https://github.com/yasio/yasio/blob/dev/yasio/detail/config.hpp) 定义或者在编译器预处理器定义
+以下宏定义可以控制 `yasio` 库的某些行为，可以在 [yasio/config.hpp](https://github.com/yasio/yasio/blob/dev/yasio/config.hpp) 定义或者在编译器预处理器定义
 
 |Name|Description|
 |----------|-----------------|

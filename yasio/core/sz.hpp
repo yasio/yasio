@@ -4,7 +4,9 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 /*
 The MIT License (MIT)
+
 Copyright (c) 2012-2023 HALX99
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -21,12 +23,35 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__UNREAL_HPP
-#define YASIO__UNREAL_HPP
+#ifndef YASIO__SZ_HPP
+#define YASIO__SZ_HPP
 
-#include "yasio/config.hpp"
+#include <stdint.h>
 
-YASIO_API void yasio_unreal_init();
-YASIO_API void yasio_unreal_cleanup();
+static const uint64_t YASIO__B  = (1);
+static const uint64_t YASIO__KB = (1024 * YASIO__B);
+static const uint64_t YASIO__MB = (1024 * YASIO__KB);
+static const uint64_t YASIO__GB = (1024 * YASIO__MB);
+static const uint64_t YASIO__TB = (1024 * YASIO__GB);
+static const uint64_t YASIO__PB = (1024 * YASIO__TB);
+static const uint64_t YASIO__EB = (1024 * YASIO__PB); // lgtm [cpp/unused-static-variable]
+
+#define YASIO__K YASIO__KB
+#define YASIO__M YASIO__MB
+#define YASIO__G YASIO__GB
+#define YASIO__T YASIO__TB
+#define YASIO__P YASIO__PB
+#define YASIO__E YASIO__EB
+#define YASIO__b YASIO__B
+#define YASIO__k YASIO__K
+#define YASIO__m YASIO__M
+#define YASIO__g YASIO__G
+#define YASIO__t YASIO__T
+#define YASIO__p YASIO__P
+#define YASIO__e YASIO__E
+
+#define YASIO_SZ(n, u) ((n)*YASIO__##u)
+
+#define YASIO_SZ_ALIGN(d, a) (((d) + ((a)-1)) & ~((a)-1))
 
 #endif

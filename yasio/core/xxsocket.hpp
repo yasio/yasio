@@ -38,8 +38,8 @@ SOFTWARE.
 #include <chrono>
 #include <functional>
 #include <memory>
-#include "yasio/detail/socket.hpp"
-#include "yasio/detail/logging.hpp"
+#include "yasio/core/socket.hpp"
+#include "yasio/core/logging.hpp"
 
 #if defined(_MSC_VER)
 #  pragma warning(push)

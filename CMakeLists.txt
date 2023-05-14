@@ -151,7 +151,7 @@ if (YASIO_USE_CARES)
 endif()
 
 ### The yasio core library project
-file(GLOB_RECURSE YASIO_CORE yasio/detail/*.hpp;yasio/detail/*.inl;yasio/core/*.hpp;yasio/core/*.cpp;yasio/stl/*.hpp)
+file(GLOB_RECURSE YASIO_CORE yasio/core/*.hpp;yasio/core/*.cpp;yasio/stl/*.hpp)
 list (APPEND YASIO_CORE
     yasio/compiler/feature_test.hpp
     yasio/yasio.hpp

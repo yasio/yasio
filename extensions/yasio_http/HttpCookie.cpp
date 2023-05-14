@@ -26,7 +26,7 @@
 
 #include "yasio_http/HttpCookie.h"
 #include "yasio_http/Uri.h"
-#include "yasio/detail/utils.hpp"
+#include "yasio/core/utils.hpp"
 #include "yasio/stl/string_view.hpp"
 #include "yasio_http/utils/fast_split.hpp"
 

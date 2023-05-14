@@ -30,7 +30,7 @@ SOFTWARE.
 #define YASIO_OBS_BUILTIN_STACK 1
 
 #include "yasio/yasio.hpp"
-#include "yasio/detail/ref_ptr.hpp"
+#include "yasio/core/ref_ptr.hpp"
 
 #if __has_include(<cocos/bindings/jswrapper/SeApi.h>) || defined(YASIO_CREATOR_30_OR_LATER)
 #  include "cocos/bindings/jswrapper/SeApi.h"
@@ -107,7 +107,7 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 {
   if (n > 0 && interval >= 0)
   {
-    yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
+    yasio::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
@@ -128,7 +128,7 @@ TIMER_ID delay(float delay, vcallback_t callback)
 {
   if (delay > 0)
   {
-    yasio::gc::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
+    yasio::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
     std::string key = StringUtil::format("STMR#%p", timerId);

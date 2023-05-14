@@ -38,14 +38,14 @@ SOFTWARE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "yasio/detail/thread_name.hpp"
+#include "yasio/core/thread_name.hpp"
 
 #if defined(YASIO_SSL_BACKEND)
 #  include "yasio/core/ssl.hpp"
 #endif
 
 #if defined(YASIO_USE_CARES)
-#  include "yasio/detail/ares.hpp"
+#  include "yasio/core/ares.hpp"
 #endif
 
 // clang-format off

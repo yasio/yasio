@@ -1,3 +1,9 @@
+yasio-3.39.10
+
+  1. Improve object_pool, ensure address of allocated object from pool align with `std::max_align_t`,
+   should fix optimized-build crash on android x86_64.
+
+
 yasio-3.39.9
 
   1. Remove unsafe option: `YOPT_S_FORWARD_EVENT`,  may cause internal channel behavior incorrect.

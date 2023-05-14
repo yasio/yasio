@@ -25,12 +25,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-// object_pool.hpp: a simple & high-performance object pool implementation v1.3.3
+// object_pool.hpp: a simple & high-performance object pool implementation v1.3.4
 #ifndef YASIO__OBJECT_POOL_HPP
 #define YASIO__OBJECT_POOL_HPP
 
 #include <assert.h>
 #include <stdlib.h>
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -49,21 +50,23 @@ namespace gc
 #define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
 #define YASIO_POOL_PREALLOCATE 1
 
-template <typename _Ty>
-static size_t aligned_storage_size()
-{
-  return sizeof(typename std::aligned_storage<sizeof(_Ty), std::alignment_of<_Ty>::value>::type);
-}
-
 namespace detail
 {
+template <typename _Ty>
+struct aligned_storage_size {
+  static const size_t value = sizeof(typename std::aligned_storage<sizeof(_Ty)>::type);
+};
+
 class object_pool {
   typedef struct free_link_node {
     free_link_node* next;
   }* free_link;
 
   typedef struct chunk_link_node {
-    chunk_link_node* next;
+    union {
+      chunk_link_node* next;
+      char padding[sizeof(std::max_align_t)];
+    };
     char data[0];
   }* chunk_link;
 
@@ -183,7 +186,7 @@ private:
 template <typename _Ty, typename _Mutex = std::mutex>
 class object_pool : public detail::object_pool {
 public:
-  object_pool(size_t _ElemCount = 512) : detail::object_pool(yasio::gc::aligned_storage_size<_Ty>(), _ElemCount) {}
+  object_pool(size_t _ElemCount = 128) : detail::object_pool(detail::aligned_storage_size<_Ty>::value, _ElemCount) {}
 
   template <typename... _Types>
   _Ty* construct(_Types&&... args)
@@ -218,7 +221,7 @@ class object_pool<_Ty, void> : public detail::object_pool {
   void operator=(const object_pool&) = delete;
 
 public:
-  object_pool(size_t _ElemCount = 512) : detail::object_pool(yasio::gc::aligned_storage_size<_Ty>(), _ElemCount) {}
+  object_pool(size_t _ElemCount = 128) : detail::object_pool(detail::aligned_storage_size<_Ty>::value, _ElemCount) {}
 
   template <typename... _Types>
   _Ty* construct(_Types&&... args)
@@ -286,7 +289,7 @@ public:                                                                         
 
 //////////////////////// allocator /////////////////
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector, DO NOT use at non-msvc compiler.
-template <class _Ty, size_t _ElemCount = 512, class _Mutex = void>
+template <class _Ty, size_t _ElemCount = 128, class _Mutex = void>
 class object_pool_allocator { // generic allocator for objects of class _Ty
 public:
   typedef _Ty value_type;

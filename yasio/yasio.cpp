@@ -646,7 +646,7 @@ int io_transport_kcp::write(sbyte_buffer&& buffer, completion_cb_t&& /*handler*/
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
   int len    = static_cast<int>(buffer.size());
   int retval = ::ikcp_send(kcp_, buffer.data(), len);
-  get_service().interrupt();
+  get_service().wakeup();
   return retval == 0 ? len : retval;
 }
 int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duration)

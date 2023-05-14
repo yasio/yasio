@@ -1097,10 +1097,11 @@ private:
 #endif
 
 #if defined(YASIO_HAVE_CARES)
-  YASIO__DECL static void ares_getaddrinfo_cb(void* arg, int status, int timeouts, ares_addrinfo* answerlist);
+  YASIO__DECL static void ares_getaddrinfo_cb(void* data, int status, int timeouts, ares_addrinfo* answerlist);
+  YASIO__DECL static void ares_sock_state_cb(void* data, socket_native_type socket_fd, int readable, int writable);
   YASIO__DECL void ares_work_started();
   YASIO__DECL void ares_work_finished();
-  YASIO__DECL int do_ares_fds(socket_native_type* socks, timeval& waitd_tv);
+  YASIO__DECL int ares_get_fds(socket_native_type* socks, highp_time_t& waitd_usec);
   YASIO__DECL void do_ares_process_fds(socket_native_type* socks, int count);
   YASIO__DECL void recreate_ares_channel();
   YASIO__DECL void config_ares_name_servers();
@@ -1114,9 +1115,6 @@ private:
 
   YASIO__DECL transport_handle_t allocate_transport(io_channel*, xxsocket_ptr&&);
   YASIO__DECL void deallocate_transport(transport_handle_t);
-
-  YASIO__DECL void register_descriptor(const socket_native_type fd, int events);
-  YASIO__DECL void deregister_descriptor(const socket_native_type fd, int events);
 
   // The major non-blocking event-loop
   YASIO__DECL void run(void);

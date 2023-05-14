@@ -9,7 +9,7 @@
 #include <chrono>
 #include <map>
 #include "yasio/detail/socket.hpp"
-#include "yasio/detail/pod_vector.hpp"
+#include "yasio/core/pod_vector.hpp"
 #include "yasio/core/select_interrupter.hpp"
 
 namespace yasio

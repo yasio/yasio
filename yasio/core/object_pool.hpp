@@ -45,6 +45,7 @@ SOFTWARE.
 
 namespace yasio
 {
+YASIO__NS_INLINE
 namespace gc
 {
 #define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
@@ -403,19 +404,10 @@ public:
   }
 };
 
-template <class _Ty, class _Other>
-inline bool operator==(const object_pool_allocator<_Ty>&, const object_pool_allocator<_Other>&) throw()
-{ // test for allocator equality
-  return (true);
-}
-
-template <class _Ty, class _Other>
-inline bool operator!=(const object_pool_allocator<_Ty>& _Left, const object_pool_allocator<_Other>& _Right) throw()
-{ // test for allocator inequality
-  return (!(_Left == _Right));
-}
-
 } // namespace gc
+#if !YASIO__HAS_CXX11
+using namespace yasio::gc;
+#endif
 } // namespace yasio
 
 #if defined(_MSC_VER)

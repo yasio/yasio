@@ -55,11 +55,7 @@ SOFTWARE.
 
 #if defined(YASIO_SSL_BACKEND)
 typedef struct ssl_ctx_st yssl_ctx_st;
-#  if YASIO_SSL_BACKEND == 2 || defined(YASIO_USE_OPENSSL_BIO)
 struct yssl_st;
-#  else
-typedef struct ssl_st yssl_st;
-#  endif
 #endif
 
 #if defined(YASIO_USE_CARES)

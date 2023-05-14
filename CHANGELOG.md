@@ -8,17 +8,22 @@ yasio-4.0.0
   3. Exclude kcp implemention from core.
   4. Add support forward packet on both send and recv stages.
   5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`.
-  6. Refactor pipe signal suppression.
-  7. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue` support.
-  8. Inline namespace `yasio::gc`.
+  6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue` support.
+  7. Remove namespace `yasio::gc`.
   
+  
+yasio-3.39.11
 
+  1. Refactor pipe signal suppression.
+  2. Refine fd_set_adapter as io_watcher.
+  
+  
 yasio-3.39.10
 
   1. Improve object_pool, ensure address of allocated object from pool align with `std::max_align_t`,
    should fix optimized-build crash on android x86_64.
-   
-
+  
+  
 yasio-3.39.9
 
   1. Remove unsafe option: `YOPT_S_FORWARD_EVENT`,  may cause internal channel behavior incorrect.

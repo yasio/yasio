@@ -145,15 +145,6 @@ SOFTWARE.
 */
 // #define YASIO_ENABLE_WEPOLL 1
 
-/*
-** Uncomment or add compiler flag -DYASIO_USE_OPENSSL_BIO to use openssl bio when YASIO_SSL_BACKEND=1
-*/
-// #define YASIO_USE_OPENSSL_BIO 1
-
-#if defined(__EMSCRIPTEN__) && !defined(YASIO_USE_OPENSSL_BIO)
-#  define YASIO_USE_OPENSSL_BIO 1
-#endif
-
 #if YASIO__HAS_EPOLL
 #  define epoll_close close
 typedef int epoll_handle_t;

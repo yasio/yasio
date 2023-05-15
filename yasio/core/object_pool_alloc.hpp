@@ -76,13 +76,13 @@ public:
   { // construct by copying (do nothing)
   }
 
-  template <class _Other, size_t _OtherElementCount, class _OtherMutex>
-  object_pool_allocator(const object_pool_allocator<_Other, _OtherElementCount, _OtherMutex>&) throw()
+  template <class _Other>
+  object_pool_allocator(const object_pool_allocator<_Other, _ElemCount, _Mutex>&) throw()
   { // construct from a related allocator (do nothing)
   }
 
-  template <class _Other, size_t _OtherElementCount, class _OtherMutex>
-  my_type& operator=(const object_pool_allocator<_Other, _OtherElementCount, _OtherMutex>&) throw()
+  template <class _Other>
+  my_type& operator=(const object_pool_allocator<_Other, _ElemCount, _Mutex>&) throw()
   { // assign from a related allocator (do nothing)
     return (*this);
   }

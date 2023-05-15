@@ -68,52 +68,36 @@ public:
   _Mutex mutex_;
 };
 
-#define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                      \
-public:                                                                                 \
-  static void* operator new(size_t /*size*/)                                            \
-  {                                                                                     \
-    return get_pool().allocate();                                                       \
-  }                                                                                     \
-                                                                                        \
-  static void* operator new(size_t /*size*/, std::nothrow_t)                            \
-  {                                                                                     \
-    return get_pool().allocate();                                                       \
-  }                                                                                     \
-                                                                                        \
-  static void operator delete(void* p)                                                  \
-  {                                                                                     \
-    get_pool().deallocate(p);                                                           \
-  }                                                                                     \
-                                                                                        \
-  static yasio::object_pool<ELEMENT_TYPE, void>& get_pool()                             \
-  {                                                                                     \
-    static yasio::object_pool<ELEMENT_TYPE, ::yasio::null_mutex> s_pool(ELEMENT_COUNT); \
-    return s_pool;                                                                      \
+#define DEFINE_OBJECT_POOL_ALLOCATION_ANY(ELEMENT_TYPE, ELEMENT_COUNT, MUTEX_TYPE) \
+public:                                                                            \
+  using object_pool_type = yasio::object_pool<ELEMENT_TYPE, MUTEX_TYPE>;           \
+  static void* operator new(size_t /*size*/)                                       \
+  {                                                                                \
+    return get_pool().allocate();                                                  \
+  }                                                                                \
+                                                                                   \
+  static void* operator new(size_t /*size*/, std::nothrow_t)                       \
+  {                                                                                \
+    return get_pool().allocate();                                                  \
+  }                                                                                \
+                                                                                   \
+  static void operator delete(void* p)                                             \
+  {                                                                                \
+    get_pool().deallocate(p);                                                      \
+  }                                                                                \
+                                                                                   \
+  static object_pool_type& get_pool()                                              \
+  {                                                                                \
+    static object_pool_type s_pool(ELEMENT_COUNT);                                 \
+    return s_pool;                                                                 \
   }
 
+// The non thread safe edition
+#define DEFINE_FAST_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT) DEFINE_OBJECT_POOL_ALLOCATION_ANY(ELEMENT_TYPE, ELEMENT_COUNT, ::yasio::null_mutex)
+
 // The thread safe edition
-#define DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)  \
-public:                                                                        \
-  static void* operator new(size_t /*size*/)                                   \
-  {                                                                            \
-    return get_pool().allocate();                                              \
-  }                                                                            \
-                                                                               \
-  static void* operator new(size_t /*size*/, std::nothrow_t)                   \
-  {                                                                            \
-    return get_pool().allocate();                                              \
-  }                                                                            \
-                                                                               \
-  static void operator delete(void* p)                                         \
-  {                                                                            \
-    get_pool().deallocate(p);                                                  \
-  }                                                                            \
-                                                                               \
-  static yasio::object_pool<ELEMENT_TYPE, std::mutex>& get_pool()              \
-  {                                                                            \
-    static yasio::object_pool<ELEMENT_TYPE, std::mutex> s_pool(ELEMENT_COUNT); \
-    return s_pool;                                                             \
-  }
+#define DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT) DEFINE_OBJECT_POOL_ALLOCATION_ANY(ELEMENT_TYPE, ELEMENT_COUNT, std::mutex)
+
 } // namespace yasio
 
 #endif

@@ -106,19 +106,16 @@ class singleton {
 
 public:
   // Return the singleton instance
-  template <typename... _Types, bool dealy = false>
+  template <typename... _Types>
   static pointer instance(_Types&&... args)
   {
-    auto& inst = _Myt::__single__;
-    if (inst.load(std::memory_order_acquire))
-      return inst;
+    return get_instance<false>(std::forward<_Types>(args)...);
+  }
 
-    {
-      std::lock_guard<std::mutex> lck(__mutex__);
-      if (!inst.load(std::memory_order_relaxed))
-        inst.store(singleton_constructor<_Ty, dealy>::construct(std::forward<_Types>(args)...), std::memory_order_release);
-    }
-    return inst;
+  template <typename... _Types>
+  static pointer instance1(_Types&&... args)
+  {
+    return get_instance<true>(std::forward<_Types>(args)...);
   }
 
   static void destroy(void)
@@ -131,6 +128,21 @@ public:
   static pointer peek() { return _Myt::__single__; }
 
 private:
+  template <bool delay, typename... _Types>
+  static pointer get_instance(_Types&&... args)
+  {
+    auto& inst = _Myt::__single__;
+    if (inst.load(std::memory_order_acquire))
+      return inst;
+
+    {
+      std::lock_guard<std::mutex> lck(__mutex__);
+      if (!inst.load(std::memory_order_relaxed))
+        inst.store(singleton_constructor<_Ty, delay>::construct(std::forward<_Types>(args)...), std::memory_order_release);
+    }
+    return inst;
+  }
+
   static std::atomic<_Ty*> __single__;
   static std::mutex __mutex__;
 

@@ -123,8 +123,8 @@ public:
 
   static void destroy(void)
   {
-    if (auto inst = _Myt::__single__.exchange(nullptr))
-      delete static_cast<_Ty*>(inst);
+    if (auto inst = _Myt::__single__.exchange(nullptr, std::memory_order_acq_rel))
+      delete inst;
   }
 
   // Peek the singleton instance

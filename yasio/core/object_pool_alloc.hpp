@@ -33,7 +33,7 @@ SOFTWARE.
 namespace yasio
 {
 // TEMPLATE class object_pool_allocator, can't used by sequence container
-template <class _Ty, size_t _ElemCount = 128, class _Mutex = void>
+template <class _Ty, size_t _ElemCount = 128, class _Mutex = ::yasio::null_mutex>
 class object_pool_allocator { // generic allocator for objects of class _Ty
 public:
   typedef _Ty value_type;

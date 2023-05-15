@@ -28,6 +28,10 @@ namespace yasio { inline namespace inet { class io_channel; } }
 |[io_channel::bytes_transferred](#bytes_transferred)|获取传输字节数|
 |[io_channel::connect_id](#bytes_transferred)|获取连接ID|
 
+## 要求
+
+**头文件:** yasio/yasio.hpp
+
 ## 注意
 
 当io_service对象构造后，最大信道数量不可改变， <br/>

@@ -32,7 +32,7 @@
     1. 开源社区已知比较有名的网络库有asio,libevent,libev,libuv，他们提供的都是非常基础的非阻塞多路io复用模型，并且，各平台底层会使用iocp,kqueue,epoll,select等模型，拿来做客户端网络，如连接管理，TCP粘包处理等都需要程序员自己处理。
     2. yasio将连接管理，TCP拆包都封装到了底层。
     3. yasio将TCP,UDP,KCP统一抽象成Transport更加方便使用。
-    4. yasio更轻量级，所有平台均使用select模型。
+    4. yasio更轻量级，所有平台默认均使用`poll`模型，也可通过定义预编译宏`YASIO_DISABLE_POLL`切换为`select`(不建议，有fd值超1024限制风险)。
 
 ??? question "yasio是否支持非阻塞域名解析?"
 

@@ -23,9 +23,9 @@ namespace yasio {}
 
 主机字节序转网络字节序。
 
-### 头文件
+## 要求
 
-`yasio/core/endian_portable.hpp`
+**头文件:** `yasio/core/endian_portable.hpp`
 
 ```cpp
 template <typename _Ty>

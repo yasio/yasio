@@ -80,6 +80,9 @@ namespace yasio { inline namespace inet { class xxsocket; } }
 |[xxsocket::getipsv](#getipsv)|获取本机支持的ip协议栈版本标志位|
 |[xxsocket::traverse_local_address](#traverse_local_address)|枚举本机地址|
 
+## 要求
+
+**头文件:** yasio/yasio.hpp
 
 ## <a name="xxsocket"></a> xxsocket::xxsocket
 

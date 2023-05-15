@@ -1,7 +1,7 @@
 ---
 title: "ibstream Class"
 date: "1/16/2021"
-f1_keywords: ["ibstream", "yasio/ibstream", ]
+f1_keywords: ["ibstream", "yasio/core/ibstream", ]
 helpviewer_keywords: []
 ---
 # ibstream_view Class
@@ -54,7 +54,7 @@ using fast_ibstream_view = basic_ibstream_view<endian::host_convert_tag>;
 
 ## 要求
 
-**头文件:** ibstream.hpp
+**头文件:** yasio/yasio.hpp
 
 ## <a name="ibstream_view"></a> ibstream_view::ibstream_view
 
@@ -326,7 +326,7 @@ bool load(const char* filename) const;
 
 `true` 加载成功，`false` 加载失败。
 
-### 示例
+## 示例
 
 请查看 [obstream::save](obstream-class.md#save)
 

@@ -32,6 +32,10 @@ namespace yasio { inline namespace inet { class io_event; } }
 |[io_event::transport_id](#transport_id)|获取事件传输会话ID|
 |[io_event::transport_ud](#transport_ud)|设置或获取事件传输会话用户数据|
 
+## 要求
+
+**头文件:** yasio/yasio.hpp
+
 
 ## <a name="kind"></a> io_event::kind
 

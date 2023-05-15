@@ -35,6 +35,10 @@ namespace yasio { inline namespace inet { inline namespace ip { struct endpoint;
 |[endpoint::to_string](#to_string)|将地址转换为字符串|
 |[endpoint::format_to](#format_to)|格式化地址到字符串|
 
+## 要求
+
+**头文件:** yasio/yasio.hpp
+
 ## <a name="endpoint"></a> endpoint::endpoint
 
 构造 `endpoint` 对象。

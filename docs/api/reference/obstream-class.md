@@ -59,7 +59,7 @@ using fast_obstream_span = basic_obstream_span<convert_traits<host_convert_tag>,
 
 ## 要求
 
-**头文件:** obstream.hpp
+**头文件:** yasio/yasio.hpp
 
 ## <a name="obstream"></a> obstream::obstream
 
@@ -246,7 +246,7 @@ yasio::sbyte_buffer& buffer();
 ```cpp
 // obstream_buffer.cpp
 // compile with: /EHsc
-#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main( )
 {
@@ -298,8 +298,7 @@ void save(const char* filename) const;
 ```cpp
 // obstream_save.cpp
 // compile with: /EHsc
-#include "yasio/obstream.hpp"
-#include "yasio/ibstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main( )
 {
@@ -334,7 +333,7 @@ int main( )
 
 ### obstream_any用法
 ```cpp
-#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main() {
     yasio::obstream_any<128> obs; // 使用栈空间, 注意不要太大，防止栈空间溢出
@@ -351,7 +350,7 @@ int main() {
 ### obstream_span + std::array用法
 
 ```cpp
-#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main() {
     std::array<char, 128> fb; // 使用栈空间, 注意不要太大，防止栈空间溢出
@@ -369,7 +368,7 @@ int main() {
 ### obstream_span + char[]用法
 
 ```cpp
-#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main() {
     char raw_fb[128]; // 使用栈空间, 注意不要太大，防止栈空间溢出
@@ -389,7 +388,7 @@ int main() {
 ### obstream_span + std::vector<char>用法
 
 ```cpp
-#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main() {
     std::vector<char> buf;
@@ -407,7 +406,7 @@ int main() {
 ### obstream_span + std::string用法
 
 ```cpp
-#include "yasio/obstream.hpp"
+#include "yasio/yasio.hpp"
 
 int main() {
     std::string buf;

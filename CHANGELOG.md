@@ -10,6 +10,7 @@ yasio-4.0.0
   5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`.
   6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue` support.
   7. Remove namespace `yasio::gc`.
+  8. Improve `object_pool` and `singleton`.
   
   
 yasio-3.39.11

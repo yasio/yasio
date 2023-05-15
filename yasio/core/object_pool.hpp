@@ -25,7 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-// object_pool.hpp: a simple & high-performance object pool implementation v1.3.4
+// object_pool.hpp: a simple & high-performance object pool implementation v1.3.5
 #ifndef YASIO__OBJECT_POOL_HPP
 #define YASIO__OBJECT_POOL_HPP
 
@@ -36,18 +36,15 @@ SOFTWARE.
 #include <mutex>
 #include <type_traits>
 
-#define OBJECT_POOL_DECL inline
-
 #if defined(_MSC_VER)
 #  pragma warning(push)
 #  pragma warning(disable : 4200)
 #endif
 
+#define OBJECT_POOL_DECL inline
+
 namespace yasio
 {
-#define YASIO_POOL_FL_BEGIN(chunk) reinterpret_cast<free_link_node*>(chunk->data)
-#define YASIO_POOL_PREALLOCATE 1
-
 namespace detail
 {
 template <typename _Ty>
@@ -56,10 +53,11 @@ struct aligned_storage_size {
 };
 
 class object_pool {
+#if defined(_DEBUG)
   typedef struct free_link_node {
     free_link_node* next;
   }* free_link;
-
+#endif
   typedef struct chunk_link_node {
     union {
       chunk_link_node* next;
@@ -73,12 +71,14 @@ class object_pool {
 
 public:
   OBJECT_POOL_DECL object_pool(size_t element_size, size_t element_count)
-      : free_link_(nullptr), chunk_(nullptr), element_size_(element_size), element_count_(element_count)
+      : first_(nullptr), chunk_(nullptr), element_size_(element_size), element_count_(element_count)
   {
-#if YASIO_POOL_PREALLOCATE
     release(allocate_from_process_heap()); // preallocate 1 chunk
-#endif
   }
+
+  OBJECT_POOL_DECL object_pool(size_t element_size, size_t element_count, std::false_type /*preallocate?*/)
+      : first_(nullptr), chunk_(nullptr), element_size_(element_size), element_count_(element_count)
+  {}
 
   OBJECT_POOL_DECL virtual ~object_pool(void) { this->purge(); }
 
@@ -94,88 +94,71 @@ public:
       delete[] (uint8_t*)(p);
     }
 
-    free_link_ = nullptr;
+    first_ = nullptr;
   }
 
   OBJECT_POOL_DECL void cleanup(void)
   {
     if (this->chunk_ == nullptr)
-    {
       return;
-    }
 
-    chunk_link_node* chunk  = this->chunk_;
-    free_link_node* linkend = this->tidy_chunk(chunk);
+    chunk_link_node* chunk = this->chunk_;
+    void* last             = this->tidy_chunk(chunk);
 
     while ((chunk = chunk->next) != nullptr)
     {
-      linkend->next = YASIO_POOL_FL_BEGIN(chunk);
-
-      linkend = this->tidy_chunk(chunk);
+      nextof(last) = firstof(chunk);
+      last         = this->tidy_chunk(chunk);
     }
 
-    linkend->next = nullptr;
+    nextof(last) = nullptr;
 
-    this->free_link_ = YASIO_POOL_FL_BEGIN(this->chunk_);
+    first_ = firstof(this->chunk_);
   }
 
-  OBJECT_POOL_DECL void* get(void)
-  {
-    if (this->free_link_ != nullptr)
-    {
-      return allocate_from_chunk();
-    }
-
-    return allocate_from_process_heap();
-  }
+  OBJECT_POOL_DECL void* get(void) { return (first_ != nullptr) ? allocate_from_chunk(first_) : allocate_from_process_heap(); }
 
   OBJECT_POOL_DECL void release(void* _Ptr)
   {
-    free_link_node* ptr = reinterpret_cast<free_link_node*>(_Ptr);
-    ptr->next           = this->free_link_;
-    this->free_link_    = ptr;
+    nextof(_Ptr) = first_;
+    first_       = _Ptr;
   }
 
 private:
-  OBJECT_POOL_DECL void* allocate_from_chunk(void)
+  OBJECT_POOL_DECL void* allocate_from_chunk(void* current)
   {
-    free_link_node* ptr = this->free_link_;
-    this->free_link_    = ptr->next;
-    return reinterpret_cast<void*>(ptr);
+    first_ = nextof(current);
+    return current;
   }
+  OBJECT_POOL_DECL static void* firstof(chunk_link chunk) { return chunk->data; }
+  OBJECT_POOL_DECL static void*& nextof(void* const ptr) { return *(static_cast<void**>(ptr)); }
   OBJECT_POOL_DECL void* allocate_from_process_heap(void)
   {
     chunk_link new_chunk = (chunk_link) new uint8_t[sizeof(chunk_link_node) + element_size_ * element_count_];
 #ifdef _DEBUG
     ::memset(new_chunk, 0x00, sizeof(chunk_link_node));
 #endif
-    tidy_chunk(new_chunk)->next = nullptr;
+    nextof(tidy_chunk(new_chunk)) = nullptr;
 
     // link the new_chunk
     new_chunk->next = this->chunk_;
     this->chunk_    = new_chunk;
 
     // allocate 1 object
-    auto ptr         = YASIO_POOL_FL_BEGIN(new_chunk);
-    this->free_link_ = ptr->next;
-
-    return reinterpret_cast<void*>(ptr);
+    return allocate_from_chunk(firstof(new_chunk));
   }
 
-  OBJECT_POOL_DECL free_link_node* tidy_chunk(chunk_link chunk)
+  OBJECT_POOL_DECL void* tidy_chunk(chunk_link chunk)
   {
-    char* rbegin = chunk->data + (element_count_ - 1) * element_size_;
-
-    for (char* ptr = chunk->data; ptr < rbegin; ptr += element_size_)
-    {
-      reinterpret_cast<free_link_node*>(ptr)->next = reinterpret_cast<free_link_node*>(ptr + element_size_);
-    }
-    return reinterpret_cast<free_link_node*>(rbegin);
+    char* last = chunk->data + (element_count_ - 1) * element_size_;
+    for (char* ptr = chunk->data; ptr < last; ptr += element_size_)
+      nextof(ptr) = (ptr + element_size_);
+    return last;
   }
 
 private:
-  free_link free_link_; // link to free head
-  chunk_link chunk_;    // chunk link
+  void* first_;      // link to free head
+  chunk_link chunk_; // chunk link
   const size_t element_size_;
   const size_t element_count_;
 };
@@ -285,7 +268,6 @@ public:                                                                        \
     return s_pool;                                                             \
   }
 
-//////////////////////// allocator /////////////////
 // TEMPLATE CLASS object_pool_allocator, can't used by std::vector, DO NOT use at non-msvc compiler.
 template <class _Ty, size_t _ElemCount = 128, class _Mutex = void>
 class object_pool_allocator { // generic allocator for objects of class _Ty

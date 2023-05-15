@@ -24,12 +24,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-A common use thread safe singleton class template, support non-delayed or delayed init with variadic args,
-
-refer to:
-  https://www.youtube.com/watch?v=c1gO9aB9nbs&t=1120s
 */
+// core/singleton.hpp: A common use thread safe singleton class template, support non-delayed or delayed init with variadic args.
+//
+// refer to:
+//   https://www.youtube.com/watch?v=c1gO9aB9nbs&t=1120s
+//
+// remark:
+// Singletons make it hard to determine the lifetime of an object, which can
+// lead to buggy code and spurious crashes.
+//
+// Instead of adding another singleton into the mix, try to identify either:
+//   a) An existing singleton that can manage your object's lifetime
+//   b) Locations where you can deterministically create the object and pass
+//      into other objects
+//
+// If you absolutely need a singleton, please keep them as trivial as possible
+// and ideally a leaf dependency. Singletons get problematic when they attempt
+// to do too much in their destructor or have circular dependencies.
 #ifndef YASIO__SINGLETON_HPP
 #define YASIO__SINGLETON_HPP
 #include <new>

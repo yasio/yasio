@@ -24,19 +24,20 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+A thread safe singleton class template
+refer to:
+  https://www.youtube.com/watch?v=c1gO9aB9nbs&t=1120s
 */
 #ifndef YASIO__SINGLETON_HPP
 #define YASIO__SINGLETON_HPP
 #include <new>
 #include <memory>
 #include <functional>
+#include <mutex>
+#include <atomic>
 
 #include "yasio/config.hpp"
-
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
-#  include <mutex>
-#  include <atomic>
-#endif
 
 namespace yasio
 {
@@ -100,12 +101,12 @@ public:
     if (_Myt::__single__)
       return _Myt::__single__;
 
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
-    std::lock_guard<std::mutex> lck(__mutex__);
-    if (_Myt::__single__)
-      return _Myt::__single__;
-#endif
-    return (_Myt::__single__ = singleton_constructor<_Ty>::construct(std::forward<_Types>(args)...));
+    {
+      std::lock_guard<std::mutex> lck(__mutex__);
+      if (_Myt::__single__ == nullptr)
+        _Myt::__single__ = singleton_constructor<_Ty>::construct(std::forward<_Types>(args)...);
+    }
+    return _Myt::__single__;
   }
 
   // Return the singleton instance with delayed init func
@@ -114,13 +115,12 @@ public:
   {
     if (_Myt::__single__)
       return _Myt::__single__;
-
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
-    std::lock_guard<std::mutex> lck(__mutex__);
-    if (_Myt::__single__)
-      return _Myt::__single__;
-#endif
-    return (_Myt::__single__ = singleton_constructor<_Ty, true>::construct(std::forward<_Types>(args)...));
+    {
+      std::lock_guard<std::mutex> lck(__mutex__);
+      if (_Myt::__single__ == nullptr)
+        _Myt::__single__ = singleton_constructor<_Ty, true>::construct(std::forward<_Types>(args)...);
+    }
+    return _Myt::__single__;
   }
 
   // Peek the singleton instance
@@ -128,9 +128,7 @@ public:
 
   static void destroy(void)
   {
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
     std::lock_guard<std::mutex> lck(__mutex__);
-#endif
     if (_Myt::__single__)
     {
       delete static_cast<_Ty*>(_Myt::__single__);
@@ -139,26 +137,19 @@ public:
   }
 
 private:
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
   static std::atomic<_Ty*> __single__;
   static std::mutex __mutex__;
-#else
-  static _Ty* __single__;
-#endif
+
 private:
   // disable construct, assign operation, copy construct also not allowed.
   singleton(void) = delete;
 };
 
-#if !defined(YASIO_DISABLE_CONCURRENT_SINGLETON)
 template <typename _Ty>
 std::atomic<_Ty*> singleton<_Ty>::__single__;
 template <typename _Ty>
 std::mutex singleton<_Ty>::__mutex__;
-#else
-template <typename _Ty>
-_Ty* singleton<_Ty>::__single__;
-#endif
+
 } // namespace yasio
 
 #endif

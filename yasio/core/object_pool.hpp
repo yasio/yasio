@@ -32,7 +32,11 @@ SOFTWARE.
 
 namespace yasio
 {
-template <typename _Ty, typename _Mutex = std::mutex>
+struct null_mutex {
+  void lock() {}
+  void unlock() {}
+};
+template <typename _Ty, typename _Mutex = ::yasio::null_mutex>
 class object_pool : public detail::object_pool {
 public:
   object_pool(size_t _ElemCount = 128) : detail::object_pool(detail::aligned_storage_size<_Ty>::value, _ElemCount) {}
@@ -64,52 +68,27 @@ public:
   _Mutex mutex_;
 };
 
-template <typename _Ty>
-class object_pool<_Ty, void> : public detail::object_pool {
-  object_pool(const object_pool&)    = delete;
-  void operator=(const object_pool&) = delete;
-
-public:
-  object_pool(size_t _ElemCount = 128) : detail::object_pool(detail::aligned_storage_size<_Ty>::value, _ElemCount) {}
-
-  template <typename... _Types>
-  _Ty* construct(_Types&&... args)
-  {
-    return new (allocate()) _Ty(std::forward<_Types>(args)...);
-  }
-
-  void destroy(void* _Ptr)
-  {
-    ((_Ty*)_Ptr)->~_Ty(); // call the destructor
-    release(_Ptr);
-  }
-
-  void* allocate() { return get(); }
-
-  void deallocate(void* _Ptr) { release(_Ptr); }
-};
-
-#define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)       \
-public:                                                                  \
-  static void* operator new(size_t /*size*/)                             \
-  {                                                                      \
-    return get_pool().allocate();                                        \
-  }                                                                      \
-                                                                         \
-  static void* operator new(size_t /*size*/, std::nothrow_t)             \
-  {                                                                      \
-    return get_pool().allocate();                                        \
-  }                                                                      \
-                                                                         \
-  static void operator delete(void* p)                                   \
-  {                                                                      \
-    get_pool().deallocate(p);                                            \
-  }                                                                      \
-                                                                         \
-  static yasio::object_pool<ELEMENT_TYPE, void>& get_pool()              \
-  {                                                                      \
-    static yasio::object_pool<ELEMENT_TYPE, void> s_pool(ELEMENT_COUNT); \
-    return s_pool;                                                       \
+#define DEFINE_OBJECT_POOL_ALLOCATION(ELEMENT_TYPE, ELEMENT_COUNT)                      \
+public:                                                                                 \
+  static void* operator new(size_t /*size*/)                                            \
+  {                                                                                     \
+    return get_pool().allocate();                                                       \
+  }                                                                                     \
+                                                                                        \
+  static void* operator new(size_t /*size*/, std::nothrow_t)                            \
+  {                                                                                     \
+    return get_pool().allocate();                                                       \
+  }                                                                                     \
+                                                                                        \
+  static void operator delete(void* p)                                                  \
+  {                                                                                     \
+    get_pool().deallocate(p);                                                           \
+  }                                                                                     \
+                                                                                        \
+  static yasio::object_pool<ELEMENT_TYPE, void>& get_pool()                             \
+  {                                                                                     \
+    static yasio::object_pool<ELEMENT_TYPE, ::yasio::null_mutex> s_pool(ELEMENT_COUNT); \
+    return s_pool;                                                                      \
   }
 
 // The thread safe edition

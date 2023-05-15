@@ -25,7 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-A thread safe singleton class template
+A common use thread safe singleton class template, support non-delayed or delayed init with variadic args,
+
 refer to:
   https://www.youtube.com/watch?v=c1gO9aB9nbs&t=1120s
 */
@@ -86,8 +87,6 @@ private:
   }
 };
 
-/// CLASS TEMPLATE singleton, support non-delayed or delayed init with variadic args
-/// the managed singleton object will be destructed after main function.
 template <typename _Ty>
 class singleton {
   typedef singleton<_Ty> _Myt;
@@ -95,46 +94,29 @@ class singleton {
 
 public:
   // Return the singleton instance
-  template <typename... _Types>
+  template <typename... _Types, bool dealy = false>
   static pointer instance(_Types&&... args)
   {
-    if (_Myt::__single__)
-      return _Myt::__single__;
+    auto& inst = _Myt::__single__;
+    if (inst.load(std::memory_order_acquire))
+      return inst;
 
     {
       std::lock_guard<std::mutex> lck(__mutex__);
-      if (_Myt::__single__ == nullptr)
-        _Myt::__single__ = singleton_constructor<_Ty>::construct(std::forward<_Types>(args)...);
+      if (!inst.load(std::memory_order_relaxed))
+        inst.store(singleton_constructor<_Ty, dealy>::construct(std::forward<_Types>(args)...), std::memory_order_release);
     }
-    return _Myt::__single__;
+    return inst;
   }
 
-  // Return the singleton instance with delayed init func
-  template <typename... _Types>
-  static pointer delayed(_Types&&... args)
+  static void destroy(void)
   {
-    if (_Myt::__single__)
-      return _Myt::__single__;
-    {
-      std::lock_guard<std::mutex> lck(__mutex__);
-      if (_Myt::__single__ == nullptr)
-        _Myt::__single__ = singleton_constructor<_Ty, true>::construct(std::forward<_Types>(args)...);
-    }
-    return _Myt::__single__;
+    if (auto inst = _Myt::__single__.exchange(nullptr))
+      delete static_cast<_Ty*>(inst);
   }
 
   // Peek the singleton instance
   static pointer peek() { return _Myt::__single__; }
-
-  static void destroy(void)
-  {
-    std::lock_guard<std::mutex> lck(__mutex__);
-    if (_Myt::__single__)
-    {
-      delete static_cast<_Ty*>(_Myt::__single__);
-      _Myt::__single__ = nullptr;
-    }
-  }
 
 private:
   static std::atomic<_Ty*> __single__;

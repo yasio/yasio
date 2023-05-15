@@ -50,9 +50,12 @@ public:
   typedef long difference_type;
 #endif
 
+  using object_pool_type = object_pool<_Ty, _Mutex>;
+  using my_type          = object_pool_allocator<_Ty, _ElemCount, _Mutex>;
+
   template <class _Other>
   struct rebind { // convert this type to _ALLOCATOR<_Other>
-    typedef object_pool_allocator<_Other> other;
+    typedef object_pool_allocator<_Other, _ElemCount, _Mutex> other;
   };
 
   pointer address(reference _Val) const
@@ -69,31 +72,31 @@ public:
   { // construct default allocator (do nothing)
   }
 
-  object_pool_allocator(const object_pool_allocator<_Ty>&) throw()
+  object_pool_allocator(const my_type&) throw()
   { // construct by copying (do nothing)
   }
 
-  template <class _Other>
-  object_pool_allocator(const object_pool_allocator<_Other>&) throw()
+  template <class _Other, size_t _OtherElementCount, class _OtherMutex>
+  object_pool_allocator(const object_pool_allocator<_Other, _OtherElementCount, _OtherMutex>&) throw()
   { // construct from a related allocator (do nothing)
   }
 
-  template <class _Other>
-  object_pool_allocator<_Ty>& operator=(const object_pool_allocator<_Other>&)
+  template <class _Other, size_t _OtherElementCount, class _OtherMutex>
+  my_type& operator=(const object_pool_allocator<_Other, _OtherElementCount, _OtherMutex>&) throw()
   { // assign from a related allocator (do nothing)
     return (*this);
   }
 
   void deallocate(pointer _Ptr, size_type)
   { // deallocate object at _Ptr, ignore size
-    _Spool().release(_Ptr);
+    _Spool().deallocate(_Ptr);
   }
 
   pointer allocate(size_type count)
   { // allocate array of _Count elements
     assert(count == 1);
     (void)count;
-    return static_cast<pointer>(_Spool().get());
+    return static_cast<pointer>(_Spool().allocate());
   }
 
   pointer allocate(size_type count, const void*)
@@ -140,9 +143,9 @@ public:
     return (0 < _Count ? _Count : 1);
   }
 
-  static object_pool<_Ty, _Mutex>& _Spool()
+  static object_pool_type& _Spool()
   {
-    static object_pool<_Ty, _Mutex> s_pool(_ElemCount);
+    static object_pool_type s_pool(_ElemCount);
     return s_pool;
   }
 };

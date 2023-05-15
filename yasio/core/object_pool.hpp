@@ -42,7 +42,7 @@ public:
   object_pool(size_t _ElemCount = 128) : detail::object_pool(detail::aligned_storage_size<_Ty>::value, _ElemCount) {}
 
   template <typename... _Types>
-  _Ty* construct(_Types&&... args)
+  _Ty* create(_Types&&... args)
   {
     return new (allocate()) _Ty(std::forward<_Types>(args)...);
   }

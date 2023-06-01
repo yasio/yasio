@@ -28,9 +28,18 @@ function build_ios()
     echo "Building iOS..."
 
     # cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
-    # cmake official cross-compiling doesn't works on latest macOS 10.15 + xcode11
-    # https://cmake.org/cmake/help/v3.17/manual/cmake-toolchains.7.html?highlight=iphoneos#cross-compiling-for-ios-tvos-or-watchos
     cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.mini.cmake" "-DCMAKE_OSX_ARCHITECTURES=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake --build build --config Release
+    
+    exit 0
+}
+
+function build_tvos()
+{  
+    echo "Building tvos..."
+
+    # cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_SYSROOT=appletvsimulator -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.mini.cmake" "-DCMAKE_OSX_ARCHITECTURES=arm64" -DCMAKE_SYSTEM_NAME=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
     cmake --build build --config Release
     
     exit 0
@@ -78,6 +87,8 @@ elif [ $BUILD_TARGET = "osx" ]; then
     build_osx
 elif [ $BUILD_TARGET = "ios" ]; then
     build_ios
+elif [ $BUILD_TARGET = "tvos" ]; then
+    build_tvos
 elif [ $BUILD_TARGET = "android" ]; then
     build_android
 else

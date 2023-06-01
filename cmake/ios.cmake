@@ -1,9 +1,41 @@
-# See: https://github.com/yasio/ios.mini.cmake
-# v4.0.0
+# The simple ios toolchain file: https://github.com/yasio/ios.cmake
+# v4.0.1
+# PLAT: iOS, tvOS
+# ARCHS: arm64, x86_64
+# DEPLOYMENT_TARGET: 11.0
+# SIMULATOR: TRUE, FALSE, UNDEFINED(auto determine by archs) 
+# ENABLE_BITCODE: TRUE(default)
 
-if(NOT DEFINED CMAKE_SYSTEM_NAME)
-    set(CMAKE_SYSTEM_NAME "iOS" CACHE STRING "The CMake system name for iOS")
+if(NOT DEFINED PLAT)
+    set(PLAT iOS CACHE STRING "" FORCE)
 endif()
+
+if(NOT DEFINED ARCHS)
+    set(ARCHS "arm64" CACHE STRING "" FORCE)
+endif()
+
+if(NOT DEFINED DEPLOYMENT_TARGET)
+    if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
+       set(DEPLOYMENT_TARGET "10.0" CACHE STRING "" FORCE)
+    else()
+       set(DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
+    endif()
+endif()
+
+# SIMULATOR, regards x86_64 as simulator if SIMULATOR not defined
+if((NOT DEFINED SIMULATOR) AND ("${ARCHS}" STREQUAL "x86_64"))
+    set(SIMULATOR TRUE CACHE BOOL "" FORCE)
+endif()
+
+# ENABLE_BITCODE, default ON
+if(NOT DEFINED ENABLE_BITCODE)
+    set(ENABLE_BITCODE TRUE CACHE BOOL "" FORCE)
+endif()
+
+# apply params
+set(CMAKE_SYSTEM_NAME ${PLAT} CACHE STRING "")
+set(CMAKE_OSX_ARCHITECTURES ${ARCHS} CACHE STRING "")
+set(CMAKE_OSX_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET} CACHE STRING "")
 
 # The best solution for fix try_compile failed with code sign currently
 # since cmake-3.18.2, not required
@@ -23,41 +55,22 @@ set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
 # clang: error: invalid iOS deployment version '--target=armv7-apple-ios13.6', 
 #        iOS 10 is the maximum deployment target for 32-bit targets
 # If not defined CMAKE_OSX_DEPLOYMENT_TARGET, cmake will choose latest deployment target
-if(NOT DEFINED DEPLOYMENT_TARGET)
-    if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
-       set(DEPLOYMENT_TARGET "10.0")
-    else()
-       set(DEPLOYMENT_TARGET "11.0")
-    endif()
-endif()
-if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
-    message(STATUS "The CMAKE_OSX_DEPLOYMENT_TARGET not defined, sets iOS minimum deployment target to ${DEPLOYMENT_TARGET}")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET} CACHE STRING "")
-endif()
 if(NOT DEFINED CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET)
     set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${CMAKE_OSX_DEPLOYMENT_TARGET} CACHE STRING "")
 endif()
 
-# Regards x86_64 as simulator
-if(NOT DEFINED CMAKE_OSX_ARCHITECTURES)
-    set(CMAKE_OSX_ARCHITECTURES "arm64"  CACHE STRING "")
-endif()
-if("${CMAKE_OSX_ARCHITECTURES}" MATCHES "x86_64")
-    if (CMAKE_SYSTEM_NAME EQUAL "iOS")
+if(SIMULATOR)
+    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(CMAKE_OSX_SYSROOT "iphonesimulator" CACHE STRING "")
-    elseif(CMAKE_SYSTEM_NAME EQUAL "tvOS")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
         set(CMAKE_OSX_SYSROOT "appletvsimulator" CACHE STRING "")
-    elseif(CMAKE_SYSTEM_NAME EQUAL "watchsimulator")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "watchsimulator")
         set(CMAKE_OSX_SYSROOT "watchsimulator" CACHE STRING "")
     else()
         message(FATAL_ERROR "CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME} unsupported!")
     endif()
 endif() 
 
-# ENABLE_BITCODE, default ON
-if(NOT DEFINED ENABLE_BITCODE
-    set(ENABLE_BITCODE TRUE)
-endif()
 if(ENABLE_BITCODE)
     set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
     set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")

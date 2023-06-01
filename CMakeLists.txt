@@ -216,8 +216,6 @@ if (APPLE)
            ${YASIO_CORE}
            ${THIRDPART_SRC}
         )
-        
-        set_xcode_property (${yasio_target_name} IPHONEOS_DEPLOYMENT_TARGET "7.0")
     else ()
         # set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_64_BIT)")
         if (BUILD_SHARED_LIBS)

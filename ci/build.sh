@@ -28,7 +28,7 @@ function build_ios()
     echo "Building iOS..."
 
     # cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
-    cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.mini.cmake" "-DCMAKE_OSX_ARCHITECTURES=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.cmake" "-DARCHS=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
     cmake --build build --config Release
     
     exit 0
@@ -39,7 +39,7 @@ function build_tvos()
     echo "Building tvos..."
 
     # cmake .. -GXcode -Bbuild_ios -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_SYSROOT=appletvsimulator -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
-    cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.mini.cmake" "-DCMAKE_OSX_ARCHITECTURES=arm64" -DCMAKE_SYSTEM_NAME=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
     cmake --build build --config Release
     
     exit 0

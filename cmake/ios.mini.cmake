@@ -1,4 +1,5 @@
 # See: https://github.com/yasio/ios.mini.cmake
+# v4.0.0
 
 if(NOT DEFINED CMAKE_SYSTEM_NAME)
     set(CMAKE_SYSTEM_NAME "iOS" CACHE STRING "The CMake system name for iOS")
@@ -50,6 +51,10 @@ if("${CMAKE_OSX_ARCHITECTURES}" MATCHES "x86_64")
     endif()
 endif() 
 
+# ENABLE_BITCODE, default ON
+if(NOT DEFINED ENABLE_BITCODE
+    set(ENABLE_BITCODE TRUE)
+endif()
 if(ENABLE_BITCODE)
     set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
     set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")

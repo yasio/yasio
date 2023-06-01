@@ -1,21 +1,28 @@
+#
 # The simple ios toolchain file: https://github.com/yasio/ios.cmake
-# v4.0.1
-# PLAT: iOS, tvOS
-# ARCHS: arm64, x86_64
-# DEPLOYMENT_TARGET: 11.0
-# SIMULATOR: TRUE, FALSE, UNDEFINED(auto determine by archs) 
-# ENABLE_BITCODE: TRUE(default)
+# version: 4.0.2
+#
+# The supported params:
+#   PLAT: iOS, tvOS, default: iOS
+#   ARCHS: arm64, x86_64, default: arm64
+#   DEPLOYMENT_TARGET: 11.0(default)
+#   SIMULATOR: TRUE, FALSE, UNDEFINED(auto determine by archs) 
+#   BITCODE: TRUE(default)
+#
 
+# PLAT
 if(NOT DEFINED PLAT)
     set(PLAT iOS CACHE STRING "" FORCE)
 endif()
 
+# ARCHS
 if(NOT DEFINED ARCHS)
     set(ARCHS "arm64" CACHE STRING "" FORCE)
 endif()
 
+# DEPLOYMENT_TARGET
 if(NOT DEFINED DEPLOYMENT_TARGET)
-    if("${CMAKE_OSX_ARCHITECTURES}" MATCHES ".*armv7.*")
+    if("${ARCHS}" MATCHES ".*armv7.*")
        set(DEPLOYMENT_TARGET "10.0" CACHE STRING "" FORCE)
     else()
        set(DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
@@ -27,9 +34,9 @@ if((NOT DEFINED SIMULATOR) AND ("${ARCHS}" STREQUAL "x86_64"))
     set(SIMULATOR TRUE CACHE BOOL "" FORCE)
 endif()
 
-# ENABLE_BITCODE, default ON
-if(NOT DEFINED ENABLE_BITCODE)
-    set(ENABLE_BITCODE TRUE CACHE BOOL "" FORCE)
+# BITCODE, default ON
+if(NOT DEFINED BITCODE)
+    set(BITCODE TRUE CACHE BOOL "" FORCE)
 endif()
 
 # apply params
@@ -71,7 +78,7 @@ if(SIMULATOR)
     endif()
 endif() 
 
-if(ENABLE_BITCODE)
+if(BITCODE)
     set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
     set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")
 else()

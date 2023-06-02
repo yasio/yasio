@@ -69,7 +69,7 @@ namespace ip
 {
 namespace compat
 {
-#  include "yasio/core/inet_ntop_impl.hpp"
+#  include "yasio/core/impl/inet_ntop.hpp"
 } // namespace compat
 } // namespace ip
 } // namespace inet

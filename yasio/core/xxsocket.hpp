@@ -196,7 +196,7 @@ YASIO__DECL int inet_pton(int af, const char* src, void* dst);
 inline bool is_global_in4_addr(const in_addr* addr) { return !IN4_IS_ADDR_LOOPBACK(addr) && !IN4_IS_ADDR_LINKLOCAL(addr); };
 inline bool is_global_in6_addr(const in6_addr* addr) { return !!IN6_IS_ADDR_GLOBAL(addr); };
 
-struct endpoint {
+struct endpoint final {
 public:
   enum
   {
@@ -212,7 +212,11 @@ public:
   static const size_t max_fmt_len = IN_MAX_ADDRSTRLEN + 2 /*[]*/ + sizeof("65535") /*:port*/;
 #endif
 
-  endpoint() { this->zeroset(); }
+  endpoint()
+  {
+    this->af(AF_UNSPEC);
+    this->len(0);
+  }
   endpoint(const endpoint& rhs) { this->as_is(rhs); }
   explicit endpoint(const addrinfo* info) { as_is(info); }
   explicit endpoint(const sockaddr* info) { as_is(info); }
@@ -226,14 +230,12 @@ public:
   endpoint& operator=(const endpoint& rhs) { return this->as_is(rhs); }
   endpoint& as_is(const endpoint& rhs)
   {
-    this->zeroset();
     memcpy(this, &rhs, sizeof(rhs));
     return *this;
   }
   endpoint& as_is(const addrinfo* info) { return this->as_is_raw(info->ai_addr, info->ai_addrlen); }
   endpoint& as_is(const sockaddr* addr)
   {
-    this->zeroset();
     switch (addr->sa_family)
     {
       case AF_INET:
@@ -284,7 +286,6 @@ public:
   }
   endpoint& as_in(int family, const void* addr_in, u_short port)
   {
-    this->zeroset();
     this->af(family);
     this->port(port);
     switch (family)
@@ -302,8 +303,6 @@ public:
   }
   endpoint& as_in(const char* ip, unsigned short port)
   {
-    this->zeroset();
-
     if (strchr(ip, ':'))
     { // ipv6
       char addr_part[IN_MAX_ADDRSTRLEN];
@@ -338,8 +337,6 @@ public:
   }
   endpoint& as_in(uint32_t addr, u_short port)
   {
-    this->zeroset();
-
     this->addr_v4(addr);
     this->port(port);
     return *this;
@@ -365,13 +362,10 @@ public:
 
   endpoint& as_is_raw(const void* ai_addr, size_t ai_addrlen)
   {
-    this->zeroset();
     ::memcpy(this, ai_addr, ai_addrlen);
     this->len(ai_addrlen);
     return *this;
   }
-
-  void zeroset() { ::memset(this, 0x0, sizeof(*this)); }
 
   void af(int v) { sa_.sa_family = static_cast<u_short>(v); }
   int af() const { return sa_.sa_family; }
@@ -1085,7 +1079,7 @@ public:
     {
       if (ai->ai_family == AF_INET6 || ai->ai_family == AF_INET)
       {
-        if (callback(endpoint(ai)))
+        if (callback(ai))
           break;
       }
     }

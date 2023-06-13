@@ -27,6 +27,18 @@ option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+set(YASIO_ROOT ${CMAKE_CURRENT_LIST_DIR})
+
+message(STATUS "YASIO_ROOT=${YASIO_ROOT}")
+message(STATUS "CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "MSVC=${MSVC}, MSVC_IDE=${MSVC_IDE}")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set(_MSVC TRUE)
+else(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(_CLANG TRUE)
+endif()
+
 # --- The C/C++ standard
 if (NOT MSVC)
     if (NOT CXX_STD)
@@ -76,10 +88,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 endif()
 
 if (WIN32)
-    if (NOT MINGW)
-        add_compile_options(/GF /Bv)
+    if (MSVC)
+        add_compile_options(/GF)
         add_definitions(-D_CRT_SECURE_NO_WARNINGS -DUNICODE -D_UNICODE -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
         remove_definitions(-D_MBCS)
+        if(_MSVC)
+            add_compile_options(/Bv)
+        endif()
     else()
         add_definitions(-D__STDC_FORMAT_MACROS)
     endif()
@@ -87,6 +102,11 @@ endif()
 
 if (NOT DEFINED YASIO_SSL_BACKEND)
     set(YASIO_SSL_BACKEND 2)
+endif()
+
+# Force set ssl backend to openssl for windows clang compiler happy
+if (WIN32 AND _CLANG)
+    set(YASIO_SSL_BACKEND 1)
 endif()
 
 if (NOT DEFINED YASIO_ENABLE_HALF_FLOAT)
@@ -244,8 +264,6 @@ else ( ) # linux/win32/android
     )
 endif ( )
 
-yasio_config_target_outdir(${yasio_target_name})
-    
 if ( WIN32 )
     target_link_libraries(${yasio_target_name}
         ws2_32
@@ -411,6 +429,12 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_DISABLE_EPOLL)
     yasio_config_pred(${target_name} YASIO_DISABLE_KQUEUE)
     yasio_config_pred(${target_name} YASIO_ENABLE_WEPOLL)
+    yasio_config_target_outdir(${yasio_target_name})
+endmacro()
+
+macro (yasio_config_ext_options target_name)
+    yasio_config_lib_options(${target_name})
+    target_include_directories(${target_name} PUBLIC "${YASIO_ROOT}/extensions")
 endmacro()
 
 yasio_config_lib_options(${yasio_target_name})
@@ -452,8 +476,6 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
         configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/sslcerts.hpp" @ONLY)
     endif()
     
-    include_directories("extensions")
-    
     # llhttp for extensions: yasio_http, ...
     if (NOT BUILD_SHARED_LIBS)
       set (BUILD_SHARED_LIBS FALSE CACHE BOOL "")
@@ -464,13 +486,10 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     # httptest
     add_subdirectory(extensions/yasio_http)
     target_link_libraries(yasio_http llhttp::llhttp)
-    target_include_directories(yasio_http PUBLIC "thirdparty/llhttp/include")
-    yasio_config_lib_options(yasio_http)
-    yasio_config_target_outdir(yasio_http)
+    yasio_config_ext_options(yasio_http)
 
     add_subdirectory(extensions/yasio_kcp)
-    yasio_config_lib_options(yasio_kcp)
-    yasio_config_target_outdir(yasio_kcp)
+    yasio_config_ext_options(yasio_kcp)
 
     add_subdirectory(tests/http)
 endif ()

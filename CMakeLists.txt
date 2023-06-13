@@ -19,6 +19,7 @@ set(yasio_target_name yasio)
 project(${yasio_target_name})
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
+option(YASIO_BUILD_EXTS "Build yasio extensions" ON)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
@@ -34,9 +35,9 @@ message(STATUS "CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "MSVC=${MSVC}, MSVC_IDE=${MSVC_IDE}")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(_MSVC TRUE)
-else(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(_CLANG TRUE)
+    set(FULL_MSVC TRUE)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(FULL_CLANG TRUE)
 endif()
 
 # --- The C/C++ standard
@@ -92,7 +93,7 @@ if (WIN32)
         add_compile_options(/GF)
         add_definitions(-D_CRT_SECURE_NO_WARNINGS -DUNICODE -D_UNICODE -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
         remove_definitions(-D_MBCS)
-        if(_MSVC)
+        if(FULL_MSVC)
             add_compile_options(/Bv)
         endif()
     else()
@@ -444,6 +445,32 @@ if (MSVC_IDE)
   target_sources(${yasio_target_name} PRIVATE yasio/yasio.natvis)
 endif()
 
+if(YASIO_SSL_BACKEND)
+    add_subdirectory(tests/ssl)
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem,${CMAKE_CURRENT_LIST_DIR}/certs/ca-cer.pem" SSLTEST_CACERT)
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-cer.pem" SSLTEST_CERT)
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-prk.pem" SSLTEST_PKEY)
+    # ${CMAKE_BINARY_DIR} will be set include for all targets by cmake auto
+    configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/sslcerts.hpp" @ONLY)
+endif()
+
+if(YASIO_BUILD_EXTS)
+    # llhttp for extensions: yasio_http, ...
+    if (NOT BUILD_SHARED_LIBS)
+        set (BUILD_SHARED_LIBS FALSE CACHE BOOL "")
+        set (BUILD_STATIC_LIBS TRUE CACHE BOOL "")
+    endif()
+    add_subdirectory(thirdparty/llhttp)
+
+    # httptest
+    add_subdirectory(extensions/yasio_http)
+    target_link_libraries(yasio_http llhttp::llhttp)
+    yasio_config_ext_options(yasio_http)
+
+    add_subdirectory(extensions/yasio_kcp)
+    yasio_config_ext_options(yasio_kcp)
+endif()
+
 # The tests & examples
 if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     add_subdirectory(tests/tcp)
@@ -466,31 +493,6 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
         target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)
     endif()
     add_subdirectory(examples/ftp_server)
-
-    if(YASIO_SSL_BACKEND)
-        add_subdirectory(tests/ssl)
-        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem,${CMAKE_CURRENT_LIST_DIR}/certs/ca-cer.pem" SSLTEST_CACERT)
-        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-cer.pem" SSLTEST_CERT)
-        file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-prk.pem" SSLTEST_PKEY)
-        # ${CMAKE_BINARY_DIR} will be set include for all targets by cmake auto
-        configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/sslcerts.hpp" @ONLY)
-    endif()
-    
-    # llhttp for extensions: yasio_http, ...
-    if (NOT BUILD_SHARED_LIBS)
-      set (BUILD_SHARED_LIBS FALSE CACHE BOOL "")
-      set (BUILD_STATIC_LIBS TRUE CACHE BOOL "")
-    endif()
-    add_subdirectory(thirdparty/llhttp)
-
-    # httptest
-    add_subdirectory(extensions/yasio_http)
-    target_link_libraries(yasio_http llhttp::llhttp)
-    yasio_config_ext_options(yasio_http)
-
-    add_subdirectory(extensions/yasio_kcp)
-    yasio_config_ext_options(yasio_kcp)
-
     add_subdirectory(tests/http)
 endif ()
 

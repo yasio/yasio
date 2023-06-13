@@ -94,11 +94,11 @@ public:
      */
     enum class Type
     {
-        GET,
-        POST,
-        PUT,
-        DELETE,
-        UNKNOWN,
+        Get,
+        Post,
+        Put,
+        Delete,
+        Unknown,
     };
 
     /**
@@ -108,7 +108,7 @@ public:
          new/retain/release still works, which means you need to release it manually
          Please refer to HttpRequestTest.cpp to find its usage.
      */
-    HttpRequest() : _requestType(Type::UNKNOWN), _pCallback(nullptr), _pUserData(nullptr) {}
+    HttpRequest() : _requestType(Type::Unknown), _pCallback(nullptr), _pUserData(nullptr) {}
 
     /** Destructor. */
     virtual ~HttpRequest() {}

@@ -148,7 +148,7 @@ private:
             {
                 auto redirectUrl = iter->second;
                 if (_responseCode == 302)
-                    getHttpRequest()->setRequestType(HttpRequest::Type::GET);
+                    getHttpRequest()->setRequestType(HttpRequest::Type::Get);
                 // YASIO_LOG("Process url redirect (%d): %s", _responseCode, redirectUrl.c_str());
                 return setLocation(redirectUrl, true);
             }

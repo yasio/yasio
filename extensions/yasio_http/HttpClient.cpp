@@ -30,8 +30,6 @@
 #include <errno.h>
 #include "yasio/yasio.hpp"
 
-#undef DELETE  // from winnt.h
-
 using namespace yasio;
 
 namespace yasio_ext
@@ -362,17 +360,17 @@ void HttpClient::handleNetworkEvent(yasio::io_event* event)
             auto request     = response->getHttpRequest();
             switch (request->getRequestType())
             {
-            case HttpRequest::Type::GET:
+            case HttpRequest::Type::Get:
                 obs.write_bytes("GET");
                 break;
-            case HttpRequest::Type::POST:
+            case HttpRequest::Type::Post:
                 obs.write_bytes("POST");
                 usePostData = true;
                 break;
-            case HttpRequest::Type::DELETE:
+            case HttpRequest::Type::Delete:
                 obs.write_bytes("DELETE");
                 break;
-            case HttpRequest::Type::PUT:
+            case HttpRequest::Type::Put:
                 obs.write_bytes("PUT");
                 usePostData = true;
                 break;

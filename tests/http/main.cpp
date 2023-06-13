@@ -10,7 +10,7 @@
 using namespace yasio;
 using namespace yasio_ext::network;
 
-#define CHROME_UA "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.5359.125 Safari/537.36"
+#define CHROME_UA "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
 void yasioTest()
 {
@@ -20,8 +20,8 @@ void yasioTest()
   auto request = new HttpRequest();
 
   request->setHeaders(std::vector<std::string>{CHROME_UA});
-  request->setUrl("https://56.31.23.11");
-  request->setRequestType(HttpRequest::Type::GET);
+  request->setUrl("https://github.com/yasio");
+  request->setRequestType(HttpRequest::Type::Get);
 
   auto response = httpClient->sendSync(request);
   request->release();

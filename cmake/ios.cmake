@@ -7,7 +7,7 @@
 #   ARCHS: arm64, x86_64, default: arm64
 #   DEPLOYMENT_TARGET: 11.0(default)
 #   SIMULATOR: TRUE, FALSE, UNDEFINED(auto determine by archs) 
-#   BITCODE: TRUE(default)
+#   ENABLE_BITCODE: FALSE(default)
 #
 
 # PLAT
@@ -34,9 +34,9 @@ if((NOT DEFINED SIMULATOR) AND ("${ARCHS}" STREQUAL "x86_64"))
     set(SIMULATOR TRUE CACHE BOOL "" FORCE)
 endif()
 
-# BITCODE, default ON
-if(NOT DEFINED BITCODE)
-    set(BITCODE TRUE CACHE BOOL "" FORCE)
+# ENABLE_BITCODE, default OFF, xcode14: Building with bitcode is deprecated. Please update your project and/or target settings to disable bitcode
+if(NOT DEFINED ENABLE_BITCODE)
+    set(ENABLE_BITCODE FALSE CACHE BOOL "" FORCE)
 endif()
 
 # apply params
@@ -78,7 +78,7 @@ if(SIMULATOR)
     endif()
 endif() 
 
-if(BITCODE)
+if(ENABLE_BITCODE)
     set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
     set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")
 else()

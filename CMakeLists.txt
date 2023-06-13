@@ -446,12 +446,12 @@ if (MSVC_IDE)
 endif()
 
 if(YASIO_SSL_BACKEND)
-    add_subdirectory(tests/ssl)
     file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/cacert.pem,${CMAKE_CURRENT_LIST_DIR}/certs/ca-cer.pem" SSLTEST_CACERT)
     file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-cer.pem" SSLTEST_CERT)
     file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/certs/server-prk.pem" SSLTEST_PKEY)
     # ${CMAKE_BINARY_DIR} will be set include for all targets by cmake auto
     configure_file("${CMAKE_CURRENT_LIST_DIR}/certs/sslcerts.hpp.in" "${CMAKE_BINARY_DIR}/sslcerts.hpp" @ONLY)
+    target_include_directories(${yasio_target_name} INTERFACE ${CMAKE_BINARY_DIR})
 endif()
 
 if(YASIO_BUILD_EXTS)
@@ -462,17 +462,18 @@ if(YASIO_BUILD_EXTS)
     endif()
     add_subdirectory(thirdparty/llhttp)
 
-    # httptest
+    # yasio_http
     add_subdirectory(extensions/yasio_http)
     target_link_libraries(yasio_http llhttp::llhttp)
     yasio_config_ext_options(yasio_http)
 
+    # yasio_kcp, not implemented yet
     add_subdirectory(extensions/yasio_kcp)
     yasio_config_ext_options(yasio_kcp)
 endif()
 
 # The tests & examples
-if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
+if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS AND NOT ANDROID)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/icmp)
     add_subdirectory(tests/mcast)
@@ -494,6 +495,9 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     endif()
     add_subdirectory(examples/ftp_server)
     add_subdirectory(tests/http)
+    if (YASIO_SSL_BACKEND)
+        add_subdirectory(tests/ssl)
+    endif()
 endif ()
 
 ### Sets startup project for vs .sln

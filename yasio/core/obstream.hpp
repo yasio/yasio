@@ -196,7 +196,7 @@ public:
   using buffer_implementation_type = typename buffer_type::implementation_type;
   using my_type                    = binary_writer_impl<convert_traits_type, buffer_type>;
 
-  static const size_t npos = -1;
+  static const size_t npos = static_cast<size_t>(-1);
 
   binary_writer_impl(buffer_type* outs) : outs_(outs) {}
   ~binary_writer_impl() {}

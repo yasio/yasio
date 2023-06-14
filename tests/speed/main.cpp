@@ -102,17 +102,17 @@ static const char* proto_name(int myproto)
   return protos[myproto];
 }
 
-static void sbtoa(double speedInBytes, char* buf)
+static void sbtoa(double speedInBytes, char* buf, size_t buf_len)
 {
   double speedInBits = speedInBytes * 8;
   if (speedInBits < 1024)
-    sprintf(buf, "%gbits", speedInBits);
+    snprintf(buf, buf_len, "%gbits", speedInBits);
   else if (speedInBits < 1024 * 1024)
-    sprintf(buf, "%.1lfKbits", speedInBits / 1024);
+    snprintf(buf, buf_len, "%.1lfKbits", speedInBits / 1024);
   else if (speedInBits < 1024 * 1024 * 1024)
-    sprintf(buf, "%.1lfMbits", speedInBits / 1024 / 1024);
+    snprintf(buf, buf_len, "%.1lfMbits", speedInBits / 1024 / 1024);
   else
-    sprintf(buf, "%.1lfGbits", speedInBits / 1024 / 1024 / 1024);
+    snprintf(buf, buf_len, "%.1lfGbits", speedInBits / 1024 / 1024 / 1024);
 }
 
 static void print_speed_detail(double interval, double time_elapsed)

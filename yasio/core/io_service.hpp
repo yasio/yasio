@@ -392,8 +392,9 @@ struct io_hostent {
 class YASIO_API highp_timer {
 public:
   highp_timer(io_service& service) : service_(service){};
-  highp_timer(const highp_timer&) = delete;
-  highp_timer(highp_timer&&)      = delete;
+  highp_timer(const highp_timer&)            = delete;
+  highp_timer(highp_timer&&)                 = delete;
+  highp_timer& operator=(const highp_timer&) = delete;
   void expires_from_now(const std::chrono::microseconds& duration)
   {
     this->duration_    = duration;

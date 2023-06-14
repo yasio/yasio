@@ -1890,7 +1890,7 @@ void io_service::start_query(io_channel* ctx)
   const char* service        = nullptr;
   if (ctx->remote_port_ > 0)
   {
-    sprintf(sport, "%u", ctx->remote_port_); // It's enough for unsigned short, so use sprintf ok.
+    snprintf(sport, sizeof(sport), "%u", ctx->remote_port_);
     service = sport;
   }
   ares_work_started();

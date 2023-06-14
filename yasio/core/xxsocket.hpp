@@ -41,11 +41,6 @@ SOFTWARE.
 #include "yasio/core/socket.hpp"
 #include "yasio/core/logging.hpp"
 
-#if defined(_MSC_VER)
-#  pragma warning(push)
-#  pragma warning(disable : 4996)
-#endif
-
 namespace yasio
 {
 YASIO__NS_INLINE
@@ -351,8 +346,8 @@ public:
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
   endpoint& as_un(const char* name)
   {
-    int n = snprintf(un_.sun_path, sizeof(un_.sun_path) - 1, "%s", name);
-    if (n > 0)
+    int n = snprintf(un_.sun_path, sizeof(un_.sun_path), "%s", name);
+    if (n > 0 && n < sizeof(un_.sun_path))
     {
       un_.sun_family = AF_UNIX;
       this->len(offsetof(struct sockaddr_un, sun_path) + n + 1);
@@ -470,7 +465,9 @@ public:
    *    buf: the buffer to output
    *    buf_len: the buffer len, must be at least endpoint::max_fmt_len
    * @returns:
-   *    the number of character written to the buf without null-termianted charactor
+   *    The number of characters that would have been written if n had been sufficiently large, not counting the terminating null character.
+   *    If an encoding error occurs, a negative number is returned.
+   *    Notice that only when this returned value is non-negative and less than n, the string has been completely written.
    *
    * @remark:
    *   The buffer result should be
@@ -485,11 +482,11 @@ public:
       switch (af())
       {
         case AF_INET:
-          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buf, buf_len));
+          n = strlen(compat::inet_ntop(AF_INET, &in4_.sin_addr, buf, static_cast<socklen_t>(buf_len)));
           break;
         case AF_INET6:
           buf[n++] = '[';
-          n += strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, buf + n, buf_len - n));
+          n += strlen(compat::inet_ntop(AF_INET6, &in6_.sin6_addr, buf + n, static_cast<socklen_t>(buf_len - n)));
           buf[n++] = ']';
           break;
 #if defined(YASIO_ENABLE_UDS) && YASIO__HAS_UDS
@@ -508,7 +505,11 @@ public:
         {
           u_short p = this->port();
           if (!(flags & fmt_no_port_0) || p != 0)
-            n += sprintf(buf + n, ":%u", (unsigned int)p);
+          {
+            int np = snprintf(buf + n, buf_len - n, ":%u", (unsigned int)p);
+            if (np > 0)
+              n += np;
+          }
         }
       }
       return n;
@@ -541,7 +542,7 @@ public:
       auto offst = s.find(fmt);
       if (offst != std::string::npos)
       {
-        sprintf(snum, "%u", addr_bytes[idx]);
+        snprintf(snum,sizeof(snum), "%u", addr_bytes[idx]);
         s.replace(offst, _N0, snum);
       }
     }
@@ -1077,7 +1078,7 @@ public:
     const char* service         = nullptr;
     if (port > 0)
     {
-      sprintf(buffer, "%u", port); // It's enough for unsigned short, so use sprintf ok.
+      snprintf(buffer, sizeof(buffer), "%u", port);
       service = buffer;
     }
     int error = getaddrinfo(hostname, service, &hint, &answerlist);
@@ -1147,10 +1148,6 @@ inline bool operator==(const yasio::inet::ip::endpoint& lhs, const yasio::inet::
   return !(lhs < rhs) && !(rhs < lhs);
 }
 } // namespace std
-
-#if defined(_MSC_VER)
-#  pragma warning(pop)
-#endif
 
 #if defined(YASIO_HEADER_ONLY)
 #  include "yasio/core/xxsocket.cpp" // lgtm [cpp/include-non-header]

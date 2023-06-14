@@ -19,7 +19,7 @@ set(yasio_target_name yasio)
 project(${yasio_target_name})
 
 #option ( LUA_COMPAT_MODULE "compat module" ON)
-option(YASIO_BUILD_EXTS "Build yasio extensions" ON)
+option(YASIO_BUILD_EXT_HTTP "Build yasio http extension" ON)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
 option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
@@ -454,7 +454,7 @@ if(YASIO_SSL_BACKEND)
     target_include_directories(${yasio_target_name} INTERFACE ${CMAKE_BINARY_DIR})
 endif()
 
-if(YASIO_BUILD_EXTS)
+if(YASIO_BUILD_EXT_HTTP)
     # llhttp for extensions: yasio_http, ...
     if (NOT BUILD_SHARED_LIBS)
         set (BUILD_SHARED_LIBS FALSE CACHE BOOL "")
@@ -466,10 +466,6 @@ if(YASIO_BUILD_EXTS)
     add_subdirectory(extensions/yasio_http)
     target_link_libraries(yasio_http llhttp::llhttp)
     yasio_config_ext_options(yasio_http)
-
-    # yasio_kcp, not implemented yet
-    add_subdirectory(extensions/yasio_kcp)
-    yasio_config_ext_options(yasio_kcp)
 endif()
 
 # The tests & examples

@@ -106,51 +106,45 @@ YASIO__DECL void yssl_ctx_free(yssl_ctx_st*& ctx)
 YASIO__DECL int yssl_bio_out_write(BIO* bio, const char* buf, int blen)
 {
   auto backend = reinterpret_cast<yssl_st*>(BIO_get_data(bio));
-  int nwritten;
-  int result = 0;
 
-  nwritten = ::send(backend->fd, buf, blen, YASIO_MSG_FLAG);
+  int nwritten = yasio::xxsocket::send(backend->fd, buf, blen, YASIO_MSG_FLAG);
   BIO_clear_retry_flags(bio);
   if (nwritten < 0)
   {
-    result = yasio::xxsocket::get_last_errno();
+    int result = yasio::xxsocket::get_last_errno();
     if (EAGAIN == result || EWOULDBLOCK == result)
       BIO_set_retry_write(bio);
   }
-  return (int)nwritten;
+  return nwritten;
 }
 YASIO__DECL int yssl_bio_in_read(BIO* bio, char* buf, int blen)
 {
   auto backend = reinterpret_cast<yssl_st*>(BIO_get_data(bio));
-  int nread;
   if (!buf || !backend)
     return 0;
 
   // recv data from kernel
-  int result = 0;
-  nread      = ::recv(backend->fd, buf, blen, 0);
+  int nread      = yasio::xxsocket::recv(backend->fd, buf, blen, 0);
   BIO_clear_retry_flags(bio);
   if (nread < 0)
   {
-    result = yasio::xxsocket::get_last_errno();
+    int result = yasio::xxsocket::get_last_errno();
     if (EAGAIN == result || EWOULDBLOCK == result)
       BIO_set_retry_read(bio);
   }
 
-  return (int)nread;
+  return nread;
 }
-YASIO__DECL long yssl_bio_ctrl(BIO* bio, int cmd, long num, void* ptr)
+YASIO__DECL long yssl_bio_ctrl(BIO* bio, int cmd, long num, void* /*ptr*/)
 {
   long ret = 1;
-
-  (void)ptr;
   switch (cmd)
   {
     case BIO_CTRL_GET_CLOSE:
-      ret = (long)BIO_get_shutdown(bio);
+      ret = static_cast<long>(BIO_get_shutdown(bio));
       break;
     case BIO_CTRL_SET_CLOSE:
-      BIO_set_shutdown(bio, (int)num);
+      BIO_set_shutdown(bio, static_cast<int>(num));
       break;
     case BIO_CTRL_FLUSH:
       /* we do no delayed writes, but if we ever would, this

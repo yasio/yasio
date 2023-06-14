@@ -123,8 +123,8 @@ static void print_speed_detail(double interval, double time_elapsed)
   if (((time_elapsed - last_print_time) > interval) && (send_total_bytes != s_send_total_bytes || recv_total_bytes != s_recv_total_bytes))
   {
     char str_send_speed[128], str_recv_speed[128];
-    sbtoa(s_send_speed, str_send_speed);
-    sbtoa(s_recv_speed, str_recv_speed);
+    sbtoa(s_send_speed, str_send_speed, sizeof(str_send_speed));
+    sbtoa(s_recv_speed, str_recv_speed, sizeof(str_recv_speed));
     printf("Speed: send=%s/s recv=%s/s, Total Time: %g(s), Total Bytes: send=%lld recv=%lld\n", str_send_speed, str_recv_speed, time_elapsed,
            s_send_total_bytes, s_recv_total_bytes);
 

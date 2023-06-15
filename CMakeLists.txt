@@ -38,6 +38,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(FULL_MSVC TRUE)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(FULL_CLANG TRUE)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(FULL_GCC TRUE)
 endif()
 
 # --- The C/C++ standard
@@ -89,7 +91,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 endif()
 
 if (WIN32)
-    if (MSVC)
+    if (NOT FULL_GCC)
         add_compile_options(/GF)
         add_definitions(-D_CRT_SECURE_NO_WARNINGS -DUNICODE -D_UNICODE -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
         remove_definitions(-D_MBCS)

@@ -35,7 +35,7 @@ $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 
 Write-Output "yasio_root=$yasio_root"
 
-if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
+if ($IsWindows) { # On Windows, we can build for target win, winuwp
     if ($options.cc -eq '') {
         $options.cc = 'msvc'
     }
@@ -117,7 +117,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
     # Build
     cmake --build build --config Release
 
-    if ($options.p -ne 'uwp') {
+    if (($options.p -ne 'uwp') -and ($options.cc -ne 'mingw-gcc')) {
         Write-Output "run icmptest on windows ..."
         Invoke-Expression -Command ".\build\tests\icmp\Release\icmptest.exe $env:PING_HOST"
     }

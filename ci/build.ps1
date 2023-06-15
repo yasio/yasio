@@ -102,7 +102,8 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
     }
     elseif($options.cc -eq 'clang') {
         clang --version
-        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1'
+        # requires c++17 to build example 'ftp_server'
+        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1', '-DCXX_STD=17'
         cmake -B build $CONFIG_ALL_OPTIONS
     }
     else { # Generate mingw

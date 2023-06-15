@@ -21,7 +21,7 @@
 |-------|-----------------|
 | Windows|[![Windows Build Status](https://github.com/yasio/yasio/workflows/windows/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Awindows)|
 | Android|[![Android Build Status](https://github.com/yasio/yasio/workflows/android/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aandroid)|
-| iOS/tvOS|[![iOS Build Status](https://github.com/yasio/yasio/workflows/ios/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aios)|
+| iOS/tvOS/watchOS|[![iOS Build Status](https://github.com/yasio/yasio/workflows/ios/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aios)|
 | Linux |[![Linux Build Status](https://github.com/yasio/yasio/workflows/linux/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Alinux)|
 | macOS |[![macOS Build Status](https://github.com/yasio/yasio/workflows/osx/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aosx)|
 | FreeBSD |[![FreeBSD Build Status](https://github.com/yasio/yasio/workflows/freebsd/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Afreebsd)|

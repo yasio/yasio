@@ -40,6 +40,22 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
         $options.cc = 'msvc'
     }
 
+    if ($options.cc -ne 'msvc') { # install ninja for non msvc compilers
+        if(!(Get-Command "ninja" -ErrorAction SilentlyContinue)) {
+            Write-Output "Install ninja ..."
+            $ninja_ver='1.11.1'
+            if (!(Test-Path '.\ninja-win' -PathType Container)) {
+                curl -L "https://github.com/ninja-build/ninja/releases/download/v$ninja_ver/ninja-win.zip" -o "ninja-win.zip"
+                Expand-Archive -Path ninja-win.zip -DestinationPath .\ninja-win\
+            }
+            $ninja_bin = (Resolve-Path .\ninja-win).Path
+            if ($env:PATH.IndexOf($ninja_bin) -ne -1) {
+                $env:Path = "$ninja_bin;$env:Path"
+            }
+        }
+        ninja --version
+    }
+
     if (!($env:GITHUB_ACTIONS -eq "true")) {
         $cmake_ver="3.27.0-rc2"
         if (!(Test-Path ".\cmake-$cmake_ver-windows-x86_64" -PathType Container)) {
@@ -85,25 +101,12 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
         }
     }
     elseif($options.cc -eq 'clang') {
-        if(!(Get-Command "ninja" -ErrorAction SilentlyContinue)) {
-            Write-Output "Install ninja ..."
-            $ninja_ver='1.11.1'
-            if (!(Test-Path '.\ninja-win' -PathType Container)) {
-                curl -L "https://github.com/ninja-build/ninja/releases/download/v$ninja_ver/ninja-win.zip" -o "ninja-win.zip"
-                Expand-Archive -Path ninja-win.zip -DestinationPath .\ninja-win\
-            }
-            $ninja_bin = (Resolve-Path .\ninja-win).Path
-            if ($env:PATH.IndexOf($ninja_bin) -ne -1) {
-                $env:Path = "$ninja_bin;$env:Path"
-            }
-        }
-        ninja --version
         clang --version
         $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1'
         cmake -B build $CONFIG_ALL_OPTIONS
     }
     else { # Generate mingw
-        $CONFIG_ALL_OPTIONS += '-G', 'MinGW Makefiles'
+        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config'
     }
    
     Write-Output ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)

@@ -91,7 +91,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 endif()
 
 if (WIN32)
-    if(NOT FULL_GCC)
+    if(FULL_GCC)
+        set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
+    else()
         add_definitions(-D_CRT_SECURE_NO_WARNINGS -DUNICODE -D_UNICODE -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
         remove_definitions(-D_MBCS)
     endif()
@@ -119,11 +121,6 @@ endif()
 if(BUILD_SHARED_LIBS AND LINUX)
    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -fPIC")
 endif()
-
-if ( IOS )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
-endif ()
 
 set (YASIO_USE_PREBUILT_LUA FALSE)
 

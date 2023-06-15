@@ -66,6 +66,26 @@ jobs:
 
     - name: Build
       run: ci\build.ps1 -p win -cc clang
+  mingw:
+    if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - uses: msys2/setup-msys2@v2
+      with: 
+        msystem: mingw64
+        install: mingw-w64-x86_64-toolchain
+
+    - name: Build
+      run: ci\build.ps1 -cc 'mingw-gcc'
   uwp:
     if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
     # The CMake configure and build commands are platform agnostic and should work equally

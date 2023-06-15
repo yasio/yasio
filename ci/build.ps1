@@ -40,6 +40,8 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
         $options.cc = 'msvc'
     }
 
+    $toolchain = $options.cc
+
     if ($options.cc -ne 'msvc') { # install ninja for non msvc compilers
         if(!(Get-Command "ninja" -ErrorAction SilentlyContinue)) {
             Write-Output "Install ninja ..."
@@ -56,8 +58,11 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
         ninja --version
     }
 
-    if (!($env:GITHUB_ACTIONS -eq "true")) {
+    $cmake_ver=$($(cmake --version | Select-Object -First 1) -split ' ')[2]
+    Write-Output "Checking cmake version: $cmake_ver"
+    if ($cmake_ver -lt '3.13.0') {
         $cmake_ver="3.27.0-rc2"
+        Write-Output "The cmake too old, installing cmake-$cmake_ver ..."
         if (!(Test-Path ".\cmake-$cmake_ver-windows-x86_64" -PathType Container)) {
             if ($pwsh_ver -lt '7.0')  {
                 curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
@@ -112,14 +117,16 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
    
     Write-Output ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
 
+    $build_dir="build_$toolchain"
+
     # Configure
-    cmake -B build $CONFIG_ALL_OPTIONS
+    cmake -B $build_dir $CONFIG_ALL_OPTIONS
     # Build
-    cmake --build build --config Release
+    cmake --build $build_dir --config Release
 
     if (($options.p -ne 'uwp') -and ($options.cc -ne 'mingw-gcc')) {
         Write-Output "run icmptest on windows ..."
-        Invoke-Expression -Command ".\build\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+        Invoke-Expression -Command ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
     }
 }
 elseif($IsLinux) { # On Linux, we build targets: android, linux

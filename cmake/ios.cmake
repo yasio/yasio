@@ -1,6 +1,6 @@
 #
-# The simple ios toolchain file: https://github.com/yasio/ios.cmake
-# version: 4.0.2
+# The simple ios toolchain file: https://github.com/yasio/yasio/blob/dev/cmake/ios.cmake
+# version: 4.0.3
 #
 # The supported params:
 #   PLAT: iOS, tvOS, default: iOS

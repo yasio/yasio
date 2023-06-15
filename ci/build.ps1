@@ -61,7 +61,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
     $cmake_ver=$($(cmake --version | Select-Object -First 1) -split ' ')[2]
     Write-Output "Checking cmake version: $cmake_ver"
     if ($cmake_ver -lt '3.13.0') {
-        $cmake_ver="3.27.0-rc2"
+        $cmake_ver = '3.27.0-rc2'
         Write-Output "The cmake too old, installing cmake-$cmake_ver ..."
         if (!(Test-Path ".\cmake-$cmake_ver-windows-x86_64" -PathType Container)) {
             if ($pwsh_ver -lt '7.0')  {
@@ -72,12 +72,12 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
             Expand-Archive -Path cmake-$cmake_ver-windows-x86_64.zip -DestinationPath .\
         }
         $cmake_bin = (Resolve-Path .\cmake-$cmake_ver-windows-x86_64\bin).Path
-        if ($env:PATH.IndexOf($cmake_bin) -ne -1) {
+        if ($env:PATH.IndexOf($cmake_bin) -eq -1) {
             $env:Path = "$cmake_bin;$env:Path"
         }
+        cmake --version
     }
 
-    cmake --version
     $CONFIG_ALL_OPTIONS=@()
     if ($toolchain -eq 'msvc') { # Generate vs2019 on github ci
         # Determine arch name

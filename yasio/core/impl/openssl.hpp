@@ -124,7 +124,7 @@ YASIO__DECL int yssl_bio_in_read(BIO* bio, char* buf, int blen)
     return 0;
 
   // recv data from kernel
-  int nread      = yasio::xxsocket::recv(backend->fd, buf, blen, 0);
+  int nread = yasio::xxsocket::recv(backend->fd, buf, blen, 0);
   BIO_clear_retry_flags(bio);
   if (nread < 0)
   {
@@ -154,11 +154,11 @@ YASIO__DECL long yssl_bio_ctrl(BIO* bio, int cmd, long num, void* /*ptr*/)
     case BIO_CTRL_DUP:
       ret = 1;
       break;
-#    ifdef BIO_CTRL_EOF
+#  ifdef BIO_CTRL_EOF
     case BIO_CTRL_EOF:
       /* EOF has been reached on input? */
       return 0;
-#    endif
+#  endif
     default:
       ret = 0;
       break;
@@ -193,7 +193,7 @@ YASIO__DECL BIO_METHOD* yssl_bio_method_create(void)
 }
 YASIO__DECL yssl_st* yssl_new(yssl_ctx_st* ctx, int fd, const char* hostname, bool client)
 {
-  auto ssl = ::SSL_new(ctx);
+  auto ssl  = ::SSL_new(ctx);
   auto yssl = new yssl_st{ssl, fd, yssl_bio_method_create()};
   auto bio  = ::BIO_new(yssl->bmth);
   ::BIO_set_data(bio, yssl);

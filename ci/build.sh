@@ -45,6 +45,16 @@ function build_tvos()
     exit 0
 }
 
+function build_watchos()
+{  
+    echo "Building watchos..."
+
+    cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
+    cmake --build build --config Release
+    
+    exit 0
+}
+
 function build_linux()
 {
     echo "Building linux..."
@@ -89,6 +99,8 @@ elif [ $BUILD_TARGET = "ios" ]; then
     build_ios
 elif [ $BUILD_TARGET = "tvos" ]; then
     build_tvos
+elif [ $BUILD_TARGET = "watchos" ]; then
+    build_watchos
 elif [ $BUILD_TARGET = "android" ]; then
     build_android
 else

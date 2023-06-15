@@ -5,7 +5,7 @@
 # The supported params:
 #   PLAT: iOS, tvOS, default: iOS
 #   ARCHS: arm64, x86_64, default: arm64
-#   DEPLOYMENT_TARGET: 11.0(default)
+#   DEPLOYMENT_TARGET: default: iOS=11.0, tvOS=15.0, watchOS=8.0
 #   SIMULATOR: TRUE, FALSE, UNDEFINED(auto determine by archs) 
 #   ENABLE_BITCODE: FALSE(default)
 #
@@ -22,10 +22,18 @@ endif()
 
 # DEPLOYMENT_TARGET
 if(NOT DEFINED DEPLOYMENT_TARGET)
-    if("${ARCHS}" MATCHES ".*armv7.*")
-       set(DEPLOYMENT_TARGET "10.0" CACHE STRING "" FORCE)
+    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        if("${ARCHS}" MATCHES ".*armv7.*")
+           set(DEPLOYMENT_TARGET "10.0" CACHE STRING "" FORCE)
+        else()
+           set(DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
+        endif()
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+        set(DEPLOYMENT_TARGET "15.0" CACHE STRING "" FORCE)
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "watchOS")
+        set(DEPLOYMENT_TARGET "8.0" CACHE STRING "" FORCE)
     else()
-       set(DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
+        message(FATAL_ERROR "CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME} unsupported!")
     endif()
 endif()
 

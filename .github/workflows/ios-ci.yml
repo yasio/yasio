@@ -15,7 +15,6 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TARGET: ios
   BUILD_TYPE: Release
 
 jobs:
@@ -25,6 +24,15 @@ jobs:
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: macos-latest
+    
+    strategy:
+      matrix:
+        target:
+          - ios
+          - tvos
+          - watchos
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
 
     steps:
     - uses: actions/checkout@v3

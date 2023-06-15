@@ -256,6 +256,8 @@ int main(int argc, char** argv)
   const char* host    = argc > 1 ? argv[1] : ICMPTEST_PIN_HOST;
   const int max_times = argc > 2 ? atoi(argv[2]) : 4;
 
+  printf("sizeof(intptr_t)=%zu, sizeof(wchar_t)=%zu, sizeof(long)=%zu\n", sizeof(intptr_t), sizeof(wchar_t), sizeof(long));
+
   std::vector<ip::endpoint> endpoints;
   xxsocket::resolve(endpoints, host, 0);
   if (endpoints.empty())

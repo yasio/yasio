@@ -128,9 +128,13 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
     # Build
     cmake --build $build_dir --config Release
 
-    if (($options.p -ne 'uwp') -and ($options.cc -ne 'mingw-gcc')) {
+    if (($options.p -ne 'uwp')) {
         Write-Output "run icmptest on windows ..."
-        Invoke-Expression -Command ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+        if ($options.cc -ne 'mingw-gcc') {
+            Invoke-Expression -Command ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+        } else {
+            cmd /c ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+        }
     }
 }
 elseif($IsLinux) { # On Linux, we build targets: android, linux

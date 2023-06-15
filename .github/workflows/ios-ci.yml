@@ -13,10 +13,6 @@ on:
       - extensions/**/*
       - cmake/ios.cmake
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
 jobs:
   build:
     # The CMake configure and build commands are platform agnostic and should work equally
@@ -41,4 +37,5 @@ jobs:
         
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: ci/build.sh
+      shell: pwsh
+      run: ./ci/build.ps1 -p $env:BUILD_TARGET

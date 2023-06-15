@@ -12,11 +12,6 @@ on:
       - ci/**/*
       - extensions/**/*
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-  TOOLCHAIN: 'mingw'
-
 jobs:
   build:
     if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
@@ -25,11 +20,6 @@ jobs:
     # cross-platform coverage.
     # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
     runs-on: windows-latest
-    strategy:
-      matrix:
-        include:
-        - { sys: mingw64, env: x86_64 }
-        - { sys: mingw32, env: i686 }
 
     steps:
     - uses: actions/checkout@v3
@@ -38,8 +28,8 @@ jobs:
 
     - uses: msys2/setup-msys2@v2
       with: 
-        msystem: ${{ matrix.sys }}
-        install: mingw-w64-${{ matrix.env }}-toolchain
+        msystem: mingw64
+        install: mingw-w64-x86_64-toolchain
 
     - name: Build
-      run: ci\build.ps1
+      run: ci\build.ps1 -cc 'mingw-gcc'

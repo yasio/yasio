@@ -101,7 +101,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
                 $CONFIG_ALL_OPTIONS += '-G', "Visual Studio 12 2013 Win64", '-DYASIO_BUILD_WITH_LUA=ON'
             }
             else {
-                $CONFIG_ALL_OPTIONS += 'G', "Visual Studio 12 2013", '-DYASIO_BUILD_WITH_LUA=ON'
+                $CONFIG_ALL_OPTIONS += '-G', "Visual Studio 12 2013", '-DYASIO_BUILD_WITH_LUA=ON'
             }
         }
     }

@@ -14,8 +14,6 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TARGET: linux
-  BUILD_TYPE: Release
   PING_HOST: github.com
 
 jobs:
@@ -33,4 +31,5 @@ jobs:
 
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: ci/build.sh
+      shell: pwsh
+      run: ./ci/build.ps1 -p linux

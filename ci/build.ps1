@@ -42,7 +42,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
 
     $toolchain = $options.cc
 
-    if ($options.cc -ne 'msvc') { # install ninja for non msvc compilers
+    if ($toolchain -ne 'msvc') { # install ninja for non msvc compilers
         if(!(Get-Command "ninja" -ErrorAction SilentlyContinue)) {
             Write-Output "Install ninja ..."
             $ninja_ver='1.11.1'
@@ -79,7 +79,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
 
     cmake --version
     $CONFIG_ALL_OPTIONS=@()
-    if ($options.cc -eq 'msvc') { # Generate vs2019 on github ci
+    if ($toolchain -eq 'msvc') { # Generate vs2019 on github ci
         # Determine arch name
         $arch=""
         if ($options.a -eq "x86") {
@@ -105,14 +105,18 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
             }
         }
     }
-    elseif($options.cc -eq 'clang') {
+    elseif($toolchain -eq 'clang') {
         clang --version
-        # requires c++17 to build example 'ftp_server'
-        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1', '-DCXX_STD=17'
+        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1'
         cmake -B build $CONFIG_ALL_OPTIONS
     }
     else { # Generate mingw
         $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config'
+    }
+
+    if ($options -ne 'msvc') {
+        # requires c++17 to build example 'ftp_server' for non-msvc compilers
+        $CONFIG_ALL_OPTIONS += '-DCXX_STD=17'
     }
    
     Write-Output ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)

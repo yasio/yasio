@@ -25,6 +25,10 @@ foreach ($arg in $args) {
     }
 }
 
+$pwsh_ver = $PSVersionTable.PSVersion.ToString()
+
+Write-Output "PowerShell $pwsh_ver"
+
 Write-Output $options
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
@@ -39,7 +43,11 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
     if (!($env:GITHUB_ACTIONS -eq "true")) {
         $cmake_ver="3.27.0-rc2"
         if (!(Test-Path ".\cmake-$cmake_ver-windows-x86_64" -PathType Container)) {
-            curl.exe -L "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
+            if ($pwsh_ver -lt '7.0')  {
+                curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
+            } else {
+                curl -L "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
+            }
             Expand-Archive -Path cmake-$cmake_ver-windows-x86_64.zip -DestinationPath .\
         }
         $cmake_bin = (Resolve-Path .\cmake-$cmake_ver-windows-x86_64\bin).Path

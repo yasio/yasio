@@ -83,9 +83,13 @@ jobs:
       with: 
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
-
     - name: Build
       run: ci\build.ps1 -cc 'mingw-gcc'
+    - name: Upload icmptest.exe
+      uses: actions/upload-artifact@v3
+      with:
+        path: ./build_mingw-gcc/tests/icmp/Release/icmptest.exe
+        name: icmptest
   uwp:
     if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
     # The CMake configure and build commands are platform agnostic and should work equally

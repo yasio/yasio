@@ -179,12 +179,16 @@ elseif($IsLinux) { # On Linux, we build targets: android, linux
     }
 }
 elseif($IsMacOS) { # On macOS, we build targets: osx(macos),ios,tvos,watchos
+    $arch = $options.a
+    if ($arch -eq 'x64') {
+        $arch = 'x86_64'
+    }
     if ($options.p -eq 'osx') {
         Write-Output "Building osx..."
-        cmake -GXcode -Bbuild -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON "-DCMAKE_OSX_ARCHITECTURES=$arch"
         cmake --build build --config Release
 
-        if ($env:GITHUB_ACTIONS -eq "true") {
+        if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
             Write-Output "run test tcptest on osx ..."
             ./build/tests/tcp/Release/tcptest
             
@@ -197,17 +201,17 @@ elseif($IsMacOS) { # On macOS, we build targets: osx(macos),ios,tvos,watchos
     }
     elseif ($options.p -eq 'ios') {
         Write-Output "Building iOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     } 
     elseif ($options.p -eq 'tvos') {
         Write-Output "Building tvOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     }
     elseif ($options.p -eq 'watchos') {
         Write-Output "Building  watchOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     }  
 }

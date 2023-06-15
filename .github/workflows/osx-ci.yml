@@ -20,6 +20,14 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: macos-latest
 
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - arm64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+
     steps:
     - uses: actions/checkout@v3
       with:
@@ -28,4 +36,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./ci/build.ps1 -p osx
+      run: ./ci/build.ps1 -p osx -a $env:BUILD_ARCH

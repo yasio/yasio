@@ -99,14 +99,14 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
     # Configure
     cmake -B build $CONFIG_ALL_OPTIONS
     # Build
-    cmake --build build --config Release --target icmptest
+    cmake --build build --config Release
 
     if ($options.p -ne 'uwp') {
         Write-Output "run icmptest on windows ..."
         Invoke-Expression -Command ".\build\tests\icmp\Release\icmptest.exe $env:PING_HOST"
     }
 }
-elseif($IsLinux) { // On Linux, we build targets: android, linux
+elseif($IsLinux) { # On Linux, we build targets: android, linux
     if ($options.p -eq 'linux') {
         Write-Output "Building linux..."
         cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=2 -DYASIO_USE_CARES=ON -DYASIO_ENABLE_ARES_PROFILER=ON -DYAISO_BUILD_NI=YES -DCXX_STD=17 -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON

@@ -18,7 +18,6 @@ jobs:
           - x64
     env:
       BUILD_ARCH: ${{ matrix.arch }}
-      TOOLCHAIN: 'msvc'
     steps:
       - uses: actions/checkout@v3
         with:
@@ -27,27 +26,20 @@ jobs:
         with: 
           arch: ${{ env.BUILD_ARCH }}
       - name: Build
-        run: ci\build.ps1
+        run: ci\build.ps1 -p win -a $env:BUILD_ARCH
   build-mingw:
     name: build-mingw
     runs-on: windows-latest
-    strategy:
-      matrix:
-        include:
-        - { sys: mingw64, env: x86_64 }
-        - { sys: mingw32, env: i686 }
-    env:
-      TOOLCHAIN: 'mingw'
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - uses: msys2/setup-msys2@v2
         with: 
-          msystem: ${{ matrix.sys }}
-          install: mingw-w64-${{ matrix.env }}-toolchain
+          msystem: mingw64
+          install: mingw-w64-x86_64-toolchain
       - name: Build
-        run: ci\build.ps1
+        run: ci\build.ps1 -p win -cc 'mingw-gcc'
   build-linux:
     name: build-linux
     runs-on: ubuntu-latest
@@ -58,31 +50,29 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        run: ci/build.sh
+        shell: pwsh
+        run: ./ci/build.ps1 -p linux
   build-android:
     name: build-android
     runs-on: ubuntu-latest
     strategy:
       matrix:
         arch:
-          - armeabi-v7a
-          - arm64-v8a
+          - arm
+          - arm64
           - x86
-          - x86_64
+          - x64
     env:
       BUILD_ARCH: ${{ matrix.arch }}
-      BUILD_TARGET: android
       # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
       NDK_VER: r19c
-      USE_GH_NDK: 'true'
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build
-        run: |
-          source ci/install.sh
-          source ci/build.sh
+        shell: pwsh
+        run: ./ci/build.ps1 -p android -a $env:BUILD_ARCH
   build-osx:
     name: build-osx
     runs-on: macos-latest
@@ -93,7 +83,8 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        run: ci/build.sh
+        shell: pwsh
+        run: ./ci/build.ps1 -p osx -a x64
   build-ios:
     name: build-ios
     runs-on: macos-latest
@@ -104,7 +95,8 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Build
-        run: ci/build.sh
+        shell: pwsh
+        run: ./ci/build.ps1 -p ios -a arm64
   build-freebsd:
     name: build-freebsd
     runs-on: macos-12

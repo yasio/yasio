@@ -95,7 +95,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
         cmake -B build $CONFIG_ALL_OPTIONS
     }
     else { # Generate mingw
-        CONFIG_ALL_OPTIONS += '-G', 'MinGW Makefiles'
+        $CONFIG_ALL_OPTIONS += '-G', 'MinGW Makefiles'
     }
    
     Write-Output ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)

@@ -3,7 +3,7 @@
 
 # options
 #  -arch: build arch: x86,x64,arm,arm64
-#  -plat: build target platform: win,uwp,linux,android,macos,ios,tvos,watchoss
+#  -plat: build target platform: win,uwp,linux,android,osx(macos),ios,tvos,watchos
 #  -cc: compiler id: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
 #  -t: toolset name for visual studio: v12,v141,v143
 
@@ -26,6 +26,10 @@ foreach ($arg in $args) {
 }
 
 Write-Output $options
+
+$yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
+
+Write-Output "yasio_root=$yasio_root"
 
 if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
     if ($options.cc -eq '') {
@@ -87,7 +91,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp, mingw
         }
         ninja --version
         clang --version
-        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=0'
+        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1'
         cmake -B build $CONFIG_ALL_OPTIONS
     }
     else { # Generate mingw
@@ -168,14 +172,14 @@ elseif($IsLinux) { # On Linux, we build targets: android, linux
         } elseif($arch -eq 'x64') {
             $arch = 'x86_64'
         }
-        $NINJA_PATH=~/ninja
+        $NINJA_PATH="$home/ninja"
         cmake -G "Ninja" -B build "-DANDROID_STL=c++_shared" "-DCMAKE_MAKE_PROGRAM=$NINJA_PATH" "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake" -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang "-DANDROID_ABI=$arch" -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --target yasio
         cmake --build build --target yasio_http
     }
 }
-elseif($IsMacOS) { # On macOS, we build targets: macos,ios,tvos,watchos
-    if ($options.p -eq 'macos') {
+elseif($IsMacOS) { # On macOS, we build targets: osx(macos),ios,tvos,watchos
+    if ($options.p -eq 'osx') {
         Write-Output "Building osx..."
         cmake -GXcode -Bbuild -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
@@ -193,17 +197,17 @@ elseif($IsMacOS) { # On macOS, we build targets: macos,ios,tvos,watchos
     }
     elseif ($options.p -eq 'ios') {
         Write-Output "Building iOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.cmake" "-DARCHS=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=arm64" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     } 
     elseif ($options.p -eq 'tvos') {
         Write-Output "Building tvOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     }
     elseif ($options.p -eq 'watchos') {
         Write-Output "Building  watchOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$YASIO_ROOT/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=arm64" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     }  
 }

@@ -19,7 +19,7 @@ foreach ($arg in $args) {
         if ($options.Contains($optName)) {
             $options[$optName] = $arg
         } else {
-            Write-Output "Warning: ignore unrecognized option: $optName"
+            Write-Host "Warning: ignore unrecognized option: $optName"
         }
         $optName = $null
     }
@@ -27,13 +27,13 @@ foreach ($arg in $args) {
 
 $pwsh_ver = $PSVersionTable.PSVersion.ToString()
 
-Write-Output "PowerShell $pwsh_ver"
+Write-Host "PowerShell $pwsh_ver"
 
-Write-Output $options
+Write-Host $options
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 
-Write-Output "yasio_root=$yasio_root"
+Write-Host "yasio_root=$yasio_root"
 
 # 0: windows, 1: linux, 2: macos
 if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
@@ -53,31 +53,27 @@ else {
 $exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
 $myHome = (Resolve-Path ~).Path
 
-function setup_ninja($addToPath = $False) {
+function setup_ninja() {
     $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
-    if ($ninja_prog) {
-        Write-Host "Using system installed ninja: $ninja_prog"
-        return $ninja_prog
-    }
-    # install ninja
-    $osName = $('win', 'linux', 'mac').Get($hostOS)
-    $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
-    if (!$ninja_bin) {
-        
-        curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$osName.zip" -o $myHome/ninja-$osName.zip 
-        # unzip ~/ninja-$osName.zip -d ~
-        Expand-Archive -Path $myHome/ninja-$osName.zip -DestinationPath "$myHome/ninja-$osName/"
-        & $ninja_bin/ninja --version
+    if (!$ninja_prog) {
+        # install ninja
+        $osName = $('win', 'linux', 'mac').Get($hostOS)
         $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
-    }
-    if ($addToPath) {
+        if (!$ninja_bin) {
+            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$osName.zip" -o $myHome/ninja-$osName.zip 
+            # unzip ~/ninja-$osName.zip -d ~
+            Expand-Archive -Path $myHome/ninja-$osName.zip -DestinationPath "$myHome/ninja-$osName/"
+            $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
+        }
         if ($env:PATH.IndexOf($ninja_bin) -ne -1) {
             $env:Path = "$ninja_bin;$env:Path"
         }
+        $ninja_prog = (Join-Path -Path $ninja_bin -ChildPath ninja$exeSuffix)
+    } else {
+        Write-Host "Using system installed ninja: $ninja_prog"
     }
-
-    $ninja_proj = (Join-Path -Path $ninja_bin -ChildPath ninja$exeSuffix)
-    return $ninja_proj
+    Write-Host (ninja --version)
+    return $ninja_prog
 }
 
 function setup_ndk() {
@@ -132,7 +128,7 @@ $ndk_root = setup_ndk
 
 # build methods
 function build_win() {
-    Write-Output "Building target $($options.p) on windows ..."
+    Write-Host "Building target $($options.p) on windows ..."
     if ($options.cc -eq '') {
         $options.cc = 'msvc'
     }
@@ -140,15 +136,14 @@ function build_win() {
     $toolchain = $options.cc
 
     if ($toolchain -ne 'msvc') { # install ninja for non msvc compilers
-        setup_ninja($True)
-        ninja --version
+        setup_ninja
     }
 
     $cmake_ver=$($(cmake --version | Select-Object -First 1) -split ' ')[2]
-    Write-Output "Checking cmake version: $cmake_ver"
+    Write-Host "Checking cmake version: $cmake_ver"
     if ($cmake_ver -lt '3.13.0') {
         $cmake_ver = '3.27.0-rc2'
-        Write-Output "The cmake too old, installing cmake-$cmake_ver ..."
+        Write-Host "The cmake too old, installing cmake-$cmake_ver ..."
         if (!(Test-Path ".\cmake-$cmake_ver-windows-x86_64" -PathType Container)) {
             if ($pwsh_ver -lt '7.0')  {
                 curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
@@ -205,7 +200,7 @@ function build_win() {
         $CONFIG_ALL_OPTIONS += '-DCXX_STD=17'
     }
    
-    Write-Output ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
+    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
 
     $build_dir="build_$toolchain"
 
@@ -215,34 +210,34 @@ function build_win() {
     cmake --build $build_dir --config Release
 
     if (($options.p -ne 'uwp') -and ($options.cc -ne 'mingw-gcc')) {
-        Write-Output "run icmptest on windows ..."
+        Write-Host "run icmptest on windows ..."
         Invoke-Expression -Command ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
     }
 }
 
 function build_linux() {
-    Write-Output "Building linux ..."
+    Write-Host "Building linux ..."
 
     cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=2 -DYASIO_USE_CARES=ON -DYASIO_ENABLE_ARES_PROFILER=ON -DYAISO_BUILD_NI=YES -DCXX_STD=17 -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON
     cmake --build build -- -j $(nproc)
 
     if ($env:GITHUB_ACTIONS -eq "true") {
-        Write-Output "run issue201 on linux..."
+        Write-Host "run issue201 on linux..."
         ./build/tests/issue201/issue201
         
-        Write-Output "run httptest on linux..."
+        Write-Host "run httptest on linux..."
         ./build/tests/http/httptest
     
-        Write-Output "run ssltest on linux..."
+        Write-Host "run ssltest on linux..."
         ./build/tests/ssl/ssltest
     
-        Write-Output "run icmp test on linux..."
+        Write-Host "run icmp test on linux..."
         ./build/tests/icmp/icmptest $env:PING_HOST
     }
 }
 
 function build_andorid() {
-    Write-Output "Building android ..."
+    Write-Host "Building android ..."
 
     $ninja_prog = setup_ninja
     $ndk_root = setup_ndk
@@ -261,7 +256,7 @@ function build_andorid() {
 }
 
 function build_osx() {
-    Write-Output "Building $($options.p) ..."
+    Write-Host "Building $($options.p) ..."
     $arch = $options.a
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
@@ -271,35 +266,35 @@ function build_osx() {
     cmake --build build --config Release
 
     if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
-        Write-Output "run test tcptest on osx ..."
+        Write-Host "run test tcptest on osx ..."
         ./build/tests/tcp/Release/tcptest
         
-        Write-Output "run test issue384 on osx ..."
+        Write-Host "run test issue384 on osx ..."
         ./build/tests/issue384/Release/issue384
 
-        Write-Output "run test icmp on osx ..."
+        Write-Host "run test icmp on osx ..."
         ./build/tests/icmp/Release/icmptest $env:PING_HOST
     }
 }
 
 # build ios famliy (ios,tvos,watchos)
 function build_ios() {
-    Write-Output "Building $($options.p) ..."
+    Write-Host "Building $($options.p) ..."
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
     if ($options.p -eq 'ios') {
-        Write-Output "Building iOS..."
+        Write-Host "Building iOS..."
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     } 
     elseif ($options.p -eq 'tvos') {
-        Write-Output "Building tvOS..."
+        Write-Host "Building tvOS..."
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     }
     elseif ($options.p -eq 'watchos') {
-        Write-Output "Building  watchOS..."
+        Write-Host "Building  watchOS..."
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
     }

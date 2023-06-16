@@ -299,7 +299,7 @@ endmacro()
 
 macro(yasio_config_lib_depends target_name)
     target_link_libraries(${target_name} ${yasio_target_name})
-    if (NOT WIN32)
+    if ((NOT WIN32) AND (NOT ANDROID))
         target_link_libraries(${target_name} pthread)
     endif()
     
@@ -467,7 +467,7 @@ if(YASIO_BUILD_EXT_HTTP)
 endif()
 
 # The tests & examples
-if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS AND NOT ANDROID)
+if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/icmp)
     add_subdirectory(tests/mcast)

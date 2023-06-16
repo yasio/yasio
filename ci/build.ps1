@@ -2,8 +2,8 @@
 # refer to: https://docs.github.com/en/actions/learn-github-actions/environment-variables
 
 # options
-#  -arch: build arch: x86,x64,arm,arm64
-#  -plat: build target platform: win,uwp,linux,android,osx(macos),ios,tvos,watchos
+#  -a: build arch: x86,x64,arm,arm64
+#  -p: build target platform: win,uwp,linux,android,osx(macos),ios,tvos,watchos
 #  -cc: compiler id: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
 #  -t: toolset name for visual studio: v12,v141,v143
 
@@ -35,7 +35,104 @@ $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 
 Write-Output "yasio_root=$yasio_root"
 
-if ($IsWindows) { # On Windows, we can build for target win, winuwp
+# 0: windows, 1: linux, 2: macos
+if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
+    $hostOS = 0
+}
+elseif($IsLinux) {
+    $hostOS = 1
+}
+elseif($IsMacOS) {
+    $hostOS = 2
+}
+else {
+    Write-Error "Unsupported host OS for building target $(options.p)"
+    exit 1
+}
+
+$exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
+$myHome = (Resolve-Path ~).Path
+
+function setup_ninja($addToPath = $False) {
+    $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
+    if ($ninja_prog) {
+        Write-Host "Using system installed ninja: $ninja_prog"
+        return $ninja_prog
+    }
+    # install ninja
+    $osName = $('win', 'linux', 'mac').Get($hostOS)
+    $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
+    if (!$ninja_bin) {
+        
+        curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$osName.zip" -o $myHome/ninja-$osName.zip 
+        # unzip ~/ninja-$osName.zip -d ~
+        Expand-Archive -Path $myHome/ninja-$osName.zip -DestinationPath "$myHome/ninja-$osName/"
+        & $ninja_bin/ninja --version
+        $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
+    }
+    if ($addToPath) {
+        if ($env:PATH.IndexOf($ninja_bin) -ne -1) {
+            $env:Path = "$ninja_bin;$env:Path"
+        }
+    }
+
+    $ninja_proj = (Join-Path -Path $ninja_bin -ChildPath ninja$exeSuffix)
+    return $ninja_proj
+}
+
+function setup_ndk() {
+    # install ndk
+    if ($env:GITHUB_ACTIONS -eq "true") {
+        Write-Host "Using github action ndk ..."
+        Write-Host "ANDROID_NDK=$env:ANDROID_NDK"
+        Write-Host "ANDROID_NDK_HOME=$env:ANDROID_NDK_HOME"
+        Write-Host "ANDROID_NDK_ROOT=$env:ANDROID_NDK_ROOT"
+
+        $ndk_root = $env:ANDROID_NDK
+        if ($ndk_root -eq '') {
+            $ndk_root = $env:ANDROID_NDK_HOME
+            if ($ndk_root -eq '') {
+                $ndk_root = $env:ANDROID_NDK_ROOT
+            }
+        }
+    } elseif("$env:ANDROID_HOME" -ne '') {
+        # find ndk in sdk
+        foreach($item in $(Get-ChildItem -Path "$env:ANDROID_HOME/ndk")) {
+            $sourceProps = "$item/source.properties"
+            if (Test-Path $sourceProps -PathType Leaf) {
+                $verLine = $(Get-Content $sourceProps | Select-Object -Index 1)
+                $ndk_rev = $($verLine -split '=').Trim()[1]
+                if ($ndk_rev -ge "19.0") {
+                    $ndk_root = $item.ToString()
+                    break
+                }
+            }
+        }
+    }
+    
+    if (Test-Path "$ndk_root" -PathType Container)
+    {
+        Write-Host "Using exist ndk: $ndk_root ..."
+    }
+    else {  
+        # since r23 no suffix
+        $osName = $('windows', 'linux', 'darwin').Get($hostOS)
+        $suffix=if ("$env:NDK_VER" -le "r22z") {'-x86_64'} else {''}
+        $ndk_package="android-ndk-$env:NDK_VER-$osName$suffix"
+        Write-Host "Downloading ndk package $ndk_package ..."
+        curl -o $myHome/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
+        Expand-Archive -Path $myHome/$ndk_package.zip -DestinationPath $myHome/
+        $ndk_root=$myHome/$ndk_package
+    }
+
+    return $ndk_root
+}
+
+$ndk_root = setup_ndk
+
+# build methods
+function build_win() {
+    Write-Output "Building target $($options.p) on windows ..."
     if ($options.cc -eq '') {
         $options.cc = 'msvc'
     }
@@ -43,18 +140,7 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
     $toolchain = $options.cc
 
     if ($toolchain -ne 'msvc') { # install ninja for non msvc compilers
-        if(!(Get-Command "ninja" -ErrorAction SilentlyContinue)) {
-            Write-Output "Install ninja ..."
-            $ninja_ver='1.11.1'
-            if (!(Test-Path '.\ninja-win' -PathType Container)) {
-                curl -L "https://github.com/ninja-build/ninja/releases/download/v$ninja_ver/ninja-win.zip" -o "ninja-win.zip"
-                Expand-Archive -Path ninja-win.zip -DestinationPath .\ninja-win\
-            }
-            $ninja_bin = (Resolve-Path .\ninja-win).Path
-            if ($env:PATH.IndexOf($ninja_bin) -ne -1) {
-                $env:Path = "$ninja_bin;$env:Path"
-            }
-        }
+        setup_ninja($True)
         ninja --version
     }
 
@@ -133,96 +219,76 @@ if ($IsWindows) { # On Windows, we can build for target win, winuwp
         Invoke-Expression -Command ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
     }
 }
-elseif($IsLinux) { # On Linux, we build targets: android, linux
-    if ($options.p -eq 'linux') {
-        Write-Output "Building linux..."
-        cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=2 -DYASIO_USE_CARES=ON -DYASIO_ENABLE_ARES_PROFILER=ON -DYAISO_BUILD_NI=YES -DCXX_STD=17 -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON
+
+function build_linux() {
+    Write-Output "Building linux ..."
+
+    cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=2 -DYASIO_USE_CARES=ON -DYASIO_ENABLE_ARES_PROFILER=ON -DYAISO_BUILD_NI=YES -DCXX_STD=17 -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON
+    cmake --build build -- -j $(nproc)
+
+    if ($env:GITHUB_ACTIONS -eq "true") {
+        Write-Output "run issue201 on linux..."
+        ./build/tests/issue201/issue201
+        
+        Write-Output "run httptest on linux..."
+        ./build/tests/http/httptest
     
-        cmake --build build -- -j $(nproc)
-
-        if ($env:GITHUB_ACTIONS -eq "true") {
-            Write-Output "run issue201 on linux..."
-            ./build/tests/issue201/issue201
-            
-            Write-Output "run httptest on linux..."
-            ./build/tests/http/httptest
-        
-            Write-Output "run ssltest on linux..."
-            ./build/tests/ssl/ssltest
-        
-            Write-Output "run icmp test on linux..."
-            ./build/tests/icmp/icmptest $env:PING_HOST
-        }
-    }
-    elseif($options.p -eq 'android') {
-        # install ninja
-        wget -O ~/ninja-linux.zip 'https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip'
-        unzip ~/ninja-linux.zip -d ~
-        ~/ninja --version
-
-        # install ndk
-        if ($env:GITHUB_ACTIONS -eq "true") {
-            Write-Output "Using github action ndk ..."
-            Write-Output "ANDROID_NDK=$env:ANDROID_NDK"
-            Write-Output "ANDROID_NDK_HOME=$env:ANDROID_NDK_HOME"
-            Write-Output "ANDROID_NDK_ROOT=$env:ANDROID_NDK_ROOT"
-
-            $ndk_root = $env:ANDROID_NDK
-            if ($ndk_root -eq '') {
-                $ndk_root = $env:ANDROID_NDK_HOME
-                if ($ndk_root -eq '') {
-                    $ndk_root = $env:ANDROID_NDK_ROOT
-                }
-            }
-        }
-        
-        if ($ndk_root -eq '') {
-            # since r23 no suffix
-            $suffix=if ("$env:NDK_VER" -le "r22z") {'x86_64'} else {''}
-            $ndk_package="android-ndk-$env:NDK_VER-linux$suffix"
-            Write-Output "Downloading ndk package $ndk_package ..."
-            curl -o ~/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
-            unzip -q ~/$ndk_package.zip -d ~
-            $ndk_root=~/$ndk_package
-        }
-
-        # building
-        $arch=$options.a
-        if ($arch -eq 'arm') {
-            $arch = 'armeabi-v7a'
-        } elseif($arch -eq 'arm64') {
-            $arch = 'arm64-v8a'
-        } elseif($arch -eq 'x64') {
-            $arch = 'x86_64'
-        }
-        $NINJA_PATH="$home/ninja"
-        cmake -G "Ninja" -B build "-DANDROID_STL=c++_shared" "-DCMAKE_MAKE_PROGRAM=$NINJA_PATH" "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake" -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang "-DANDROID_ABI=$arch" -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
-        cmake --build build --target yasio
-        cmake --build build --target yasio_http
+        Write-Output "run ssltest on linux..."
+        ./build/tests/ssl/ssltest
+    
+        Write-Output "run icmp test on linux..."
+        ./build/tests/icmp/icmptest $env:PING_HOST
     }
 }
-elseif($IsMacOS) { # On macOS, we build targets: osx(macos),ios,tvos,watchos
+
+function build_andorid() {
+    Write-Output "Building android ..."
+
+    $ninja_prog = setup_ninja
+    $ndk_root = setup_ndk
+    
+    # building
+    $arch=$options.a
+    if ($arch -eq 'arm') {
+        $arch = 'armeabi-v7a'
+    } elseif($arch -eq 'arm64') {
+        $arch = 'arm64-v8a'
+    } elseif($arch -eq 'x64') {
+        $arch = 'x86_64'
+    }
+    cmake -G "Ninja" -B build "-DANDROID_STL=c++_shared" "-DCMAKE_MAKE_PROGRAM=$ninja_prog" "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake" -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang -DANDROID_PLATFORM=16 "-DANDROID_ABI=$arch" -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake --build build --config Release 
+}
+
+function build_osx() {
+    Write-Output "Building $($options.p) ..."
     $arch = $options.a
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    if ($options.p -eq 'osx') {
-        Write-Output "Building osx..."
-        cmake -GXcode -Bbuild -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON "-DCMAKE_OSX_ARCHITECTURES=$arch"
-        cmake --build build --config Release
 
-        if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
-            Write-Output "run test tcptest on osx ..."
-            ./build/tests/tcp/Release/tcptest
-            
-            Write-Output "run test issue384 on osx ..."
-            ./build/tests/issue384/Release/issue384
+    cmake -GXcode -Bbuild -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON "-DCMAKE_OSX_ARCHITECTURES=$arch"
+    cmake --build build --config Release
 
-            Write-Output "run test icmp on osx ..."
-            ./build/tests/icmp/Release/icmptest $env:PING_HOST
-        }
+    if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
+        Write-Output "run test tcptest on osx ..."
+        ./build/tests/tcp/Release/tcptest
+        
+        Write-Output "run test issue384 on osx ..."
+        ./build/tests/issue384/Release/issue384
+
+        Write-Output "run test icmp on osx ..."
+        ./build/tests/icmp/Release/icmptest $env:PING_HOST
     }
-    elseif ($options.p -eq 'ios') {
+}
+
+# build ios famliy (ios,tvos,watchos)
+function build_ios() {
+    Write-Output "Building $($options.p) ..."
+    if ($arch -eq 'x64') {
+        $arch = 'x86_64'
+    }
+    if ($options.p -eq 'ios') {
         Write-Output "Building iOS..."
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
@@ -236,5 +302,18 @@ elseif($IsMacOS) { # On macOS, we build targets: osx(macos),ios,tvos,watchos
         Write-Output "Building  watchOS..."
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
         cmake --build build --config Release
-    }  
+    }
 }
+
+$builds = @{ 
+    'win' = ${function:build_win};
+    'uwp' = ${function:build_win};
+    'linux' = ${function:build_linux}; 
+    'android' = ${function:build_andorid};
+    'osx' = ${function:build_osx};
+    'ios' = ${function:build_ios};
+    'tvos' = ${function:build_ios};
+    'watchos' = ${function:build_ios};
+}
+
+& $builds[$options.p]

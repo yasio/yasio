@@ -65,7 +65,7 @@ function setup_ninja() {
             Expand-Archive -Path $myHome/ninja-$osName.zip -DestinationPath "$myHome/ninja-$osName/"
             $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
         }
-        if ($env:PATH.IndexOf($ninja_bin) -ne -1) {
+        if ($env:PATH.IndexOf($ninja_bin) -eq -1) {
             $env:Path = "$ninja_bin;$env:Path"
         }
         $ninja_prog = (Join-Path -Path $ninja_bin -ChildPath ninja$exeSuffix)
@@ -123,8 +123,6 @@ function setup_ndk() {
 
     return $ndk_root
 }
-
-$ndk_root = setup_ndk
 
 # build methods
 function build_win() {

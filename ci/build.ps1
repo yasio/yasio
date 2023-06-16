@@ -1,6 +1,32 @@
-# Install latest cmake version for appveyor ci
-# refer to: https://docs.github.com/en/actions/learn-github-actions/environment-variables
+# //////////////////////////////////////////////////////////////////////////////////////////
+# // A multi-platform support c++11 library with focus on asynchronous socket I/O for any
+# // client application.
+# //////////////////////////////////////////////////////////////////////////////////////////
+# 
+# The MIT License (MIT)
+# 
+# Copyright (c) 2012-2023 HALX99
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# 
 
+# The build.ps1 for ci, support all target platforms
 # options
 #  -a: build arch: x86,x64,arm,arm64
 #  -p: build target platform: win,uwp,linux,android,osx(macos),ios,tvos,watchos
@@ -32,41 +58,81 @@ Write-Host "PowerShell $pwsh_ver"
 Write-Host $options
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
+$yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
 
 Write-Host "yasio_root=$yasio_root"
 
+$HOST_WIN   = 0 # targets: win,uwp,android
+$HOST_LINUX = 1 # targets: linux,android 
+$HOST_OSX   = 2 # targets: android,ios,osx(macos),tvos,watchos
+
 # 0: windows, 1: linux, 2: macos
 if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
-    $hostOS = 0
-}
-elseif($IsLinux) {
-    $hostOS = 1
-}
-elseif($IsMacOS) {
-    $hostOS = 2
+    $hostOS = $HOST_WIN
+    $envPathSep = ';'
 }
 else {
-    Write-Error "Unsupported host OS for building target $(options.p)"
-    exit 1
+    $envPathSep = ':'
+    if($IsLinux) {
+        $hostOS =$HOST_LINUX1
+    }
+    elseif($IsMacOS) {
+        $hostOS = $HOST_OSX
+    }
+    else {
+        Write-Error "Unsupported host OS for building target $(options.p)"
+        exit 1
+    }
 }
 
 $exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
-$myHome = (Resolve-Path ~).Path
+
+# now windows only
+function setup_cmake() {
+    $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source
+    if ($cmake_prog) {
+        $cmake_ver = $($(cmake --version | Select-Object -First 1) -split ' ')[2]
+    } else {
+        $cmake_ver = '0.0.0'
+    }
+    if ($cmake_ver -ge '3.13.0') {
+        Write-Host "Using system installed cmake version: $cmake_ver"
+    } else {
+        $cmake_ver = '3.27.0-rc2'
+        Write-Host "The installed cmake $cmake_ver too old, installing newer cmake-$cmake_ver ..."
+        $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip"
+        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-windows-x86_64")
+        if (!(Test-Path $cmake_root -PathType Container)) {
+            if ($pwsh_ver -lt '7.0')  {
+                curl $cmake_url -o "$cmake_root.zip"
+            } else {
+                curl -L $cmake_url -o "$cmake_root.zip"
+            }
+            Expand-Archive -Path "$cmake_root.zip" -DestinationPath $yasio_tools\
+        }
+        $cmake_bin = Join-Path -Path $cmake_root -ChildPath 'bin'
+        if ($env:PATH.IndexOf($cmake_bin) -eq -1) {
+            $env:PATH = "$cmake_bin;$env:PATH"
+        }
+        Write-Host (cmake --version)
+    }
+}
 
 function setup_ninja() {
     $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
     if (!$ninja_prog) {
         # install ninja
+    
         $osName = $('win', 'linux', 'mac').Get($hostOS)
-        $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
+        $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$osName" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
-            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$osName.zip" -o $myHome/ninja-$osName.zip 
+            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$osName.zip" -o $yasio_tools/ninja-$osName.zip 
             # unzip ~/ninja-$osName.zip -d ~
-            Expand-Archive -Path $myHome/ninja-$osName.zip -DestinationPath "$myHome/ninja-$osName/"
-            $ninja_bin = (Resolve-Path "$myHome/ninja-$osName" -ErrorAction SilentlyContinue).Path
+            Expand-Archive -Path $yasio_tools/ninja-$osName.zip -DestinationPath "$yasio_tools/ninja-$osName/"
+            $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$osName" -ErrorAction SilentlyContinue).Path
         }
         if ($env:PATH.IndexOf($ninja_bin) -eq -1) {
-            $env:Path = "$ninja_bin;$env:Path"
+            $env:PATH = "$ninja_bin$envPathSep$env:PATH"
         }
         $ninja_prog = (Join-Path -Path $ninja_bin -ChildPath ninja$exeSuffix)
     } else {
@@ -111,14 +177,15 @@ function setup_ndk() {
         Write-Host "Using exist ndk: $ndk_root ..."
     }
     else {  
-        # since r23 no suffix
+        $ndk_ver = $env:NDK_VER
+        if ("$ndk_ver" -eq '') { $ndk_ver = 'r19c' }
         $osName = $('windows', 'linux', 'darwin').Get($hostOS)
-        $suffix=if ("$env:NDK_VER" -le "r22z") {'-x86_64'} else {''}
-        $ndk_package="android-ndk-$env:NDK_VER-$osName$suffix"
+        $suffix=if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''}
+        $ndk_package="android-ndk-$ndk_ver-$osName$suffix"
         Write-Host "Downloading ndk package $ndk_package ..."
-        curl -o $myHome/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
-        Expand-Archive -Path $myHome/$ndk_package.zip -DestinationPath $myHome/
-        $ndk_root=$myHome/$ndk_package
+        curl -o $yasio_tools/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
+        Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/
+        $ndk_root=$yasio_tools/$ndk_package
     }
 
     return $ndk_root
@@ -132,29 +199,11 @@ function build_win() {
     }
 
     $toolchain = $options.cc
+    
+    setup_cmake
 
     if ($toolchain -ne 'msvc') { # install ninja for non msvc compilers
         setup_ninja
-    }
-
-    $cmake_ver=$($(cmake --version | Select-Object -First 1) -split ' ')[2]
-    Write-Host "Checking cmake version: $cmake_ver"
-    if ($cmake_ver -lt '3.13.0') {
-        $cmake_ver = '3.27.0-rc2'
-        Write-Host "The cmake too old, installing cmake-$cmake_ver ..."
-        if (!(Test-Path ".\cmake-$cmake_ver-windows-x86_64" -PathType Container)) {
-            if ($pwsh_ver -lt '7.0')  {
-                curl "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
-            } else {
-                curl -L "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip" -o "cmake-$cmake_ver-windows-x86_64.zip"
-            }
-            Expand-Archive -Path cmake-$cmake_ver-windows-x86_64.zip -DestinationPath .\
-        }
-        $cmake_bin = (Resolve-Path .\cmake-$cmake_ver-windows-x86_64\bin).Path
-        if ($env:PATH.IndexOf($cmake_bin) -eq -1) {
-            $env:Path = "$cmake_bin;$env:Path"
-        }
-        cmake --version
     }
 
     $CONFIG_ALL_OPTIONS=@()

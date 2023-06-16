@@ -28,3 +28,4 @@ ignored/*.*
 /_site
 *.xsxproj
 /out
+/tools

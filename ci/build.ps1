@@ -87,6 +87,10 @@ else {
 
 $exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
 
+if (!(Test-Path "$yasio_tools")) {
+    mkdir $yasio_tools
+}
+
 # now windows only
 function setup_cmake() {
     $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source

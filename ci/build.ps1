@@ -60,6 +60,8 @@ Write-Host $options
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
 
+Set-Location $yasio_root
+
 Write-Host "yasio_root=$yasio_root"
 
 $HOST_WIN   = 0 # targets: win,uwp,android
@@ -87,7 +89,7 @@ else {
 
 $exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
 
-if (!(Test-Path "$yasio_tools")) {
+if (!(Test-Path "$yasio_tools" -PathType Container)) {
     mkdir $yasio_tools
 }
 

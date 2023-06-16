@@ -18,12 +18,19 @@ cmake_policy(SET CMP0048 NEW)
 set(yasio_target_name yasio)
 project(${yasio_target_name})
 
-#option ( LUA_COMPAT_MODULE "compat module" ON)
+include(CMakeDependentOption)
+
+cmake_dependent_option(YASIO_BUILD_TESTS
+  "Build the tests when we are the root project" ON
+  "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
+
+cmake_dependent_option(YASIO_BUILD_LUA_EXAMPLE
+  "Build lua example when we are the root project" ON
+  "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
+
 option(YASIO_BUILD_EXT_HTTP "Build yasio http extension" ON)
 option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
 option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
-option(YASIO_BUILD_TESTS "Build yasio tests and examples" ON)  
-option(YASIO_BUILD_LUA_EXAMPLE "Build yasio lua example" ON)
 option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -104,12 +111,8 @@ if (WIN32)
     endif()
 endif()
 
+# set default ssl backend to openssl
 if (NOT DEFINED YASIO_SSL_BACKEND)
-    set(YASIO_SSL_BACKEND 2)
-endif()
-
-# Force set ssl backend to openssl for windows clang compiler happy
-if (WIN32 AND _CLANG)
     set(YASIO_SSL_BACKEND 1)
 endif()
 
@@ -117,6 +120,8 @@ endif()
 if ((CMAKE_SYSTEM_NAME STREQUAL "watchOS") OR (CMAKE_SYSTEM_NAME MATCHES "Emscripten"))
     set(YASIO_SSL_BACKEND 0)
 endif()
+
+message(STATUS "YASIO_SSL_BACKEND=${YASIO_SSL_BACKEND}")
 
 if (NOT DEFINED YASIO_ENABLE_HALF_FLOAT)
     set(YASIO_ENABLE_HALF_FLOAT ON)
@@ -455,8 +460,8 @@ endif()
 if(YASIO_BUILD_EXT_HTTP)
     # llhttp for extensions: yasio_http, ...
     if (NOT BUILD_SHARED_LIBS)
-        set (BUILD_SHARED_LIBS FALSE CACHE BOOL "")
-        set (BUILD_STATIC_LIBS TRUE CACHE BOOL "")
+        set (BUILD_SHARED_LIBS FALSE CACHE BOOL "" FORCE)
+        set (BUILD_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
     endif()
     add_subdirectory(thirdparty/llhttp)
 
@@ -467,7 +472,7 @@ if(YASIO_BUILD_EXT_HTTP)
 endif()
 
 # The tests & examples
-if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
+if(YASIO_BUILD_TESTS)
     add_subdirectory(tests/tcp)
     add_subdirectory(tests/icmp)
     add_subdirectory(tests/mcast)
@@ -495,6 +500,6 @@ if(YASIO_BUILD_TESTS AND NOT UWP AND NOT IOS)
 endif ()
 
 ### Sets startup project for vs .sln
-if (WIN32 AND NOT UWP AND YASIO_BUILD_TESTS)
+if (WIN32 AND YASIO_BUILD_TESTS)
     set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
 endif ()

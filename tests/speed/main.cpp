@@ -187,7 +187,9 @@ void start_sender(io_service& service)
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
 
+#if YASIO_SSL_BACKEND != 0
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
+#endif
   service.start([&](event_ptr event) {
     switch (event->kind())
     {
@@ -249,7 +251,9 @@ void start_receiver(io_service& service)
   static double last_print_time = 0;
   service.set_option(YOPT_S_FORWARD_PACKET, 1);
   service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
+#if YASIO_SSL_BACKEND != 0
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
+#endif
   service.start([&](event_ptr event) {
     switch (event->kind())
     {

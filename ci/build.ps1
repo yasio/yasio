@@ -224,7 +224,7 @@ function build_win() {
         
         if($options.t -eq '') {
             if ($options.p -eq "uwp") {
-                $CONFIG_ALL_OPTIONS += '-A', $arch, '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0', '-DBUILD_SHARED_LIBS=ON', '-DYAISO_BUILD_NI=ON', '-DYASIO_SSL_BACKEND=0'
+                $CONFIG_ALL_OPTIONS += '-A', $arch, '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0', '-DBUILD_SHARED_LIBS=OFF', '-DYAISO_BUILD_NI=ON', '-DYASIO_SSL_BACKEND=0'
             }
             else {
                 $CONFIG_ALL_OPTIONS += '-A', $arch
@@ -240,7 +240,7 @@ function build_win() {
     }
     elseif($toolchain -eq 'clang') {
         clang --version
-        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++', '-DYASIO_SSL_BACKEND=1'
+        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++'
         cmake -B build $CONFIG_ALL_OPTIONS
     }
     else { # Generate mingw
@@ -303,7 +303,7 @@ function build_andorid() {
     } elseif($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    cmake -G "Ninja" -B build "-DANDROID_STL=c++_shared" "-DCMAKE_MAKE_PROGRAM=$ninja_prog" "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake" -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang "-DANDROID_ABI=$arch" -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
+    cmake -G "Ninja" -B build "-DANDROID_STL=c++_shared" "-DCMAKE_MAKE_PROGRAM=$ninja_prog" "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake" -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang "-DANDROID_ABI=$arch" -DCMAKE_BUILD_TYPE=Release -DYASIO_USE_CARES=ON
     cmake --build build --config Release 
 }
 
@@ -314,7 +314,7 @@ function build_osx() {
         $arch = 'x86_64'
     }
 
-    cmake -GXcode -Bbuild -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON "-DCMAKE_OSX_ARCHITECTURES=$arch"
+    cmake -GXcode -Bbuild -DYASIO_USE_CARES=ON "-DCMAKE_OSX_ARCHITECTURES=$arch"
     cmake --build build --config Release
 
     if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
@@ -336,20 +336,15 @@ function build_ios() {
         $arch = 'x86_64'
     }
     if ($options.p -eq 'ios') {
-        Write-Host "Building iOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
-        cmake --build build --config Release
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DYASIO_USE_CARES=ON
     } 
     elseif ($options.p -eq 'tvos') {
-        Write-Host "Building tvOS..."
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=tvOS -DYASIO_SSL_BACKEND=1 -DYASIO_USE_CARES=ON
-        cmake --build build --config Release
+        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=tvOS -DYASIO_USE_CARES=ON
     }
     elseif ($options.p -eq 'watchos') {
-        Write-Host "Building  watchOS..."
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
-        cmake --build build --config Release
     }
+    cmake --build build --config Release
 }
 
 $builds = @{ 

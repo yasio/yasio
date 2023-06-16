@@ -1,6 +1,6 @@
 #
 # The simple ios toolchain file: https://github.com/yasio/yasio/blob/dev/cmake/ios.cmake
-# version: 4.0.3
+# version: 4.0.4
 #
 # The supported params:
 #   PLAT: iOS, tvOS, default: iOS
@@ -86,12 +86,19 @@ if(SIMULATOR)
     endif()
 endif() 
 
+# Since xcode14, the bitcode was marked deprecated, so we disable by default
 if(ENABLE_BITCODE)
     set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
     set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")
 else()
     set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
 endif()
+
+# Set find path mode properly for cross-compiling
+# refer to: https://discourse.cmake.org/t/find-package-stops-working-when-cmake-system-name-ios/4609/6
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH CACHE STRING "")
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH CACHE STRING "")
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH CACHE STRING "")
 
 # Sets CMAKE_SYSTEM_PROCESSOR for device and simulator properly
 string(TOLOWER "${CMAKE_OSX_SYSROOT}" lowercase_CMAKE_OSX_SYSROOT)

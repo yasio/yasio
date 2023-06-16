@@ -113,6 +113,11 @@ if (WIN32 AND _CLANG)
     set(YASIO_SSL_BACKEND 1)
 endif()
 
+# mbedtls can't compile for watchOS, and openssl prebuilt also not ready yet
+if ((CMAKE_SYSTEM_NAME STREQUAL "watchOS") OR (CMAKE_SYSTEM_NAME MATCHES "Emscripten"))
+    set(YASIO_SSL_BACKEND 0)
+endif()
+
 if (NOT DEFINED YASIO_ENABLE_HALF_FLOAT)
     set(YASIO_ENABLE_HALF_FLOAT ON)
 endif()
@@ -139,11 +144,6 @@ include_directories(
 )
 
 ### ssl support
-
-# force use openssl for wasm
-if ((NOT YASIO_SSL_BACKEND EQUAL 0) AND (CMAKE_SYSTEM_NAME MATCHES "Emscripten"))
-   set (YASIO_SSL_BACKEND 1)
-endif()
 
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    message(STATUS "Build with openssl support")

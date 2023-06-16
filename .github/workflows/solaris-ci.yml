@@ -45,7 +45,7 @@ jobs:
           perl -v
         run: |
           echo Building on solaris...
-          cmake -G "Unix Makefiles" -S . -Bbuild
+          cmake -G "Unix Makefiles" -S . -Bbuild -DYASIO_SSL_BACKEND=2
           cmake --build build --config Release
           echo run test icmp on solaris ...
           ./build/tests/icmp/icmptest

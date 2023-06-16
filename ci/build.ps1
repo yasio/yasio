@@ -74,7 +74,7 @@ if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
 else {
     $envPathSep = ':'
     if($IsLinux) {
-        $hostOS =$HOST_LINUX1
+        $hostOS = $HOST_LINUX
     }
     elseif($IsMacOS) {
         $hostOS = $HOST_OSX
@@ -99,10 +99,11 @@ function setup_cmake() {
         Write-Host "Using system installed cmake version: $cmake_ver"
     } else {
         $cmake_ver = '3.27.0-rc2'
-        Write-Host "The installed cmake $cmake_ver too old, installing newer cmake-$cmake_ver ..."
-        $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip"
+        Write-Host "The installed cmake $cmake_ver too old ..."
         $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-windows-x86_64")
         if (!(Test-Path $cmake_root -PathType Container)) {
+            Write-Host "Downloading cmake-$cmake_ver-windows-x86_64.zip ..."
+            $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip"
             if ($pwsh_ver -lt '7.0')  {
                 curl $cmake_url -o "$cmake_root.zip"
             } else {
@@ -121,15 +122,13 @@ function setup_cmake() {
 function setup_ninja() {
     $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
     if (!$ninja_prog) {
-        # install ninja
-    
-        $osName = $('win', 'linux', 'mac').Get($hostOS)
-        $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$osName" -ErrorAction SilentlyContinue).Path
+        $hostName = $('win', 'linux', 'mac').Get($hostOS)
+        $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$hostName" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
-            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$osName.zip" -o $yasio_tools/ninja-$osName.zip 
-            # unzip ~/ninja-$osName.zip -d ~
-            Expand-Archive -Path $yasio_tools/ninja-$osName.zip -DestinationPath "$yasio_tools/ninja-$osName/"
-            $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$osName" -ErrorAction SilentlyContinue).Path
+            Write-Host "Downloading ninja-$hostName.zip ..."
+            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$hostName.zip" -o $yasio_tools/ninja-$hostName.zip
+            Expand-Archive -Path $yasio_tools/ninja-$hostName.zip -DestinationPath "$yasio_tools/ninja-$hostName/"
+            $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$hostName" -ErrorAction SilentlyContinue).Path
         }
         if ($env:PATH.IndexOf($ninja_bin) -eq -1) {
             $env:PATH = "$ninja_bin$envPathSep$env:PATH"
@@ -179,13 +178,15 @@ function setup_ndk() {
     else {  
         $ndk_ver = $env:NDK_VER
         if ("$ndk_ver" -eq '') { $ndk_ver = 'r19c' }
-        $osName = $('windows', 'linux', 'darwin').Get($hostOS)
-        $suffix=if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''}
-        $ndk_package="android-ndk-$ndk_ver-$osName$suffix"
-        Write-Host "Downloading ndk package $ndk_package ..."
-        curl -o $yasio_tools/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
-        Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/
-        $ndk_root=$yasio_tools/$ndk_package
+        $hostName = $('windows', 'linux', 'darwin').Get($hostOS)
+        $suffix = if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''}
+        $ndk_root = "$yasio_tools/android-ndk-$ndk_ver"
+        if (!(Test-Path "$ndk_root" -PathType Container)) {
+            Write-Host "Downloading ndk package $ndk_package ..."
+            $ndk_package="android-ndk-$ndk_ver-$hostName$suffix"
+            curl -o $yasio_tools/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
+            Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/
+        }
     }
 
     return $ndk_root

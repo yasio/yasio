@@ -19,14 +19,14 @@
 
 | Build | Status (github) |
 |-------|-----------------|
-| Windows|[![Windows Build Status](https://github.com/yasio/yasio/workflows/windows/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Awindows)|
+| Windows(msvc,clang,mingw)|[![Windows Build Status](https://github.com/yasio/yasio/workflows/windows/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Awindows)|
+| Windows(vs2013)|[![Windows VS2013 status](https://ci.appveyor.com/api/projects/status/xdmad4v3917n7rct?svg=true)](https://ci.appveyor.com/project/halx99/yasio)|
 | Android|[![Android Build Status](https://github.com/yasio/yasio/workflows/android/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aandroid)|
 | iOS/tvOS/watchOS|[![iOS Build Status](https://github.com/yasio/yasio/workflows/ios/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aios)|
 | Linux |[![Linux Build Status](https://github.com/yasio/yasio/workflows/linux/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Alinux)|
 | macOS |[![macOS Build Status](https://github.com/yasio/yasio/workflows/osx/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aosx)|
 | FreeBSD |[![FreeBSD Build Status](https://github.com/yasio/yasio/workflows/freebsd/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Afreebsd)|
 | Solaris |[![Solaris Build Status](https://github.com/yasio/yasio/workflows/solaris/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Asolaris)|
-| MinGW |[![MinGW Build Status](https://github.com/yasio/yasio/workflows/mingw/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Amingw)|
 
 ## Showcase
 * [Place Girls](http://hcsj.c4connect.co.jp/): A popular mobile game published on jp.

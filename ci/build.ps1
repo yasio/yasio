@@ -261,6 +261,9 @@ function build_win() {
             else {
                 $CONFIG_ALL_OPTIONS += '-G', "Visual Studio 12 2013", '-DYASIO_BUILD_WITH_LUA=ON'
             }
+            # openssl prebuilt was built from vs2022, so we set ssl backend to use mbedtls-2.28.3
+            # Notes: mbedtls-3.x no longer support compile with vs2013, will encounter many compiling errors
+            $CONFIG_ALL_OPTIONS += '-DYASIO_SSL_BACKEND=2'
         }
     }
     elseif($toolchain -eq 'clang') {

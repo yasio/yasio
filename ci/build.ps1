@@ -60,6 +60,9 @@ Write-Host $options.ToString()
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
 
+# The preferred cmake version to install when system installed cmake < 3.13.0
+$cmake_ver = '3.26.4'
+
 Set-Location $yasio_root
 
 Write-Host "yasio_root=$yasio_root"
@@ -97,31 +100,54 @@ if (!(Test-Path "$yasio_tools" -PathType Container)) {
 function setup_cmake() {
     $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source
     if ($cmake_prog) {
-        $cmake_ver = $($(cmake --version | Select-Object -First 1) -split ' ')[2]
+        $_cmake_ver = $($(cmake --version | Select-Object -First 1) -split ' ')[2]
     } else {
-        $cmake_ver = '0.0.0'
+        $_cmake_ver = '0.0.0'
     }
-    if ($cmake_ver -ge '3.13.0') {
-        Write-Host "Using system installed cmake $cmake_prog, version: $cmake_ver"
+    if ($_cmake_ver -ge '3.13.0') {
+        Write-Host "Using system installed cmake $cmake_prog, version: $_cmake_ver"
     } else {
-        $cmake_ver = '3.27.0-rc2'
-        Write-Host "The installed cmake $cmake_ver too old ..."
-        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-windows-x86_64")
+        
+        Write-Host "The installed cmake $_cmake_ver too old, installing newer $cmake_ver ..."
+
+        $hostName = $('windows', 'linux', 'macos').Get($hostOS)
+        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$hostName-x86_64")
         if (!(Test-Path $cmake_root -PathType Container)) {
             Write-Host "Downloading cmake-$cmake_ver-windows-x86_64.zip ..."
-            $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip"
-            if ($pwsh_ver -lt '7.0')  {
-                curl $cmake_url -o "$cmake_root.zip"
-            } else {
-                curl -L $cmake_url -o "$cmake_root.zip"
+            if ($hostOS -eq $HOST_WIN) {
+                $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip"
+                if ($pwsh_ver -lt '7.0')  {
+                    curl $cmake_url -o "$cmake_root.zip"
+                } else {
+                    curl -L $cmake_url -o "$cmake_root.zip"
+                }
+                Expand-Archive -Path "$cmake_root.zip" -DestinationPath $yasio_tools\
             }
-            Expand-Archive -Path "$cmake_root.zip" -DestinationPath $yasio_tools\
+            elseif($hostOS -eq $HOST_LINUX) {
+                if (!(Test-Path "$cmake_root.sh" -PathType Leaf)) {
+                    $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-linux-x86_64.sh"
+                    curl -L $cmake_url -o "$cmake_root.sh"
+                }
+                chmod 'u+x' "$cmake_root.sh"
+                mkdir $cmake_root
+                & "$cmake_root.sh" '--skip-license' '--exclude-subdir' "--prefix=$cmake_root"
+            }
         }
         $cmake_bin = Join-Path -Path $cmake_root -ChildPath 'bin'
         if ($env:PATH.IndexOf($cmake_bin) -eq -1) {
-            $env:PATH = "$cmake_bin;$env:PATH"
+            $env:PATH = "$cmake_bin$envPathSep$env:PATH"
         }
-        Write-Host (cmake --version)
+        $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source
+        if ($cmake_prog) {
+            $_cmake_ver = $($(cmake --version | Select-Object -First 1) -split ' ')[2]
+        }
+        if ($_cmake_ver -ge '3.13.0') {
+            Write-Host "Install cmake $_cmake_ver succeed"
+        }
+        else {
+            Write-Host "Install cmake $_cmake_ver fail"
+            exit 1
+        }
     }
 }
 

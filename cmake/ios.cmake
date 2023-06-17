@@ -1,6 +1,6 @@
 #
 # The simple ios toolchain file: https://github.com/yasio/yasio/blob/dev/cmake/ios.cmake
-# version: 4.0.4
+# version: 4.0.5
 #
 # The supported params:
 #   PLAT: iOS, tvOS, default: iOS
@@ -99,6 +99,7 @@ endif()
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH CACHE STRING "")
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH CACHE STRING "")
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH CACHE STRING "")
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH CACHE STRING "")
 
 # Sets CMAKE_SYSTEM_PROCESSOR for device and simulator properly
 string(TOLOWER "${CMAKE_OSX_SYSROOT}" lowercase_CMAKE_OSX_SYSROOT)

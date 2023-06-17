@@ -54,8 +54,7 @@ foreach ($arg in $args) {
 $pwsh_ver = $PSVersionTable.PSVersion.ToString()
 
 Write-Host "PowerShell $pwsh_ver"
-
-Write-Host $options.ToString()
+Write-Host $(ConvertTo-Yaml @{ options = $options})
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
@@ -329,8 +328,13 @@ function build_andorid() {
     } elseif($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    cmake -G "Ninja" -B build "-DANDROID_STL=c++_shared" "-DCMAKE_MAKE_PROGRAM=$ninja_prog" "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake" -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang "-DANDROID_ABI=$arch" -DCMAKE_BUILD_TYPE=Release -DYASIO_USE_CARES=ON
-    cmake --build build --config Release 
+    $CONFIG_ALL_OPTIONS = @('-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake", "-DANDROID_ABI=$arch", '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON')
+    $CONFIG_ALL_OPTIONS += ' -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
+    $CONFIG_ALL_OPTIONS += ' -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH'
+    $CONFIG_ALL_OPTIONS += ' -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH'
+    $CONFIG_ALL_OPTIONS += ' -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=BOTH'
+    cmake -B build_a $CONFIG_ALL_OPTIONS
+    cmake --build build_a --config Release 
 }
 
 function build_osx() {

@@ -55,7 +55,7 @@ $pwsh_ver = $PSVersionTable.PSVersion.ToString()
 
 Write-Host "PowerShell $pwsh_ver"
 
-Write-Host $options
+Write-Host $options.ToString()
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
@@ -102,7 +102,7 @@ function setup_cmake() {
         $cmake_ver = '0.0.0'
     }
     if ($cmake_ver -ge '3.13.0') {
-        Write-Host "Using system installed cmake version: $cmake_ver"
+        Write-Host "Using system installed cmake $cmake_prog, version: $cmake_ver"
     } else {
         $cmake_ver = '3.27.0-rc2'
         Write-Host "The installed cmake $cmake_ver too old ..."

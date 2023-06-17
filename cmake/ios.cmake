@@ -99,6 +99,7 @@ endif()
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH CACHE STRING "")
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH CACHE STRING "")
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH CACHE STRING "")
+# by default, we want find host program only when cross-compiling
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER CACHE STRING "")
 
 # Sets CMAKE_SYSTEM_PROCESSOR for device and simulator properly

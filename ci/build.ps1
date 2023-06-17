@@ -54,7 +54,7 @@ foreach ($arg in $args) {
 $pwsh_ver = $PSVersionTable.PSVersion.ToString()
 
 Write-Host "PowerShell $pwsh_ver"
-Write-Host $(ConvertTo-Json @{ options = $options})
+Write-Host $(ConvertTo-Json $options)
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
@@ -332,6 +332,7 @@ function build_andorid() {
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH'
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH'
+    # by default, we want find host program only when cross-compiling
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER'
     Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
     cmake -B build_a $CONFIG_ALL_OPTIONS

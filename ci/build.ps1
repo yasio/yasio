@@ -207,8 +207,6 @@ function build_win() {
 
     $toolchain = $options.cc
     
-    setup_cmake
-
     if ($toolchain -ne 'msvc') { # install ninja for non msvc compilers
         setup_ninja
     }
@@ -359,5 +357,7 @@ $builds = @{
     'tvos' = ${function:build_ios};
     'watchos' = ${function:build_ios};
 }
+
+setup_cmake
 
 & $builds[$options.p]

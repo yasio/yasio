@@ -96,7 +96,6 @@ if (!(Test-Path "$yasio_tools" -PathType Container)) {
 }
 
 # for ci check, enable high preformance platform I/O multiplexing
-Write-Host "GITHUB_ACTIONS=$env:GITHUB_ACTIONS"
 if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "Enable high performance I/O multiplexing for ci checks"
     $CONFIG_ALL_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
@@ -233,8 +232,12 @@ function setup_ndk() {
 }
 
 # build methods
-function build_win() {
-    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+function build_win {
+    Param(
+        [string[]]$cmakeOptions
+    )
+    $CONFIG_ALL_OPTIONS = $cmakeOptions
+
     $CONFIG_ALL_OPTIONS += '-DYASIO_ENABLE_WEPOLL=1'
 
     Write-Host "Building target $($options.p) on windows ..."
@@ -306,8 +309,11 @@ function build_win() {
     }
 }
 
-function build_linux() {
-    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+function build_linux {
+    Param(
+        [string[]]$cmakeOptions
+    )
+    $CONFIG_ALL_OPTIONS = $cmakeOptions
 
     Write-Host "Building linux ..."
 
@@ -331,8 +337,11 @@ function build_linux() {
     }
 }
 
-function build_andorid() {
-    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+function build_andorid {
+    Param(
+        [string[]]$cmakeOptions
+    )
+    $CONFIG_ALL_OPTIONS = $cmakeOptions
 
     Write-Host "Building android ..."
 
@@ -359,8 +368,11 @@ function build_andorid() {
     cmake --build build_a --config Release 
 }
 
-function build_osx() {
-    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+function build_osx {
+    Param(
+        [string[]]$cmakeOptions
+    )
+    $CONFIG_ALL_OPTIONS = $cmakeOptions
 
     Write-Host "Building $($options.p) ..."
     $arch = $options.a
@@ -386,8 +398,11 @@ function build_osx() {
 }
 
 # build ios famliy (ios,tvos,watchos)
-function build_ios() {
-    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+function build_ios {
+    Param(
+        [string[]]$cmakeOptions
+    )
+    $CONFIG_ALL_OPTIONS = $cmakeOptions
 
     Write-Host "Building $($options.p) ..."
     if ($arch -eq 'x64') {
@@ -419,4 +434,4 @@ $builds = @{
 
 setup_cmake
 
-& $builds[$options.p]
+& $builds[$options.p] -cmakeOptions $CONFIG_ALL_OPTIONS

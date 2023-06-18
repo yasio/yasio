@@ -51,6 +51,7 @@ public:
 
   int poll_io(int64_t waitd_us)
   {
+    ready_events_.resize_fit(_nevents);
     ::memset(ready_events_.data(), 0x0, sizeof(struct kevent) * ready_events_.size());
 
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
@@ -132,7 +133,7 @@ protected:
         registered_events_[fd] = events;
         int diff               = nkvlist - nkv_old;
         if (diff != 0)
-          ready_events_.resize(registered_events_.size() + diff);
+          nevents_ += diff; //ready_events_.resize(registered_events_.size() + diff);
       }
     }
   }
@@ -178,12 +179,13 @@ protected:
           registered_events_.erase(fd);
         int diff = nkvlist - curr_count;
         if (diff != 0)
-          ready_events_.resize(ready_events_.size() + diff);
+          nevents_ += diff;
       }
     }
   }
 
   int kqueue_fd_;
+  int nevents_ = 0;
   std::map<socket_native_type, int> registered_events_;
   yasio::pod_vector<struct kevent> ready_events_;
   select_interrupter interrupter_;

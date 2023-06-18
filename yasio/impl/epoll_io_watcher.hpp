@@ -22,7 +22,7 @@ class epoll_io_watcher {
 public:
   epoll_io_watcher() : epoll_handle_(do_epoll_create())
   {
-    this->ready_events_.reserve(128);
+    this->ready_events_.resize_fit(128);
     this->mod_event(interrupter_.read_descriptor(), socket_event::read, 0, EPOLLONESHOT);
     interrupter_.interrupt();
     poll_io(1);
@@ -52,10 +52,7 @@ public:
         if (registered)
           it->second = underlying_events;
         else
-        {
           registered_events_[fd] = underlying_events;
-          ready_events_.resize(registered_events_.size());
-        }
       }
     }
     else
@@ -64,7 +61,6 @@ public:
       {
         ::epoll_ctl(epoll_handle_, EPOLL_CTL_DEL, fd, &ev);
         registered_events_.erase(it);
-        ready_events_.resize(registered_events_.size());
       }
     }
   }

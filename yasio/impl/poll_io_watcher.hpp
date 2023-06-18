@@ -8,6 +8,7 @@
 #define YASIO__POLL_IO_WATCHER_HPP
 #include <vector>
 #include "yasio/impl/socket.hpp"
+#include "yasio/impl/pod_vector.hpp"
 #include "yasio/impl/select_interrupter.hpp"
 
 namespace yasio
@@ -77,7 +78,7 @@ protected:
     }
     return underlying_events;
   }
-  static void pollfd_mod(std::vector<pollfd>& fdset, socket_native_type fd, int add_events, int remove_events)
+  static void pollfd_mod(yasio::pod_vector<pollfd>& fdset, socket_native_type fd, int add_events, int remove_events)
   {
     auto it = std::find_if(fdset.begin(), fdset.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
     if (it != fdset.end())
@@ -91,13 +92,13 @@ protected:
     {
       auto events = add_events & ~remove_events;
       if (events)
-        fdset.push_back(pollfd{fd, static_cast<short>(events), 0});
+        fdset.emplace_back(pollfd{fd, static_cast<short>(events), 0});
     }
   }
 
 protected:
-  std::vector<pollfd> registered_events_;
-  std::vector<pollfd> ready_events_;
+  yasio::pod_vector<pollfd> registered_events_;
+  yasio::pod_vector<pollfd> ready_events_;
 
   select_interrupter interrupter_;
 };

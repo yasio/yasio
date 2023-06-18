@@ -32,7 +32,7 @@ namespace inet
 {
 class evport_io_watcher {
 public:
-  evport_io_watcher() : port_handle_(::port_create()) { this->ready_events_.reserve(128); }
+  evport_io_watcher() : port_handle_(::port_create()) { this->ready_events_.resize_fit(128); }
   ~evport_io_watcher() { ::close(port_handle_); }
 
   void mod_event(socket_native_type fd, int add_events, int remove_events, int flags = 0)
@@ -50,10 +50,7 @@ public:
         if (registered)
           it->second = underlying_events;
         else
-        {
           registered_events_[fd] = underlying_events;
-          ready_events_.resize(registered_events_.size());
-        }
       }
     }
     else
@@ -62,7 +59,6 @@ public:
       {
         ::port_dissociate(port_handle_, PORT_SOURCE_FD, fd);
         registered_events_.erase(it);
-        ready_events_.resize(registered_events_.size());
       }
     }
   }

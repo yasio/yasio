@@ -65,8 +65,12 @@ public:
   using const_iterator  = const _Ty*;
   pod_vector()          = default;
   explicit pod_vector(size_t count) { resize_fit(count); }
-  pod_vector(pod_vector const&)            = delete;
-  pod_vector& operator=(pod_vector const&) = delete;
+  pod_vector(pod_vector const& rhs) { this->assign(rhs); }
+  pod_vector& operator=(pod_vector const& rhs)
+  {
+    this->assign(rhs);
+    return *this;
+  }
 
   pod_vector(pod_vector&& o) noexcept : _Myfirst(o._Myfirst), _Mylast(o._Mylast), _Myend(o._Myend)
   {
@@ -78,6 +82,13 @@ public:
   {
     this->swap(o);
     return *this;
+  }
+
+  void assign(pod_vector const& rhs)
+  {
+    resize_fit(rhs.size());
+    if (!rhs.empty())
+      std::copy(rhs._Myfirst, rhs._Mylast, _Myfirst);
   }
 
   void swap(pod_vector& rhs) noexcept
@@ -145,10 +156,11 @@ public:
     }
   }
 
-  void zeroset()
+  iterator erase(iterator _Where)
   {
-    if (!this->empty())
-      ::memset(_Myfirst, 0x0, sizeof(_Ty) * this->size());
+    // _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where < _Mylast, "byte_buffer: out of range!");
+    _Mylast = std::move(_Where + 1, _Mylast, _Where);
+    return _Where;
   }
 
   // release memmory ownership

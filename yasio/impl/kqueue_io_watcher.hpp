@@ -51,7 +51,7 @@ public:
 
   int poll_io(int64_t waitd_us)
   {
-    ready_events_.resize_fit(_nevents);
+    ready_events_.resize_fit(nevents_);
     ::memset(ready_events_.data(), 0x0, sizeof(struct kevent) * ready_events_.size());
 
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),

@@ -95,8 +95,10 @@ if (!(Test-Path "$yasio_tools" -PathType Container)) {
     mkdir $yasio_tools
 }
 
+$CI_CHECKS = ("$env:GITHUB_ACTIONS" -eq 'true') -or ("$env:APPVEYOR_BUILD_VERSION" -ne '')
+
 # for ci check, enable high preformance platform I/O multiplexing
-if ($env:GITHUB_ACTIONS -eq 'true') {
+if ($CI_CHECKS) {
     Write-Host "Enable high performance I/O multiplexing for ci checks"
     $CONFIG_ALL_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
 } else {
@@ -182,20 +184,7 @@ function setup_ninja() {
 
 function setup_ndk() {
     # install ndk
-    if ($env:GITHUB_ACTIONS -eq "true") {
-        Write-Host "Using github action ndk ..."
-        Write-Host "ANDROID_NDK=$env:ANDROID_NDK"
-        Write-Host "ANDROID_NDK_HOME=$env:ANDROID_NDK_HOME"
-        Write-Host "ANDROID_NDK_ROOT=$env:ANDROID_NDK_ROOT"
-
-        $ndk_root = $env:ANDROID_NDK
-        if ($ndk_root -eq '') {
-            $ndk_root = $env:ANDROID_NDK_HOME
-            if ($ndk_root -eq '') {
-                $ndk_root = $env:ANDROID_NDK_ROOT
-            }
-        }
-    } elseif("$env:ANDROID_HOME" -ne '') {
+    if("$env:ANDROID_HOME" -ne '') {
         # find ndk in sdk
         foreach($item in $(Get-ChildItem -Path "$env:ANDROID_HOME/ndk")) {
             $sourceProps = "$item/source.properties"
@@ -322,7 +311,7 @@ function build_linux {
     cmake -Bbuild $CONFIG_ALL_OPTIONS
     cmake --build build -- -j $(nproc)
 
-    if ($env:GITHUB_ACTIONS -eq "true") {
+    if ($CI_CHECKS) {
         Write-Host "run issue201 on linux..."
         ./build/tests/issue201/issue201
         
@@ -385,7 +374,7 @@ function build_osx {
     cmake -Bbuild $CONFIG_ALL_OPTIONS
     cmake --build build --config Release
 
-    if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
+    if ($CI_CHECKS -and ($options.a -eq 'x64')) {
         Write-Host "run test tcptest on osx ..."
         ./build/tests/tcp/Release/tcptest
         

@@ -129,7 +129,7 @@ public:
     _Mylast = _Myfirst + new_size;
   }
 
-  static constexpr size_t max_size() YASIO__NOEXCEPT { return (std::numeric_limits<ptrdiff_t>::max)(); }
+  static YASIO__CONSTEXPR size_t max_size() YASIO__NOEXCEPT { return (std::numeric_limits<ptrdiff_t>::max)(); }
   iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
   iterator end() YASIO__NOEXCEPT { return _Mylast; }
   const_iterator begin() const YASIO__NOEXCEPT { return _Myfirst; }

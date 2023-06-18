@@ -232,6 +232,9 @@ function setup_ndk() {
 
 # build methods
 function build_win() {
+    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+    $CONFIG_ALL_OPTIONS += '-DYASIO_ENABLE_WEPOLL=1'
+
     Write-Host "Building target $($options.p) on windows ..."
     if ($options.cc -eq '') {
         $options.cc = 'msvc'
@@ -302,6 +305,8 @@ function build_win() {
 }
 
 function build_linux() {
+    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+
     Write-Host "Building linux ..."
 
     $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_BUILD_NI=YES', '-DCXX_STD=17', '-DYASIO_BUILD_WITH_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
@@ -325,6 +330,8 @@ function build_linux() {
 }
 
 function build_andorid() {
+    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+
     Write-Host "Building android ..."
 
     $ninja_prog = setup_ninja
@@ -351,6 +358,8 @@ function build_andorid() {
 }
 
 function build_osx() {
+    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+
     Write-Host "Building $($options.p) ..."
     $arch = $options.a
     if ($arch -eq 'x64') {
@@ -376,6 +385,8 @@ function build_osx() {
 
 # build ios famliy (ios,tvos,watchos)
 function build_ios() {
+    $CONFIG_ALL_OPTIONS = $Global:CONFIG_ALL_OPTIONS
+
     Write-Host "Building $($options.p) ..."
     if ($arch -eq 'x64') {
         $arch = 'x86_64'

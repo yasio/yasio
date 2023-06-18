@@ -96,6 +96,7 @@ if (!(Test-Path "$yasio_tools" -PathType Container)) {
 }
 
 # for ci check, enable high preformance platform I/O multiplexing
+Write-Host "GITHUB_ACTIONS=$env:GITHUB_ACTIONS"
 if ($env:GITHUB_ACTIONS -eq 'true') {
     $CONFIG_ALL_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
 } else {

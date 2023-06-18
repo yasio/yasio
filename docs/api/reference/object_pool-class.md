@@ -74,7 +74,7 @@ void destroy(void* _Ptr);
 ## 示例
 
 ```cpp
-#include "yasio/core/object_pool.hpp"
+#include "yasio/object_pool.hpp"
 
 int main() {
     // 非线程安全版本

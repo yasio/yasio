@@ -11,7 +11,7 @@
 using namespace yasio;
 
 #define ICMPTEST_PIN_HOST "www.ip138.com"
-#define ICMPTEST_PIN "yasio-3.39.x ping."
+#define ICMPTEST_PIN "yasio-4.0.x ping."
 
 // ICMP header for both IPv4 and IPv6.
 //

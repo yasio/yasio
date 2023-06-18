@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 #include "yasio/config.hpp"
-#include "yasio/core/logging.hpp"
+#include "yasio/logging.hpp"
 
 #if defined(_WIN32)
 #    include <Windows.h>

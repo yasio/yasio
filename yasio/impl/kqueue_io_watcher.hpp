@@ -4,16 +4,17 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
-#pragma once
+#ifndef YASIO__KQUEUE_IO_WATCHER_HPP
+#define YASIO__KQUEUE_IO_WATCHER_HPP
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
 #include <vector>
 #include <chrono>
 #include <map>
-#include "yasio/core/socket.hpp"
-#include "yasio/core/pod_vector.hpp"
-#include "yasio/core/select_interrupter.hpp"
+#include "yasio/impl/socket.hpp"
+#include "yasio/impl/pod_vector.hpp"
+#include "yasio/impl/select_interrupter.hpp"
 
 #if defined(__NetBSD__) && __NetBSD_Version__ < 999001500
 #  define YASIO_KQUEUE_EV_SET(ev, ident, filt, flags, fflags, data, udata) \
@@ -189,3 +190,4 @@ protected:
 };
 } // namespace inet
 } // namespace yasio
+#endif

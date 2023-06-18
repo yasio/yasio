@@ -54,7 +54,7 @@ foreach ($arg in $args) {
 $pwsh_ver = $PSVersionTable.PSVersion.ToString()
 
 Write-Host "PowerShell $pwsh_ver"
-Write-Host $(ConvertTo-Json $options)
+Write-Host $(Out-String -InputObject $options)
 
 $yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
 $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
@@ -93,6 +93,13 @@ $exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
 
 if (!(Test-Path "$yasio_tools" -PathType Container)) {
     mkdir $yasio_tools
+}
+
+# for ci check, enable high preformance platform I/O multiplexing
+if ($env:GITHUB_ACTIONS -eq 'true') {
+    $CONFIG_ALL_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
+} else {
+    $CONFIG_ALL_OPTIONS = @()
 }
 
 # now windows only
@@ -236,7 +243,6 @@ function build_win() {
         setup_ninja
     }
 
-    $CONFIG_ALL_OPTIONS=@()
     if ($toolchain -eq 'msvc') { # Generate vs2019 on github ci
         # Determine arch name
         $arch=""
@@ -298,7 +304,9 @@ function build_win() {
 function build_linux() {
     Write-Host "Building linux ..."
 
-    cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DYASIO_SSL_BACKEND=2 -DYASIO_USE_CARES=ON -DYASIO_ENABLE_ARES_PROFILER=ON -DYAISO_BUILD_NI=YES -DCXX_STD=17 -DYASIO_BUILD_WITH_LUA=ON -DBUILD_SHARED_LIBS=ON
+    $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_BUILD_NI=YES', '-DCXX_STD=17', '-DYASIO_BUILD_WITH_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
+    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
+    cmake -Bbuild $CONFIG_ALL_OPTIONS
     cmake --build build -- -j $(nproc)
 
     if ($env:GITHUB_ACTIONS -eq "true") {
@@ -331,7 +339,7 @@ function build_andorid() {
     } elseif($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    $CONFIG_ALL_OPTIONS = @('-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake", "-DANDROID_ABI=$arch", '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON')
+    $CONFIG_ALL_OPTIONS += '-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake", "-DANDROID_ABI=$arch", '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON'
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH'
     $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH'
@@ -349,7 +357,9 @@ function build_osx() {
         $arch = 'x86_64'
     }
 
-    cmake -GXcode -Bbuild -DYASIO_USE_CARES=ON "-DCMAKE_OSX_ARCHITECTURES=$arch"
+    $CONFIG_ALL_OPTIONS += '-GXcode', '-DYASIO_USE_CARES=ON', "-DCMAKE_OSX_ARCHITECTURES=$arch"
+    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
+    cmake -Bbuild $CONFIG_ALL_OPTIONS
     cmake --build build --config Release
 
     if (($env:GITHUB_ACTIONS -eq "true") -and ($options.a -eq 'x64')) {
@@ -370,15 +380,16 @@ function build_ios() {
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    if ($options.p -eq 'ios') {
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DYASIO_USE_CARES=ON
-    } 
-    elseif ($options.p -eq 'tvos') {
+    $CONFIG_ALL_OPTIONS += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake", "-DARCHS=$arch", '-DYASIO_USE_CARES=ON'
+    if ($options.p -eq 'tvos') {
+        $CONFIG_ALL_OPTIONS += '-DPLAT=tvOS'
         cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=tvOS -DYASIO_USE_CARES=ON
     }
     elseif ($options.p -eq 'watchos') {
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=watchOS -DYASIO_SSL_BACKEND=0 -DYASIO_USE_CARES=ON
+        $CONFIG_ALL_OPTIONS += '-DPLAT=watchOS', '-DYASIO_SSL_BACKEND=0'
     }
+    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
+    cmake -Bbuild $CONFIG_ALL_OPTIONS
     cmake --build build --config Release
 }
 

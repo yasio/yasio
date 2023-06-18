@@ -32,7 +32,7 @@ SOFTWARE.
 
 #include "yasio/bindings/yasio_jsb.hpp"
 #include "yasio/yasio.hpp"
-#include "yasio/core/ref_ptr.hpp"
+#include "yasio/ref_ptr.hpp"
 
 // A workaround to fix compile issue caused by `CCPlatformMacros.h` doesn't handle `__has_attribute` it properly
 #if !__has_attribute(format)

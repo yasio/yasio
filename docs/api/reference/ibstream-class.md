@@ -1,7 +1,7 @@
 ---
 title: "ibstream Class"
 date: "1/16/2021"
-f1_keywords: ["ibstream", "yasio/core/ibstream", ]
+f1_keywords: ["ibstream", "yasio/ibstream", ]
 helpviewer_keywords: []
 ---
 # ibstream_view Class

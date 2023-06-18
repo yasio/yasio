@@ -102,7 +102,7 @@ typedef int socket_native_type;
 
 #include <fcntl.h> // common platform header
 
-#include "yasio/core/endian_portable.hpp"
+#include "yasio/endian_portable.hpp"
 
 // redefine socket error code for posix api
 #ifdef _WIN32

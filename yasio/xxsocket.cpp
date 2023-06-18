@@ -33,13 +33,13 @@ SOFTWARE.
 #endif
 
 #if !defined(YASIO_HEADER_ONLY)
-#  include "yasio/core/xxsocket.hpp"
+#  include "yasio/xxsocket.hpp"
 #endif
 
-#include "yasio/core/utils.hpp"
+#include "yasio/utils.hpp"
 
 #if !defined(_WIN32)
-#  include "yasio/core/ifaddrs.hpp"
+#  include "yasio/impl/ifaddrs.hpp"
 #endif
 
 // For apple bsd socket implemention
@@ -69,7 +69,7 @@ namespace ip
 {
 namespace compat
 {
-#  include "yasio/core/impl/inet_ntop.hpp"
+#  include "yasio/impl/inet_ntop.hpp"
 } // namespace compat
 } // namespace ip
 } // namespace inet

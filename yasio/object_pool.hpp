@@ -28,7 +28,7 @@ SOFTWARE.
 #ifndef YASIO__OBJECT_POOL_HPP
 #define YASIO__OBJECT_POOL_HPP
 
-#include "yasio/core/impl/object_pool.hpp"
+#include "yasio/impl/object_pool.hpp"
 
 namespace yasio
 {

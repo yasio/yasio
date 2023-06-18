@@ -8,7 +8,7 @@ yasio-4.0.0
   3. Exclude kcp implemention from core.
   4. Add support forward packet on both send and recv stages.
   5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`.
-  6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue` support.
+  6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue`, `evport` support by `YASIO_ENABLE_HPERF_IO`, by default not enabled.
   7. Remove namespace `yasio::gc`.
   8. Improve `object_pool` and `singleton`.
   

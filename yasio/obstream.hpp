@@ -34,9 +34,9 @@ SOFTWARE.
 #include <stack>
 #include <fstream>
 #include "yasio/stl/string_view.hpp"
-#include "yasio/core/endian_portable.hpp"
-#include "yasio/core/utils.hpp"
-#include "yasio/core/byte_buffer.hpp"
+#include "yasio/endian_portable.hpp"
+#include "yasio/utils.hpp"
+#include "yasio/byte_buffer.hpp"
 namespace yasio
 {
 enum : size_t

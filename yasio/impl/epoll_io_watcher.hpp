@@ -4,13 +4,14 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
-#pragma once
+#ifndef YASIO__EPOLL_IO_WATCHER_HPP
+#define YASIO__EPOLL_IO_WATCHER_HPP
 #include <vector>
 #include <chrono>
 #include <map>
-#include "yasio/core/socket.hpp"
-#include "yasio/core/pod_vector.hpp"
-#include "yasio/core/select_interrupter.hpp"
+#include "yasio/impl/socket.hpp"
+#include "yasio/impl/pod_vector.hpp"
+#include "yasio/impl/select_interrupter.hpp"
 
 namespace yasio
 {
@@ -161,3 +162,4 @@ protected:
 };
 } // namespace inet
 } // namespace yasio
+#endif

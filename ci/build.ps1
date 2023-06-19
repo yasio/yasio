@@ -29,11 +29,11 @@
 # The build.ps1 for ci, support all target platforms
 # options
 #  -a: build arch: x86,x64,arm,arm64
-#  -p: build target platform: win,uwp,linux,android,osx(macos),ios,tvos,watchos
+#  -p: build target platform: win32,winuwp,linux,android,osx,ios,tvos,watchos
 #  -cc: compiler id: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
-#  -t: toolset name for visual studio: v12,v141,v143
+#  -t: toolset name for visual studio: v120,v141,v143
 
-$options = @{p = 'win'; a = 'x64'; cc = ''; t = ''}
+$options = @{p = 'win32'; a = 'x64'; cc = ''; t = ''}
 
 $optName = $null
 foreach ($arg in $args) {
@@ -103,10 +103,6 @@ if ($CI_CHECKS) {
     $CONFIG_ALL_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
 } else {
     $CONFIG_ALL_OPTIONS = @()
-}
-
-if ($options.p -eq 'osx') {
-    $options.p = 'macos'
 }
 
 $hostName = $('windows', 'linux', 'macos').Get($hostOS)
@@ -411,11 +407,11 @@ function build_ios {
 }
 
 $builds = @{ 
-    'win' = ${function:build_win};
-    'uwp' = ${function:build_win};
+    'win32' = ${function:build_win};
+    'winuwp' = ${function:build_win};
     'linux' = ${function:build_linux}; 
     'android' = ${function:build_andorid};
-    'macos' = ${function:build_osx};
+    'osx' = ${function:build_osx};
     'ios' = ${function:build_ios};
     'tvos' = ${function:build_ios};
     'watchos' = ${function:build_ios};

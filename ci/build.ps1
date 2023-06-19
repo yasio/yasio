@@ -33,7 +33,7 @@
 #  -cc: compiler id: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
 #  -t: toolset name for visual studio: v12,v141,v143
 
-$options = @{ a = 'x64'; p = 'win'; cc = ''; t = ''}
+$options = @{p = 'win'; a = 'x64'; cc = ''; t = ''}
 
 $optName = $null
 foreach ($arg in $args) {
@@ -105,6 +105,14 @@ if ($CI_CHECKS) {
     $CONFIG_ALL_OPTIONS = @()
 }
 
+if ($options.p -eq 'osx') {
+    $options.p = 'macos'
+}
+
+$hostName = $('windows', 'linux', 'macos').Get($hostOS)
+
+Write-Host "Building target $($options.p) on $hostName ..."
+
 # now windows only
 function setup_cmake() {
     $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source
@@ -114,12 +122,11 @@ function setup_cmake() {
         $_cmake_ver = '0.0.0'
     }
     if ($_cmake_ver -ge '3.13.0') {
-        Write-Host "Using system installed cmake $cmake_prog, version: $_cmake_ver"
+        Write-Host "Using installed cmake $cmake_prog, version: $_cmake_ver"
     } else {
         
         Write-Host "The installed cmake $_cmake_ver too old, installing newer $cmake_ver ..."
 
-        $hostName = $('windows', 'linux', 'macos').Get($hostOS)
         $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$hostName-x86_64")
         if (!(Test-Path $cmake_root -PathType Container)) {
             Write-Host "Downloading cmake-$cmake_ver-windows-x86_64.zip ..."
@@ -163,22 +170,21 @@ function setup_cmake() {
 function setup_ninja() {
     $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
     if (!$ninja_prog) {
-        $hostName = $('win', 'linux', 'mac').Get($hostOS)
-        $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$hostName" -ErrorAction SilentlyContinue).Path
+        $suffix = $('win', 'linux', 'mac').Get($hostOS)
+        $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
-            Write-Host "Downloading ninja-$hostName.zip ..."
-            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$hostName.zip" -o $yasio_tools/ninja-$hostName.zip
-            Expand-Archive -Path $yasio_tools/ninja-$hostName.zip -DestinationPath "$yasio_tools/ninja-$hostName/"
-            $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$hostName" -ErrorAction SilentlyContinue).Path
+            Write-Host "Downloading ninja-$suffix.zip ..."
+            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$suffix.zip" -o $yasio_tools/ninja-$suffix.zip
+            Expand-Archive -Path $yasio_tools/ninja-$suffix.zip -DestinationPath "$yasio_tools/ninja-$suffix/"
+            $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         }
         if ($env:PATH.IndexOf($ninja_bin) -eq -1) {
             $env:PATH = "$ninja_bin$envPathSep$env:PATH"
         }
         $ninja_prog = (Join-Path -Path $ninja_bin -ChildPath ninja$exeSuffix)
     } else {
-        Write-Host "Using system installed ninja: $ninja_prog"
+        Write-Host "Using installed ninja: $ninja_prog, version: $(ninja --version)"
     }
-    Write-Host (ninja --version)
     return $ninja_prog
 }
 
@@ -188,11 +194,12 @@ function setup_ndk() {
         # find ndk in sdk
         $ndks = [ordered]@{}
         foreach($item in $(Get-ChildItem -Path "$env:ANDROID_HOME/ndk")) {
-            $sourceProps = "$item/source.properties"
+            $ndkDir = $item.FullName
+            $sourceProps = "$ndkDir/source.properties"
             if (Test-Path $sourceProps -PathType Leaf) {
                 $verLine = $(Get-Content $sourceProps | Select-Object -Index 1)
                 $ndk_rev = $($verLine -split '=').Trim()[1]
-                $ndks.Add($ndk_rev, $item.ToString())
+                $ndks.Add($ndk_rev, $ndkDir)
             }
         }
         foreach ($item in $ndks.GetEnumerator()) {
@@ -205,17 +212,16 @@ function setup_ndk() {
     
     if (Test-Path "$ndk_root" -PathType Container)
     {
-        Write-Host "Using found ndk: $ndk_root ..."
+        Write-Host "Using installed ndk: $ndk_root ..."
     }
     else {  
         $ndk_ver = $env:NDK_VER
         if ("$ndk_ver" -eq '') { $ndk_ver = 'r19c' }
-        $hostName = $('windows', 'linux', 'darwin').Get($hostOS)
-        $suffix = if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''}
+        $suffix = "$(('windows', 'linux', 'darwin').Get($hostOS))$(if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''})"
         $ndk_root = "$yasio_tools/android-ndk-$ndk_ver"
         if (!(Test-Path "$ndk_root" -PathType Container)) {
             Write-Host "Downloading ndk package $ndk_package ..."
-            $ndk_package="android-ndk-$ndk_ver-$hostName$suffix"
+            $ndk_package="android-ndk-$ndk_ver-$suffix"
             curl -o $yasio_tools/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
             Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/
         }
@@ -232,8 +238,6 @@ function build_win {
     $CONFIG_ALL_OPTIONS = $cmakeOptions
 
     $CONFIG_ALL_OPTIONS += '-DYASIO_ENABLE_WEPOLL=1'
-
-    Write-Host "Building target $($options.p) on windows ..."
     if ($options.cc -eq '') {
         $options.cc = 'msvc'
     }
@@ -308,8 +312,6 @@ function build_linux {
     )
     $CONFIG_ALL_OPTIONS = $cmakeOptions
 
-    Write-Host "Building linux ..."
-
     $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_BUILD_NI=YES', '-DCXX_STD=17', '-DYASIO_BUILD_WITH_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
     Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
     cmake -Bbuild $CONFIG_ALL_OPTIONS
@@ -335,8 +337,6 @@ function build_andorid {
         [string[]]$cmakeOptions
     )
     $CONFIG_ALL_OPTIONS = $cmakeOptions
-
-    Write-Host "Building android ..."
 
     $ninja_prog = setup_ninja
     $ndk_root = setup_ndk
@@ -366,8 +366,6 @@ function build_osx {
         [string[]]$cmakeOptions
     )
     $CONFIG_ALL_OPTIONS = $cmakeOptions
-
-    Write-Host "Building $($options.p) ..."
     $arch = $options.a
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
@@ -396,8 +394,6 @@ function build_ios {
         [string[]]$cmakeOptions
     )
     $CONFIG_ALL_OPTIONS = $cmakeOptions
-
-    Write-Host "Building $($options.p) ..."
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
@@ -419,7 +415,7 @@ $builds = @{
     'uwp' = ${function:build_win};
     'linux' = ${function:build_linux}; 
     'android' = ${function:build_andorid};
-    'osx' = ${function:build_osx};
+    'macos' = ${function:build_osx};
     'ios' = ${function:build_ios};
     'tvos' = ${function:build_ios};
     'watchos' = ${function:build_ios};

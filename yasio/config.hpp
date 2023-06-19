@@ -151,14 +151,9 @@ SOFTWARE.
 */
 // #define YASIO_ENABLE_WEPOLL 1
 
-#if YASIO__HAS_EPOLL
-#  define epoll_close close
-typedef int epoll_handle_t;
-#elif defined(_WIN32) && defined(YASIO_ENABLE_WEPOLL)
-#  include "wepoll/wepoll.h"
+#if defined(_WIN32) && defined(YASIO_ENABLE_WEPOLL)
 #  undef YASIO__HAS_EPOLL
 #  define YASIO__HAS_EPOLL 1
-typedef HANDLE epoll_handle_t;
 #endif
 
 #if defined(YASIO_HEADER_ONLY)

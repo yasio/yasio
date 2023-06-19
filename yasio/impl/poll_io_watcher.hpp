@@ -22,18 +22,18 @@ public:
 
   void mod_event(socket_native_type fd, int add_events, int remove_events)
   {
-    pollfd_mod(this->registered_events_, fd, to_underlying_events(add_events), to_underlying_events(remove_events));
+    pollfd_mod(this->events_, fd, to_underlying_events(add_events), to_underlying_events(remove_events));
   }
 
   int poll_io(int64_t waitd_us)
   {
-    ready_events_ = this->registered_events_;
+    revents_ = this->events_;
 #if YASIO__HAS_PPOLL
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
                         (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
-    int num_events   = ::ppoll(this->ready_events_.data(), static_cast<int>(this->ready_events_.size()), &timeout, nullptr);
+    int num_events   = ::ppoll(this->revents_.data(), static_cast<int>(this->revents_.size()), &timeout, nullptr);
 #else
-    int num_events = ::poll(this->ready_events_.data(), static_cast<int>(this->ready_events_.size()), static_cast<int>(waitd_us / std::milli::den));
+    int num_events = ::poll(this->revents_.data(), static_cast<int>(this->revents_.size()), static_cast<int>(waitd_us / std::milli::den));
 #endif
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
     {
@@ -55,8 +55,8 @@ public:
       underlying_events |= POLLOUT;
     if (events & socket_event::error)
       underlying_events |= (POLLERR | POLLHUP | POLLNVAL);
-    auto it = std::find_if(this->ready_events_.begin(), this->ready_events_.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
-    return it != this->ready_events_.end() ? (it->revents & underlying_events) : 0;
+    auto it = std::find_if(this->revents_.begin(), this->revents_.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
+    return it != this->revents_.end() ? (it->revents & underlying_events) : 0;
   }
 
   int max_descriptor() const { return -1; }
@@ -97,8 +97,8 @@ protected:
   }
 
 protected:
-  yasio::pod_vector<pollfd> registered_events_;
-  yasio::pod_vector<pollfd> ready_events_;
+  yasio::pod_vector<pollfd> events_;
+  yasio::pod_vector<pollfd> revents_;
 
   select_interrupter interrupter_;
 };

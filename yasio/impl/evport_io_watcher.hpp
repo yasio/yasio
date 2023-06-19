@@ -32,13 +32,13 @@ namespace inet
 {
 class evport_io_watcher {
 public:
-  evport_io_watcher() : port_handle_(::port_create()) { this->ready_events_.resize_fit(128); }
+  evport_io_watcher() : port_handle_(::port_create()) { this->revents_.reserve(16); }
   ~evport_io_watcher() { ::close(port_handle_); }
 
   void mod_event(socket_native_type fd, int add_events, int remove_events, int flags = 0)
   {
-    auto it               = registered_events_.find(fd);
-    const auto registered = it != registered_events_.end();
+    auto it               = events_.find(fd);
+    const auto registered = it != events_.end();
     int underlying_events = registered ? it->second : 0;
     underlying_events |= to_underlying_events(add_events);
     underlying_events &= ~to_underlying_events(remove_events);
@@ -50,7 +50,7 @@ public:
         if (registered)
           it->second = underlying_events;
         else
-          registered_events_[fd] = underlying_events;
+          events_[fd] = underlying_events;
       }
     }
     else
@@ -58,14 +58,16 @@ public:
       if (registered)
       {
         ::port_dissociate(port_handle_, PORT_SOURCE_FD, fd);
-        registered_events_.erase(it);
+        events_.erase(it);
       }
     }
+    max_events_ = (std::min)(static_cast<uint_t>(events_.size()), 128u);
   }
 
   int poll_io(int64_t waitd_us)
   {
-    ::memset(ready_events_.data(), 0x0, sizeof(port_event_t) * ready_events_.size());
+    assert(max_events_ > 0);
+    this->revents_.reset(max_events_);
 
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
                         (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
@@ -73,7 +75,7 @@ public:
     // The nget argument points to the desired number of events to be retrieved.
     // On return, the value pointed to by nget is updated to the actual number of events retrieved in list.
     uint_t num_events = 1;
-    auto ret          = ::port_getn(port_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), &num_events, &timeout);
+    auto ret          = ::port_getn(port_handle_, revents_.data(), static_cast<int>(revents_.size()), &num_events, &timeout);
 
     // re-associate
     /*
@@ -85,19 +87,19 @@ public:
     int interrupt_hint = 0;
     for (int i = 0; i < num_events; ++i)
     {
-      auto event_source = ready_events_[i].portev_source;
+      auto event_source = revents_[i].portev_source;
       if (event_source != PORT_SOURCE_FD)
       {
         interrupt_hint = 1;
         continue;
       }
-      int fd                 = static_cast<int>(ready_events_[i].portev_object);
-      auto underlying_events = registered_events_[fd];
+      int fd                 = static_cast<int>(revents_[i].portev_object);
+      auto underlying_events = events_[fd];
       if (underlying_events)
         ::port_associate(port_handle_, PORT_SOURCE_FD, fd, underlying_events, nullptr);
     }
 
-    nevents_ = num_events;
+    nrevents_ = num_events;
     num_events -= interrupt_hint;
   }
 
@@ -112,9 +114,9 @@ public:
       underlying_events |= POLLOUT;
     if (events & socket_event::error)
       underlying_events |= (POLLERR | POLLHUP | POLLPRI);
-    auto it = std::find_if(ready_events_.begin(), this->ready_events_.begin() + static_cast<int>(nevents_),
+    auto it = std::find_if(revents_.begin(), this->revents_.begin() + static_cast<int>(nrevents_),
                            [fd](const port_event_t& ev) { return static_cast<int>(ev.portev_object) == fd; });
-    return it != this->ready_events_.end() ? (it->portev_events & underlying_events) : 0;
+    return it != this->revents_.end() ? (it->portev_events & underlying_events) : 0;
   }
 
   int max_descriptor() const { return -1; }
@@ -138,9 +140,10 @@ protected:
   }
 
   int port_handle_;
-  std::map<socket_native_type, int> registered_events_;
-  yasio::pod_vector<port_event_t> ready_events_;
-  uint_t nevents_ = 0;
+  uint_t max_events_ = 0;
+  uint_t nrevents_   = 0;
+  std::map<socket_native_type, int> events_;
+  yasio::pod_vector<port_event_t> revents_;
 };
 } // namespace inet
 } // namespace yasio

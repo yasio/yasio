@@ -32,7 +32,7 @@ class kqueue_io_watcher {
 public:
   kqueue_io_watcher() : kqueue_fd_(kqueue())
   {
-    ready_events_.reserve(128);
+    revents_.reserve(32);
     this->register_event(interrupter_.read_descriptor(), socket_event::read);
   }
   ~kqueue_io_watcher()
@@ -51,12 +51,13 @@ public:
 
   int poll_io(int64_t waitd_us)
   {
-    ready_events_.resize_fit(nevents_);
-    ::memset(ready_events_.data(), 0x0, sizeof(struct kevent) * ready_events_.size());
+    assert(max_events_ > 0);
+    revents_.reset(max_events_);
 
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
                         (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
-    int num_events   = kevent(kqueue_fd_, 0, 0, ready_events_.data(), static_cast<int>(ready_events_.size()), &timeout);
+    int num_events   = kevent(kqueue_fd_, 0, 0, revents_.data(), static_cast<int>(revents_.size()), &timeout);
+    nrevents_ = num_events;
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
     {
       if (!interrupter_.reset())
@@ -70,7 +71,7 @@ public:
 
   int is_ready(socket_native_type fd, int events) const
   {
-    auto it = std::find_if(ready_events_.begin(), this->ready_events_.end(), [fd, events](const struct kevent& ev) {
+    auto it = std::find_if(revents_.begin(), this->revents_.begin() + nrevents_, [fd, events](const struct kevent& ev) {
       int rfd = static_cast<int>(reinterpret_cast<intptr_t>(ev.udata));
       if (rfd == fd)
       {
@@ -92,7 +93,7 @@ public:
       }
       return false;
     });
-    return it != ready_events_.end() ? -it->filter : 0;
+    return it != revents_.end() ? -it->filter : 0;
   }
 
   int max_descriptor() const { return -1; }
@@ -100,7 +101,7 @@ public:
 protected:
   void register_event(socket_native_type fd, int events)
   {
-    int prev_events = registered_events_[fd];
+    int prev_events = events_[fd];
     int nkv_old     = prev_events > 0 ? ((prev_events >> 1) + 1) : 0;
 
     struct kevent kevlist[3];
@@ -130,17 +131,17 @@ protected:
       int ret = ::kevent(kqueue_fd_, kevlist, nkvlist, 0, 0, 0);
       if (ret != -1)
       {
-        registered_events_[fd] = events;
+        events_[fd] = events;
         int diff               = nkvlist - nkv_old;
         if (diff != 0)
-          nevents_ += diff; //ready_events_.resize(registered_events_.size() + diff);
+          max_events_ += diff;
       }
     }
   }
 
   void deregister_event(socket_native_type fd, int events)
   {
-    int curr_events = registered_events_[fd];
+    int curr_events = events_[fd];
     int curr_count  = curr_events > 0 ? ((curr_events >> 1) + 1) : 0;
 
     struct kevent kevlist[3];
@@ -174,20 +175,21 @@ protected:
       if (ret == 0)
       {
         if (curr_events != 0)
-          registered_events_[fd] = curr_events;
+          events_[fd] = curr_events;
         else
-          registered_events_.erase(fd);
+          events_.erase(fd);
         int diff = nkvlist - curr_count;
         if (diff != 0)
-          nevents_ += diff;
+          max_events_ += diff;
       }
     }
   }
 
   int kqueue_fd_;
-  int nevents_ = 0;
-  std::map<socket_native_type, int> registered_events_;
-  yasio::pod_vector<struct kevent> ready_events_;
+  int max_events_ = 0;
+  int nrevents_ = 0;
+  std::map<socket_native_type, int> events_;
+  yasio::pod_vector<struct kevent> revents_;
   select_interrupter interrupter_;
 };
 } // namespace inet

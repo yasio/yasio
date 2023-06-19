@@ -129,6 +129,12 @@ public:
     _Mylast = _Myfirst + new_size;
   }
 
+  void reset(size_t new_size)
+  {
+    resize_fit(new_size);
+    memset(_Myfirst, 0x0, size() * sizeof(_Ty));
+  }
+
   static YASIO__CONSTEXPR size_t max_size() YASIO__NOEXCEPT { return (std::numeric_limits<ptrdiff_t>::max)(); }
   iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
   iterator end() YASIO__NOEXCEPT { return _Mylast; }

@@ -706,14 +706,14 @@ end
                                  case YOPT_C_KCP_CONV:
                                  case YOPT_C_KCP_MTU:
                                  case YOPT_C_KCP_RTO_MIN:
-                                   service->set_option(opt, static_cast(args[0]), static_cast(args[1]));
+                                   service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                                    break;
                                  case YOPT_C_KCP_WINDOW_SIZE:
-                                   service->set_option(opt, static_cast(args[0]), static_cast(args[1]), static_cast(args[2]));
+                                   service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]), static_cast<int>(args[2]));
                                    break;
                                  case YOPT_C_KCP_NODELAY:
-                                   service->set_option(opt, static_cast(args[0]), static_cast(args[1]), static_cast(args[2]), static_cast(args[3]),
-                                                       static_cast(args[4]));
+                                   service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]), static_cast<int>(args[2]), static_cast<int>(args[3]),
+                                                       static_cast<int>(args[4]));
                                    break;
                                  default:
                                    service->set_option(opt, static_cast<int>(args[0]));

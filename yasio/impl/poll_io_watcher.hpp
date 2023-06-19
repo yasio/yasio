@@ -4,10 +4,12 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
-#pragma once
+#ifndef YASIO__POLL_IO_WATCHER_HPP
+#define YASIO__POLL_IO_WATCHER_HPP
 #include <vector>
-#include "yasio/core/socket.hpp"
-#include "yasio/core/select_interrupter.hpp"
+#include "yasio/impl/socket.hpp"
+#include "yasio/impl/pod_vector.hpp"
+#include "yasio/impl/select_interrupter.hpp"
 
 namespace yasio
 {
@@ -20,18 +22,18 @@ public:
 
   void mod_event(socket_native_type fd, int add_events, int remove_events)
   {
-    pollfd_mod(this->registered_events_, fd, to_underlying_events(add_events), to_underlying_events(remove_events));
+    pollfd_mod(this->events_, fd, to_underlying_events(add_events), to_underlying_events(remove_events));
   }
 
   int poll_io(int64_t waitd_us)
   {
-    ready_events_ = this->registered_events_;
+    revents_ = this->events_;
 #if YASIO__HAS_PPOLL
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
                         (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
-    int num_events   = ::ppoll(this->ready_events_.data(), static_cast<int>(this->ready_events_.size()), &timeout, nullptr);
+    int num_events   = ::ppoll(this->revents_.data(), static_cast<int>(this->revents_.size()), &timeout, nullptr);
 #else
-    int num_events = ::poll(this->ready_events_.data(), static_cast<int>(this->ready_events_.size()), static_cast<int>(waitd_us / std::milli::den));
+    int num_events = ::poll(this->revents_.data(), static_cast<int>(this->revents_.size()), static_cast<int>(waitd_us / std::milli::den));
 #endif
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
     {
@@ -53,8 +55,8 @@ public:
       underlying_events |= POLLOUT;
     if (events & socket_event::error)
       underlying_events |= (POLLERR | POLLHUP | POLLNVAL);
-    auto it = std::find_if(this->ready_events_.begin(), this->ready_events_.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
-    return it != this->ready_events_.end() ? (it->revents & underlying_events) : 0;
+    auto it = std::find_if(this->revents_.begin(), this->revents_.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
+    return it != this->revents_.end() ? (it->revents & underlying_events) : 0;
   }
 
   int max_descriptor() const { return -1; }
@@ -76,7 +78,7 @@ protected:
     }
     return underlying_events;
   }
-  static void pollfd_mod(std::vector<pollfd>& fdset, socket_native_type fd, int add_events, int remove_events)
+  static void pollfd_mod(yasio::pod_vector<pollfd>& fdset, socket_native_type fd, int add_events, int remove_events)
   {
     auto it = std::find_if(fdset.begin(), fdset.end(), [fd](const pollfd& pfd) { return pfd.fd == fd; });
     if (it != fdset.end())
@@ -90,15 +92,16 @@ protected:
     {
       auto events = add_events & ~remove_events;
       if (events)
-        fdset.push_back(pollfd{fd, static_cast<short>(events), 0});
+        fdset.emplace_back(pollfd{fd, static_cast<short>(events), 0});
     }
   }
 
 protected:
-  std::vector<pollfd> registered_events_;
-  std::vector<pollfd> ready_events_;
+  yasio::pod_vector<pollfd> events_;
+  yasio::pod_vector<pollfd> revents_;
 
   select_interrupter interrupter_;
 };
 } // namespace inet
 } // namespace yasio
+#endif

@@ -10,16 +10,16 @@
 
 #include "yasio/config.hpp"
 
-#if YASIO__HAS_KQUEUE && !defined(YASIO_DISABLE_KQUEUE)
-#  include "yasio/core/kqueue_io_watcher.hpp"
-#elif YASIO__HAS_EPOLL && !defined(YASIO_DISABLE_EPOLL)
-#  include "yasio/core/epoll_io_watcher.hpp"
-#elif YASIO__HAS_EVPORT && !defined(YASIO_DISABLE_EVPORT)
-#  include "yasio/core/evport_io_watcher.hpp"
+#if YASIO__HAS_KQUEUE && !defined(YASIO_DISABLE_KQUEUE) && defined(YASIO_ENABLE_HPERF_IO)
+#  include "yasio/impl/kqueue_io_watcher.hpp"
+#elif YASIO__HAS_EPOLL && !defined(YASIO_DISABLE_EPOLL) && defined(YASIO_ENABLE_HPERF_IO)
+#  include "yasio/impl/epoll_io_watcher.hpp"
+#elif YASIO__HAS_EVPORT && !defined(YASIO_DISABLE_EVPORT) && defined(YASIO_ENABLE_HPERF_IO)
+#  include "yasio/impl/evport_io_watcher.hpp"
 #elif !defined(YASIO_DISABLE_POLL)
-#  include "yasio/core/poll_io_watcher.hpp"
+#  include "yasio/impl/poll_io_watcher.hpp"
 #else
-#  include "yasio/core/select_io_watcher.hpp"
+#  include "yasio/impl/select_io_watcher.hpp"
 #endif
 
 namespace yasio
@@ -27,11 +27,11 @@ namespace yasio
 YASIO__NS_INLINE
 namespace inet
 {
-#if YASIO__HAS_KQUEUE && !defined(YASIO_DISABLE_KQUEUE)
+#if defined(YASIO__KQUEUE_IO_WATCHER_HPP)
 using io_watcher = kqueue_io_watcher;
-#elif YASIO__HAS_EPOLL && !defined(YASIO_DISABLE_EPOLL)
+#elif defined(YASIO__EPOLL_IO_WATCHER_HPP)
 using io_watcher = epoll_io_watcher;
-#elif YASIO__HAS_EVPORT && !defined(YASIO_DISABLE_EVPORT)
+#elif defined(YASIO__EVPORT_IO_WATCHER_HPP)
 using io_watcher = evport_io_watcher;
 #elif !defined(YASIO_DISABLE_POLL)
 using io_watcher = poll_io_watcher;

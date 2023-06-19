@@ -4,13 +4,24 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 // Copyright (c) 2012-2023 HALX99 (halx99 at live dot com)
-#pragma once
+#ifndef YASIO__EPOLL_IO_WATCHER_HPP
+#define YASIO__EPOLL_IO_WATCHER_HPP
 #include <vector>
 #include <chrono>
 #include <map>
-#include "yasio/core/socket.hpp"
-#include "yasio/core/pod_vector.hpp"
-#include "yasio/core/select_interrupter.hpp"
+#include "yasio/impl/socket.hpp"
+#include "yasio/impl/pod_vector.hpp"
+#include "yasio/impl/select_interrupter.hpp"
+
+#if !defined(_WIN32)
+#  define epoll_close close
+typedef int epoll_handle_t;
+#elif defined(YASIO_ENABLE_WEPOLL)
+#  include "wepoll/wepoll.h"
+#  undef YASIO__HAS_EPOLL
+#  define YASIO__HAS_EPOLL 1
+typedef void* epoll_handle_t;
+#endif
 
 namespace yasio
 {
@@ -21,7 +32,7 @@ class epoll_io_watcher {
 public:
   epoll_io_watcher() : epoll_handle_(do_epoll_create())
   {
-    this->ready_events_.reserve(128);
+    this->revents_.reserve(16);
     this->mod_event(interrupter_.read_descriptor(), socket_event::read, 0, EPOLLONESHOT);
     interrupter_.interrupt();
     poll_io(1);
@@ -34,14 +45,14 @@ public:
 
   void mod_event(socket_native_type fd, int add_events, int remove_events, int flags = 0)
   {
-    auto it               = registered_events_.find(fd);
-    const auto registered = it != registered_events_.end();
+    auto it               = events_.find(fd);
+    const auto registered = it != events_.end();
     int underlying_events = registered ? it->second : 0;
     underlying_events |= to_underlying_events(add_events);
     underlying_events &= ~to_underlying_events(remove_events);
 
     epoll_event ev = {0, {0}};
-    ev.events      = underlying_events;
+    ev.events      = underlying_events | flags;
     ev.data.fd     = static_cast<int>(fd);
 
     if (underlying_events)
@@ -51,10 +62,7 @@ public:
         if (registered)
           it->second = underlying_events;
         else
-        {
-          registered_events_[fd] = underlying_events;
-          ready_events_.resize(registered_events_.size());
-        }
+          events_[fd] = underlying_events;
       }
     }
     else
@@ -62,24 +70,26 @@ public:
       if (registered)
       {
         ::epoll_ctl(epoll_handle_, EPOLL_CTL_DEL, fd, &ev);
-        registered_events_.erase(it);
-        ready_events_.resize(registered_events_.size());
+        events_.erase(it);
       }
     }
+
+    max_events_ = (std::min)(static_cast<int>(events_.size()), 128);
   }
 
   int poll_io(int64_t waitd_us)
   {
-    ::memset(ready_events_.data(), 0x0, sizeof(epoll_event) * ready_events_.size());
+    assert(max_events_ > 0);
+    this->revents_.reset(max_events_);
 
 #if YASIO__HAS_EPOLL_PWAIT2
     timespec timeout = {(decltype(timespec::tv_sec))(waitd_us / std::micro::den),
                         (decltype(timespec::tv_nsec))((waitd_us % std::micro::den) * std::milli::den)};
-    int num_events   = ::epoll_pwait2(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), &timeout, nullptr);
+    int num_events   = ::epoll_pwait2(epoll_handle_, revents_.data(), static_cast<int>(revents_.size()), &timeout, nullptr);
 #else
-    int num_events = ::epoll_wait(epoll_handle_, ready_events_.data(), static_cast<int>(ready_events_.size()), static_cast<int>(waitd_us / std::milli::den));
+    int num_events   = ::epoll_wait(epoll_handle_, revents_.data(), static_cast<int>(revents_.size()), static_cast<int>(waitd_us / std::milli::den));
 #endif
-    nevents_ = num_events;
+    nrevents_ = num_events;
     if (num_events > 0 && is_ready(this->interrupter_.read_descriptor(), socket_event::read))
       --num_events;
     return num_events;
@@ -102,8 +112,8 @@ public:
       underlying_events |= EPOLLOUT;
     if (events & socket_event::error)
       underlying_events |= (EPOLLERR | EPOLLHUP | EPOLLPRI);
-    auto it = std::find_if(ready_events_.begin(), ready_events_.begin() + nevents_, [fd](const epoll_event& ev) { return ev.data.fd == fd; });
-    return it != this->ready_events_.end() ? (it->events & underlying_events) : 0;
+    auto it = std::find_if(revents_.begin(), revents_.begin() + nrevents_, [fd](const epoll_event& ev) { return ev.data.fd == fd; });
+    return it != this->revents_.end() ? (it->events & underlying_events) : 0;
   }
 
   int max_descriptor() const { return -1; }
@@ -140,24 +150,20 @@ protected:
 #endif // defined(EPOLL_CLOEXEC)
 
     if (handle == (epoll_handle_t)-1 && (errno == EINVAL || errno == ENOSYS))
-    {
       handle = epoll_create(epoll_size);
-    }
-
-    if (handle == (epoll_handle_t)-1)
-    {
-      yasio__throw_error0(errno);
-    }
 
     return handle;
   }
 
   epoll_handle_t epoll_handle_;
-  std::map<socket_native_type, int> registered_events_;
-  yasio::pod_vector<epoll_event> ready_events_;
-  int nevents_ = 0;
+
+  int max_events_ = 0;
+  int nrevents_   = 0;
+  std::map<socket_native_type, int> events_;
+  yasio::pod_vector<epoll_event> revents_;
 
   select_interrupter interrupter_;
 };
 } // namespace inet
 } // namespace yasio
+#endif

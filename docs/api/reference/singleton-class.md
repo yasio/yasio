@@ -65,7 +65,7 @@ static void destroy(void);
 ## 示例
 
 ```cpp
-#include "yasio/core/singleton.hpp"
+#include "yasio/singleton.hpp"
 
 class FruitManager {
 public:

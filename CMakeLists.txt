@@ -175,11 +175,7 @@ if (YASIO_USE_CARES)
 endif()
 
 ### The yasio core library project
-file(GLOB_RECURSE YASIO_CORE yasio/core/*.hpp;yasio/core/*.cpp;yasio/stl/*.hpp)
-list (APPEND YASIO_CORE
-    yasio/compiler/feature_test.hpp
-    yasio/yasio.hpp
-)
+file(GLOB YASIO_CORE yasio/*.hpp;yasio/*.cpp;yasio/compiler/*.hpp;yasio/stl/*.hpp;yasio/impl/*.hpp;)
 
 if (YAISO_BUILD_NI)
   set(YASIO_CORE ${YASIO_CORE} 
@@ -429,6 +425,7 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_ENABLE_HALF_FLOAT)
     yasio_config_pred(${target_name} YASIO_ENABLE_PASSIVE_EVENT)
     yasio_config_pred(${target_name} YASIO_NO_JNI_ONLOAD)
+    yasio_config_pred(${target_name} YASIO_ENABLE_HPERF_IO)
     yasio_config_pred(${target_name} YASIO_DISABLE_POLL)
     yasio_config_pred(${target_name} YASIO_DISABLE_EPOLL)
     yasio_config_pred(${target_name} YASIO_DISABLE_KQUEUE)

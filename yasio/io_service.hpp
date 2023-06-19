@@ -36,18 +36,18 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 #include <functional>
-#include "yasio/core/sz.hpp"
+#include "yasio/sz.hpp"
 #include "yasio/config.hpp"
-#include "yasio/core/singleton.hpp"
-#include "yasio/core/concurrent_queue.hpp"
-#include "yasio/core/utils.hpp"
-#include "yasio/core/errc.hpp"
+#include "yasio/singleton.hpp"
+#include "yasio/impl/concurrent_queue.hpp"
+#include "yasio/utils.hpp"
+#include "yasio/errc.hpp"
 #include "yasio/stl/memory.hpp"
 #include "yasio/stl/string_view.hpp"
-#include "yasio/core/object_pool.hpp"
-#include "yasio/core/byte_buffer.hpp"
-#include "yasio/core/xxsocket.hpp"
-#include "yasio/core/io_watcher.hpp"
+#include "yasio/object_pool.hpp"
+#include "yasio/byte_buffer.hpp"
+#include "yasio/xxsocket.hpp"
+#include "yasio/io_watcher.hpp"
 
 #if !defined(YASIO_USE_CARES)
 #  include "yasio/stl/shared_mutex.hpp"
@@ -1270,6 +1270,6 @@ using namespace yasio::inet;
 #define yasio_shared_service yasio::singleton<yasio::inet::io_service>::instance
 
 #if defined(YASIO_HEADER_ONLY)
-#  include "yasio/core/io_service.cpp" // lgtm [cpp/include-non-header]
+#  include "yasio/io_service.cpp" // lgtm [cpp/include-non-header]
 #endif
 #endif

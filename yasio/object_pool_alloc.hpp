@@ -28,7 +28,7 @@ SOFTWARE.
 #ifndef YASIO__OBJECT_POOL_ALLOC_HPP
 #define YASIO__OBJECT_POOL_ALLOC_HPP
 
-#include "yasio/core/object_pool.hpp"
+#include "yasio/object_pool.hpp"
 
 namespace yasio
 {

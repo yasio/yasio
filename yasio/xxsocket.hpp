@@ -38,8 +38,8 @@ SOFTWARE.
 #include <chrono>
 #include <functional>
 #include <memory>
-#include "yasio/core/socket.hpp"
-#include "yasio/core/logging.hpp"
+#include "yasio/impl/socket.hpp"
+#include "yasio/logging.hpp"
 
 namespace yasio
 {
@@ -1150,7 +1150,7 @@ inline bool operator==(const yasio::inet::ip::endpoint& lhs, const yasio::inet::
 } // namespace std
 
 #if defined(YASIO_HEADER_ONLY)
-#  include "yasio/core/xxsocket.cpp" // lgtm [cpp/include-non-header]
+#  include "yasio/xxsocket.cpp" // lgtm [cpp/include-non-header]
 #endif
 
 #endif

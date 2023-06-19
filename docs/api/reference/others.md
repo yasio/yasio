@@ -25,7 +25,7 @@ namespace yasio {}
 
 ## 要求
 
-**头文件:** `yasio/core/endian_portable.hpp`
+**头文件:** `yasio/endian_portable.hpp`
 
 ```cpp
 template <typename _Ty>
@@ -50,7 +50,7 @@ inline int host_to_network(int value, int size);
 ```cpp
 #include <stdio.h>
 #include <inttypes.h>
-#include "yasio/core/endian_portable.hpp"
+#include "yasio/endian_portable.hpp"
 int main(){
     uint16_t v1 = 0x1122;
     uint32_t v2 = 0x11223344;
@@ -70,7 +70,7 @@ int main(){
 
 ### 头文件
 
-`yasio/core/endian_portable.hpp`
+`yasio/endian_portable.hpp`
 
 ```cpp
 template <typename _Ty>
@@ -95,7 +95,7 @@ inline int network_to_host(int value, int size);
 ```cpp
 #include <stdio.h>
 #include <inttypes.h>
-#include "yasio/core/endian_portable.hpp"
+#include "yasio/endian_portable.hpp"
 int main(){
     uint16_t v1 = 0x2211;
     uint32_t v2 = 0x44332211;
@@ -115,7 +115,7 @@ int main(){
 
 ### 头文件
 
-`yasio/core/utils.hpp`
+`yasio/utils.hpp`
 
 ```cpp
 template <typename _Ty = steady_clock_t>
@@ -139,7 +139,7 @@ inline highp_time_t xhighp_clock();
 
 ### 头文件
 
-`yasio/core/utils.hpp`
+`yasio/utils.hpp`
 
 ```cpp
 template <typename _Ty = steady_clock_t>
@@ -163,7 +163,7 @@ inline highp_time_t highp_clock();
 
 ### 头文件
 
-`yasio/core/utils.hpp`
+`yasio/utils.hpp`
 
 ```cpp
 template <typename _Ty = steady_clock_t>
@@ -187,7 +187,7 @@ inline highp_time_t clock();
 
 ### 头文件
 
-`yasio/core/thread_name.hpp`
+`yasio/thread_name.hpp`
 
 ```cpp
 inline void set_thread_name(const char* name);
@@ -208,7 +208,7 @@ inline void set_thread_name(const char* name);
 
 ### 头文件
 
-`yasio/core/strfmt.hpp`
+`yasio/strfmt.hpp`
 
 ```cpp
 template <class _Elem, class _Traits = std::char_traits<_Elem>,
@@ -239,7 +239,7 @@ inline std::basic_string<_Elem, _Traits, _Alloc> basic_strfmt(size_t n, const _E
 ### 示例
 
 ```cpp
-#include "yasio/core/strfmt.hpp"
+#include "yasio/strfmt.hpp"
 int main() {
     std::string str1 = yasio::strfmt(64, "My age is %d", 19);
     std::wstring str2 = yasio::wcsfmt(64, L"My age is %d", 19);

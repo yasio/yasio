@@ -31,21 +31,21 @@ SOFTWARE.
 #ifndef YASIO__IO_SERVICE_CPP
 #define YASIO__IO_SERVICE_CPP
 #if !defined(YASIO_HEADER_ONLY)
-#  include "yasio/core/io_service.hpp"
+#  include "yasio/io_service.hpp"
 #endif
 #include <limits>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "yasio/core/thread_name.hpp"
+#include "yasio/thread_name.hpp"
 
 #if defined(YASIO_SSL_BACKEND)
-#  include "yasio/core/ssl.hpp"
+#  include "yasio/ssl.hpp"
 #endif
 
 #if defined(YASIO_USE_CARES)
-#  include "yasio/core/ares.hpp"
+#  include "yasio/impl/ares.hpp"
 #endif
 
 // clang-format off

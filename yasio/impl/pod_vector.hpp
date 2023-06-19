@@ -65,22 +65,33 @@ public:
   using const_iterator  = const _Ty*;
   pod_vector()          = default;
   explicit pod_vector(size_t count) { resize_fit(count); }
-  pod_vector(pod_vector const&)            = delete;
-  pod_vector& operator=(pod_vector const&) = delete;
+  pod_vector(pod_vector const& rhs) { this->assign(rhs); }
+  pod_vector& operator=(pod_vector const& rhs)
+  {
+    this->assign(rhs);
+    return *this;
+  }
 
-  pod_vector(pod_vector&& o) noexcept : _Myfirst(o._Myfirst), _Mylast(o._Mylast), _Myend(o._Myend)
+  pod_vector(pod_vector&& o) YASIO__NOEXCEPT : _Myfirst(o._Myfirst), _Mylast(o._Mylast), _Myend(o._Myend)
   {
     o._Myfirst = nullptr;
     o._Mylast  = nullptr;
     o._Myend   = nullptr;
   }
-  pod_vector& operator=(pod_vector&& o) noexcept
+  pod_vector& operator=(pod_vector&& o) YASIO__NOEXCEPT
   {
     this->swap(o);
     return *this;
   }
 
-  void swap(pod_vector& rhs) noexcept
+  void assign(pod_vector const& rhs)
+  {
+    resize_fit(rhs.size());
+    if (!rhs.empty())
+      std::copy(rhs._Myfirst, rhs._Mylast, _Myfirst);
+  }
+
+  void swap(pod_vector& rhs) YASIO__NOEXCEPT
   {
     std::swap(_Myfirst, rhs._Myfirst);
     std::swap(_Mylast, rhs._Mylast);
@@ -90,7 +101,7 @@ public:
   ~pod_vector() { _Tidy(); }
 
   template <typename... _Valty>
-  _Ty& emplace_back(_Valty&&... _Val) noexcept
+  _Ty& emplace_back(_Valty&&... _Val) YASIO__NOEXCEPT
   {
     if (_Mylast != _Myend)
       return *new (_Mylast++) _Ty(std::forward<_Valty>(_Val)...);
@@ -118,17 +129,23 @@ public:
     _Mylast = _Myfirst + new_size;
   }
 
-  static constexpr size_t max_size() noexcept { return (std::numeric_limits<ptrdiff_t>::max)(); }
-  iterator begin() noexcept { return _Myfirst; }
-  iterator end() noexcept { return _Mylast; }
-  const_iterator begin() const noexcept { return _Myfirst; }
-  const_iterator end() const noexcept { return _Mylast; }
-  pointer data() noexcept { return _Myfirst; }
-  const_pointer data() const noexcept { return _Myfirst; }
-  size_t capacity() const noexcept { return _Myend - _Myfirst; }
-  size_t size() const noexcept { return _Mylast - _Myfirst; }
-  void clear() noexcept { _Mylast = _Myfirst; }
-  bool empty() const noexcept { return _Mylast == _Myfirst; }
+  void reset(size_t new_size)
+  {
+    resize_fit(new_size);
+    memset(_Myfirst, 0x0, size() * sizeof(_Ty));
+  }
+
+  static YASIO__CONSTEXPR size_t max_size() YASIO__NOEXCEPT { return (std::numeric_limits<ptrdiff_t>::max)(); }
+  iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
+  iterator end() YASIO__NOEXCEPT { return _Mylast; }
+  const_iterator begin() const YASIO__NOEXCEPT { return _Myfirst; }
+  const_iterator end() const YASIO__NOEXCEPT { return _Mylast; }
+  pointer data() YASIO__NOEXCEPT { return _Myfirst; }
+  const_pointer data() const YASIO__NOEXCEPT { return _Myfirst; }
+  size_t capacity() const YASIO__NOEXCEPT { return _Myend - _Myfirst; }
+  size_t size() const YASIO__NOEXCEPT { return _Mylast - _Myfirst; }
+  void clear() YASIO__NOEXCEPT { _Mylast = _Myfirst; }
+  bool empty() const YASIO__NOEXCEPT { return _Mylast == _Myfirst; }
   const_reference operator[](size_t index) const { return _Myfirst[index]; }
   reference operator[](size_t index) { return _Myfirst[index]; }
 
@@ -145,14 +162,15 @@ public:
     }
   }
 
-  void zeroset()
+  iterator erase(iterator _Where)
   {
-    if (!this->empty())
-      ::memset(_Myfirst, 0x0, sizeof(_Ty) * this->size());
+    // _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where < _Mylast, "byte_buffer: out of range!");
+    _Mylast = std::move(_Where + 1, _Mylast, _Where);
+    return _Where;
   }
 
   // release memmory ownership
-  pointer release_pointer() noexcept
+  pointer release_pointer() YASIO__NOEXCEPT
   {
     auto ptr = _Myfirst;
     _Myfirst = nullptr;
@@ -222,7 +240,7 @@ private:
     return _Geometric; // geometric growth is sufficient
   }
 
-  void _Tidy() noexcept
+  void _Tidy() YASIO__NOEXCEPT
   { // free all storage
     if (_Myfirst)
     { // destroy and deallocate old array

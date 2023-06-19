@@ -116,4 +116,4 @@ jobs:
         uwp: 'true'
 
     - name: Build
-      run: ci\build.ps1 -p uwp -a $env:BUILD_ARCH
+      run: ci\build.ps1 -p winuwp -a $env:BUILD_ARCH

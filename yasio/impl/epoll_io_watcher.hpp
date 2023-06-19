@@ -16,7 +16,7 @@
 #if !defined(_WIN32)
 #  define epoll_close close
 typedef int epoll_handle_t;
-#else defined(YASIO_ENABLE_WEPOLL)
+#elif defined(YASIO_ENABLE_WEPOLL)
 #  include "wepoll/wepoll.h"
 #  undef YASIO__HAS_EPOLL
 #  define YASIO__HAS_EPOLL 1

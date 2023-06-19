@@ -217,7 +217,6 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
           case YOPT_C_UNPACK_STRIP:
           case YOPT_C_LOCAL_PORT:
           case YOPT_C_REMOTE_PORT:
-          case YOPT_C_KCP_CONV:
           case YOPT_C_UNPACK_NO_BSWAP:
             service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
             break;
@@ -243,6 +242,18 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
               io_event_cb_t fnwrap = [=](event_ptr e) mutable -> void { fn(std::move(e)); };
               service->set_option(opt, std::addressof(fnwrap));
             }
+            break;
+          case YOPT_C_KCP_CONV:
+          case YOPT_C_KCP_MTU:
+          case YOPT_C_KCP_RTO_MIN:
+            service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
+            break;
+          case YOPT_C_KCP_WINDOW_SIZE:
+            service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]), static_cast<int>(args[2]));
+            break;
+          case YOPT_C_KCP_NODELAY:
+            service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]), static_cast<int>(args[2]), static_cast<int>(args[3]),
+                                static_cast<int>(args[4]));
             break;
           default:
             service->set_option(opt, static_cast<int>(args[0]));
@@ -326,6 +337,10 @@ YASIO_LUA_API int luaopen_yasio(lua_State* L)
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_NODELAY);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_WINDOW_SIZE);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_MTU);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_RTO_MIN);
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);
@@ -662,7 +677,6 @@ end
                                  case YOPT_C_UNPACK_STRIP:
                                  case YOPT_C_LOCAL_PORT:
                                  case YOPT_C_REMOTE_PORT:
-                                 case YOPT_C_KCP_CONV:
                                  case YOPT_C_UNPACK_NO_BSWAP:
                                    service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
                                    break;
@@ -688,6 +702,18 @@ end
                                      io_event_cb_t fnwrap   = [=](event_ptr e) mutable -> void { fn(e.get()); };
                                      service->set_option(opt, std::addressof(fnwrap));
                                    }
+                                   break;
+                                 case YOPT_C_KCP_CONV:
+                                 case YOPT_C_KCP_MTU:
+                                 case YOPT_C_KCP_RTO_MIN:
+                                   service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]));
+                                   break;
+                                 case YOPT_C_KCP_WINDOW_SIZE:
+                                   service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]), static_cast<int>(args[2]));
+                                   break;
+                                 case YOPT_C_KCP_NODELAY:
+                                   service->set_option(opt, static_cast<int>(args[0]), static_cast<int>(args[1]), static_cast<int>(args[2]), static_cast<int>(args[3]),
+                                                       static_cast<int>(args[4]));
                                    break;
                                  default:
                                    service->set_option(opt, static_cast<int>(args[0]));
@@ -758,6 +784,10 @@ end
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_NODELAY);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_WINDOW_SIZE);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_MTU);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_RTO_MIN);
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);

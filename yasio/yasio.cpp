@@ -626,8 +626,13 @@ int io_transport_udp::handle_input(const char* data, int bytes_transferred, int&
 io_transport_kcp::io_transport_kcp(io_channel* ctx, xxsocket_ptr&& s) : io_transport_udp(ctx, std::forward<xxsocket_ptr>(s))
 {
   this->kcp_ = ::ikcp_create(static_cast<IUINT32>(ctx->kcp_conv_), this);
+  ::ikcp_nodelay(this->kcp_, ctx->kcp_nodelay_, ctx->kcp_interval_ /*kcp max interval is 5000(ms)*/, ctx->kcp_resend_, ctx->kcp_ncwnd_);
+  ::ikcp_wndsize(this->kcp_, ctx->kcp_sndwnd_, ctx->kcp_rcvwnd_);
+  ::ikcp_setmtu(this->kcp_, ctx->kcp_mtu_);
+  // Because of nodelaying config will change the value. so setting RTO min after call ikcp_nodely.
+  this->kcp_->rx_minrto = ctx->kcp_minrto_;
+
   this->rawbuf_.resize(YASIO_INET_BUFFER_SIZE);
-  ::ikcp_nodelay(this->kcp_, 1, 5000 /*kcp max interval is 5000(ms)*/, 2, 1);
   ::ikcp_setoutput(this->kcp_, [](const char* buf, int len, ::ikcpcb* /*kcp*/, void* user) {
     auto t = (io_transport_kcp*)user;
     if (yasio__min_wait_usec == 0)
@@ -2207,6 +2212,40 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
         channel->kcp_conv_ = va_arg(ap, int);
       break;
     }
+    case YOPT_C_KCP_NODELAY: {
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        // nodelay:int, interval:int, resend:int, nc:int.
+        channel->kcp_nodelay_  = va_arg(ap, int);
+        channel->kcp_interval_ = va_arg(ap, int);
+        channel->kcp_resend_   = va_arg(ap, int);
+        channel->kcp_ncwnd_    = va_arg(ap, int);
+      }
+      break;
+    }
+    case YOPT_C_KCP_WINDOW_SIZE: {
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+      {
+        channel->kcp_sndwnd_ = va_arg(ap, int);
+        channel->kcp_rcvwnd_ = va_arg(ap, int);
+      }
+      break;
+    }
+    case YOPT_C_KCP_MTU: {
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->kcp_mtu_ = va_arg(ap, int);
+      break;
+    }
+    case YOPT_C_KCP_RTO_MIN: {
+      auto channel = channel_at(static_cast<size_t>(va_arg(ap, int)));
+      if (channel)
+        channel->kcp_minrto_ = va_arg(ap, int);
+      break;
+    }
+
 #endif
     case YOPT_T_CONNECT: {
       auto transport = va_arg(ap, transport_handle_t);

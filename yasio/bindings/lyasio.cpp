@@ -29,7 +29,6 @@ SOFTWARE.
 #include "yasio/obstream.hpp"
 #include "yasio/yasio.hpp"
 #include "yasio/bindings/lyasio.hpp"
-#include "yasio/bindings/yasio_sol.hpp"
 using namespace yasio;
 
 namespace lyasio
@@ -82,6 +81,8 @@ static cxx17::string_view ibstream_read_v(_Stream* ibs, int length_field_bits)
 } // namespace lyasio
 
 #if YASIO__HAS_CXX14
+
+#  include "yasio/bindings/yasio_sol.hpp"
 
 namespace lyasio
 {

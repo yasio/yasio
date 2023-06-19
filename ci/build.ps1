@@ -186,22 +186,26 @@ function setup_ndk() {
     # install ndk
     if("$env:ANDROID_HOME" -ne '') {
         # find ndk in sdk
+        $ndks = [ordered]@{}
         foreach($item in $(Get-ChildItem -Path "$env:ANDROID_HOME/ndk")) {
             $sourceProps = "$item/source.properties"
             if (Test-Path $sourceProps -PathType Leaf) {
                 $verLine = $(Get-Content $sourceProps | Select-Object -Index 1)
                 $ndk_rev = $($verLine -split '=').Trim()[1]
-                if ($ndk_rev -ge "19.0") {
-                    $ndk_root = $item.ToString()
-                    break
-                }
+                $ndks.Add($ndk_rev, $item.ToString())
+            }
+        }
+        foreach ($item in $ndks.GetEnumerator()) {
+            if ($item.Name -ge "19.0") {
+                $ndk_root = $item.Value
+                break
             }
         }
     }
     
     if (Test-Path "$ndk_root" -PathType Container)
     {
-        Write-Host "Using exist ndk: $ndk_root ..."
+        Write-Host "Using found ndk: $ndk_root ..."
     }
     else {  
         $ndk_ver = $env:NDK_VER

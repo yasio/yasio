@@ -1,14 +1,37 @@
 docs_dir: docs
 site_name: yasio
 repo_url: https://github.com/yasio/yasio
-repo_name: GitHub
+repo_name: yasio/yasio
 edit_uri: edit/dev/docs
 copyright: Copyright &copy; 2022-2023 Bytedance Inc.
 theme:
   name: material
-  language: en
+  language: zh
   logo: assets/images/logo.png
   favicon: assets/images/logo.png
+  features:
+    - content.action.edit
+    - content.action.view
+    - content.code.copy
+    - navigation.footer
+  icon:
+    edit: material/pencil 
+    view: material/eye
+    repo: fontawesome/brands/github
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 nav:
   - 主页: index.md
   - API 参考:
@@ -27,13 +50,14 @@ nav:
   - 粘包处理: unpacking.md
   - Interop: interop.md
   - 常见问题: faq.md
+
+# Extensions
 markdown_extensions:
-  - admonition
   - abbr
+  - admonition
   - attr_list
   - def_list
   - footnotes
-  - meta
   - md_in_html
   - toc:
       permalink: true
@@ -42,10 +66,14 @@ markdown_extensions:
   - pymdownx.betterem:
       smart_enable: all
   - pymdownx.caret
-  - pymdownx.critic
   - pymdownx.details
-  - pymdownx.emoji
-  - pymdownx.highlight
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:materialx.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.magiclink:
@@ -54,19 +82,19 @@ markdown_extensions:
       repo: yasio
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.snippets:
-      check_paths: true
-  - pymdownx.superfences
-  - pymdownx.tabbed
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
 plugins:
   - search:
-      lang:
-        - en
-        - ja
-      separator: '[\s\-\，\。]+'
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - pdf-export:
       verbose: false
       media_type: print
@@ -75,9 +103,29 @@ plugins:
       enabled_if_env: DOCS_CI
   - minify:
       minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
 extra_css:
   - 'assets/stylesheets/extra.css'
 extra:
+  analytics:
+    provider: google
+    property: G-DHR2DGTKEB
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >- 
+            Thanks for your feedback! Help us improve this page by
+            using our <a href="..." target="_blank" rel="noopener">feedback form</a>.
+
   alternate:
     # Switch to Chinese Simplfied
     - name: 简体中文

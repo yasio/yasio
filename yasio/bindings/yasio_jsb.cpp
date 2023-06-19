@@ -1658,7 +1658,6 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
 #endif
         case YOPT_C_LOCAL_PORT:
         case YOPT_C_REMOTE_PORT:
-        case YOPT_C_KCP_CONV:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_ENABLE_MCAST:
@@ -1695,6 +1694,17 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
           service->set_option(opt, std::addressof(callback));
           break;
         }
+        case YOPT_C_KCP_CONV:
+        case YOPT_C_KCP_MTU:
+        case YOPT_C_KCP_RTO_MIN:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32());
+          break;
+        case YOPT_C_KCP_WINDOW_SIZE:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
+          break;
+        case YOPT_C_KCP_NODELAY:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(), args[4].toInt32(), args[5].toInt32());
+          break;
         default:
           service->set_option(opt, args[1].toInt32());
       }
@@ -1903,6 +1913,10 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_NODELAY);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_WINDOW_SIZE);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_MTU);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_RTO_MIN);
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);

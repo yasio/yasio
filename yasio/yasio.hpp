@@ -253,6 +253,26 @@ enum
   // params: index:int, conv:int
   YOPT_C_KCP_CONV,
 
+  // The setting for kcp nodelay config.
+  // refer to:https://github.com/skywind3000/kcp/wiki/KCP-Basic-Usage
+  // params: index:int, nodelay:int, interval:int, resend:int, nc:int.
+  YOPT_C_KCP_NODELAY,
+
+  // The setting for kcp window size config.
+  // refer to:https://github.com/skywind3000/kcp/wiki/KCP-Basic-Usage
+  // params: index:int, sndWnd:int, rcvwnd:int
+  YOPT_C_KCP_WINDOW_SIZE,
+
+  // The setting for kcp MTU config.
+  // refer to:https://github.com/skywind3000/kcp/wiki/KCP-Basic-Usage
+  // params: index:int,mtu:int
+  YOPT_C_KCP_MTU,
+
+  // The setting for kcp min RTO config.
+  // refer to:https://github.com/skywind3000/kcp/wiki/KCP-Basic-Usage
+  // params: index:int,minRTO:int
+  YOPT_C_KCP_RTO_MIN,
+
   // Whether never perform bswap for length field
   // params: index:int, no_bswap:int(0)
   YOPT_C_UNPACK_NO_BSWAP,
@@ -616,7 +636,19 @@ private:
   unsigned int connect_id_ = 0;
 
 #if defined(YASIO_HAVE_KCP)
-  int kcp_conv_ = 0;
+  int kcp_conv_     = 0;
+
+  int kcp_nodelay_  = 1;
+  int kcp_interval_ = 5000;
+  int kcp_resend_   = 2;
+  int kcp_ncwnd_    = 1;
+
+  int kcp_sndwnd_   = 32;
+  int kcp_rcvwnd_   = 128;
+
+  int kcp_mtu_      = 1400;
+  //kcp fast model the RTO min is 30.
+  int kcp_minrto_   = 30;
 #endif
 };
 

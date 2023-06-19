@@ -1,7 +1,7 @@
 image:
   - Visual Studio 2013
 
-version: 3.39.11.{build}
+version: 3.39.12.{build}
 
 environment:
     global:

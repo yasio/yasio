@@ -1,3 +1,9 @@
+yasio-3.39.12
+
+  1. Add more kcp options setup support
+  2. Fix vs2013 lua binding build
+  
+  
 yasio-3.39.11
 
   1. Refactor pipe signal suppression.

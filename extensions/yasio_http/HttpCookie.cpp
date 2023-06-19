@@ -27,8 +27,7 @@
 #include "yasio_http/HttpCookie.h"
 #include "yasio_http/Uri.h"
 #include "yasio/utils.hpp"
-#include "yasio/stl/string_view.hpp"
-#include "yasio_http/utils/fast_split.hpp"
+#include "yasio_ext.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,23 +41,6 @@ namespace yasio_ext
 
 namespace network
 {
-static std::string getFileContent(cxx17::string_view filePath)
-{
-    std::ifstream fin(filePath.data(), std::ios_base::binary);
-    if (fin.is_open())
-    {
-        fin.seekg(std::ios_base::end);
-        auto n = fin.tellg();
-        if (n > 0)
-        {
-            std::string ret(n, '\0');
-            fin.seekg(std::ios_base::beg);
-            fin.read(&ret.front(), n);
-            return ret;
-        }
-    }
-    return std::string{};
-}
 void HttpCookie::readFile()
 {
     enum
@@ -72,15 +54,15 @@ void HttpCookie::readFile()
         VALUE_INDEX,
     };
 
-    std::string inString = getFileContent(_cookieFileName);
-    if (!inString.empty())
+   auto content = yasio_ext::read_text_file(_cookieFileName);
+    if (content.size() > 1)
     {
-        xsbase::fast_split(inString, '\n', [this](char* s, char* e) {
+        yasio_ext::split_cb(content.data(), content.size() - 1, '\n', [this](char* s, char* e) {
             if (*s == '#')  // skip comment
                 return;
             int count = 0;
             CookieInfo cookieInfo;
-            xsbase::fast_split(s, e - s, '\t', [&, this](char* ss, char* ee) {
+            yasio_ext::split_cb(s, e - s, '\t', [&, this](char* ss, char* ee) {
                 auto ch = *ee;  // store
                 *ee     = '\0';
                 switch (count)
@@ -172,7 +154,7 @@ bool HttpCookie::updateOrAddCookie(const cxx17::string_view& cookie, const Uri& 
 {
     unsigned int count = 0;
     CookieInfo info;
-    xsbase::nzls::fast_split(cookie.data(), cookie.length(), ';', [&](const char* start, const char* end) {
+    yasio_ext::split_cb(cookie.data(), cookie.length(), ';', [&](const char* start, const char* end) {
         unsigned int count_ = 0;
         while (*start == ' ')
             ++start;  // skip ws
@@ -180,7 +162,7 @@ bool HttpCookie::updateOrAddCookie(const cxx17::string_view& cookie, const Uri& 
         {
             cxx17::string_view key;
             cxx17::string_view value;
-            xsbase::fast_split(start, end - start, '=', [&](const char* s, const char* e) {
+            yasio_ext::split_cb(start, end - start, '=', [&](const char* s, const char* e) {
                 switch (++count_)
                 {
                 case 1:
@@ -241,7 +223,7 @@ bool HttpCookie::updateOrAddCookie(const cxx17::string_view& cookie, const Uri& 
         }
         else
         {  // first is cookie name
-            xsbase::fast_split(start, end - start, '=', [&](const char* s, const char* e) {
+            yasio_ext::split_cb(start, end - start, '=', [&](const char* s, const char* e) {
                 switch (++count_)
                 {
                 case 1:

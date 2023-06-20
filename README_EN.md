@@ -46,14 +46,17 @@
 * [axmol](https://github.com/axmolengine/axmol): Use as tcp/udp asynchronous socket solution of game engine `axmol`
 
 ## Docomentation
+
 * [https://yasio.github.io/en](https://yasio.github.io/en)
 
 ## Simple run tcptest with g++
+
 ```sh
 g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest
 ```
 
 ## Build more examples with cmake
+
 ```sh
 git clone --recursive https://github.com/yasio/yasio
 cd yasio
@@ -66,7 +69,26 @@ cmake -B build
 cmake --build build --config Debug
 ```
 
+## About new `scripts/build.ps1`
+
+- Cross-platform, it can run on Windows, Linux, macOS
+- All github ci actions use it
+- Support options
+  - `-p`: build target os: `win32`,`winuwp`,`linux`,`android`,`osx`,`ios`,`tvos`,`watchos`
+  - `-a`: build arch: `x86`,`x64`,`arm`,`arm64`
+  - `-cc`: c/c++ compiler toolchain: `clang`, `msvc`, `gcc`, `mingw-gcc` or empty use default compiler avaiable on current OS;  
+    For msvc can be `msvc120`, `mvsc140`, `mvsc160`
+  - `-cm`: additional cmake options: i.e.  `-cm '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'`
+
+- Support build target matrix
+  | OS        |   Build targets     |  Build toolchain     |
+  |----------|----------------------|----------------------|
+  | Windows  |  win32,winuwp        | msvc,clang,mingw-gcc |
+  | Linux    | linux,android        | gcc,clang            |        
+  | macOS    | osx,ios,tvos,watchos | clang                |
+
 ## Features: 
+
 * Support TCP/UDP/KCP, and manipulate APIs are same
 * Support process ```sticking packets``` for TCP internal, user do not need to care it
 * Support multicast
@@ -85,13 +107,24 @@ cmake --build build --config Debug
 * Support BinaryStram by **obstream/ibstream**, easy to use
 * Support **7Bit Encoded Int/Int64** compatible with dotnet
 
+
 ## About C++17
+
 yasio provide follow C++17 standard components compatible with C++11 compiler, please see: [yasio/stl](https://github.com/yasio/yasio/tree/dev/yasio/stl)
 - cxx17::string_view
 - cxx17::shared_mutex
 - cxx20::starts_with
 - cxx20::ends_with
-  
+
+## Abount OpenSSL prebuilt (Windows)
+
+The OpenSSL prebuilts are download from [buildware](https://github.com/axmolengine/buildware) and built by vs2022 msvc-14.36,
+If your installed visual studio version less then vs2022, please pass `-DYASIO_SSL_BACKEND=2` to use `mbedtls` instead, i.e:
+
+```bat
+powershell scripts/build.ps1 -p win32 -a x64 -cm "'-Bbuild','-DYASIO_SSL_BACKEND=2'"
+```
+
 ## Core framework
 ![image](docs/assets/images/framework_en.png)  
 

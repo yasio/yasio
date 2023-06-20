@@ -68,6 +68,25 @@ cmake --build build --config Debug
 # # 者直接用VS打开 
 ```
 
+## 关于 `scripts/build.ps1`
+
+- 跨平台， 可以运行在 Windows, Linux, macOS
+- 所有Github CI使用该脚本
+- 支持选项
+  - `-p`: 构建目标平台，支持: `win32`,`winuwp`,`linux`,`android`,`osx`,`ios`,`tvos`,`watchos`
+  - `-a`: 构建目标平台CPU架构: `x86`,`x64`,`arm`,`arm64`
+  - `-cc`: 构建C/C++编译器: `clang`, `msvc`, `gcc`, `mingw-gcc`, 默认空，使用当前宿主OS下可用编译器;  
+    对于Visual Studio还可以是 `msvc120`, `mvsc140`, `mvsc160`，来明确指定使用VS哪个版本 `msvc` 进行编译
+  - `-cm`: 额外的CMake参数，例如:  `-cm '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'`
+
+- 构建目标支持表
+  | 构建宿主OS |   构建目标平台       |  构建工具链          |
+  |------------|----------------------|----------------------|
+  | Windows    |  win32,winuwp        | msvc,clang,mingw-gcc |
+  | Linux      | linux,android        | gcc,clang            |        
+  | macOS      | osx,ios,tvos,watchos | clang                |
+
+
 ## 特性：
 * 支持TCP，UDP，KCP传输，且API是统一的。
 * 支持TCP粘包处理，业务完全不必关心。ds
@@ -93,6 +112,16 @@ yasio提供了如下可在C++11编译器下使用的C++17标准库组件，请�
 - cxx17::shared_mutex
 - cxx20::starts_with
 - cxx20::ends_with
+
+## 关于 OpenSSL 预编译库 (Windows)
+
+yasio 的cmake脚本默认选择OpenSSL 作为SSL支持库，并且会自动从[buildware](https://github.com/axmolengine/buildware)下载， 
+且预编译库使用 `VS2022(MSVC-14.36)` 编译，如果你的系统未安装该版本，请传入CMake参数`-DYASIO_SSL_BACKEND=2`，例如使用项目
+提供的跨平台一键编译脚本 `scripts/build.ps1`
+
+```bat
+powershell scripts/build.ps1 -p win32 -a x64 -cm "'-Bbuild','-DYASIO_SSL_BACKEND=2'"
+```
 
 ## 框架图
 ![image](docs/assets/images/framework.png)  

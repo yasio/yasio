@@ -6,11 +6,12 @@ mike delete --all
 
 Write-Host "Active versions: $rel_str"
 
-$rel_arr = ($rel_str -split ',')
-if ($rel_arr.Count -eq 0) {
-    Write-Error "docs versions list can't be empty, should be 'docs_ver[:docs_tag],...'
+if ("$rel_str" -eq "") {
+    Write-Error "docs versions list can't be empty, should be 'docs_ver[:docs_tag],...'"
     exit 1
 }
+
+$rel_arr = ($rel_str -split ',')
 
 $docs_ver = $null
 foreach($rel in $rel_arr) {

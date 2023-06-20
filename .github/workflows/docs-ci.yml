@@ -7,7 +7,7 @@ on:
       versions:
         description: 'Please specific active versions'
         # Default value if no value is explicitly provided
-        default: '3.39.11'
+        default: '3.39.12:3.39.x'
         # Input has to be provided for the workflow to run
         required: true
       comment:

@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/windows-ci.yml
-      - ci/**/*
+      - scripts/**/*
       - extensions/**/*
 
 env:

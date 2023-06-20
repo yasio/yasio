@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/android-ci.yml
-      - ci/**/*
+      - scripts/**/*
       - extensions/**/*
 
 env:
@@ -41,4 +41,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./ci/build.ps1 -p android -a $env:BUILD_ARCH
+      run: ./scripts/build.ps1 -p android -a $env:BUILD_ARCH

@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/solaris-ci.yml
-      - ci/**/*
+      - scripts/**/*
       - extensions/**/*
 
 jobs:

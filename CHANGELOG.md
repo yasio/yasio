@@ -11,6 +11,7 @@ yasio-4.0.0
   6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue`, `evport` support by `YASIO_ENABLE_HPERF_IO`, by default not enabled.
   7. Remove namespace `yasio::gc`.
   8. Improve `object_pool` and `singleton`.
+  9. Migrate build scripts to powershell runs on windows,linux,macos
   
   
 yasio-3.39.11

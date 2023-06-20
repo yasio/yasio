@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/freebsd-ci.yml
-      - ci/**/*
+      - scripts/**/*
       - extensions/**/*
 
 jobs:

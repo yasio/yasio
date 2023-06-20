@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/linux-ci.yml
-      - ci/**/*
+      - scripts/**/*
       - extensions/**/*
 
 env:
@@ -32,4 +32,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./ci/build.ps1 -p linux
+      run: ./scripts/build.ps1 -p linux

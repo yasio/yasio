@@ -41,7 +41,7 @@
 #  
 #
 
-$options = @{p = 'win32'; a = 'x64'; cc = '';  cm = @(); }
+$options = @{p = ''; a = 'x64'; cc = '';  cm = @(); }
 
 $optName = $null
 foreach ($arg in $args) {
@@ -84,16 +84,16 @@ $HOST_OSX   = 2 # targets: android,ios,osx(macos),tvos,watchos
 
 # 0: windows, 1: linux, 2: macos
 if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
-    $hostOS = $HOST_WIN
+    $HOST_OS = $HOST_WIN
     $envPathSep = ';'
 }
 else {
     $envPathSep = ':'
     if($IsLinux) {
-        $hostOS = $HOST_LINUX
+        $HOST_OS = $HOST_LINUX
     }
     elseif($IsMacOS) {
-        $hostOS = $HOST_OSX
+        $HOST_OS = $HOST_OSX
     }
     else {
         Write-Error "Unsupported host OS for building target $(options.p)"
@@ -101,7 +101,7 @@ else {
     }
 }
 
-$exeSuffix = if ($hostOS -eq 0) {'.exe'} else {''}
+$exeSuffix = if ($HOST_OS -eq 0) {'.exe'} else {''}
 
 if (!(Test-Path "$yasio_tools" -PathType Container)) {
     mkdir $yasio_tools
@@ -117,6 +117,14 @@ if ($CI_CHECKS) {
     $CONFIG_DEFAULT_OPTIONS = @()
 }
 
+$HOST_OS_NAME = $('windows', 'linux', 'macos').Get($HOST_OS)
+
+# determine build target os
+$BUILD_TARGET = $options.p
+if (!$BUILD_TARGET) {
+    $BUILD_TARGET = $('win32', 'linux', 'osx').Get($HOST_OS)
+}
+
 # determine toolchain
 $TOOLCHAIN = $options.cc
 $toolchains = @{ 
@@ -130,7 +138,7 @@ $toolchains = @{
     'watchos' = 'clang';
 }
 if (!$TOOLCHAIN) {
-    $TOOLCHAIN = $toolchains[$options.p]
+    $TOOLCHAIN = $toolchains[$BUILD_TARGET]
 }
 $TOOLCHAIN_INFO = ([regex]::Matches($TOOLCHAIN, '(\d+)|(\D+)')).Value
 if ($TOOLCHAIN_INFO.Count -ge 2) {
@@ -140,8 +148,6 @@ if ($TOOLCHAIN_INFO.Count -ge 2) {
     $TOOLCHAIN_NAME = $TOOLCHAIN
     $TOOLCHAIN_VER = $null
 }
-
-$HOST_NAME = $('windows', 'linux', 'macos').Get($hostOS)
 
 # now windows only
 function setup_cmake() {
@@ -157,11 +163,11 @@ function setup_cmake() {
         
         Write-Host "The installed cmake $_cmake_ver too old, installing newer $cmake_ver ..."
 
-        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$HOST_NAME-x86_64")
+        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$HOST_OS_NAME-x86_64")
         if (!(Test-Path $cmake_root -PathType Container)) {
             Write-Host "Downloading cmake-$cmake_ver-windows-x86_64.zip ..."
-            if ($hostOS -eq $HOST_WIN) {
-                $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_NAME-x86_64.zip"
+            if ($HOST_OS -eq $HOST_WIN) {
+                $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_OS_NAME-x86_64.zip"
                 if ($pwsh_ver -lt '7.0')  {
                     curl $cmake_url -o "$cmake_root.zip"
                 } else {
@@ -169,9 +175,9 @@ function setup_cmake() {
                 }
                 Expand-Archive -Path "$cmake_root.zip" -DestinationPath $yasio_tools\
             }
-            elseif($hostOS -eq $HOST_LINUX) {
+            elseif($HOST_OS -eq $HOST_LINUX) {
                 if (!(Test-Path "$cmake_root.sh" -PathType Leaf)) {
-                    $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_NAME-x86_64.sh"
+                    $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_OS_NAME-x86_64.sh"
                     curl -L $cmake_url -o "$cmake_root.sh"
                 }
                 chmod 'u+x' "$cmake_root.sh"
@@ -200,7 +206,7 @@ function setup_cmake() {
 function setup_ninja() {
     $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
     if (!$ninja_prog) {
-        $suffix = $('win', 'linux', 'mac').Get($hostOS)
+        $suffix = $('win', 'linux', 'mac').Get($HOST_OS)
         $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
             Write-Host "Downloading ninja-$suffix.zip ..."
@@ -267,7 +273,7 @@ function setup_ndk() {
         Write-Host "Using installed ndk: $ndk_root ..."
     }
     else {
-        $suffix = "$(('windows', 'linux', 'darwin').Get($hostOS))$(if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''})"
+        $suffix = "$(('windows', 'linux', 'darwin').Get($HOST_OS))$(if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''})"
         $ndk_root = "$yasio_tools/android-ndk-$ndk_ver"
         if (!(Test-Path "$ndk_root" -PathType Container)) {
             Write-Host "Downloading ndk package $ndk_package ..."
@@ -331,7 +337,7 @@ function preprocess_win {
         }
         
         # platform
-        if ($options.p -eq "winuwp") {
+        if ($BUILD_TARGET -eq "winuwp") {
             '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0', '-DBUILD_SHARED_LIBS=OFF'
         }
         
@@ -417,13 +423,51 @@ function preprocess_ios {
     }
     $cmake_toolchain_file = Join-Path -Path $yasio_root -ChildPath 'cmake' -AdditionalChildPath 'ios.cmake'
     $outputOptions += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DARCHS=$arch", '-DYASIO_USE_CARES=ON'
-    if ($options.p -eq 'tvos') {
+    if ($BUILD_TARGET -eq 'tvos') {
         $outputOptions += '-DPLAT=tvOS'
     }
-    elseif ($options.p -eq 'watchos') {
+    elseif ($BUILD_TARGET -eq 'watchos') {
         $outputOptions += '-DPLAT=watchOS', '-DYASIO_SSL_BACKEND=0'
     }
     return $outputOptions
+}
+
+function validHostAndToolchain() {
+    $appleTable = @{
+        'host' = @{'macos' = $True};
+        'toolchain' = @{'clang' = $True; };
+    };
+    $validTable = @{
+        'win32' = @{
+            'host' = @{'windows' = $True};
+            'toolchain' = @{'msvc' = $True; 'clang' = $True; 'mingw-gcc' = $True};
+        };
+        'winuwp' = @{
+            'host' = @{'windows' = $True};
+            'toolchain' = @{'msvc' = $True; };
+        };
+        'linux' = @{
+            'host' = @{'linux' = $True};
+            'toolchain' = @{'gcc' = $True; };
+        };
+        'android' = @{
+            'host' = @{'windows' = $True; 'linux' = $True; 'macos' = $True};
+            'toolchain' = @{'clang' = $True; };
+        };
+        'osx' = $appleTable;
+        'ios' = $appleTable;
+        'tvos' = $appleTable;
+        'watchos' = $appleTable;
+    }
+    $validInfo = $validTable[$BUILD_TARGET]
+    $validOS = $validInfo.host[$HOST_OS_NAME]
+    if (!$validOS) {
+        throw "Can't build target $BUILD_TARGET on $HOST_OS_NAME"
+    }
+    $validToolchain = $validInfo.toolchain[$TOOLCHAIN_NAME]
+    if(!$validToolchain) {
+        throw "Can't build target $BUILD_TARGET with toolchain $TOOLCHAIN_NAME"
+    }
 }
 
 $proprocessTable = @{ 
@@ -441,7 +485,7 @@ $proprocessTable = @{
 $testTable = @{
     'win32' = {
         param([string]$buildDir)
-        if (($options.p -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
+        if (($BUILD_TARGET -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
             Write-Host "run icmptest on windows ..."
             & ".\$buildDir\tests\icmp\Release\icmptest.exe" $env:PING_HOST
         }
@@ -482,24 +526,26 @@ $testTable = @{
     'watchos' = {};
 }
 
+validHostAndToolchain
+
 # setup tools: cmake, ninja, ndk if required for target build
-if ($hostOS -ne $HOST_OSX) {
+if ($HOST_OS -ne $HOST_OSX) {
     setup_cmake
 }
 
-if (($options.p -eq 'android' -or $options.p -eq 'win32') -and ($TOOLCHAIN_NAME -ne 'msvc')) {
+if (($BUILD_TARGET -eq 'android' -or $BUILD_TARGET -eq 'win32') -and ($TOOLCHAIN_NAME -ne 'msvc')) {
     $ninja_prog = setup_ninja
 }
 
-if ($options.p -eq 'android') {
+if ($BUILD_TARGET -eq 'android') {
     $ndk_root = setup_ndk
 }
 
 # enter building steps
-Write-Host "Building target $($options.p) on $hostName with toolchain $TOOLCHAIN ..."
+Write-Host "Building target $BUILD_TARGET on $HOST_OS_NAME with toolchain $TOOLCHAIN ..."
 
 # step1. preprocess cmake options
-$CONFIG_ALL_OPTIONS = $(& $proprocessTable[$options.p] -inputOptions $CONFIG_DEFAULT_OPTIONS)
+$CONFIG_ALL_OPTIONS = $(& $proprocessTable[$BUILD_TARGET] -inputOptions $CONFIG_DEFAULT_OPTIONS)
 
 # step2. appli additional cmake options
 if ($options.cm.Count -gt 0) {
@@ -523,7 +569,7 @@ cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS
 cmake --build $BUILD_DIR --config Release
 
 # run test
-$run_test = $testTable[$options.p]
+$run_test = $testTable[$BUILD_TARGET]
 if ($run_test) {
     & $run_test -buildDir $BUILD_DIR
 }

@@ -41,7 +41,7 @@
 #  
 #
 
-$options = @{p = 'win32'; a = 'x64'; cc = '';  cm = @(); }
+$options = @{p = 'win32'; a = 'x64'; cc = 'msvc120';  cm = @(); }
 
 $optName = $null
 foreach ($arg in $args) {
@@ -320,7 +320,7 @@ function preprocess_win {
                 "150" = 'Visual Studio 15 2017';
             }
             $gen = $gens[$TOOLCHAIN_VER]
-            if($gen) {
+            if(!$gen) {
                 Write-Error "Unsupported toolchain: $TOOLCHAIN"
                 exit 1
             }

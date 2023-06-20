@@ -4,12 +4,10 @@ on: [pull_request]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
   PING_HOST: github.com
 
 jobs:
-  build-windows:
-    name: build-windows
+  win32:
     runs-on: windows-latest
     strategy:
       matrix:
@@ -27,8 +25,26 @@ jobs:
           arch: ${{ env.BUILD_ARCH }}
       - name: Build
         run: scripts\build.ps1 -p win32 -a $env:BUILD_ARCH
-  build-mingw:
-    name: build-mingw
+  winuwp:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - arm64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: ilammy/msvc-dev-cmd@v1.12.0
+      with: 
+        arch: ${{ env.BUILD_ARCH }}
+        uwp: 'true'
+    - name: Build
+      run: scripts\build.ps1 -p winuwp -a $env:BUILD_ARCH
+  win32-mingw:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -40,8 +56,7 @@ jobs:
           install: mingw-w64-x86_64-toolchain
       - name: Build
         run: scripts\build.ps1 -p win32 -cc 'mingw-gcc'
-  build-linux:
-    name: build-linux
+  linux:
     runs-on: ubuntu-latest
     env:
       BUILD_TARGET: linux
@@ -52,8 +67,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: ./scripts/build.ps1 -p linux
-  build-android:
-    name: build-android
+  android:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -73,8 +87,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: ./scripts/build.ps1 -p android -a $env:BUILD_ARCH
-  build-osx:
-    name: build-osx
+  osx:
     runs-on: macos-latest
     env:
       BUILD_TARGET: osx
@@ -85,20 +98,24 @@ jobs:
       - name: Build
         shell: pwsh
         run: ./scripts/build.ps1 -p osx -a x64
-  build-ios:
-    name: build-ios
+  ios:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - ios
+          - tvos
+          - watchos
     env:
-      BUILD_TARGET: ios
+      BUILD_TARGET: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
       - name: Build
         shell: pwsh
-        run: ./scripts/build.ps1 -p ios -a arm64
-  build-freebsd:
-    name: build-freebsd
+        run: ./scripts/build.ps1 -p $env:BUILD_TARGET -a arm64
+  freebsd:
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v3

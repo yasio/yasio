@@ -14,17 +14,10 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-  TOOLCHAIN: 'msvc'
   PING_HOST: github.com
 
 jobs:
   msvc:
-    if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
     runs-on: windows-latest
     strategy:
       matrix:
@@ -47,11 +40,6 @@ jobs:
     - name: Build
       run: scripts\build.ps1 -p win32 -a $env:BUILD_ARCH
   clang:
-    if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
     runs-on: windows-latest
  
     steps:
@@ -67,11 +55,6 @@ jobs:
     - name: Build
       run: scripts\build.ps1 -p win32 -cc clang
   mingw:
-    if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
     runs-on: windows-latest
 
     steps:
@@ -85,23 +68,13 @@ jobs:
         install: mingw-w64-x86_64-toolchain
     - name: Build
       run: scripts\build.ps1 -p win32 -cc 'mingw-gcc'
-    - name: Upload icmptest.exe
-      uses: actions/upload-artifact@v3
-      with:
-        path: ./build_mingw-gcc/tests/icmp/Release/icmptest.exe
-        name: icmptest
-  uwp:
-    if: ${{ !startsWith(github.event.commits[0].message, 'Merge pull request') }}
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
+  winuwp:
     runs-on: windows-latest
     strategy:
       matrix:
         arch:
-          - x86
           - x64
+          - arm64
     env:
       BUILD_ARCH: ${{ matrix.arch }}
 

@@ -348,7 +348,10 @@ function preprocess_win {
 
         # openssl prebuilt was built from vs2022, so we set ssl backend to use mbedtls-2.28.3
         # Notes: mbedtls-3.x no longer support compile with vs2013, will encounter many compiling errors
-        if ($TOOLCHAIN_VER -lt '170') {
+        if ($BUILD_TARGET -eq "winuwp") { # mbedtls can't build for winuwp
+          $outputOptions += '-DYASIO_SSL_BACKEND=1'
+        }
+        elseif (($TOOLCHAIN_VER -ne '') -and ($TOOLCHAIN_VER -lt '170')) {
             $outputOptions += '-DYASIO_SSL_BACKEND=2'
         }
     }
@@ -484,14 +487,14 @@ $proprocessTable = @{
 # run tests
 $testTable = @{
     'win32' = {
-        param([string]$buildDir)
+        $buildDir = $args[0]
         if (($BUILD_TARGET -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
             Write-Host "run icmptest on windows ..."
             & ".\$buildDir\tests\icmp\Release\icmptest.exe" $env:PING_HOST
         }
     };
     'linux' = {
-        param([string]$buildDir)
+        $buildDir = $args[0]
         if ($CI_CHECKS) {
             Write-Host "run issue201 on linux..."
             & "./$buildDir/tests/issue201/issue201"
@@ -507,7 +510,7 @@ $testTable = @{
         }
     }; 
     'osx' = {
-        param([string]$buildDir)
+        $buildDir = $args[0]
         if ($CI_CHECKS -and ($options.a -eq 'x64')) {
             Write-Host "run test tcptest on osx ..."
             & "./$buildDir/tests/tcp/Release/tcptest"
@@ -571,5 +574,5 @@ cmake --build $BUILD_DIR --config Release
 # run test
 $run_test = $testTable[$BUILD_TARGET]
 if ($run_test) {
-    & $run_test -buildDir $BUILD_DIR
+    & $run_test $BUILD_DIR
 }

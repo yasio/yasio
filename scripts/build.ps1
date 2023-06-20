@@ -41,7 +41,7 @@
 #  
 #
 
-$options = @{p = 'win32'; a = 'x64'; cc = 'msvc120';  cm = @(); }
+$options = @{p = 'win32'; a = 'x64'; cc = '';  cm = @(); }
 
 $optName = $null
 foreach ($arg in $args) {
@@ -440,39 +440,39 @@ $proprocessTable = @{
 # run tests
 $testTable = @{
     'win32' = {
-        $buildDir = $args[0]
+        param([string]$buildDir)
         if (($options.p -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
             Write-Host "run icmptest on windows ..."
-            Invoke-Expression -Command ".\$buildDir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+            & ".\$buildDir\tests\icmp\Release\icmptest.exe" $env:PING_HOST
         }
     };
     'linux' = {
-        $buildDir = $args[0]
+        param([string]$buildDir)
         if ($CI_CHECKS) {
             Write-Host "run issue201 on linux..."
-            ./$buildDir/tests/issue201/issue201
+            & "./$buildDir/tests/issue201/issue201"
             
             Write-Host "run httptest on linux..."
-            ./$buildDir/tests/http/httptest
+            & "./$buildDir/tests/http/httptest"
         
             Write-Host "run ssltest on linux..."
-            ./$buildDir/tests/ssl/ssltest
+            & "./$buildDir/tests/ssl/ssltest"
         
             Write-Host "run icmp test on linux..."
-            ./$buildDir/tests/icmp/icmptest $env:PING_HOST
+            & "./$buildDir/tests/icmp/icmptest" $env:PING_HOST
         }
     }; 
     'osx' = {
-        $buildDir = $args[0]
+        param([string]$buildDir)
         if ($CI_CHECKS -and ($options.a -eq 'x64')) {
             Write-Host "run test tcptest on osx ..."
-            ./$buildDir/tests/tcp/Release/tcptest
+            & "./$buildDir/tests/tcp/Release/tcptest"
             
             Write-Host "run test issue384 on osx ..."
-            ./$buildDir/tests/issue384/Release/issue384
+            & "./$buildDir/tests/issue384/Release/issue384"
     
             Write-Host "run test icmp on osx ..."
-            ./$buildDir/tests/icmp/Release/icmptest $env:PING_HOST
+            & "./$buildDir/tests/icmp/Release/icmptest" $env:PING_HOST
         }
     };
     'winuwp' = {};
@@ -525,5 +525,5 @@ cmake --build $BUILD_DIR --config Release
 # run test
 $run_test = $testTable[$options.p]
 if ($run_test) {
-    & $run_test($BUILD_DIR)
+    & $run_test -buildDir $BUILD_DIR
 }

@@ -1,4 +1,4 @@
-mkdocs-material>=7.2.6
+mkdocs-material==9.*
 cffi==1.14.6
 pytest-runner==5.3.1
 WeasyPrint==53.0
@@ -8,3 +8,4 @@ mike>=1.0.0
 Pillow==9.3.0
 mkdocs-git-revision-date-localized-plugin
 mkdocs-redirects>=1.0
+jieba>=0.42.1

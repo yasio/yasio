@@ -42,7 +42,7 @@
 #  
 #
 
-$options = @{p = 'win32'; a = 'x64'; cc = ''; t = ''}
+$options = @{p = 'android'; a = 'arm64'; cc = ''; t = ''}
 
 $optName = $null
 foreach ($arg in $args) {
@@ -194,24 +194,49 @@ function setup_ninja() {
 }
 
 function setup_ndk() {
-    # install ndk
+    # setup ndk
+    $ndk_ver = $env:NDK_VER
+    if (!$ndk_ver) {
+        $ndk_ver = 'r16b+'
+    }
+
+    # if found or installed, the ndk_root indicate the root path of installed ndk
+    $ndk_root = $null
+
+    $IsGraterThan = $ndk_ver.EndsWith('+')
+    if($IsGraterThan) {
+        $ndk_ver = $ndk_ver.Substring(0, $ndk_ver.Length - 1)
+    }
+
     if("$env:ANDROID_HOME" -ne '') {
+        $ndk_minor_base = [int][char]'a'
+
+        $ndk_major = ($ndk_ver -replace '[^0-9]', '')
+        $ndk_minor_off = "$ndk_major".Length + 1
+        $ndk_minor = if($ndk_minor_off -lt $ndk_ver.Length) {"$([int][char]$ndk_ver.Substring($ndk_minor_off) - $ndk_minor_base)"} else {'0'}
+        $ndk_rev_base = "$ndk_major.$ndk_minor"
+
         # find ndk in sdk
         $ndks = [ordered]@{}
+        $ndk_rev_max = '0.0'
         foreach($item in $(Get-ChildItem -Path "$env:ANDROID_HOME/ndk")) {
             $ndkDir = $item.FullName
             $sourceProps = "$ndkDir/source.properties"
             if (Test-Path $sourceProps -PathType Leaf) {
                 $verLine = $(Get-Content $sourceProps | Select-Object -Index 1)
-                $ndk_rev = $($verLine -split '=').Trim()[1]
+                $ndk_rev = $($verLine -split '=').Trim()[1].split('.')[0..1] -join '.'
                 $ndks.Add($ndk_rev, $ndkDir)
+                if ($ndk_rev_max -le $ndk_rev) {
+                    $ndk_rev_max = $ndk_rev
+                }
             }
         }
-        foreach ($item in $ndks.GetEnumerator()) {
-            if ($item.Name -ge "19.0") {
-                $ndk_root = $item.Value
-                break
+        if ($IsGraterThan) {
+            if ($ndk_rev_max -ge $ndk_rev_base) {
+                $ndk_root = $ndks[$ndk_rev_max]
             }
+        } else {
+            $ndk_root = $ndks[$ndk_rev_base]
         }
     }
     
@@ -219,9 +244,7 @@ function setup_ndk() {
     {
         Write-Host "Using installed ndk: $ndk_root ..."
     }
-    else {  
-        $ndk_ver = $env:NDK_VER
-        if ("$ndk_ver" -eq '') { $ndk_ver = 'r19c' }
+    else {
         $suffix = "$(('windows', 'linux', 'darwin').Get($hostOS))$(if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''})"
         $ndk_root = "$yasio_tools/android-ndk-$ndk_ver"
         if (!(Test-Path "$ndk_root" -PathType Container)) {

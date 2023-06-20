@@ -141,8 +141,7 @@ if ($TOOLCHAIN_INFO.Count -ge 2) {
     $TOOLCHAIN_VER = $null
 }
 
-$hostName = $('windows', 'linux', 'macos').Get($hostOS)
-Write-Host "Building target $($options.p) on $hostName with toolchain $TOOLCHAIN ..."
+$HOST_NAME = $('windows', 'linux', 'macos').Get($hostOS)
 
 # now windows only
 function setup_cmake() {
@@ -158,11 +157,11 @@ function setup_cmake() {
         
         Write-Host "The installed cmake $_cmake_ver too old, installing newer $cmake_ver ..."
 
-        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$hostName-x86_64")
+        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$HOST_NAME-x86_64")
         if (!(Test-Path $cmake_root -PathType Container)) {
             Write-Host "Downloading cmake-$cmake_ver-windows-x86_64.zip ..."
             if ($hostOS -eq $HOST_WIN) {
-                $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-windows-x86_64.zip"
+                $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_NAME-x86_64.zip"
                 if ($pwsh_ver -lt '7.0')  {
                     curl $cmake_url -o "$cmake_root.zip"
                 } else {
@@ -172,7 +171,7 @@ function setup_cmake() {
             }
             elseif($hostOS -eq $HOST_LINUX) {
                 if (!(Test-Path "$cmake_root.sh" -PathType Leaf)) {
-                    $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-linux-x86_64.sh"
+                    $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_NAME-x86_64.sh"
                     curl -L $cmake_url -o "$cmake_root.sh"
                 }
                 chmod 'u+x' "$cmake_root.sh"
@@ -321,7 +320,7 @@ function preprocess_win {
                 "150" = 'Visual Studio 15 2017';
             }
             $gen = $gens[$TOOLCHAIN_VER]
-            if(!gen) {
+            if($gen) {
                 Write-Error "Unsupported toolchain: $TOOLCHAIN"
                 exit 1
             }
@@ -441,36 +440,39 @@ $proprocessTable = @{
 # run tests
 $testTable = @{
     'win32' = {
+        $buildDir = $args[0]
         if (($options.p -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
             Write-Host "run icmptest on windows ..."
-            Invoke-Expression -Command ".\$BUILD_DIR\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+            Invoke-Expression -Command ".\$buildDir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
         }
     };
     'linux' = {
+        $buildDir = $args[0]
         if ($CI_CHECKS) {
             Write-Host "run issue201 on linux..."
-            ./$BUILD_DIR/tests/issue201/issue201
+            ./$buildDir/tests/issue201/issue201
             
             Write-Host "run httptest on linux..."
-            ./$BUILD_DIR/tests/http/httptest
+            ./$buildDir/tests/http/httptest
         
             Write-Host "run ssltest on linux..."
-            ./$BUILD_DIR/tests/ssl/ssltest
+            ./$buildDir/tests/ssl/ssltest
         
             Write-Host "run icmp test on linux..."
-            ./$BUILD_DIR/tests/icmp/icmptest $env:PING_HOST
+            ./$buildDir/tests/icmp/icmptest $env:PING_HOST
         }
     }; 
     'osx' = {
+        $buildDir = $args[0]
         if ($CI_CHECKS -and ($options.a -eq 'x64')) {
             Write-Host "run test tcptest on osx ..."
-            ./$BUILD_DIR/tests/tcp/Release/tcptest
+            ./$buildDir/tests/tcp/Release/tcptest
             
             Write-Host "run test issue384 on osx ..."
-            ./$BUILD_DIR/tests/issue384/Release/issue384
+            ./$buildDir/tests/issue384/Release/issue384
     
             Write-Host "run test icmp on osx ..."
-            ./$BUILD_DIR/tests/icmp/Release/icmptest $env:PING_HOST
+            ./$buildDir/tests/icmp/Release/icmptest $env:PING_HOST
         }
     };
     'winuwp' = {};
@@ -480,7 +482,7 @@ $testTable = @{
     'watchos' = {};
 }
 
-# setup cmake and toolchain
+# setup tools: cmake, ninja, ndk if required for target build
 if ($hostOS -ne $HOST_OSX) {
     setup_cmake
 }
@@ -493,15 +495,17 @@ if ($options.p -eq 'android') {
     $ndk_root = setup_ndk
 }
 
-# preprocess cmake options
+# enter building steps
+Write-Host "Building target $($options.p) on $hostName with toolchain $TOOLCHAIN ..."
+
+# step1. preprocess cmake options
 $CONFIG_ALL_OPTIONS = $(& $proprocessTable[$options.p] -inputOptions $CONFIG_DEFAULT_OPTIONS)
+
+# step2. appli additional cmake options
 if ($options.cm.Count -gt 0) {
     Write-Host ("Apply additional cmake options: $($options.cm), Count={0}" -f $options.cm.Count)
     $CONFIG_ALL_OPTIONS += $options.cm
 }
-Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
-
-# configure & build
 if ("$($options.cm)".IndexOf(('-B')) -eq -1) {
     $BUILD_DIR = "build_${TOOLCHAIN}_$($options.a)"
 } else {
@@ -512,12 +516,14 @@ if ("$($options.cm)".IndexOf(('-B')) -eq -1) {
         }
     }
 }
+Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
 
+# step3. configure & build
 cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS
 cmake --build $BUILD_DIR --config Release
 
-# runt test
+# run test
 $run_test = $testTable[$options.p]
 if ($run_test) {
-    & $run_test
+    & $run_test($BUILD_DIR)
 }

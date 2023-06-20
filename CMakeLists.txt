@@ -28,10 +28,10 @@ cmake_dependent_option(YASIO_BUILD_LUA_EXAMPLE
   "Build lua example when we are the root project" ON
   "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 
-option(YASIO_BUILD_EXT_HTTP "Build yasio http extension" ON)
-option(YASIO_BUILD_WITH_LUA "Build yasio with lua support" OFF)
-option(YASIO_BUILD_WITH_CCLUA "Build yasio with cclua support" OFF)
-option(YAISO_BUILD_NI "Build yasio with native interface for interop" OFF)
+option(YASIO_ENABLE_EXT_HTTP "Build yasio http extension" ON)
+option(YASIO_ENABLE_WITH_LUA "Build yasio with lua support" OFF)
+option(YASIO_ENABLE_WITH_CCLUA "Build yasio with cclua support" OFF)
+option(YAISO_ENABLE_NI "Build yasio with native interface for interop" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -177,18 +177,18 @@ endif()
 ### The yasio core library project
 file(GLOB YASIO_CORE yasio/*.hpp;yasio/*.cpp;yasio/compiler/*.hpp;yasio/stl/*.hpp;yasio/impl/*.hpp;)
 
-if (YAISO_BUILD_NI)
+if (YAISO_ENABLE_NI)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/yasio_ni.cpp
   )
 endif()
 
-if (YASIO_BUILD_WITH_LUA)
+if (YASIO_ENABLE_WITH_LUA)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/lyasio.cpp
   )
   
-  if(YASIO_BUILD_WITH_CCLUA)
+  if(YASIO_ENABLE_WITH_CCLUA)
       set(YASIO_CORE ${YASIO_CORE} 
         yasio/bindings/yasio_cclua.cpp
       )
@@ -205,7 +205,7 @@ if(WIN32 AND YASIO_ENABLE_WEPOLL)
   set(THIRDPART_SRC thirdparty/wepoll/wepoll.c)
 endif()
 
-if(YASIO_BUILD_WITH_LUA OR YASIO_USE_CARES OR YASIO_ENABLE_HALF_FLOAT)
+if(YASIO_ENABLE_WITH_LUA OR YASIO_USE_CARES OR YASIO_ENABLE_HALF_FLOAT)
     include_directories("${PROJECT_SOURCE_DIR}/thirdparty")
 endif()
 
@@ -326,7 +326,7 @@ macro(yasio_config_lib_depends target_name)
                 $<TARGET_FILE_DIR:${target_name}>
             )
         # copy plainlua.dll
-        if(YASIO_BUILD_WITH_LUA)
+        if(YASIO_ENABLE_WITH_LUA)
             if(NOT YASIO_USE_PREBUILT_LUA)
                 add_custom_command(TARGET ${target_name} POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -373,7 +373,7 @@ if (BUILD_SHARED_LIBS AND ANDROID)
 endif()
 
 # lua
-if(YASIO_BUILD_WITH_LUA)
+if(YASIO_ENABLE_WITH_LUA)
     find_package(Lua "5.1.0")
     if(NOT LUA_FOUND)
         add_subdirectory(yasio/bindings/lua)
@@ -454,7 +454,7 @@ if(YASIO_SSL_BACKEND)
     target_include_directories(${yasio_target_name} INTERFACE ${CMAKE_BINARY_DIR})
 endif()
 
-if(YASIO_BUILD_EXT_HTTP)
+if(YASIO_ENABLE_EXT_HTTP)
     # llhttp for extensions: yasio_http, ...
     if (NOT BUILD_SHARED_LIBS)
         set (BUILD_SHARED_LIBS FALSE CACHE BOOL "" FORCE)
@@ -484,7 +484,7 @@ if(YASIO_BUILD_TESTS)
     add_subdirectory(tests/issue384)
     add_subdirectory(tests/echo_server)
     add_subdirectory(tests/echo_client)
-    if(YASIO_BUILD_WITH_LUA AND YASIO_BUILD_LUA_EXAMPLE)
+    if(YASIO_ENABLE_WITH_LUA AND YASIO_BUILD_LUA_EXAMPLE)
         add_subdirectory(examples/lua)
         target_include_directories(example_lua PRIVATE thirdparty)
         target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)

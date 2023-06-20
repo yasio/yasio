@@ -30,9 +30,8 @@
 # options
 #  -p: build target platform: win32,winuwp,linux,android,osx,ios,tvos,watchos
 #  -a: build arch: x86,x64,arm,arm64
-#  -cc: compiler id: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
-#  -t: toolset name for visual studio: v120,v141,v143
-# 
+#  -cc: c/c++ compiler toolchain: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
+#  -cm: additional cmake options: i.e.  -cm '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'
 # support matrix
 #   | OS        |   Build targets     |  Build toolchain     |
 #   +----------+----------------------+----------------------+
@@ -42,12 +41,12 @@
 #  
 #
 
-$options = @{p = 'android'; a = 'arm64'; cc = ''; t = ''}
+$options = @{p = 'win32'; a = 'x64'; cc = '';  cm = @(); }
 
 $optName = $null
 foreach ($arg in $args) {
     if (!$optName) {
-        if ($arg.StartsWith('-')) {
+        if ($arg.StartsWith('-')) { 
             $optName = $arg.SubString(1)
         }
     } else {
@@ -70,6 +69,10 @@ $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
 
 # The preferred cmake version to install when system installed cmake < 3.13.0
 $cmake_ver = '3.26.4'
+
+# if found or installed, the ndk_root indicate the root path of installed ndk
+$ndk_root = $null
+$ninja_prog = $null
 
 Set-Location $yasio_root
 
@@ -109,18 +112,41 @@ $CI_CHECKS = ("$env:GITHUB_ACTIONS" -eq 'true') -or ("$env:APPVEYOR_BUILD_VERSIO
 # for ci check, enable high preformance platform I/O multiplexing
 if ($CI_CHECKS) {
     Write-Host "Enable high performance I/O multiplexing for ci checks"
-    $CONFIG_ALL_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
+    $CONFIG_DEFAULT_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
 } else {
-    $CONFIG_ALL_OPTIONS = @()
+    $CONFIG_DEFAULT_OPTIONS = @()
+}
+
+# determine toolchain
+$TOOLCHAIN = $options.cc
+$toolchains = @{ 
+    'win32' = 'msvc';
+    'winuwp' = 'msvc';
+    'linux' = 'gcc'; 
+    'android' = 'clang';
+    'osx' = 'clang';
+    'ios' = 'clang';
+    'tvos' = 'clang';
+    'watchos' = 'clang';
+}
+if (!$TOOLCHAIN) {
+    $TOOLCHAIN = $toolchains[$options.p]
+}
+$TOOLCHAIN_INFO = ([regex]::Matches($TOOLCHAIN, '(\d+)|(\D+)')).Value
+if ($TOOLCHAIN_INFO.Count -ge 2) {
+    $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0]
+    $TOOLCHAIN_VER = $TOOLCHAIN_INFO[1]
+} else {
+    $TOOLCHAIN_NAME = $TOOLCHAIN
+    $TOOLCHAIN_VER = $null
 }
 
 $hostName = $('windows', 'linux', 'macos').Get($hostOS)
-
-Write-Host "Building target $($options.p) on $hostName ..."
+Write-Host "Building target $($options.p) on $hostName with toolchain $TOOLCHAIN ..."
 
 # now windows only
 function setup_cmake() {
-    $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source
+    $cmake_prog = (Get-Command "cmake" -ErrorAction SilentlyContinue).Source
     if ($cmake_prog) {
         $_cmake_ver = $($(cmake --version | Select-Object -First 1) -split ' ')[2]
     } else {
@@ -200,9 +226,6 @@ function setup_ndk() {
         $ndk_ver = 'r16b+'
     }
 
-    # if found or installed, the ndk_root indicate the root path of installed ndk
-    $ndk_root = $null
-
     $IsGraterThan = $ndk_ver.EndsWith('+')
     if($IsGraterThan) {
         $ndk_ver = $ndk_ver.Substring(0, $ndk_ver.Length - 1)
@@ -258,25 +281,16 @@ function setup_ndk() {
     return $ndk_root
 }
 
-# build methods
-function build_win {
+# preprocess methods: 
+#   <param>-inputOptions</param> [CMAKE_OPTIONS]
+function preprocess_win {
     Param(
-        [string[]]$cmakeOptions
+        [string[]]$inputOptions
     )
-    $CONFIG_ALL_OPTIONS = $cmakeOptions
+    $outputOptions = $inputOptions
+    $outputOptions += '-DYASIO_ENABLE_WEPOLL=1'
 
-    $CONFIG_ALL_OPTIONS += '-DYASIO_ENABLE_WEPOLL=1'
-    if ($options.cc -eq '') {
-        $options.cc = 'msvc'
-    }
-
-    $toolchain = $options.cc
-    
-    if ($toolchain -ne 'msvc') { # install ninja for non msvc compilers
-        setup_ninja
-    }
-
-    if ($toolchain -eq 'msvc') { # Generate vs2019 on github ci
+    if ($TOOLCHAIN_NAME -eq 'msvc') { # Generate vs2019 on github ci
         # Determine arch name
         $arch=""
         if ($options.a -eq "x86") {
@@ -285,90 +299,80 @@ function build_win {
         else {
             $arch=$options.a
         }
-        
-        if($options.t -eq '') {
-            if ($options.p -eq "uwp") {
-                $CONFIG_ALL_OPTIONS += '-A', $arch, '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0', '-DBUILD_SHARED_LIBS=OFF', '-DYAISO_BUILD_NI=ON', '-DYASIO_SSL_BACKEND=0'
+
+        $VSWHERE_EXE = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $eap = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
+        $VS2019_OR_LATER_VESION = $null
+        $VS2019_OR_LATER_VESION = (& $VSWHERE_EXE -version '16.0' -property installationVersion)
+        $ErrorActionPreference = $eap
+
+        # arch
+        if($VS2019_OR_LATER_VESION) {
+            $outputOptions += '-A', $arch
+            if ($TOOLCHAIN_VER) {
+                $outputOptions += "-Tv$TOOLCHAIN_VER"
             }
-            else {
-                $CONFIG_ALL_OPTIONS += '-A', $arch
+        }
+        else {
+            $gens = @{
+                '120' = 'Visual Studio 12 2013';
+                '140' = 'Visual Studio 14 2015'
+                "150" = 'Visual Studio 15 2017';
             }
-        } else { # vs2013
+            $gen = $gens[$TOOLCHAIN_VER]
+            if(!gen) {
+                Write-Error "Unsupported toolchain: $TOOLCHAIN"
+                exit 1
+            }
             if ($options.a -eq "x64") {
-                $CONFIG_ALL_OPTIONS += '-G', "Visual Studio 12 2013 Win64", '-DYASIO_BUILD_WITH_LUA=ON'
+                $gen += ' Win64'
             }
-            else {
-                $CONFIG_ALL_OPTIONS += '-G', "Visual Studio 12 2013", '-DYASIO_BUILD_WITH_LUA=ON'
-            }
-            # openssl prebuilt was built from vs2022, so we set ssl backend to use mbedtls-2.28.3
-            # Notes: mbedtls-3.x no longer support compile with vs2013, will encounter many compiling errors
-            $CONFIG_ALL_OPTIONS += '-DYASIO_SSL_BACKEND=2'
+            $outputOptions += '-G', $gen
+        }
+        
+        # platform
+        if ($options.p -eq "winuwp") {
+            '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0', '-DBUILD_SHARED_LIBS=OFF'
+        }
+        
+        # common options
+        if ($CI_CHECKS) {
+            $outputOptions += '-DYASIO_ENABLE_WITH_LUA=ON', '-DYAISO_ENABLE_NI=ON'
+        }
+
+        # openssl prebuilt was built from vs2022, so we set ssl backend to use mbedtls-2.28.3
+        # Notes: mbedtls-3.x no longer support compile with vs2013, will encounter many compiling errors
+        if ($TOOLCHAIN_VER -lt '170') {
+            $outputOptions += '-DYASIO_SSL_BACKEND=2'
         }
     }
-    elseif($toolchain -eq 'clang') {
-        clang --version
-        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++'
-        cmake -B build $CONFIG_ALL_OPTIONS
+    elseif($TOOLCHAIN_NAME -eq 'clang') {
+        Write-Host (clang --version)
+        $outputOptions += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++'
     }
     else { # Generate mingw
-        $CONFIG_ALL_OPTIONS += '-G', 'Ninja Multi-Config'
+        $outputOptions += '-G', 'Ninja Multi-Config'
     }
-
-    if ($options -ne 'msvc') {
-        # requires c++17 to build example 'ftp_server' for non-msvc compilers
-        $CONFIG_ALL_OPTIONS += '-DCXX_STD=17'
-    }
-   
-    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
-
-    $build_dir="build_$toolchain"
-
-    # Configure
-    cmake -B $build_dir $CONFIG_ALL_OPTIONS
-    # Build
-    cmake --build $build_dir --config Release
-
-    if (($options.p -ne 'uwp') -and ($options.cc -ne 'mingw-gcc')) {
-        Write-Host "run icmptest on windows ..."
-        Invoke-Expression -Command ".\$build_dir\tests\icmp\Release\icmptest.exe $env:PING_HOST"
-    }
+    return $outputOptions
 }
 
-function build_linux {
+function preprocess_linux {
     Param(
-        [string[]]$cmakeOptions
+        [string[]]$inputOptions
     )
-    $CONFIG_ALL_OPTIONS = $cmakeOptions
+    $outputOptions = $inputOptions
+    $outputOptions += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_ENABLE_NI=YES', '-DCXX_STD=17', '-DYASIO_ENABLE_WITH_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
 
-    $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_BUILD_NI=YES', '-DCXX_STD=17', '-DYASIO_BUILD_WITH_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
-    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
-    cmake -Bbuild $CONFIG_ALL_OPTIONS
-    cmake --build build -- -j $(nproc)
-
-    if ($CI_CHECKS) {
-        Write-Host "run issue201 on linux..."
-        ./build/tests/issue201/issue201
-        
-        Write-Host "run httptest on linux..."
-        ./build/tests/http/httptest
-    
-        Write-Host "run ssltest on linux..."
-        ./build/tests/ssl/ssltest
-    
-        Write-Host "run icmp test on linux..."
-        ./build/tests/icmp/icmptest $env:PING_HOST
-    }
+    return $outputOptions
 }
 
-function build_andorid {
+function preprocess_andorid {
     Param(
-        [string[]]$cmakeOptions
+        [string[]]$inputOptions
     )
-    $CONFIG_ALL_OPTIONS = $cmakeOptions
+    $outputOptions = $inputOptions
 
-    $ninja_prog = setup_ninja
-    $ndk_root = setup_ndk
-    
     # building
     $arch=$options.a
     if ($arch -eq 'arm') {
@@ -378,77 +382,142 @@ function build_andorid {
     } elseif($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    $CONFIG_ALL_OPTIONS += '-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$ndk_root/build/cmake/android.toolchain.cmake", "-DANDROID_ABI=$arch", '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON'
-    $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
-    $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH'
-    $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH'
+    $cmake_toolchain_file = "$ndk_root\build\cmake\android.toolchain.cmake"
+    $outputOptions += '-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DANDROID_ABI=$arch", '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON'
+    $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
+    $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH'
+    $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH'
     # by default, we want find host program only when cross-compiling
-    $CONFIG_ALL_OPTIONS += '-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER'
-    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
-    cmake -B build_a $CONFIG_ALL_OPTIONS
-    cmake --build build_a --config Release 
+    $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER'
+    
+    return $outputOptions
 }
 
-function build_osx {
+function preprocess_osx {
     Param(
-        [string[]]$cmakeOptions
+        [string[]]$inputOptions
     )
-    $CONFIG_ALL_OPTIONS = $cmakeOptions
+    $outputOptions = $inputOptions
     $arch = $options.a
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
 
-    $CONFIG_ALL_OPTIONS += '-GXcode', '-DYASIO_USE_CARES=ON', "-DCMAKE_OSX_ARCHITECTURES=$arch"
-    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
-    cmake -Bbuild $CONFIG_ALL_OPTIONS
-    cmake --build build --config Release
-
-    if ($CI_CHECKS -and ($options.a -eq 'x64')) {
-        Write-Host "run test tcptest on osx ..."
-        ./build/tests/tcp/Release/tcptest
-        
-        Write-Host "run test issue384 on osx ..."
-        ./build/tests/issue384/Release/issue384
-
-        Write-Host "run test icmp on osx ..."
-        ./build/tests/icmp/Release/icmptest $env:PING_HOST
-    }
+    $outputOptions += '-GXcode', '-DYASIO_USE_CARES=ON', "-DCMAKE_OSX_ARCHITECTURES=$arch"
+    return $outputOptions
 }
 
 # build ios famliy (ios,tvos,watchos)
-function build_ios {
+function preprocess_ios {
     Param(
-        [string[]]$cmakeOptions
+        [string[]]$inputOptions
     )
-    $CONFIG_ALL_OPTIONS = $cmakeOptions
+    $outputOptions = $inputOptions
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    $CONFIG_ALL_OPTIONS += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake", "-DARCHS=$arch", '-DYASIO_USE_CARES=ON'
+    $cmake_toolchain_file = Join-Path -Path $yasio_root -ChildPath 'cmake' -AdditionalChildPath 'ios.cmake'
+    $outputOptions += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DARCHS=$arch", '-DYASIO_USE_CARES=ON'
     if ($options.p -eq 'tvos') {
-        $CONFIG_ALL_OPTIONS += '-DPLAT=tvOS'
-        cmake -GXcode -Bbuild "-DCMAKE_TOOLCHAIN_FILE=$yasio_root/cmake/ios.cmake" "-DARCHS=$arch" -DPLAT=tvOS -DYASIO_USE_CARES=ON
+        $outputOptions += '-DPLAT=tvOS'
     }
     elseif ($options.p -eq 'watchos') {
-        $CONFIG_ALL_OPTIONS += '-DPLAT=watchOS', '-DYASIO_SSL_BACKEND=0'
+        $outputOptions += '-DPLAT=watchOS', '-DYASIO_SSL_BACKEND=0'
     }
-    Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
-    cmake -Bbuild $CONFIG_ALL_OPTIONS
-    cmake --build build --config Release
+    return $outputOptions
 }
 
-$builds = @{ 
-    'win32' = ${function:build_win};
-    'winuwp' = ${function:build_win};
-    'linux' = ${function:build_linux}; 
-    'android' = ${function:build_andorid};
-    'osx' = ${function:build_osx};
-    'ios' = ${function:build_ios};
-    'tvos' = ${function:build_ios};
-    'watchos' = ${function:build_ios};
+$proprocessTable = @{ 
+    'win32' = ${function:preprocess_win};
+    'winuwp' = ${function:preprocess_win};
+    'linux' = ${function:preprocess_linux}; 
+    'android' = ${function:preprocess_andorid};
+    'osx' = ${function:preprocess_osx};
+    'ios' = ${function:preprocess_ios};
+    'tvos' = ${function:preprocess_ios};
+    'watchos' = ${function:preprocess_ios};
 }
 
-setup_cmake
+# run tests
+$testTable = @{
+    'win32' = {
+        if (($options.p -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
+            Write-Host "run icmptest on windows ..."
+            Invoke-Expression -Command ".\$BUILD_DIR\tests\icmp\Release\icmptest.exe $env:PING_HOST"
+        }
+    };
+    'linux' = {
+        if ($CI_CHECKS) {
+            Write-Host "run issue201 on linux..."
+            ./$BUILD_DIR/tests/issue201/issue201
+            
+            Write-Host "run httptest on linux..."
+            ./$BUILD_DIR/tests/http/httptest
+        
+            Write-Host "run ssltest on linux..."
+            ./$BUILD_DIR/tests/ssl/ssltest
+        
+            Write-Host "run icmp test on linux..."
+            ./$BUILD_DIR/tests/icmp/icmptest $env:PING_HOST
+        }
+    }; 
+    'osx' = {
+        if ($CI_CHECKS -and ($options.a -eq 'x64')) {
+            Write-Host "run test tcptest on osx ..."
+            ./$BUILD_DIR/tests/tcp/Release/tcptest
+            
+            Write-Host "run test issue384 on osx ..."
+            ./$BUILD_DIR/tests/issue384/Release/issue384
+    
+            Write-Host "run test icmp on osx ..."
+            ./$BUILD_DIR/tests/icmp/Release/icmptest $env:PING_HOST
+        }
+    };
+    'winuwp' = {};
+    'android' = {};
+    'ios' = {};
+    'tvos' = {};
+    'watchos' = {};
+}
 
-& $builds[$options.p] -cmakeOptions $CONFIG_ALL_OPTIONS
+# setup cmake and toolchain
+if ($hostOS -ne $HOST_OSX) {
+    setup_cmake
+}
+
+if (($options.p -eq 'android' -or $options.p -eq 'win32') -and ($TOOLCHAIN_NAME -ne 'msvc')) {
+    $ninja_prog = setup_ninja
+}
+
+if ($options.p -eq 'android') {
+    $ndk_root = setup_ndk
+}
+
+# preprocess cmake options
+$CONFIG_ALL_OPTIONS = $(& $proprocessTable[$options.p] -inputOptions $CONFIG_DEFAULT_OPTIONS)
+if ($options.cm.Count -gt 0) {
+    Write-Host ("Apply additional cmake options: $($options.cm), Count={0}" -f $options.cm.Count)
+    $CONFIG_ALL_OPTIONS += $options.cm
+}
+Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
+
+# configure & build
+if ("$($options.cm)".IndexOf(('-B')) -eq -1) {
+    $BUILD_DIR = "build_${TOOLCHAIN}_$($options.a)"
+} else {
+    foreach($opt in $options.cm) {
+        if ($opt.StartsWith('-B')) {
+            $BUILD_DIR = $opt.Substring(2).Trim()
+            break
+        }
+    }
+}
+
+cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS
+cmake --build $BUILD_DIR --config Release
+
+# runt test
+$run_test = $testTable[$options.p]
+if ($run_test) {
+    & $run_test
+}

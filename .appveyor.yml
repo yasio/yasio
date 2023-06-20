@@ -17,4 +17,4 @@ install:
   - git submodule update --init --recursive
 
 build_script:
-  - ps: .\scripts\build.ps1 -p win32 -a $env:BUILD_ARCH -t v120
+  - ps: .\scripts\build.ps1 -p win32 -a $env:BUILD_ARCH -cc msvc120

@@ -343,7 +343,7 @@ function preprocess_win {
         
         # common options
         if ($CI_CHECKS) {
-            $outputOptions += '-DYASIO_ENABLE_WITH_LUA=ON', '-DYAISO_ENABLE_NI=ON'
+            $outputOptions += '-DYASIO_ENABLE_LUA=ON', '-DYAISO_ENABLE_NI=ON'
         }
 
         # openssl prebuilt was built from vs2022, so we set ssl backend to use mbedtls-2.28.3
@@ -370,7 +370,7 @@ function preprocess_linux {
         [string[]]$inputOptions
     )
     $outputOptions = $inputOptions
-    $outputOptions += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_ENABLE_NI=YES', '-DCXX_STD=17', '-DYASIO_ENABLE_WITH_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
+    $outputOptions += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_ENABLE_NI=YES', '-DCXX_STD=17', '-DYASIO_ENABLE_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
 
     return $outputOptions
 }

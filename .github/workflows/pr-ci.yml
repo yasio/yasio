@@ -26,7 +26,7 @@ jobs:
         with: 
           arch: ${{ env.BUILD_ARCH }}
       - name: Build
-        run: ci\build.ps1 -p win32 -a $env:BUILD_ARCH
+        run: scripts\build.ps1 -p win32 -a $env:BUILD_ARCH
   build-mingw:
     name: build-mingw
     runs-on: windows-latest
@@ -39,7 +39,7 @@ jobs:
           msystem: mingw64
           install: mingw-w64-x86_64-toolchain
       - name: Build
-        run: ci\build.ps1 -p win32 -cc 'mingw-gcc'
+        run: scripts\build.ps1 -p win32 -cc 'mingw-gcc'
   build-linux:
     name: build-linux
     runs-on: ubuntu-latest

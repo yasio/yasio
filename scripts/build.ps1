@@ -151,7 +151,11 @@ if ($TOOLCHAIN_INFO.Count -ge 2) {
 }
 
 function download_file($url, $out) {
-    Invoke-WebRequest -Uri $url -OutFile $out
+    if ($pwsh_ver -ge '7.0')  {
+        curl -L $url -o $out
+    } else {
+        Invoke-WebRequest -Uri $url -OutFile $out
+    }
 }
 
 # now windows only
@@ -181,7 +185,7 @@ function setup_cmake() {
             $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/$cmake_pkg_name"
             if (!(Test-Path $cmake_pkg_path -PathType Leaf)) {
                 Write-Host "Downloading $cmake_pkg_name ..."
-                download_file $cmake_url $cmake_pkg_path
+                download_file "$cmake_url" "$cmake_pkg_path"
             }
 
             if ($HOST_OS -eq $HOST_WIN) {
@@ -193,15 +197,22 @@ function setup_cmake() {
                 & "$cmake_pkg_path" '--skip-license' '--exclude-subdir' "--prefix=$cmake_root"
             }
             elseif($HOST_OS -eq $HOST_MAC) {
-                tar xvf $cmake_root.tar.gz -C "$yasio_tools/"
+                tar xvf "$cmake_root.tar.gz" -C "$yasio_tools/"
             }
         }
+
+        $cmake_bin = $null
         if ($HOST_OS -ne $HOST_MAC) {
             $cmake_bin = Join-Path -Path $cmake_root -ChildPath 'bin'
         } else {
-            $cmake_bin = "$cmake_root/CMake.app/Contents/bin"
+            if ((Test-Path '/Applications/CMake.app' -PathType Container)) { # upgrade installed cmake
+                rm -rf '/Applications/CMake.app'
+                mv "$cmake_root/CMake.app" '/Applications/'
+            } else {
+                $cmake_bin = "$cmake_root/CMake.app/Contents/bin"
+            }
         }
-        if ($env:PATH.IndexOf($cmake_bin) -eq -1) {
+        if (($null -ne $cmake_bin) -and ($env:PATH.IndexOf($cmake_bin) -eq -1)) {
             $env:PATH = "$cmake_bin$envPathSep$env:PATH"
         }
         $cmake_prog=(Get-Command "cmake" -ErrorAction SilentlyContinue).Source

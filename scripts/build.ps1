@@ -225,7 +225,7 @@ function setup_ninja() {
         $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
             Write-Host "Downloading ninja-$suffix.zip ..."
-            curl -L "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$suffix.zip" -o $yasio_tools/ninja-$suffix.zip
+            download_file "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$suffix.zip" "$yasio_tools/ninja-$suffix.zip"
             Expand-Archive -Path $yasio_tools/ninja-$suffix.zip -DestinationPath "$yasio_tools/ninja-$suffix/"
             $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         }
@@ -293,7 +293,7 @@ function setup_ndk() {
         if (!(Test-Path "$ndk_root" -PathType Container)) {
             Write-Host "Downloading ndk package $ndk_package ..."
             $ndk_package="android-ndk-$ndk_ver-$suffix"
-            curl -o $yasio_tools/$ndk_package.zip https://dl.google.com/android/repository/$ndk_package.zip
+            download_file "https://dl.google.com/android/repository/$ndk_package.zip" "$yasio_tools/$ndk_package.zip"
             Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/
         }
     }

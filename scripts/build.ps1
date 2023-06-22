@@ -314,10 +314,7 @@ function setup_ndk() {
 
 # preprocess methods: 
 #   <param>-inputOptions</param> [CMAKE_OPTIONS]
-function preprocess_win {
-    Param(
-        [string[]]$inputOptions
-    )
+function preprocess_win([string[]]$inputOptions) {
     $outputOptions = $inputOptions
     $outputOptions += '-DYASIO_ENABLE_WEPOLL=1'
 
@@ -391,20 +388,14 @@ function preprocess_win {
     return $outputOptions
 }
 
-function preprocess_linux {
-    Param(
-        [string[]]$inputOptions
-    )
+function preprocess_linux([string[]]$inputOptions) {
     $outputOptions = $inputOptions
     $outputOptions += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_ENABLE_NI=YES', '-DCXX_STD=17', '-DYASIO_ENABLE_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
 
     return $outputOptions
 }
 
-function preprocess_andorid {
-    Param(
-        [string[]]$inputOptions
-    )
+function preprocess_andorid([string[]]$inputOptions) {
     $outputOptions = $inputOptions
 
     # building
@@ -427,10 +418,7 @@ function preprocess_andorid {
     return $outputOptions
 }
 
-function preprocess_osx {
-    Param(
-        [string[]]$inputOptions
-    )
+function preprocess_osx([string[]]$inputOptions) {
     $outputOptions = $inputOptions
     $arch = $options.a
     if ($arch -eq 'x64') {
@@ -442,10 +430,7 @@ function preprocess_osx {
 }
 
 # build ios famliy (ios,tvos,watchos)
-function preprocess_ios {
-    Param(
-        [string[]]$inputOptions
-    )
+function preprocess_ios([string[]]$inputOptions) {
     $outputOptions = $inputOptions
     if ($arch -eq 'x64') {
         $arch = 'x86_64'

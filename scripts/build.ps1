@@ -69,6 +69,7 @@ $yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
 
 # The preferred cmake version to install when system installed cmake < 3.13.0
 $cmake_ver = '3.26.4'
+$cmake_ver_minimal = '3.13.0'
 
 # if found or installed, the ndk_root indicate the root path of installed ndk
 $ndk_root = $null
@@ -80,7 +81,7 @@ Write-Host "yasio_root=$yasio_root"
 
 $HOST_WIN   = 0 # targets: win,uwp,android
 $HOST_LINUX = 1 # targets: linux,android 
-$HOST_OSX   = 2 # targets: android,ios,osx(macos),tvos,watchos
+$HOST_MAC   = 2 # targets: android,ios,osx(macos),tvos,watchos
 
 # 0: windows, 1: linux, 2: macos
 if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
@@ -93,7 +94,7 @@ else {
         $HOST_OS = $HOST_LINUX
     }
     elseif($IsMacOS) {
-        $HOST_OS = $HOST_OSX
+        $HOST_OS = $HOST_MAC
     }
     else {
         Write-Error "Unsupported host OS for building target $(options.p)"
@@ -149,6 +150,10 @@ if ($TOOLCHAIN_INFO.Count -ge 2) {
     $TOOLCHAIN_VER = $null
 }
 
+function download_file($url, $out) {
+    Invoke-WebRequest -Uri $url -OutFile $out
+}
+
 # now windows only
 function setup_cmake() {
     $cmake_prog = (Get-Command "cmake" -ErrorAction SilentlyContinue).Source
@@ -157,35 +162,45 @@ function setup_cmake() {
     } else {
         $_cmake_ver = '0.0.0'
     }
-    if ($_cmake_ver -ge '3.13.0') {
+    if ($_cmake_ver -ge $cmake_ver_minimal) {
         Write-Host "Using installed cmake $cmake_prog, version: $_cmake_ver"
     } else {
         
         Write-Host "The installed cmake $_cmake_ver too old, installing newer $cmake_ver ..."
 
-        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath "cmake-$cmake_ver-$HOST_OS_NAME-x86_64")
+        $cmake_suffix = @(".zip", ".sh", ".tar.gz").Get($HOST_OS)
+        if ($HOST_OS -ne $HOST_MAC) {
+            $cmake_dir = "cmake-$cmake_ver-$HOST_OS_NAME-x86_64"
+        } else {
+            $cmake_dir = "cmake-$cmake_ver-$HOST_OS_NAME-universal"
+        }
+        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath $cmake_dir)
+        $cmake_pkg_name = "$cmake_dir$cmake_suffix"
+        $cmake_pkg_path = "$cmake_root$cmake_suffix"
         if (!(Test-Path $cmake_root -PathType Container)) {
-            Write-Host "Downloading cmake-$cmake_ver-windows-x86_64.zip ..."
+            $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/$cmake_pkg_name"
+            if (!(Test-Path $cmake_pkg_path -PathType Leaf)) {
+                Write-Host "Downloading $cmake_pkg_name ..."
+                download_file $cmake_url $cmake_pkg_path
+            }
+
             if ($HOST_OS -eq $HOST_WIN) {
-                $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_OS_NAME-x86_64.zip"
-                if ($pwsh_ver -lt '7.0')  {
-                    curl $cmake_url -o "$cmake_root.zip"
-                } else {
-                    curl -L $cmake_url -o "$cmake_root.zip"
-                }
-                Expand-Archive -Path "$cmake_root.zip" -DestinationPath $yasio_tools\
+                Expand-Archive -Path $cmake_pkg_path -DestinationPath $yasio_tools\
             }
             elseif($HOST_OS -eq $HOST_LINUX) {
-                if (!(Test-Path "$cmake_root.sh" -PathType Leaf)) {
-                    $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/cmake-$cmake_ver-$HOST_OS_NAME-x86_64.sh"
-                    curl -L $cmake_url -o "$cmake_root.sh"
-                }
-                chmod 'u+x' "$cmake_root.sh"
+                chmod 'u+x' "$cmake_pkg_path"
                 mkdir $cmake_root
-                & "$cmake_root.sh" '--skip-license' '--exclude-subdir' "--prefix=$cmake_root"
+                & "$cmake_pkg_path" '--skip-license' '--exclude-subdir' "--prefix=$cmake_root"
+            }
+            elseif($HOST_OS -eq $HOST_MAC) {
+                tar xvf $cmake_root.tar.gz -C "$yasio_tools/"
             }
         }
-        $cmake_bin = Join-Path -Path $cmake_root -ChildPath 'bin'
+        if ($HOST_OS -ne $HOST_MAC) {
+            $cmake_bin = Join-Path -Path $cmake_root -ChildPath 'bin'
+        } else {
+            $cmake_bin = "$cmake_root/CMake.app/Contents/bin"
+        }
         if ($env:PATH.IndexOf($cmake_bin) -eq -1) {
             $env:PATH = "$cmake_bin$envPathSep$env:PATH"
         }
@@ -193,7 +208,7 @@ function setup_cmake() {
         if ($cmake_prog) {
             $_cmake_ver = $($(cmake --version | Select-Object -First 1) -split ' ')[2]
         }
-        if ($_cmake_ver -ge '3.13.0') {
+        if ($_cmake_ver -ge $cmake_ver_minimal) {
             Write-Host "Install cmake $_cmake_ver succeed"
         }
         else {
@@ -532,9 +547,7 @@ $testTable = @{
 validHostAndToolchain
 
 # setup tools: cmake, ninja, ndk if required for target build
-if ($HOST_OS -ne $HOST_OSX) {
-    setup_cmake
-}
+setup_cmake
 
 if (($BUILD_TARGET -eq 'android' -or $BUILD_TARGET -eq 'win32') -and ($TOOLCHAIN_NAME -ne 'msvc')) {
     $ninja_prog = setup_ninja

@@ -36,7 +36,7 @@
 #include <atomic>
 
 #include "yasio/byte_buffer.hpp"
-#include "yasio/stl/string_view.hpp"
+#include "yasio/string_view.hpp"
 
 /**
  * @addtogroup network

@@ -29,12 +29,14 @@
 | Solaris |[![Solaris Build Status](https://github.com/yasio/yasio/workflows/solaris/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Asolaris)|
 
 ## 应用案例
+
 * [放置少女（HD）](http://hcsj.c4connect.co.jp/)：用于cocos和unity重制版客户端网络传输。
 * [红警OL手游项目](https://hongjing.qq.com/)：用于客户端网络传输，并且随着该项目于2018年10月17日由腾讯游戏发行正式上线后稳定运行于上千万移动设备上。
 * [x-studio软件项目](https://x-studio.net/)：网络解决方案。
 * [QttAudio](https://www.qttaudio.com/)：语音连麦聊天集成方案。
 
 ## 集成案例
+
 * Unity
   - [yasio_unity](https://github.com/yasio/yasio_unity)：Unity 纯C#封装，打开场景`SampleScene`运行即可。
   - [xlua](https://github.com/yasio/xLua)：将yasio集成到xlua, 打开场景`U3DScripting`运行即可。
@@ -45,14 +47,17 @@
 * [axmol](https://github.com/axmolengine/axmol)：作为`axmol`游戏引擎的网络解决方案。
 
 ## 文档
+
 * [https://yasio.github.io/yasio](https://yasio.github.io/yasio)
 
 ## 使用g++快速运行tcptest测试程序
+
 ```sh
 g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest && ./tcptest
 ```
 
 ## 使用CMake编译yasio的测试程序和示例程序
+
 ```sh
 git clone --recursive https://github.com/yasio/yasio
 cd yasio
@@ -88,6 +93,7 @@ cmake --build build --config Debug
 
 
 ## 特性：
+
 * 支持TCP，UDP，KCP传输，且API是统一的。
 * 支持TCP粘包处理，业务完全不必关心。ds
 * 支持组播。
@@ -106,8 +112,11 @@ cmake --build build --config Debug
 * 支持二进制读写，两个工具类**obstream/ibstream**非常方便使用。
 * 支持和.net兼容的整数压缩编码方式：**7Bit Encoded Int/Int64**。
 
-## 关于C++17
-yasio提供了如下可在C++11编译器下使用的C++17标准库组件，请查看 [yasio/stl](https://github.com/yasio/yasio/tree/dev/yasio/stl)
+## 关于C++14/17/20
+
+yasio提供了如下可在C++11编译器下使用的C++14/17/20标准库组件，请查看 [yasio/string_view.hpp](yasio/string_view.hpp), [yasio/shared_mutex.hpp](yasio/shared_mutex.hpp), [yasio/memory.hpp](yasio/memory.hpp)
+
+- cxx14::make_unique
 - cxx17::string_view
 - cxx17::shared_mutex
 - cxx20::starts_with
@@ -124,8 +133,10 @@ powershell scripts/build.ps1 -p win32 -a x64 -cm "'-Bbuild','-DYASIO_SSL_BACKEND
 ```
 
 ## 框架图
+
 ![image](docs/assets/images/framework.png)  
 
 ## QQ交流群
+
 点击加入：[829884294](https://jq.qq.com/?_wv=1027&k=5LDEiNv)
 

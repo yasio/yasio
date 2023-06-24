@@ -39,7 +39,7 @@
 #include "yasio_http/utils/concurrent_deque.h"
 
 #include "yasio/yasio_fwd.hpp"
-#include "yasio/stl/string_view.hpp"
+#include "yasio/string_view.hpp"
 
 /**
  * @addtogroup network

@@ -29,12 +29,14 @@
 | Solaris |[![Solaris Build Status](https://github.com/yasio/yasio/workflows/solaris/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Asolaris)|
 
 ## Showcase
+
 * [Place Girls](http://hcsj.c4connect.co.jp/): A popular mobile game published on jp.
 * [RAOL Mobile Game Project](https://hongjing.qq.com/): Since the game is published on Tencent Games at 2018.10.17, it's run at millions of devices.
 * [x-studio IDE Project](https://en.x-studio.net/): The local LAN upgrade system is based on yasio.
 * [QttAudio](https://www.qttaudio.com/): Integrated Audio solution.
 
 ## Integration Demos
+
 * Unity
   - [yasio_unity](https://github.com/yasio/yasio_unity): The unity c# wrapper of yasio, open scene `SampleScene` and run it.
   - [xlua](https://github.com/yasio/xLua): Integrate yasio to xlua, open scene `U3DScripting` and run it.
@@ -108,9 +110,11 @@ cmake --build build --config Debug
 * Support **7Bit Encoded Int/Int64** compatible with dotnet
 
 
-## About C++17
+## About some features of C++14/17/20 on C++11
 
-yasio provide follow C++17 standard components compatible with C++11 compiler, please see: [yasio/stl](https://github.com/yasio/yasio/tree/dev/yasio/stl)
+yasio provide follow C++14/17/20 standard components compatible with C++11 compiler, please see: [yasio/string_view.hpp](yasio/string_view.hpp), [yasio/shared_mutex.hpp](yasio/shared_mutex.hpp), [yasio/memory.hpp](yasio/memory.hpp)
+
+- cxx14::make_unique
 - cxx17::string_view
 - cxx17::shared_mutex
 - cxx20::starts_with

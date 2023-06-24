@@ -175,7 +175,7 @@ if (YASIO_USE_CARES)
 endif()
 
 ### The yasio core library project
-file(GLOB YASIO_CORE yasio/*.hpp;yasio/*.cpp;yasio/compiler/*.hpp;yasio/stl/*.hpp;yasio/impl/*.hpp;)
+file(GLOB YASIO_CORE yasio/*.hpp;yasio/*.cpp;yasio/compiler/*.hpp;yasio/impl/*.hpp;)
 
 if (YAISO_ENABLE_NI)
   set(YASIO_CORE ${YASIO_CORE} 

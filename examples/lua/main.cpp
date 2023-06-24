@@ -1,6 +1,6 @@
 #include <thread>
 #include "yasio/bindings/lyasio.hpp"
-#include "yasio/stl/string_view.hpp"
+#include "yasio/string_view.hpp"
 #if YASIO__HAS_CXX14
 #  if YASIO__HAS_CXX17 // use sol2-3.x
 #    include "sol/sol.hpp"

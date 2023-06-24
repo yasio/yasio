@@ -24,7 +24,7 @@
 #include <vector>
 #include <stdint.h>
 
-#include "yasio/stl/string_view.hpp"
+#include "yasio/string_view.hpp"
 
 /**
  * @addtogroup network

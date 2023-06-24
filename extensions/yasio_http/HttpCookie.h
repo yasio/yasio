@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-#include "yasio/stl/string_view.hpp"
+#include "yasio/string_view.hpp"
 
 namespace yasio_ext
 {

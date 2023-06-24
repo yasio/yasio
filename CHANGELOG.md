@@ -12,11 +12,12 @@ yasio-4.0.0
   7. Remove namespace `yasio::gc`.
   8. Improve `object_pool` and `singleton`.
   9. Migrate build scripts to powershell runs on windows,linux,macos
-  10. Rename cmake feature options:
-    - `YASIO_BUILD_WITH_LUA` ==> `YASIO_ENABLE_LUA`
-    - `YASIO_BUILD_WITH_CCLUA` ==> `YASIO_ENABLE_CCLUA`
-    - `YAISO_BUILD_NI` ==> `YASIO_ENABLE_NI`
-  11. Auto diable `YASIO_BUILD_TESTS` and `YASIO_BUILD_LUA_EXAMPLE` when `yasio` not in root directory of cmake project
+  10. Rename cmake feature options:  
+      - `YASIO_BUILD_WITH_LUA` --> `YASIO_ENABLE_LUA`
+      - `YASIO_BUILD_WITH_CCLUA` --> `YASIO_ENABLE_CCLUA`
+      - `YAISO_BUILD_NI` --> `YASIO_ENABLE_NI`
+  11. Auto disable `YASIO_BUILD_TESTS` and `YASIO_BUILD_LUA_EXAMPLE` when `yasio` not in root directory of cmake project
+  12. Move public headers to `yasio/` which are allow include directly, like `yasio/xxx.hpp`, private header to `yasio/impl/` which don't allow been included
   
   
 yasio-3.39.11

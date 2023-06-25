@@ -151,6 +151,7 @@ if ($TOOLCHAIN_INFO.Count -ge 2) {
 }
 
 function download_file($url, $out) {
+    Write-Host "Downloading $url to $out ..."
     if ($pwsh_ver -ge '7.0')  {
         curl -L $url -o $out
     } else {
@@ -182,9 +183,9 @@ function setup_cmake() {
         $cmake_pkg_name = "$cmake_dir$cmake_suffix"
         $cmake_pkg_path = "$cmake_root$cmake_suffix"
         if (!(Test-Path $cmake_root -PathType Container)) {
-            $cmake_url = "https://github.com/Kitware/CMake/releases/download/v$cmake_ver/$cmake_pkg_name"
+            $cmake_base_uri = 'https://github.com/Kitware/CMake/releases/download'
+            $cmake_url = "$cmake_base_uri/v$cmake_ver/$cmake_pkg_name"
             if (!(Test-Path $cmake_pkg_path -PathType Leaf)) {
-                Write-Host "Downloading $cmake_pkg_name ..."
                 download_file "$cmake_url" "$cmake_pkg_path"
             }
 
@@ -235,7 +236,6 @@ function setup_ninja() {
         $suffix = $('win', 'linux', 'mac').Get($HOST_OS)
         $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
-            Write-Host "Downloading ninja-$suffix.zip ..."
             download_file "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$suffix.zip" "$yasio_tools/ninja-$suffix.zip"
             Expand-Archive -Path $yasio_tools/ninja-$suffix.zip -DestinationPath "$yasio_tools/ninja-$suffix/"
             $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
@@ -302,7 +302,6 @@ function setup_ndk() {
         $suffix = "$(('windows', 'linux', 'darwin').Get($HOST_OS))$(if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''})"
         $ndk_root = "$yasio_tools/android-ndk-$ndk_ver"
         if (!(Test-Path "$ndk_root" -PathType Container)) {
-            Write-Host "Downloading ndk package $ndk_package ..."
             $ndk_package="android-ndk-$ndk_ver-$suffix"
             download_file "https://dl.google.com/android/repository/$ndk_package.zip" "$yasio_tools/$ndk_package.zip"
             Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/

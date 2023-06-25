@@ -32,6 +32,7 @@ option(YASIO_ENABLE_EXT_HTTP "Build yasio http extension" ON)
 option(YASIO_ENABLE_LUA "Build yasio with lua support" OFF)
 option(YASIO_ENABLE_CCLUA "Build yasio with cclua support" OFF)
 option(YAISO_ENABLE_NI "Build yasio with native interface for interop" OFF)
+option(YASIO_NO_DEPS "Build yasio without deps" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -147,6 +148,17 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${THIRDPART_INC}
 )
+
+### no deps
+if (YASIO_NO_DEPS)
+    set(YASIO_SSL_BACKEND 0)
+    set(YASIO_USE_CARES OFF)
+    set(YASIO_ENABLE_WEPOLL OFF)
+    set(YASIO_ENABLE_HALF_FLOAT OFF)
+    set(YASIO_ENABLE_LUA OFF CACHE BOOL "" FORCE)
+    set(YASIO_ENABLE_EXT_HTTP OFF CACHE BOOL "" FORCE)
+    set(YASIO_BUILD_LUA_EXAMPLE OFF CACHE BOOL "" FORCE)
+endif()
 
 ### ssl support
 
@@ -489,8 +501,10 @@ if(YASIO_BUILD_TESTS)
         target_include_directories(example_lua PRIVATE thirdparty)
         target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)
     endif()
-    add_subdirectory(examples/ftp_server)
-    add_subdirectory(tests/http)
+    if (NOT YASIO_NO_DEPS)
+        add_subdirectory(examples/ftp_server)
+        add_subdirectory(tests/http)
+    endif()
     if (YASIO_SSL_BACKEND)
         add_subdirectory(tests/ssl)
     endif()
@@ -498,5 +512,5 @@ endif ()
 
 ### Sets startup project for vs .sln
 if (WIN32 AND YASIO_BUILD_TESTS)
-    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "ftp_server")
+    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT "icmptest")
 endif ()

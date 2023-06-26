@@ -11,7 +11,7 @@
 using namespace yasio;
 
 #define ICMPTEST_PIN_HOST "www.ip138.com"
-#define ICMPTEST_PIN "yasio 4.0.x ping."
+#define ICMPTEST_PIN "yasio-4.0.x ping."
 #define ICMPTEST_PIN_LEN (sizeof(ICMPTEST_PIN) - 1)
 #define ICMPTEST_MAX_LEN 64 // max ip packet len
 
@@ -122,11 +122,20 @@ const char* strerror(int ec)
 static int icmp_ping(yasio::io_watcher& watcher, const ip::endpoint& endpoint, int socktype, const std::chrono::microseconds& wtimeout,
                      yasio::byte_buffer& body, ip::endpoint& peer, icmp_hdr_st& reply_hdr, uint8_t& ttl, int& ec)
 {
+  // icmp message type refer to RFC792: https://datatracker.ietf.org/doc/html/rfc792
   enum
   {
-    icmp_echo       = 8,
-    icmp_echo_reply = 0,
-    icmp_min_len    = 14,
+    icmp_echo_reply        = 0,
+    icmp_dest_unreachable  = 3,
+    icmp_source_quench     = 4,
+    icmp_redirect          = 5,
+    icmp_echo              = 8,
+    icmp_time_exceeded     = 11,
+    icmp_parameter_problem = 12,
+    icmp_timestamp         = 13,
+    icmp_timestamp_reply   = 14,
+    icmp_info_request      = 15,
+    icmp_info_reply        = 16,
   };
 
   xxsocket s;
@@ -273,16 +282,22 @@ int main(int argc, char** argv)
 
   const size_t ip_icmp_hdr_len = sizeof(ip_hdr_st) + sizeof(icmp_hdr_st);
 
-  // some host router require ip packet of icmp must align with 32 bytes, otherwise will be dropped by router
-  const size_t ip_pkt_len = std::min<size_t>(YASIO_SZ_ALIGN(static_cast<int>(ip_icmp_hdr_len + ICMPTEST_PIN_LEN), 32), ICMPTEST_MAX_LEN);
+  // !!!Notes: some host router require (ip_total_length % 2 == 0), otherwise will be dropped by router
+  const size_t ip_pkt_len = std::min<size_t>(YASIO_SZ_ALIGN(static_cast<int>(ip_icmp_hdr_len + ICMPTEST_PIN_LEN), 8), ICMPTEST_MAX_LEN);
 
   const size_t icmp_data_len = ip_pkt_len - ip_icmp_hdr_len;
-  yasio::byte_buffer icmp_body(icmp_data_len, 0, std::true_type{});
+  yasio::byte_buffer icmp_body(icmp_data_len, 'F', std::true_type{});
 
-  memcpy(icmp_body.data(), ICMPTEST_PIN, std::min<int>(icmp_data_len,ICMPTEST_PIN_LEN));
+  const auto valid_len = std::min<size_t>(icmp_data_len, ICMPTEST_PIN_LEN);
+  memcpy(icmp_body.data(), ICMPTEST_PIN, valid_len);
 
   const std::string remote_ip = endpoints[0].ip();
-  fprintf(stdout, "Ping %s [%s] with %d bytes of data(%s):\n", host, remote_ip.c_str(), static_cast<int>(ip_pkt_len),
+  /*
+   * The default inetutils-ping of system:
+   *   Windows: 40(60) bytes: Display icmp data len only, i.e. 32(40 - icmp_hdr(8)) bytes
+   *   Linux/macOS: 56(84) bytes: icmp_data(48), ip_hdr(20), icmp_hdr(8) + icmp_timestamp(8)
+   */
+  fprintf(stdout, "Ping %s [%s] with %d(%d) bytes of data(%s):\n", host, remote_ip.c_str(), static_cast<int>(ip_icmp_hdr_len), static_cast<int>(ip_pkt_len),
           socktype == SOCK_RAW ? "SOCK_RAW" : "SOCK_DGRAM");
 
   icmp_hdr_st reply_hdr;

@@ -178,12 +178,7 @@ endif()
 
 ### c-ares support
 if (YASIO_USE_CARES)
-    set(CARES_STATIC ON CACHE BOOL "Build c-ares as static library" FORCE)
-    set(CARES_SHARED OFF CACHE BOOL "Build c-ares as shared library" FORCE)
-    set(CARES_BUILD_TOOLS OFF CACHE BOOL "Build c-ares tools" FORCE)
     add_subdirectory(thirdparty/c-ares)
-    set(CARES_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/thirdparty/c-ares/include" CACHE INTERNAL "c-ares Include Directory" )
-    yasio_config_target_outdir(c-ares)
 endif()
 
 ### The yasio core library project

@@ -31,7 +31,7 @@
 #  -p: build target platform: win32,winuwp,linux,android,osx,ios,tvos,watchos
 #      for android: will search ndk in sdk_root which is specified by env:ANDROID_HOME first, 
 #      if not found, by default will install ndk-r16b or can be specified by option: -cc 'ndk-r23c'
-#  -a: build arch: x86,x64,arm,arm64
+#  -a: build arch: x86,x64,armv7,arm64
 #  -cc: c/c++ compiler toolchain: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
 #       msvc: msvc-120, msvc-141
 #       ndk: ndk-r16b, ndk-r16b+
@@ -148,7 +148,7 @@ if (!$TOOLCHAIN) {
 }
 $TOOLCHAIN_INFO = $TOOLCHAIN.Split('-')
 if ($TOOLCHAIN_INFO.Count -ge 2) {
-    $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0..($TOOLCHAIN_INFO.Count - 2)] -join '.'
+    $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0..($TOOLCHAIN_INFO.Count - 1)] -join '-'
     $TOOLCHAIN_VER = $TOOLCHAIN_INFO[$TOOLCHAIN_INFO.Count - 1]
 } else {
     $TOOLCHAIN_NAME = $TOOLCHAIN
@@ -386,15 +386,10 @@ function preprocess_linux([string[]]$inputOptions) {
 function preprocess_andorid([string[]]$inputOptions) {
     $outputOptions = $inputOptions
 
-    # building
-    $arch=$options.a
-    if ($arch -eq 'arm') {
-        $arch = 'armeabi-v7a'
-    } elseif($arch -eq 'arm64') {
-        $arch = 'arm64-v8a'
-    } elseif($arch -eq 'x64') {
-        $arch = 'x86_64'
-    }
+    $t_archs = @{arm64 = 'arm64-v8a'; armv7 = 'armeabi-v7a'; x64 = 'x86_64'; x86 = 'x86';}
+
+    $arch = $t_archs[$options.a]
+
     $cmake_toolchain_file = "$ndk_root\build\cmake\android.toolchain.cmake"
     $outputOptions += '-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DANDROID_ABI=$arch"
     $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
@@ -423,7 +418,7 @@ function preprocess_ios([string[]]$inputOptions) {
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    $cmake_toolchain_file = Join-Path -Path $myRoot -ChildPath 'cmake' -AdditionalChildPath 'ios.cmake'
+    $cmake_toolchain_file = Join-Path -Path $myRoot -ChildPath 'ios.cmake'
     $outputOptions += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DARCHS=$arch"
     if ($BUILD_TARGET -eq 'tvos') {
         $outputOptions += '-DPLAT=tvOS'

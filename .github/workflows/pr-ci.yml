@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         arch:
-          - arm
+          - armv7
           - arm64
           - x86
           - x64

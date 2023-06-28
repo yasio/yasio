@@ -328,13 +328,7 @@ function preprocess_win([string[]]$inputOptions) {
 
     if ($TOOLCHAIN_NAME -eq 'msvc') { # Generate vs2019 on github ci
         # Determine arch name
-        $arch=""
-        if ($options.a -eq "x86") {
-            $arch="Win32"
-        }
-        else {
-            $arch=$options.a
-        }
+        $arch = if ($options.a -eq 'x86') {'Win32'} else {$options.a}
 
         $VSWHERE_EXE = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
         $eap = $ErrorActionPreference

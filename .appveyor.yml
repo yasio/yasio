@@ -11,10 +11,10 @@ environment:
       - BUILD_ARCH: x64
 
 install:
-  # Remove the VS Xamarin targets to reduce AppVeyor specific noise in build
-  # logs.  See also http://help.appveyor.com/discussions/problems/4569
-  # - del "C:\Program Files (x86)\MSBuild\15.0\Microsoft.Common.targets\ImportAfter\Xamarin.Common.targets"
   - git submodule update --init --recursive
 
 build_script:
-  - ps: .\scripts\build.ps1 -p win32 -a $env:BUILD_ARCH -cc msvc120
+  - ps: .\scripts\build.ps1 -p win32 -a $env:BUILD_ARCH -cc msvc-120 -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_SSL_BACKEND=2'
+
+test_script:
+  - ps: .\scripts\test.ps1 -dir 'build' -target 'win32'

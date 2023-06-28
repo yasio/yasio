@@ -50,4 +50,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./scripts/build.ps1 -p android -a $env:BUILD_ARCH
+      run: ./scripts/build.ps1 -p android -a $env:BUILD_ARCH -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1'

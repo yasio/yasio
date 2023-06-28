@@ -29,9 +29,15 @@
 # The build.ps1
 # options
 #  -p: build target platform: win32,winuwp,linux,android,osx,ios,tvos,watchos
+#      for android: will search ndk in sdk_root which is specified by env:ANDROID_HOME first, 
+#      if not found, by default will install ndk-r16b or can be specified by option: -cc 'ndk-r23c'
 #  -a: build arch: x86,x64,arm,arm64
 #  -cc: c/c++ compiler toolchain: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
+#       msvc: msvc-120, msvc-141
+#       ndk: ndk-r16b, ndk-r16b+
 #  -cm: additional cmake options: i.e.  -cm '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'
+#  -cb: additional cross build options: i.e. -cb '--config','Release'
+#  -cwd: the build workspace, i.e project root which contains root CMakeLists.txt or others
 # support matrix
 #   | OS        |   Build targets     |  Build toolchain     |
 #   +----------+----------------------+----------------------+
@@ -41,7 +47,7 @@
 #  
 #
 
-$options = @{p = ''; a = 'x64'; cc = '';  cm = @(); }
+$options = @{p = ''; a = 'x64'; cc = '';  cm = @(); cb = @(); cwd = $null }
 
 $optName = $null
 foreach ($arg in $args) {
@@ -64,9 +70,6 @@ $pwsh_ver = $PSVersionTable.PSVersion.ToString()
 Write-Host "PowerShell $pwsh_ver"
 Write-Host $(Out-String -InputObject $options)
 
-$yasio_root = (Resolve-Path "$PSScriptRoot/..").Path
-$yasio_tools = Join-Path -Path $yasio_root -ChildPath 'tools'
-
 # The preferred cmake version to install when system installed cmake < 3.13.0
 $cmake_ver = '3.26.4'
 $cmake_ver_minimal = '3.13.0'
@@ -75,9 +78,20 @@ $cmake_ver_minimal = '3.13.0'
 $ndk_root = $null
 $ninja_prog = $null
 
-Set-Location $yasio_root
+$myRoot = $PSScriptRoot
 
-Write-Host "yasio_root=$yasio_root"
+# determine build script workspace
+$cwd = $options.cwd
+if ($cwd) {
+    Set-Location $cwd
+}
+else {
+    $cwd = $(Get-Location).Path
+}
+
+$tools_dir = Join-Path -Path $cwd -ChildPath 'tools'
+
+Write-Host "cwd=$cwd, tools_dir=$tools_dir"
 
 $HOST_WIN   = 0 # targets: win,uwp,android
 $HOST_LINUX = 1 # targets: linux,android 
@@ -104,20 +118,11 @@ else {
 
 $exeSuffix = if ($HOST_OS -eq 0) {'.exe'} else {''}
 
-if (!(Test-Path "$yasio_tools" -PathType Container)) {
-    mkdir $yasio_tools
+if (!(Test-Path "$tools_dir" -PathType Container)) {
+    mkdir $tools_dir
 }
 
-$CI_CHECKS = ("$env:GITHUB_ACTIONS" -eq 'true') -or ("$env:APPVEYOR_BUILD_VERSION" -ne '')
-
-# for ci check, enable high preformance platform I/O multiplexing
-if ($CI_CHECKS) {
-    Write-Host "Enable high performance I/O multiplexing for ci checks"
-    $CONFIG_DEFAULT_OPTIONS = @('-DYASIO_ENABLE_HPERF_IO=1')
-} else {
-    $CONFIG_DEFAULT_OPTIONS = @()
-}
-
+$CONFIG_DEFAULT_OPTIONS = @()
 $HOST_OS_NAME = $('windows', 'linux', 'macos').Get($HOST_OS)
 
 # determine build target os
@@ -132,7 +137,7 @@ $toolchains = @{
     'win32' = 'msvc';
     'winuwp' = 'msvc';
     'linux' = 'gcc'; 
-    'android' = 'clang';
+    'android' = 'ndk';
     'osx' = 'clang';
     'ios' = 'clang';
     'tvos' = 'clang';
@@ -141,10 +146,10 @@ $toolchains = @{
 if (!$TOOLCHAIN) {
     $TOOLCHAIN = $toolchains[$BUILD_TARGET]
 }
-$TOOLCHAIN_INFO = ([regex]::Matches($TOOLCHAIN, '(\d+)|(\D+)')).Value
+$TOOLCHAIN_INFO = $TOOLCHAIN.Split('-')
 if ($TOOLCHAIN_INFO.Count -ge 2) {
-    $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0]
-    $TOOLCHAIN_VER = $TOOLCHAIN_INFO[1]
+    $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0..($TOOLCHAIN_INFO.Count - 2)] -join '.'
+    $TOOLCHAIN_VER = $TOOLCHAIN_INFO[$TOOLCHAIN_INFO.Count - 1]
 } else {
     $TOOLCHAIN_NAME = $TOOLCHAIN
     $TOOLCHAIN_VER = $null
@@ -179,7 +184,7 @@ function setup_cmake() {
         } else {
             $cmake_dir = "cmake-$cmake_ver-$HOST_OS_NAME-universal"
         }
-        $cmake_root = $(Join-Path -Path $yasio_tools -ChildPath $cmake_dir)
+        $cmake_root = $(Join-Path -Path $tools_dir -ChildPath $cmake_dir)
         $cmake_pkg_name = "$cmake_dir$cmake_suffix"
         $cmake_pkg_path = "$cmake_root$cmake_suffix"
         if (!(Test-Path $cmake_root -PathType Container)) {
@@ -190,7 +195,7 @@ function setup_cmake() {
             }
 
             if ($HOST_OS -eq $HOST_WIN) {
-                Expand-Archive -Path $cmake_pkg_path -DestinationPath $yasio_tools\
+                Expand-Archive -Path $cmake_pkg_path -DestinationPath $tools_dir\
             }
             elseif($HOST_OS -eq $HOST_LINUX) {
                 chmod 'u+x' "$cmake_pkg_path"
@@ -198,7 +203,7 @@ function setup_cmake() {
                 & "$cmake_pkg_path" '--skip-license' '--exclude-subdir' "--prefix=$cmake_root"
             }
             elseif($HOST_OS -eq $HOST_MAC) {
-                tar xvf "$cmake_root.tar.gz" -C "$yasio_tools/"
+                tar xvf "$cmake_root.tar.gz" -C "$tools_dir/"
             }
         }
 
@@ -207,8 +212,8 @@ function setup_cmake() {
             $cmake_bin = Join-Path -Path $cmake_root -ChildPath 'bin'
         } else {
             if ((Test-Path '/Applications/CMake.app' -PathType Container)) { # upgrade installed cmake
-                rm -rf '/Applications/CMake.app'
-                mv "$cmake_root/CMake.app" '/Applications/'
+                Remove-Item '/Applications/CMake.app' -Recurse
+                Move-Item "$cmake_root/CMake.app" '/Applications/'
             } else {
                 $cmake_bin = "$cmake_root/CMake.app/Contents/bin"
             }
@@ -234,11 +239,11 @@ function setup_ninja() {
     $ninja_prog=(Get-Command "ninja" -ErrorAction SilentlyContinue).Source
     if (!$ninja_prog) {
         $suffix = $('win', 'linux', 'mac').Get($HOST_OS)
-        $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
+        $ninja_bin = (Resolve-Path "$tools_dir/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         if (!$ninja_bin) {
-            download_file "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$suffix.zip" "$yasio_tools/ninja-$suffix.zip"
-            Expand-Archive -Path $yasio_tools/ninja-$suffix.zip -DestinationPath "$yasio_tools/ninja-$suffix/"
-            $ninja_bin = (Resolve-Path "$yasio_tools/ninja-$suffix" -ErrorAction SilentlyContinue).Path
+            download_file "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-$suffix.zip" "$tools_dir/ninja-$suffix.zip"
+            Expand-Archive -Path $tools_dir/ninja-$suffix.zip -DestinationPath "$tools_dir/ninja-$suffix/"
+            $ninja_bin = (Resolve-Path "$tools_dir/ninja-$suffix" -ErrorAction SilentlyContinue).Path
         }
         if ($env:PATH.IndexOf($ninja_bin) -eq -1) {
             $env:PATH = "$ninja_bin$envPathSep$env:PATH"
@@ -252,7 +257,7 @@ function setup_ninja() {
 
 function setup_ndk() {
     # setup ndk
-    $ndk_ver = $env:NDK_VER
+    $ndk_ver = $TOOLCHAIN_VER
     if (!$ndk_ver) {
         $ndk_ver = 'r16b+'
     }
@@ -262,6 +267,7 @@ function setup_ndk() {
         $ndk_ver = $ndk_ver.Substring(0, $ndk_ver.Length - 1)
     }
 
+    # find ndk from env:ANDROID_HOME
     if("$env:ANDROID_HOME" -ne '') {
         $ndk_minor_base = [int][char]'a'
 
@@ -300,11 +306,11 @@ function setup_ndk() {
     }
     else {
         $suffix = "$(('windows', 'linux', 'darwin').Get($HOST_OS))$(if ("$ndk_ver" -le "r22z") {'-x86_64'} else {''})"
-        $ndk_root = "$yasio_tools/android-ndk-$ndk_ver"
+        $ndk_root = "$tools_dir/android-ndk-$ndk_ver"
         if (!(Test-Path "$ndk_root" -PathType Container)) {
             $ndk_package="android-ndk-$ndk_ver-$suffix"
-            download_file "https://dl.google.com/android/repository/$ndk_package.zip" "$yasio_tools/$ndk_package.zip"
-            Expand-Archive -Path $yasio_tools/$ndk_package.zip -DestinationPath $yasio_tools/
+            download_file "https://dl.google.com/android/repository/$ndk_package.zip" "$tools_dir/$ndk_package.zip"
+            Expand-Archive -Path $tools_dir/$ndk_package.zip -DestinationPath $tools_dir/
         }
     }
 
@@ -315,7 +321,6 @@ function setup_ndk() {
 #   <param>-inputOptions</param> [CMAKE_OPTIONS]
 function preprocess_win([string[]]$inputOptions) {
     $outputOptions = $inputOptions
-    $outputOptions += '-DYASIO_ENABLE_WEPOLL=1'
 
     if ($TOOLCHAIN_NAME -eq 'msvc') { # Generate vs2019 on github ci
         # Determine arch name
@@ -360,21 +365,7 @@ function preprocess_win([string[]]$inputOptions) {
         
         # platform
         if ($BUILD_TARGET -eq "winuwp") {
-            '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0', '-DBUILD_SHARED_LIBS=OFF'
-        }
-        
-        # common options
-        if ($CI_CHECKS) {
-            $outputOptions += '-DYASIO_ENABLE_LUA=ON', '-DYAISO_ENABLE_NI=ON'
-        }
-
-        # openssl prebuilt was built from vs2022, so we set ssl backend to use mbedtls-2.28.3
-        # Notes: mbedtls-3.x no longer support compile with vs2013, will encounter many compiling errors
-        if ($BUILD_TARGET -eq "winuwp") { # mbedtls can't build for winuwp
-          $outputOptions += '-DYASIO_SSL_BACKEND=1'
-        }
-        elseif (($TOOLCHAIN_VER -ne '') -and ($TOOLCHAIN_VER -lt '170')) {
-            $outputOptions += '-DYASIO_SSL_BACKEND=2'
+            '-DCMAKE_SYSTEM_NAME=WindowsStore', '-DCMAKE_SYSTEM_VERSION=10.0'
         }
     }
     elseif($TOOLCHAIN_NAME -eq 'clang') {
@@ -389,8 +380,6 @@ function preprocess_win([string[]]$inputOptions) {
 
 function preprocess_linux([string[]]$inputOptions) {
     $outputOptions = $inputOptions
-    $outputOptions += '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON', '-DYASIO_ENABLE_ARES_PROFILER=ON', '-DYAISO_ENABLE_NI=YES', '-DCXX_STD=17', '-DYASIO_ENABLE_LUA=ON', '-DBUILD_SHARED_LIBS=ON'
-
     return $outputOptions
 }
 
@@ -407,7 +396,7 @@ function preprocess_andorid([string[]]$inputOptions) {
         $arch = 'x86_64'
     }
     $cmake_toolchain_file = "$ndk_root\build\cmake\android.toolchain.cmake"
-    $outputOptions += '-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DANDROID_ABI=$arch", '-DCMAKE_BUILD_TYPE=Release', '-DYASIO_USE_CARES=ON'
+    $outputOptions += '-G', 'Ninja', '-DANDROID_STL=c++_shared', "-DCMAKE_MAKE_PROGRAM=$ninja_prog", "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DANDROID_ABI=$arch"
     $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH'
     $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH'
     $outputOptions += '-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH'
@@ -424,7 +413,7 @@ function preprocess_osx([string[]]$inputOptions) {
         $arch = 'x86_64'
     }
 
-    $outputOptions += '-GXcode', '-DYASIO_USE_CARES=ON', "-DCMAKE_OSX_ARCHITECTURES=$arch"
+    $outputOptions += '-GXcode', "-DCMAKE_OSX_ARCHITECTURES=$arch"
     return $outputOptions
 }
 
@@ -434,13 +423,13 @@ function preprocess_ios([string[]]$inputOptions) {
     if ($arch -eq 'x64') {
         $arch = 'x86_64'
     }
-    $cmake_toolchain_file = Join-Path -Path $yasio_root -ChildPath 'cmake' -AdditionalChildPath 'ios.cmake'
-    $outputOptions += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DARCHS=$arch", '-DYASIO_USE_CARES=ON'
+    $cmake_toolchain_file = Join-Path -Path $myRoot -ChildPath 'cmake' -AdditionalChildPath 'ios.cmake'
+    $outputOptions += '-GXcode', "-DCMAKE_TOOLCHAIN_FILE=$cmake_toolchain_file", "-DARCHS=$arch"
     if ($BUILD_TARGET -eq 'tvos') {
         $outputOptions += '-DPLAT=tvOS'
     }
     elseif ($BUILD_TARGET -eq 'watchos') {
-        $outputOptions += '-DPLAT=watchOS', '-DYASIO_SSL_BACKEND=0'
+        $outputOptions += '-DPLAT=watchOS'
     }
     return $outputOptions
 }
@@ -465,7 +454,7 @@ function validHostAndToolchain() {
         };
         'android' = @{
             'host' = @{'windows' = $True; 'linux' = $True; 'macos' = $True};
-            'toolchain' = @{'clang' = $True; };
+            'toolchain' = @{'ndk' = $True; };
         };
         'osx' = $appleTable;
         'ios' = $appleTable;
@@ -494,51 +483,6 @@ $proprocessTable = @{
     'watchos' = ${function:preprocess_ios};
 }
 
-# run tests
-$testTable = @{
-    'win32' = {
-        $buildDir = $args[0]
-        if (($BUILD_TARGET -ne 'winuwp') -and ($TOOLCHAIN_NAME -ne 'mingw-gcc')) {
-            Write-Host "run icmptest on windows ..."
-            & ".\$buildDir\tests\icmp\Release\icmptest.exe" $env:PING_HOST
-        }
-    };
-    'linux' = {
-        $buildDir = $args[0]
-        if ($CI_CHECKS) {
-            Write-Host "run issue201 on linux..."
-            & "./$buildDir/tests/issue201/issue201"
-            
-            Write-Host "run httptest on linux..."
-            & "./$buildDir/tests/http/httptest"
-        
-            Write-Host "run ssltest on linux..."
-            & "./$buildDir/tests/ssl/ssltest"
-        
-            Write-Host "run icmp test on linux..."
-            & "./$buildDir/tests/icmp/icmptest" $env:PING_HOST
-        }
-    }; 
-    'osx' = {
-        $buildDir = $args[0]
-        if ($CI_CHECKS -and ($options.a -eq 'x64')) {
-            Write-Host "run test tcptest on osx ..."
-            & "./$buildDir/tests/tcp/Release/tcptest"
-            
-            Write-Host "run test issue384 on osx ..."
-            & "./$buildDir/tests/issue384/Release/issue384"
-    
-            Write-Host "run test icmp on osx ..."
-            & "./$buildDir/tests/icmp/Release/icmptest" $env:PING_HOST
-        }
-    };
-    'winuwp' = {};
-    'android' = {};
-    'ios' = {};
-    'tvos' = {};
-    'watchos' = {};
-}
-
 validHostAndToolchain
 
 # setup tools: cmake, ninja, ndk if required for target build
@@ -558,13 +502,13 @@ Write-Host "Building target $BUILD_TARGET on $HOST_OS_NAME with toolchain $TOOLC
 # step1. preprocess cmake options
 $CONFIG_ALL_OPTIONS = $(& $proprocessTable[$BUILD_TARGET] -inputOptions $CONFIG_DEFAULT_OPTIONS)
 
-# step2. appli additional cmake options
+# step2. apply additional cmake options
 if ($options.cm.Count -gt 0) {
     Write-Host ("Apply additional cmake options: $($options.cm), Count={0}" -f $options.cm.Count)
     $CONFIG_ALL_OPTIONS += $options.cm
 }
-if ("$($options.cm)".IndexOf(('-B')) -eq -1) {
-    $BUILD_DIR = "build_${TOOLCHAIN}_$($options.a)"
+if ("$($options.cm)".IndexOf('-B') -eq -1) {
+    $BUILD_DIR = "build_$($options.a)"
 } else {
     foreach($opt in $options.cm) {
         if ($opt.StartsWith('-B')) {
@@ -575,12 +519,13 @@ if ("$($options.cm)".IndexOf(('-B')) -eq -1) {
 }
 Write-Host ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
 
-# step3. configure & build
+# step3. configure
 cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS
-cmake --build $BUILD_DIR --config Release
 
-# run test
-$run_test = $testTable[$BUILD_TARGET]
-if ($run_test) {
-    & $run_test $BUILD_DIR
-}
+# step4. build
+# apply additional build options
+$BUILD_ALL_OPTIONS = if ("$($options.cb)".IndexOf('--config') -eq -1) {@('--config','Release')} else {@()}
+$BUILD_ALL_OPTIONS += $options.cb
+
+Write-Host ("BUILD_ALL_OPTIONS=$BUILD_ALL_OPTIONS, Count={0}" -f $BUILD_ALL_OPTIONS.Count)
+cmake --build $BUILD_DIR $BUILD_ALL_OPTIONS

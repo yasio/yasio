@@ -38,7 +38,10 @@ jobs:
         uwp: 'false'
 
     - name: Build
-      run: scripts\build.ps1 -p win32 -a $env:BUILD_ARCH
+      shell: pwsh
+      run: |
+        scripts\build.ps1 -p win32 -a $env:BUILD_ARCH -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
+        scripts\test.ps1 -dir 'build' -target 'win32'
   clang:
     runs-on: windows-latest
  
@@ -53,7 +56,10 @@ jobs:
         uwp: 'false'
 
     - name: Build
-      run: scripts\build.ps1 -p win32 -cc clang
+      shell: pwsh
+      run: |
+        scripts\build.ps1 -p win32 -cc clang -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
+        scripts\test.ps1 -dir 'build' -target 'win32'
   mingw:
     runs-on: windows-latest
 
@@ -89,4 +95,5 @@ jobs:
         uwp: 'true'
 
     - name: Build
+      shell: pwsh
       run: scripts\build.ps1 -p winuwp -a $env:BUILD_ARCH

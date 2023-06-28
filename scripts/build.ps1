@@ -147,12 +147,16 @@ if (!$TOOLCHAIN) {
     $TOOLCHAIN = $toolchains[$BUILD_TARGET]
 }
 $TOOLCHAIN_INFO = $TOOLCHAIN.Split('-')
+$TOOLCHAIN_VER = $null
 if ($TOOLCHAIN_INFO.Count -ge 2) {
-    $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0..($TOOLCHAIN_INFO.Count - 1)] -join '-'
-    $TOOLCHAIN_VER = $TOOLCHAIN_INFO[$TOOLCHAIN_INFO.Count - 1]
-} else {
+    $toolVer = $TOOLCHAIN_INFO[$TOOLCHAIN_INFO.Count - 1]
+    if ($toolVer -match "\d+") {
+        $TOOLCHAIN_NAME = $TOOLCHAIN_INFO[0..($TOOLCHAIN_INFO.Count - 2)] -join '-'
+        $TOOLCHAIN_VER = $toolVer
+    }
+}
+if (!$TOOLCHAIN_VER) {
     $TOOLCHAIN_NAME = $TOOLCHAIN
-    $TOOLCHAIN_VER = $null
 }
 
 function download_file($url, $out) {

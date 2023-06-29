@@ -35,7 +35,7 @@
 #  -cc: c/c++ compiler toolchain: clang, msvc, gcc, mingw-gcc or empty use default installed on current OS
 #       msvc: msvc-120, msvc-141
 #       ndk: ndk-r16b, ndk-r16b+
-#  -cm: additional cmake options: i.e.  -cm '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'
+#  -cm: additional cmake options: i.e.  -cm '-Dbuild','-DCMAKE_BUILD_TYPE=Release'
 #  -cb: additional cross build options: i.e. -cb '--config','Release'
 #  -cwd: the build workspace, i.e project root which contains root CMakeLists.txt or others
 # support matrix
@@ -120,10 +120,10 @@ $toolchains = @{
     'winuwp' = 'msvc';
     'linux' = 'gcc'; 
     'android' = 'ndk';
-    'osx' = 'clang';
-    'ios' = 'clang';
-    'tvos' = 'clang';
-    'watchos' = 'clang';
+    'osx' = 'xcode';
+    'ios' = 'xcode';
+    'tvos' = 'xcode';
+    'watchos' = 'xcode';
 }
 if (!$TOOLCHAIN) {
     $TOOLCHAIN = $toolchains[$BUILD_TARGET]
@@ -425,7 +425,7 @@ function preprocess_ios([string[]]$inputOptions) {
 function validHostAndToolchain() {
     $appleTable = @{
         'host' = @{'macos' = $True};
-        'toolchain' = @{'clang' = $True; };
+        'toolchain' = @{'xcode' = $True; };
     };
     $validTable = @{
         'win32' = @{
@@ -513,8 +513,17 @@ cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS
 # step4. build
 # apply additional build options
 $BUILD_ALL_OPTIONS = if ("$($options.cb)".IndexOf('--config') -eq -1) {@('--config','Release')} else {@()}
-$BUILD_ALL_OPTIONS += $options.cb
+if ($options.cb) {
+    $BUILD_ALL_OPTIONS += $options.cb
+}
 
+$BUILD_ALL_OPTIONS += "--parallel"
+if ($BUILD_TARGET -eq 'linux') {
+    $BUILD_ALL_OPTIONS += "$(nproc)"
+}
+if ($TOOLCHAIN_NAME -eq 'xcode') {
+    $BUILD_ALL_OPTIONS += '--', '-quiet'
+}
 Write-Host ("BUILD_ALL_OPTIONS=$BUILD_ALL_OPTIONS, Count={0}" -f $BUILD_ALL_OPTIONS.Count)
 cmake --build $BUILD_DIR $BUILD_ALL_OPTIONS
 

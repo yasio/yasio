@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/linux-ci.yml
-      - scripts/**/*
+      - ci/**/*
       - extensions/**/*
 
 env:
@@ -33,5 +33,5 @@ jobs:
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
       run: |
-        ./scripts/build.ps1 -p linux -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1'
-        ./scripts/test.ps1 -dir 'build' -target 'linux'
+        ./ci/build1k.ps1 -p linux -xc '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1'
+        ./ci/test.ps1 -dir 'build' -target 'linux'

@@ -9,7 +9,7 @@ on:
       - examples/**/*
       - CMakeLists.txt
       - .github/workflows/windows-ci.yml
-      - scripts/**/*
+      - ci/**/*
       - extensions/**/*
 
 env:
@@ -40,8 +40,8 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        scripts\build.ps1 -p win32 -a $env:BUILD_ARCH -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
-        scripts\test.ps1 -dir 'build' -target 'win32'
+        ci\build1k.ps1 -p win32 -a $env:BUILD_ARCH -xc '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
+        ci\test.ps1 -dir 'build' -target 'win32'
   clang:
     runs-on: windows-latest
  
@@ -58,8 +58,8 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        scripts\build.ps1 -p win32 -cc clang -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
-        scripts\test.ps1 -dir 'build' -target 'win32'
+        ci\build1k.ps1 -p win32 -cc clang -xc '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
+        ci\test.ps1 -dir 'build' -target 'win32'
   mingw:
     runs-on: windows-latest
 
@@ -73,7 +73,7 @@ jobs:
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
     - name: Build
-      run: scripts\build.ps1 -p win32 -cc 'mingw-gcc'
+      run: ci\build1k.ps1 -p win32 -cc 'mingw-gcc'
   winuwp:
     runs-on: windows-latest
     strategy:
@@ -96,4 +96,4 @@ jobs:
 
     - name: Build
       shell: pwsh
-      run: scripts\build.ps1 -p winuwp -a $env:BUILD_ARCH
+      run: ci\build1k.ps1 -p winuwp -a $env:BUILD_ARCH

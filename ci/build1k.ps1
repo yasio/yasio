@@ -74,7 +74,7 @@ function b1k_print($msg) {
     Write-Host "build1k: $msg"
 }
 
-$options = @{p = $null; a = 'x64'; d = $null; cc = $null; xt = 'cmake'; prefix = $null; xc = @(); xb = @(); dll = $false }
+$options = @{p = $null; a = 'x64'; d = $null; cc = $null; xt = 'cmake'; prefix = $null; xc = @(); xb = @(); winsdk = $null; dll = $false }
 
 $optName = $null
 foreach ($arg in $args) {
@@ -219,10 +219,15 @@ function find_prog($name, $path = $null, $cmd = $null, $param = $null, $silent =
     }
 
     # find command
-    $prog_path = (Get-Command $cmd -ErrorAction SilentlyContinue).Source
+    $cmd_info = (Get-Command $cmd -ErrorAction SilentlyContinue)
     $found_rets = $null # prog_path,prog_version
-    if ($prog_path) {
-        $verStr = if (!$param) { $(. $cmd '--version') | Select-Object -First 1 } else { $(. $cmd '--version' $param) | Select-Object -First 1 }
+    if ($cmd_info) {
+        $prog_path = $cmd_info.Source
+        $verInfo = $cmd_info.Version
+        $verStr = "$($verInfo.Major).$($verInfo.Minor).$($verInfo.Revision)"
+        if ($verStr -eq '0.0.0') {
+            $verStr = if (!$param) { $(. $cmd '--version') | Select-Object -First 1 } else { $(. $cmd '--version' $param) | Select-Object -First 1 }
+        }
         # full pattern: '(\d+\.)+(\*|\d+)(\-[a-z]+[0-9]*)?' can match x.y.z-rc3, but not require for us
         $matchInfo = [Regex]::Match($verStr, '(\d+\.)+(-)?(\*|\d+)')
         $foundVer = $matchInfo.Value
@@ -561,6 +566,16 @@ function setup_android_sdk() {
     return $sdk_root, $ndk_root
 }
 
+function setup_clang(){
+    $clang_prog, $clang_ver = find_prog -name 'clang'
+    if ($clang_prog) {
+        b1k_print "Using installed clang: $clang_prog, version: $clang_ver"
+    }
+    else {
+        throw 'required clang $clang_ver not installed, please install it from: https://github.com/llvm/llvm-project/releases'
+    }
+}
+
 # preprocess methods: 
 #   <param>-inputOptions</param> [CMAKE_OPTIONS]
 function preprocess_win([string[]]$inputOptions) {
@@ -615,7 +630,6 @@ function preprocess_win([string[]]$inputOptions) {
         }
     }
     elseif ($TOOLCHAIN_NAME -eq 'clang') {
-        b1k_print (clang --version)
         $outputOptions += '-G', 'Ninja Multi-Config', '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++'
     }
     else {
@@ -752,9 +766,10 @@ validHostAndToolchain
 $cmake_prog = setup_cmake
 
 if ($BUILD_TARGET -eq 'win32') {
-    # $nuget_prog = setup_nuget
+    $nuget_prog = setup_nuget
     if ($TOOLCHAIN_NAME -ne 'msvc') {
         $ninja_prog = setup_ninja
+        $null = setup_clang
     }
 }
 elseif ($BUILD_TARGET -eq 'android') {
@@ -799,6 +814,8 @@ else {
     }
 }
 b1k_print ("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
+
+exit 0
 
 if (($BUILD_TARGET -eq 'android') -and ($options.xt -eq 'gradle')) {
     ./gradlew assembleRelease $CONFIG_ALL_OPTIONS

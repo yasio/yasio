@@ -674,13 +674,12 @@ io_transport_kcp::~io_transport_kcp() { ::ikcp_release(this->kcp_); }
 int io_transport_kcp::write(io_send_buffer&& buffer, completion_cb_t&& handler)
 {
   std::lock_guard<std::recursive_mutex> lck(send_mtx_);
-  int len    = static_cast<int>(buffer.size());
-  int retval = ::ikcp_send(kcp_, buffer.data(), len);
-  assert(retval == 0);
+  int nsent = ::ikcp_send(kcp_, buffer.data(), static_cast<int>(buffer.size()));
+  assert(nsent > 0);
   if (handler)
-    handler(retval, len);
+    handler(nsent > 0 ? 0 : nsent, nsent);
   get_service().wakeup();
-  return retval == 0 ? len : retval;
+  return nsent;
 }
 int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duration)
 {
@@ -719,7 +718,7 @@ bool io_transport_kcp::do_write(highp_time_t& wait_duration)
   this->check_timeout(wait_duration); // call ikcp_check
   return true;
 }
-static IINT32 yasio_kcp_itimediff(IUINT32 later, IUINT32 earlier) { return static_cast<IINT32>(later - earlier); }
+static IINT32 yasio_itimediff(IUINT32 later, IUINT32 earlier) { return static_cast<IINT32>(later - earlier); }
 static IUINT32 yasio_ikcp_check(const ikcpcb* kcp, IUINT32 current, IUINT32 waitd_ms)
 {
   IUINT32 ts_flush = kcp->ts_flush;
@@ -731,10 +730,10 @@ static IUINT32 yasio_ikcp_check(const ikcpcb* kcp, IUINT32 current, IUINT32 wait
   if (kcp->updated == 0)
     return current;
 
-  if (yasio_kcp_itimediff(current, ts_flush) < -10000)
+  if (yasio_itimediff(current, ts_flush) < -10000)
     ts_flush = current;
 
-  if (yasio_kcp_itimediff(current, ts_flush) >= 0)
+  if (yasio_itimediff(current, ts_flush) >= 0)
     return current;
 
   if (kcp->nsnd_que)
@@ -742,15 +741,15 @@ static IUINT32 yasio_ikcp_check(const ikcpcb* kcp, IUINT32 current, IUINT32 wait
   if (kcp->probe)
     return current;
 
-  if (kcp->rmt_wnd == 0 && yasio_kcp_itimediff(kcp->current, kcp->ts_probe) >= 0)
+  if (kcp->rmt_wnd == 0 && yasio_itimediff(kcp->current, kcp->ts_probe) >= 0)
     return current;
 
-  tm_flush = yasio_kcp_itimediff(ts_flush, current);
+  tm_flush = yasio_itimediff(ts_flush, current);
 
   for (p = kcp->snd_buf.next; p != &kcp->snd_buf; p = p->next)
   {
     const IKCPSEG* seg = iqueue_entry(p, const IKCPSEG, node);
-    IINT32 diff        = yasio_kcp_itimediff(seg->resendts, current);
+    IINT32 diff        = yasio_itimediff(seg->resendts, current);
     if (diff <= 0)
     {
       return current;
@@ -766,7 +765,7 @@ static IUINT32 yasio_ikcp_check(const ikcpcb* kcp, IUINT32 current, IUINT32 wait
 void io_transport_kcp::check_timeout(highp_time_t& wait_duration) const
 {
   auto current          = static_cast<IUINT32>(::yasio::clock());
-  auto expire_time      = yasio_ikcp_check(kcp_, current, wait_duration / std::milli::den);
+  auto expire_time      = yasio_ikcp_check(kcp_, current, static_cast<IUINT32>(wait_duration / std::milli::den));
   highp_time_t duration = static_cast<highp_time_t>(expire_time - current) * std::milli::den;
   if (duration < 0)
     duration = 0;

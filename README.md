@@ -73,7 +73,7 @@ cmake --build build --config Debug
 # # 者直接用VS打开 
 ```
 
-## 关于 `scripts/build.ps1`
+## 关于 `build.ps1`
 
 - 跨平台， 可以运行在 Windows, Linux, macOS
 - 所有Github CI使用该脚本
@@ -126,10 +126,10 @@ yasio提供了如下可在C++11编译器下使用的C++14/17/20标准库组件�
 
 yasio 的cmake脚本默认选择OpenSSL 作为SSL支持库，并且会自动从[buildware](https://github.com/axmolengine/buildware)下载， 
 且预编译库使用 `VS2022(MSVC-14.36)` 编译，如果你的系统未安装该版本，请传入CMake参数`-DYASIO_SSL_BACKEND=2`，例如使用项目
-提供的跨平台一键编译脚本 `scripts/build.ps1`
+提供的跨平台一键编译脚本 `build.ps1`
 
 ```bat
-powershell scripts/build.ps1 -p win32 -a x64 -cm "'-Bbuild','-DYASIO_SSL_BACKEND=2'"
+powershell build.ps1 -p win32 -a x64 -xc "'-DYASIO_SSL_BACKEND=2'"
 ```
 
 ## 框架图

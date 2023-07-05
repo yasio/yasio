@@ -14,7 +14,4 @@ install:
   - git submodule update --init --recursive
 
 build_script:
-  - ps: .\ci\build1k.ps1 -p win32 -a $env:BUILD_ARCH -cc msvc-120 -cm '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_SSL_BACKEND=2'
-
-test_script:
-  - ps: .\ci\test.ps1 -dir 'build' -target 'win32'
+  - ps: .\build.ps1 -p win32 -a $env:BUILD_ARCH -cc msvc-120 -xc '-DYASIO_SSL_BACKEND=2'

@@ -75,10 +75,6 @@ $is_ci = $env:GITHUB_ACTIONS -eq 'true'
 # start construct full cmd line
 $fullCmdLine = @("$((Resolve-Path -Path "$myRoot/ci/build1k.ps1").Path)")
 
-if ($options.p -eq 'android') {
-    $fullCmdLine += "'-xt'", "'gradle'"
-}
-
 $search_prior_dir = $options.d
 $search_paths = if ($search_prior_dir) { @($search_prior_dir, $workDir, $myRoot) } else { @($workDir, $myRoot) }
 function search_proj($path, $type) {
@@ -96,7 +92,8 @@ $search_rule = @{ path = 'CMakeLists.txt'; type = 'Leaf' }
 $proj_dir = search_proj $search_rule.path $search_rule.type
 
 if ($is_ci) {
-    $options.xc += '-Bbuild, -DYASIO_ENABLE_KCP=TRUE','-DYASIO_ENABLE_HPERF_IO=1'
+    $options.xc = [array]$options.xc
+    $options.xc += '-DYASIO_ENABLE_KCP=TRUE','-DYASIO_ENABLE_HPERF_IO=1'
 }
 
 $bci = $null
@@ -134,19 +131,10 @@ foreach ($option in $options.GetEnumerator()) {
 $strFullCmdLine = "$fullCmdLine"
 Invoke-Expression $strFullCmdLine
 
-if ($is_ci) { # run tests
-    $target_os = $options.p
-    if (!$target_os) {
-        # choose host target if not specified by command line automatically
-        if ($IsWindows -or ("$env:OS" -eq 'Windows_NT')) {
-            $target_os = 'win32'
-        }
-        elseif($IsLinux) {
-            $target_os = 'linux'
-        }
-        elseif($IsMacOS) {
-            $target_os = 'osx'
-        }
-    }
-    & .\ci\test.ps1 -dir 'build' -target $target_os
+$buildResult = ConvertFrom-Json $env:buildResult
+
+if ($is_ci -and !$buildResult.compilerID.StartsWith('mingw')) { # run tests
+    $targetOS = $buildResult.targetOS
+    $buildDir = $buildResult.buildDir
+    & .\ci\test.ps1 -dir $buildDir -target $targetOS
 }

@@ -38,4 +38,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./ci/build1k.ps1 -p $env:BUILD_TARGET -a arm64 -xc '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1'
+      run: ./build.ps1 -p $env:BUILD_TARGET -a arm64

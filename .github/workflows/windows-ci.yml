@@ -40,8 +40,7 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        ci\build1k.ps1 -p win32 -a $env:BUILD_ARCH -xc '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
-        ci\test.ps1 -dir 'build' -target 'win32'
+        .\build.ps1 -p win32 -a $env:BUILD_ARCH
   clang:
     runs-on: windows-latest
  
@@ -58,8 +57,7 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        ci\build1k.ps1 -p win32 -cc clang -xc '-Bbuild','-DYASIO_ENABLE_HPERF_IO=1','-DYASIO_ENABLE_WEPOLL=1'
-        ci\test.ps1 -dir 'build' -target 'win32'
+        .\build.ps1 -p win32 -cc clang
   mingw:
     runs-on: windows-latest
 
@@ -73,7 +71,7 @@ jobs:
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
     - name: Build
-      run: ci\build1k.ps1 -p win32 -cc 'mingw-gcc'
+      run: .\build.ps1 -p win32 -cc 'mingw-gcc'
   winuwp:
     runs-on: windows-latest
     strategy:
@@ -96,4 +94,4 @@ jobs:
 
     - name: Build
       shell: pwsh
-      run: ci\build1k.ps1 -p winuwp -a $env:BUILD_ARCH
+      run: .\build.ps1 -p winuwp -a $env:BUILD_ARCH

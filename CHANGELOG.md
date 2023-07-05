@@ -2,15 +2,15 @@ yasio-4.0.0
 
   1. IMPORTANT: Rename `YOPT_S_DEFERRED_EVENT` to `YOPT_S_NO_DISPATCH`, and the default event dispatch behavior was changed,
   by default, the network thread will always dispatch events at end of event loop. you must set `YOPT_S_NO_DISPATCH` to `1` to 
-  ensure the dispatch behavior match with previous releases.
+  ensure the dispatch behavior match with previous releases
   2. The `YOPT_S_DEFER_EVENT_CB` return check changed, return `true` to tell io_service the event already processed, io_service will
-  skip `processed` event, previous releases should return `false`.
-  3. Improve kcp transport, fix data retention problem, caused by interval too large.
-  4. Add support forward packet on both send and recv stages.
-  5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`.
-  6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue`, `evport` support by `YASIO_ENABLE_HPERF_IO`, by default not enabled.
-  7. Remove namespace `yasio::gc`.
-  8. Improve `object_pool` and `singleton`.
+  skip `processed` event, previous releases should return `false`
+  3. Improve kcp transport, fix data retention problem(caused by interval too large) and update kcp to git 1.7-f2aa30e
+  4. Add support forward packet on both send and recv stages
+  5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`
+  6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue`, `evport` support by `YASIO_ENABLE_HPERF_IO`, by default not enabled
+  7. Remove namespace `yasio::gc`
+  8. Improve `object_pool` and `singleton`
   9. Migrate build scripts to powershell runs on windows,linux,macos
   10. Rename cmake feature options:  
       - `YASIO_BUILD_WITH_LUA` --> `YASIO_ENABLE_LUA`
@@ -20,6 +20,12 @@ yasio-4.0.0
   12. Move public headers to `yasio/` which are allow include directly, like `yasio/xxx.hpp`, private header to `yasio/impl/` which don't allow been included
   
   
+yasio-3.39.12
+
+  1. Add more kcp options setup support
+  2. Fix vs2013 lua binding build
+  
+
 yasio-3.39.11
 
   1. Refactor pipe signal suppression.

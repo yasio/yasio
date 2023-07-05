@@ -5,7 +5,7 @@ yasio-4.0.0
   ensure the dispatch behavior match with previous releases.
   2. The `YOPT_S_DEFER_EVENT_CB` return check changed, return `true` to tell io_service the event already processed, io_service will
   skip `processed` event, previous releases should return `false`.
-  3. Exclude kcp implemention from core.
+  3. Improve kcp transport, fix data retention problem, caused by interval too large.
   4. Add support forward packet on both send and recv stages.
   5. Rename preprocessors `YASIO_HAVE_` to `YASIO_ENABLE_XXX`, `YASIO_HAVE_CARES` to `YASIO_USE_CARES`.
   6. Refactor non-blocking io mode, add `epoll/wepoll`, `kqueue`, `evport` support by `YASIO_ENABLE_HPERF_IO`, by default not enabled.

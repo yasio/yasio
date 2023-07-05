@@ -82,7 +82,7 @@ cmake --build build --config Debug
   - `-a`: 构建目标平台CPU架构: `x86`,`x64`,`arm`,`arm64`
   - `-cc`: 构建C/C++编译器: `clang`, `msvc`, `gcc`, `mingw-gcc`, 默认空，使用当前宿主OS下可用编译器;  
     对于Visual Studio还可以是 `msvc120`, `mvsc140`, `mvsc160`，来明确指定使用VS哪个版本 `msvc` 进行编译
-  - `-xc`: 额外的CMake参数，例如:  `-cm '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'`
+  - `-xc`: 额外的CMake参数，例如:  `-xc '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'`
 
 - 构建目标支持表
   | 构建宿主OS |   构建目标平台       |  构建工具链          |

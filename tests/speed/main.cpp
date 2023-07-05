@@ -4,10 +4,12 @@
 
 #include "yasio/yasio.hpp"
 
-#include "kcp/ikcp.h"
+#if defined(YASIO_ENABLE_KCP)
+#  include "kcp/ikcp.h"
+#endif
 
 #if YASIO_SSL_BACKEND != 0
-#include "sslcerts.hpp"
+#  include "sslcerts.hpp"
 #endif
 
 #if defined(_MSC_VER)
@@ -38,7 +40,7 @@ Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 #  define SPEEDTEST_SSL_MASK 0
 #endif
 
-#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_TCP
+#define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 #  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT | SPEEDTEST_SSL_MASK

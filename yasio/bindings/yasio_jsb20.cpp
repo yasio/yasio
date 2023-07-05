@@ -26,7 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #define YASIO_HEADER_ONLY 1
-#define YASIO_ENABLE_KCP 1
+#define YASIO_HAVE_KCP 1
 #define YASIO_OBS_BUILTIN_STACK 1
 
 #include "yasio/yasio.hpp"
@@ -61,19 +61,22 @@ using namespace yasio;
 namespace yasio_jsb
 {
 
-#define YASIO_DEFINE_REFERENCE_CLASS                                                                                                                           \
-private:                                                                                                                                                       \
-  unsigned int referenceCount_;                                                                                                                                \
-                                                                                                                                                               \
-public:                                                                                                                                                        \
-  void retain() { ++referenceCount_; }                                                                                                                         \
-  void release()                                                                                                                                               \
-  {                                                                                                                                                            \
-    --referenceCount_;                                                                                                                                         \
-    if (referenceCount_ == 0)                                                                                                                                  \
-      delete this;                                                                                                                                             \
-  }                                                                                                                                                            \
-                                                                                                                                                               \
+#define YASIO_DEFINE_REFERENCE_CLASS \
+private:                             \
+  unsigned int referenceCount_;      \
+                                     \
+public:                              \
+  void retain()                      \
+  {                                  \
+    ++referenceCount_;               \
+  }                                  \
+  void release()                     \
+  {                                  \
+    --referenceCount_;               \
+    if (referenceCount_ == 0)        \
+      delete this;                   \
+  }                                  \
+                                     \
 private:
 
 enum
@@ -1001,10 +1004,10 @@ bool js_yasio_io_event_packet(se::State& s)
         s.rval().setObject(se::HandleObject(se::Object::createArrayBufferObject(packet.data(), packet.size())));
         break;
       case yasio_jsb::BUFFER_FAST:
-        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet&&)packet)), &s.rval());
+        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet &&) packet)), &s.rval());
         break;
       default:
-        native_ptr_to_seval<yasio::ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet&&)packet)), &s.rval());
+        native_ptr_to_seval<yasio::ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet &&) packet)), &s.rval());
     }
   }
   else
@@ -1302,7 +1305,6 @@ bool js_yasio_io_service_set_option(se::State& s)
 #endif
         case YOPT_C_LOCAL_PORT:
         case YOPT_C_REMOTE_PORT:
-        case YOPT_C_KCP_CONV:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_ENABLE_MCAST:
@@ -1338,6 +1340,17 @@ bool js_yasio_io_service_set_option(se::State& s)
           service->set_option(opt, std::addressof(callback));
           break;
         }
+        case YOPT_C_KCP_CONV:
+        case YOPT_C_KCP_MTU:
+        case YOPT_C_KCP_RTO_MIN:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32());
+          break;
+        case YOPT_C_KCP_WINDOW_SIZE:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
+          break;
+        case YOPT_C_KCP_NODELAY:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(), args[4].toInt32(), args[5].toInt32());
+          break;
         default:
           service->set_option(opt, args[1].toInt32());
       }
@@ -1486,18 +1499,18 @@ bool jsb_register_yasio(se::Object* obj)
 
   // ##-- yasio enums
   se::Value __jsvalIntVal;
-#define YASIO_SET_INT_PROP(name, value)                                                                                                                        \
-  __jsvalIntVal.setInt32(value);                                                                                                                               \
+#define YASIO_SET_INT_PROP(name, value) \
+  __jsvalIntVal.setInt32(value);        \
   yasio->setProperty(name, __jsvalIntVal)
 #define YASIO_EXPORT_ENUM(v) YASIO_SET_INT_PROP(#v, v)
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_UDP_SERVER);
-// #if defined(YASIO_ENABLE_KCP)
-//   YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
-//   YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
-// #endif
+#if defined(YASIO_ENABLE_KCP)
+  YASIO_EXPORT_ENUM(YCK_KCP_CLIENT);
+  YASIO_EXPORT_ENUM(YCK_KCP_SERVER);
+#endif
 #if defined(YASIO_SSL_BACKEND)
   YASIO_EXPORT_ENUM(YCK_SSL_CLIENT);
 #endif
@@ -1517,7 +1530,13 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
+#if defined(YASIO_ENABLE_KCP)
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_NODELAY);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_WINDOW_SIZE);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_MTU);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_RTO_MIN);
+#endif
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);

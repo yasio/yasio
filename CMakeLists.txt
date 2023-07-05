@@ -30,8 +30,9 @@ cmake_dependent_option(YASIO_BUILD_LUA_EXAMPLE
 
 option(YASIO_ENABLE_EXT_HTTP "Build yasio http extension" ON)
 option(YASIO_ENABLE_LUA "Build yasio with lua support" OFF)
-option(YASIO_ENABLE_CCLUA "Build yasio with cclua support" OFF)
+option(YASIO_ENABLE_AXLUA "Build yasio with axmol-lua support" OFF)
 option(YAISO_ENABLE_NI "Build yasio with native interface for interop" OFF)
+option(YASIO_ENABLE_KCP "Enable kcp support" OFF)
 option(YASIO_NO_DEPS "Build yasio without deps" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -184,6 +185,11 @@ endif()
 ### The yasio core library project
 file(GLOB YASIO_CORE yasio/*.hpp;yasio/*.cpp;yasio/compiler/*.hpp;yasio/impl/*.hpp;)
 
+if (YASIO_ENABLE_KCP)
+  set(YASIO_CORE ${YASIO_CORE} 
+    ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
+  )
+endif()
 if (YAISO_ENABLE_NI)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/yasio_ni.cpp
@@ -195,9 +201,9 @@ if (YASIO_ENABLE_LUA)
     yasio/bindings/lyasio.cpp
   )
   
-  if(YASIO_ENABLE_CCLUA)
+  if(YASIO_ENABLE_AXLUA)
       set(YASIO_CORE ${YASIO_CORE} 
-        yasio/bindings/yasio_cclua.cpp
+        yasio/bindings/yasio_axlua.cpp
       )
   endif()
 endif()
@@ -422,9 +428,10 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_VERBOSE_LOG)
     yasio_config_pred(${target_name} YASIO_USE_SPSC_QUEUE)
     yasio_config_pred(${target_name} YASIO_USE_SHARED_PACKET)
+    yasio_config_pred(${target_name} YASIO_USE_CARES)
     yasio_config_pred(${target_name} YASIO_DISABLE_OBJECT_POOL)
     yasio_config_pred(${target_name} YASIO_ENABLE_ARES_PROFILER)
-    yasio_config_pred(${target_name} YASIO_USE_CARES)
+    yasio_config_pred(${target_name} YASIO_ENABLE_KCP)
     yasio_config_option(${target_name} YASIO_SSL_BACKEND "${YASIO_SSL_BACKEND}")
     yasio_config_pred(${target_name} YASIO_ENABLE_UDS)
     yasio_config_pred(${target_name} YASIO_NT_COMPAT_GAI)

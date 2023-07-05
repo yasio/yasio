@@ -46,19 +46,22 @@ using namespace cocos2d;
 namespace yasio_jsb
 {
 
-#define YASIO_DEFINE_REFERENCE_CLASS                                                                                                                           \
-private:                                                                                                                                                       \
-  unsigned int referenceCount_;                                                                                                                                \
-                                                                                                                                                               \
-public:                                                                                                                                                        \
-  void retain() { ++referenceCount_; }                                                                                                                         \
-  void release()                                                                                                                                               \
-  {                                                                                                                                                            \
-    --referenceCount_;                                                                                                                                         \
-    if (referenceCount_ == 0)                                                                                                                                  \
-      delete this;                                                                                                                                             \
-  }                                                                                                                                                            \
-                                                                                                                                                               \
+#define YASIO_DEFINE_REFERENCE_CLASS \
+private:                             \
+  unsigned int referenceCount_;      \
+                                     \
+public:                              \
+  void retain()                      \
+  {                                  \
+    ++referenceCount_;               \
+  }                                  \
+  void release()                     \
+  {                                  \
+    --referenceCount_;               \
+    if (referenceCount_ == 0)        \
+      delete this;                   \
+  }                                  \
+                                     \
 private:
 
 enum
@@ -1291,10 +1294,11 @@ bool js_yasio_io_event_packet(JSContext* ctx, uint32_t argc, jsval* vp)
         args.rval().set(yasio_jsb::createJSArrayBuffer(ctx, packet.data(), packet.size()));
         break;
       case lyasio::BUFFER_FAST:
-        args.rval().set(jsb_yasio_to_jsval<yasio::fast_ibstream>(ctx, cxx17::make_unique<yasio::fast_ibstream>(yasio::forward_packet((yasio::packet_t&&)packet))));
+        args.rval().set(
+            jsb_yasio_to_jsval<yasio::fast_ibstream>(ctx, cxx17::make_unique<yasio::fast_ibstream>(yasio::forward_packet((yasio::packet_t &&) packet))));
         break;
       default:
-        args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, cxx17::make_unique<yasio::ibstream>(yasio::forward_packet((yasio::packet_t&&)packet))));
+        args.rval().set(jsb_yasio_to_jsval<yasio::ibstream>(ctx, cxx17::make_unique<yasio::ibstream>(yasio::forward_packet((yasio::packet_t &&) packet))));
     }
   }
   else
@@ -1657,7 +1661,6 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
 #endif
         case YOPT_C_LOCAL_PORT:
         case YOPT_C_REMOTE_PORT:
-        case YOPT_C_KCP_CONV:
           service->set_option(opt, args[1].toInt32(), args[2].toInt32());
           break;
         case YOPT_C_ENABLE_MCAST:
@@ -1694,6 +1697,17 @@ bool js_yasio_io_service_set_option(JSContext* ctx, uint32_t argc, jsval* vp)
           service->set_option(opt, std::addressof(callback));
           break;
         }
+        case YOPT_C_KCP_CONV:
+        case YOPT_C_KCP_MTU:
+        case YOPT_C_KCP_RTO_MIN:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32());
+          break;
+        case YOPT_C_KCP_WINDOW_SIZE:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32());
+          break;
+        case YOPT_C_KCP_NODELAY:
+          service->set_option(opt, args[1].toInt32(), args[2].toInt32(), args[3].toInt32(), args[4].toInt32(), args[5].toInt32());
+          break;
         default:
           service->set_option(opt, args[1].toInt32());
       }
@@ -1870,8 +1884,8 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   // ##-- yasio enums
   JS::RootedValue __jsvalIntVal(ctx);
 
-#define YASIO_SET_INT_PROP(name, value)                                                                                                                        \
-  __jsvalIntVal = INT_TO_JSVAL(value);                                                                                                                         \
+#define YASIO_SET_INT_PROP(name, value) \
+  __jsvalIntVal = INT_TO_JSVAL(value);  \
   JS_SetProperty(ctx, yasio, name, __jsvalIntVal)
 #define YASIO_EXPORT_ENUM(v) YASIO_SET_INT_PROP(#v, v)
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);
@@ -1901,7 +1915,13 @@ void jsb_register_yasio(JSContext* ctx, JS::HandleObject global)
   YASIO_EXPORT_ENUM(YOPT_C_REMOTE_ENDPOINT);
   YASIO_EXPORT_ENUM(YOPT_C_ENABLE_MCAST);
   YASIO_EXPORT_ENUM(YOPT_C_DISABLE_MCAST);
+#if defined(YASIO_ENABLE_KCP)
   YASIO_EXPORT_ENUM(YOPT_C_KCP_CONV);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_NODELAY);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_WINDOW_SIZE);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_MTU);
+  YASIO_EXPORT_ENUM(YOPT_C_KCP_RTO_MIN);
+#endif
   YASIO_EXPORT_ENUM(YOPT_C_MOD_FLAGS);
 
   YASIO_EXPORT_ENUM(YCF_REUSEADDR);

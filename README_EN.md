@@ -71,7 +71,7 @@ cmake -B build
 cmake --build build --config Debug
 ```
 
-## About new `scripts/build.ps1`
+## About new `build.ps1`
 
 - Cross-platform, it can run on Windows, Linux, macOS
 - All github ci actions use it
@@ -126,7 +126,7 @@ The OpenSSL prebuilts are download from [buildware](https://github.com/axmolengi
 If your installed visual studio version less then vs2022, please pass `-DYASIO_SSL_BACKEND=2` to use `mbedtls` instead, i.e:
 
 ```bat
-powershell scripts/build.ps1 -p win32 -a x64 -cm "'-Bbuild','-DYASIO_SSL_BACKEND=2'"
+powershell build.ps1 -p win32 -a x64 -xc "'-DYASIO_SSL_BACKEND=2'"
 ```
 
 ## Core framework

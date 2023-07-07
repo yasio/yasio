@@ -73,7 +73,7 @@ $workDir = $(Get-Location).Path
 $is_ci = $env:GITHUB_ACTIONS -eq 'true'
 
 # start construct full cmd line
-$fullCmdLine = @("$((Resolve-Path -Path "$myRoot/ci/build1k.ps1").Path)")
+$fullCmdLine = @("$((Resolve-Path -Path "$myRoot/1k/build1k.ps1").Path)")
 
 $search_prior_dir = $options.d
 $search_paths = if ($search_prior_dir) { @($search_prior_dir, $workDir, $myRoot) } else { @($workDir, $myRoot) }
@@ -138,3 +138,7 @@ if ($is_ci -and !$buildResult.compilerID.StartsWith('mingw')) { # run tests
     $buildDir = $buildResult.buildDir
     & .\ci\test.ps1 -dir $buildDir -target $targetOS
 }
+
+. $myRoot/1k/utils.ps1
+
+pauseIfExplorer("build successfully")

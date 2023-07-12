@@ -407,7 +407,7 @@ endif()
 # link libraries for yasio_core when BUILD_SHARED_LIBS=TRUE
 if(BUILD_SHARED_LIBS)
     yasio_link_ssl_libraries(${yasio_target_name})
-    if(NOT WIN32)
+    if(NOT WIN32 AND (NOT ANDROID))
         target_link_libraries(${yasio_target_name} pthread)
     endif()
 endif()

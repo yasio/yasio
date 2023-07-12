@@ -27,6 +27,7 @@ SOFTWARE.
 */
 #define YASIO_HEADER_ONLY 1
 #define YASIO_HAVE_KCP 1
+#define YASIO_ENABLE_KCP 1
 #define YASIO_OBS_BUILTIN_STACK 1
 
 #include "yasio/yasio.hpp"
@@ -99,22 +100,6 @@ enum
 #  define YASIO_JSB_SCHE CC_CURRENT_ENGINE()->getScheduler()
 #else
 #  define YASIO_JSB_SCHE Application::getInstance()->getScheduler()
-#endif
-
-#if defined(COCOS_MAJOR_VERSION) && COCOS_MAJOR_VERSION >= 3 && COCOS_MINJOR_VERSION >= 6
-template <typename _Ty>
-void seval_to_float(_Ty& from, float* to, se::Object* thisObj)
-{
-  float* ival = nullptr;
-  ::sevalue_to_native(from, &ival, thisObj);
-  *to = *ival;
-}
-#else
-template <typename _Ty>
-void seval_to_float(_Ty& from, float* to, se::Object* /*thisObj*/)
-{
-  ::seval_to_float(from, to);
-}
 #endif
 
 namespace stimer
@@ -213,8 +198,7 @@ bool jsb_yasio_setTimeout(se::State& s)
         }
       };
 
-      float timeout = 0;
-      yasio_jsb::seval_to_float(arg1, &timeout, s.thisObject());
+      float timeout = arg1.toFloat();
 
       auto timerId = yasio_jsb::stimer::delay(timeout, std::move(callback));
 
@@ -254,8 +238,7 @@ bool jsb_yasio_setInterval(se::State& s)
         }
       };
 
-      float interval = 0;
-      yasio_jsb::seval_to_float(arg1, &interval, s.thisObject());
+      float interval = arg1.toFloat();
       auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval, std::move(callback));
 
       s.rval().setNumber((double)(int64_t)timerId);
@@ -398,21 +381,21 @@ static bool jsb_yasio__dtor(se::State& s)
 #if !defined(JSB_MAKE_PRIVATE_OBJECT)
   auto iter = se::NonRefNativePtrCreatedByCtorMap::find(s.nativeThisObject());
   if (iter != se::NonRefNativePtrCreatedByCtorMap::end())
-  {
+  { // finalize created by ctor < 3.6.0
     CC_LOG_DEBUG("jsbindings: finalizing JS object(created by ctor) %p(%s)", s.nativeThisObject(), typeid(T).name());
     se::NonRefNativePtrCreatedByCtorMap::erase(iter);
     T* cobj = reinterpret_cast<T*>(s.nativeThisObject());
     delete cobj;
+    return true;
   }
-  else
-  { // finalize not created by ctor
-    auto iter2 = se::NativePtrToObjectMap::find(s.nativeThisObject());
-    if (iter2 != se::NativePtrToObjectMap::end())
-    {
-      CC_LOG_DEBUG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(), typeid(T).name());
-      T* cobj = reinterpret_cast<T*>(s.nativeThisObject());
-      delete cobj;
-    }
+#else
+  // finalize not created by ctor
+  auto iter2 = se::NativePtrToObjectMap::find(s.nativeThisObject());
+  if (iter2 != se::NativePtrToObjectMap::end())
+  {
+    CC_LOG_DEBUG("jsbindings: finalizing JS object(created by native) %p(%s)", s.nativeThisObject(), typeid(T).name());
+    T* cobj = reinterpret_cast<T*>(s.nativeThisObject());
+    delete cobj;
   }
 #endif
   return true;
@@ -943,10 +926,8 @@ bool js_yasio_obstream_sub(se::State& s)
     {
       count = args[1].toInt32();
     }
-
     auto subobj = new yasio::obstream(cobj->sub(offset, count));
     native_ptr_to_seval<yasio::obstream>(subobj, &s.rval());
-
     return true;
   } while (false);
 
@@ -1052,11 +1033,11 @@ bool js_yasio_io_event_packet(se::State& s)
       case yasio_jsb::BUFFER_RAW:
         s.rval().setObject(se::HandleObject(se::Object::createArrayBufferObject(packet.data(), packet.size())));
         break;
-      case yasio_jsb::BUFFER_FAST:
-        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet_t &&) packet)), &s.rval());
+      case yasio_jsb::BUFFER_FAST: // fast_ibstream also require export otherwise will assert fail
+        // native_ptr_to_seval<yasio::fast_ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet_t &&) packet)), &s.rval());
         break;
       default:
-        native_ptr_to_seval<yasio::fast_ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet_t &&) packet)), &s.rval());
+        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet_t &&) packet)), &s.rval());
     }
   }
   else

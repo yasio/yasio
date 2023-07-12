@@ -32,11 +32,19 @@ SOFTWARE.
 #include "yasio/yasio.hpp"
 #include "yasio/ref_ptr.hpp"
 
+#if __has_include(<cocos-version.h>)
+#  include "cocos-version.h"
+#endif
+
 #if __has_include(<cocos/bindings/jswrapper/SeApi.h>) || defined(YASIO_CREATOR_30_OR_LATER)
 #  include "cocos/bindings/jswrapper/SeApi.h"
 #  include "cocos/bindings/manual/jsb_conversions.h"
 #  include "cocos/bindings/manual/jsb_global.h"
-#  include "cocos/platform/Application.h"
+#  if __has_include(<cocos/platform/Application.h>)
+#    include "cocos/platform/Application.h"
+#  elif __has_include(<cocos/application/ApplicationManager.h>)
+#    include "cocos/application/ApplicationManager.h"
+#  endif
 #  include "cocos/base/Scheduler.h"
 #  include "cocos/base/StringUtil.h"
 using namespace cc;
@@ -86,6 +94,29 @@ enum
   BUFFER_FAST,
 };
 
+// since 3.5 use ApplicationManager
+#if defined(COCOS_MAJOR_VERSION) && COCOS_MAJOR_VERSION >= 3 && COCOS_MINJOR_VERSION >= 5
+#  define YASIO_JSB_SCHE CC_CURRENT_ENGINE()->getScheduler()
+#else
+#  define YASIO_JSB_SCHE Application::getInstance()->getScheduler()
+#endif
+
+#if defined(COCOS_MAJOR_VERSION) && COCOS_MAJOR_VERSION >= 3 && COCOS_MINJOR_VERSION >= 6
+template <typename _Ty>
+void seval_to_float(_Ty& from, float* to, se::Object* thisObj)
+{
+  float* ival = nullptr;
+  ::sevalue_to_native(from, &ival, thisObj);
+  *to = *ival;
+}
+#else
+template <typename _Ty>
+void seval_to_float(_Ty& from, float* to, se::Object* /*thisObj*/)
+{
+  ::seval_to_float(from, to);
+}
+#endif
+
 namespace stimer
 {
 // The STIMER fake target: 0xfffffffe, well, any system's malloc never return a object address
@@ -101,7 +132,7 @@ struct TimerObject {
   vcallback_t callback_;
   static uintptr_t s_timerId;
 
-  DEFINE_OBJECT_POOL_ALLOCATION(TimerObject, 128)
+  DEFINE_CONCURRENT_OBJECT_POOL_ALLOCATION(TimerObject, 128)
   YASIO_DEFINE_REFERENCE_CLASS
 };
 uintptr_t TimerObject::s_timerId = 0;
@@ -116,7 +147,7 @@ TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 
     std::string key = StringUtil::format("STMR#%p", timerId);
 
-    Application::getInstance()->getScheduler()->schedule(
+    YASIO_JSB_SCHE->schedule(
         [timerObj](float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
@@ -135,7 +166,7 @@ TIMER_ID delay(float delay, vcallback_t callback)
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
     std::string key = StringUtil::format("STMR#%p", timerId);
-    Application::getInstance()->getScheduler()->schedule(
+    YASIO_JSB_SCHE->schedule(
         [timerObj](float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
           timerObj->callback_();
         },
@@ -149,9 +180,9 @@ TIMER_ID delay(float delay, vcallback_t callback)
 void kill(TIMER_ID timerId)
 {
   std::string key = StringUtil::format("STMR#%p", timerId);
-  Application::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
+  YASIO_JSB_SCHE->unschedule(key, STIMER_TARGET_VALUE);
 }
-void clear() { Application::getInstance()->getScheduler()->unscheduleAllForTarget(STIMER_TARGET_VALUE); }
+void clear() { YASIO_JSB_SCHE->unscheduleAllForTarget(STIMER_TARGET_VALUE); }
 } // namespace stimer
 } // namespace yasio_jsb
 
@@ -183,7 +214,8 @@ bool jsb_yasio_setTimeout(se::State& s)
       };
 
       float timeout = 0;
-      seval_to_float(arg1, &timeout);
+      yasio_jsb::seval_to_float(arg1, &timeout, s.thisObject());
+
       auto timerId = yasio_jsb::stimer::delay(timeout, std::move(callback));
 
       s.rval().setNumber((double)(int64_t)timerId);
@@ -223,7 +255,7 @@ bool jsb_yasio_setInterval(se::State& s)
       };
 
       float interval = 0;
-      seval_to_float(arg1, &interval);
+      yasio_jsb::seval_to_float(arg1, &interval, s.thisObject());
       auto timerId = yasio_jsb::stimer::loop((std::numeric_limits<unsigned int>::max)(), interval, std::move(callback));
 
       s.rval().setNumber((double)(int64_t)timerId);
@@ -340,18 +372,30 @@ cxx17::string_view seval_to_string_view(const se::Value& v, bool* unrecognized_o
 
 //////////////////// common template functions //////////////
 
+#if defined(JSB_MAKE_PRIVATE_OBJECT)
+#define YASIO_JSB_USE_SHARED_OBJECT 1
+#  define yasio_jsb_make_object(kls, ...) JSB_MAKE_PRIVATE_OBJECT(kls, __VA_ARGS__)
+#else
+#  define yasio_jsb_make_object(kls, ...) new kls(__VA_ARGS__)
+#endif
+
 template <typename T>
 static bool jsb_yasio__ctor(se::State& s)
 {
-  auto cobj = new T();
+  auto cobj = yasio_jsb_make_object(T);
+#if defined(YASIO_JSB_USE_SHARED_OBJECT)
+  s.thisObject()->setPrivateObject(cobj);
+#else
   s.thisObject()->setPrivateData(cobj);
   se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
+#endif
   return true;
 }
 
 template <typename T>
 static bool jsb_yasio__dtor(se::State& s)
 {
+#if !defined(JSB_MAKE_PRIVATE_OBJECT)
   auto iter = se::NonRefNativePtrCreatedByCtorMap::find(s.nativeThisObject());
   if (iter != se::NonRefNativePtrCreatedByCtorMap::end())
   {
@@ -370,6 +414,7 @@ static bool jsb_yasio__dtor(se::State& s)
       delete cobj;
     }
   }
+#endif
   return true;
 }
 
@@ -604,22 +649,22 @@ static bool jsb_yasio_obstream__ctor(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
-  yasio::obstream* cobj = nullptr;
-  if (argc == 0)
-  {
-    cobj = new yasio::obstream();
-  }
-  else
+  int capacity = 128;
+  if (argc >= 1)
   {
     auto arg0 = args[0];
     if (arg0.isNumber())
-      cobj = new yasio::obstream(arg0.toUint32());
-    else
-      cobj = new yasio::obstream();
+      capacity = arg0.toUint32();
   }
 
+  auto cobj = yasio_jsb_make_object(yasio::obstream, capacity);
+
+#if defined(YASIO_JSB_USE_SHARED_OBJECT)
+  s.thisObject()->setPrivateObject(cobj);
+#else
   s.thisObject()->setPrivateData(cobj);
   se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
+#endif
 
   return true;
 }
@@ -795,8 +840,12 @@ static bool js_yasio_obstream_write_dx(se::State& s)
   const auto& args = s.args();
   size_t argc      = args.size();
 
+#if defined(COCOS_MAJOR_VERSION) && COCOS_MAJOR_VERSION >= 3 && COCOS_MINJOR_VERSION >= 6
+  double argval = args[0].toDouble();
+#else
   double argval = 0;
   seval_to_double(args[0], &argval);
+#endif
   cobj->write<T>(static_cast<T>(argval));
 
   s.rval().setUndefined();
@@ -1004,10 +1053,10 @@ bool js_yasio_io_event_packet(se::State& s)
         s.rval().setObject(se::HandleObject(se::Object::createArrayBufferObject(packet.data(), packet.size())));
         break;
       case yasio_jsb::BUFFER_FAST:
-        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet &&) packet)), &s.rval());
+        native_ptr_to_seval<yasio::ibstream>(new yasio::ibstream(yasio::forward_packet((yasio::packet_t &&) packet)), &s.rval());
         break;
       default:
-        native_ptr_to_seval<yasio::ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet &&) packet)), &s.rval());
+        native_ptr_to_seval<yasio::fast_ibstream>(new yasio::fast_ibstream(yasio::forward_packet((yasio::packet_t &&) packet)), &s.rval());
     }
   }
   else
@@ -1083,7 +1132,11 @@ se::Class* __jsb_yasio_io_service_class  = nullptr;
 
 static bool jsb_yasio_io_service__ctor(se::State& s)
 {
+#if defined(YASIO_JSB_USE_SHARED_OBJECT)
+  se::PrivateObjectBase* cobj = nullptr;
+    #else
   io_service* cobj = nullptr;
+  #endif
   const auto& args = s.args();
   size_t argc      = args.size();
 
@@ -1096,23 +1149,28 @@ static bool jsb_yasio_io_service__ctor(se::State& s)
       {
         std::vector<inet::io_hostent> hostents;
         seval_to_std_vector_hostent(arg0, &hostents);
-        cobj = new io_service(!hostents.empty() ? &hostents.front() : nullptr, (std::max)((int)hostents.size(), 1));
+        cobj = yasio_jsb_make_object(io_service, !hostents.empty() ? &hostents.front() : nullptr, (std::max)((int)hostents.size(), 1));
       }
       else
       {
         inet::io_hostent ioh;
         seval_to_hostent(arg0, &ioh);
-        cobj = new io_service(&ioh, 1);
+        cobj = yasio_jsb_make_object(io_service, &ioh, 1);
       }
     }
     else if (arg0.isNumber())
-      cobj = new io_service(arg0.toInt32());
+      cobj = yasio_jsb_make_object(io_service, arg0.toInt32());
   }
   else
-    cobj = new io_service();
+    cobj = yasio_jsb_make_object(io_service);
 
+#if defined(YASIO_JSB_USE_SHARED_OBJECT)
+  s.thisObject()->setPrivateObject(cobj);
+#else
   s.thisObject()->setPrivateData(cobj);
   se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
+#endif
+
   return true;
 }
 

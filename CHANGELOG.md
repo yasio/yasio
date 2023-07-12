@@ -1,3 +1,8 @@
+yasio-4.1.0
+
+  1. Change yasio-ni API `yasio_create_service` prototype to: `YASIO_NI_API void* yasio_create_service(int channel_count, void(YASIO_INTEROP_DECL* event_cb)(yasio_event_data* event), void* user);`
+  
+  
 yasio-4.0.0
 
   1. IMPORTANT: Rename `YOPT_S_DEFERRED_EVENT` to `YOPT_S_NO_DISPATCH`, and the default event dispatch behavior was changed,

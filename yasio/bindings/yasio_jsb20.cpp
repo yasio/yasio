@@ -1538,10 +1538,14 @@ bool jsb_register_yasio(se::Object* obj)
 
   // ##-- yasio enums
   se::Value __jsvalIntVal;
-#define YASIO_SET_INT_PROP(name, value) \
+#define YASIO_EXPORT_ENUM(value) \
   __jsvalIntVal.setInt32(value);        \
-  yasio->setProperty(name, __jsvalIntVal)
-#define YASIO_EXPORT_ENUM(v) YASIO_SET_INT_PROP(#v, v)
+  yasio->setProperty(#value, __jsvalIntVal)
+
+#define YASIO_EXPORT_STR(value)  \
+  __jsvalIntVal.setString(value); \
+  yasio->setProperty(#value, __jsvalIntVal)
+
   YASIO_EXPORT_ENUM(YCK_TCP_CLIENT);
   YASIO_EXPORT_ENUM(YCK_TCP_SERVER);
   YASIO_EXPORT_ENUM(YCK_UDP_CLIENT);
@@ -1592,6 +1596,10 @@ bool jsb_register_yasio(se::Object* obj)
   YASIO_EXPORT_ENUM(SEEK_CUR);
   YASIO_EXPORT_ENUM(SEEK_SET);
   YASIO_EXPORT_ENUM(SEEK_END);
+
+  char version[32];
+  snprintf(version, sizeof(version), "%x.%x.%x", (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff, YASIO_VERSION_NUM & 0xff);
+  YASIO_EXPORT_STR(version);
 
   using namespace yasio_jsb;
   YASIO_EXPORT_ENUM(BUFFER_DEFAULT);

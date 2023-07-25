@@ -186,6 +186,10 @@ enum
   //   when forward packet enabled, the packet will always dispach when recv data from OS kernel immediately
   YOPT_S_FORWARD_PACKET,
 
+  // Set whether enable high resultion timer on win32
+  // params: hres: int(0)
+  YOPT_S_HRES_TIMER,
+
   // Sets channel length field based frame decode function, native C++ ONLY
   // params: index:int, func:decode_len_fn_t*
   YOPT_C_UNPACK_FN = 101,
@@ -1273,6 +1277,10 @@ private:
 
     bool no_dispatch_    = false; // since v4.0.0
     bool forward_packet_ = false; // since v3.39.8
+
+#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+    bool hres_timer_ = false;
+#endif
 
     // tcp keepalive settings
     struct __unnamed01 {

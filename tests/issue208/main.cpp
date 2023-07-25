@@ -44,8 +44,10 @@ timer_cb_t create_timer_cb()
 
 int main()
 {
-  get_service().set_option(YOPT_C_REMOTE_ENDPOINT, 0, "www.ip138.com", 80);
-  get_service().start([&](event_ptr&& ev) {
+  auto& service = get_service();
+  service.set_option(YOPT_S_HRES_TIMER, 1);
+  service.set_option(YOPT_C_REMOTE_ENDPOINT, 0, "www.ip138.com", 80);
+  service.start([&](event_ptr&& ev) {
     switch (ev->kind())
     {
       case YEK_PACKET: {
@@ -73,7 +75,7 @@ int main()
             obs.write_bytes("Accept: */*;q=0.8\r\n");
             obs.write_bytes("Connection: Close\r\n\r\n");
 
-            get_service().write(transport, std::move(obs.buffer()));
+            service.write(transport, std::move(obs.buffer()));
           }
         }
         break;
@@ -83,13 +85,13 @@ int main()
     }
   });
   // open channel 0 as tcp client
-  get_service().open(0, YCK_TCP_CLIENT);
+  service.open(0, YCK_TCP_CLIENT);
 
   std::this_thread::sleep_for(std::chrono::microseconds(1000 * 1000));
   printf("tmp timer call at %lld\n", getTimeStamp());
-  get_service().schedule(std::chrono::milliseconds(1), [](io_service&) {
+  service.schedule(std::chrono::milliseconds(1), [](io_service&) {
     printf("tmp timer start at %lld\n", getTimeStamp());
-    return true;
+    return false;
   });
 
   getchar();

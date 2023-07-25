@@ -44,6 +44,11 @@ SOFTWARE.
 #  include "yasio/ssl.hpp"
 #endif
 
+#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+#  include <timeapi.h>
+#  pragma comment(lib, "Winmm.lib")
+#endif
+
 #if defined(YASIO_ENABLE_KCP)
 #  include "kcp/ikcp.h"
 struct yasio_kcp_options {
@@ -938,9 +943,56 @@ size_t io_service::dispatch(int max_count)
     this->events_.consume(max_count, options_.on_event_);
   return this->events_.count();
 }
+
+#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+template <typename _Ty>
+struct minmal_optional {
+  template <typename... _Args>
+  void emplace(_Args&&... args)
+  {
+    new (&unintialized_memory_[0]) _Ty(std::forward<_Args>(args)...);
+    has_value_ = true;
+  }
+  ~minmal_optional()
+  {
+    if (has_value_)
+    {
+      auto p = (_Ty*)&unintialized_memory_[0];
+      p->~_Ty();
+    }
+  }
+  bool has_value_ = false;
+  uint8_t unintialized_memory_[sizeof(_Ty)];
+};
+struct auto_enable_hres_timer {
+  auto_enable_hres_timer()
+  {
+    UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
+    TIMECAPS tc;
+    UINT wTimerRes = 0;
+    if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
+    {
+      wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
+      timeBeginPeriod(wTimerRes);
+    }
+  }
+  ~auto_enable_hres_timer()
+  {
+    if (wTimerRes != 0)
+      timeEndPeriod(wTimerRes);
+  }
+  UINT wTimerRes = 0;
+};
+#endif
 void io_service::run()
 {
   yasio::set_thread_name("yasio");
+
+#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+  minmal_optional<auto_enable_hres_timer> opts;
+  if (options_.hres_timer_)
+    opts.emplace();
+#endif
 
 #if defined(YASIO_SSL_BACKEND)
   init_ssl_context(YSSL_CLIENT); // by default, init ssl client context
@@ -2187,6 +2239,11 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);
       break;
+#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+    case YOPT_S_HRES_TIMER:
+      options_.hres_timer_ = !!va_arg(ap, int);
+      break;
+#endif
 #if defined(YASIO_SSL_BACKEND)
     case YOPT_S_SSL_CERT:
       options_.crtfile_ = va_arg(ap, const char*);

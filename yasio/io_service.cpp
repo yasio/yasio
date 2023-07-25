@@ -946,14 +946,14 @@ size_t io_service::dispatch(int max_count)
 
 #if YASIO__HAS_WIN32_TIMEAPI
 template <typename _Ty>
-struct minmal_optional {
+struct minimal_optional {
   template <typename... _Args>
   void emplace(_Args&&... args)
   {
     new (&unintialized_memory_[0]) _Ty(std::forward<_Args>(args)...);
     has_value_ = true;
   }
-  ~minmal_optional()
+  ~minimal_optional()
   {
     if (has_value_)
     {
@@ -961,8 +961,8 @@ struct minmal_optional {
       p->~_Ty();
     }
   }
-  bool has_value_ = false;
   uint8_t unintialized_memory_[sizeof(_Ty)];
+  bool has_value_ = false;
 };
 struct auto_enable_hres_timer {
   auto_enable_hres_timer()
@@ -989,7 +989,7 @@ void io_service::run()
   yasio::set_thread_name("yasio");
 
 #if YASIO__HAS_WIN32_TIMEAPI
-  minmal_optional<auto_enable_hres_timer> __hres_timer_man;
+  minimal_optional<auto_enable_hres_timer> __hres_timer_man;
   if (options_.hres_timer_)
     __hres_timer_man.emplace();
 #endif

@@ -44,7 +44,7 @@ SOFTWARE.
 #  include "yasio/ssl.hpp"
 #endif
 
-#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+#if YASIO__HAS_WIN32_TIMEAPI
 #  include <timeapi.h>
 #  pragma comment(lib, "Winmm.lib")
 #endif
@@ -944,7 +944,7 @@ size_t io_service::dispatch(int max_count)
   return this->events_.count();
 }
 
-#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+#if YASIO__HAS_WIN32_TIMEAPI
 template <typename _Ty>
 struct minmal_optional {
   template <typename... _Args>
@@ -988,10 +988,10 @@ void io_service::run()
 {
   yasio::set_thread_name("yasio");
 
-#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
-  minmal_optional<auto_enable_hres_timer> opts;
+#if YASIO__HAS_WIN32_TIMEAPI
+  minmal_optional<auto_enable_hres_timer> __hres_timer_man;
   if (options_.hres_timer_)
-    opts.emplace();
+    __hres_timer_man.emplace();
 #endif
 
 #if defined(YASIO_SSL_BACKEND)

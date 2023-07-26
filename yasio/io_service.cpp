@@ -2239,7 +2239,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);
       break;
-#if defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
+#if YASIO__HAS_WIN32_TIMEAPI
     case YOPT_S_HRES_TIMER:
       options_.hres_timer_ = !!va_arg(ap, int);
       break;

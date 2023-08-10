@@ -1,6 +1,7 @@
 yasio-4.1.0
 
   1. Change yasio-ni API `yasio_create_service` prototype to: `YASIO_NI_API void* yasio_create_service(int channel_count, void(YASIO_INTEROP_DECL* event_cb)(yasio_event_data* event), void* user);`
+  2. Prob both v4, v6, v4mapped when resolve ip address
   
   
 yasio-4.0.0

@@ -1002,9 +1002,6 @@ void io_service::run()
   ares_socket_t ares_socks[ARES_GETSOCK_MAXNUM] = {0};
 #endif
 
-  // Call once at startup
-  this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
-
   // Update time for 1st loop
   this->update_time();
 
@@ -1256,8 +1253,6 @@ int io_service::forward_to(transport_handle_t transport, const void* buf, size_t
 void io_service::do_connect(io_channel* ctx)
 {
   assert(!ctx->remote_eps_.empty());
-  if (this->ipsv_ == 0)
-    this->ipsv_ = static_cast<u_short>(xxsocket::getipsv());
   if (ctx->socket_->is_open())
     cleanup_io(ctx);
 
@@ -1616,6 +1611,12 @@ void io_service::do_accept_completion(io_channel* ctx)
       }
     }
   }
+}
+int io_service::local_address_family() const
+{
+  if (!yasio__testbits(ipsv_, ipsv_ipv4))
+    ipsv_ = static_cast<u_short>(xxsocket::getipsv());
+  return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6;
 }
 transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoint& peer, int& error)
 {
@@ -2120,12 +2121,12 @@ void io_service::update_dns_status()
   }
 }
 int io_service::resolve(std::vector<ip::endpoint>& endpoints, const char* hostname, unsigned short port)
-{
-  if (yasio__testbits(this->ipsv_, ipsv_ipv4))
-    return xxsocket::resolve_v4(endpoints, hostname, port);
-  else if (yasio__testbits(this->ipsv_, ipsv_ipv6)) // localhost is IPv6_only network
-    return xxsocket::resolve_v6(endpoints, hostname, port) != 0 ? xxsocket::resolve_v4to6(endpoints, hostname, port) : 0;
-  return -1;
+{ // prob v4, v6, v4mapped
+  if (xxsocket::resolve_v4(endpoints, hostname, port) == 0)
+    return 0;
+  if (xxsocket::resolve_v6(endpoints, hostname, port) == 0)
+    return 0;
+  return xxsocket::resolve_v4to6(endpoints, hostname, port);
 }
 void io_service::wakeup() { io_watcher_.wakeup(); }
 const char* io_service::strerror(int error)

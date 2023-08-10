@@ -1225,7 +1225,7 @@ private:
   */
   YASIO__DECL transport_handle_t do_dgram_accept(io_channel*, const ip::endpoint& peer, int& error);
 
-  int local_address_family() const { return ((ipsv_ & ipsv_ipv4) || !ipsv_) ? AF_INET : AF_INET6; }
+  YASIO__DECL int local_address_family() const;
 
   YASIO__DECL void update_dns_status();
 
@@ -1314,7 +1314,7 @@ private:
   } options_;
 
   // The ip stack version supported by localhost
-  u_short ipsv_ = 0;
+  mutable u_short ipsv_ = 0;
   // The stop flag to notify all transports needs close
   uint8_t stop_flag_ = 0;
 #if defined(YASIO_SSL_BACKEND)

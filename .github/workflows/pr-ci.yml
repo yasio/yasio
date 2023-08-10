@@ -126,6 +126,7 @@ jobs:
         with:
           usesh: true
           prepare: |
+            pkg install -y git
             pkg install -y cmake
             pkg install -y python3
             # required by mbedtls-3.3.0

@@ -115,11 +115,12 @@ endif()
 
 # Auto choose ssl backend if not supplied by user
 if (NOT DEFINED YASIO_SSL_BACKEND)
-    # mbedtls can't compile for watchOS, and openssl prebuilt also not ready yet
     if (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
         set(YASIO_SSL_BACKEND 0)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "watchOS")
+        set(YASIO_SSL_BACKEND 2) # mbedtls
     else()
-        set(YASIO_SSL_BACKEND 1)
+        set(YASIO_SSL_BACKEND 1) # openssl
     endif()
 endif()
 

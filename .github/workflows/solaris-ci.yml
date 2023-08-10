@@ -31,6 +31,8 @@ jobs:
         sync: rsync
         copyback: false
         prepare: |
+          # git
+          pkgutil -y -i git
           # cmake
           pkgutil -y -i cmake
           # required by mbedtls-3.3.0

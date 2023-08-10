@@ -38,4 +38,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./build.ps1 -p $env:BUILD_TARGET -a arm64
+      run: if($env:BUILD_TARGET -ne 'watchos') { ./build.ps1 -p $env:BUILD_TARGET -a arm64 } else { ./build.ps1 -p $env:BUILD_TARGET -a arm64 -xc '-DYASIO_SSL_BACKEND=2' }

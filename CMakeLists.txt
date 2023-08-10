@@ -116,7 +116,7 @@ endif()
 # Auto choose ssl backend if not supplied by user
 if (NOT DEFINED YASIO_SSL_BACKEND)
     # mbedtls can't compile for watchOS, and openssl prebuilt also not ready yet
-    if ((CMAKE_SYSTEM_NAME STREQUAL "watchOS") OR (CMAKE_SYSTEM_NAME MATCHES "Emscripten"))
+    if (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
         set(YASIO_SSL_BACKEND 0)
     else()
         set(YASIO_SSL_BACKEND 1)
@@ -168,10 +168,23 @@ if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    add_subdirectory(thirdparty/openssl)
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
     message(STATUS "Build with mbedtls support")
-    include_directories("${PROJECT_SOURCE_DIR}/thirdparty/mbedtls/include")
+    # include_directories("${PROJECT_SOURCE_DIR}/thirdparty/mbedtls/include")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
     set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/mbedtls)
+    set(MBEDTLS_VER "3.4.1")
+    if(MSVC_VERSION LESS 1900)
+        message(AUTHOR_WARNING "Using mbedtls 2.28.3 for vs2013 happy")
+        set(MBEDTLS_VER "2.28.3")
+    endif()
+    include(1k/CPM.cmake)
+    CPMAddPackage(
+      NAME mbedtls
+      VERSION ${MBEDTLS_VER}
+      GITHUB_REPOSITORY "Mbed-TLS/mbedtls"
+      GIT_TAG "v${MBEDTLS_VER}"
+      OPTIONS
+        "MBEDTLS_FATAL_WARNINGS OFF"
+    )
     yasio_config_target_outdir(mbedtls)
     yasio_config_target_outdir(mbedcrypto)
     yasio_config_target_outdir(mbedx509)
@@ -405,8 +418,8 @@ if(YASIO_ENABLE_LUA)
 endif()
 
 # link libraries for yasio_core when BUILD_SHARED_LIBS=TRUE
+yasio_link_ssl_libraries(${yasio_target_name})
 if(BUILD_SHARED_LIBS)
-    yasio_link_ssl_libraries(${yasio_target_name})
     if(NOT WIN32 AND (NOT ANDROID))
         target_link_libraries(${yasio_target_name} pthread)
     endif()

@@ -68,7 +68,7 @@ jobs:
         shell: pwsh
         run: ./build.ps1
   android:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     strategy:
       matrix:
         arch:
@@ -78,8 +78,6 @@ jobs:
           - x64
     env:
       BUILD_ARCH: ${{ matrix.arch }}
-      # r16b can't runs on latest ubuntu, test works on ubuntu-18.04
-      NDK_VER: r19c
     steps:
       - uses: actions/checkout@v3
         with:

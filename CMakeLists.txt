@@ -169,7 +169,6 @@ if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    add_subdirectory(thirdparty/openssl)
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
     message(STATUS "Build with mbedtls support")
-    # include_directories("${PROJECT_SOURCE_DIR}/thirdparty/mbedtls/include")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
     set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
     set(MBEDTLS_VER "3.4.1")

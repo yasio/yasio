@@ -31,6 +31,7 @@ SOFTWARE.
 #include <assert.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #ifdef _WIN32
 #  if !defined(WIN32_LEAN_AND_MEAN)

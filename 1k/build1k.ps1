@@ -1008,7 +1008,7 @@ $cmake_prog = setup_cmake
 if ($BUILD_TARGET -eq 'win32') {
     $nuget_prog = setup_nuget
     $nsis_prog = setup_nsis
-    if ($TOOLCHAIN_NAME -ne 'msvc') {
+    if ($TOOLCHAIN_NAME -eq 'clang') {
         $ninja_prog = setup_ninja
         $null = setup_clang
     }
@@ -1132,8 +1132,13 @@ if (!$setupOnly) {
         $cmakeCachePath = Join-Path $workDir "$BUILD_DIR/CMakeCache.txt"
 
         if ($mainDepChanged -or !$b1k.isfile($cmakeCachePath)) {
-            if ($optimize_flag -eq 'Debug' -and ($options.p -eq 'linux' -or $options.p -eq 'wasm')) {
-                $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Debug'
+            if ($options.p -eq 'linux' -or $options.p -eq 'wasm') {
+                if($optimize_flag -eq 'Debug') {
+                    $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Debug'
+                }
+                else {
+                    $CONFIG_ALL_OPTIONS += '-DCMAKE_BUILD_TYPE=Release'
+                }
             }
             if (!$is_wasm) {
                 cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS | Out-Host

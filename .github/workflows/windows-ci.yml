@@ -53,7 +53,11 @@ jobs:
       with: 
         arch: ${{ env.BUILD_ARCH }}
         uwp: 'false'
-
+    # github installed 15.0.7 not working on msvc14.37
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v1
+      with:
+        version: "16.0"
     - name: Build
       shell: pwsh
       run: |

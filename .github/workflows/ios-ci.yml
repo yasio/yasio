@@ -1,16 +1,6 @@
 name: ios
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/ios-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 jobs:
   build:

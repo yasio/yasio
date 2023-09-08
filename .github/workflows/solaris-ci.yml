@@ -1,16 +1,6 @@
 name: solaris
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/solaris-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 jobs:
   build:

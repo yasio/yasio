@@ -1,16 +1,6 @@
 name: linux
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/linux-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

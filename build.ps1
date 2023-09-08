@@ -9,6 +9,7 @@
 #  -cc: toolchain: for win32 you can specific -cc clang to use llvm-clang, please install llvm-clang from https://github.com/llvm/llvm-project/releases
 #  -xc: additional cmake options: i.e.  -xc '-Dbuild','-DCMAKE_BUILD_TYPE=Release'
 #  -xb: additional cross build options: i.e. -xb '--config','Release'
+#  -c(configOnly): no build, only generate natvie project file (vs .sln, xcodeproj)
 #  -d: specify project dir to compile, i.e. -d /path/your/project/
 # examples:
 #   - win32: 
@@ -30,8 +31,11 @@
 #   on linux: target platform is linux, arch=x64
 #   on macos: target platform is osx, arch=x64
 #
+param(
+    [switch]$configOnly
+)
 
-$options = @{p = $null; a = 'x64'; d = $null; cc = $null; xc = @(); xb = @(); winsdk = $null }
+$options = @{p = $null; a = 'x64'; d = $null; cc = $null; xc = @(); xb = @(); sdk = $null }
 
 $optName = $null
 foreach ($arg in $args) {
@@ -47,6 +51,16 @@ foreach ($arg in $args) {
         $optName = $null
     }
 }
+
+function translate_array_opt($opt) {
+    if ($opt -and $opt.GetType().BaseType -ne [array]) {
+        $opt = "$opt".Split(',')
+    }
+    return $opt
+}
+
+$options.xb = translate_array_opt $options.xb
+$options.xc = translate_array_opt $options.xc
 
 $myRoot = $PSScriptRoot
 $workDir = $(Get-Location).Path
@@ -103,14 +117,19 @@ $b1k_args += '-prefix', "$prefix"
 
 # remove arg we don't want forward to
 $options.Remove('d')
+$b1k_args = [System.Collections.ArrayList]$b1k_args
 foreach ($option in $options.GetEnumerator()) {
     if ($option.Value) {
-        $b1k_args += "-$($option.Key)"
-        $b1k_args += "$($option.Value)"
+        $null = $b1k_args.Add("-$($option.Key)")
+        $null = $b1k_args.Add($option.Value)
     }
 }
 
-. $b1k_script @b1k_args
+if (!$configOnly) {
+    . $b1k_script @b1k_args
+} else {
+    . $b1k_script @b1k_args -configOnly
+}
 
 $buildResult = ConvertFrom-Json $env:buildResult
 

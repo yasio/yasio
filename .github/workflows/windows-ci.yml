@@ -1,16 +1,6 @@
 name: windows
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/windows-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

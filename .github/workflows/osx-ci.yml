@@ -1,16 +1,6 @@
 name: osx
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/osx-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 jobs:
   build:

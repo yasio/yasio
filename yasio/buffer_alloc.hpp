@@ -58,11 +58,8 @@ struct is_byte_type {
 
 template <typename _Elem, enable_if_t<std::is_integral<_Elem>::value, int> = 0>
 struct default_buffer_allocator {
-  static _Elem* reallocate(void* old_block, size_t /*old_size*/, size_t new_size)
-  {
-    return static_cast<_Elem*>(::realloc(old_block, new_size * sizeof(_Elem)));
-  }
-  static void deallocate(void* block) { ::free(block); }
+  static _Elem* reallocate(void* block, size_t /*size*/, size_t new_size) { return static_cast<_Elem*>(::realloc(block, new_size * sizeof(_Elem))); }
+  static void deallocate(void* block, size_t /*size*/) { ::free(block); }
 };
 } // namespace yasio
 

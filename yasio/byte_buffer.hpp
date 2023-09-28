@@ -49,7 +49,7 @@ namespace yasio
 template <typename _Elem, enable_if_t<is_byte_type<_Elem>::value, int> = 0>
 using default_byte_allocater = default_buffer_allocator<_Elem>;
 
-template <typename _Elem, typename _Alloc = default_byte_allocater<_Elem>, enable_if_t<is_byte_type<_Elem>::value, int> = 0>
+template <typename _Elem, typename _Alloc = default_byte_allocater<_Elem>>
 class basic_byte_buffer {
 public:
   using pointer         = _Elem*;
@@ -357,7 +357,7 @@ private:
   { // free all storage
     if (_Myfirst)
     {
-      _Alloc::deallocate(_Myfirst);
+      _Alloc::deallocate(_Myfirst, static_cast<size_type>(_Myend - _Myfirst));
       _Myfirst = _Mylast = _Myend = nullptr;
     }
   }

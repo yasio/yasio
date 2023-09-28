@@ -13,5 +13,7 @@
 
 # overwrite ndk requirement
 $manifest['ndk'] = 'r16b'
+$manifest['glslcc'] = $null
+$manifest['nuget'] = $null
 
 # [void]$manifest

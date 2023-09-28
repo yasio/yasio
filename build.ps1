@@ -25,6 +25,7 @@
 #     - pwsh build.ps1 -p osx -a arm64
 #   - ios: pwsh build.ps1 -p ios -a x64
 #   - tvos: pwsh build.ps1 -p tvos -a x64
+#   - watchos: pwsh build.ps1 -p watchos -a x64
 # build.ps1 without any arguments:
 # - pwsh build.ps1
 #   on windows: target platform is win32, arch=x64
@@ -32,7 +33,8 @@
 #   on macos: target platform is osx, arch=x64
 #
 param(
-    [switch]$configOnly
+    [switch]$configOnly,
+    [switch]$forceConfig
 )
 
 $options = @{p = $null; a = 'x64'; d = $null; cc = $null; xc = @(); xb = @(); sdk = $null }
@@ -41,7 +43,7 @@ $optName = $null
 foreach ($arg in $args) {
     if (!$optName) {
         if ($arg.StartsWith('-')) { 
-            $optName = $arg.SubString(1)
+            $optName = $arg.SubString(1).TrimEnd(':')
         }
     }
     else {
@@ -59,40 +61,45 @@ function translate_array_opt($opt) {
     return $opt
 }
 
-$options.xb = translate_array_opt $options.xb
-$options.xc = translate_array_opt $options.xc
+if ($options.xb.Count -ne 0) {
+    $options.xb = translate_array_opt $options.xb
+}
+if ($options.xc.Count -ne 0) {
+    $options.xc = translate_array_opt $options.xc
+}
 
 $myRoot = $PSScriptRoot
 $workDir = $(Get-Location).Path
 
+if(Test-Path "$myRoot/1k/build1k.ps1" -PathType Leaf) {
+    $b1k_root = $myRoot
+}
+else {
+    throw "The build1k.ps1 not found"
+}
+
+$source_proj_dir = if($options.d) { $options.d } else { $workDir }
 $is_ci = $env:GITHUB_ACTIONS -eq 'true'
 
 # start construct full cmd line
-$b1k_script = (Resolve-Path -Path "$myRoot/1k/build1k.ps1").Path
+$b1k_script = (Resolve-Path -Path "$b1k_root/1k/build1k.ps1").Path
 $b1k_args = @()
 
-$search_prior_dir = $options.d
-$search_paths = if ($search_prior_dir) { @($search_prior_dir, $workDir, $myRoot) } else { @($workDir, $myRoot) }
-function search_proj($path, $type) {
+$search_paths = if ($source_proj_dir -ne $myRoot) { @($source_proj_dir, $myRoot) } else { @($source_proj_dir) }
+function search_proj_file($file_path, $type) {
     foreach ($search_path in $search_paths) {
-        $full_path = Join-Path $search_path $path
+        $full_path = Join-Path $search_path $file_path
         if (Test-Path $full_path -PathType $type) {
-            $ret_path = if ($type -eq 'Container') { $full_path } else { $search_path }
-            return $ret_path
+            # $ret_path = if ($type -eq 'Container') { $full_path } else { $search_path }
+            return $search_path
         }
     }
     return $null
 }
 
-$search_rule = @{ path = 'CMakeLists.txt'; type = 'Leaf' }
-$proj_dir = search_proj $search_rule.path $search_rule.type
+$proj_dir = search_proj_file 'CMakeLists.txt' 'Leaf'
 
-if ($is_ci) {
-    $options.xc = [array]$options.xc
-    $options.xc += '-DYASIO_ENABLE_KCP=TRUE','-DYASIO_ENABLE_HPERF_IO=1'
-}
-
-$bci = $null
+$bci = $null # cmake optimize flag param index
 # parsing build options
 $nopts = $options.xb.Count
 for ($i = 0; $i -lt $nopts; ++$i) {
@@ -104,15 +111,19 @@ for ($i = 0; $i -lt $nopts; ++$i) {
     }
 }
 
+$env:b1k_override_target = $true
+
 if (!$bci) {
     $optimize_flag = @('Debug', 'Release')[$is_ci]
     $options.xb += '--config', $optimize_flag
+} else {
+    $optimize_flag = $options.xb[$bci]
 }
 
 if ($proj_dir) {
     $b1k_args += '-d', "$proj_dir"
 }
-$prefix = Join-Path $myRoot 'tools/external'
+$prefix = Join-Path $b1k_root 'tools/external'
 $b1k_args += '-prefix', "$prefix"
 
 # remove arg we don't want forward to
@@ -125,18 +136,29 @@ foreach ($option in $options.GetEnumerator()) {
     }
 }
 
+$forward_args = @{}
+if ($configOnly) {
+    $forward_args['configOnly'] = $true
+}
+if ($forceConfig) {
+    $forward_args['forceConfig'] = $true
+}
+
+. $b1k_script @b1k_args @forward_args
+
 if (!$configOnly) {
-    . $b1k_script @b1k_args
-} else {
-    . $b1k_script @b1k_args -configOnly
+    $b1k.pause('Build done')
+}
+else {
+    $b1k.pause('Generate done')
 }
 
-$buildResult = ConvertFrom-Json $env:buildResult
+if (!$configOnly) {
+    $buildResult = ConvertFrom-Json $env:buildResult
 
-if ($is_ci -and !$buildResult.compilerID.StartsWith('mingw')) { # run tests
-    $targetOS = $buildResult.targetOS
-    $buildDir = $buildResult.buildDir
-    & .\ci\test.ps1 -dir $buildDir -target $targetOS
+    if ($is_ci -and !$buildResult.compilerID.StartsWith('gcc')) { # run tests
+        $targetOS = $buildResult.targetOS
+        $buildDir = $buildResult.buildDir
+        & .\ci\test.ps1 -dir $buildDir -target $targetOS
+    }
 }
-
-$b1k.pause("build done")

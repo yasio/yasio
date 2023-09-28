@@ -35,48 +35,21 @@ The byte_buffer concepts:
 */
 #ifndef YASIO__BYTE_BUFFER_HPP
 #define YASIO__BYTE_BUFFER_HPP
-#include <stddef.h>
-#include <string.h>
-#include <stdint.h>
 #include <utility>
 #include <memory>
 #include <iterator>
 #include <limits>
 #include <algorithm>
-#include <type_traits>
-#include <stdexcept>
 #include <initializer_list>
-#include <type_traits>
+#include "yasio/buffer_alloc.hpp"
 #include "yasio/compiler/feature_test.hpp"
 
 namespace yasio
 {
-#define _YASIO_VERIFY_RANGE(cond, mesg)                 \
-  do                                                    \
-  {                                                     \
-    if (cond)                                           \
-      ; /* contextually convertible to bool paranoia */ \
-    else                                                \
-    {                                                   \
-      throw std::out_of_range(mesg);                    \
-    }                                                   \
-                                                        \
-  } while (false)
-
-template <bool _Test, class _Ty = void>
-using enable_if_t = typename ::std::enable_if<_Test, _Ty>::type;
-
-template <typename _Elem>
-struct is_byte_type {
-  static const bool value = std::is_same<_Elem, char>::value || std::is_same<_Elem, unsigned char>::value;
-};
-
 template <typename _Elem, enable_if_t<is_byte_type<_Elem>::value, int> = 0>
-struct default_byte_allocator {
-  static _Elem* reallocate(void* old_block, size_t /*old_size*/, size_t new_size) { return static_cast<_Elem*>(::realloc(old_block, new_size)); }
-};
+using default_byte_allocater = default_buffer_allocator<_Elem>;
 
-template <typename _Elem, typename _Alloc = default_byte_allocator<_Elem>, enable_if_t<is_byte_type<_Elem>::value, int> = 0>
+template <typename _Elem, typename _Alloc = default_byte_allocater<_Elem>, enable_if_t<is_byte_type<_Elem>::value, int> = 0>
 class basic_byte_buffer {
 public:
   using pointer         = _Elem*;
@@ -383,7 +356,10 @@ private:
   void _Tidy() YASIO__NOEXCEPT
   { // free all storage
     if (_Myfirst)
-      _Resize_uninitialized(0, 0);
+    {
+      _Alloc::deallocate(_Myfirst);
+      _Myfirst = _Mylast = _Myend = nullptr;
+    }
   }
 
   pointer _Myfirst = nullptr;

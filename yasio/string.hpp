@@ -52,7 +52,7 @@ SOFTWARE.
 
 namespace yasio
 {
-template <typename _Elem, enable_if_t<std::is_integral<_Elem>::value && sizeof(_Elem) <= sizeof(uint32_t), int> = 0>
+template <typename _Elem, enable_if_t<std::is_integral<_Elem>::value && sizeof(_Elem) <= sizeof(char32_t), int> = 0>
 using default_string_allocater = default_buffer_allocator<_Elem>;
 
 template <typename _Elem, typename _Alloc = default_string_allocater<_Elem>>

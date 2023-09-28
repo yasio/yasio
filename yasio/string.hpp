@@ -70,7 +70,7 @@ public:
   using view_type       = cxx17::basic_string_view<_Elem>;
   using _Traits         = std::char_traits<_Elem>;
   // using _Myty           = basic_string<_Elem, _Alloc>;
-  basic_string() { _Resize_uninitialized(0, 0); }
+  basic_string() {}
   explicit basic_string(size_type count) { resize(count); }
   explicit basic_string(view_type rhs) { assign(rhs); }
   basic_string(const _Elem* ntcs) { assign(ntcs); }
@@ -202,8 +202,8 @@ public:
   const_iterator begin() const YASIO__NOEXCEPT { return _Myfirst; }
   const_iterator end() const YASIO__NOEXCEPT { return _Mylast; }
   pointer data() YASIO__NOEXCEPT { return _Myfirst; }
-  const_pointer data() const YASIO__NOEXCEPT { return _Myfirst; }
-  const_pointer c_str() const { return _Myfirst; }
+  const_pointer data() const YASIO__NOEXCEPT { return _Myfirst ? _Myfirst : &_Myend; }
+  const_pointer c_str() const { return this->data(); }
   size_type capacity() const YASIO__NOEXCEPT { return static_cast<size_type>(_Myend - _Myfirst); }
   size_type size() const YASIO__NOEXCEPT { return static_cast<size_type>(_Mylast - _Myfirst); }
   void clear() YASIO__NOEXCEPT { _Mylast = _Myfirst; }
@@ -358,7 +358,7 @@ private:
   }
   void _Resize_uninitialized(size_type new_size, size_type new_cap)
   {
-    _Myfirst = _Alloc::reallocate(_Myfirst, static_cast<size_type>(_Myend - _Myfirst), new_cap + 1);
+    _Myfirst = _Alloc::reallocate(_Myfirst, static_cast<size_type>(_Myend - _Myfirst), new_cap > new_size ? new_cap : new_size + 1);
     if (_Myfirst || !new_cap)
     {
       _Eos(new_size);

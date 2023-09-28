@@ -145,9 +145,8 @@ public:
     _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast && first <= last, "byte_buffer: out of range!");
     if (first != last)
     {
-      auto ifirst        = (iterator)std::addressof(*first);
-      auto ilast         = (iterator)(std::addressof(*first) + std::distance(first, last));
-      auto count         = std::distance(ifirst, ilast);
+      auto ifirst        = std::addressof(*first);
+      auto count         = std::distance(first, last) * sizeof(*ifirst);
       auto insertion_pos = std::distance(_Myfirst, _Where);
       if (_Where == _Mylast)
       {
@@ -155,10 +154,10 @@ public:
         {
           auto old_size = _Mylast - _Myfirst;
           resize(old_size + count);
-          std::copy_n(ifirst, count, _Myfirst + old_size);
+          std::copy_n((iterator)ifirst, count, _Myfirst + old_size);
         }
         else if (count == 1)
-          push_back(static_cast<value_type>(*ifirst));
+          push_back(static_cast<value_type>(*(iterator)ifirst));
       }
       else
       {
@@ -169,7 +168,7 @@ public:
           _Where       = _Myfirst + insertion_pos;
           auto move_to = _Where + count;
           std::copy_n(_Where, _Mylast - move_to, move_to);
-          std::copy_n(ifirst, count, _Where);
+          std::copy_n((iterator)ifirst, count, _Where);
         }
       }
       return _Myfirst + insertion_pos;
@@ -275,7 +274,7 @@ public:
       _Resize_uninitialized(_Count, _Count);
     }
   }
-  /** Release internal buffer ownership
+  /** detach internal buffer ownership
    * Note: this is a unsafe operation, after take the internal buffer, you are responsible for
    * destroy it once you don't need it, i.e:
    *   yasio::byte_buffer buf;
@@ -289,13 +288,26 @@ public:
    *   yasio::byte_buffer::allocator_type::deallocate(rawbuf, rawbufCapacity);
    *
    */
-  pointer release_pointer() YASIO__NOEXCEPT
+  template <typename _Intty>
+  pointer detach(_Intty& len)
   {
+    len      = static_cast<_Intty>(this->size());
     auto ptr = _Myfirst;
     _Myfirst = nullptr;
     _Mylast  = nullptr;
     _Myend   = nullptr;
     return ptr;
+  }
+  void attach(pointer ptr, size_t len)
+  {
+    _Tidy();
+    _Myfirst = ptr;
+    _Myend = _Mylast = ptr + len;
+  }
+  pointer release_pointer() YASIO__NOEXCEPT
+  {
+    size_t ignored_len;
+    return this->detach(ignored_len);
   }
 
 private:
@@ -305,10 +317,10 @@ private:
     _Mylast = _Myfirst;
     if (last > first)
     {
-      auto ifirst = (iterator)std::addressof(*first);
-      auto ilast  = (iterator)std::addressof(*last);
-      resize(std::distance(ifirst, ilast));
-      std::copy(ifirst, ilast, _Myfirst);
+      auto ifirst           = std::addressof(*first);
+      const auto size_bytes = std::distance(first, last) * sizeof(*ifirst);
+      resize(size_bytes);
+      std::copy_n((iterator)ifirst, size_bytes, _Myfirst);
     }
   }
   template <typename _Iter>
@@ -317,8 +329,10 @@ private:
     _Mylast = _Myfirst;
     if (last > first)
     {
-      resize_fit(std::distance(first, last));
-      std::copy(first, last, _Myfirst);
+      auto ifirst           = std::addressof(*first);
+      const auto size_bytes = std::distance(first, last) * sizeof(*ifirst);
+      resize_fit(size_bytes);
+      std::copy_n((iterator)ifirst, size_bytes, _Myfirst);
     }
   }
   void _Assign_rv(basic_byte_buffer&& rhs)

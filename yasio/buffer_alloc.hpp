@@ -56,7 +56,7 @@ struct is_byte_type {
   static const bool value = std::is_same<_Elem, char>::value || std::is_same<_Elem, unsigned char>::value;
 };
 
-template <typename _Elem, enable_if_t<std::is_integral<_Elem>::value, int> = 0>
+template <typename _Elem, enable_if_t<std::is_trivially_copyable<_Elem>::value, int> = 0>
 struct default_buffer_allocator {
   static _Elem* reallocate(void* block, size_t /*size*/, size_t new_size) { return static_cast<_Elem*>(::realloc(block, new_size * sizeof(_Elem))); }
 };

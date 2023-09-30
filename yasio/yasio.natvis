@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="yasio::pod_vector&lt;*&gt;">
+    <AlternativeType Name="std::vector&lt;*&gt;" />
     <DisplayString>{{ size={_Mylast - _Myfirst} capacity={_Myend - _Myfirst} }}</DisplayString>
     <Expand>
       <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>

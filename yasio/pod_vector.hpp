@@ -25,14 +25,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Version: 4.2.0
+Version: 5.0.0
 
-The pod_vector concepts:
-   a. The memory model is similar to to std::vector<char>
-   b. Support resize fit
+The pod_vector aka array_buffer concepts:
+   a. The memory model is similar to to std::vector, but only accept trivially_copyable(no destructor & no custom copy constructor) types
+   b. The resize behavior different stl, always allocate exactly
    c. By default resize without fill (uninitialized and for overwrite)
    d. Support release internal buffer ownership with `release_pointer`
-   e. no data/precision lost
+   e. Transparent iterator
+   f. no data/precision lost
+   g. expand/append/insert/push_back will trigger memory allocate growth strategy MSVC
+   e. resize_and_overwrite (c++23)
 */
 #ifndef YASIO__POD_VECTOR_HPP
 #define YASIO__POD_VECTOR_HPP
@@ -56,36 +59,23 @@ public:
   using const_reference = const _Elem&;
   using size_type       = size_t;
   using value_type      = _Elem;
-  using iterator        = _Elem*; // byte_buffer only needs transparent iterator
+  using iterator        = _Elem*; // transparent iterator
   using const_iterator  = const _Elem*;
   using allocator_type  = _Alloc;
   pod_vector() {}
   explicit pod_vector(size_type count) { resize(count); }
-  pod_vector(size_type count, std::true_type /*fit*/) { resize_fit(count); }
   pod_vector(size_type count, const_reference val) { resize(count, val); }
-  pod_vector(size_type count, const_reference val, std::true_type /*fit*/) { resize_fit(count, val); }
   template <typename _Iter>
   pod_vector(_Iter first, _Iter last)
   {
     assign(first, last);
   }
-  template <typename _Iter>
-  pod_vector(_Iter first, _Iter last, std::true_type /*fit*/)
-  {
-    assign(first, last, std::true_type{});
-  }
   pod_vector(const pod_vector& rhs) { assign(rhs); };
-  pod_vector(const pod_vector& rhs, std::true_type /*fit*/) { assign(rhs, std::true_type{}); }
   pod_vector(pod_vector&& rhs) YASIO__NOEXCEPT { assign(std::move(rhs)); }
   template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
   pod_vector(std::initializer_list<_Ty> rhs)
   {
     assign(rhs);
-  }
-  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
-  pod_vector(std::initializer_list<_Ty> rhs, std::true_type /*fit*/)
-  {
-    assign(rhs, std::true_type{});
   }
   ~pod_vector() { _Tidy(); }
   pod_vector& operator=(const pod_vector& rhs)
@@ -113,23 +103,12 @@ public:
   {
     _Assign_range(first, last);
   }
-  template <typename _Iter>
-  void assign(const _Iter first, const _Iter last, std::true_type /*fit*/)
-  {
-    _Assign_range(first, last, std::true_type{});
-  }
   void assign(const pod_vector& rhs) { _Assign_range(rhs.begin(), rhs.end()); }
-  void assign(const pod_vector& rhs, std::true_type) { _Assign_range(rhs.begin(), rhs.end(), std::true_type{}); }
   void assign(pod_vector&& rhs) { _Assign_rv(std::move(rhs)); }
   template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
   void assign(std::initializer_list<_Ty> rhs)
   {
     _Assign_range(rhs.begin(), rhs.end());
-  }
-  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
-  void assign(std::initializer_list<_Ty> rhs, std::true_type /*fit*/)
-  {
-    _Assign_range(rhs.begin(), rhs.end(), std::true_type{});
   }
   void swap(pod_vector& rhs) YASIO__NOEXCEPT
   {
@@ -143,27 +122,18 @@ public:
     _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast && first <= last, "byte_buffer: out of range!");
     if (first != last)
     {
-      auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
-      auto icount        = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       auto insertion_pos = std::distance(_Myfirst, _Where);
       if (_Where == _Mylast)
-      {
-        if (icount > 1)
-        {
-          auto old_size = _Mylast - _Myfirst;
-          resize(old_size + icount);
-          std::copy_n((iterator)ifirst, icount, _Myfirst + old_size);
-        }
-        else if (icount == 1)
-          push_back(static_cast<value_type>(*(iterator)ifirst));
-      }
+        append(first, last);
       else
       {
+        auto ifirst = std::addressof(*first);
+        static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
+        auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
         if (insertion_pos >= 0)
         {
           auto old_size = _Mylast - _Myfirst;
-          resize(old_size + icount);
+          expand(icount);
           _Where       = _Myfirst + insertion_pos;
           auto move_to = _Where + icount;
           std::copy_n(_Where, _Mylast - move_to, move_to);
@@ -174,16 +144,58 @@ public:
     }
     return _Where;
   }
+  iterator insert(iterator _Where, size_type count, const_reference val)
+  {
+    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast, "byte_buffer: out of range!");
+    if (count)
+    {
+      auto insertion_pos = std::distance(_Myfirst, _Where);
+      if (_Where == _Mylast)
+        append(count, val);
+      else
+      {
+        if (insertion_pos >= 0)
+        {
+          auto old_size = _Mylast - _Myfirst;
+          expand(count);
+          _Where       = _Myfirst + insertion_pos;
+          auto move_to = _Where + count;
+          std::copy_n(_Where, _Mylast - move_to, move_to);
+          std::fill_n(_Where, count, val);
+        }
+      }
+      return _Myfirst + insertion_pos;
+    }
+    return _Where;
+  }
   template <typename _Iter>
   pod_vector& append(_Iter first, const _Iter last)
   {
-    insert(end(), first, last);
+    if (first != last)
+    {
+      auto ifirst = std::addressof(*first);
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
+      auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
+      if (icount > 1)
+      {
+        auto old_size = _Mylast - _Myfirst;
+        expand(icount);
+        std::copy_n((iterator)ifirst, icount, _Myfirst + old_size);
+      }
+      else if (icount == 1)
+        push_back(static_cast<value_type>(*(iterator)ifirst));
+    }
+    return *this;
+  }
+  pod_vector& append(size_t count, const_reference val)
+  {
+    expand(count, val);
     return *this;
   }
   void push_back(value_type&& v) { push_back(v); }
   void push_back(const value_type& v)
   {
-    resize(this->size() + 1);
+    expand(1);
     *(_Mylast - 1) = v;
   }
   template <typename... _Valty, enable_if_t<std::is_scalar<value_type>::value || ::yasio::is_aligned_storage<value_type>::value, int> = 0>
@@ -193,12 +205,6 @@ public:
       return *construct_helper<value_type>::construct_at(_Mylast++, std::forward<_Valty>(_Val)...);
     return *_Emplace_back_reallocate(std::forward<_Valty>(_Val)...);
   }
-  void reset(size_t new_size)
-  {
-    resize_fit(new_size);
-    memset(_Myfirst, 0x0, size_bytes());
-  }
-  size_t size_bytes() const { return (_Mylast - _Myfirst) * sizeof(value_type); }
   iterator erase(iterator _Where)
   {
     _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where < _Mylast, "pod_vector: out of range!");
@@ -230,6 +236,7 @@ public:
   const_pointer data() const YASIO__NOEXCEPT { return _Myfirst; }
   size_type capacity() const YASIO__NOEXCEPT { return static_cast<size_type>(_Myend - _Myfirst); }
   size_type size() const YASIO__NOEXCEPT { return static_cast<size_type>(_Mylast - _Myfirst); }
+  size_type length() const YASIO__NOEXCEPT { return static_cast<size_type>(_Mylast - _Myfirst); }
   void clear() YASIO__NOEXCEPT { _Mylast = _Myfirst; }
   bool empty() const YASIO__NOEXCEPT { return _Mylast == _Myfirst; }
 
@@ -245,48 +252,74 @@ public:
     _YASIO_VERIFY_RANGE(index < this->size(), "pod_vector: out of range!");
     return _Myfirst[index];
   }
-  void resize(size_type new_size, const_reference val)
-  {
-    auto old_size = this->size();
-    resize(new_size);
-    if (old_size < new_size)
-      memset(_Myfirst + old_size, val, new_size - old_size);
-  }
+#pragma region modify size and capacity
   void resize(size_type new_size)
   {
     auto old_cap = this->capacity();
     if (old_cap < new_size)
-      _Resize_uninitialized(new_size, _Calculate_growth(new_size));
-    else
-      _Mylast = _Myfirst + new_size;
+      _Reallocate_exactly(new_size);
+    _Eos(new_size);
   }
-  void resize_fit(size_type new_size, const_reference val)
+  void expand(size_type count)
   {
-    auto old_size = this->size();
-    resize_fit(new_size);
-    if (old_size < new_size)
-      memset(_Myfirst + old_size, val, new_size - old_size);
-  }
-  void resize_fit(size_type new_size)
-  {
-    if (this->capacity() < new_size)
-      _Resize_uninitialized(new_size, new_size);
-    else
-      _Mylast = _Myfirst + new_size;
-  }
-  void reserve(size_type new_cap)
-  {
-    if (this->capacity() < new_cap)
-      _Resize_uninitialized(this->size(), new_cap);
+    const auto new_size = this->size() + count;
+    auto old_cap        = this->capacity();
+    if (old_cap < new_size)
+      _Reallocate_exactly(_Calculate_growth(new_size));
+    _Eos(new_size);
   }
   void shrink_to_fit()
   { // reduce capacity to size, provide strong guarantee
     if (_Myfirst)
     {
-      const auto _Count = this->size();
-      _Resize_uninitialized(_Count, _Count);
+      const auto count = this->size();
+      _Reallocate_exactly(count);
+      _Eos(count);
     }
   }
+  void reserve(size_type new_cap)
+  {
+    if (this->capacity() < new_cap)
+    {
+      const auto count = this->size();
+      _Reallocate_exactly(new_cap);
+      _Eos(count);
+    }
+  }
+#pragma endregion
+  template <typename _Operation>
+  void resize_and_overwrite(const size_type _New_size, _Operation _Op)
+  {
+    _Reallocate_exactly(_New_size);
+    _Eos(std::move(_Op)(_Myfirst, _New_size));
+  }
+  void resize(size_type new_size, const_reference val)
+  {
+    auto old_size = this->size();
+    resize(new_size);
+    if (old_size < new_size)
+      std::fill(_Myfirst + old_size, _Mylast, val);
+  }
+  void expand(size_type count, const_reference val)
+  {
+    auto old_size = this->size();
+    expand(count);
+    if (count)
+      std::fill(_Myfirst + old_size, _Mylast, val);
+  }
+  int index_of(const_reference val) const YASIO__NOEXCEPT
+  {
+    auto it = std::find(begin(), end(), val);
+    if (it != this->end())
+      return std::distance(begin(), it);
+    return -1;
+  }
+  void reset(size_t new_size)
+  {
+    resize(new_size);
+    memset(_Myfirst, 0x0, size_bytes());
+  }
+  size_t size_bytes() const YASIO__NOEXCEPT { return (_Mylast - _Myfirst) * sizeof(value_type); }
   /** detach internal buffer ownership
    * Note: this is a unsafe operation, after take the internal buffer, you are responsible for
    * destroy it once you don't need it, i.e:
@@ -302,7 +335,7 @@ public:
    *
    */
   template <typename _Intty>
-  pointer detach(_Intty& len)
+  pointer detach_abi(_Intty& len) YASIO__NOEXCEPT
   {
     len      = static_cast<_Intty>(this->size());
     auto ptr = _Myfirst;
@@ -311,7 +344,7 @@ public:
     _Myend   = nullptr;
     return ptr;
   }
-  void attach(pointer ptr, size_t len)
+  void attach_abi(pointer ptr, size_t len)
   {
     _Tidy();
     _Myfirst = ptr;
@@ -320,10 +353,11 @@ public:
   pointer release_pointer() YASIO__NOEXCEPT
   {
     size_t ignored_len;
-    return this->detach(ignored_len);
+    return this->detach_abi(ignored_len);
   }
 
 private:
+  void _Eos(size_t size) YASIO__NOEXCEPT { _Mylast = _Myfirst + size; }
   template <typename... _Valty>
   pointer _Emplace_back_reallocate(_Valty&&... _Val)
   {
@@ -335,9 +369,9 @@ private:
     const size_type _Newsize     = _Oldsize + 1;
     const size_type _Newcapacity = _Calculate_growth(_Newsize);
 
-    _Resize_uninitialized(_Newsize, _Newcapacity);
+    _Reallocate_exactly(_Newcapacity);
     const pointer _Newptr = construct_helper<value_type>::construct_at(_Myfirst + _Oldsize, std::forward<_Valty>(_Val)...);
-
+    _Eos(_Newsize);
     return _Newptr;
   }
   template <typename _Iter>
@@ -362,7 +396,7 @@ private:
       auto ifirst = std::addressof(*first);
       static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
       const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
-      resize_fit(icount);
+      resize(icount);
       std::copy_n((iterator)ifirst, icount, _Myfirst);
     }
   }
@@ -371,14 +405,11 @@ private:
     memcpy(this, &rhs, sizeof(rhs));
     memset(&rhs, 0, sizeof(rhs));
   }
-  void _Resize_uninitialized(size_type new_size, size_type new_cap)
+  void _Reallocate_exactly(size_type new_cap)
   {
     _Myfirst = _Alloc::reallocate(_Myfirst, static_cast<size_type>(_Myend - _Myfirst), new_cap);
     if (_Myfirst || !new_cap)
-    {
-      _Mylast = _Myfirst + new_size;
-      _Myend  = _Myfirst + new_cap;
-    }
+      _Myend = _Myfirst + new_cap;
     else
       throw std::bad_alloc{};
   }
@@ -411,5 +442,8 @@ private:
   pointer _Mylast  = nullptr;
   pointer _Myend   = nullptr;
 };
+
+template <typename _Elem, typename _Alloc = default_buffer_allocator<_Elem>>
+using array_buffer = pod_vector<_Elem, _Alloc>;
 } // namespace yasio
 #endif

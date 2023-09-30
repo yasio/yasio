@@ -24,27 +24,21 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-Version: 4.2.0
-
-The byte_buffer concepts:
-   a. The memory model is similar to to std::vector<char>
-   b. Support resize fit
-   c. By default resize without fill (uninitialized and for overwrite)
-   d. Support release internal buffer ownership with `release_pointer`
 */
 #ifndef YASIO__BYTE_BUFFER_HPP
 #define YASIO__BYTE_BUFFER_HPP
 #include "yasio/pod_vector.hpp"
+
 namespace yasio
 {
 template <typename _Elem, enable_if_t<is_byte_type<_Elem>::value, int> = 0>
 using default_bytes_allocater = default_buffer_allocator<_Elem>;
 
 template <typename _Elem, typename _Alloc = default_bytes_allocater<_Elem>>
-using basic_byte_buffer = pod_vector<_Elem, _Alloc>;
+using basic_byte_buffer = array_buffer<_Elem, _Alloc>;
 
 using sbyte_buffer = basic_byte_buffer<char>;
 using byte_buffer  = basic_byte_buffer<unsigned char>;
+
 } // namespace yasio
 #endif

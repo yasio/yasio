@@ -28,13 +28,14 @@ SOFTWARE.
 Version: 4.2.0
 
 The pod_vector concepts:
-   a. The memory model is similar to to std::vector<char>, std::string
+   a. The memory model is similar to to std::vector<char>
    b. Support resize fit
    c. By default resize without fill (uninitialized and for overwrite)
    d. Support release internal buffer ownership with `release_pointer`
+   e. no data/precision lost
 */
-#ifndef YASIO__pod_vector_HPP
-#define YASIO__pod_vector_HPP
+#ifndef YASIO__POD_VECTOR_HPP
+#define YASIO__POD_VECTOR_HPP
 #include <utility>
 #include <memory>
 #include <iterator>
@@ -76,12 +77,12 @@ public:
   pod_vector(const pod_vector& rhs) { assign(rhs); };
   pod_vector(const pod_vector& rhs, std::true_type /*fit*/) { assign(rhs, std::true_type{}); }
   pod_vector(pod_vector&& rhs) YASIO__NOEXCEPT { assign(std::move(rhs)); }
-  template <typename _Ty, enable_if_t<std::is_trivial<_Ty>::value, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
   pod_vector(std::initializer_list<_Ty> rhs)
   {
     assign(rhs);
   }
-  template <typename _Ty, enable_if_t<std::is_trivial<_Ty>::value, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
   pod_vector(std::initializer_list<_Ty> rhs, std::true_type /*fit*/)
   {
     assign(rhs, std::true_type{});
@@ -120,12 +121,12 @@ public:
   void assign(const pod_vector& rhs) { _Assign_range(rhs.begin(), rhs.end()); }
   void assign(const pod_vector& rhs, std::true_type) { _Assign_range(rhs.begin(), rhs.end(), std::true_type{}); }
   void assign(pod_vector&& rhs) { _Assign_rv(std::move(rhs)); }
-  template <typename _Ty, enable_if_t<std::is_trivial<_Ty>::value, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
   void assign(std::initializer_list<_Ty> rhs)
   {
     _Assign_range(rhs.begin(), rhs.end());
   }
-  template <typename _Ty, enable_if_t<std::is_trivial<_Ty>::value, int> = 0>
+  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
   void assign(std::initializer_list<_Ty> rhs, std::true_type /*fit*/)
   {
     _Assign_range(rhs.begin(), rhs.end(), std::true_type{});
@@ -142,7 +143,8 @@ public:
     _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast && first <= last, "byte_buffer: out of range!");
     if (first != last)
     {
-      auto ifirst        = std::addressof(*first);
+      auto ifirst = std::addressof(*first);
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
       auto icount        = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       auto insertion_pos = std::distance(_Myfirst, _Where);
       if (_Where == _Mylast)
@@ -178,15 +180,18 @@ public:
     insert(end(), first, last);
     return *this;
   }
-  void push_back(value_type&& v) { emplace_back(v); }
-  void push_back(const value_type& v) { emplace_back(value_type(v)); }
-  template <typename... _Valty>
-  value_type& emplace_back(_Valty&&... _Val)
+  void push_back(value_type&& v) { push_back(v); }
+  void push_back(const value_type& v)
+  {
+    resize(this->size() + 1);
+    *(_Mylast - 1) = v;
+  }
+  template <typename... _Valty, enable_if_t<std::is_scalar<value_type>::value || ::yasio::is_aligned_storage<value_type>::value, int> = 0>
+  inline value_type& emplace_back(_Valty&&... _Val)
   {
     if (_Mylast != _Myend)
-      return *new (_Mylast++) value_type{std::forward<_Valty>(_Val)...};
-    resize(this->size() + 1);
-    return *new (_Mylast - 1) value_type{std::forward<_Valty>(_Val)...};
+      return *construct_helper<value_type>::construct_at(_Mylast++, std::forward<_Valty>(_Val)...);
+    return *_Emplace_back_reallocate(std::forward<_Valty>(_Val)...);
   }
   void reset(size_t new_size)
   {
@@ -196,24 +201,24 @@ public:
   size_t size_bytes() const { return (_Mylast - _Myfirst) * sizeof(value_type); }
   iterator erase(iterator _Where)
   {
-    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where < _Mylast, "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where < _Mylast, "pod_vector: out of range!");
     _Mylast = std::move(_Where + 1, _Mylast, _Where);
     return _Where;
   }
   iterator erase(iterator first, iterator last)
   {
-    _YASIO_VERIFY_RANGE((first <= last) && first >= _Myfirst && last <= _Mylast, "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE((first <= last) && first >= _Myfirst && last <= _Mylast, "pod_vector: out of range!");
     _Mylast = std::move(last, _Mylast, first);
     return first;
   }
   value_type& front()
   {
-    _YASIO_VERIFY_RANGE(_Myfirst < _Mylast, "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(_Myfirst < _Mylast, "pod_vector: out of range!");
     return *_Myfirst;
   }
   value_type& back()
   {
-    _YASIO_VERIFY_RANGE(_Myfirst < _Mylast, "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(_Myfirst < _Mylast, "pod_vector: out of range!");
     return *(_Mylast - 1);
   }
   static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return (std::numeric_limits<ptrdiff_t>::max)() / sizeof(value_type); }
@@ -232,12 +237,12 @@ public:
   reference operator[](size_type index) { return this->at(index); }
   const_reference at(size_type index) const
   {
-    _YASIO_VERIFY_RANGE(index < this->size(), "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(index < this->size(), "pod_vector: out of range!");
     return _Myfirst[index];
   }
   reference at(size_type index)
   {
-    _YASIO_VERIFY_RANGE(index < this->size(), "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(index < this->size(), "pod_vector: out of range!");
     return _Myfirst[index];
   }
   void resize(size_type new_size, const_reference val)
@@ -319,13 +324,30 @@ public:
   }
 
 private:
+  template <typename... _Valty>
+  pointer _Emplace_back_reallocate(_Valty&&... _Val)
+  {
+    const auto _Oldsize = static_cast<size_type>(_Mylast - _Myfirst);
+
+    if (_Oldsize == max_size())
+      throw std::length_error("pod_vector too long");
+
+    const size_type _Newsize     = _Oldsize + 1;
+    const size_type _Newcapacity = _Calculate_growth(_Newsize);
+
+    _Resize_uninitialized(_Newsize, _Newcapacity);
+    const pointer _Newptr = construct_helper<value_type>::construct_at(_Myfirst + _Oldsize, std::forward<_Valty>(_Val)...);
+
+    return _Newptr;
+  }
   template <typename _Iter>
   void _Assign_range(_Iter first, _Iter last)
   {
     _Mylast = _Myfirst;
     if (last > first)
     {
-      auto ifirst       = std::addressof(*first);
+      auto ifirst = std::addressof(*first);
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
       const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       resize(icount);
       std::copy_n((iterator)ifirst, icount, _Myfirst);
@@ -337,7 +359,8 @@ private:
     _Mylast = _Myfirst;
     if (last > first)
     {
-      auto ifirst       = std::addressof(*first);
+      auto ifirst = std::addressof(*first);
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
       const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       resize_fit(icount);
       std::copy_n((iterator)ifirst, icount, _Myfirst);

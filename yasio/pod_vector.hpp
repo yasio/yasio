@@ -307,7 +307,7 @@ public:
     if (count)
       std::fill(_Myfirst + old_size, _Mylast, val);
   }
-  int index_of(const_reference val) const YASIO__NOEXCEPT
+  ptrdiff_t index_of(const_reference val) const YASIO__NOEXCEPT
   {
     auto it = std::find(begin(), end(), val);
     if (it != this->end())

@@ -64,14 +64,14 @@ public:
   pod_vector() {}
   explicit pod_vector(size_type count) { resize(count); }
   pod_vector(size_type count, const_reference val) { resize(count, val); }
-  template <typename _Iter>
+  template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   pod_vector(_Iter first, _Iter last)
   {
     assign(first, last);
   }
   pod_vector(const pod_vector& rhs) { assign(rhs); };
   pod_vector(pod_vector&& rhs) YASIO__NOEXCEPT { assign(std::move(rhs)); }
-  pod_vector(std::initializer_list<value_type> rhs) { _Assign_range(rhs.begin(), rhs.end()); }
+  /*pod_vector(std::initializer_list<value_type> rhs) { _Assign_range(rhs.begin(), rhs.end()); }*/
   ~pod_vector() { _Tidy(); }
   pod_vector& operator=(const pod_vector& rhs)
   {
@@ -93,8 +93,8 @@ public:
     this->push_back(rhs);
     return *this;
   }
-  template <typename _Iter>
-  void assign(const _Iter first, const _Iter last)
+  template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
+  void assign(_Iter first, _Iter last)
   {
     _Assign_range(first, last);
   }
@@ -106,8 +106,8 @@ public:
     std::swap(_Mylast, rhs._Mylast);
     std::swap(_Myend, rhs._Myend);
   }
-  template <typename _Iter>
-  iterator insert(iterator _Where, _Iter first, const _Iter last)
+  template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
+  iterator insert(iterator _Where, _Iter first, _Iter last)
   {
     _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast && first <= last, "pod_vector: out of range!");
     if (first != last)
@@ -158,7 +158,7 @@ public:
     }
     return _Where;
   }
-  template <typename _Iter>
+  template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   pod_vector& append(_Iter first, const _Iter last)
   {
     if (first != last)
@@ -188,9 +188,10 @@ public:
     expand(1);
     *(_Mylast - 1) = v;
   }
-  template <typename... _Valty, enable_if_t<std::is_scalar<value_type>::value || ::yasio::is_aligned_storage<value_type>::value, int> = 0>
+  template <typename... _Valty>
   inline value_type& emplace_back(_Valty&&... _Val)
   {
+    static_assert(std::is_scalar<value_type>::value || ::yasio::is_aligned_storage<value_type>::value, "pod_vector: incompatible pod type");
     if (_Mylast != _Myend)
       return *construct_helper<value_type>::construct_at(_Mylast++, std::forward<_Valty>(_Val)...);
     return *_Emplace_back_reallocate(std::forward<_Valty>(_Val)...);
@@ -350,21 +351,8 @@ private:
     _Eos(_Newsize);
     return _Newptr;
   }
-  template <typename _Iter>
+  template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   void _Assign_range(_Iter first, _Iter last)
-  {
-    _Mylast = _Myfirst;
-    if (last > first)
-    {
-      auto ifirst = std::addressof(*first);
-      static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
-      const auto count = std::distance(first, last);
-      resize(count);
-      std::copy_n((iterator)ifirst, count, _Myfirst);
-    }
-  }
-  template <typename _Iter>
-  void _Assign_range(_Iter first, _Iter last, std::true_type)
   {
     _Mylast = _Myfirst;
     if (last > first)

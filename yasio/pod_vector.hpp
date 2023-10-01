@@ -119,7 +119,7 @@ public:
   template <typename _Iter>
   iterator insert(iterator _Where, _Iter first, const _Iter last)
   {
-    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast && first <= last, "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast && first <= last, "pod_vector: out of range!");
     if (first != last)
     {
       auto insertion_pos = std::distance(_Myfirst, _Where);

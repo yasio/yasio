@@ -128,7 +128,7 @@ public:
       else
       {
         auto ifirst = std::addressof(*first);
-        static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
+        static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
         auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
         if (insertion_pos >= 0)
         {
@@ -146,7 +146,7 @@ public:
   }
   iterator insert(iterator _Where, size_type count, const_reference val)
   {
-    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast, "byte_buffer: out of range!");
+    _YASIO_VERIFY_RANGE(_Where >= _Myfirst && _Where <= _Mylast, "pod_vector: out of range!");
     if (count)
     {
       auto insertion_pos = std::distance(_Myfirst, _Where);
@@ -174,7 +174,7 @@ public:
     if (first != last)
     {
       auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
       auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       if (icount > 1)
       {
@@ -286,13 +286,13 @@ public:
       _Eos(count);
     }
   }
-#pragma endregion
   template <typename _Operation>
   void resize_and_overwrite(const size_type _New_size, _Operation _Op)
   {
     _Reallocate_exactly(_New_size);
     _Eos(std::move(_Op)(_Myfirst, _New_size));
   }
+#pragma endregion
   void resize(size_type new_size, const_reference val)
   {
     auto old_size = this->size();
@@ -381,7 +381,7 @@ private:
     if (last > first)
     {
       auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
       const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       resize(icount);
       std::copy_n((iterator)ifirst, icount, _Myfirst);
@@ -394,7 +394,7 @@ private:
     if (last > first)
     {
       auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type not incompatible!");
+      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
       const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
       resize(icount);
       std::copy_n((iterator)ifirst, icount, _Myfirst);

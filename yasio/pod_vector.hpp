@@ -29,13 +29,12 @@ Version: 5.0.0
 
 The pod_vector aka array_buffer concepts:
    a. The memory model is similar to to std::vector, but only accept trivially_copyable(no destructor & no custom copy constructor) types
-   b. The resize behavior different stl, always allocate exactly
+   b. The resize behavior differrent stl, always allocate exactly
    c. By default resize without fill (uninitialized and for overwrite)
    d. Support release internal buffer ownership with `release_pointer`
    e. Transparent iterator
-   f. no data/precision lost
-   g. expand/append/insert/push_back will trigger memory allocate growth strategy MSVC
-   e. resize_and_overwrite (c++23)
+   f. expand/append/insert/push_back will trigger memory allocate growth strategy MSVC
+   g. resize_and_overwrite (c++23)
 */
 #ifndef YASIO__POD_VECTOR_HPP
 #define YASIO__POD_VECTOR_HPP
@@ -72,11 +71,7 @@ public:
   }
   pod_vector(const pod_vector& rhs) { assign(rhs); };
   pod_vector(pod_vector&& rhs) YASIO__NOEXCEPT { assign(std::move(rhs)); }
-  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
-  pod_vector(std::initializer_list<_Ty> rhs)
-  {
-    assign(rhs);
-  }
+  pod_vector(std::initializer_list<value_type> rhs) { _Assign_range(rhs.begin(), rhs.end()); }
   ~pod_vector() { _Tidy(); }
   pod_vector& operator=(const pod_vector& rhs)
   {
@@ -105,11 +100,6 @@ public:
   }
   void assign(const pod_vector& rhs) { _Assign_range(rhs.begin(), rhs.end()); }
   void assign(pod_vector&& rhs) { _Assign_rv(std::move(rhs)); }
-  template <typename _Ty, enable_if_t<std::is_convertible<_Ty, value_type>::value, int> = 0>
-  void assign(std::initializer_list<_Ty> rhs)
-  {
-    _Assign_range(rhs.begin(), rhs.end());
-  }
   void swap(pod_vector& rhs) YASIO__NOEXCEPT
   {
     std::swap(_Myfirst, rhs._Myfirst);
@@ -128,16 +118,16 @@ public:
       else
       {
         auto ifirst = std::addressof(*first);
-        static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
-        auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
+        static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
+        auto count = std::distance(first, last);
         if (insertion_pos >= 0)
         {
           auto old_size = _Mylast - _Myfirst;
-          expand(icount);
+          expand(count);
           _Where       = _Myfirst + insertion_pos;
-          auto move_to = _Where + icount;
+          auto move_to = _Where + count;
           std::copy_n(_Where, _Mylast - move_to, move_to);
-          std::copy_n((iterator)ifirst, icount, _Where);
+          std::copy_n((iterator)ifirst, count, _Where);
         }
       }
       return _Myfirst + insertion_pos;
@@ -174,15 +164,15 @@ public:
     if (first != last)
     {
       auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
-      auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
-      if (icount > 1)
+      static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
+      auto count = std::distance(first, last);
+      if (count > 1)
       {
         auto old_size = _Mylast - _Myfirst;
-        expand(icount);
-        std::copy_n((iterator)ifirst, icount, _Myfirst + old_size);
+        expand(count);
+        std::copy_n((iterator)ifirst, count, _Myfirst + old_size);
       }
-      else if (icount == 1)
+      else if (count == 1)
         push_back(static_cast<value_type>(*(iterator)ifirst));
     }
     return *this;
@@ -320,20 +310,6 @@ public:
     memset(_Myfirst, 0x0, size_bytes());
   }
   size_t size_bytes() const YASIO__NOEXCEPT { return (_Mylast - _Myfirst) * sizeof(value_type); }
-  /** detach internal buffer ownership
-   * Note: this is a unsafe operation, after take the internal buffer, you are responsible for
-   * destroy it once you don't need it, i.e:
-   *   yasio::byte_buffer buf;
-   *   buf.push_back('I');
-   *   auto rawbufCapacity = buf.capacity();
-   *   auto rawbufLen = buf.size();
-   *   auto rawbuf = buf.release_pointer();
-   *   // use rawbuf to do something
-   *   // ...
-   *   // done, destroy the memory
-   *   yasio::byte_buffer::allocator_type::deallocate(rawbuf, rawbufCapacity);
-   *
-   */
   template <typename _Intty>
   pointer detach_abi(_Intty& len) YASIO__NOEXCEPT
   {
@@ -381,10 +357,10 @@ private:
     if (last > first)
     {
       auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
-      const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
-      resize(icount);
-      std::copy_n((iterator)ifirst, icount, _Myfirst);
+      static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
+      const auto count = std::distance(first, last);
+      resize(count);
+      std::copy_n((iterator)ifirst, count, _Myfirst);
     }
   }
   template <typename _Iter>
@@ -394,10 +370,10 @@ private:
     if (last > first)
     {
       auto ifirst = std::addressof(*first);
-      static_assert((sizeof(*ifirst) / sizeof(value_type)) > 0, "iterator type incompatible!");
-      const auto icount = std::distance(first, last) * (sizeof(*ifirst) / sizeof(value_type));
-      resize(icount);
-      std::copy_n((iterator)ifirst, icount, _Myfirst);
+      static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
+      const auto count = std::distance(first, last);
+      resize(count);
+      std::copy_n((iterator)ifirst, count, _Myfirst);
     }
   }
   void _Assign_rv(pod_vector&& rhs)

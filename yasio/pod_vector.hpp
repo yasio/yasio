@@ -186,12 +186,11 @@ public:
   void push_back(const value_type& v)
   {
     expand(1);
-    *(_Mylast - 1) = v;
+    _Mylast[-1] = v;
   }
   template <typename... _Valty>
   inline value_type& emplace_back(_Valty&&... _Val)
   {
-    static_assert(std::is_scalar<value_type>::value || ::yasio::is_aligned_storage<value_type>::value, "pod_vector: incompatible pod type");
     if (_Mylast != _Myend)
       return *construct_helper<value_type>::construct_at(_Mylast++, std::forward<_Valty>(_Val)...);
     return *_Emplace_back_reallocate(std::forward<_Valty>(_Val)...);
@@ -216,7 +215,7 @@ public:
   value_type& back()
   {
     _YASIO_VERIFY_RANGE(_Myfirst < _Mylast, "pod_vector: out of range!");
-    return *(_Mylast - 1);
+    return _Mylast[-1];
   }
   static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return (std::numeric_limits<ptrdiff_t>::max)() / sizeof(value_type); }
   iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
@@ -249,7 +248,7 @@ public:
     auto old_cap = this->capacity();
     if (old_cap < new_size)
       _Reallocate_exactly(new_size);
-    _Eos(new_size);
+      _Eos(new_size);
   }
   void expand(size_type count)
   {
@@ -257,15 +256,22 @@ public:
     auto old_cap        = this->capacity();
     if (old_cap < new_size)
       _Reallocate_exactly(_Calculate_growth(new_size));
-    _Eos(new_size);
+      _Eos(new_size);
   }
   void shrink_to_fit()
   { // reduce capacity to size, provide strong guarantee
-    if (_Myfirst)
-    {
-      const auto count = this->size();
-      _Reallocate_exactly(count);
-      _Eos(count);
+    const pointer _Oldlast = _Mylast;
+    if (_Oldlast != _Myend)
+    { // something to do
+      const pointer _Oldfirst = _Myfirst;
+      if (_Oldfirst == _Oldlast)
+        _Tidy();
+      else
+      {
+        const auto _Mysize = static_cast<size_type>(_Oldlast - _Oldfirst);
+        _Reallocate_exactly(_Mysize);
+        _Eos(_Mysize);
+      }
     }
   }
   void reserve(size_type new_cap)

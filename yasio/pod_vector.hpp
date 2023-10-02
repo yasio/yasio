@@ -321,18 +321,18 @@ public:
     _Myend   = nullptr;
     return ptr;
   }
+  pointer detach_abi() YASIO__NOEXCEPT
+  {
+    size_t ignored_len;
+    return this->detach_abi(ignored_len);
+  }
   void attach_abi(pointer ptr, size_t len)
   {
     _Tidy();
     _Myfirst = ptr;
     _Myend = _Mylast = ptr + len;
   }
-  pointer release_pointer() YASIO__NOEXCEPT
-  {
-    size_t ignored_len;
-    return this->detach_abi(ignored_len);
-  }
-
+  pointer release_pointer() YASIO__NOEXCEPT { return detach_abi(); }
 private:
   void _Eos(size_t size) YASIO__NOEXCEPT { _Mylast = _Myfirst + size; }
   template <typename... _Valty>
@@ -354,14 +354,17 @@ private:
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   void _Assign_range(_Iter first, _Iter last)
   {
-    _Mylast = _Myfirst;
-    if (last > first)
+    auto ifirst = std::addressof(*first);
+    static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
+    if (ifirst != _Myfirst)
     {
-      auto ifirst = std::addressof(*first);
-      static_assert(sizeof(*ifirst) == sizeof(value_type), "pod_vector: iterator type incompatible!");
-      const auto count = std::distance(first, last);
-      resize(count);
-      std::copy_n((iterator)ifirst, count, _Myfirst);
+      _Mylast = _Myfirst;
+      if (last > first)
+      {
+        const auto count = std::distance(first, last);
+        resize(count);
+        std::copy_n((iterator)ifirst, count, _Myfirst);
+      }
     }
   }
   void _Assign_rv(pod_vector&& rhs)

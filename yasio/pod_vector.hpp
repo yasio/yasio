@@ -248,7 +248,7 @@ public:
     auto old_cap = this->capacity();
     if (old_cap < new_size)
       _Reallocate_exactly(new_size);
-      _Eos(new_size);
+    _Eos(new_size);
   }
   void expand(size_type count)
   {
@@ -256,7 +256,7 @@ public:
     auto old_cap        = this->capacity();
     if (old_cap < new_size)
       _Reallocate_exactly(_Calculate_growth(new_size));
-      _Eos(new_size);
+    _Eos(new_size);
   }
   void shrink_to_fit()
   { // reduce capacity to size, provide strong guarantee
@@ -268,9 +268,9 @@ public:
         _Tidy();
       else
       {
-        const auto _Mysize = static_cast<size_type>(_Oldlast - _Oldfirst);
-        _Reallocate_exactly(_Mysize);
-        _Eos(_Mysize);
+        const auto count = static_cast<size_type>(_Oldlast - _Oldfirst);
+        _Reallocate_exactly(count);
+        _Eos(count);
       }
     }
   }
@@ -316,7 +316,7 @@ public:
     resize(new_size);
     memset(_Myfirst, 0x0, size_bytes());
   }
-  size_t size_bytes() const YASIO__NOEXCEPT { return (_Mylast - _Myfirst) * sizeof(value_type); }
+  size_t size_bytes() const YASIO__NOEXCEPT { return this->size() * sizeof(value_type); }
   template <typename _Intty>
   pointer detach_abi(_Intty& len) YASIO__NOEXCEPT
   {
@@ -380,9 +380,12 @@ private:
   }
   void _Reallocate_exactly(size_type new_cap)
   {
-    _Myfirst = _Alloc::reallocate(_Myfirst, static_cast<size_type>(_Myend - _Myfirst), new_cap);
-    if (_Myfirst || !new_cap)
-      _Myend = _Myfirst + new_cap;
+    auto _Newvec = _Alloc::reallocate(_Myfirst, static_cast<size_type>(_Myend - _Myfirst), new_cap);
+    if (_Newvec || !new_cap)
+    {
+      _Myfirst = _Newvec;
+      _Myend   = _Newvec + new_cap;
+    }
     else
       throw std::bad_alloc{};
   }

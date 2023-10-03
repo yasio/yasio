@@ -41,4 +41,13 @@ struct is_aligned_storage {
 };
 template <class _Iter>
 struct is_iterator : public std::integral_constant<bool, !std::is_integral<_Iter>::value> {};
+
+template <bool _Test, class _Ty = void>
+using enable_if_t = typename ::std::enable_if<_Test, _Ty>::type;
+
+template <typename _Elem>
+struct is_byte_type {
+  static const bool value = std::is_same<_Elem, char>::value || std::is_same<_Elem, unsigned char>::value;
+};
+
 } // namespace yasio

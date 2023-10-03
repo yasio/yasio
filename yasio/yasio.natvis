@@ -24,41 +24,65 @@
     </Expand>
   </Type>
   <Type Name="yasio::basic_string&lt;char,*&gt;">
-    <DisplayString>{_Myfirst,s8}</DisplayString>
-    <StringView>_Myfirst,s8</StringView>
+    <AlternativeType Name="yasio::basic_string&lt;char8_t,*&gt;" />
+    <DisplayString Condition="__l.__is_long_==1">{__l.__data_,s8}</DisplayString>
+    <DisplayString Condition="__l.__is_long_==0">{__s.__data_,s8}</DisplayString>
+    <StringView Condition="__l.__is_long_==1">__l.__data_,s8</StringView>
+    <StringView Condition="__l.__is_long_==0">__s.__data_,s8</StringView>
     <Expand>
-      <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
-      <ArrayItems>
-        <Size>_Mylast - _Myfirst</Size>
-        <ValuePointer>_Myfirst</ValuePointer>
+      <Item Name="[size]" ExcludeView="simple" Condition="__l.__is_long_==1">__l.__size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="__l.__is_long_==1">__l.__cap_ * 2</Item>
+      <Item Name="[size]" ExcludeView="simple" Condition="__l.__is_long_==0">__s.__size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="__l.__is_long_==0">__min_cap - 1</Item>
+      <ArrayItems Condition="__l.__is_long_==1">
+        <Size>__l.__size_</Size>
+        <ValuePointer>__l.__data_</ValuePointer>
+      </ArrayItems>
+      <ArrayItems Condition="__l.__is_long_==0">
+        <Size>__s.__size_</Size>
+        <ValuePointer>__s.__data_</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
   <Type Name="yasio::basic_string&lt;wchar_t,*&gt;">
     <AlternativeType Name="yasio::basic_string&lt;unsigned short,*&gt;" />
     <AlternativeType Name="yasio::basic_string&lt;char16_t,*&gt;" />
-    <DisplayString>{_Myfirst,su}</DisplayString>
-    <StringView>_Myfirst,su</StringView>
+    <DisplayString Condition="__l.__is_long_==1">{__l.__data_,su}</DisplayString>
+    <DisplayString Condition="__l.__is_long_==0">{__s.__data_,su}</DisplayString>
+    <StringView Condition="__l.__is_long_==1">__l.__data_,su</StringView>
+    <StringView Condition="__l.__is_long_==0">__s.__data_,su</StringView>
     <Expand>
-      <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
-      <ArrayItems>
-        <Size>_Mylast - _Myfirst</Size>
-        <ValuePointer>_Myfirst</ValuePointer>
+      <Item Name="[size]" ExcludeView="simple" Condition="__l.__is_long_==1">__l.__size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="__l.__is_long_==1">__l.__cap_ * 2</Item>
+      <Item Name="[size]" ExcludeView="simple" Condition="__l.__is_long_==0">__s.__size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="__l.__is_long_==0">__min_cap - 1</Item>
+      <ArrayItems Condition="__l.__is_long_==1">
+        <Size>__l.__size_</Size>
+        <ValuePointer>__l.__data_</ValuePointer>
+      </ArrayItems>
+      <ArrayItems Condition="__l.__is_long_==0">
+        <Size>__s.__size_</Size>
+        <ValuePointer>__s.__data_</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
   <Type Name="yasio::basic_string&lt;char32_t,*&gt;">
-    <AlternativeType Name="yasio::basic_string&lt;char32_t,*&gt;" />
-    <DisplayString>{_Myfirst,s32}</DisplayString>
-    <StringView>_Myfirst,s32</StringView>
+    <DisplayString Condition="__l.__is_long_==1">{__l.__data_,s32}</DisplayString>
+    <DisplayString Condition="__l.__is_long_==0">{__s.__data_,s32}</DisplayString>
+    <StringView Condition="__l.__is_long_==1">__l.__data_,s32</StringView>
+    <StringView Condition="__l.__is_long_==0">__s.__data_,s32</StringView>
     <Expand>
-      <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
-      <ArrayItems>
-        <Size>_Mylast - _Myfirst</Size>
-        <ValuePointer>_Myfirst</ValuePointer>
+      <Item Name="[size]" ExcludeView="simple" Condition="__l.__is_long_==1">__l.__size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="__l.__is_long_==1">__l.__cap_ * 2</Item>
+      <Item Name="[size]" ExcludeView="simple" Condition="__l.__is_long_==0">__s.__size_</Item>
+      <Item Name="[capacity]" ExcludeView="simple" Condition="__l.__is_long_==0">__min_cap - 1</Item>
+      <ArrayItems Condition="__l.__is_long_==1">
+        <Size>__l.__size_</Size>
+        <ValuePointer>__l.__data_</ValuePointer>
+      </ArrayItems>
+      <ArrayItems Condition="__l.__is_long_==0">
+        <Size>__s.__size_</Size>
+        <ValuePointer>__s.__data_</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>

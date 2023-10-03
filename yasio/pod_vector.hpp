@@ -269,8 +269,7 @@ public:
       else
       {
         const auto count = static_cast<size_type>(_Oldlast - _Oldfirst);
-        _Reallocate_exactly(count);
-        _Eos(count);
+        _Reallocate_exactly(count, count);
       }
     }
   }
@@ -279,8 +278,7 @@ public:
     if (this->capacity() < new_cap)
     {
       const auto count = this->size();
-      _Reallocate_exactly(new_cap);
-      _Eos(count);
+      _Reallocate_exactly(new_cap, count);
     }
   }
   template <typename _Operation>
@@ -339,6 +337,7 @@ public:
     _Myend = _Mylast = ptr + len;
   }
   pointer release_pointer() YASIO__NOEXCEPT { return detach_abi(); }
+
 private:
   void _Eos(size_t size) YASIO__NOEXCEPT { _Mylast = _Myfirst + size; }
   template <typename... _Valty>
@@ -352,9 +351,8 @@ private:
     const size_type _Newsize     = _Oldsize + 1;
     const size_type _Newcapacity = _Calculate_growth(_Newsize);
 
-    _Reallocate_exactly(_Newcapacity);
+    _Reallocate_exactly(_Newcapacity, _Newsize);
     const pointer _Newptr = construct_helper<value_type>::construct_at(_Myfirst + _Oldsize, std::forward<_Valty>(_Val)...);
-    _Eos(_Newsize);
     return _Newptr;
   }
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
@@ -377,6 +375,11 @@ private:
   {
     memcpy(this, &rhs, sizeof(rhs));
     memset(&rhs, 0, sizeof(rhs));
+  }
+  void _Reallocate_exactly(size_type new_cap, size_type new_size)
+  {
+    _Reallocate_exactly(new_cap);
+    _Eos(new_size);
   }
   void _Reallocate_exactly(size_type new_cap)
   {

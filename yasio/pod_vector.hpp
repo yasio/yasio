@@ -248,7 +248,7 @@ public:
     auto old_cap = this->capacity();
     if (old_cap < new_size)
       _Reallocate_exactly(new_size);
-    _Eos(new_size);
+    __set_last(new_size);
   }
   void expand(size_type count)
   {
@@ -256,7 +256,7 @@ public:
     auto old_cap        = this->capacity();
     if (old_cap < new_size)
       _Reallocate_exactly(_Calculate_growth(new_size));
-    _Eos(new_size);
+    __set_last(new_size);
   }
   void shrink_to_fit()
   { // reduce capacity to size, provide strong guarantee
@@ -285,7 +285,7 @@ public:
   void resize_and_overwrite(const size_type _New_size, _Operation _Op)
   {
     _Reallocate_exactly(_New_size);
-    _Eos(std::move(_Op)(_Myfirst, _New_size));
+    __set_last(std::move(_Op)(_Myfirst, _New_size));
   }
 #pragma endregion
   void resize(size_type new_size, const_reference val)
@@ -339,7 +339,7 @@ public:
   pointer release_pointer() YASIO__NOEXCEPT { return detach_abi(); }
 
 private:
-  void _Eos(size_t size) YASIO__NOEXCEPT { _Mylast = _Myfirst + size; }
+  void __set_last(size_t size) YASIO__NOEXCEPT { _Mylast = _Myfirst + size; }
   template <typename... _Valty>
   pointer _Emplace_back_reallocate(_Valty&&... _Val)
   {
@@ -379,7 +379,7 @@ private:
   void _Reallocate_exactly(size_type new_cap, size_type new_size)
   {
     _Reallocate_exactly(new_cap);
-    _Eos(new_size);
+    __set_last(new_size);
   }
   void _Reallocate_exactly(size_type new_cap)
   {

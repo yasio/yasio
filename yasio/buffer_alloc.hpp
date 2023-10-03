@@ -52,6 +52,7 @@ namespace yasio
 template <typename _Elem, enable_if_t<std::is_trivially_copyable<_Elem>::value, int> = 0>
 struct default_buffer_allocator {
   static _Elem* reallocate(void* block, size_t /*size*/, size_t new_size) { return static_cast<_Elem*>(::realloc(block, new_size * sizeof(_Elem))); }
+  static void deallocate(void* block, size_t /*size*/) { ::free(block); }
 };
 template <typename _Elem, enable_if_t<std::is_trivially_copyable<_Elem>::value, int> = 0>
 struct std_buffer_allocator {
@@ -68,9 +69,10 @@ struct std_buffer_allocator {
       if (new_block)
         memcpy(new_block, block, size);
     }
-    delete[] (_Elem*)(block);
+    delete[] (_Elem*)block;
     return (_Elem*)new_block;
   }
+  static void deallocate(void* block, size_t /*size*/) { delete[] (_Elem*)block; }
 };
 template <typename _Ty, bool = std::is_trivially_constructible<_Ty>::value /* trivially_constructible */>
 struct construct_helper {

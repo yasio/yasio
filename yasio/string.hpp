@@ -15,17 +15,21 @@ using default_string_allocater = default_buffer_allocator<_Elem>;
 template <typename _Elem, typename _SizeT = uint, typename _Alloc = default_string_allocater<_Elem>>
 class basic_string {
 public:
-  using pointer         = _Elem*;
-  using const_pointer   = const _Elem*;
-  using reference       = _Elem&;
-  using const_reference = const _Elem&;
-  using size_type       = _SizeT;
-  using value_type      = _Elem;
-  using iterator        = _Elem*; // transparent iterator
-  using const_iterator  = const _Elem*;
-  using allocator_type  = _Alloc;
-  using view_type       = cxx17::string_view<_Elem>;
+  using pointer            = _Elem*;
+  using const_pointer      = const _Elem*;
+  using reference          = _Elem&;
+  using const_reference    = const _Elem&;
+  using size_type          = _SizeT;
+  using value_type         = _Elem;
+  using iterator           = _Elem*; // transparent iterator
+  using const_iterator     = const _Elem*;
+  using allocator_type     = _Alloc;
+  using traits_type        = std::char_traits<_Elem>;
+  using view_type          = cxx17::basic_string_view<_Elem>;
+  using my_type            = basic_string<_Elem, _SizeT, _Alloc>;
+  static const size_t npos = -1;
   basic_string() {}
+  basic_string(nullptr_t) = delete;
   explicit basic_string(size_type count) { resize(static_cast<size_type>(count)); }
   basic_string(size_type count, const_reference val) { resize(static_cast<size_type>(count), val); }
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
@@ -35,9 +39,13 @@ public:
   }
   basic_string(const basic_string& rhs) { assign(rhs); };
   basic_string(basic_string&& rhs) YASIO__NOEXCEPT { assign(std::move(rhs)); }
-  basic_string(view_type rhs) { assign(rhs.begin(), rhs.end()); }
+  basic_string(view_type rhs) { assign(rhs); }
+  basic_string(const_pointer ntcs) { assign(ntcs); }
+  basic_string(const_pointer ntcs, size_type count) { assign(ntcs, ntcs + count); }
   /*basic_string(std::initializer_list<value_type> rhs) { _Assign_range(rhs.begin(), rhs.end()); }*/
   ~basic_string() { _Tidy(); }
+  operator view_type() const YASIO__NOEXCEPT { return this->view(); }
+  view_type view() const YASIO__NOEXCEPT { return view_type(this->c_str(), this->size()); }
   basic_string& operator=(const basic_string& rhs)
   {
     assign(rhs);
@@ -63,6 +71,9 @@ public:
   {
     _Assign_range(first, last);
   }
+  void assign(view_type rhs) { _Assign_range(rhs.begin(), rhs.end()); }
+  void assign(const_pointer ntcs) { this->assign(ntcs, static_cast<size_type>(traits_type::length(ntcs))); }
+  void assign(const_pointer ntcs, size_type count) { _Assign_range(ntcs, ntcs + count); }
   void assign(const basic_string& rhs) { _Assign_range(rhs.begin(), rhs.end()); }
   void assign(basic_string&& rhs) { _Assign_rv(std::move(rhs)); }
   void swap(basic_string& rhs) YASIO__NOEXCEPT
@@ -127,6 +138,7 @@ public:
     }
     return _Where;
   }
+  basic_string& append(view_type value) { return this->append(value.begin(), value.end()); }
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   basic_string& append(_Iter first, const _Iter last)
   {
@@ -189,19 +201,17 @@ public:
     return _Myfirst[_Mysize - 1];
   }
   static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return (std::numeric_limits<size_type>::max)() / sizeof(value_type); }
-  iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
-  iterator end() YASIO__NOEXCEPT { return _Myfirst + _Mysize; }
-  const_iterator begin() const YASIO__NOEXCEPT { return _Myfirst; }
-  const_iterator end() const YASIO__NOEXCEPT { return _Myfirst + _Mysize; }
-  pointer data() YASIO__NOEXCEPT { return _Myfirst; }
-  const_pointer data() const YASIO__NOEXCEPT { return _Myfirst; }
-  const_pointer c_str() const YASIO__NOEXCEPT { return _Myfirst ? _Myfirst : reinterpret_cast<const_pointer>(&_Myfirst); }
-  size_type capacity() const YASIO__NOEXCEPT { return _Myres; }
-  size_type size() const YASIO__NOEXCEPT { return _Mysize; }
-  size_type length() const YASIO__NOEXCEPT { return _Mysize; }
-  void clear() YASIO__NOEXCEPT { _Mysize = 0; }
-  bool empty() const YASIO__NOEXCEPT { return _Mysize == 0; }
 
+#pragma region Iterators
+  iterator begin() YASIO__NOEXCEPT { return this->data(); }
+  iterator end() YASIO__NOEXCEPT { return begin() + _Mysize; }
+  const_iterator begin() const YASIO__NOEXCEPT { return this->data(); }
+  const_iterator end() const YASIO__NOEXCEPT { return begin() + _Mysize; }
+#pragma endregion
+
+  pointer data() YASIO__NOEXCEPT { return _Myfirst ? _Myfirst : reinterpret_cast<const_pointer>(&_Myfirst); }
+  const_pointer data() const YASIO__NOEXCEPT { return _Myfirst ? _Myfirst : reinterpret_cast<const_pointer>(&_Myfirst); }
+  const_pointer c_str() const YASIO__NOEXCEPT { return this->data(); }
   const_reference operator[](size_type index) const { return this->at(index); }
   reference operator[](size_type index) { return this->at(index); }
   const_reference at(size_type index) const
@@ -214,7 +224,13 @@ public:
     _YASIO_VERIFY_RANGE(index < this->size(), "basic_string: out of range!");
     return _Myfirst[index];
   }
-#pragma region modify size and capacity
+
+#pragma region Capacity
+  size_type capacity() const YASIO__NOEXCEPT { return _Myres; }
+  size_type size() const YASIO__NOEXCEPT { return _Mysize; }
+  size_type length() const YASIO__NOEXCEPT { return _Mysize; }
+  void clear() YASIO__NOEXCEPT { _Mysize = 0; }
+  bool empty() const YASIO__NOEXCEPT { return _Mysize == 0; }
   void resize(size_type new_size)
   {
     if (this->capacity() < new_size)
@@ -272,13 +288,6 @@ public:
         std::fill_n(_Myfirst + old_size, count, val);
     }
   }
-  ptrdiff_t index_of(const_reference val) const YASIO__NOEXCEPT
-  {
-    auto it = std::find(begin(), end(), val);
-    if (it != this->end())
-      return std::distance(begin(), it);
-    return -1;
-  }
   void reset(size_type new_size)
   {
     resize(new_size);
@@ -307,6 +316,27 @@ public:
   }
   pointer release_pointer() YASIO__NOEXCEPT { return detach_abi(); }
 
+#pragma region find stubs, String operations
+  size_t find(value_type c, size_t pos = 0) const YASIO__NOEXCEPT { return view().find(c, pos); }
+  size_t find(view_type str, size_t pos = 0) const YASIO__NOEXCEPT { return view().find(str, pos); }
+
+  size_t rfind(value_type c, size_t pos = npos) const YASIO__NOEXCEPT { return view().rfind(c, pos); }
+  size_t rfind(view_type str, size_t pos = npos) const YASIO__NOEXCEPT { return view().rfind(str, pos); }
+
+  size_t find_first_of(value_type c, size_t pos = 0) const YASIO__NOEXCEPT { return view().find_first_of(c, pos); }
+  size_t find_first_of(view_type str, size_t pos = 0) const YASIO__NOEXCEPT { return view().find_first_of(str, pos); }
+
+  size_t find_last_of(value_type c, size_t pos = npos) const YASIO__NOEXCEPT { return view().find_last_of(c, pos); }
+  size_t find_last_of(view_type str, size_t pos = npos) const YASIO__NOEXCEPT { return view().find_last_of(str, pos); }
+
+  size_t find_first_not_of(value_type c, size_t pos = 0) const YASIO__NOEXCEPT { return view().find_first_not_of(c, pos); }
+  size_t find_first_not_of(view_type str, size_t pos = 0) const YASIO__NOEXCEPT { return view().find_first_not_of(str, pos); }
+
+  int compare(view_type str) const YASIO__NOEXCEPT { return view().compare(str); }
+
+  my_type substr(size_t pos = 0, size_t len = npos) const { return my_type{view().substr(pos, len)}; }
+#pragma endregion
+  
 private:
   void _Eos(size_type size) YASIO__NOEXCEPT
   {

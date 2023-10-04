@@ -35,7 +35,7 @@ SOFTWARE.
 //===----------------------------------------------------------------------===//
 
 /**
- * A alternative stl compatible string implementation, incomplete
+ * A alternative stl compatible string implementation, incomplete, draft, archived
  * refer to: https://github.com/llvm/llvm-project/blob/main/libcxx/include/string
  * Features:
  *   - LLVM libcxx string SSO layout
@@ -43,9 +43,6 @@ SOFTWARE.
  *   - transparent iterator
  *   - resize exactly
  *   - expand for growth strategy
- * TODO:
- *   - find stubs
- *   - unit tests or fuzz tests
  */
 
 #ifndef YASIO__STRING_HPP
@@ -65,6 +62,8 @@ SOFTWARE.
 
 namespace yasio
 {
+namespace sso_draft
+{
 template <typename _Elem, enable_if_t<std::is_integral<_Elem>::value && sizeof(_Elem) <= sizeof(char32_t), int> = 0>
 using default_string_allocater = default_buffer_allocator<_Elem>;
 
@@ -82,7 +81,7 @@ public:
   using allocator_type  = _Alloc;
   using view_type       = cxx17::basic_string_view<_Elem>;
   using _Traits         = std::char_traits<_Elem>;
-  basic_string() { __zero(); }
+  basic_string() {}
   explicit basic_string(size_type count) { resize(count); }
   explicit basic_string(view_type rhs) { assign(rhs); }
   basic_string(const _Elem* ntcs) { assign(ntcs); }
@@ -348,9 +347,15 @@ private:
     else
       new_cap = (std::max)(_Calculate_growth(size), size + 1);
 
-    auto _Newvec = _Alloc::reallocate(__get_long_pointer(), __get_long_cap(), new_cap);
+    pointer _Newvec = __is_long() ? _Alloc::reallocate(__get_long_pointer(), __get_long_cap(), new_cap) : _Alloc::reallocate(nullptr, 0, new_cap);
     if (_Newvec)
     {
+      if (!__is_long())
+      {
+        auto old_size = __get_short_size();
+        if (old_size)
+          std::copy_n(__get_short_pointer(), old_size, _Newvec);
+      }
       __set_long_pointer(_Newvec);
       __set_long_cap(new_cap - 1);
     }
@@ -469,5 +474,6 @@ using u8string = basic_string<char8_t>;
 using wstring   = basic_string<wchar_t>;
 using u16string = basic_string<char16_t>;
 using u32string = basic_string<char32_t>;
+} // namespace sso_draft
 } // namespace yasio
 #endif

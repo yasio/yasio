@@ -169,13 +169,6 @@ public:
     expand(1);
     back() = v;
   }
-  template <typename... _Valty>
-  inline value_type& emplace_back(_Valty&&... _Val)
-  {
-    if (_Mysize < _Myres)
-      return *construct_helper<value_type>::construct_at(_Myfirst + _Mysize++, std::forward<_Valty>(_Val)...);
-    return *_Emplace_back_reallocate(std::forward<_Valty>(_Val)...);
-  }
   iterator erase(iterator _Where)
   {
     const auto _Mylast = _Myfirst + _Mysize;
@@ -342,19 +335,6 @@ private:
   {
     _Mysize           = size;
     _Myfirst[_Mysize] = static_cast<value_type>(0);
-  }
-  template <typename... _Valty>
-  pointer _Emplace_back_reallocate(_Valty&&... _Val)
-  {
-    const auto _Oldsize = _Mysize;
-
-    if (_Oldsize == max_size())
-      throw std::length_error("basic_string too long");
-
-    const size_type _Newsize = _Oldsize + 1;
-    _Resize_reallocate<_Reallocation_policy::_At_least>(_Newsize);
-    const pointer _Newptr = construct_helper<value_type>::construct_at(_Myfirst + _Oldsize, std::forward<_Valty>(_Val)...);
-    return _Newptr;
   }
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   void _Assign_range(_Iter first, _Iter last)

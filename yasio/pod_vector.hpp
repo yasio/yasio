@@ -49,7 +49,8 @@ The pod_vector aka array_buffer concepts:
 
 namespace yasio
 {
-template <typename _Elem, typename _SizeT = unsigned int, typename _Alloc = default_buffer_allocator<_Elem>>
+using uint = unsigned int;
+template <typename _Elem, typename _SizeT = uint, typename _Alloc = default_buffer_allocator<_Elem>>
 class pod_vector {
 public:
   using pointer         = _Elem*;
@@ -62,8 +63,8 @@ public:
   using const_iterator  = const _Elem*;
   using allocator_type  = _Alloc;
   pod_vector() {}
-  explicit pod_vector(size_type count) { resize(count); }
-  pod_vector(size_type count, const_reference val) { resize(count, val); }
+  explicit pod_vector(size_type count) { resize(static_cast<size_type>(count)); }
+  pod_vector(size_type count, const_reference val) { resize(static_cast<size_type>(count), val); }
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>
   pod_vector(_Iter first, _Iter last)
   {

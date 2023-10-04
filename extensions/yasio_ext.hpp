@@ -31,22 +31,23 @@ inline void split_cb(cxx17::string_view s, char delim, _Fn&& func)
   split_cb(s.data(), s.length(), delim, std::move(func));
 }
 
-inline yasio::sbyte_buffer read_text_file(cxx17::string_view file_path) {
-    std::ifstream fin(file_path.data(), std::ios_base::binary);
-    if (fin.is_open())
+inline yasio::sbyte_buffer read_text_file(cxx17::string_view file_path)
+{
+  std::ifstream fin(file_path.data(), std::ios_base::binary);
+  if (fin.is_open())
+  {
+    fin.seekg(std::ios_base::end);
+    auto n = fin.tellg();
+    if (n > 0)
     {
-        fin.seekg(std::ios_base::end);
-        auto n = fin.tellg();
-        if (n > 0)
-        {
-            yasio::sbyte_buffer buffer{static_cast<size_t>(n) + 1, std::true_type{}};
-            fin.seekg(std::ios_base::beg);
-            fin.read(buffer.data(), n);
-            buffer[static_cast<size_t>(n)] = '\0';
-            return buffer;
-        }
+      yasio::sbyte_buffer buffer{static_cast<yasio::uint>(n) + 1};
+      fin.seekg(std::ios_base::beg);
+      fin.read(buffer.data(), n);
+      buffer[static_cast<yasio::uint>(n)] = '\0';
+      return buffer;
     }
-    return yasio::sbyte_buffer{};
+  }
+  return yasio::sbyte_buffer{};
 }
 
 } // namespace yasio_ext

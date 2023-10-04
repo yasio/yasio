@@ -281,12 +281,6 @@ public:
         std::fill_n(_Myfirst + old_size, count, val);
     }
   }
-  void reset(size_type new_size)
-  {
-    resize(new_size);
-    memset(_Myfirst, 0x0, size_bytes());
-  }
-  size_t size_bytes() const YASIO__NOEXCEPT { return this->size() * sizeof(value_type); }
   template <typename _Intty>
   pointer detach_abi(_Intty& len) YASIO__NOEXCEPT
   {

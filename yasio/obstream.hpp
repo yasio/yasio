@@ -166,7 +166,7 @@ public:
     ::memcpy(outs_->data() + offset, d, n);
     return n;
   }
-  void fill_bytes(size_t count, uint8_t val) { outs_->insert(outs_->end(), count, val); }
+  void fill_bytes(size_t count, uint8_t val) { outs_->insert(outs_->end(), static_cast<implementation_type::size_type>(count), val); }
   void reserve(size_t capacity) { outs_->reserve(static_cast<implementation_type::size_type>(capacity)); }
   void shrink_to_fit() { outs_->shrink_to_fit(); };
   void clear() { outs_->clear(); }

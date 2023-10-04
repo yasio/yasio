@@ -222,7 +222,7 @@ inline size_t __xxtraits_find_last_of(const typename _Traits::char_type* _Haysta
 }
 
 template <class _Traits>
-inline size_t _xxtraits_find_last_not_of(const typename _Traits::char_type* _Haystack,
+inline size_t __xxtraits_find_last_not_of(const typename _Traits::char_type* _Haystack,
                                          const size_t _Hay_size, const size_t _Start_at,
                                          const typename _Traits::char_type* _Needle,
                                          const size_t _Needle_size)
@@ -1070,7 +1070,7 @@ template <typename _CharT, typename _Traits>
 inline typename basic_string_view<_CharT, _Traits>::size_type
 basic_string_view<_CharT, _Traits>::find_last_not_of(basic_string_view v, size_type pos) const
 {
-  return _xxtraits_find_last_not_of(m_str, m_size, pos, v.m_str, v.m_size);
+  return __xxtraits_find_last_not_of<_Traits>(m_str, m_size, pos, v.m_str, v.m_size);
 }
 
 template <typename _CharT, typename _Traits>

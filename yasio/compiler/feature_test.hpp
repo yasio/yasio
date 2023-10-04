@@ -53,7 +53,7 @@ SOFTWARE.
 #else
 #  define YASIO__HAS_CXX11 0
 #  define YASIO__NS_INLINE
-#  define YASIO__CONSTEXPR const
+#  define YASIO__CONSTEXPR
 #  define YASIO__NOEXCEPT throw()
 #endif
 

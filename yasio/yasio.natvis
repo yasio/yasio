@@ -2,23 +2,23 @@
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="yasio::pod_vector&lt;*&gt;">
     <AlternativeType Name="std::vector&lt;*&gt;" />
-    <DisplayString>{{ size={_Mylast - _Myfirst} capacity={_Myend - _Myfirst} }}</DisplayString>
+    <DisplayString>{{ size={_Mysize} capacity={_Myres} }}</DisplayString>
     <Expand>
-      <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
+      <Item Name="[size]" ExcludeView="simple">_Mysize</Item>
+      <Item Name="[capacity]" ExcludeView="simple">_Myres</Item>
       <ArrayItems>
-        <Size>_Mylast - _Myfirst</Size>
+        <Size>_Mysize</Size>
         <ValuePointer>_Myfirst</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
   <Type Name="yasio::basic_byte_buffer&lt;*&gt;">
-    <DisplayString>{{ size={_Mylast - _Myfirst} {_Myfirst,[_Mylast - _Myfirst]s8} }}</DisplayString>
+    <DisplayString>{{ size={_Mysize} {_Myfirst,[_Mysize]s8} }}</DisplayString>
     <Expand>
-      <Item Name="[size]" ExcludeView="simple">_Mylast - _Myfirst</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_Myend - _Myfirst</Item>
+      <Item Name="[size]" ExcludeView="simple">_Mysize</Item>
+      <Item Name="[capacity]" ExcludeView="simple">_Myres</Item>
       <ArrayItems>
-        <Size>_Mylast - _Myfirst</Size>
+        <Size>_Mysize</Size>
         <ValuePointer>_Myfirst</ValuePointer>
       </ArrayItems>
     </Expand>

@@ -48,7 +48,6 @@ The pod_vector aka array_buffer concepts:
 
 namespace yasio
 {
-using uint = unsigned int;
 template <typename _Elem, typename _SizeT = uint, typename _Alloc = default_buffer_allocator<_Elem>>
 class pod_vector {
 public:

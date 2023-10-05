@@ -12,21 +12,21 @@ namespace yasio
 {
 template <typename _Elem, enable_if_t<std::is_integral<_Elem>::value && sizeof(_Elem) <= sizeof(char32_t), int> = 0>
 using default_string_allocater = default_buffer_allocator<_Elem>;
-template <typename _Elem, typename _SizeT = uint, typename _Alloc = default_string_allocater<_Elem>>
+template <typename _Elem, typename _Alloc = default_string_allocater<_Elem>>
 class basic_string {
 public:
   using pointer            = _Elem*;
   using const_pointer      = const _Elem*;
   using reference          = _Elem&;
   using const_reference    = const _Elem&;
-  using size_type          = _SizeT;
+  using size_type          = typename _Alloc::size_type;
   using value_type         = _Elem;
   using iterator           = _Elem*; // transparent iterator
   using const_iterator     = const _Elem*;
   using allocator_type     = _Alloc;
   using traits_type        = std::char_traits<_Elem>;
   using view_type          = cxx17::basic_string_view<_Elem>;
-  using my_type            = basic_string<_Elem, _SizeT, _Alloc>;
+  using my_type            = basic_string<_Elem, _Alloc>;
   static const size_t npos = -1;
   basic_string() {}
   basic_string(nullptr_t) = delete;
@@ -193,7 +193,7 @@ public:
     _YASIO_VERIFY_RANGE(!empty(), "basic_string: out of range!");
     return _Myfirst[_Mysize - 1];
   }
-  static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return (std::numeric_limits<size_type>::max)() / sizeof(value_type); }
+  static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return _Alloc::max_size(); }
 
 #pragma region Iterators
   iterator begin() YASIO__NOEXCEPT { return this->data(); }

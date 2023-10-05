@@ -24,7 +24,7 @@ public:
   using iterator           = _Elem*; // transparent iterator
   using const_iterator     = const _Elem*;
   using allocator_type     = _Alloc;
-  using traits_type        = std::char_traits<_Elem>;
+  using _Traits            = std::char_traits<_Elem>;
   using view_type          = cxx17::basic_string_view<_Elem>;
   using my_type            = basic_string<_Elem, _Alloc>;
   static const size_t npos = -1;
@@ -72,7 +72,7 @@ public:
     _Assign_range(first, last);
   }
   void assign(view_type rhs) { _Assign_range(rhs.begin(), rhs.end()); }
-  void assign(const_pointer ntcs) { this->assign(ntcs, static_cast<size_type>(traits_type::length(ntcs))); }
+  void assign(const_pointer ntcs) { this->assign(ntcs, static_cast<size_type>(_Traits::length(ntcs))); }
   void assign(const_pointer ntcs, size_type count) { _Assign_range(ntcs, ntcs + count); }
   void assign(const basic_string& rhs) { _Assign_range(rhs.begin(), rhs.end()); }
   void assign(basic_string&& rhs) { _Assign_rv(std::move(rhs)); }
@@ -322,8 +322,125 @@ public:
   int compare(view_type str) const YASIO__NOEXCEPT { return view().compare(str); }
 
   my_type substr(size_t pos = 0, size_t len = npos) const { return my_type{view().substr(pos, len)}; }
+
+  my_type& replace(const size_type _Off, size_type _Nx, view_type value) { return this->replace(_Off, _Nx, value.data(), value.length()); }
+  my_type& replace(const size_type _Off, size_type _Nx, const _Elem* const _Ptr, const size_type _Count)
+  {
+    //_Mypair._Myval2._Check_offset(_Off);
+    _YASIO_VERIFY_RANGE(_Off < _Mysize, "basic_string: out of range!");
+    _Nx = (std::min)(_Nx, _Mysize - _Off); //_Mypair._Myval2._Clamp_suffix_size(_Off, _Nx);
+    if (_Nx == _Count)
+    { // size doesn't change, so a single move does the trick
+      _Traits::move(_Myfirst + _Off, _Ptr, _Count);
+      return *this;
+    }
+
+    const size_type _Old_size    = _Mysize;
+    const size_type _Suffix_size = _Old_size - _Nx - _Off + 1;
+    if (_Count < _Nx)
+    { // suffix shifts backwards; we don't have to move anything out of the way
+      _Elem* const _Old_ptr   = _Myfirst;
+      _Elem* const _Insert_at = _Old_ptr + _Off;
+      _Traits::move(_Insert_at, _Ptr, _Count);
+      _Traits::move(_Insert_at + _Count, _Insert_at + _Nx, _Suffix_size);
+
+      const auto _New_size = _Old_size - (_Nx - _Count);
+      // _ASAN_STRING_MODIFY(*this, _Old_size, _New_size);
+      _Mysize = _New_size;
+      return *this;
+    }
+
+    const size_type _Growth = static_cast<size_type>(_Count - _Nx);
+
+    // checking for overlapping ranges is technically UB (considering string literals), so just always reallocate
+    // and copy to the new buffer if constant evaluated
+#if YASIO__HAS_CXX20
+    if (!std::is_constant_evaluated())
+#endif // _HAS_CXX20
+    {
+      if (_Growth <= _Myres - _Old_size)
+      { // growth fits
+        _Mysize                 = _Old_size + _Growth;
+        _Elem* const _Old_ptr   = _Myfirst;
+        _Elem* const _Insert_at = _Old_ptr + _Off;
+        _Elem* const _Suffix_at = _Insert_at + _Nx;
+
+        size_type _Ptr_shifted_after; // see rationale in insert
+        if (_Ptr + _Count <= _Insert_at || _Ptr > _Old_ptr + _Old_size)
+        {
+          _Ptr_shifted_after = _Count;
+        }
+        else if (_Suffix_at <= _Ptr)
+        {
+          _Ptr_shifted_after = 0;
+        }
+        else
+        {
+          _Ptr_shifted_after = static_cast<size_type>(_Suffix_at - _Ptr);
+        }
+
+        _Traits::move(_Suffix_at + _Growth, _Suffix_at, _Suffix_size);
+        // next case must be move, in case _Ptr begins before _Insert_at and contains part of the hole;
+        // this case doesn't occur in insert because the new content must come from outside the removed
+        // content there (because in insert there is no removed content)
+        _Traits::move(_Insert_at, _Ptr, _Ptr_shifted_after);
+        // the next case can be copy, because it comes from the chunk moved out of the way in the
+        // first move, and the hole we're filling can't alias the chunk we moved out of the way
+        _Traits::copy(_Insert_at + _Ptr_shifted_after, _Ptr + _Growth + _Ptr_shifted_after, _Count - _Ptr_shifted_after);
+        return *this;
+      }
+    }
+
+    return _Reallocate_grow_by(
+        _Growth,
+        [](_Elem* const _New_ptr, const size_type _Old_size, const size_type _Off, const size_type _Nx, const _Elem* const _Ptr, const size_type _Count) {
+          _Traits::copy(_New_ptr + _Off + _Count, _New_ptr + _Off + _Nx, _Old_size - _Nx - _Off + 1);
+          _Traits::copy(_New_ptr + _Off, _Ptr, _Count);
+        },
+        _Off, _Nx, _Ptr, _Count);
+  }
+  template <class _Fty, class... _ArgTys>
+  my_type& _Reallocate_grow_by(const size_type _Size_increase, _Fty _Fn, _ArgTys... _Args)
+  {
+    const size_type _Old_size = _Mysize;
+    if (max_size() - _Old_size < _Size_increase)
+      throw std::length_error("string too long");
+
+    const size_type _New_size     = _Old_size + _Size_increase;
+    const size_type _Old_capacity = _Myres;
+    const size_type _New_capacity = _Calculate_growth(_New_size);
+    pointer _New_ptr              = _Alloc::reallocate(_Myfirst, _Myres, _New_capacity + 1); // throws
+
+    _Mysize = _New_size;
+    _Myres  = _New_capacity;
+
+    const pointer _Old_ptr = _Myfirst;
+    _Fn(_New_ptr, _Old_size, _Args...);
+    _Myfirst = _New_ptr;
+
+    return *this;
+  }
 #pragma endregion
-  
+
+#pragma region replace all stubs, yasio string spec
+  size_t replace_all(view_type from, view_type to)
+  {
+    if (from == to)
+      return 0;
+    int hints              = 0;
+    size_t pos             = 0;
+    const size_t predicate = !from.empty() ? 0 : 1;
+    while ((pos = this->find(from, pos)) != my_type::npos)
+    {
+      (void)this->replace(pos, from.length(), to);
+      pos += (to.length() + predicate);
+      ++hints;
+    }
+    return hints;
+  }
+  void replace_all(value_type from, value_type to) { std::replace(this->begin(), this->end(), from, to); }
+#pragma endregion
+
 private:
   void _Eos(size_type size) YASIO__NOEXCEPT
   {

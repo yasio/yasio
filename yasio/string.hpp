@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ctype.h>
 #include <utility>
 #include <memory>
 #include <iterator>
@@ -325,10 +326,9 @@ public:
 
   my_type& replace(const size_type _Off, size_type _Nx, view_type value) { return this->replace(_Off, _Nx, value.data(), value.length()); }
   my_type& replace(const size_type _Off, size_type _Nx, const _Elem* const _Ptr, const size_type _Count)
-  {
-    //_Mypair._Myval2._Check_offset(_Off);
+  { // replace port from https://github.com/microsoft/stl
     _YASIO_VERIFY_RANGE(_Off < _Mysize, "basic_string: out of range!");
-    _Nx = (std::min)(_Nx, _Mysize - _Off); //_Mypair._Myval2._Clamp_suffix_size(_Off, _Nx);
+    _Nx = (std::min)(_Nx, _Mysize - _Off);
     if (_Nx == _Count)
     { // size doesn't change, so a single move does the trick
       _Traits::move(_Myfirst + _Off, _Ptr, _Count);
@@ -438,7 +438,20 @@ public:
     }
     return hints;
   }
-  void replace_all(value_type from, value_type to) { std::replace(this->begin(), this->end(), from, to); }
+  void replace_all(value_type from, value_type to) YASIO__NOEXCEPT { std::replace(this->begin(), this->end(), from, to); }
+#pragma endregion
+
+#pragma region to_lower, to_upper
+  my_type& to_lower() YASIO__NOEXCEPT
+  {
+    std::transform(this->begin(), this->end(), this->begin(), ::tolower);
+    return *this;
+  }
+  my_type& to_upper() YASIO__NOEXCEPT
+  {
+    std::transform(this->begin(), this->end(), this->begin(), ::toupper);
+    return *this;
+  }
 #pragma endregion
 
 private:

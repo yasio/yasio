@@ -51,11 +51,20 @@ SOFTWARE.
 namespace yasio
 {
 using uint = unsigned int;
-template <typename _Ty, enable_if_t<std::is_trivially_copyable<_Ty>::value, int> = 0>
-struct default_buffer_allocator {
-  using value_type = _Ty;
+template <typename _Alty>
+struct buffer_allocator_traits {
+  using value_type = typename _Alty::value_type;
   using size_type  = uint;
   static YASIO__CONSTEXPR size_type max_size() { return static_cast<size_type>(-1) / sizeof(value_type); }
+  static value_type* reallocate(void* block, size_t size, size_t new_size)
+  {
+    return static_cast<value_type*>(_Alty::reallocate(block, size, new_size * sizeof(value_type)));
+  }
+  static void deallocate(void* block, size_t size) { _Alty::deallocate(block, size); }
+};
+template <typename _Ty, enable_if_t<std::is_trivially_copyable<_Ty>::value, int> = 0>
+struct buffer_allocator {
+  using value_type = _Ty;
   static value_type* reallocate(void* block, size_t /*size*/, size_t new_size)
   {
     return static_cast<value_type*>(::realloc(block, new_size * sizeof(value_type)));
@@ -65,8 +74,6 @@ struct default_buffer_allocator {
 template <typename _Ty, enable_if_t<std::is_trivially_copyable<_Ty>::value, int> = 0>
 struct std_buffer_allocator {
   using value_type = _Ty;
-  using size_type  = uint;
-  static YASIO__CONSTEXPR size_type max_size() { return static_cast<size_type>(-1) / sizeof(value_type); }
   static value_type* reallocate(void* block, size_t size, size_t new_size)
   {
     if (!block)

@@ -45,9 +45,14 @@ struct is_iterator : public std::integral_constant<bool, !std::is_integral<_Iter
 template <bool _Test, class _Ty = void>
 using enable_if_t = typename ::std::enable_if<_Test, _Ty>::type;
 
-template <typename _Elem>
+template <typename _Ty>
 struct is_byte_type {
-  static const bool value = std::is_same<_Elem, char>::value || std::is_same<_Elem, unsigned char>::value;
+  static const bool value = std::is_same<_Ty, char>::value || std::is_same<_Ty, unsigned char>::value;
+};
+
+template <typename _Ty>
+struct is_char_type {
+  static const bool value = std::is_integral<_Ty>::value && sizeof(_Ty) <= sizeof(char32_t);
 };
 
 } // namespace yasio

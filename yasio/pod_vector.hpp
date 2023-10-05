@@ -48,14 +48,15 @@ The pod_vector aka array_buffer concepts:
 
 namespace yasio
 {
-template <typename _Ty, typename _Alloc = default_buffer_allocator<_Ty>>
+template <typename _Ty, typename _Alloc = buffer_allocator<_Ty>>
 class pod_vector {
 public:
   using pointer         = _Ty*;
   using const_pointer   = const _Ty*;
   using reference       = _Ty&;
   using const_reference = const _Ty&;
-  using size_type       = typename _Alloc::size_type;
+  using _Alloc_traits   = buffer_allocator_traits<_Alloc>;
+  using size_type       = typename _Alloc_traits::size_type;
   using value_type      = _Ty;
   using iterator        = _Ty*; // transparent iterator
   using const_iterator  = const _Ty*;
@@ -222,7 +223,7 @@ public:
     _YASIO_VERIFY_RANGE(!empty(), "pod_vector: out of range!");
     return _Myfirst[_Mysize - 1];
   }
-  static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return _Alloc::max_size(); }
+  static YASIO__CONSTEXPR size_type max_size() YASIO__NOEXCEPT { return _Alloc_traits::max_size(); }
   iterator begin() YASIO__NOEXCEPT { return _Myfirst; }
   iterator end() YASIO__NOEXCEPT { return _Myfirst + _Mysize; }
   const_iterator begin() const YASIO__NOEXCEPT { return _Myfirst; }
@@ -428,7 +429,7 @@ private:
       _Myfirst = nullptr;
       _Mysize = _Myres = 0;
     }
- }
+  }
 
   pointer _Myfirst  = nullptr;
   size_type _Mysize = 0;

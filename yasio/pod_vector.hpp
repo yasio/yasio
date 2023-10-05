@@ -436,7 +436,7 @@ private:
   size_type _Myres  = 0;
 };
 
-template <typename _Ty, typename _Alloc = default_buffer_allocator<_Ty>>
+template <typename _Ty, typename _Alloc = buffer_allocator<_Ty>>
 using array_buffer = pod_vector<_Ty, _Alloc>;
 } // namespace yasio
 #endif

@@ -436,7 +436,22 @@ private:
   size_type _Myres  = 0;
 };
 
+#pragma region c++20 like std::erase
+template <typename _Ty, typename _Alloc>
+void erase(pod_vector<_Ty, _Alloc>& cont, const _Ty& value)
+{
+  cont.erase(std::remove(cont.begin(), cont.end(), value), cont.end());
+}
+template <typename _Ty, typename _Alloc, typename _Pr>
+void erase_if(pod_vector<_Ty, _Alloc>& cont, _Pr pred)
+{
+  cont.erase(std::remove_if(cont.begin(), cont.end(), pred), cont.end());
+}
+#pragma endregion
+
+// alias: array_buffer 
 template <typename _Ty, typename _Alloc = buffer_allocator<_Ty>>
 using array_buffer = pod_vector<_Ty, _Alloc>;
+
 } // namespace yasio
 #endif

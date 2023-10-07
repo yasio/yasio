@@ -25,18 +25,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef YASIO__BYTE_BUFFER_HPP
-#define YASIO__BYTE_BUFFER_HPP
-#include "yasio/pod_vector.hpp"
+
+#pragma once
+#include <type_traits>
 
 namespace yasio
 {
+template <typename _Ty>
+struct aligned_storage_size {
+  static const size_t value = sizeof(typename std::aligned_storage<sizeof(_Ty)>::type);
+};
+template <typename _Ty>
+struct is_aligned_storage {
+  static const bool value = aligned_storage_size<_Ty>::value == sizeof(_Ty);
+};
+template <class _Iter>
+struct is_iterator : public std::integral_constant<bool, !std::is_integral<_Iter>::value> {};
 
-template <typename _Ty, typename _Alloc = buffer_allocator<_Ty>, enable_if_t<is_byte_type<_Ty>::value, int> = 0>
-using basic_byte_buffer = array_buffer<_Ty, _Alloc>;
+template <bool _Test, class _Ty = void>
+using enable_if_t = typename ::std::enable_if<_Test, _Ty>::type;
 
-using sbyte_buffer = basic_byte_buffer<char>;
-using byte_buffer  = basic_byte_buffer<unsigned char>;
+template <typename _Ty>
+struct is_byte_type {
+  static const bool value = std::is_same<_Ty, char>::value || std::is_same<_Ty, unsigned char>::value;
+};
+
+template <typename _Ty>
+struct is_char_type {
+  static const bool value = std::is_integral<_Ty>::value && sizeof(_Ty) <= sizeof(char32_t);
+};
 
 } // namespace yasio
-#endif

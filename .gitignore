@@ -20,12 +20,11 @@ ignored/*.*
 *.suo
 /.vs
 /.xs
-/build
 /build*
 /.vscode
 /**/.DS_Store
 /site
 /_site
 *.xsxproj
-/out
+/out*
 /tools

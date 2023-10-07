@@ -1,16 +1,6 @@
 name: windows
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/windows-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -53,7 +43,11 @@ jobs:
       with: 
         arch: ${{ env.BUILD_ARCH }}
         uwp: 'false'
-
+    # github installed 15.0.7 not working on msvc14.37
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v1
+      with:
+        version: "16.0"
     - name: Build
       shell: pwsh
       run: |
@@ -71,7 +65,7 @@ jobs:
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
     - name: Build
-      run: .\build.ps1 -p win32 -cc 'mingw-gcc'
+      run: .\build.ps1 -p win32 -cc 'gcc'
   winuwp:
     runs-on: windows-latest
     strategy:

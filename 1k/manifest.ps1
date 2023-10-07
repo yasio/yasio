@@ -1,5 +1,4 @@
-# The default manifest in main script build1k.ps1
-
+# Default manifest in main script build1k.ps1
 # $manifest = @{
 #     msvc         = '143+';
 #     ndk          = 'r23c+';
@@ -14,5 +13,7 @@
 
 # overwrite ndk requirement
 $manifest['ndk'] = 'r16b'
+$manifest['glslcc'] = $null
+$manifest['nuget'] = $null
 
 # [void]$manifest

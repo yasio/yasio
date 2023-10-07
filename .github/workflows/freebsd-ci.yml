@@ -1,16 +1,6 @@
 name: freebsd
 
-on:
-  push:
-    paths:
-      - yasio/**/*
-      - thirdparty/**/*
-      - tests/**/*
-      - examples/**/*
-      - CMakeLists.txt
-      - .github/workflows/freebsd-ci.yml
-      - ci/**/*
-      - extensions/**/*
+on: push
 
 jobs:
   build:

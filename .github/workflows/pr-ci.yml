@@ -55,7 +55,7 @@ jobs:
           msystem: mingw64
           install: mingw-w64-x86_64-toolchain
       - name: Build
-        run: .\build.ps1 -p win32 -cc 'mingw-gcc'
+        run: .\build.ps1 -p win32 -cc 'gcc'
   linux:
     runs-on: ubuntu-latest
     env:

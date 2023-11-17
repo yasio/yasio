@@ -396,12 +396,14 @@ function find_prog($name, $path = $null, $mode = 'ONLY', $cmd = $null, $params =
         $env:PATH = "$path$envPathSep$storedPATH"
     }
 
+    $verbose = $cmd -eq 'cmake' -and $IsMacOS
+
     $found_rets = $null # prog_path,prog_version
     $prog_path = $null
     if ($cmd_info) {
         $prog_path = $cmd_info.Source
         $prog_item = Get-Item $prog_path
-        if ($prog_item.Target -and !$b1k.isfile($prog_item.Target)) { # symlink target missing
+        if ($prog_item.Target -and !(Test-Path $prog_item.Target)) { # symlink target missing
             $prog_path = $null
         }
     }

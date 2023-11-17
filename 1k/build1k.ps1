@@ -1140,6 +1140,7 @@ validHostAndToolchain
 
 $null = setup_glslcc
 
+cmake --version
 $cmake_prog = setup_cmake
 
 if($TARGET_OS -eq 'win32' -or $TARGET_OS -eq 'winuwp') {

@@ -559,9 +559,9 @@ function setup_ninja() {
 }
 
 # setup cmake
-function setup_cmake([switch]$Force = $false) {
+function setup_cmake($skipOS = $false) {
     $cmake_prog, $cmake_ver = find_prog -name 'cmake'
-    if ($cmake_prog -and !$Force) {
+    if ($cmake_prog -and (!$skipOS -or $cmake_prog.IndexOf($myRoot) -ne -1)) {
         return $cmake_prog
     }
 

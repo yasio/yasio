@@ -78,14 +78,14 @@ cmake --build build --config Debug
 - Support options
   - `-p`: build target os: `win32`,`winuwp`,`linux`,`android`,`osx`,`ios`,`tvos`,`watchos`
   - `-a`: build arch: `x86`,`x64`,`arm`,`arm64`
-  - `-cc`: c/c++ compiler toolchain: `clang`, `msvc`, `gcc`, `mingw-gcc` or empty use default compiler avaiable on current OS;  
-    For msvc can be `msvc120`, `mvsc140`, `mvsc160`
+  - `-cc`: c/c++ compiler toolchain: `clang`, `msvc`, `gcc` or empty use default compiler avaiable on current OS;  
+    For msvc can be `msvc-120`, `mvsc-140`, `mvsc-160`
   - `-xc`: additional cmake options: i.e.  `-xc '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'`
 
 - Support build target matrix
   | OS        |   Build targets     |  Build toolchain     |
   |----------|----------------------|----------------------|
-  | Windows  |  win32,winuwp        | msvc,clang,mingw-gcc |
+  | Windows  |  win32,winuwp        | msvc,clang |
   | Linux    | linux,android        | gcc,clang            |        
   | macOS    | osx,ios,tvos,watchos | clang                |
 

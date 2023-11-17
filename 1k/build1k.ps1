@@ -396,20 +396,21 @@ function find_prog($name, $path = $null, $mode = 'ONLY', $cmd = $null, $params =
         $env:PATH = "$path$envPathSep$storedPATH"
     }
 
-    $verbose = $cmd -eq 'cmake' -and $IsMacOS
-
     $found_rets = $null # prog_path,prog_version
     $prog_path = $null
     if ($cmd_info) {
         $prog_path = $cmd_info.Source
         $prog_item = Get-Item $prog_path
-	if ($verbose) {Write-Host "cmake_prog=$prog_path, link=$($prog_item.Target)"}
-        if ($prog_item.Target -and !(Test-Path $prog_item.Target)) { # symlink target missing
-            $prog_path = $null
+        if ($prog_item.Target) { # follow symlink checks
+            $symlink_target = $prog_item.Target
+            if (![IO.Path]::IsPathRooted($symlink_target)) {
+                $symlink_target = Join-Path $(Split-Path $prog_path -Parent) $symlink_target
+            }
+            if (!(Test-Path $symlink_target)) {
+                $prog_path = $null
+                $b1k.println("warning: the symlink target $prog_path ==> $symlink_target not is missing")
+            }
         }
-    }
-    else {
-        if ($verbose) {Write-Host "macos get command cmake fail"}
     }
     if ($prog_path) {
         $verStr = $(. $cmd @params 2>$null) | Select-Object -First 1

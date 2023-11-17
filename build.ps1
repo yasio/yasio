@@ -111,8 +111,6 @@ for ($i = 0; $i -lt $nopts; ++$i) {
     }
 }
 
-$env:b1k_override_target = $true
-
 if (!$bci) {
     $optimize_flag = @('Debug', 'Release')[$is_ci]
     $options.xb += '--config', $optimize_flag
@@ -125,6 +123,11 @@ if ($proj_dir) {
 }
 $prefix = Join-Path $b1k_root 'tools/external'
 $b1k_args += '-prefix', "$prefix"
+
+# android c++stl
+if($options.p -eq 'android' -and $options.xc.IndexOf('-DANDROID_STL') -eq -1) {
+    $options.xc += '-DANDROID_STL=c++_shared'
+}
 
 # remove arg we don't want forward to
 $options.Remove('d')

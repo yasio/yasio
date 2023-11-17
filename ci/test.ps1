@@ -5,6 +5,8 @@ param(
     [string]$target
 )
 
+# (Resolve-Path $PSScriptRoot/../build.ps1)
+
 # run tests
 $testTable = @{
     'win32' = {

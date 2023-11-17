@@ -30,7 +30,7 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        .\build.ps1 -p win32 -a $env:BUILD_ARCH
+        .\tools\ci.ps1 -p win32 -a $env:BUILD_ARCH
   clang:
     runs-on: windows-latest
  
@@ -51,7 +51,7 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        .\build.ps1 -p win32 -cc clang
+        .\tools\ci.ps1 -p win32 -cc clang
   mingw:
     runs-on: windows-latest
 
@@ -65,7 +65,7 @@ jobs:
         msystem: mingw64
         install: mingw-w64-x86_64-toolchain
     - name: Build
-      run: .\build.ps1 -p win32 -cc 'gcc'
+      run: .\tools\ci.ps1 -p win32 -cc 'gcc'
   winuwp:
     runs-on: windows-latest
     strategy:
@@ -88,4 +88,4 @@ jobs:
 
     - name: Build
       shell: pwsh
-      run: .\build.ps1 -p winuwp -a $env:BUILD_ARCH
+      run: .\tools\ci.ps1 -p winuwp -a $env:BUILD_ARCH

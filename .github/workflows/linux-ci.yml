@@ -23,4 +23,4 @@ jobs:
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
       run: |
-        ./build.ps1 -p linux
+        ./tools/ci.ps1 -p linux

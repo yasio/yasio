@@ -1383,9 +1383,10 @@ if (!$setupOnly) {
     }
 
     $env:buildResult = ConvertTo-Json @{
-        buildDir   = $BUILD_DIR;
-        targetOS   = $TARGET_OS;
-        compilerID = $TOOLCHAIN_NAME;
+        buildDir   = $BUILD_DIR
+        targetOS   = $TARGET_OS
+        isHostTarget = $is_host_target
+        compilerID = $TOOLCHAIN_NAME
     }
 
     Set-Location $stored_cwd

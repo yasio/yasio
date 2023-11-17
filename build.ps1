@@ -79,7 +79,6 @@ else {
 }
 
 $source_proj_dir = if($options.d) { $options.d } else { $workDir }
-$is_ci = $env:GITHUB_ACTIONS -eq 'true'
 
 # start construct full cmd line
 $b1k_script = (Resolve-Path -Path "$b1k_root/1k/build1k.ps1").Path
@@ -112,7 +111,7 @@ for ($i = 0; $i -lt $nopts; ++$i) {
 }
 
 if (!$bci) {
-    $optimize_flag = @('Debug', 'Release')[$is_ci]
+    $optimize_flag = 'Release'
     $options.xb += '--config', $optimize_flag
 } else {
     $optimize_flag = $options.xb[$bci]
@@ -154,14 +153,4 @@ if (!$configOnly) {
 }
 else {
     $b1k.pause('Generate done')
-}
-
-if (!$configOnly) {
-    $buildResult = ConvertFrom-Json $env:buildResult
-
-    if ($is_ci -and !$buildResult.compilerID.StartsWith('gcc')) { # run tests
-        $targetOS = $buildResult.targetOS
-        $buildDir = $buildResult.buildDir
-        & .\ci\test.ps1 -dir $buildDir -target $targetOS
-    }
 }

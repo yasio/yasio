@@ -53,5 +53,5 @@ jobs:
         env:
           ACTIVE_VERSIONS: ${{ github.event.inputs.versions }}
         shell: pwsh
-        run: ./ci/docs.ps1 "$env:ACTIVE_VERSIONS"
+        run: ./tools/docs.ps1 "$env:ACTIVE_VERSIONS"
       

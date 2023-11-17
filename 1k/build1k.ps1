@@ -403,9 +403,13 @@ function find_prog($name, $path = $null, $mode = 'ONLY', $cmd = $null, $params =
     if ($cmd_info) {
         $prog_path = $cmd_info.Source
         $prog_item = Get-Item $prog_path
+	if ($verbose) {Write-Host "cmake_prog=$prog_path, link=$($prog_item.Target)"}
         if ($prog_item.Target -and !(Test-Path $prog_item.Target)) { # symlink target missing
             $prog_path = $null
         }
+    }
+    else {
+        if ($verbose) {Write-Host "macos get command cmake fail"}
     }
     if ($prog_path) {
         $verStr = $(. $cmd @params 2>$null) | Select-Object -First 1

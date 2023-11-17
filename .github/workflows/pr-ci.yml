@@ -114,7 +114,7 @@ jobs:
         shell: pwsh
         run: ./tools/ci.ps1 -p $env:BUILD_TARGET -a arm64
   freebsd:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:

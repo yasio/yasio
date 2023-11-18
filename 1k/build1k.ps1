@@ -150,6 +150,7 @@ class build1k {
         }
     }
 
+    # Get full path without exist check
     [string] realpath($path) {
         return $Global:ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
     }
@@ -352,7 +353,7 @@ function validate_cmd_fs($source, $root) {
     $target = $fileinfo.Target
     if (![IO.Path]::IsPathRooted($target)) {
         # convert symlink target to fullpath
-        $target = Join-Path $(Split-Path $source -Parent) $target
+        $target = $b1k.realpath($(Join-Path $(Split-Path $source -Parent) $target))
     }
     if (!$b1k.isfile($target)) {
         $b1k.println("warning: the symlink target $root ==> $target is missing")

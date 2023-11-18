@@ -37,11 +37,11 @@ inline yasio::string read_text_file(cxx17::string_view file_path)
   if (fin.is_open())
   {
     fin.seekg(std::ios_base::end);
-    auto n = static_cast<yasio::uint>(fin.tellg());
+    auto n = static_cast<size_t>(fin.tellg());
     if (n > 0)
     {
       yasio::string ret;
-      ret.resize_and_overwrite(n, [&fin](char* out, yasio::uint outlen) {
+      ret.resize_and_overwrite(n, [&fin](char* out, size_t outlen) {
         fin.seekg(std::ios_base::beg);
         fin.read(out, outlen);
         return outlen;

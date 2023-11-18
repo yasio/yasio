@@ -24,7 +24,7 @@ jobs:
         with: 
           arch: ${{ env.BUILD_ARCH }}
       - name: Build
-        run: .\build.ps1 -p win32 -a $env:BUILD_ARCH
+        run: .\tools\ci.ps1 -p win32 -a $env:BUILD_ARCH
   winuwp:
     runs-on: windows-latest
     strategy:
@@ -43,7 +43,7 @@ jobs:
         arch: ${{ env.BUILD_ARCH }}
         uwp: 'true'
     - name: Build
-      run: .\build.ps1 -p winuwp -a $env:BUILD_ARCH
+      run: .\tools\ci.ps1 -p winuwp -a $env:BUILD_ARCH
   win32-mingw:
     runs-on: windows-latest
     steps:
@@ -55,7 +55,7 @@ jobs:
           msystem: mingw64
           install: mingw-w64-x86_64-toolchain
       - name: Build
-        run: .\build.ps1 -p win32 -cc 'gcc'
+        run: .\tools\ci.ps1 -p win32 -cc 'gcc'
   linux:
     runs-on: ubuntu-latest
     env:
@@ -66,7 +66,7 @@ jobs:
           submodules: 'recursive'
       - name: Build
         shell: pwsh
-        run: ./build.ps1
+        run: ./tools/ci.ps1
   android:
     runs-on: windows-latest
     strategy:
@@ -84,7 +84,7 @@ jobs:
           submodules: 'recursive'
       - name: Build
         shell: pwsh
-        run: ./build.ps1 -p android -a $env:BUILD_ARCH
+        run: ./tools/ci.ps1 -p android -a $env:BUILD_ARCH
   osx:
     runs-on: macos-latest
     env:
@@ -95,7 +95,7 @@ jobs:
           submodules: 'recursive'
       - name: Build
         shell: pwsh
-        run: ./build.ps1
+        run: ./tools/ci.ps1
   ios:
     runs-on: macos-latest
     strategy:
@@ -112,9 +112,9 @@ jobs:
           submodules: 'recursive'
       - name: Build
         shell: pwsh
-        run: ./build.ps1 -p $env:BUILD_TARGET -a arm64
+        run: ./tools/ci.ps1 -p $env:BUILD_TARGET -a arm64
   freebsd:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:

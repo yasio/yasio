@@ -1,3 +1,9 @@
+yasio-4.1.1
+
+  1. Fix unpack incorrect when YOPT_C_UNPACK_STRIP > 0
+  2. Improve pod_vector aka array_buffer, now `yasio::byte_buffer` just a alias of it
+  
+  
 yasio-4.1.0
 
   1. Change yasio-ni API `yasio_create_service` prototype to: `YASIO_NI_API void* yasio_create_service(int channel_count, void(YASIO_INTEROP_DECL* event_cb)(yasio_event_data* event), void* user);`

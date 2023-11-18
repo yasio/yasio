@@ -27,4 +27,4 @@ jobs:
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       shell: pwsh
-      run: ./build.ps1 -p $env:BUILD_TARGET -a arm64
+      run: ./tools/ci.ps1 -p $env:BUILD_TARGET -a arm64

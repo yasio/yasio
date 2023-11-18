@@ -79,7 +79,6 @@ else {
 }
 
 $source_proj_dir = if($options.d) { $options.d } else { $workDir }
-$is_ci = $env:GITHUB_ACTIONS -eq 'true'
 
 # start construct full cmd line
 $b1k_script = (Resolve-Path -Path "$b1k_root/1k/build1k.ps1").Path
@@ -111,10 +110,8 @@ for ($i = 0; $i -lt $nopts; ++$i) {
     }
 }
 
-$env:b1k_override_target = $true
-
 if (!$bci) {
-    $optimize_flag = @('Debug', 'Release')[$is_ci]
+    $optimize_flag = 'Release'
     $options.xb += '--config', $optimize_flag
 } else {
     $optimize_flag = $options.xb[$bci]
@@ -125,6 +122,11 @@ if ($proj_dir) {
 }
 $prefix = Join-Path $b1k_root 'tools/external'
 $b1k_args += '-prefix', "$prefix"
+
+# android c++stl
+if($options.p -eq 'android' -and $options.xc.IndexOf('-DANDROID_STL') -eq -1) {
+    $options.xc += '-DANDROID_STL=c++_shared'
+}
 
 # remove arg we don't want forward to
 $options.Remove('d')
@@ -151,14 +153,4 @@ if (!$configOnly) {
 }
 else {
     $b1k.pause('Generate done')
-}
-
-if (!$configOnly) {
-    $buildResult = ConvertFrom-Json $env:buildResult
-
-    if ($is_ci -and !$buildResult.compilerID.StartsWith('gcc')) { # run tests
-        $targetOS = $buildResult.targetOS
-        $buildDir = $buildResult.buildDir
-        & .\ci\test.ps1 -dir $buildDir -target $targetOS
-    }
 }

@@ -85,7 +85,7 @@ else {
 
 $exeSuffix = if ($HOST_OS -eq 0) { '.exe' } else { '' }
 
-$cmake_generator = $null
+$Script:cmake_generator = $null
 
 class build1k {
     [void] println($msg) {
@@ -998,12 +998,12 @@ function preprocess_win([string[]]$inputOptions) {
                 '140' = 'Visual Studio 14 2015'
                 "150" = 'Visual Studio 15 2017';
             }
-            $cmake_generator = $gens[$TOOLCHAIN_VER]
-            if (!$cmake_generator) {
+            $Script:cmake_generator = $gens[$TOOLCHAIN_VER]
+            if (!$Script:cmake_generator) {
                 throw "Unsupported toolchain: $TOOLCHAIN"
             }
             if ($options.a -eq "x64") {
-                $cmake_generator += ' Win64'
+                $Script:cmake_generator += ' Win64'
             }
         }
         
@@ -1018,11 +1018,11 @@ function preprocess_win([string[]]$inputOptions) {
     }
     elseif ($TOOLCHAIN_NAME -eq 'clang') {
         $outputOptions += '-DCMAKE_C_COMPILER=clang', '-DCMAKE_CXX_COMPILER=clang++'
-        $cmake_generator = 'Ninja Multi-Config'
+        $Script:cmake_generator = 'Ninja Multi-Config'
     }
     else {
         # Generate mingw
-        $cmake_generator = 'Ninja Multi-Config'
+        $Script:cmake_generator = 'Ninja Multi-Config'
     }
     return $outputOptions
 }
@@ -1417,6 +1417,7 @@ if (!$setupOnly) {
     $env:buildResult = ConvertTo-Json @{
         buildDir     = $BUILD_DIR
         targetOS     = $TARGET_OS
+        hostArch     = $hostArch
         isHostTarget = $is_host_target
         compilerID   = $TOOLCHAIN_NAME
     }

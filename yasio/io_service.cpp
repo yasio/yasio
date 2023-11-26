@@ -1689,10 +1689,18 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
     io_watcher_.mod_event(connection->native_handle(), socket_event::read, 0);
   if (yasio__testbits(ctx->properties_, YCM_TCP))
   {
+
     // apply tcp keepalive options
     if (options_.tcp_keepalive_.onoff)
       connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);
   }
+#if !defined(_WIN32) // windows: UDP will ignore sndbuf, other: ensure sndbuf >= max_ip_mtu(65535)
+  if (yasio__testbits(ctx->properties_, YCM_UDP))
+  {
+    constexpr int max_ip_mtu = static_cast<int>((std::numeric_limits<uint16_t>::max)());
+    transport->socket_->set_optval(SOL_SOCKET, SO_SNDBUF, max_ip_mtu);
+  }
+#endif
 
   active_transport(transport);
 }

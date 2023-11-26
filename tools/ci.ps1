@@ -15,7 +15,7 @@ if (!$configOnly) {
         $testTable = @{
             'win32' = {
                 $buildDir = $args[0]
-                if ($buildResult.compilerID -eq 'msvc') {
+                if ($buildResult.compilerID -ne 'gcc') {
                     Write-Host "run icmptest on windows ..."
                     & "$buildDir\tests\icmp\Release\icmptest.exe" $env:PING_HOST
                     Write-Host "run mtu on windows ..."

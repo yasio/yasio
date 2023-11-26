@@ -41,27 +41,48 @@ int main()
   do
   {
     nret = s.sendto(data.data(), data.size(), endpoints[0]);
+    error          = xxsocket::get_last_errno();
+    os_sndbuf_size = s.get_optval<int>(SOL_SOCKET, SO_SNDBUF);
     if (nret == data.size())
     {
-      printf("[%d] send data succeed, %zu bytes transferred\n", tries + 1, data.size());
+      printf("[%d] send data succeed, sndbuf=%d, %zu bytes transferred\n", tries + 1, os_sndbuf_size, data.size());
+#if !defined(__linux__)
+      s.set_optval(SOL_SOCKET, SO_SNDBUF, 9216);
+#else
+      s.set_optval(SOL_SOCKET, SO_SNDBUF, 9216 / 2);
+#endif
+      ++tries;
     }
     else
     {
-      error = xxsocket::get_last_errno();
-      printf("[%d] sendto data %zu fail, sndbuf=%d: ec: %d, detail: %s\n", tries + 1, data.size(), s.get_optval<int>(SOL_SOCKET, SO_SNDBUF), error, xxsocket::strerror(error));
+      printf("[%d] sendto data %zu fail, sndbuf=%d: ec: %d, detail: %s\n", tries + 1, data.size(), s.get_optval<int>(SOL_SOCKET, SO_SNDBUF), error,
+             xxsocket::strerror(error));
       ++tries;
-      if (tries == 1) {
-        if(os_sndbuf_size <= data.size()) {
-            s.set_optval(SOL_SOCKET, SO_SNDBUF, os_sndbuf_size + 28);
+      if (tries == 1)
+      {
+        if (os_sndbuf_size <= data.size())
+        {
+          s.set_optval(SOL_SOCKET, SO_SNDBUF, os_sndbuf_size + 28);
         }
-        else {
-            printf("linux kernel sndbuf %d, greater than data size: %zu\n", os_sndbuf_size, data.size());
+        else
+        {
+          printf("linux kernel sndbuf %d, greater than data size: %zu\n", os_sndbuf_size, data.size());
         }
-      } else if(tries == 2) {
+      }
+      else if (tries == 2)
+      {
         data.resize(data.size() - 28); // decrease ip and udp header size
       }
+      else if (tries == 3)
+      {
+        data.resize(os_sndbuf_size);
+      }
+      else if (tries == 4)
+      {
+        data.resize(os_sndbuf_size - 28);
+      }
     }
-  } while (nret < 0 && error == EMSGSIZE && tries <= 2);
+  } while (tries < 5);
 
   return 0;
 }

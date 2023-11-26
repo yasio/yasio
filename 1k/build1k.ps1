@@ -131,19 +131,24 @@ class build1k {
     }
 
     [void] pause($msg) {
-        if ($Global:IsWin) {
+        $executed_from_explorer = $false
+        do {
+            if (!$Global:IsWin) { break }
             $myProcess = [System.Diagnostics.Process]::GetCurrentProcess()
+            if ($myProcess.ProcessName.EndsWith('_ise')) { break }
             $parentProcess = $myProcess.Parent
             if (!$parentProcess) {
                 $myPID = $myProcess.Id
                 $instance = Get-WmiObject Win32_Process -Filter "ProcessId = $myPID"
-                $parentProcess = Get-Process -Id $instance.ParentProcessID
+                $parentProcess = Get-Process -Id $instance.ParentProcessID -ErrorAction SilentlyContinue
+                if (!$parentProcess) { break }
             }
-            $parentProcessName = $parentProcess.ProcessName
-            if ($parentProcessName -like "explorer") {
-                $this.print("$msg, press any key to continue . . .")
-                cmd /c pause 1>$null
-            }
+            
+            $executed_from_explorer = ($parentProcess.ProcessName -like "explorer")
+        } while ($false)
+        if ($executed_from_explorer) {
+            $this.print("$msg, press any key to continue . . .")
+            cmd /c pause 1>$null
         }
         else {
             $this.println($msg)
@@ -1418,6 +1423,7 @@ if (!$setupOnly) {
         buildDir     = $BUILD_DIR
         targetOS     = $TARGET_OS
         hostArch     = $hostArch
+        isHostArch   = $TARGET_ARCH -eq $hostArch
         isHostTarget = $is_host_target
         compilerID   = $TOOLCHAIN_NAME
     }

@@ -624,7 +624,8 @@ void io_transport_udp::set_primitives()
   {
     this->write_cb_ = [this](const void* data, int len, const ip::endpoint* destination, int& error) {
       assert(destination);
-      int n = socket_->sendto(data, len, *destination);
+      constexpr int max_udp_data_mtu = static_cast<int>((std::numeric_limits<uint16_t>::max)() - (sizeof(yasio::ip::ip_hdr_st) + sizeof(yasio::ip::udp_hdr_st)));
+      int n = socket_->sendto(data, (std::min)(len, max_udp_data_mtu), *destination);
       if (n < 0)
       {
         error = xxsocket::get_last_errno();
@@ -1689,7 +1690,6 @@ void io_service::handle_connect_succeed(transport_handle_t transport)
     io_watcher_.mod_event(connection->native_handle(), socket_event::read, 0);
   if (yasio__testbits(ctx->properties_, YCM_TCP))
   {
-
     // apply tcp keepalive options
     if (options_.tcp_keepalive_.onoff)
       connection->set_keepalive(options_.tcp_keepalive_.onoff, options_.tcp_keepalive_.idle, options_.tcp_keepalive_.interval, options_.tcp_keepalive_.probs);

@@ -7,7 +7,7 @@ int main()
   printf("Testing udp mtu ...\n");
 
   xxsocket s;
-  s.popen(AF_INET, SOCK_DGRAM, 0);
+  s.open(AF_INET, SOCK_DGRAM, 0);
 
   std::vector<ip::endpoint> endpoints;
   xxsocket::resolve(endpoints, "github.com", 51122);
@@ -71,6 +71,7 @@ int main()
       }
       else if (tries == 2)
       {
+        s.set_optval(SOL_SOCKET, SO_SNDBUF, 65535);
         data.resize(data.size() - 28); // decrease ip and udp header size
       }
       else if (tries == 3)

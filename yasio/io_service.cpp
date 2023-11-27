@@ -145,6 +145,7 @@ namespace
 static const highp_time_t yasio__max_wait_usec = 5 * 60 * 1000 * 1000LL;
 // the max transport alloc size
 static const size_t yasio__max_tsize = (std::max)({sizeof(io_transport_tcp), sizeof(io_transport_udp), sizeof(io_transport_ssl), sizeof(io_transport_kcp)});
+constexpr int yasio_max_udp_data_mtu = static_cast<int>((std::numeric_limits<uint16_t>::max)() - (sizeof(yasio::ip::ip_hdr_st) + sizeof(yasio::ip::udp_hdr_st)));
 } // namespace
 struct yasio__global_state {
   enum
@@ -476,12 +477,24 @@ void io_transport::complete_op(io_send_op* op, int error)
 }
 void io_transport::set_primitives()
 {
-  this->write_cb_ = [this](const void* data, int len, const ip::endpoint*, int& error) {
-    int n = socket_->send(data, len, YASIO_MSG_FLAG);
-    if (n < 0)
-      error = xxsocket::get_last_errno();
-    return n;
-  };
+  if (yasio__testbits(ctx_->properties_, YCM_TCP))
+  {
+    this->write_cb_ = [this](const void* data, int len, const ip::endpoint*, int& error) {
+      int n = socket_->send(data, len, YASIO_MSG_FLAG);
+      if (n < 0)
+        error = xxsocket::get_last_errno();
+      return n;
+    };
+  }
+  else // UDP
+  {
+    this->write_cb_ = [this](const void* data, int len, const ip::endpoint*, int& error) {
+      int n = socket_->send(data, (std::min)(len, yasio_max_udp_data_mtu), YASIO_MSG_FLAG);
+      if (n < 0)
+        error = xxsocket::get_last_errno();
+      return n;
+    };
+  }
   this->read_cb_ = [this](void* data, int len, int revent, int& error) {
     if (revent)
     {
@@ -624,8 +637,7 @@ void io_transport_udp::set_primitives()
   {
     this->write_cb_ = [this](const void* data, int len, const ip::endpoint* destination, int& error) {
       assert(destination);
-      constexpr int max_udp_data_mtu = static_cast<int>((std::numeric_limits<uint16_t>::max)() - (sizeof(yasio::ip::ip_hdr_st) + sizeof(yasio::ip::udp_hdr_st)));
-      int n = socket_->sendto(data, (std::min)(len, max_udp_data_mtu), *destination);
+      int n = socket_->sendto(data, (std::min)(len, yasio_max_udp_data_mtu), *destination);
       if (n < 0)
       {
         error = xxsocket::get_last_errno();

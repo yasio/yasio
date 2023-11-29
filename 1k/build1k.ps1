@@ -228,11 +228,6 @@ foreach ($arg in $args) {
     }
 }
 
-$manifest_file = Join-Path $myRoot 'manifest.ps1'
-if ($b1k.isfile($manifest_file)) {
-    . $manifest_file
-}
-
 # translate xtool args
 if ($options.xc.GetType() -eq [string]) {
     $options.xc = $options.xc.Split(' ')
@@ -314,6 +309,12 @@ if (!$b1k.isdir($external_prefix)) {
 }
 
 $b1k.println("proj_dir=$((Get-Location).Path), external_prefix=$external_prefix")
+
+# load toolset manifest
+$manifest_file = Join-Path $myRoot 'manifest.ps1'
+if ($b1k.isfile($manifest_file)) {
+    . $manifest_file
+}
 
 # accept x.y.z-rc1
 function version_eq($ver1, $ver2) {

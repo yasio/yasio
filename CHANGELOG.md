@@ -1,3 +1,8 @@
+yasio-4.1.2
+
+  1. Slice sending udp data to mtu (65507) avoid send fail
+  
+  
 yasio-4.1.1
 
   1. Fix unpack incorrect when YOPT_C_UNPACK_STRIP > 0

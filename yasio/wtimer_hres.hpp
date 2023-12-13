@@ -38,7 +38,10 @@ SOFTWARE.
 
 namespace yasio
 {
-struct whres_timer {
+/**
+* CLASS wtimer_hres: The windows timer high-resolution setup helper
+*/
+struct wtimer_hres {
   using NTSTATUS = LONG;
   /**
    * @param res the timer resolution in 100-ns units: 100-ns * 10000 = 1ms
@@ -46,19 +49,20 @@ struct whres_timer {
    *   - timeapi timeBeginPeriod max resolution is 1ms
    *   - ZwSetTimerResolution max resolution is 0.5ms aka 100-ns * 5000
    */
-  whres_timer(ULONG timer_res = 10000)
+  static const ULONG _1ms_den = 10000;
+  wtimer_hres(ULONG timer_res = _1ms_den)
   {
 #  if defined(YASIO__USE_TIMEAPI)
     TIMECAPS tc;
     if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
     {
-      timer_res_ = (std::min)((std::max)(tc.wPeriodMin, static_cast<UINT>(timer_res / 10000)), tc.wPeriodMax);
+      timer_res_ = yasio::clamp(static_cast<UINT>(timer_res / _1ms_den), tc.wPeriodMin, tc.wPeriodMax);
       timeBeginPeriod(timer_res_);
     }
 #  else
     do
     {
-      HMODULE hNtDll = GetModuleHandle(L"ntdll");
+      HMODULE hNtDll = GetModuleHandleW(L"ntdll");
       if (!hNtDll)
         break;
 
@@ -78,7 +82,7 @@ struct whres_timer {
     } while (false);
 #  endif
   }
-  ~whres_timer()
+  ~wtimer_hres()
   {
 #  if defined(YASIO__USE_TIMEAPI)
     if (timer_res_ != 0)

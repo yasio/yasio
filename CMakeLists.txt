@@ -456,6 +456,7 @@ macro (yasio_config_lib_options target_name)
     yasio_config_pred(${target_name} YASIO_DISABLE_POLL)
     yasio_config_pred(${target_name} YASIO_DISABLE_EPOLL)
     yasio_config_pred(${target_name} YASIO_DISABLE_KQUEUE)
+    yasio_config_pred(${target_name} YASIO_NT_XHRES_TIMER)
     yasio_config_target_outdir(${yasio_target_name})
 endmacro()
 

@@ -44,7 +44,7 @@ SOFTWARE.
 #  include "yasio/ssl.hpp"
 #endif
 
-#include "yasio/whres_timer.hpp"
+#include "yasio/wtimer_hres.hpp"
 
 #if defined(YASIO_ENABLE_KCP)
 #  include "kcp/ikcp.h"
@@ -142,7 +142,8 @@ namespace
 static const highp_time_t yasio__max_wait_usec = 5 * 60 * 1000 * 1000LL;
 // the max transport alloc size
 static const size_t yasio__max_tsize = (std::max)({sizeof(io_transport_tcp), sizeof(io_transport_udp), sizeof(io_transport_ssl), sizeof(io_transport_kcp)});
-static const int yasio_max_udp_data_mtu = static_cast<int>((std::numeric_limits<uint16_t>::max)() - (sizeof(yasio::ip::ip_hdr_st) + sizeof(yasio::ip::udp_hdr_st)));
+static const int yasio_max_udp_data_mtu =
+    static_cast<int>((std::numeric_limits<uint16_t>::max)() - (sizeof(yasio::ip::ip_hdr_st) + sizeof(yasio::ip::udp_hdr_st)));
 } // namespace
 struct yasio__global_state {
   enum
@@ -954,7 +955,7 @@ size_t io_service::dispatch(int max_count)
   return this->events_.count();
 }
 
-#if YASIO__HAS_WIN32_TIMEAPI
+#if defined(_WIN32)
 template <typename _Ty>
 struct minimal_optional {
   template <typename... _Args>
@@ -980,9 +981,9 @@ void io_service::run()
   yasio::set_thread_name("yasio");
 
 #if defined(_WIN32)
-  minimal_optional<yasio::whres_timer> __hres_timer_man;
+  minimal_optional<yasio::wtimer_hres> __timer_hres_man;
   if (options_.hres_timer_)
-    __hres_timer_man.emplace();
+    __timer_hres_man.emplace();
 #endif
 
 #if defined(YASIO_SSL_BACKEND)

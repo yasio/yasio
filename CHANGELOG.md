@@ -1,3 +1,10 @@
+yasio-4.1.3
+
+  1. Enable hres timer for Windows Universal Apps
+  2. Add `YASIO_NT_XHRES_TIMER` to control whether forcing use undocumented NT API to setup high-resolution timer
+  
+
+
 yasio-4.1.2
 
   1. Slice sending udp data to mtu (65507) avoid send fail

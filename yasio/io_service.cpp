@@ -44,10 +44,7 @@ SOFTWARE.
 #  include "yasio/ssl.hpp"
 #endif
 
-#if YASIO__HAS_WIN32_TIMEAPI
-#  include <timeapi.h>
-#  pragma comment(lib, "Winmm.lib")
-#endif
+#include "yasio/whres_timer.hpp"
 
 #if defined(YASIO_ENABLE_KCP)
 #  include "kcp/ikcp.h"
@@ -977,32 +974,13 @@ struct minimal_optional {
   uint8_t unintialized_memory_[sizeof(_Ty)];
   bool has_value_ = false;
 };
-struct auto_enable_hres_timer {
-  auto_enable_hres_timer()
-  {
-    UINT TARGET_RESOLUTION = 1; // 1 millisecond target resolution
-    TIMECAPS tc;
-    UINT wTimerRes = 0;
-    if (TIMERR_NOERROR == timeGetDevCaps(&tc, sizeof(TIMECAPS)))
-    {
-      wTimerRes = (std::min)((std::max)(tc.wPeriodMin, TARGET_RESOLUTION), tc.wPeriodMax);
-      timeBeginPeriod(wTimerRes);
-    }
-  }
-  ~auto_enable_hres_timer()
-  {
-    if (wTimerRes != 0)
-      timeEndPeriod(wTimerRes);
-  }
-  UINT wTimerRes = 0;
-};
 #endif
 void io_service::run()
 {
   yasio::set_thread_name("yasio");
 
-#if YASIO__HAS_WIN32_TIMEAPI
-  minimal_optional<auto_enable_hres_timer> __hres_timer_man;
+#if defined(_WIN32)
+  minimal_optional<yasio::whres_timer> __hres_timer_man;
   if (options_.hres_timer_)
     __hres_timer_man.emplace();
 #endif
@@ -2266,7 +2244,7 @@ void io_service::set_option_internal(int opt, va_list ap) // lgtm [cpp/poorly-do
     case YOPT_S_FORWARD_PACKET:
       options_.forward_packet_ = !!va_arg(ap, int);
       break;
-#if YASIO__HAS_WIN32_TIMEAPI
+#if defined(_WIN32)
     case YOPT_S_HRES_TIMER:
       options_.hres_timer_ = !!va_arg(ap, int);
       break;

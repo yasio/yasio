@@ -62,26 +62,26 @@ function translate_array_opt($opt) {
 }
 
 if ($options.xb.Count -ne 0) {
-    $options.xb = translate_array_opt $options.xb
+    [array]$options.xb = translate_array_opt $options.xb
 }
 if ($options.xc.Count -ne 0) {
-    $options.xc = translate_array_opt $options.xc
+    [array]$options.xc = translate_array_opt $options.xc
 }
 
 $myRoot = $PSScriptRoot
 $workDir = $(Get-Location).Path
 
-if(Test-Path "$myRoot/1k/build1k.ps1" -PathType Leaf) {
+if(Test-Path "$myRoot/1k/build.ps1" -PathType Leaf) {
     $b1k_root = $myRoot
 }
 else {
-    throw "The build1k.ps1 not found"
+    throw "The 1k/build.ps1 not found"
 }
 
 $source_proj_dir = if($options.d) { $options.d } else { $workDir }
 
 # start construct full cmd line
-$b1k_script = (Resolve-Path -Path "$b1k_root/1k/build1k.ps1").Path
+$b1k_script = (Resolve-Path -Path "$b1k_root/1k/build.ps1").Path
 $b1k_args = @()
 
 $search_paths = if ($source_proj_dir -ne $myRoot) { @($source_proj_dir, $myRoot) } else { @($source_proj_dir) }

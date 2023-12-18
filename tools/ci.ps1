@@ -2,7 +2,7 @@
 
 $build_script = (Resolve-Path $PSScriptRoot/../build.ps1).Path
 
-. $build_script @args -xc '-DYASIO_ENABLE_NI=ON'
+. $build_script @args -xc '-DYASIO_ENABLE_NI=ON' -xb '--verbose'
 
 if (!$configOnly) {
     Write-Host "buildResult: $env:buildResult"

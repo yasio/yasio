@@ -31,7 +31,7 @@ cmake_dependent_option(YASIO_BUILD_LUA_EXAMPLE
 option(YASIO_ENABLE_EXT_HTTP "Build yasio http extension" ON)
 option(YASIO_ENABLE_LUA "Build yasio with lua support" OFF)
 option(YASIO_ENABLE_AXLUA "Build yasio with axmol-lua support" OFF)
-option(YAISO_ENABLE_NI "Build yasio with native interface for interop" OFF)
+option(YASIO_ENABLE_NI "Build yasio with native interface for interop" OFF)
 option(YASIO_ENABLE_KCP "Enable kcp support" OFF)
 option(YASIO_NO_DEPS "Build yasio without deps" OFF)
 
@@ -203,7 +203,7 @@ if (YASIO_ENABLE_KCP)
     ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
   )
 endif()
-if (YAISO_ENABLE_NI)
+if (YASIO_ENABLE_NI)
   set(YASIO_CORE ${YASIO_CORE} 
     yasio/bindings/yasio_ni.cpp
   )

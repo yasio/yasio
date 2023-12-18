@@ -2,6 +2,7 @@ yasio-4.1.3
 
   1. Enable hres timer for Windows Universal Apps
   2. Add `YASIO_NT_XHRES_TIMER` to control whether forcing use undocumented NT API to setup high-resolution timer
+  3. Fix `yasio_ni` compile error
   
 
 

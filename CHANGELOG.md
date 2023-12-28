@@ -1,3 +1,8 @@
+yasio-4.1.4
+
+  1. Fix destroy of object_pool with mutex not thread-safe
+  
+  
 yasio-4.1.3
 
   1. Enable hres timer for Windows Universal Apps

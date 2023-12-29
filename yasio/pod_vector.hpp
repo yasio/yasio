@@ -124,7 +124,6 @@ public:
         auto count = static_cast<size_type>(std::distance(first, last));
         if (insertion_off >= 0)
         {
-          auto old_size = mlast - _Myfirst;
           expand(count);
           pos          = _Myfirst + insertion_off;
           mlast      = _Myfirst + _Mysize;

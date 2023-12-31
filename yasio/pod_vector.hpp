@@ -187,7 +187,6 @@ public:
     {
       if (insertion_off >= 0)
       {
-        const auto old_size = _Mysize;
         expand(1);
         pos          = _Myfirst + insertion_off;
         mlast        = _Myfirst + _Mysize;

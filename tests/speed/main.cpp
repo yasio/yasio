@@ -52,6 +52,10 @@ Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 #  error "please define SPEEDTEST_TRANSFER_PROTOCOL to one of SPEEDTEST_PROTO_TCP, SPEEDTEST_PROTO_UDP, SPEEDTEST_PROTO_KCP"
 #endif
 
+// speedtest kcp mtu to max mss of udp (65535 - 20(ip_hdr) - 8(udp_hdr))
+#define SPEEDTEST_KCP_MTU 65507
+#define SPEEDTEST_KCP_MSS (SPEEDTEST_KCP_MTU - 24)
+
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 namespace speedtest
 {
@@ -140,8 +144,8 @@ static void print_speed_detail(double interval, double time_elapsed)
 void setup_kcp_transfer(transport_handle_t handle)
 {
   auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
-  ::ikcp_setmtu(kcp_handle, YASIO_SZ(63, k));
-  ::ikcp_wndsize(kcp_handle, 4096, 8192);
+  ::ikcp_setmtu(kcp_handle, SPEEDTEST_KCP_MTU);
+  ::ikcp_wndsize(kcp_handle, 256, 1024);
 }
 #endif
 
@@ -184,10 +188,12 @@ void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream
 
 void start_sender(io_service& service)
 {
-  static const int PER_PACKET_SIZE = YASIO_SZ(62, k);
+  static const int PER_PACKET_SIZE = SPEEDTEST_KCP_MSS;
   static char buffer[PER_PACKET_SIZE];
   static obstream obs;
   obs.write_bytes(buffer, PER_PACKET_SIZE);
+
+  service.set_option(YOPT_S_HRES_TIMER, 1);
 
 #if YASIO_SSL_BACKEND != 0
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
@@ -253,6 +259,7 @@ void start_receiver(io_service& service)
   static double last_print_time = 0;
   service.set_option(YOPT_S_FORWARD_PACKET, 1);
   service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
+  service.set_option(YOPT_S_HRES_TIMER, 1);
 #if YASIO_SSL_BACKEND != 0
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
 #endif
@@ -277,7 +284,7 @@ void start_receiver(io_service& service)
             if (ec != 0)
               YASIO_LOG("set_option failed, ec=%d, detail:%s", ec, xxsocket::strerror(ec));
           }
-#if defined(YAISO_ENABLE_KCP)
+#if defined(YASIO_ENABLE_KCP)
           if (SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP)
             setup_kcp_transfer(event->transport());
 #endif

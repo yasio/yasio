@@ -6,7 +6,7 @@
 # 
 
 ### 1kdist url
-find_program(PWSH_COMMAND NAMES pwsh powershell NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH NO_CMAKE_FIND_ROOT_PATH REQUIRED)
+find_program(PWSH_COMMAND NAMES pwsh powershell NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH NO_CMAKE_FIND_ROOT_PATH)
 
 function(_1kfetch_init)
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fetchurl.ps1
@@ -71,4 +71,6 @@ function(_1klink src dest)
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fsync.ps1 -s "${_srcDir}" -d "${_dstDir}" -l 1)
 endfunction()
 
-_1kfetch_init()
+if(PWSH_COMMAND)
+    _1kfetch_init()
+endif()

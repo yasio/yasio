@@ -1,15 +1,10 @@
-# Default manifest in main script build1k.ps1
-# $manifest = @{
-#     msvc         = '143+';
-#     ndk          = 'r23c+';
-#     xcode        = '13.0.0~14.2.0'; # range
-#     clang        = '15.0.0+';
-#     gcc          = '9.0.0+';
-#     cmake        = '3.26.4+';
-#     ninja        = '1.11.1+';
-#     jdk          = '11.0.19+';
-#     cmdlinetools = '7.0+'; # android cmdlinetools
-# }
+# Default manifest, refer in 1k/build.ps1
+# For maintaining axmol, halx99 contributed some PRs to https://gitlab.kitware.com/cmake
+# 3.27.0: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/8319
+# 3.28.0: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/8632
+#         https://gitlab.kitware.com/cmake/cmake/-/merge_requests/9008
+# 3.28.0: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/9014
+#
 
 # overwrite ndk requirement
 $manifest['ndk'] = 'r16b'

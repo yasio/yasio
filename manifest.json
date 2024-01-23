@@ -1,0 +1,14 @@
+{
+  "versions": {
+    "1kdist": "71"
+  },
+  "mirrors": {
+    "github": {
+      "1kdist": "simdsoft/1kiss/releases/download"
+    },
+    "gitee":
+    {
+      "1kdist": "simdsoft/1kiss/releases/download"
+    }    
+  }
+}

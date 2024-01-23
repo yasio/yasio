@@ -18,6 +18,11 @@ cmake_policy(SET CMP0048 NEW)
 set(yasio_target_name yasio)
 project(${yasio_target_name})
 
+set(_1kfetch_cache_dir "${CMAKE_CURRENT_LIST_DIR}/cache" CACHE STRING "" FORCE)
+set(_1kfetch_manifest "${CMAKE_CURRENT_LIST_DIR}/manifest.json" CACHE STRING "" FORCE)
+
+include(1k/platform.cmake)
+include(1k/fetch.cmake)
 include(CMakeDependentOption)
 
 cmake_dependent_option(YASIO_BUILD_TESTS

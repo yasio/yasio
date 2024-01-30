@@ -519,8 +519,9 @@ io_transport_ssl::io_transport_ssl(io_channel* ctx, xxsocket_ptr&& sock) : io_tr
 int io_transport_ssl::do_ssl_handshake(int& error)
 {
   int ret = yssl_do_handshake(ssl_, error);
-  if (ret == 0) // handshake succeed
-  {             // because we invoke handshake in call_read, so we emit EWOULDBLOCK to mark ssl transport status `ok`
+  // handshake succeed, because we invoke handshake in call_read, so we emit EWOULDBLOCK to mark ssl transport status `ok`
+  if (ret == 0 && !error)
+  {
     this->state_   = io_base::state::OPENED;
     this->read_cb_ = [this](void* data, int len, int revent, int& error) {
       if (revent)
@@ -543,7 +544,7 @@ int io_transport_ssl::do_ssl_handshake(int& error)
     else
     { // handshake failed, print reason
       char buf[256] = {0};
-      YASIO_KLOGE("[index: %d] do_ssl_handshake fail with %s", ctx_->index_, yssl_strerror(ssl_, ret, buf, sizeof(buf)));
+      YASIO_KLOGE("[index: %d] do_ssl_handshake fail with: %s", ctx_->index_, yssl_strerror(ssl_, ret, buf, sizeof(buf)));
       if (yasio__testbits(ctx_->properties_, YCM_CLIENT))
       {
         YASIO_KLOGE("[index: %d] connect server %s failed, ec=%d, detail:%s", ctx_->index_, ctx_->format_destination().c_str(), error,
@@ -2138,8 +2139,6 @@ const char* io_service::strerror(int error)
 {
   switch (error)
   {
-    case 0:
-      return "No error.";
     case yasio::errc::resolve_host_failed:
       return "Resolve host failed!";
     case yasio::errc::no_available_address:

@@ -696,7 +696,6 @@ void io_transport_kcp::set_primitives()
     {
       ::ikcp_flush(kcp_);
       expire_time_ = 0;
-      get_service().wakeup();
     }
     else if (nsent == -2)
       error = EWOULDBLOCK;

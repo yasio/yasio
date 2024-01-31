@@ -1664,9 +1664,11 @@ void io_service::active_transport(transport_handle_t t)
   if (yasio__testbits(ctx->properties_, YCM_KCP))
   {
     ++this->nsched_;
+#if defined(YASIO_ENABLE_KCP)
     auto interval = static_cast<io_transport_kcp*>(t)->interval();
     if (this->sched_freq_ > interval)
       this->sched_freq_ = interval;
+#endif
   }
   if (!yasio__testbits(ctx->properties_, YCM_SSL))
   {

@@ -219,13 +219,13 @@ public:
 
   explicit operator bool() const { return this->af() != AF_UNSPEC; }
 
-  friend inline bool operator<(const endpoint& lhs, const endpoint& rhs)
+  friend bool operator<(const endpoint& lhs, const endpoint& rhs)
   { // apply operator < to operands
     if (lhs.af() == AF_INET)
       return (static_cast<uint64_t>(lhs.in4_.sin_addr.s_addr) + lhs.in4_.sin_port) < (static_cast<uint64_t>(rhs.in4_.sin_addr.s_addr) + rhs.in4_.sin_port);
     return ::memcmp(&lhs, &rhs, sizeof(rhs)) < 0;
   }
-  friend inline bool operator==(const endpoint& lhs, const endpoint& rhs)
+  friend bool operator==(const endpoint& lhs, const endpoint& rhs)
   { // apply operator == to operands
     return !(lhs < rhs) && !(rhs < lhs);
   }

@@ -240,7 +240,6 @@ void start_sender(io_service& service)
   service.open(0, speedtest::SENDER_CHANNEL_KIND);
 }
 
-static io_service* s_sender;
 void start_receiver(io_service& service)
 {
   static long long time_start   = yasio::highp_clock<>();
@@ -292,14 +291,24 @@ void start_receiver(io_service& service)
   service.open(0, speedtest::RECEIVER_CHANNEL_KIND);
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
-  io_hostent receiver_ep(SPEEDTEST_SOCKET_NAME, speedtest::RECEIVER_PORT), sender_ep(SPEEDTEST_SOCKET_NAME, speedtest::SENDER_PORT);
+  io_hostent receiver_ep(SPEEDTEST_LISTEN_NAME, speedtest::RECEIVER_PORT), sender_ep(SPEEDTEST_SOCKET_NAME, speedtest::SENDER_PORT);
   io_service receiver(&receiver_ep, 1), sender(&sender_ep, 1);
 
-  s_sender = &sender;
-  start_receiver(receiver);
-  start_sender(sender);
+  const char* mode = "host";
+  if (argc > 1)
+    mode = argv[1];
+
+  if (cxx20::ic::iequals(mode, "server"))
+    start_receiver(receiver);
+  else if (cxx20::ic::iequals(mode, "client"))
+    start_sender(sender);
+  else
+  {
+    start_receiver(receiver);
+    start_sender(sender);
+  }
 
   static long long time_start = yasio::highp_clock<>();
   while (true)

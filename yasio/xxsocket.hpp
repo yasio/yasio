@@ -218,6 +218,17 @@ public:
 
   explicit operator bool() const { return this->af() != AF_UNSPEC; }
 
+  friend inline bool operator<(const endpoint& lhs, const endpoint& rhs)
+  { // apply operator < to operands
+    if (lhs.af() == AF_INET)
+      return (static_cast<uint64_t>(lhs.in4_.sin_addr.s_addr) + lhs.in4_.sin_port) < (static_cast<uint64_t>(rhs.in4_.sin_addr.s_addr) + rhs.in4_.sin_port);
+    return ::memcmp(&lhs, &rhs, sizeof(rhs)) < 0;
+  }
+  friend inline bool operator==(const endpoint& lhs, const endpoint& rhs)
+  { // apply operator == to operands
+    return !(lhs < rhs) && !(rhs < lhs);
+  }
+
   endpoint& operator=(const endpoint& rhs) { return as_is(rhs); }
   endpoint& as_is(const endpoint& rhs)
   {
@@ -1135,23 +1146,6 @@ using namespace yasio::inet;
 #endif
 } // namespace yasio
 
-#if defined(YASIO__HAS_CXX11)
-namespace std
-{ // VS2013 the operator must be at namespace std
-#endif
-inline bool operator<(const yasio::inet::ip::endpoint& lhs, const yasio::inet::ip::endpoint& rhs)
-{ // apply operator < to operands
-  if (lhs.af() == AF_INET)
-    return (static_cast<uint64_t>(lhs.in4_.sin_addr.s_addr) + lhs.in4_.sin_port) < (static_cast<uint64_t>(rhs.in4_.sin_addr.s_addr) + rhs.in4_.sin_port);
-  return ::memcmp(&lhs, &rhs, sizeof(rhs)) < 0;
-}
-inline bool operator==(const yasio::inet::ip::endpoint& lhs, const yasio::inet::ip::endpoint& rhs)
-{ // apply operator == to operands
-  return !(lhs < rhs) && !(rhs < lhs);
-}
-#if defined(YASIO__HAS_CXX11)
-} // namespace std
-#endif
 #if defined(YASIO_HEADER_ONLY)
 #  include "yasio/xxsocket.cpp" // lgtm [cpp/include-non-header]
 #endif

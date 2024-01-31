@@ -896,6 +896,7 @@ void io_service::destroy_channels()
 }
 void io_service::clear_transports()
 {
+  transport_map_.clear();
   for (auto transport : transports_)
   {
     cleanup_io(transport);
@@ -1136,6 +1137,9 @@ void io_service::handle_close(transport_handle_t thandle)
   auto ctx          = thandle->ctx_;
   auto error        = thandle->error_;
   const bool client = yasio__testbits(ctx->properties_, YCM_CLIENT);
+
+  if (yasio__testbits(ctx->properties_, YCM_UDP))
+    transport_map_.erase(thandle->remote_endpoint());
 
   if (yasio__testbits(ctx->properties_, YCM_KCP))
   {
@@ -1588,16 +1592,10 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       b. for non-win32 multicast: same with win32, because the kernel can't route same udp peer as 1
          transport when the peer always sendto multicast address.
   */
-  const bool user_route = !YASIO__UDP_KROUTE || yasio__testbits(ctx->properties_, YCPF_MCAST);
-  if (user_route)
-  {
-    auto it = yasio__find_if(this->transports_, [&peer](const io_transport* transport) {
-      using namespace std;
-      return yasio__testbits(transport->ctx_->properties_, YCM_UDP) && static_cast<const io_transport_udp*>(transport)->remote_endpoint() == peer;
-    });
-    if (it != this->transports_.end())
-      return *it;
-  }
+  // both win32 and unix(like) should check does remote endpoint already assoc with a transport
+  auto it = this->transport_map_.find(peer);
+  if (it != this->transport_map_.end())
+    return it->second;
 
   auto new_sock = std::make_shared<xxsocket>();
   if (new_sock->popen(peer.af(), SOCK_DGRAM))
@@ -1611,10 +1609,13 @@ transport_handle_t io_service::do_dgram_accept(io_channel* ctx, const ip::endpoi
       auto transport = static_cast<io_transport_udp*>(allocate_transport(ctx, std::move(new_sock)));
       // We always establish 4 tuple with clients
       transport->confgure_remote(peer);
+      const bool user_route = !YASIO__UDP_KROUTE || yasio__testbits(ctx->properties_, YCPF_MCAST);
       if (user_route)
         active_transport(transport);
       else
         handle_connect_succeed(transport);
+
+      this->transport_map_.emplace(peer, transport);
       return transport;
     }
   }

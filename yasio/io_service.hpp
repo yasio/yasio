@@ -36,6 +36,7 @@ SOFTWARE.
 #include <vector>
 #include <chrono>
 #include <functional>
+#include <map>
 #include "yasio/sz.hpp"
 #include "yasio/config.hpp"
 #include "yasio/singleton.hpp"
@@ -1259,6 +1260,7 @@ private:
 
   std::vector<transport_handle_t> transports_;
   std::vector<transport_handle_t> tpool_;
+  std::map<ip::endpoint, transport_handle_t> transport_map_;
 
   // timer support timer_pair, back is earliest expire timer
   std::vector<timer_impl_t> timer_queue_;

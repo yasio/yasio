@@ -848,18 +848,17 @@ public:
   ikcpcb* internal_object() { return kcp_; }
 
 protected:
-  YASIO__DECL int write(io_send_buffer&&, completion_cb_t&&) override;
+
+  YASIO__DECL void set_primitives() override;
 
   YASIO__DECL int do_read(int revent, int& error, highp_time_t& wait_duration) override;
-  YASIO__DECL bool do_write(highp_time_t& wait_duration) override;
 
   YASIO__DECL int handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration) override;
 
-  YASIO__DECL void check_timeout(highp_time_t& wait_duration) const;
-
   sbyte_buffer rawbuf_; // the low level raw buffer
   ikcpcb* kcp_;
-  std::recursive_mutex send_mtx_;
+  highp_timer timer_for_update_;
+  std::function<int(const void*, int, const ip::endpoint*, int&)> underlaying_write_cb_;
 };
 #else
 class io_transport_kcp {};

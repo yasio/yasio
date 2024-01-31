@@ -542,7 +542,7 @@ public:
       auto offst = s.find(fmt);
       if (offst != std::string::npos)
       {
-        snprintf(snum,sizeof(snum), "%u", addr_bytes[idx]);
+        snprintf(snum, sizeof(snum), "%u", addr_bytes[idx]);
         s.replace(offst, _N0, snum);
       }
     }
@@ -1135,8 +1135,10 @@ using namespace yasio::inet;
 #endif
 } // namespace yasio
 
+#if defined(YASIO__HAS_CXX11)
 namespace std
 { // VS2013 the operator must be at namespace std
+#endif
 inline bool operator<(const yasio::inet::ip::endpoint& lhs, const yasio::inet::ip::endpoint& rhs)
 { // apply operator < to operands
   if (lhs.af() == AF_INET)
@@ -1147,8 +1149,9 @@ inline bool operator==(const yasio::inet::ip::endpoint& lhs, const yasio::inet::
 { // apply operator == to operands
   return !(lhs < rhs) && !(rhs < lhs);
 }
+#if defined(YASIO__HAS_CXX11)
 } // namespace std
-
+#endif
 #if defined(YASIO_HEADER_ONLY)
 #  include "yasio/xxsocket.cpp" // lgtm [cpp/include-non-header]
 #endif

@@ -43,53 +43,46 @@ Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 #define SPEEDTEST_TRANSFER_PROTOCOL SPEEDTEST_PROTO_KCP
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
-#  define SPEEDTEST_DEFAULT_KIND YCK_TCP_CLIENT | SPEEDTEST_SSL_MASK
+#  define SPEEDTEST_SERVER_KIND YCK_TCP_SERVER
+#  define SPEEDTEST_CLIENT_KIND YCK_TCP_CLIENT | SPEEDTEST_SSL_MASK
 #elif SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_UDP
-#  define SPEEDTEST_DEFAULT_KIND YCK_UDP_CLIENT
+#  define SPEEDTEST_SERVER_KIND YCK_UDP_SERVER
+#  define SPEEDTEST_CLIENT_KIND YCK_UDP_CLIENT
 #elif SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP
-#  define SPEEDTEST_DEFAULT_KIND YCK_KCP_CLIENT
+#  define SPEEDTEST_SERVER_KIND YCK_KCP_SERVER
+#  define SPEEDTEST_CLIENT_KIND YCK_KCP_CLIENT
 #else
 #  error "please define SPEEDTEST_TRANSFER_PROTOCOL to one of SPEEDTEST_PROTO_TCP, SPEEDTEST_PROTO_UDP, SPEEDTEST_PROTO_KCP"
 #endif
 
 // speedtest kcp mtu to max mss of udp (65535 - 20(ip_hdr) - 8(udp_hdr))
-#define SPEEDTEST_KCP_MTU 65507
+#define SPEEDTEST_UDP_MSS 65507
+#define SPEEDTEST_KCP_MTU SPEEDTEST_UDP_MSS
 #define SPEEDTEST_KCP_MSS (SPEEDTEST_KCP_MTU - 24)
 
-#if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_TCP
 namespace speedtest
 {
 enum
 {
   RECEIVER_PORT = 3002,
   SENDER_PORT   = RECEIVER_PORT,
-#  if !SPEEDTEST_VIA_UDS
-  RECEIVER_CHANNEL_KIND = YCK_TCP_SERVER | SPEEDTEST_SSL_MASK,
-  SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND,
-#  else
-  RECEIVER_CHANNEL_KIND = YCK_TCP_SERVER | YCM_UDS,
-  SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND | YCM_UDS,
-#  endif
-};
-} // namespace speedtest
-#  if !SPEEDTEST_VIA_UDS
-#    define SPEEDTEST_SOCKET_NAME "127.0.0.1"
-#  else
-#    define SPEEDTEST_SOCKET_NAME "speedtest.socket"
-#  endif
+#if !SPEEDTEST_VIA_UDS
+  RECEIVER_CHANNEL_KIND = SPEEDTEST_SERVER_KIND | SPEEDTEST_SSL_MASK,
+  SENDER_CHANNEL_KIND   = SPEEDTEST_CLIENT_KIND,
 #else
-namespace speedtest
-{
-enum
-{
-  RECEIVER_PORT         = 3001,
-  SENDER_PORT           = 3002,
-  RECEIVER_CHANNEL_KIND = SPEEDTEST_DEFAULT_KIND,
-  SENDER_CHANNEL_KIND   = SPEEDTEST_DEFAULT_KIND,
-};
-#  define SPEEDTEST_SOCKET_NAME "127.0.0.1"
-} // namespace speedtest
+  RECEIVER_CHANNEL_KIND = SPEEDTEST_SERVER_KIND | YCM_UDS,
+  SENDER_CHANNEL_KIND   = SPEEDTEST_CLIENT_KIND | YCM_UDS,
 #endif
+};
+#if !SPEEDTEST_VIA_UDS
+#  define SPEEDTEST_SOCKET_NAME "127.0.0.1"
+#  define SPEEDTEST_LISTEN_NAME "0.0.0.0"
+#else
+
+#  define SPEEDTEST_SOCKET_NAME "speedtest.socket"
+#  define SPEEDTEST_LISTEN_NAME SPEEDTEST_SOCKET_NAME
+#endif
+} // namespace speedtest
 
 static const double s_send_limit_time = 10; // max send time in seconds
 
@@ -99,7 +92,7 @@ static long long s_recv_total_bytes = 0;
 static double s_send_speed = 0; // bytes/s
 static double s_recv_speed = 0;
 
-static const long long s_kcp_send_interval = 10;   // (us) in microseconds
+static const long long s_kcp_send_interval = 100; // (us) in milliseconds
 static const uint32_t s_kcp_conv           = 8633; // can be any, but must same with two endpoint
 
 static const char* proto_name(int myproto)
@@ -143,7 +136,7 @@ static void print_speed_detail(double interval, double time_elapsed)
 #if defined(YASIO_ENABLE_KCP)
 void setup_kcp_transfer(transport_handle_t handle)
 {
-  auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
+   auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
   ::ikcp_setmtu(kcp_handle, SPEEDTEST_KCP_MTU);
   ::ikcp_wndsize(kcp_handle, 256, 1024);
 }
@@ -241,10 +234,6 @@ void start_sender(io_service& service)
   printf("Start trasnfer test via %s after 170ms...\n", proto_name(SPEEDTEST_TRANSFER_PROTOCOL));
   std::this_thread::sleep_for(std::chrono::milliseconds(170));
 
-#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP
-  service.set_option(YOPT_C_LOCAL_PORT, 0, speedtest::RECEIVER_PORT);
-#endif
-
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP
   service.set_option(YOPT_C_KCP_CONV, 0, s_kcp_conv);
 #endif
@@ -252,7 +241,6 @@ void start_sender(io_service& service)
   service.open(0, speedtest::SENDER_CHANNEL_KIND);
 }
 
-static io_service* s_sender;
 void start_receiver(io_service& service)
 {
   static long long time_start   = yasio::highp_clock<>();
@@ -297,10 +285,6 @@ void start_receiver(io_service& service)
     }
   });
 
-#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP
-  service.set_option(YOPT_C_LOCAL_PORT, 0, speedtest::SENDER_PORT);
-#endif
-
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP
   service.set_option(YOPT_C_KCP_CONV, 0, s_kcp_conv);
 #endif
@@ -308,14 +292,24 @@ void start_receiver(io_service& service)
   service.open(0, speedtest::RECEIVER_CHANNEL_KIND);
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
-  io_hostent receiver_ep(SPEEDTEST_SOCKET_NAME, speedtest::RECEIVER_PORT), sender_ep(SPEEDTEST_SOCKET_NAME, speedtest::SENDER_PORT);
+  io_hostent receiver_ep(SPEEDTEST_LISTEN_NAME, speedtest::RECEIVER_PORT), sender_ep(SPEEDTEST_SOCKET_NAME, speedtest::SENDER_PORT);
   io_service receiver(&receiver_ep, 1), sender(&sender_ep, 1);
 
-  s_sender = &sender;
-  start_receiver(receiver);
-  start_sender(sender);
+  const char* mode = "host";
+  if (argc > 1)
+    mode = argv[1];
+
+  if (cxx20::ic::iequals(mode, "server"))
+    start_receiver(receiver);
+  else if (cxx20::ic::iequals(mode, "client"))
+    start_sender(sender);
+  else
+  {
+    start_receiver(receiver);
+    start_sender(sender);
+  }
 
   static long long time_start = yasio::highp_clock<>();
   while (true)

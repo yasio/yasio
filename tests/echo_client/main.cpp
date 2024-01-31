@@ -34,8 +34,9 @@ void run_echo_client(const char* ip, int port, const char* protocol)
 
         auto packet = std::move(event->packet());
         total_bytes_transferred += static_cast<int>(packet.size());
+        printf("[latency: %lf(ms), bytes=%zu]", diff / 1000.0, packet.size());
         fwrite(packet.data(), packet.size(), 1, stdout);
-        printf("latency: %lf(ms)\n", diff / 1000.0);
+        printf("\n");
         fflush(stdout);
         break;
       }
@@ -50,13 +51,12 @@ void run_echo_client(const char* ip, int port, const char* protocol)
             send_timer.async_wait([transport, index, protocol](io_service& service) -> bool {
               obstream obs;
               obs.write_byte('[');
-              obs.write_bytes(protocol, strlen(protocol));
+              obs.write_bytes(protocol, static_cast<int>(strlen(protocol)));
               obs.write_bytes("] Hello, ");
-              auto n = 4096 - obs.length();
-              obs.fill_bytes(n - 1, '1');
-              obs.write_byte(',');
-              printf("Sending %zu bytes ...\n", obs.length());
+              auto n = 4096 - static_cast<int>(obs.length());
+              obs.fill_bytes(n, 'a');
               service.write(transport, std::move(obs.buffer()));
+              printf("sent %zu bytes ...\n", obs.length());
               s_last_send_time[index] = highp_clock();
               return false;
             });

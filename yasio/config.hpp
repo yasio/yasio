@@ -216,9 +216,6 @@ SOFTWARE.
 // The default ttl of multicast
 #define YASIO_DEFAULT_MULTICAST_TTL (int)128
 
-// The max internet buffer size
-#define YASIO_INET_BUFFER_SIZE 65536
-
 // The max pdu buffer length, avoid large memory allocation when application decode a huge length.
 #define YASIO_MAX_PDU_BUFFER_SIZE static_cast<int>(1 * 1024 * 1024)
 

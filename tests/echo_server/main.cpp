@@ -13,7 +13,7 @@ void handle_signal(int sig)
 }
 
 // 6: TCP server, 10: UDP server, 26: KCP server
-void run_echo_server(const char* ip, u_short port, int channel_kind)
+void run_echo_server(const char* ip, u_short port, const char* protocol)
 {
   io_hostent endpoints[] = {{ip, port}};
   io_service server(endpoints, 1);
@@ -26,11 +26,17 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
   // !important, because we set YOPT_S_NO_NEW_THREAD, so need a timer to start server
   deadline_timer timer(server);
   timer.expires_from_now(std::chrono::seconds(1));
-  timer.async_wait_once([channel_kind](io_service& server) {
-    server.set_option(YOPT_C_UNPACK_PARAMS, 0, 65535, -1, 0, 0);
-    server.open(0, channel_kind);
+  timer.async_wait_once([=](io_service& server) {
+    server.set_option(YOPT_C_UNPACK_PARAMS, 0, 65536, -1, 0, 0);
+    printf("[%s] open server %s:%u ...\n", protocol, ip, port);
+    if (cxx20::ic::iequals(protocol, "udp"))
+      server.open(0, YCK_UDP_SERVER);
+    else if (cxx20::ic::iequals(protocol, "kcp"))
+      server.open(0, YCK_KCP_SERVER);
+    else
+      server.open(0, YCK_TCP_SERVER);
   });
-  server.start([&, channel_kind](event_ptr ev) {
+  server.start([&](event_ptr ev) {
     switch (ev->kind())
     {
       case YEK_ON_OPEN:
@@ -62,7 +68,7 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
         if (ev->passive())
         {
           printf("[%lld] stop server done, status=%d\n", ev->timestamp(), ev->status());
-          server.stop(); // stop could call self thread
+          server.stop();      // stop could call self thread
           gservice = nullptr; // service will stop, clear gservice weak pointer
         }
         break;
@@ -73,6 +79,8 @@ void run_echo_server(const char* ip, u_short port, int channel_kind)
 int main(int argc, char** argv)
 {
   if (argc > 3)
-    run_echo_server(argv[1], atoi(argv[2]), atoi(argv[3]));
+    run_echo_server(argv[1], atoi(argv[2]), argv[3]);
+  else 
+    printf("usage: ip port protocol(udp,kcp,tcp)\n");
   return 0;
 }

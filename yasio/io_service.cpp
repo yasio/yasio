@@ -691,17 +691,15 @@ void io_transport_kcp::set_primitives()
   io_transport_udp::set_primitives();
   underlaying_write_cb_ = write_cb_;
   write_cb_             = [this](const void* data, int len, const ip::endpoint*, int& error) {
-    int nsent = ::ikcp_send(kcp_, static_cast<const char*>(data), (std::min)(static_cast<int>(kcp_->mss), len));
-    if (nsent > 0)
-    {
-      ::ikcp_flush(kcp_);
-      expire_time_ = 0;
-    }
-    else if (nsent == -2)
-      error = EWOULDBLOCK;
-    else
-      error = yasio::errc::invalid_packet;
-    return nsent;
+      int nsent = ::ikcp_send(kcp_, static_cast<const char*>(data), len /*(std::min)(static_cast<int>(kcp_->mss), len)*/);
+      if (nsent > 0)
+      {
+        ::ikcp_flush(kcp_);
+        expire_time_ = 0;
+      }
+      else
+        error = EMSGSIZE; // emit message too long
+      return nsent;
   };
 }
 bool io_transport_kcp::do_write(highp_time_t& wait_duration)

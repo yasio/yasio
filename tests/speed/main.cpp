@@ -56,7 +56,8 @@ Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 #endif
 
 // speedtest kcp mtu to max mss of udp (65535 - 20(ip_hdr) - 8(udp_hdr))
-#define SPEEDTEST_KCP_MTU 65507
+#define SPEEDTEST_UDP_MSS 65507
+#define SPEEDTEST_KCP_MTU SPEEDTEST_UDP_MSS
 #define SPEEDTEST_KCP_MSS (SPEEDTEST_KCP_MTU - 24)
 
 namespace speedtest
@@ -91,7 +92,7 @@ static long long s_recv_total_bytes = 0;
 static double s_send_speed = 0; // bytes/s
 static double s_recv_speed = 0;
 
-static const long long s_kcp_send_interval = 1000; // (ms) in milliseconds
+static const long long s_kcp_send_interval = 100; // (us) in milliseconds
 static const uint32_t s_kcp_conv           = 8633; // can be any, but must same with two endpoint
 
 static const char* proto_name(int myproto)
@@ -135,9 +136,9 @@ static void print_speed_detail(double interval, double time_elapsed)
 #if defined(YASIO_ENABLE_KCP)
 void setup_kcp_transfer(transport_handle_t handle)
 {
-  // auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
-  //::ikcp_setmtu(kcp_handle, SPEEDTEST_KCP_MTU);
-  //::ikcp_wndsize(kcp_handle, 256, 1024);
+   auto kcp_handle = static_cast<io_transport_kcp*>(handle)->internal_object();
+  ::ikcp_setmtu(kcp_handle, SPEEDTEST_KCP_MTU);
+  ::ikcp_wndsize(kcp_handle, 256, 1024);
 }
 #endif
 
@@ -166,7 +167,7 @@ void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
-  highp_timer_ptr ignored_ret = service->schedule(std::chrono::milliseconds(s_kcp_send_interval), [=](io_service&) {
+  highp_timer_ptr ignored_ret = service->schedule(std::chrono::microseconds(s_kcp_send_interval), [=](io_service&) {
     s_send_total_bytes += service->write(thandle, obs->buffer());
     time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
     s_send_speed = s_send_total_bytes / time_elapsed;

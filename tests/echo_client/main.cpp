@@ -7,27 +7,23 @@
 
 using namespace yasio;
 
-static highp_time_t s_last_send_time[3] = {0};
+static highp_time_t s_last_send_time[3]   = {0};
 static const highp_time_t s_send_interval = 2000; // (ms)
 
-void yasioTest()
+void run_echo_client(const char* ip, int port, const char* protocol)
 {
   yasio::inet::io_hostent endpoints[] = {
-      {"test.yasio.org", 5001}, // tcp client
-      {"test.yasio.org", 5002},  // udp client
-      {"test.yasio.org", 5003},  // kcp client
+      {ip, static_cast<u_short>(port)}, // tcp client
   };
 
   io_service service(endpoints, YASIO_ARRAYSIZE(endpoints));
 
   std::vector<transport_handle_t> transports;
 
-  deadline_timer tcp_send_timer(service);
-  deadline_timer udp_send_timer(service);
-  deadline_timer kcp_send_timer(service);
+  deadline_timer send_timer(service);
   int total_bytes_transferred = 0;
 
-  int max_request_count = 2;
+  int max_request_count = 10;
 
   service.start([&](event_ptr&& event) {
     switch (event->kind())
@@ -47,35 +43,19 @@ void yasioTest()
         if (event->status() == 0)
         {
           auto transport = event->transport();
-          auto index    = event->cindex();
+          auto index     = event->cindex();
           if (index == 0)
           {
-            tcp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
-            tcp_send_timer.async_wait([transport, index](io_service& service) -> bool {
+            send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
+            send_timer.async_wait([transport, index, protocol](io_service& service) -> bool {
               obstream obs;
-              obs.write_bytes("[TCP] Hello, ");
-              service.write(transport, std::move(obs.buffer()));
-              s_last_send_time[index] = highp_clock();
-              return false;
-            });
-          }
-          else if (index == 1)
-          {
-            udp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
-            udp_send_timer.async_wait([transport, index](io_service& service) -> bool {
-              obstream obs;
-              obs.write_bytes("[UDP] Hello, ");
-              service.write(transport, std::move(obs.buffer()));
-              s_last_send_time[index] = highp_clock();
-              return false;
-            });
-          }
-          else if (index == 2)
-          {
-            kcp_send_timer.expires_from_now(std::chrono::milliseconds(s_send_interval));
-            kcp_send_timer.async_wait([transport, &max_request_count, index](io_service& service) -> bool {
-              obstream obs;
-              obs.write_bytes("[KCP] Hello, ");
+              obs.write_byte('[');
+              obs.write_bytes(protocol, strlen(protocol));
+              obs.write_bytes("] Hello, ");
+              auto n = 4096 - obs.length();
+              obs.fill_bytes(n - 1, '1');
+              obs.write_byte(',');
+              printf("Sending %zu bytes ...\n", obs.length());
               service.write(transport, std::move(obs.buffer()));
               s_last_send_time[index] = highp_clock();
               return false;
@@ -91,18 +71,28 @@ void yasioTest()
     }
   });
 
-  /*
-  ** If after 5 seconds no data interaction at application layer,
-  ** send a heartbeat per 10 seconds when no response, try 2 times
-  ** if no response, then he connection will shutdown by driver.
-  ** At windows will close with error: 10054
-  */
-  service.set_option(YOPT_S_TCP_KEEPALIVE, 5, 10, 2);
-
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  service.open(0, YCK_TCP_CLIENT); // open channel 0 as TCP client
-  service.open(1, YCK_UDP_CLIENT); // open channel 1 as UDP client
-  service.open(2, YCK_KCP_CLIENT); // open channel 2 as KCP client
+
+  printf("[%s] connecting %s:%u ...\n", protocol, ip, port);
+  if (cxx20::ic::iequals(protocol, "udp"))
+  {
+    service.open(0, YCK_UDP_CLIENT);
+  }
+  else if (cxx20::ic::iequals(protocol, "kcp"))
+  {
+    service.open(0, YCK_KCP_CLIENT);
+  }
+  else
+  { 
+    /*
+     ** If after 5 seconds no data interaction at application layer,
+     ** send a heartbeat per 10 seconds when no response, try 2 times
+     ** if no response, then he connection will shutdown by driver.
+     ** At windows will close with error: 10054
+     */
+    service.set_option(YOPT_S_TCP_KEEPALIVE, 5, 10, 2);
+    service.open(0, YCK_TCP_CLIENT);
+  }
 
   time_t duration = 0;
   while (service.is_running())
@@ -118,9 +108,10 @@ void yasioTest()
   }
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
-  yasioTest();
+  if (argc > 3)
+    run_echo_client(argv[1], atoi(argv[2]), argv[3]);
 
   return 0;
 }

@@ -171,7 +171,7 @@ endif()
 
 if (YASIO_SSL_BACKEND EQUAL 1) # openssl
    message(STATUS "Build with openssl support")
-   add_subdirectory(thirdparty/openssl)
+   add_subdirectory(3rdparty/openssl)
 elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
     message(STATUS "Build with mbedtls support")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
@@ -197,7 +197,7 @@ endif()
 
 ### c-ares support
 if (YASIO_USE_CARES)
-    add_subdirectory(thirdparty/c-ares)
+    add_subdirectory(3rdparty/c-ares)
 endif()
 
 ### The yasio core library project
@@ -205,7 +205,7 @@ file(GLOB YASIO_CORE yasio/*.hpp;yasio/*.cpp;yasio/compiler/*.hpp;yasio/impl/*.h
 
 if (YASIO_ENABLE_KCP)
   set(YASIO_CORE ${YASIO_CORE} 
-    ${PROJECT_SOURCE_DIR}/thirdparty/kcp/ikcp.c
+    ${PROJECT_SOURCE_DIR}/3rdparty/kcp/ikcp.c
   )
 endif()
 if (YASIO_ENABLE_NI)
@@ -233,11 +233,11 @@ if(ANDROID AND CARES_INCLUDE_DIR)
 endif()
 
 if(WIN32 AND YASIO_ENABLE_HPERF_IO)
-  set(THIRDPART_SRC thirdparty/wepoll/wepoll.c)
+  set(THIRDPART_SRC 3rdparty/wepoll/wepoll.c)
 endif()
 
 if(YASIO_ENABLE_KCP OR YASIO_ENABLE_LUA OR YASIO_USE_CARES OR YASIO_ENABLE_HALF_FLOAT)
-    include_directories("${PROJECT_SOURCE_DIR}/thirdparty")
+    include_directories("${PROJECT_SOURCE_DIR}/3rdparty")
 endif()
 
 macro(source_group_by_dir proj_dir source_files)
@@ -307,7 +307,7 @@ else ( )
     )
 endif ( )
 
-target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
+target_include_directories(${yasio_target_name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
 
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(${yasio_target_name} 
@@ -492,7 +492,7 @@ if(YASIO_ENABLE_EXT_HTTP)
         set (BUILD_SHARED_LIBS FALSE CACHE BOOL "" FORCE)
         set (BUILD_STATIC_LIBS TRUE CACHE BOOL "" FORCE)
     endif()
-    add_subdirectory(thirdparty/llhttp)
+    add_subdirectory(3rdparty/llhttp)
 
     # yasio_http
     add_subdirectory(extensions/yasio_http)
@@ -519,7 +519,7 @@ if(YASIO_BUILD_TESTS)
     add_subdirectory(tests/echo_client)
     if(YASIO_ENABLE_LUA AND YASIO_BUILD_LUA_EXAMPLE)
         add_subdirectory(examples/lua)
-        target_include_directories(example_lua PRIVATE thirdparty)
+        target_include_directories(example_lua PRIVATE 3rdparty)
         target_compile_definitions(example_lua PRIVATE YASIO_LUA_ENABLE_GLOBAL=0)
     endif()
     if (NOT YASIO_NO_DEPS)

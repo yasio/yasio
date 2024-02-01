@@ -3,9 +3,9 @@
 # usage: ./scripts/docs.ps1 '3.39.11:v3.39.11,3.39.12:3.39.x'
 $rel_str = $args[0]
 
-mkdocs --version
-mike --version
-mike delete --all
+python -m mkdocs --version
+python -m mike --version
+python -m mike delete --all
 
 Write-Host "Active versions: $rel_str"
 
@@ -23,10 +23,10 @@ foreach($rel in $rel_arr) {
     $docs_ver = $info[0]
     $docs_tag = if ($info.Count -ge 2) { $info[1] } else { "v$($info[0])" }
     git checkout "$docs_tag"
-    mike deploy $docs_ver
+    python -m mike deploy $docs_ver
 }
 
 git checkout dev
-mike deploy latest
-mike list
-mike set-default $docs_ver --push
+python -m mike deploy latest
+python -m mike list
+python -m mike set-default $docs_ver --push

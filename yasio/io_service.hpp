@@ -840,7 +840,7 @@ protected:
   YASIO__DECL void confgure_remote(const ip::endpoint& peer);
 
   // process received data from low level
-  YASIO__DECL virtual int handle_input(const char* data, int bytes_transferred, int& error, highp_time_t& wait_duration);
+  YASIO__DECL virtual int handle_input(char* data, int bytes_transferred, int& error, highp_time_t& wait_duration);
 
   ip::endpoint peer_;                // for recv only, unstable
   mutable ip::endpoint destination_; // for sendto only, stable
@@ -861,7 +861,7 @@ protected:
 
   YASIO__DECL bool do_write(highp_time_t& wait_duration) override;
 
-  YASIO__DECL int handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration) override;
+  YASIO__DECL int handle_input(char* buf, int len, int& error, highp_time_t& wait_duration) override;
   
   int interval() const { return kcp_->interval * std::milli::den; }
 

@@ -56,6 +56,7 @@ Test detail, please see: https://github.com/yasio/yasio/blob/master/benchmark.md
 #endif
 
 // speedtest kcp mtu to max mss of udp (65535 - 20(ip_hdr) - 8(udp_hdr))
+// wsl2 mirrored network only allow udp mss to 1500 - 28 = 1472
 #define SPEEDTEST_UDP_MSS 65507
 #define SPEEDTEST_KCP_MTU SPEEDTEST_UDP_MSS
 #define SPEEDTEST_KCP_MSS (SPEEDTEST_KCP_MTU - 24)
@@ -64,7 +65,7 @@ namespace speedtest
 {
 enum
 {
-  RECEIVER_PORT = 3002,
+  RECEIVER_PORT = 30001,
   SENDER_PORT   = RECEIVER_PORT,
 #if !SPEEDTEST_VIA_UDS
   RECEIVER_CHANNEL_KIND = SPEEDTEST_SERVER_KIND | SPEEDTEST_SSL_MASK,
@@ -187,6 +188,7 @@ void start_sender(io_service& service)
   obs.write_bytes(buffer, PER_PACKET_SIZE);
 
   service.set_option(YOPT_S_HRES_TIMER, 1);
+  service.set_option(YOPT_S_FORWARD_PACKET, 1);
 
 #if YASIO_SSL_BACKEND != 0
   service.set_option(YOPT_S_SSL_CACERT, SSLTEST_CACERT);
@@ -236,6 +238,10 @@ void start_sender(io_service& service)
 
 #if SPEEDTEST_TRANSFER_PROTOCOL == SPEEDTEST_PROTO_KCP
   service.set_option(YOPT_C_KCP_CONV, 0, s_kcp_conv);
+#endif
+
+#if SPEEDTEST_TRANSFER_PROTOCOL != SPEEDTEST_PROTO_TCP
+  service.set_option(YOPT_C_LOCAL_HOST, 0, SPEEDTEST_SOCKET_NAME);
 #endif
 
   service.open(0, speedtest::SENDER_CHANNEL_KIND);

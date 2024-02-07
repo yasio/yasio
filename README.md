@@ -71,29 +71,10 @@ cmake --build build --config Debug
 # # 者直接用VS打开 
 ```
 
-## 关于 `build.ps1`
-
-- 跨平台， 可以运行在 Windows, Linux, macOS
-- 所有Github CI使用该脚本
-- 支持选项
-  - `-p`: 构建目标平台，支持: `win32`,`winuwp`,`linux`,`android`,`osx`,`ios`,`tvos`,`watchos`
-  - `-a`: 构建目标平台CPU架构: `x86`,`x64`,`arm`,`arm64`
-  - `-cc`: 构建C/C++编译器: `clang`, `msvc`, `gcc`, 默认空，使用当前宿主OS下可用编译器;  
-    对于Visual Studio还可以是 `msvc-120`, `mvsc-140`, `mvsc-160`，来明确指定使用VS哪个版本 `msvc` 进行编译
-  - `-xc`: 额外的CMake参数，例如:  `-xc '-DCXX_STD=23','-DYASIO_ENABLE_EXT_HTTP=OFF'`
-
-- 构建目标支持表
-  | 构建宿主OS |   构建目标平台       |  构建工具链          |
-  |------------|----------------------|----------------------|
-  | Windows    |  win32,winuwp        | msvc,clang,gcc |
-  | Linux      | linux,android        | gcc,clang            |        
-  | macOS      | osx,ios,tvos,watchos | clang                |
-
-
 ## 特性：
 
 * 支持TCP，UDP，KCP传输，且API是统一的。
-* 支持TCP粘包处理，业务完全不必关心。ds
+* 支持TCP粘包处理，业务完全不必关心。
 * 支持组播。
 * 支持IPv4/IPv6或者苹果IPv6_only网络。
 * 支持处理多个连接的所有网络事件。
@@ -119,6 +100,8 @@ yasio提供了如下可在C++11编译器下使用的C++14/17/20标准库组件�
 - cxx17::shared_mutex
 - cxx20::starts_with
 - cxx20::ends_with
+- yasio::byte_buffer
+- yasio::pod_vector
 
 ## 关于 OpenSSL 预编译库 (Windows)
 
@@ -127,7 +110,7 @@ yasio 的cmake脚本默认选择OpenSSL 作为SSL支持库，并且会自动从[
 提供的跨平台一键编译脚本 `build.ps1`
 
 ```bat
-powershell build.ps1 -p win32 -a x64 -xc "'-DYASIO_SSL_BACKEND=2'"
+powershell build.ps1 -p win32 -a x64 -xc "-DYASIO_SSL_BACKEND=2"
 ```
 
 ## 框架图

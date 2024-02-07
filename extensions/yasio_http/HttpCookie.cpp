@@ -27,7 +27,8 @@
 #include "yasio_http/HttpCookie.h"
 #include "yasio_http/Uri.h"
 #include "yasio/utils.hpp"
-#include "yasio_ext.hpp"
+#include "yasio/fsutils.hpp"
+#include "yasio/split.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,15 +55,15 @@ void HttpCookie::readFile()
         VALUE_INDEX,
     };
 
-   auto content = yasio_ext::read_text_file(_cookieFileName);
+   auto content = yasio::read_text_file(_cookieFileName);
     if (content.size() > 1)
     {
-        yasio_ext::split_cb(content.data(), content.size() - 1, '\n', [this](char* s, char* e) {
+        yasio::split_n(content.data(), content.size() - 1, '\n', [this](char* s, char* e) {
             if (*s == '#')  // skip comment
                 return;
             int count = 0;
             CookieInfo cookieInfo;
-            yasio_ext::split_cb(s, e - s, '\t', [&, this](char* ss, char* ee) {
+            yasio::split_n(s, e - s, '\t', [&, this](char* ss, char* ee) {
                 auto ch = *ee;  // store
                 *ee     = '\0';
                 switch (count)
@@ -154,7 +155,7 @@ bool HttpCookie::updateOrAddCookie(const cxx17::string_view& cookie, const Uri& 
 {
     unsigned int count = 0;
     CookieInfo info;
-    yasio_ext::split_cb(cookie.data(), cookie.length(), ';', [&](const char* start, const char* end) {
+    yasio::split_n(cookie.data(), cookie.length(), ';', [&](const char* start, const char* end) {
         unsigned int count_ = 0;
         while (*start == ' ')
             ++start;  // skip ws
@@ -162,7 +163,7 @@ bool HttpCookie::updateOrAddCookie(const cxx17::string_view& cookie, const Uri& 
         {
             cxx17::string_view key;
             cxx17::string_view value;
-            yasio_ext::split_cb(start, end - start, '=', [&](const char* s, const char* e) {
+            yasio::split_n(start, end - start, '=', [&](const char* s, const char* e) {
                 switch (++count_)
                 {
                 case 1:
@@ -223,7 +224,7 @@ bool HttpCookie::updateOrAddCookie(const cxx17::string_view& cookie, const Uri& 
         }
         else
         {  // first is cookie name
-            yasio_ext::split_cb(start, end - start, '=', [&](const char* s, const char* e) {
+            yasio::split_n(start, end - start, '=', [&](const char* s, const char* e) {
                 switch (++count_)
                 {
                 case 1:

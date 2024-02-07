@@ -140,7 +140,7 @@ class build1k {
     }
 
     [void] pause($msg) {
-        $executed_from_explorer = $false
+        $shoud_pause = $false
         do {
             if (!$Global:IsWin) { break }
             $myProcess = [System.Diagnostics.Process]::GetCurrentProcess()
@@ -154,8 +154,14 @@ class build1k {
             }
 
             $executed_from_explorer = ($parentProcess.ProcessName -like "explorer")
+            if ($executed_from_explorer) {
+                $procesCmdLineArgs = "$([System.Environment]::GetCommandLineArgs())"
+                if ($procesCmdLineArgs.IndexOf('.ps1') -ne -1 -and $procesCmdLineArgs.IndexOf('-noexit') -eq -1) {
+                    $shoud_pause = $true
+                }
+            }
         } while ($false)
-        if ($executed_from_explorer) {
+        if ($shoud_pause) {
             $this.print("$msg, press any key to continue . . .")
             cmd /c pause 1>$null
         }
@@ -370,6 +376,22 @@ $b1k.println("proj_dir=$((Get-Location).Path), external_prefix=$external_prefix"
 $manifest_file = Join-Path $myRoot 'manifest.ps1'
 if ($b1k.isfile($manifest_file)) {
     . $manifest_file
+}
+
+# choose mirror for 1kiss/devtools
+$sentry_file = Join-Path $myRoot '.gitee'
+$mirror = if ($b1k.isfile($sentry_file)) { 'gitee' } else { 'github' }
+$devtools_url_base = @{'github' = 'https://github.com/'; 'gitee' = 'https://gitee.com/' }[$mirror]
+$mirror_conf_file = $b1k.realpath("$myRoot/../manifest.json")
+$mirror_conf = $null
+if (Test-Path $mirror_conf_file -PathType Leaf) {
+    $mirror_conf = ConvertFrom-Json (Get-Content $mirror_conf_file -raw)
+    $devtools_url_base += $mirror_conf.mirrors.$mirror.'1kdist'
+    $devtools_url_base += '/devtools'
+}
+
+function devtool_url($filename) {
+    return "$devtools_url_base/$filename"
 }
 
 # accept x.y.z-rc1
@@ -625,8 +647,10 @@ function setup_glslcc() {
     $b1k.rmdirs($glslcc_bin)
     $glslcc_pkg = Join-Path $external_prefix "glslcc-$suffix"
     $b1k.del($glslcc_pkg)
+    
+    $glscc_url = devtool_url glslcc-$glslcc_ver-$suffix
 
-    download_and_expand "https://github.com/axmolengine/glslcc/releases/download/v$glslcc_ver/glslcc-$glslcc_ver-$suffix" "$glslcc_pkg" $glslcc_bin
+    download_and_expand $glscc_url "$glslcc_pkg" $glslcc_bin
 
     $glslcc_prog = (Join-Path $glslcc_bin "glslcc$exeSuffix")
     if ($b1k.isfile($glslcc_prog)) {
@@ -873,7 +897,8 @@ function setup_llvm() {
                 $7z_pkg_out = Join-Path $external_prefix '7z2301-x64.zip'
                 if (!(Test-Path $7z_prog -PathType Leaf)) {
                     # https://www.7-zip.org/download.html
-                    download_and_expand -url 'https://github.com/simdsoft/1kiss/releases/download/devtools/7z2301-x64.zip' -out $7z_pkg_out $external_prefix/
+                    $7z_url = devtool_url '7z2301-x64.zip'
+                    download_and_expand -url $7z_url -out $7z_pkg_out $external_prefix/
                 }
             }
 
@@ -1578,10 +1603,9 @@ if (!$setupOnly) {
         $b1k.println("CONFIG_ALL_OPTIONS=$CONFIG_ALL_OPTIONS, Count={0}" -f $CONFIG_ALL_OPTIONS.Count)
 
         if ($Global:is_android -and $is_gradlew) {
-            $storedLocation = (Get-Location).Path
             $build_tool = (Get-Command $options.xt).Source
             $build_tool_dir = Split-Path $build_tool -Parent
-            Set-Location $build_tool_dir
+            Push-Location $build_tool_dir
             if (!$configOnly) {
                 if ($optimize_flag -eq 'Debug') {
                     & $build_tool assembleDebug $CONFIG_ALL_OPTIONS | Out-Host
@@ -1593,65 +1617,63 @@ if (!$setupOnly) {
             else {
                 & $build_tool tasks
             }
-            Set-Location $storedLocation
+            Pop-Location
         }
         else {
             # step3. configure
-
             $workDir = $(Get-Location).Path
-
             $mainDep = Join-Path $workDir 'CMakeLists.txt'
-            if (!$b1k.isfile($mainDep)) {
-                $b1k.println("Missing CMakeLists.txt in $workDir")
-                Set-Location $stored_cwd
-                return
-            }
+            if ($b1k.isfile($mainDep)) {
+                $mainDepChanged = $false
+                # A Windows file time is a 64-bit value that represents the number of 100-nanosecond
+                $tempFileItem = Get-Item $mainDep
+                $lastWriteTime = $tempFileItem.LastWriteTime.ToFileTimeUTC()
+                $tempFile = Join-Path $BUILD_DIR 'b1k_cache.txt'
 
-            $mainDepChanged = $false
-            # A Windows file time is a 64-bit value that represents the number of 100-nanosecond
-            $tempFileItem = Get-Item $mainDep
-            $lastWriteTime = $tempFileItem.LastWriteTime.ToFileTimeUTC()
-            $tempFile = Join-Path $BUILD_DIR 'b1k_cache.txt'
-
-            $storeHash = 0
-            if ($b1k.isfile($tempFile)) {
-                $storeHash = Get-Content $tempFile -Raw
-            }
-            $hashValue = $b1k.hash("$CONFIG_ALL_OPTIONS#$lastWriteTime")
-            $mainDepChanged = "$storeHash" -ne "$hashValue"
-            $cmakeCachePath = $b1k.realpath("$BUILD_DIR/CMakeCache.txt")
-
-            if ($mainDepChanged -or !$b1k.isfile($cmakeCachePath) -or $forceConfig) {
-                if (!$is_wasm) {
-                    cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS | Out-Host
+                $storeHash = 0
+                if ($b1k.isfile($tempFile)) {
+                    $storeHash = Get-Content $tempFile -Raw
                 }
-                else {
-                    emcmake cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS | Out-Host
-                }
-                Set-Content $tempFile $hashValue -NoNewline
-            }
+                $hashValue = $b1k.hash("$CONFIG_ALL_OPTIONS#$lastWriteTime")
+                $mainDepChanged = "$storeHash" -ne "$hashValue"
+                $cmakeCachePath = $b1k.realpath("$BUILD_DIR/CMakeCache.txt")
 
-            if (!$configOnly) {
-                if (!$is_engine) {
-                    if (!$b1k.isfile($cmakeCachePath)) {
-                        throw "The cmake generate incomplete, pelase add '-f' to re-generate again"
+                if ($mainDepChanged -or !$b1k.isfile($cmakeCachePath) -or $forceConfig) {
+                    if (!$is_wasm) {
+                        cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS | Out-Host
                     }
+                    else {
+                        emcmake cmake -B $BUILD_DIR $CONFIG_ALL_OPTIONS | Out-Host
+                    }
+                    Set-Content $tempFile $hashValue -NoNewline
                 }
 
-                # step4. build
-                # apply additional build options
-                $BUILD_ALL_OPTIONS += "--parallel"
-                if ($Global:is_linux) {
-                    $BUILD_ALL_OPTIONS += "$(nproc)"
-                }
-                if (($cmake_generator -eq 'Xcode') -and ($BUILD_ALL_OPTIONS.IndexOf('--verbose') -eq -1)) {
-                    $BUILD_ALL_OPTIONS += '--', '-quiet'
-                }
-                $b1k.println("BUILD_ALL_OPTIONS=$BUILD_ALL_OPTIONS, Count={0}" -f $BUILD_ALL_OPTIONS.Count)
+                if (!$configOnly) {
+                    if (!$is_engine) {
+                        if (!$b1k.isfile($cmakeCachePath)) {
+                            Set-Location $stored_cwd
+                            throw "The cmake generate incomplete, pelase add '-f' to re-generate again"
+                        }
+                    }
 
-                cmake --build $BUILD_DIR $BUILD_ALL_OPTIONS | Out-Host
+                    # step4. build
+                    # apply additional build options
+                    $BUILD_ALL_OPTIONS += "--parallel"
+                    $BUILD_ALL_OPTIONS += "$([Environment]::ProcessorCount)"
+                    
+                    if (($cmake_generator -eq 'Xcode') -and ($BUILD_ALL_OPTIONS.IndexOf('--verbose') -eq -1)) {
+                        $BUILD_ALL_OPTIONS += '--', '-quiet'
+                    }
+                    $b1k.println("BUILD_ALL_OPTIONS=$BUILD_ALL_OPTIONS, Count={0}" -f $BUILD_ALL_OPTIONS.Count)
+
+                    cmake --build $BUILD_DIR $BUILD_ALL_OPTIONS | Out-Host
+                }
+            } else {
+                $b1k.println("Missing CMakeLists.txt in $workDir")
             }
         }
+
+        Set-Location $stored_cwd
     } else {
         # google gclient/gn build system
         # refer: https://chromium.googlesource.com/chromium/src/+/eca97f87e275a7c9c5b7f13a65ff8635f0821d46/tools/gn/docs/reference.md#args_specifies-build-arguments-overrides-examples
@@ -1730,7 +1752,5 @@ if (!$setupOnly) {
         isHostTarget = $is_host_target
         compilerID   = $TOOLCHAIN_NAME
     }
-
-    Set-Location $stored_cwd
 }
 

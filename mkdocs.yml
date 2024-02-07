@@ -44,6 +44,7 @@ nav:
     - endpoint类: api/reference/endpoint-class.md
     - object_pool类: api/reference/object_pool-class.md
     - singleton类: api/reference/singleton-class.md
+    - byte_buffer类: api/reference/byte_buffer-class.md
     - io_service选项: api/reference/io_service-options.md
     - 其他常用API: api/reference/others.md
   - 预处理器: preprocessor.md
@@ -68,8 +69,8 @@ markdown_extensions:
   - pymdownx.caret
   - pymdownx.details
   - pymdownx.emoji:
-      emoji_generator: !!python/name:materialx.emoji.to_svg
-      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span

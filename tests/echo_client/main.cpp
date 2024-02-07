@@ -55,8 +55,8 @@ void run_echo_client(const char* ip, int port, const char* protocol)
               obs.write_bytes("] Hello, ");
               auto n = 4096 - static_cast<int>(obs.length());
               obs.fill_bytes(n, 'a');
-              service.write(transport, std::move(obs.buffer()));
-              printf("sent %zu bytes ...\n", obs.length());
+              auto bytes_transferred = service.write(transport, std::move(obs.buffer()));
+              printf("sent %d bytes ...\n", bytes_transferred);
               s_last_send_time[index] = highp_clock();
               return false;
             });

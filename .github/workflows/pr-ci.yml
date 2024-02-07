@@ -17,7 +17,7 @@ jobs:
     env:
       BUILD_ARCH: ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - uses: ilammy/msvc-dev-cmd@v1.12.0
@@ -35,7 +35,7 @@ jobs:
     env:
       BUILD_ARCH: ${{ matrix.arch }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'recursive'
     - uses: ilammy/msvc-dev-cmd@v1.12.0
@@ -47,7 +47,7 @@ jobs:
   win32-mingw:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - uses: msys2/setup-msys2@v2
@@ -61,7 +61,7 @@ jobs:
     env:
       BUILD_TARGET: linux
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Build
@@ -79,7 +79,7 @@ jobs:
     env:
       BUILD_ARCH: ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Build
@@ -90,7 +90,7 @@ jobs:
     env:
       BUILD_TARGET: osx
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Build
@@ -107,7 +107,7 @@ jobs:
     env:
       BUILD_TARGET: ${{ matrix.target }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Build
@@ -116,7 +116,7 @@ jobs:
   freebsd:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Build

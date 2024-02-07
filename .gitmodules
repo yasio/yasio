@@ -1,6 +1,15 @@
 [submodule "examples/ftp_server"]
 	path = examples/ftp_server
 	url = https://github.com/yasio/ftp_server
-[submodule "thirdparty"]
-	path = thirdparty
-	url = https://github.com/yasio/thirdparty.git
+[submodule "3rdparty/kcp"]
+	path = 3rdparty/kcp
+	url = https://github.com/skywind3000/kcp.git
+[submodule "3rdparty/lua"]
+	path = 3rdparty/lua
+	url = https://github.com/lua/lua.git
+[submodule "3rdparty/llhttp"]
+	path = 3rdparty/llhttp
+	url = https://github.com/nodejs/llhttp.git
+[submodule "3rdparty/wepoll"]
+	path = 3rdparty/wepoll
+	url = https://github.com/piscisaureus/wepoll.git

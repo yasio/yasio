@@ -659,9 +659,13 @@ void io_transport_udp::set_primitives()
     };
   }
 }
-int io_transport_udp::handle_input(const char* data, int bytes_transferred, int& /*error*/, highp_time_t&)
+int io_transport_udp::handle_input(char* data, int bytes_transferred, int& /*error*/, highp_time_t&)
 { // pure udp, dispatch to upper layer directly
-  get_service().fire_event(this->cindex(), io_packet{data, data + bytes_transferred}, this);
+  auto& service = get_service();
+  if (!service.options_.forward_packet_)
+    service.fire_event(this->cindex(), io_packet{data, data + bytes_transferred}, this);
+  else
+    service.forward_packet(this->cindex(), io_packet_view{data, bytes_transferred}, this);
   return bytes_transferred;
 }
 
@@ -730,7 +734,7 @@ int io_transport_kcp::do_read(int revent, int& error, highp_time_t& wait_duratio
   }
   return n;
 }
-int io_transport_kcp::handle_input(const char* buf, int len, int& error, highp_time_t& wait_duration)
+int io_transport_kcp::handle_input(char* buf, int len, int& error, highp_time_t& wait_duration)
 {
   // ikcp in event always in service thread, so no need to lock
   if (0 == ::ikcp_input(kcp_, buf, len))

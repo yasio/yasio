@@ -205,7 +205,7 @@ public:
      * If setDispatchOnWorkThread(false), you needs to invoke this API to dispatch http response
      * on the caller thread
      */
-    void tickInput();
+    void dispatch();
 
     /*
      * The urlEncode API
@@ -227,8 +227,6 @@ private:
     void handleNetworkEvent(yasio::io_event* event);
 
     void handleNetworkEOF(HttpResponse* response, yasio::io_channel* channel, int internalErrorCode);
-
-    // void tickInput();
 
     void finishResponse(HttpResponse* response);
 

@@ -239,7 +239,7 @@ void HttpClient::setDispatchOnWorkThread(bool bVal)
 }
 
 // Poll and notify main thread if responses exists in queue
-void HttpClient::tickInput()
+void HttpClient::dispatch()
 {
     if (_finishedResponseQueue.unsafe_empty())
         return;

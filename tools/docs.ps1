@@ -29,4 +29,8 @@ foreach($rel in $rel_arr) {
 git checkout dev
 mike deploy latest
 mike list
-mike set-default $docs_ver --push
+
+if ($env:GITHUB_ACTIONS -eq 'true') {
+    mike set-default $docs_ver --push
+}
+

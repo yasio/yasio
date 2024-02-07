@@ -121,7 +121,7 @@ yasio provide follow C++14/17/20 standard components compatible with C++11 compi
 
 ## Abount OpenSSL prebuilt (Windows)
 
-The OpenSSL prebuilts are download from [build1k](https://github.com/axmolengine/build1k) and built by vs2022 msvc-14.36,
+The OpenSSL prebuilts are download from [1kiss](https://github.com/simdsoft/1kiss) and built by vs2022 msvc-14.36,
 If your installed visual studio version less then vs2022, please pass `-DYASIO_SSL_BACKEND=2` to use `mbedtls` instead, i.e:
 
 ```bat
@@ -130,4 +130,3 @@ powershell build.ps1 -p win32 -a x64 -xc "'-DYASIO_SSL_BACKEND=2'"
 
 ## Core framework
 ![image](docs/assets/images/framework_en.png)  
-

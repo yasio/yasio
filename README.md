@@ -60,7 +60,7 @@ g++ tests/tcp/main.cpp --std=c++11 -DYASIO_HEADER_ONLY -lpthread -I./ -o tcptest
 git clone --recursive https://github.com/yasio/yasio
 cd yasio
 
-# 如果是macOS Xcode, 这里命令应该换成：cmake -B build -GXcode
+# 如果是 macOS Xcode, 这里命令应该换成：cmake -B build -GXcode
 cmake -B build
 
 # 使用CMake命令行编译, 如果需要调试，则使用相应平台IDE打开即可:
@@ -105,8 +105,8 @@ yasio提供了如下可在C++11编译器下使用的C++14/17/20标准库组件�
 
 ## 关于 OpenSSL 预编译库 (Windows)
 
-yasio 的cmake脚本默认选择OpenSSL 作为SSL支持库，并且会自动从[build1k](https://github.com/axmolengine/build1k)下载， 
-且预编译库使用 `VS2022(MSVC-14.37)` 编译，如果你的系统未安装该版本，请传入CMake参数`-DYASIO_SSL_BACKEND=2`，例如使用项目
+yasio 的 cmake 脚本默认选择 OpenSSL 作为 SSL 支持库，并且会自动从[1kiss](https://github.com/simdsoft/1kiss)下载， 
+且预编译库使用 `VS2022(MSVC-14.37)` 编译，如果你的系统未安装该版本，请传入 CMake 参数`-DYASIO_SSL_BACKEND=2`，例如使用项目
 提供的跨平台一键编译脚本 `build.ps1`
 
 ```bat

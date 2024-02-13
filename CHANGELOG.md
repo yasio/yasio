@@ -1,6 +1,6 @@
 yasio-4.2.1
 
-  1. Fix socket.bind always fail with EPERM when runs on macos in code signing sandbox mode
+  1. Fix #441 socket.bind always fail with EPERM when runs on macos in code signing sandbox mode
 
 
 yasio-4.2.0

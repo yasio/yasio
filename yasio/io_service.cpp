@@ -1237,7 +1237,7 @@ void io_service::do_connect(io_channel* ctx)
         require call bind before connect for UDP sockets.
         refer issue: https://github.com/yasio/yasio/issues/441
         */
-        YASIO_KLOGW("bind %s:%u fail", ifaddr, ctx->local_port_);
+        YASIO_KLOGW("[warning] bind %s:%u fail", ifaddr, ctx->local_port_);
         ret = 0;
       }
     }

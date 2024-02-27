@@ -3,7 +3,7 @@
 yasio的粘包处理不仅针对TCP，对于UDP，如果发送端有组包发送机制，也是以相同的方式处理。整体来讲有两种方式: <br/>
 
 - 通过io_service选项 [YOPT_C_UNPACK_PARAMS](#lfbfd_params) 设置信道参数。
-- 通过io_service选项 `YOPT_C_LFBFD_FN` 设置自定义包长度解码函数 [decode_len_fn_t](#decode_len_fn_t) 。
+- 通过io_service选项 `YOPT_C_UNPACK_FN` 设置自定义包长度解码函数 [decode_len_fn_t](#decode_len_fn_t) 。
 
 !!! attention "注意"
 

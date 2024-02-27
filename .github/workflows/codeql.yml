@@ -11,14 +11,7 @@
 #
 name: codeql
 
-on:
-  push:
-    branches: [ "dev" ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "dev" ]
-  schedule:
-    - cron: '30 14 * * 1'
+on: [push]
 
 jobs:
   analyze:

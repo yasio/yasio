@@ -2,11 +2,16 @@
 
 ## 重点问题解答
 
+??? question "connect server xxx fail, ec=1, detail:Operation not permitted"
+
+    - 原因：macos下开启签名并运行在sandbox模式，导致socket.bind始终失败，详见：https://github.com/axmolengine/axmol/discussions/1669
+    - 解决办法：升级至v4.2.1，增加了更严格的判断条件来确定是否有必要调用`socket.bind`
+
 ??? question "do_select failed, ec=22, detail:Invalid argument"
     
     - 原因: 
-        - macOS/ios/tvos平台，`socket.max_fd + 1`直大于`FD_SETSIZE(1024)`
-        - Windows平台工作成长，限制的是`select`能够监听的文件描述符数量，但不受`socket.max_fd + 1`限制
+        - macOS/ios/tvos平台，`socket.max_fd + 1`值大于`FD_SETSIZE(1024)`
+        - Windows平台工作正常，限制的是`select`能够监听的文件描述符数量，但不受`socket.max_fd + 1`限制
         - linux平台，受到文件描述符`socket.max_fd + 1`限制，超过会立即返回1，但实际上无数据可读
         - freebsd平台，立即返回1，即使有数据可读，`is_set`判断始终返回false
     解决办法: 升级至3.39.6+版本，使用`poll`，不再受到任何限制

@@ -52,7 +52,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "tvOS")
     set(TVOS TRUE)
     set(PLATFORM_NAME tvos)
 else()
-    message(AUTHOR_WARNING "Unsupported platform to use prebuilt libs")
+    message(FATAL_ERROR "Unsupported platform, CMake will exit")
     return()
 endif()
 

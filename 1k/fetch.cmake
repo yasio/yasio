@@ -8,6 +8,10 @@
 ### 1kdist url
 find_program(PWSH_COMMAND NAMES pwsh powershell NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH NO_CMAKE_FIND_ROOT_PATH)
 
+if(NOT PWSH_COMMAND)
+    message(WARNING "fetch.cmake: PowerShell is missing, the function _1kfetch not work, please install from https://github.com/PowerShell/PowerShell/releases")
+endif()
+
 function(_1kfetch_init)
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fetchurl.ps1
         -name "1kdist"
@@ -34,11 +38,17 @@ function(_1kfetch_dist package_name)
             list(GET _status 0 status_code)
             list(GET _status 1 status_string)
             if(NOT status_code EQUAL 0)
+                file(REMOVE ${package_store})
                 message(FATAL_ERROR "Download ${package_url} fail, ${status_string}, logs: ${_logs}")
             endif()
         endif()
         file(ARCHIVE_EXTRACT INPUT ${package_store} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/)
-        file(RENAME ${CMAKE_CURRENT_LIST_DIR}/${package_name} ${_prebuilt_root})
+        if (IS_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/${package_name})
+            file(RENAME ${CMAKE_CURRENT_LIST_DIR}/${package_name} ${_prebuilt_root})
+        else() # download may fail
+            file(REMOVE ${package_store})
+            message(FATAL_ERROR "The package ${package_store} is malformed, please try again!")
+        endif()
     endif()
 
     # set platform specific path, PLATFORM_NAME provided by user: win32,winrt,mac,ios,android,tvos,watchos,linux
@@ -52,11 +62,26 @@ endfunction()
 
 # params: name, url
 function(_1kfetch name)
+    set(oneValueArgs VERSION URI)
+    cmake_parse_arguments(opt "" "${oneValueArgs}" "" ${ARGN})
+
+    set(_pkg_ver)
+    if(opt_VERSION)
+        set(_pkg_ver ${opt_VERSION})
+    endif()
+
+    if(NOT opt_URI)
+        set(_pkg_uri ${_1kfetch_manifest})
+    else()
+        set(_pkg_uri ${opt_URI})
+    endif()
+     
     set(_pkg_store "${_1kfetch_cache_dir}/${name}")
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fetch.ps1 
         -name "${name}"
-        -dest "${_pkg_store}"
-        -cfg ${_1kfetch_manifest}
+        -uri "${_pkg_uri}"
+        -prefix "${_1kfetch_cache_dir}"
+        -version "${_pkg_ver}"
         RESULT_VARIABLE _errorcode
         )
     if (_errorcode)
@@ -71,6 +96,4 @@ function(_1klink src dest)
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fsync.ps1 -s "${_srcDir}" -d "${_dstDir}" -l 1)
 endfunction()
 
-if(PWSH_COMMAND)
-    _1kfetch_init()
-endif()
+_1kfetch_init()

@@ -124,7 +124,7 @@ $prefix = Join-Path $b1k_root 'tools/external'
 $b1k_args += '-prefix', "$prefix"
 
 # android c++stl
-if($options.p -eq 'android' -and $options.xc.IndexOf('-DANDROID_STL') -eq -1) {
+if($options.p -eq 'android' -and !"$($options.xc)".Contains('-DANDROID_STL')) {
     $options.xc += '-DANDROID_STL=c++_shared'
 }
 

@@ -21,7 +21,7 @@ project(${yasio_target_name})
 set(_1kfetch_cache_dir "${CMAKE_CURRENT_LIST_DIR}/cache" CACHE STRING "" FORCE)
 set(_1kfetch_manifest "${CMAKE_CURRENT_LIST_DIR}/manifest.json" CACHE STRING "" FORCE)
 
-include(1k/platform.cmake)
+include(1k/platforms.cmake)
 include(1k/fetch.cmake)
 include(CMakeDependentOption)
 
@@ -176,20 +176,26 @@ elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
     message(STATUS "Build with mbedtls support")
     set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs" FORCE)
     set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
-    set(MBEDTLS_VER "3.4.1")
+    set(MBEDTLS_VER "3.5.2")
     if(MSVC_VERSION LESS 1900)
-        message(AUTHOR_WARNING "Using mbedtls 2.28.3 for vs2013 happy")
-        set(MBEDTLS_VER "2.28.3")
+        set(MBEDTLS_VER "2.28.7")
+        message(AUTHOR_WARNING "Using mbedtls ${MBEDTLS_VER} for vs2013 happy")
     endif()
-    include(1k/CPM.cmake)
-    CPMAddPackage(
-      NAME mbedtls
-      VERSION ${MBEDTLS_VER}
-      GITHUB_REPOSITORY "Mbed-TLS/mbedtls"
-      GIT_TAG "v${MBEDTLS_VER}"
-      OPTIONS
-        "MBEDTLS_FATAL_WARNINGS OFF"
-    )
+    if (PWSH_COMMAND)
+        _1kfetch(mbedtls VERSION ${MBEDTLS_VER} URI https://github.com/Mbed-TLS/mbedtls.git)
+        set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "" FORCE)
+        add_subdirectory(${mbedtls_SOURCE_DIR})
+    else()
+        include(1k/CPM.cmake)
+        CPMAddPackage(
+            NAME mbedtls
+            VERSION ${MBEDTLS_VER}
+            GITHUB_REPOSITORY "Mbed-TLS/mbedtls"
+            GIT_TAG "v${MBEDTLS_VER}"
+            OPTIONS
+                "MBEDTLS_FATAL_WARNINGS OFF"
+        )
+    endif()
     yasio_config_target_outdir(mbedtls)
     yasio_config_target_outdir(mbedcrypto)
     yasio_config_target_outdir(mbedx509)

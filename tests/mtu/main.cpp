@@ -40,7 +40,7 @@ int main()
   int tries = 0; // try increase sndbuf size
   do
   {
-    nret = s.sendto(data.data(), data.size(), endpoints[0]);
+    nret = s.sendto(data.data(), static_cast<int>(data.size()), endpoints[0]);
     error          = xxsocket::get_last_errno();
     os_sndbuf_size = s.get_optval<int>(SOL_SOCKET, SO_SNDBUF);
     if (nret == data.size())

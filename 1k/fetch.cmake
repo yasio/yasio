@@ -24,7 +24,7 @@ endfunction()
 # fetch prebuilt from 1kdist
 # param package_name
 function(_1kfetch_dist package_name)
-    set(_prebuilt_root ${CMAKE_CURRENT_LIST_DIR}/_d)
+    set(_prebuilt_root ${CMAKE_CURRENT_LIST_DIR}/_x)
     if(NOT IS_DIRECTORY ${_prebuilt_root})
         set (package_store "${_1kfetch_cache_dir}/1kdist/v${_1kdist_ver}/${package_name}.zip")
         if (NOT EXISTS ${package_store})

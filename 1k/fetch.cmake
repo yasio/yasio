@@ -11,7 +11,7 @@ find_program(PWSH_COMMAND NAMES pwsh powershell NO_PACKAGE_ROOT_PATH NO_CMAKE_PA
 function(_1kfetch_init)
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fetchurl.ps1
         -name "1kdist"
-        -cfg ${_1kfetch_manifest}
+        -manifest ${_1kfetch_manifest}
         OUTPUT_VARIABLE _1kdist_url
     )
     string(REPLACE "#" ";" _1kdist_url ${_1kdist_url})
@@ -56,40 +56,85 @@ function(_1kfetch_dist package_name)
     set(${package_name}_LIB_DIR ${_prebuilt_lib_dir} PARENT_SCOPE)
 endfunction()
 
-# params: name, url
-function(_1kfetch name)
-    set(oneValueArgs VERSION URI)
+function(_1kfetch uri)
+    set(oneValueArgs NAME)
     cmake_parse_arguments(opt "" "${oneValueArgs}" "" ${ARGN})
 
-    set(_pkg_ver)
-    if(opt_VERSION)
-        set(_pkg_ver ${opt_VERSION})
+    set(_pkg_name)
+    if(opt_NAME)
+        set(_pkg_name ${opt_NAME})
+    else()
+        # parse pkg name for pkg_store due to we can't get from execute_process properly
+        string(REGEX REPLACE "#.*" "" _trimmed_uri ${uri})
+        get_filename_component(_pkg_name ${_trimmed_uri} NAME_WE)
     endif()
 
-    if(NOT opt_URI)
-        set(_pkg_uri ${_1kfetch_manifest})
-    else()
-        set(_pkg_uri ${opt_URI})
-    endif()
-     
-    set(_pkg_store "${_1kfetch_cache_dir}/${name}")
-    execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fetch.ps1 
-        -name "${name}"
-        -uri "${_pkg_uri}"
+    set(_pkg_store "${_1kfetch_cache_dir}/${_pkg_name}")
+    execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fetch.ps1
+        -uri "${uri}"
         -prefix "${_1kfetch_cache_dir}"
-        -version "${_pkg_ver}"
+        -manifest "${_1kfetch_manifest}"
+        -name "${_pkg_name}"
         RESULT_VARIABLE _errorcode
         )
     if (_errorcode)
-        message(FATAL_ERROR "aborted")
+        message(FATAL_ERROR "fetch content ${uri} failed")
     endif()
-    set(${name}_SOURCE_DIR ${_pkg_store} PARENT_SCOPE)
+    set(${_pkg_name}_SOURCE_DIR ${_pkg_store} PARENT_SCOPE)
+    set(source_dir ${_pkg_store} PARENT_SCOPE)
+endfunction()
+
+function(_1kcm_add_pkg uri)
+    _1kfetch(${uri} ${ARGN})
+
+    set(options EXCLUDE_FROM_ALL)
+    set(oneValueArgs OPTIONS)
+    cmake_parse_arguments(opt "${options}" "${oneValueArgs}" "" ${ARGN})
+    foreach(OPTION ${opt_OPTIONS})
+        _1k_parse_option("${OPTION}")
+        set(${OPTION_KEY} "${OPTION_VALUE}" CACHE BOOL "" FORCE)
+    endforeach()
+    set(binary_dir "")
+    if(IS_ABSOLUTE ${source_dir})
+        string(LENGTH "${_AX_ROOT}/cache/" _offset)
+        string(LENGTH ${source_dir} _len)
+        math(EXPR _len "${_len} - ${_offset}" OUTPUT_FORMAT DECIMAL)
+        string(SUBSTRING ${source_dir} ${_offset} ${_len} _path)
+        set(binary_dir "${CMAKE_BINARY_DIR}/1kiss/${_path}")
+    endif()
+
+    if (opt_EXCLUDE_FROM_ALL)
+        add_subdirectory(${source_dir} ${binary_dir} EXCLUDE_FROM_ALL)
+    else()
+        add_subdirectory(${source_dir} ${binary_dir})
+    endif()
 endfunction()
 
 function(_1klink src dest)
     file(TO_NATIVE_PATH "${src}" _srcDir)
     file(TO_NATIVE_PATH "${dest}" _dstDir)
     execute_process(COMMAND ${PWSH_COMMAND} ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/fsync.ps1 -s "${_srcDir}" -d "${_dstDir}" -l 1)
+endfunction()
+
+function(_1k_parse_option OPTION)
+  string(REGEX MATCH "^[^ ]+" OPTION_KEY "${OPTION}")
+  string(LENGTH "${OPTION}" OPTION_LENGTH)
+  string(LENGTH "${OPTION_KEY}" OPTION_KEY_LENGTH)
+  if(OPTION_KEY_LENGTH STREQUAL OPTION_LENGTH)
+    # no value for key provided, assume user wants to set option to "ON"
+    set(OPTION_VALUE "ON")
+  else()
+    math(EXPR OPTION_KEY_LENGTH "${OPTION_KEY_LENGTH}+1")
+    string(SUBSTRING "${OPTION}" "${OPTION_KEY_LENGTH}" "-1" OPTION_VALUE)
+  endif()
+  set(OPTION_KEY
+      "${OPTION_KEY}"
+      PARENT_SCOPE
+  )
+  set(OPTION_VALUE
+      "${OPTION_VALUE}"
+      PARENT_SCOPE
+  )
 endfunction()
 
 if(PWSH_COMMAND)

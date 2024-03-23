@@ -82,7 +82,13 @@ else {
 # simple match url/ssh schema
 if ($url) {
     # fetch by url directly
-    $folder_name = (Split-Path $url -leafbase)
+    if ($PSVersionTable.PSVersion.major -gt 5) {
+        $folder_name = (Split-Path $url -LeafBase)
+    } else {
+        $folder_name = (Split-Path $url -Leaf)
+        $first_dot = $folder_name.IndexOf('.')
+        if ($first_dot -ne -1) { $folder_name = $folder_name.Substring(0, $first_dot) }
+    }
     if ($folder_name.EndsWith('.tar')) {
         $folder_name = $folder_name.Substring(0, $folder_name.length - 4)
     }

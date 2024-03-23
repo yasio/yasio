@@ -32,28 +32,36 @@ function mkdirs($path) {
     }
 }
 
-function fetch_repo($url, $out) {
-    if (!$url.EndsWith('.git')) {
-        download_file $url $out
-        if ($out.EndsWith('.zip')) {
-            Expand-Archive -Path $out -DestinationPath $prefix
-        }
-        elseif ($out.EndsWith('.tar.gz')) {
-            tar xf "$out" -C $prefix
-        }
-    }
-    else {
-        git clone --progress $url $lib_src | Out-Host
-        if (!(Test-Path $(Join-Path $lib_src '.git')) -and (Test-Path $lib_src -PathType Container)) {
-            Remove-Item $lib_src -Recurse -Force 
-        }
-    }
-}
-
+# ensure cachedir
 $cache_dir = Join-Path (Resolve-Path $PSScriptRoot/..).Path 'cache'
-
 if (!(Test-Path $cache_dir -PathType Container)) {
     mkdirs $cache_dir
+}
+
+function fetch_repo($url, $name, $dest, $ext) {
+    if ($ext -eq '.git') {
+        git clone --progress $url $dest | Out-Host
+    }
+    else {
+        $out = Join-Path $cache_dir "${name}$ext"
+        download_file $url $out
+
+        try {
+            if ($ext -eq '.zip') {
+                Expand-Archive -Path $out -DestinationPath $prefix -Force
+            }
+            else {
+                tar xf "$out" -C $prefix
+            }
+        }
+        catch {
+            throw "fetch.ps1: extract $out failed, $_"
+        }
+
+        if (!(Test-Path $dest)) {
+            throw "fetch.ps1: the package name mismatch for $out"
+        }
+    }
 }
 
 # parse url from $uri
@@ -80,24 +88,7 @@ else {
 }
 
 # simple match url/ssh schema
-if ($url) {
-    # fetch by url directly
-    if ($PSVersionTable.PSVersion.major -gt 5) {
-        $folder_name = (Split-Path $url -LeafBase)
-    } else {
-        $folder_name = (Split-Path $url -Leaf)
-        $first_dot = $folder_name.IndexOf('.')
-        if ($first_dot -ne -1) { $folder_name = $folder_name.Substring(0, $first_dot) }
-    }
-    if ($folder_name.EndsWith('.tar')) {
-        $folder_name = $folder_name.Substring(0, $folder_name.length - 4)
-    }
-
-    if (!$name) { $name = $folder_name }
-
-    $lib_src = Join-Path $prefix $folder_name
-}
-else {
+if (!$url) {
     # fetch package from manifest config
     $lib_src = Join-Path $prefix $name
     $mirror = if (!(Test-Path (Join-Path $PSScriptRoot '.gitee') -PathType Leaf)) { 'github' } else { 'gitee' }
@@ -119,16 +110,40 @@ else {
 }
 
 if (!$url) {
-    throw "fetch.ps1: can't determine package version of '$name'"
+    throw "fetch.ps1: can't determine package url of '$name'"
 }
 
+$url_pkg_ext = $null
+$url_pkg_name = $null
+$match_info = [Regex]::Match($url, '(\.git)|(\.zip)|(\.tar\.(gz|bz2|xz))$')
+if ($match_info.Success) {
+    $url_pkg_ext = $match_info.Value
+    $url_file_name = Split-Path $url -Leaf
+    $url_pkg_name = $url_file_name.Substring(0, $url_file_name.Length - $url_pkg_ext.Length)
+    if (!$name) {
+        $name = $url_pkg_name
+    }
+}
+else {
+    throw "fetch.ps1: invalid url, must be endswith .git, .zip, .tar.xx"
+}
+
+$is_git_repo = $url_pkg_ext -eq '.git'
+if (!$is_git_repo) {
+    $match_info = [Regex]::Match($url, '(\d+\.)+(-)?(\*|\d+)')
+    if ($match_info.Success) {
+        $version = $match_info.Value
+    }
+}
+
+$lib_src = Join-Path $prefix $name
+
 if (!$version) {
-    throw "fetch.ps1: can't determine package url of '$name'"
+    throw "fetch.ps1: can't determine package version of '$name'"
 }
 
 Set-Variable -Name "${name}_src" -Value $lib_src -Scope global
 
-$is_git_repo = $url.EndsWith('.git')
 $sentry = Join-Path $lib_src '_1kiss'
 
 $is_rev_modified = $false
@@ -138,17 +153,7 @@ if (!(Test-Path $sentry -PathType Leaf)) {
         Remove-Item $lib_src -Recurse -Force
     }
 
-    if ($url.EndsWith('.tar.gz')) {
-        $out_file = Join-Path $cache_dir "${folder_name}.tar.gz"
-    }
-    elseif ($url.EndsWith('.zip')) {
-        $out_file = Join-Path $cache_dir "${folder_name}.zip"
-    }
-    else {
-        $out_file = $null
-    }
-
-    fetch_repo -url $url -out $out_file
+    fetch_repo -url $url -name $name -dest $lib_src -ext $url_pkg_ext
     
     if (Test-Path $lib_src -PathType Container) {
         New-Item $sentry -ItemType File 1>$null

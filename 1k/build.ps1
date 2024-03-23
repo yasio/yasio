@@ -327,7 +327,7 @@ if ($TARGET_OS.EndsWith('-sim')) {
     $darwin_sim_suffix = '-sim'
 }
 $Global:is_wasm = $TARGET_OS -eq 'wasm'
-$Global:Is_win32 = $TARGET_OS -eq 'win32'
+$Global:is_win32 = $TARGET_OS -eq 'win32'
 $Global:is_winrt = $TARGET_OS -eq 'winrt'
 $Global:is_mac = $TARGET_OS -eq 'osx'
 $Global:is_linux = $TARGET_OS -eq 'linux'
@@ -1774,9 +1774,10 @@ if (!$setupOnly) {
             $gn_buildargs_overrides += 'use_msvcr14x=true'
         }
 
-        if($optimize_flag -eq 'Debug') {
+        if ($optimize_flag -eq 'Debug') {
             $gn_buildargs_overrides += 'is_debug=true'
-        } else {
+        }
+        else {
             $gn_buildargs_overrides += 'is_debug=false'
         }
 
@@ -1830,10 +1831,9 @@ if (!$setupOnly) {
     $env:buildResult = ConvertTo-Json @{
         buildDir     = $BUILD_DIR
         targetOS     = $TARGET_OS
-        HOST_CPU     = $HOST_CPU
-        isHOST_CPU   = $TARGET_CPU -eq $HOST_CPU
+        targetCPU    = $TARGET_CPU
+        hostCPU      = $HOST_CPU
         isHostTarget = $is_host_target
         compilerID   = $TOOLCHAIN_NAME
     }
 }
-

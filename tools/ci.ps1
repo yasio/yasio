@@ -41,7 +41,7 @@ if (!$configOnly) {
             }; 
             'osx' = {
                 $buildDir = $args[0]
-                if ($buildResult.isHostArch) {
+                if ($buildResult.targetCPU -eq $buildResult.hostCPU) {
                     Write-Host "run test tcptest on osx ..."
                     & "$buildDir/tests/tcp/Release/tcptest"
                     

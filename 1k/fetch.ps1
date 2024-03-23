@@ -155,10 +155,10 @@ if (!(Test-Path $sentry -PathType Leaf)) {
 
 # checkout revision for git repo
 if (!$revision) {
-    $pkg_ver = [array]$version.Split('-')
-    $use_hash = $pkg_ver.Count -gt 1
-    $revision = $pkg_ver[$use_hash].Trim()
-    $version = $pkg_ver[0]
+    $ver_pair = [array]$version.Split('-')
+    $use_hash = $ver_pair.Count -gt 1
+    $revision = $ver_pair[$use_hash].Trim()
+    $version = $ver_pair[0]
 }
 if ($is_git_repo) {
     $old_rev_hash = $(git -C $lib_src rev-parse HEAD)
@@ -219,8 +219,13 @@ if ($is_rev_modified) {
 if (Test-Path (Join-Path $lib_src '.gn') -PathType Leaf) {
     # the repo use google gn build system manage deps and build
     Push-Location $lib_src
+    # angle (A GLES native implementation by google)
     if (Test-Path 'scripts/bootstrap.py' -PathType Leaf) {
         python scripts/bootstrap.py
+    }
+    # darwin (A WebGPU native implementation by google)
+    if (Test-Path 'scripts/standalone.gclient' -PathType Leaf) {
+        Copy-Item scripts/standalone.gclient .gclient -Force
     }
     gclient sync -D
     Pop-Location

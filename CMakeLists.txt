@@ -183,11 +183,7 @@ elseif(YASIO_SSL_BACKEND EQUAL 2) # mbedtls
         set(MBEDTLS_VER "3.5.2")
     endif()
     if (PWSH_COMMAND)
-        _1kcm_add_pkg("gh:Mbed-TLS/mbedtls#${MBEDTLS_VER}" OPTIONS "MBEDTLS_FATAL_WARNINGS OFF")
-        # set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "" FORCE)
-        # add_subdirectory(${mbedtls_SOURCE_DIR})
-        # _1kcm_add_pkg(gh:Mbed-TLS/mbedtls#${MBEDTLS_VER}
-        #   OPTIONS "MBEDTLS_FATAL_WARNINGS OFF")
+        _1kadd_pkg("gh:Mbed-TLS/mbedtls#${MBEDTLS_VER}" OPTIONS "MBEDTLS_FATAL_WARNINGS OFF")
     else()
         include(1k/CPM.cmake)
         CPMAddPackage(

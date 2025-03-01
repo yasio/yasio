@@ -1,8 +1,14 @@
 yasio-4.3.2
 
-  1. Fix API `xxsocket::resolve` compatibility issue on android and freebsd.
+  1. Fix API `xxsocket::resolve` compatibility issue on android and freebsd
+  2. Add pod_vector pop_back support
+  3. Add ibstream_view read_blob
+  4. Make pod_vector more compatible stl
+  5. Fix compile warnings with clang-19
+  6. Fix string.hpp data semantic
+  7. Fix solaris ci
   
-
+  
 yasio-4.3.1
 
   1. Refining the resource cleanup process for io_service during the handle_stop phase, particularly when a worker thread is terminated externally

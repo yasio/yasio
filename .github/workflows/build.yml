@@ -1,6 +1,20 @@
 name: build
 
-on: [push,pull_request]
+on:  
+  push:
+    branches: dev
+    paths-ignore:
+      - '**.md'
+      - '**/*.md.in'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/codeql.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**.md'
+      - '**/*.md.in'
+      - 'docs/**'
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

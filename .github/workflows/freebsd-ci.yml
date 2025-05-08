@@ -28,9 +28,9 @@ jobs:
           # required by mbedtls-3.3.0
           pkg search pip
           python3 -V
-          pkg install -y py311-pip
-          pip install --no-deps jsonschema 
-          pip install jinja2
+          # pkg install -y py311-pip
+          # pip install --no-deps jsonschema 
+          # pip install jinja2
           # install perl5, localtion: /usr/local/bin
           pkg search perl5
           pkg search perl5 | cut -d' ' -f1 | head -n 1 | xargs pkg install -y

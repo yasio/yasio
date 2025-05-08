@@ -2,6 +2,8 @@
 
 # *YASIO* - *Y*et *A*nother *S*ocket *I*/*O* library.
 
+[![Build Status](https://github.com/simdsoft/yasio/workflows/build/badge.svg)](https://github.com/simdsoft/yasio/actions?query=workflow%3Abuild)
+[![VS2013 Status](https://ci.appveyor.com/api/projects/status/xdmad4v3917n7rct?svg=true)](https://ci.appveyor.com/project/halx99/yasio)
 [![Latest Release](https://img.shields.io/github/v/release/yasio/yasio?include_prereleases&label=release)](../../releases/latest)
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/yasio/yasio/blob/master/LICENSE)
@@ -16,16 +18,13 @@
 
 ## Supported Platforms
 
-| Build | Status (github) |
-|-------|-----------------|
-| Windows(msvc,clang,mingw)|[![Windows Build Status](https://github.com/yasio/yasio/workflows/windows/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Awindows)|
-| Windows(vs2013)|[![Windows VS2013 status](https://ci.appveyor.com/api/projects/status/xdmad4v3917n7rct?svg=true)](https://ci.appveyor.com/project/halx99/yasio)|
-| Android|[![Android Build Status](https://github.com/yasio/yasio/workflows/android/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aandroid)|
-| iOS/tvOS/watchOS|[![iOS Build Status](https://github.com/yasio/yasio/workflows/ios/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aios)|
-| Linux |[![Linux Build Status](https://github.com/yasio/yasio/workflows/linux/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Alinux)|
-| macOS |[![macOS Build Status](https://github.com/yasio/yasio/workflows/osx/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Aosx)|
-| FreeBSD |[![FreeBSD Build Status](https://github.com/yasio/yasio/workflows/freebsd/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Afreebsd)|
-| Solaris |[![Solaris Build Status](https://github.com/yasio/yasio/workflows/solaris/badge.svg)](https://github.com/yasio/yasio/actions?query=workflow%3Asolaris)|
+- Windows
+- Android
+- iOS/tvOS/watchOS
+- Linux
+- macOS
+- FreeBSD
+- Solaris
 
 ## Showcase
 

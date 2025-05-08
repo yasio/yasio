@@ -1,0 +1,256 @@
+name: build
+
+on: [push,pull_request]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  PING_HOST: github.com
+
+jobs:
+  win-msvc:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - x86
+          - x64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      with: 
+        arch: ${{ env.BUILD_ARCH }}
+        uwp: 'false'
+
+    - name: Build
+      shell: pwsh
+      run: |
+        .\tools\ci.ps1 -p win32 -a $env:BUILD_ARCH
+  win-clang:
+    runs-on: windows-latest
+ 
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      with: 
+        arch: ${{ env.BUILD_ARCH }}
+        uwp: 'false'
+    - name: Build
+      shell: pwsh
+      run: |
+        .\tools\ci.ps1 -p win32 -cc clang
+  win-mingw:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - uses: msys2/setup-msys2@v2
+      with: 
+        msystem: mingw64
+        install: mingw-w64-x86_64-toolchain
+    - name: Build
+      run: .\tools\ci.ps1 -p win32 -cc 'gcc'
+  winuwp:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - arm64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      with: 
+        arch: ${{ env.BUILD_ARCH }}
+        uwp: 'true'
+
+    - name: Build
+      shell: pwsh
+      run: .\tools\ci.ps1 -p winuwp -a $env:BUILD_ARCH
+  linux:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Build
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      shell: pwsh
+      run: |
+        ./tools/ci.ps1 -p linux
+  android:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        arch:
+          - armv7
+          - arm64
+          - x86
+          - x64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+      
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Build
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      shell: pwsh
+      run: ./tools/ci.ps1 -p android -a $env:BUILD_ARCH
+  osx:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - arm64
+    env:
+      BUILD_ARCH: ${{ matrix.arch }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        
+    - name: Build
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      shell: pwsh
+      run: |
+        ./tools/ci.ps1 -p osx -a $env:BUILD_ARCH
+  ios:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: macos-latest
+    
+    strategy:
+      matrix:
+        target:
+          - ios
+          - tvos
+          - watchos
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        
+    - name: Build
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      shell: pwsh
+      run: ./tools/ci.ps1 -p $env:BUILD_TARGET -a arm64
+  freebsd:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Build
+      uses: vmactions/freebsd-vm@v1
+      with:
+        release: '14.2'
+        usesh: true
+        sync: rsync
+        copyback: false
+        prepare: |
+          pkg install -y git
+          pkg install -y cmake
+          pkg install -y python3
+          # required by mbedtls-3.3.0
+          pkg search pip
+          python3 -V
+          # pkg install -y py311-pip
+          # pip install --no-deps jsonschema 
+          # pip install jinja2
+          # install perl5, localtion: /usr/local/bin
+          pkg search perl5
+          pkg search perl5 | cut -d' ' -f1 | head -n 1 | xargs pkg install -y
+          perl -v
+        run: |
+          echo Building on freebsd...
+          cmake -G "Unix Makefiles" -S . -Bbuild -DYASIO_SSL_BACKEND=2
+          cmake --build build --config Release
+          echo run test icmp on freebsd...
+          ./build/tests/icmp/icmptest
+  solaris:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Build
+      uses: vmactions/solaris-vm@main
+      with:
+        usesh: true
+        sync: rsync
+        copyback: false
+        prepare: |
+          # git
+          pkgutil -y -i git
+          # cmake
+          pkgutil -y -i cmake
+          # required by mbedtls-3.3.0
+          python3 --version
+          # pip-3.5 install jsonschema jinja2
+          # gcc
+          echo y | pkg install gcc
+          # check tools
+          cmake --version
+          gcc --version
+          perl -v
+        run: |
+          echo Building on solaris...
+          cmake -G "Unix Makefiles" -S . -Bbuild -DYASIO_SSL_BACKEND=2
+          cmake --build build --config Release
+          echo run test icmp on solaris ...
+          ./build/tests/icmp/icmptest
+          echo run ssltest on solaris ...
+          ./build/tests/ssl/ssltest

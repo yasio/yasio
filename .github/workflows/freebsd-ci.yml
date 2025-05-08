@@ -8,7 +8,7 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -25,6 +25,7 @@ jobs:
           pkg install -y cmake
           pkg install -y python3
           # required by mbedtls-3.3.0
+          pkg search pip
           pkg install -y py39-pip
           pip install jsonschema jinja2
           # install perl5, localtion: /usr/local/bin

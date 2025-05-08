@@ -17,6 +17,7 @@ jobs:
     - name: Build
       uses: vmactions/freebsd-vm@v1
       with:
+        release: '14.2'
         usesh: true
         sync: rsync
         copyback: false
@@ -26,7 +27,8 @@ jobs:
           pkg install -y python3
           # required by mbedtls-3.3.0
           pkg search pip
-          pkg install -y py39-pip
+          python3 -V
+          pkg install -y py311-pip
           pip install jsonschema jinja2
           # install perl5, localtion: /usr/local/bin
           pkg search perl5

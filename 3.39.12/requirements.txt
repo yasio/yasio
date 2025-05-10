@@ -1,0 +1,11 @@
+mkdocs-material==9.*
+cffi==1.16.0
+pytest-runner==6.0.1
+WeasyPrint==60.2
+mkdocs-pdf-export-plugin==0.5.10
+mkdocs-minify-plugin==0.8.0
+mike>=2.0.0
+Pillow==10.2.0
+mkdocs-git-revision-date-localized-plugin
+mkdocs-redirects>=1.2.1
+jieba>=0.42.1

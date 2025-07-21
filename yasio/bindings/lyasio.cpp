@@ -795,7 +795,7 @@ end
 
   char version[32];
   snprintf(version, sizeof(version), "%x.%x.%x", (YASIO_VERSION_NUM >> 16) & 0xff, (YASIO_VERSION_NUM >> 8) & 0xff, YASIO_VERSION_NUM & 0xff);
-  YASIO_EXPORT_ANY(version);
+  yasio_lib["version"] = std::string(version);
 
   return yasio_lib.push(); /* return 'yasio' table */
 }

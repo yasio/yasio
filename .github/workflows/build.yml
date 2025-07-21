@@ -69,10 +69,10 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - uses: msys2/setup-msys2@v2
-      with: 
-        msystem: mingw64
-        install: mingw-w64-x86_64-toolchain
+    - name: Set up MinGW
+      uses: egor-tensin/setup-mingw@v2
+      with:
+        platform: x64
     - name: Build
       run: .\tools\ci.ps1 -p win32 -cc 'gcc'
   winuwp:

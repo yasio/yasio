@@ -36,83 +36,51 @@ SOFTWARE.
 #include "yasio/compiler/feature_test.hpp"
 #include "yasio/type_traits.hpp"
 
-#define _YASIO_VERIFY_RANGE(cond, mesg)                 \
-  do                                                    \
-  {                                                     \
-    if (cond)                                           \
-      ; /* contextually convertible to bool paranoia */ \
-    else                                                \
-    {                                                   \
-      throw std::out_of_range(mesg);                    \
-    }                                                   \
-                                                        \
-  } while (false)
-
 namespace yasio
 {
-template <typename _Alty>
-struct buffer_allocator_traits {
-  using value_type = typename _Alty::value_type;
-  using size_type  = size_t;
-  static YASIO__CONSTEXPR size_type max_size() { return static_cast<size_type>(-1) / sizeof(value_type); }
-  static value_type* reallocate(void* block, size_t size, size_t new_size)
-  {
-    return static_cast<value_type*>(_Alty::reallocate(block, size, new_size * sizeof(value_type)));
-  }
-  static void deallocate(void* block, size_t size) { _Alty::deallocate(block, size); }
-};
-template <typename _Ty, enable_if_t<std::is_trivially_copyable<_Ty>::value, int> = 0>
-struct buffer_allocator {
-  using value_type = _Ty;
-  static value_type* reallocate(void* block, size_t /*size*/, size_t new_size)
-  {
-    return static_cast<value_type*>(::realloc(block, new_size * sizeof(value_type)));
-  }
-  static void deallocate(void* block, size_t /*size*/) { ::free(block); }
-};
-template <typename _Ty, enable_if_t<std::is_trivially_copyable<_Ty>::value, int> = 0>
-struct std_buffer_allocator {
-  using value_type = _Ty;
-  static value_type* reallocate(void* block, size_t size, size_t new_size)
-  {
-    if (!block)
-      return new (std::nothrow) value_type[new_size];
-    void* new_block = nullptr;
-    if (new_size)
-    {
-      if (new_size <= size)
-        return block;
-      new_block = new (std::nothrow) value_type[new_size];
-      if (new_block)
-        memcpy(new_block, block, size);
-    }
-    delete[] (value_type*)block;
-    return (value_type*)new_block;
-  }
-  static void deallocate(void* block, size_t /*size*/) { delete[] (value_type*)block; }
-};
-template <typename _Ty, bool = true>
-struct construct_helper {
-  template <typename... Args>
-  static _Ty* construct_at(_Ty* p, Args&&... args)
-  {
-    return ::new (static_cast<void*>(p)) _Ty(std::forward<Args>(args)...);
-  }
-};
-template <typename _Ty>
-struct construct_helper<_Ty, false> {
-  template <typename... Args>
-  static _Ty* construct_at(_Ty* p, Args&&... args)
-  {
-    return ::new (static_cast<void*>(p)) _Ty{std::forward<Args>(args)...};
-  }
-};
+template <typename T>
+struct crt_buffer_allocator {
+  using value_type      = T;
+  using pointer         = T*;
+  using const_pointer   = const T*;
+  using size_type       = std::size_t;
+  using difference_type = std::ptrdiff_t;
 
-template <typename _Ty, typename... Args>
-inline _Ty* construct_at(_Ty* p, Args&&... args)
-{
-  return construct_helper<_Ty, std::is_constructible<_Ty, Args&&...>::value>::construct_at(p, std::forward<Args>(args)...);
-}
+  // allocate n elements using CRT malloc
+  pointer allocate(size_type n)
+  {
+    if (n > max_size())
+      throw std::bad_alloc();
+    void* p = ::malloc(n * sizeof(T));
+    if (!p)
+      throw std::bad_alloc();
+    return static_cast<pointer>(p);
+  }
+
+  // deallocate memory using CRT free
+  void deallocate(pointer p, size_type /*n*/) noexcept { ::free(p); }
+
+  // optional reallocate (non-standard, but useful for vector)
+  pointer reallocate(pointer p, size_type old_count, size_type new_count)
+  {
+    void* np = ::realloc(p, new_count * sizeof(T));
+    if (!np)
+      throw std::bad_alloc();
+    return static_cast<pointer>(np);
+  }
+
+  // max_size consistent with std::allocator
+  size_type max_size() const noexcept { return static_cast<size_type>(-1) / sizeof(T); }
+
+  // equality operators required by standard
+  template <class U>
+  struct rebind {
+    using other = crt_buffer_allocator<U>;
+  };
+
+  bool operator==(const crt_buffer_allocator&) const noexcept { return true; }
+  bool operator!=(const crt_buffer_allocator&) const noexcept { return false; }
+};
 
 } // namespace yasio
 

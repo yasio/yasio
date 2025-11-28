@@ -358,6 +358,12 @@ public:
     return *_Emplace_back_reallocate(std::forward<_Valty>(val)...);
   }
 
+  // erase single element by const_iterator
+  iterator erase(const_iterator pos) { return erase(const_cast<iterator>(pos)); }
+
+  // erase range by const_iterator
+  iterator erase(const_iterator first, const_iterator last) { return erase(const_cast<iterator>(first), const_cast<iterator>(last)); }
+
   // erase single
   iterator erase(iterator pos)
   {
@@ -766,6 +772,20 @@ template <typename _Ty, typename _Alloc, typename _Pr>
 void erase_if(vector<_Ty, _Alloc>& cont, _Pr pred)
 {
   cont.erase(std::remove_if(cont.begin(), cont.end(), pred), cont.end());
+}
+#pragma endregion
+
+#pragma region ordered insert, for flat container emulating
+template <typename _Cont>
+inline typename _Cont::iterator ordered_insert(_Cont& vec, typename _Cont::value_type const& val)
+{
+  return vec.insert(std::upper_bound(vec.begin(), vec.end(), val), val);
+}
+
+template <typename _Cont, typename _Pred>
+inline typename _Cont::iterator ordered_insert(_Cont& vec, typename _Cont::value_type const& val, _Pred pred)
+{
+  return vec.insert(std::upper_bound(vec.begin(), vec.end(), val, pred), val);
 }
 #pragma endregion
 

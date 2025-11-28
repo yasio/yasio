@@ -125,7 +125,7 @@ public:
       clear();
       const auto count = static_cast<size_type>(std::distance(first, last));
       reserve(count);
-      if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+      if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
         std::copy_n((iterator)ifirst, count, st._Myfirst);
       else
         std::uninitialized_copy((iterator)ifirst, (iterator)ifirst + count, st._Myfirst);
@@ -175,7 +175,7 @@ public:
       auto move_to    = pos + count;
       auto tail_count = static_cast<size_type>(mlast - move_to);
 
-      if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+      if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
       {
         // POD path: shift tail right into gap
         std::copy_n(pos, tail_count, move_to);
@@ -221,7 +221,7 @@ public:
       auto move_to    = pos + count;
       auto tail_count = static_cast<size_type>(mlast - move_to);
 
-      if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+      if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
       {
         std::copy_n(pos, tail_count, move_to);
         std::fill_n(pos, count, val);
@@ -270,7 +270,7 @@ public:
       pos        = _Mypair.second()._Myfirst + insertion_off;
       auto mlast = _Mypair.second()._Mylast;
 
-      if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+      if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
       {
         std::copy_n(pos, static_cast<size_type>(mlast - (pos + 1)), pos + 1);
         ::yasio::construct_at(pos, std::forward<_Valty>(val)...);
@@ -305,7 +305,7 @@ public:
     expand(count);
 
     auto dst = _Mypair.second()._Myfirst + old_size;
-    if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+    if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
       std::copy_n((iterator)ifirst, count, dst);
     else
       std::uninitialized_copy((iterator)ifirst, (iterator)ifirst + count, dst);
@@ -320,7 +320,7 @@ public:
     const auto old_size = size();
     expand(count);
     auto dst = _Mypair.second()._Myfirst + old_size;
-    if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+    if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
       std::fill_n(dst, count, val);
     else
       std::uninitialized_fill_n(dst, count, val);
@@ -338,7 +338,7 @@ public:
     auto& alloc = _Mypair.first();
     if (!empty())
     {
-      if constexpr (!std::is_trivially_destructible_v<value_type>)
+      if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
         _Alloc_traits::destroy(alloc, st._Mylast - 1);
       st._Mylast = st._Mylast - 1;
     }
@@ -366,7 +366,7 @@ public:
     _YASIO_VERIFY_RANGE(pos >= st._Myfirst && pos < st._Mylast, "vector: out of range!");
     iterator next = pos + 1;
 
-    if constexpr (!std::is_trivially_destructible_v<value_type>)
+    if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
     {
       _Alloc_traits::destroy(alloc, pos);
       std::move(next, st._Mylast, pos);
@@ -389,7 +389,7 @@ public:
     _YASIO_VERIFY_RANGE((first <= last) && first >= st._Myfirst && last <= st._Mylast, "vector: out of range!");
     size_type count = static_cast<size_type>(last - first);
 
-    if constexpr (!std::is_trivially_destructible_v<value_type>)
+    if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
     {
       for (iterator it = first; it != last; ++it)
         _Alloc_traits::destroy(alloc, it);
@@ -444,7 +444,7 @@ public:
   void clear() YASIO__NOEXCEPT
   {
     auto& st    = _Mypair.second();
-    if constexpr (!std::is_trivially_destructible_v<value_type>)
+    if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
     {
 	  auto& alloc = _Mypair.first();
       for (pointer p = st._Myfirst; p != st._Mylast; ++p)
@@ -482,7 +482,7 @@ public:
 
     if (new_size < old_size)
     {
-      if constexpr (!std::is_trivially_destructible_v<value_type>)
+      if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
       {
         for (pointer p = st._Myfirst + new_size; p != st._Mylast; ++p)
           _Alloc_traits::destroy(alloc, p);
@@ -491,7 +491,7 @@ public:
     }
     else if (new_size > old_size)
     {
-      if constexpr (std::is_trivially_default_constructible_v<value_type>)
+      if YASIO__CONSTEXPR (std::is_trivially_default_constructible_v<value_type>)
       {
         // POD path: leave as uninitialized for overwrite
         st._Mylast = st._Myfirst + new_size;
@@ -512,7 +512,7 @@ public:
     if (this->capacity() < new_size)
       _Resize_reallocate<_Reallocation_policy::_At_least>(new_size);
     // initialize newly added region for non-POD
-    if constexpr (std::is_trivially_default_constructible_v<value_type>)
+    if YASIO__CONSTEXPR (std::is_trivially_default_constructible_v<value_type>)
     {
       st._Mylast = st._Myfirst + new_size;
     }
@@ -566,7 +566,7 @@ public:
     {
       auto dst        = st._Myfirst + old_size;
       auto fill_count = new_size - old_size;
-      if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+      if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
         std::fill_n(dst, fill_count, val);
       else
         std::uninitialized_fill_n(dst, fill_count, val);
@@ -582,7 +582,7 @@ public:
     const auto old_size = this->size();
     expand(count);
     auto dst = st._Myfirst + old_size;
-    if constexpr (std::is_trivially_copy_constructible_v<value_type>)
+    if YASIO__CONSTEXPR (std::is_trivially_copy_constructible_v<value_type>)
       std::fill_n(dst, count, val);
     else
       std::uninitialized_fill_n(dst, count, val);
@@ -701,7 +701,7 @@ private:
 
     pointer newbuf = _Alloc_traits::allocate(alloc, new_cap);
     // move-construct into new buffer
-    if constexpr (std::is_trivially_move_constructible_v<value_type>)
+    if YASIO__CONSTEXPR (std::is_trivially_move_constructible_v<value_type>)
     {
       // POD path: copy bytes
       std::uninitialized_copy(st._Myfirst, st._Mylast, newbuf);
@@ -712,7 +712,7 @@ private:
     }
 
     // destroy old elements
-    if constexpr (!std::is_trivially_destructible_v<value_type>)
+    if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
     {
       for (pointer p = st._Myfirst; p != st._Mylast; ++p)
         _Alloc_traits::destroy(alloc, p);
@@ -735,7 +735,7 @@ private:
     auto& alloc = _Mypair.first();
     if (st._Myfirst)
     {
-      if constexpr (!std::is_trivially_destructible_v<value_type>)
+      if YASIO__CONSTEXPR (!std::is_trivially_destructible_v<value_type>)
       {
         for (pointer p = st._Myfirst; p != st._Mylast; ++p)
           _Alloc_traits::destroy(alloc, p);

@@ -241,8 +241,9 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Build
-      uses: vmactions/solaris-vm@main
+      uses: vmactions/solaris-vm@v1
       with:
+        release: '11.4-gcc'
         usesh: true
         sync: rsync
         copyback: false

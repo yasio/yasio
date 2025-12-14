@@ -70,7 +70,7 @@ public:
   using my_type            = basic_string<_Elem, _Alloc>;
   static const size_t npos = -1;
   basic_string() {}
-  basic_string(nullptr_t) = delete;
+  basic_string(::std::nullptr_t) = delete;
   explicit basic_string(size_type count) { resize(static_cast<size_type>(count)); }
   basic_string(size_type count, const_reference val) { resize(static_cast<size_type>(count), val); }
   template <typename _Iter, ::yasio::enable_if_t<::yasio::is_iterator<_Iter>::value, int> = 0>

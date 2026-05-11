@@ -146,8 +146,8 @@ template <>
 struct byte_order_impl<fp16_t, sizeof(fp16_t)> {
   static inline fp16_t host_to_network(fp16_t value)
   {
-    uint16_t& underlying_value = (uint16_t&)value;
-    YASIO__SWAP_SHORT(underlying_value);
+    auto underlying_value = reinterpret_cast<uint16_t*>(&value);
+    YASIO__SWAP_SHORT(*underlying_value);
     return value;
   }
   static inline fp16_t network_to_host(fp16_t value) { return host_to_network(value); }

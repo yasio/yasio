@@ -205,7 +205,7 @@ jobs:
     - name: Build
       uses: vmactions/freebsd-vm@v1
       with:
-        release: '14.2'
+        release: '15.0'
         usesh: true
         sync: rsync
         copyback: false

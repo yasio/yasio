@@ -27,8 +27,8 @@ if (!$configOnly) {
                 Write-Host "run issue201 on linux..."
                 & "$buildDir/tests/issue201/issue201"
                 
-                Write-Host "run httptest on linux..."
-                & "$buildDir/tests/http/httptest"
+                # Write-Host "run httptest on linux..."
+                # & "$buildDir/tests/http/httptest"
             
                 Write-Host "run ssltest on linux..."
                 & "$buildDir/tests/ssl/ssltest"

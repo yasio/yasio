@@ -75,7 +75,8 @@ void yasioMulticastTest(int mcast_role)
         // print packet msg
         auto packet = std::move(event->packet());
         fwrite(packet.data(), packet.size(), 1, stdout);
-        fprintf(stdout, "%lld--------------------\n\n", (long long)yasio::clock<yasio::system_clock_t>() / 1000);
+        fprintf(stdout, "%lld--------------------\n\n",
+                (long long)tlx::clock<tlx::system_clock_t>() / 1000);
 
         fflush(stdout);
         auto transport = event->transport();

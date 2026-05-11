@@ -14,19 +14,19 @@ void yasioTest()
 {
   yasio::inet::io_hostent endpoints[] = {{HTTP_TEST_HOST, 80}};
 
-  using namespace cxx17;
-  bool yes = cxx20::starts_with("hello world", "hello");
-  yes      = cxx20::starts_with("hello world", (int)'h');
-  yes      = cxx20::starts_with("hello world", std::string{"hello"});
-  yes      = cxx20::starts_with(std::string{"hello world"}, "hello");
-  yes      = cxx20::starts_with(std::string{"hello world"}, std::string{"hello"});
-  yes      = cxx20::starts_with(std::string{"hello world"}, (int)'h');
+  using namespace std;
+  bool yes = tlx::starts_with("hello world", "hello");
+  yes      = tlx::starts_with("hello world", (int)'h');
+  yes      = tlx::starts_with("hello world", std::string{"hello"});
+  yes      = tlx::starts_with(std::string{"hello world"}, "hello");
+  yes      = tlx::starts_with(std::string{"hello world"}, std::string{"hello"});
+  yes      = tlx::starts_with(std::string{"hello world"}, (int)'h');
 #if YASIO__HAS_CXX14
-  yes      = cxx20::starts_with("hello world"_sv, (int)'h');
-  yes      = cxx20::starts_with("hello world"_sv, "hello");
-  yes      = cxx20::starts_with("hello world", "hello"_sv);
-  yes      = cxx20::starts_with(std::string{"hello world"}, "hello"_sv);
-  yes      = cxx20::starts_with("hello world"_sv, std::string{"hello"});
+  yes      = tlx::starts_with("hello world"sv, (int)'h');
+  yes      = tlx::starts_with("hello world"sv, "hello");
+  yes      = tlx::starts_with("hello world", "hello"sv);
+  yes      = tlx::starts_with(std::string{"hello world"}, "hello"sv);
+  yes      = tlx::starts_with("hello world"sv, std::string{"hello"});
 #endif
 
   yasio::obstream obs;
@@ -57,11 +57,11 @@ void yasioTest()
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v8 << "\n";
 #endif
 
-  yasio::sbyte_buffer vecbuf;
+  tlx::sbyte_buffer vecbuf;
   std::string strbuf;
   std::array<char, 16> arrbuf;
   char raw_arrbuf[16];
-  yasio::obstream_span<yasio::sbyte_buffer>{vecbuf}.write_bytes("hello world!");
+  yasio::obstream_span<tlx::sbyte_buffer>{vecbuf}.write_bytes("hello world!");
   yasio::obstream_span<std::string>{strbuf}.write_bytes("hello world!");
   yasio::obstream_span<yasio::fixed_buffer_span>{arrbuf}.write_bytes("hello world!");
   yasio::obstream_span<yasio::fixed_buffer_span>{raw_arrbuf}.write_bytes("hello world!");

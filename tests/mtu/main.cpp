@@ -1,5 +1,5 @@
 #include "yasio/xxsocket.hpp"
-#include "yasio/byte_buffer.hpp"
+#include "yasio/tlx/byte_buffer.hpp"
 
 int main()
 {
@@ -17,7 +17,7 @@ int main()
     return ENOENT;
   }
 
-  yasio::byte_buffer data;
+  tlx::byte_buffer data;
   data.resize(65535, '1');
 
   // set sndbuf match with data size, while, linux kenerl will double it

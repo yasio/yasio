@@ -46,8 +46,8 @@ using namespace yasio;
 
 namespace
 {
-inline int svtoi(cxx17::string_view& sv) { return !sv.empty() ? atoi(sv.data()) : 0; }
-inline const char* svtoa(cxx17::string_view& sv) { return !sv.empty() ? sv.data() : ""; }
+inline int svtoi(std::string_view& sv) { return !sv.empty() ? atoi(sv.data()) : 0; }
+inline const char* svtoa(std::string_view& sv) { return !sv.empty() ? sv.data() : ""; }
 } // namespace
 
 extern "C" {
@@ -60,12 +60,12 @@ YASIO_NI_API void yasio_init_globals(void(YASIO_INTEROP_DECL* pfn)(int level, co
 YASIO_NI_API void yasio_cleanup_globals() { io_service::cleanup_globals(); }
 
 struct yasio_io_event {
-  int kind; // event kind
-  int channel; // channel index
+  int kind;      // event kind
+  int channel;   // channel index
   void* thandle; // transport
   union {
     void* hmsg; // io_packet*
-    int ec; // error code
+    int ec;     // error code
   };
   void* user; // user data
 };
@@ -154,16 +154,19 @@ YASIO_NI_API void yasio_set_option(void* service_ptr, int opt, const char* pszAr
 
   // split args
   std::string strArgs = pszArgs;
-  std::array<cxx17::string_view, YASIO_MAX_OPTION_ARGC> args;
+  std::array<std::string_view, YASIO_MAX_OPTION_ARGC> args;
   int argc = 0;
-  tlx::split_if(&strArgs.front(), ';', [&](char* s, char* e) {
-    if (e) {
-        *e           = '\0'; // to c style string
-        args[argc++] = cxx17::string_view(s, e - s);
-    } else {
-        args[argc++] = cxx17::string_view{s};
+  tlx::split_until(&strArgs.front(), ';', [&](char* s, char* e) {
+    if (e)
+    {
+      *e           = '\0'; // to c style string
+      args[argc++] = std::string_view(s, e - s);
     }
-    return (argc < YASIO_MAX_OPTION_ARGC);
+    else
+    {
+      args[argc++] = std::string_view{s};
+    }
+    return (argc >= YASIO_MAX_OPTION_ARGC);
   });
 
   switch (opt)
@@ -233,7 +236,7 @@ YASIO_NI_API int yasio_write(void* service_ptr, void* thandle, const char* bytes
 {
   auto service = reinterpret_cast<io_service*>(service_ptr);
   if (service)
-    return service->write(reinterpret_cast<transport_handle_t>(thandle), yasio::sbyte_buffer(bytes, bytes + len));
+    return service->write(reinterpret_cast<transport_handle_t>(thandle), tlx::sbyte_buffer(bytes, bytes + len));
   return -1;
 }
 YASIO_NI_API int yasio_forward(void* service_ptr, void* thandle, void* bufferHandle,
@@ -324,6 +327,6 @@ YASIO_NI_API void yasio_ob_write_bytes(void* obs_ptr, void* bytes, int len)
   obs->write_bytes(bytes, len);
 }
 
-YASIO_NI_API long long yasio_highp_time(void) { return highp_clock<system_clock_t>(); }
-YASIO_NI_API long long yasio_highp_clock(void) { return highp_clock<steady_clock_t>(); }
+YASIO_NI_API long long yasio_highp_time(void) { return tlx::highp_clock<tlx::system_clock_t>(); }
+YASIO_NI_API long long yasio_highp_clock(void) { return tlx::highp_clock<tlx::steady_clock_t>(); }
 }

@@ -29,9 +29,9 @@ void run_echo_server(const char* ip, u_short port, const char* protocol)
   timer.async_wait_once([=](io_service& server) {
     server.set_option(YOPT_C_UNPACK_PARAMS, 0, 65536, -1, 0, 0);
     printf("[%s] open server %s:%u ...\n", protocol, ip, port);
-    if (cxx20::ic::iequals(protocol, "udp"))
+    if (tlx::ic::iequals(protocol, "udp"))
       server.open(0, YCK_UDP_SERVER);
-    else if (cxx20::ic::iequals(protocol, "kcp"))
+    else if (tlx::ic::iequals(protocol, "kcp"))
       server.open(0, YCK_KCP_SERVER);
     else
       server.open(0, YCK_TCP_SERVER);

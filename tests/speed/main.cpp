@@ -146,13 +146,13 @@ void setup_kcp_transfer(transport_handle_t handle)
 // The transport rely on low level proto UDP/TCP
 void ll_send_repeated(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  static long long time_start   = yasio::highp_clock<>();
+  static long long time_start   = tlx::highp_clock<>();
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
   auto cb = [=](int, size_t bytes_transferred) {
     assert(bytes_transferred == obs->buffer().size());
-    time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    time_elapsed = (tlx::highp_clock<>() - time_start) / 1000000.0;
     s_send_total_bytes += bytes_transferred;
     s_send_speed = s_send_total_bytes / time_elapsed;
     ll_send_repeated(service, thandle, obs);
@@ -164,13 +164,13 @@ void ll_send_repeated(io_service* service, transport_handle_t thandle, obstream*
 
 void kcp_send_repeated(io_service* service, transport_handle_t thandle, obstream* obs)
 {
-  static long long time_start   = yasio::highp_clock<>();
+  static long long time_start   = tlx::highp_clock<>();
   static double time_elapsed    = 0;
   static double last_print_time = 0;
 
   highp_timer_ptr ignored_ret = service->schedule(std::chrono::microseconds(s_kcp_send_interval), [=](io_service&) {
     s_send_total_bytes += service->write(thandle, obs->buffer());
-    time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+        time_elapsed = (tlx::highp_clock<>() - time_start) / 1000000.0;
     s_send_speed = s_send_total_bytes / time_elapsed;
     print_speed_detail(0.5, time_elapsed);
     if (time_elapsed < s_send_limit_time)
@@ -249,7 +249,7 @@ void start_sender(io_service& service)
 
 void start_receiver(io_service& service)
 {
-  static long long time_start   = yasio::highp_clock<>();
+  static long long time_start   = tlx::highp_clock<>();
   static double last_print_time = 0;
   service.set_option(YOPT_S_FORWARD_PACKET, 1);
   service.set_option(YOPT_C_MOD_FLAGS, 0, YCF_REUSEADDR, 0);
@@ -262,7 +262,7 @@ void start_receiver(io_service& service)
     {
       case YEK_PACKET: {
         s_recv_total_bytes += event->packet_view().size();
-        auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+        auto time_elapsed = (tlx::highp_clock<>() - time_start) / 1000000.0;
         s_recv_speed      = s_recv_total_bytes / time_elapsed;
         break;
       }
@@ -307,9 +307,9 @@ int main(int argc, char** argv)
   if (argc > 1)
     mode = argv[1];
 
-  if (cxx20::ic::iequals(mode, "server"))
+  if (tlx::ic::iequals(mode, "server"))
     start_receiver(receiver);
-  else if (cxx20::ic::iequals(mode, "client"))
+  else if (tlx::ic::iequals(mode, "client"))
     start_sender(sender);
   else
   {
@@ -317,14 +317,14 @@ int main(int argc, char** argv)
     start_sender(sender);
   }
 
-  static long long time_start = yasio::highp_clock<>();
+  static long long time_start = tlx::highp_clock<>();
   while (true)
   {
     // main thread, print speed only, so sleep 200ms
     // !Note: sleep(10ms) will cost 0.3%CPU, 200ms %0CPU, tested on macbook pro 2019
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    auto time_elapsed = (yasio::highp_clock<>() - time_start) / 1000000.0;
+    auto time_elapsed = (tlx::highp_clock<>() - time_start) / 1000000.0;
     print_speed_detail(0.5, time_elapsed);
   }
   return 0;

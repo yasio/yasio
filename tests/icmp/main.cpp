@@ -82,12 +82,12 @@ using namespace yasio;
 // |                               |                              |       v
 // +-------------------------------+------------------------------+      ---
 
-template <typename Iterator>
-static void icmp_checksum(icmp_hdr_st& header, Iterator body_begin, Iterator body_end)
+template <typename _Iter>
+static void icmp_checksum(icmp_hdr_st& header, _Iter body_begin, _Iter body_end)
 {
   unsigned int sum = (header.type << 8) + header.code + header.id + header.seqno;
 
-  Iterator body_iter = body_begin;
+  _Iter body_iter = body_begin;
   while (body_iter != body_end)
   {
     sum += (static_cast<unsigned char>(*body_iter++) << 8);
@@ -152,7 +152,7 @@ public:
     socktype_ = schk.open(AF_INET, SOCK_RAW, IPPROTO_ICMP) ? SOCK_RAW : SOCK_DGRAM;
 
 #if defined(ICMPTEST_ENC_TSC)
-    if (yasio::time_now() < static_cast<yasio::highp_time_t>((std::numeric_limits<int>::max)() - 86400))
+    if (tlx::time_now() < static_cast<tlx::highp_time_t>((std::numeric_limits<int>::max)() - 86400))
     {
       payload_size = (std::max<int>)(payload_size, static_cast<int>(sizeof(yasio::icmp::timeval32) + ICMPTEST_PAYLOAD_LEN));
       enc_tsc_     = true;
@@ -198,7 +198,7 @@ public:
     // icmp body
     if (enc_tsc_)
     {
-      auto tsc = yasio::highp_clock<yasio::system_clock_t>();
+      auto tsc = tlx::highp_clock<tlx::system_clock_t>();
       // !!! after 01/19/2038 3:14:07 the 32bit tv_sec will overflow
       icmp::timeval32 tv{static_cast<int>(tsc / std::micro::den), static_cast<int>(tsc % std::micro::den)};
       icmp_pkt_.write_bytes(&tv, static_cast<int>(sizeof(tv)));
@@ -212,7 +212,7 @@ public:
       // id,sum
 #if !defined(__linux__)
     req_hdr.id = get_identifier();
-    icmp_checksum(req_hdr, icmp_pkt_.data() + sizeof(icmp_hdr_st), icmp_pkt_.buffer().end());
+    icmp_checksum(req_hdr, icmp_pkt_.buffer().begin() + sizeof(icmp_hdr_st), icmp_pkt_.buffer().end());
 #else
     /** Linux:
      * SOCK_DGRAM
@@ -222,7 +222,8 @@ public:
     if (socktype_ == SOCK_RAW)
     {
       req_hdr.id = get_identifier();
-      icmp_checksum(req_hdr, icmp_pkt_.data() + sizeof(icmp_hdr_st), icmp_pkt_.buffer().end());
+      icmp_checksum(req_hdr, icmp_pkt_.buffer().begin() + sizeof(icmp_hdr_st),
+                    icmp_pkt_.buffer().end());
     }
 #endif
     icmp_pkt_.pop<unsigned short>(id_off, req_hdr.id);
@@ -247,7 +248,7 @@ public:
     watcher.mod_event(s.native_handle(), 0, socket_event::read);
     if (ret > 0 && watcher.is_ready(s.native_handle(), socket_event::read))
     {
-      yasio::byte_buffer buf(ip_total_len_);
+      tlx::byte_buffer buf(ip_total_len_);
       int n = s.recvfrom(buf.data(), ip_total_len_, peer);
 
       uint8_t* icmp_raw = nullptr;
@@ -368,12 +369,12 @@ int main(int argc, char** argv)
   int payload_size = 0; // icmp payload size
   for (int argi = 2; argi < argc; ++argi)
   {
-    if (cxx20::ic::iequals(argv[argi], "-c") || cxx20::ic::iequals(argv[argi], "-n"))
+    if (tlx::ic::iequals(argv[argi], "-c") || tlx::ic::iequals(argv[argi], "-n"))
     {
       if (++argi < argc)
         max_times = atoi(argv[argi]);
     }
-    else if (cxx20::ic::iequals(argv[argi], "-s") || cxx20::ic::iequals(argv[argi], "-l"))
+    else if (tlx::ic::iequals(argv[argi], "-s") || tlx::ic::iequals(argv[argi], "-l"))
     {
       if (++argi < argc)
         payload_size = atoi(argv[argi]);
@@ -381,7 +382,7 @@ int main(int argc, char** argv)
     ++argi;
   }
 
-  payload_size = yasio::clamp(payload_size, ICMPTEST_PAYLOAD_LEN, ICMPTEST_PAYLOAD_MAX_LEN);
+  payload_size = std::clamp(payload_size, ICMPTEST_PAYLOAD_LEN, ICMPTEST_PAYLOAD_MAX_LEN);
 
   std::vector<ip::endpoint> endpoints;
   xxsocket::resolve(endpoints, host, 0);
@@ -407,11 +408,12 @@ int main(int argc, char** argv)
     uint8_t ttl = 0;
     int error   = 0;
 
-    auto start_ms = yasio::highp_clock();
+    auto start_ms = tlx::highp_clock();
     int n         = helper.ping(watcher, endpoints[0], std::chrono::seconds(3), peer, reply_hdr, ttl, error);
     if (n > 0)
       fprintf(stdout, "Reply from %s: bytes=%d icmp_seq=%u ttl=%u id=%u time=%.1lfms\n", peer.ip().c_str(), n, static_cast<unsigned int>(reply_hdr.seqno),
-              static_cast<unsigned int>(ttl), static_cast<unsigned int>(reply_hdr.id), (yasio::highp_clock() - start_ms) / 1000.0);
+              static_cast<unsigned int>(ttl), static_cast<unsigned int>(reply_hdr.id),
+              (tlx::highp_clock() - start_ms) / 1000.0);
     else
       fprintf(stderr, "Ping %s [%s] fail, ec=%d, detail: %s\n", host, remote_ip.c_str(), error, yasio::icmp::strerror(error));
     std::this_thread::sleep_for(std::chrono::seconds(1));

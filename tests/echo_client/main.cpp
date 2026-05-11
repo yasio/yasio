@@ -7,8 +7,8 @@
 
 using namespace yasio;
 
-static highp_time_t s_last_send_time[3]   = {0};
-static const highp_time_t s_send_interval = 2000; // (ms)
+static tlx::highp_time_t s_last_send_time[3]   = {0};
+static const tlx::highp_time_t s_send_interval = 2000; // (ms)
 
 void run_echo_client(const char* ip, int port, const char* protocol)
 {
@@ -30,7 +30,7 @@ void run_echo_client(const char* ip, int port, const char* protocol)
     {
       case YEK_PACKET: {
         auto index = event->cindex();
-        auto diff  = highp_clock() - s_last_send_time[index];
+        auto diff  = tlx::highp_clock() - s_last_send_time[index];
 
         auto packet = std::move(event->packet());
         total_bytes_transferred += static_cast<int>(packet.size());
@@ -57,7 +57,7 @@ void run_echo_client(const char* ip, int port, const char* protocol)
               obs.fill_bytes(n, 'a');
               auto bytes_transferred = service.write(transport, std::move(obs.buffer()));
               printf("sent %d bytes ...\n", bytes_transferred);
-              s_last_send_time[index] = highp_clock();
+              s_last_send_time[index] = tlx::highp_clock();
               return false;
             });
           }
@@ -74,11 +74,11 @@ void run_echo_client(const char* ip, int port, const char* protocol)
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
   printf("[%s] connecting %s:%u ...\n", protocol, ip, port);
-  if (cxx20::ic::iequals(protocol, "udp"))
+  if (tlx::ic::iequals(protocol, "udp"))
   {
     service.open(0, YCK_UDP_CLIENT);
   }
-  else if (cxx20::ic::iequals(protocol, "kcp"))
+  else if (tlx::ic::iequals(protocol, "kcp"))
   {
     service.open(0, YCK_KCP_CLIENT);
   }

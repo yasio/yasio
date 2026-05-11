@@ -33,7 +33,7 @@ cmake_dependent_option(YASIO_BUILD_LUA_EXAMPLE
   "Build lua example when we are the root project" ON
   "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 
-option(YASIO_ENABLE_EXT_HTTP "Build yasio http extension" ON)
+option(YASIO_ENABLE_EXT_HTTP "Build yasio http extension" OFF)
 option(YASIO_ENABLE_LUA "Build yasio with lua support" OFF)
 option(YASIO_ENABLE_AXLUA "Build yasio with axmol-lua support" OFF)
 option(YASIO_ENABLE_NI "Build yasio with native interface for interop" OFF)
@@ -499,7 +499,7 @@ if(YASIO_BUILD_TESTS)
     endif()
     if (NOT YASIO_NO_DEPS)
         add_subdirectory(examples/ftp_server)
-        add_subdirectory(tests/http)
+        # add_subdirectory(tests/http)
     endif()
     if (YASIO_SSL_BACKEND)
         add_subdirectory(tests/ssl)

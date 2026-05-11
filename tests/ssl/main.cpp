@@ -35,7 +35,7 @@ void yasioTest()
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
   service.set_option(YOPT_C_MOD_FLAGS, SSLTEST_CHANNEL_SERVER, YCF_REUSEADDR, 0);
 
-  yasio::sbyte_buffer http_resp_data;
+  tlx::sbyte_buffer http_resp_data;
 
   service.start([&](event_ptr&& event) {
     switch (event->kind())
@@ -47,7 +47,8 @@ void yasioTest()
           case SSLTEST_CHANNEL_HTTP_CLIENT: {
             auto packet = event->packet_view();
             http_client_bytes_transferred += static_cast<int>(packet.size());
-            http_resp_data.append(packet.data(), packet.data() + packet.size());
+            http_resp_data.insert(http_resp_data.end(), packet.data(),
+                                  packet.data() + packet.size());
           }
           break;
           case SSLTEST_CHANNEL_CLIENT:

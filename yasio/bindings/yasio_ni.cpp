@@ -32,7 +32,7 @@ SOFTWARE.
 #include <array>
 #include <string.h>
 #include "yasio/yasio.hpp"
-#include "yasio/split.hpp"
+#include "yasio/tlx/split.hpp"
 
 #if defined(_WINDLL)
 #  define YASIO_NI_API __declspec(dllexport)

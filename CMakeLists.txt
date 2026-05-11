@@ -63,7 +63,7 @@ endif()
 # --- The C/C++ standard
 if (NOT MSVC)
     if (NOT CXX_STD)
-        set(CXX_STD 11)
+        set(CXX_STD 20)
     endif()
     set(CMAKE_CXX_STANDARD ${CXX_STD})
 else()

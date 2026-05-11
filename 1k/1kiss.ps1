@@ -219,7 +219,7 @@ $manifest = @{
     # exactly match format: '14.42.*'
     msvc         = '14.39+';
     vs           = '12.0+';
-    ndk          = 'r23c';
+    ndk          = 'r27d';
     xcode        = '13.0.0+'; # range
     # _EMIT_STL_ERROR(STL1000, "Unexpected compiler version, expected Clang xx.x.x or newer.");
     # clang-cl msvc14.37 require 16.0.0+

@@ -30,15 +30,12 @@ SOFTWARE.
 #include "yasio/bindings/yasio_axlua.hpp"
 #include "yasio/bindings/lyasio.hpp"
 #include "yasio/object_pool.hpp"
-#include "yasio/ref_ptr.hpp"
-#include "yasio/string_view.hpp"
 
-// A workaround to fix compile issue caused by `CCPlatformMacros.h` doesn't handle `__has_attribute` it properly
-#  if !__has_attribute(format)
-#    undef __has_attribute
-#  endif
-#include "cocos2d.h"
-using namespace cocos2d;
+#include "axmol/base/Director.h"
+#include "axmol/base/Scheduler.h"
+#include "axmol/tlx/memory.hpp"
+
+using namespace ax;
 
 namespace lyasio
 {
@@ -60,7 +57,15 @@ struct TimerObject
   static uintptr_t s_timerId;
 
   DEFINE_FAST_OBJECT_POOL_ALLOCATION(TimerObject, 128)
-  YASIO__DEFINE_REFERENCE_CLASS
+
+  void retain() { ++_referenceCount; }
+  void release()
+  {
+    if (--_referenceCount == 0)
+      delete this;
+  }
+
+  uint32_t _referenceCount{1};
 };
 uintptr_t TimerObject::s_timerId = 0;
 
@@ -68,11 +73,11 @@ static TIMER_ID loop(unsigned int n, float interval, vcallback_t callback)
 {
   if (n > 0 && interval >= 0)
   {
-    yasio::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
+    tlx::retain_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)), tlx::adopt_object);
 
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("LSTMR#%p", timerId);
+    std::string key = fmt::format("LSTMR#{}", fmt::ptr(timerId));
 
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
@@ -90,10 +95,10 @@ static TIMER_ID delay(float delay, vcallback_t callback)
 {
   if (delay > 0)
   {
-    yasio::ref_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)));
+    tlx::retain_ptr<TimerObject> timerObj(new TimerObject(std::move(callback)), tlx::adopt_object);
     auto timerId = reinterpret_cast<TIMER_ID>(++TimerObject::s_timerId);
 
-    std::string key = StringUtils::format("LSTMR#%p", timerId);
+    std::string key = fmt::format("LSTMR#{}", fmt::ptr(timerId));
     Director::getInstance()->getScheduler()->schedule(
         [timerObj](
             float /*dt*/) { // lambda expression hold the reference of timerObj automatically.
@@ -108,7 +113,7 @@ static TIMER_ID delay(float delay, vcallback_t callback)
 
 static void kill(TIMER_ID timerId)
 {
-  std::string key = StringUtils::format("LSTMR#%p", timerId);
+  std::string key = fmt::format("LSTMR#{}", fmt::ptr(timerId));
   Director::getInstance()->getScheduler()->unschedule(key, STIMER_TARGET_VALUE);
 }
 YASIO_LUA_API void clear()

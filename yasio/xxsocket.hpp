@@ -40,7 +40,7 @@ SOFTWARE.
 #include <memory>
 #include "yasio/impl/socket.hpp"
 #include "yasio/logging.hpp"
-#include "yasio/string_view.hpp"
+#include "yasio/tlx/string_view.hpp"
 
 namespace yasio
 {
@@ -1176,7 +1176,7 @@ template <>
 struct hash<yasio::ip::endpoint> {
   std::size_t operator()(const yasio::ip::endpoint& ep) const YASIO__NOEXCEPT
   {
-    return std::hash<cxx17::string_view>()(cxx17::string_view{reinterpret_cast<const char*>(&ep), static_cast<size_t>(ep.len())});
+    return std::hash<std::string_view>()(std::string_view{reinterpret_cast<const char*>(&ep), static_cast<size_t>(ep.len())});
   }
 };
 } // namespace std

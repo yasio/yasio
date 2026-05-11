@@ -259,18 +259,7 @@ SOFTWARE.
 
 #define YASIO__STD ::std::
 
-#if YASIO__HAS_CXX14
-namespace cxx14
-{
-using namespace std;
-};
-#endif
-
-#if YASIO__HAS_CXX17
-namespace cxx17
-{
-using namespace std;
-};
-#endif
+// The yasio is the original tlx provider
+#define _TLX ::tlx::
 
 #endif

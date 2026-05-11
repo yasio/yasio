@@ -36,7 +36,7 @@ SOFTWARE.
 #  include "yasio/xxsocket.hpp"
 #endif
 
-#include "yasio/utils.hpp"
+#include "yasio/tlx/chrono.hpp"
 
 #if !defined(_WIN32)
 #  include "yasio/impl/ifaddrs.hpp"
@@ -718,9 +718,9 @@ int xxsocket::send_n(socket_native_type s, const void* buf, int len, std::chrono
     if (n == -1 && xxsocket::not_send_error(error))
     {
       // Wait upto <timeout> for the blocking to subside.
-      auto start    = yasio::highp_clock();
+      auto start    = tlx::highp_clock();
       int const rtn = handle_write_ready(s, wtimeout);
-      wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
+      wtimeout -= std::chrono::microseconds(tlx::highp_clock() - start);
 
       // Did select() succeed?
       if (rtn != -1 && wtimeout.count() > 0)
@@ -768,9 +768,9 @@ int xxsocket::recv_n(socket_native_type s, void* buf, int len, std::chrono::micr
     if (n == -1 && xxsocket::not_recv_error(error))
     {
       // Wait upto <timeout> for the blocking to subside.
-      auto start    = yasio::highp_clock();
+      auto start    = tlx::highp_clock();
       int const rtn = handle_read_ready(s, wtimeout);
-      wtimeout -= std::chrono::microseconds(yasio::highp_clock() - start);
+      wtimeout -= std::chrono::microseconds(tlx::highp_clock() - start);
 
       // Did select() succeed?
       if (rtn != -1 && wtimeout.count() > 0)
@@ -834,9 +834,9 @@ int xxsocket::select(socket_native_type s, fd_set* readfds, fd_set* writefds, fd
 
     timeval waitd_tv = {static_cast<decltype(timeval::tv_sec)>(wtimeout.count() / std::micro::den),
                         static_cast<decltype(timeval::tv_usec)>(wtimeout.count() % std::micro::den)};
-    long long start  = highp_clock();
+    long long start  = tlx::highp_clock();
     n                = ::select(static_cast<int>(s + 1), readfds, writefds, exceptfds, &waitd_tv);
-    wtimeout -= std::chrono::microseconds(highp_clock() - start);
+    wtimeout -= std::chrono::microseconds(tlx::highp_clock() - start);
 
     if (n < 0 && xxsocket::get_last_errno() == EINTR)
     {

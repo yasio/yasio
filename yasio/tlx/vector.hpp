@@ -53,7 +53,7 @@ namespace tlx
 {
 
 // Writable iterator for sequential containers
-template <class _Myvec>
+template <typename _Myvec>
 class sequence_const_iterator {
 public:
   using iterator_concept  = std::contiguous_iterator_tag;
@@ -146,7 +146,7 @@ public:
   _Tptr _Ptr; // pointer to element in vector
 };
 
-template <class _Myvec>
+template <typename _Myvec>
 class sequence_iterator : public sequence_const_iterator<_Myvec> {
 public:
   using _Mybase = sequence_const_iterator<_Myvec>;
@@ -227,7 +227,7 @@ public:
   constexpr reference operator[](const difference_type _Off) const noexcept { return const_cast<reference>(_Mybase::operator[](_Off)); }
 };
 
-template <class _Value_type, class _Size_type, class _Difference_type, class _Pointer, class _Const_pointer>
+template <typename _Value_type, typename _Size_type, typename _Difference_type, typename _Pointer, typename _Const_pointer>
 struct _Vec_iter_types {
   using value_type      = _Value_type;
   using size_type       = _Size_type;
@@ -272,10 +272,10 @@ struct _Vector_val {
   pointer _Myend;
 };
 
-template <class _Ty, class _Alloc = std::allocator<_Ty>, fill_policy _FillPolicy = fill_policy::always>
+template <typename _Ty, typename _Alloc = std::allocator<_Ty>, fill_policy _FillPolicy = fill_policy::always>
 class vector { // varying size array of values
 private:
-  template <class>
+  template <typename>
   friend class _Vb_val;
   friend __tidy_guard<vector>;
 
@@ -374,7 +374,7 @@ public:
     _Construct_n(_Count, _Val);
   }
 
-  template <class _Iter, enable_if_t<is_iterator<_Iter>::value, int> = 0>
+  template <typename _Iter, enable_if_t<is_iterator<_Iter>::value, int> = 0>
   constexpr vector(_Iter _First, _Iter _Last, const _Alloc& _Al = _Alloc()) : _Mypair(_TLX __one_then_variadic_args_t{}, _Al)
   {
     auto _UFirst = _First;
@@ -451,7 +451,7 @@ public:
   constexpr ~vector() noexcept { _Tidy(); }
 
 private:
-  template <class... _Valty>
+  template <typename... _Valty>
   constexpr _Ty& _Emplace_one_at_back(_Valty&&... _Val)
   {
     // insert by perfectly forwarding into element at end, provide strong guarantee
@@ -466,7 +466,7 @@ private:
     return *_Emplace_reallocate(_Mylast, std::forward<_Valty>(_Val)...);
   }
 
-  template <class... Valty>
+  template <typename... Valty>
   constexpr _Ty& _Emplace_back_with_unused_capacity(Valty&&... val)
   {
     auto& data    = _Mypair._Myval2;
@@ -487,7 +487,7 @@ private:
     return result;
   }
 
-  template <class... _Valty>
+  template <typename... _Valty>
   constexpr pointer _Emplace_reallocate(const pointer _Whereptr, _Valty&&... _Val)
   {
     // reallocate and insert by perfectly forwarding _Val at _Whereptr
@@ -542,7 +542,7 @@ private:
   }
 
 public:
-  template <class... _Valty>
+  template <typename... _Valty>
   constexpr _Ty& emplace_back(_Valty&&... _Val)
   {
     // insert by perfectly forwarding into element at end, provide strong guarantee
@@ -570,7 +570,7 @@ public:
     return *this;
   }
 
-  template <class _U = value_type, typename = std::enable_if_t<std::is_pointer<_U>::value>>
+  template <typename _U = value_type, typename _Enable = std::enable_if_t<std::is_pointer<_U>::value>>
   constexpr void resize(const size_type _Newsize, std::nullptr_t)
   {
     _Resize(_Newsize, _TLX value_init);
@@ -638,7 +638,7 @@ public:
 #pragma endregion
 
 public:
-  template <class... _Valty>
+  template <typename... _Valty>
   constexpr iterator emplace(const_iterator _Where, _Valty&&... _Val)
   {
     auto _Whereptr = _Where._Ptr;
@@ -682,7 +682,7 @@ public:
     return emplace(_Where, std::move(_Val));
   }
 
-  template <class... _Valty>
+  template <typename... _Valty>
   constexpr iterator insert(const_iterator _Where, const size_type _Count, const _Ty& _Val)
   {
     // insert _Count copies of _Val at _Where
@@ -772,7 +772,7 @@ public:
   }
 
 private:
-  template <class _Iter>
+  template <typename _Iter>
   constexpr void _Insert_counted_range(const_iterator _Where, _Iter _First, const size_type _Count)
   {
     // insert counted range _First + [0, _Count) at _Where
@@ -888,7 +888,7 @@ private:
   }
 
 public:
-  template <class _Iter, enable_if_t<tlx::is_iterator_v<_Iter>, int> = 0>
+  template <typename _Iter, enable_if_t<tlx::is_iterator_v<_Iter>, int> = 0>
   constexpr iterator insert(const_iterator _Where, _Iter _First, _Iter _Last)
   {
     auto _Whereptr          = _Where._Ptr;
@@ -947,7 +947,7 @@ public:
   }
 
 private:
-  template <class _Iter>
+  template <typename _Iter>
   constexpr void _Assign_counted_range(_Iter _First, const size_type _Newsize)
   {
     // assign elements from counted range _First + [0, _Newsize)
@@ -999,7 +999,7 @@ private:
   }
 
 public:
-  template <class _Iter, enable_if_t<std::is_pointer_v<_Iter>, int> = 0>
+  template <typename _Iter, enable_if_t<std::is_pointer_v<_Iter>, int> = 0>
   constexpr void assign(_Iter _First, _Iter _Last)
   {
     const auto _Length = static_cast<size_t>(_Last - _First); // pointer difference
@@ -1039,7 +1039,7 @@ public:
   }
 
 private:
-  template <class _Ty2>
+  template <typename _Ty2>
   constexpr void _Resize_reallocate(const size_type _Newsize, const _Ty2& _Val)
   {
     if (_Newsize > max_size())
@@ -1086,7 +1086,7 @@ private:
     _Change_array(_Newvec, _Newsize, _Newcapacity);
   }
 
-  template <class _Ty2>
+  template <typename _Ty2>
   constexpr void _Resize(const size_type _Newsize, const _Ty2& _Val)
   {
     // trim or append elements, provide strong guarantee
@@ -1528,7 +1528,7 @@ private:
     }
   }
 
-  template <class... _Valty>
+  template <typename... _Valty>
   constexpr void _Construct_n(const size_type _Count, _Valty&&... _Val)
   {
     // Dispatch between the three sized constructions:
@@ -1673,7 +1673,7 @@ inline typename _Cont::iterator ordered_insert(_Cont& vec, typename _Cont::value
 
 namespace std
 {
-template <class _Myvec>
+template <typename _Myvec>
 struct pointer_traits<_TLX sequence_const_iterator<_Myvec>> {
   using pointer         = _TLX sequence_const_iterator<_Myvec>;
   using element_type    = const typename pointer::value_type;
@@ -1681,7 +1681,7 @@ struct pointer_traits<_TLX sequence_const_iterator<_Myvec>> {
 
   static constexpr element_type* to_address(const pointer _Iter) noexcept { return std::to_address(_Iter._Ptr); }
 };
-template <class _Myvec>
+template <typename _Myvec>
 struct pointer_traits<_TLX sequence_iterator<_Myvec>> {
   using pointer         = _TLX sequence_iterator<_Myvec>;
   using element_type    = typename pointer::value_type;

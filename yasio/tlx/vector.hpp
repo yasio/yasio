@@ -570,7 +570,7 @@ public:
     return *this;
   }
 
-  template <typename _U = value_type, std::enable_if_t<std::is_pointer_v<_U>, int> = 0>
+  template <typename _Valty = value_type, std::enable_if_t<std::is_pointer_v<_Valty>, int> = 0>
   constexpr void resize(const size_type _Newsize, std::nullptr_t)
   {
     _Resize(_Newsize, _TLX value_init);

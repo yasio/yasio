@@ -35,7 +35,7 @@ void yasioTest()
   service.set_option(YOPT_S_SSL_CERT, SSLTEST_CERT, SSLTEST_PKEY);
   service.set_option(YOPT_C_MOD_FLAGS, SSLTEST_CHANNEL_SERVER, YCF_REUSEADDR, 0);
 
-  tlx::sbyte_buffer http_resp_data;
+  tlx::byte_buffer http_resp_data;
 
   service.start([&](event_ptr&& event) {
     switch (event->kind())
@@ -47,17 +47,16 @@ void yasioTest()
           case SSLTEST_CHANNEL_HTTP_CLIENT: {
             auto packet = event->packet_view();
             http_client_bytes_transferred += static_cast<int>(packet.size());
-            http_resp_data.insert(http_resp_data.end(), packet.data(),
-                                  packet.data() + packet.size());
+            http_resp_data.insert(http_resp_data.end(), packet.data(), packet.data() + packet.size());
           }
           break;
           case SSLTEST_CHANNEL_CLIENT:
-            fprintf(stdout, "==> ssl client: recv message '%s' from server\n", std::string{packet.data(), packet.size()}.c_str());
+            fprintf(stdout, "==> ssl client: recv message '%s' from server\n", std::string{reinterpret_cast<const char*>(packet.data()), packet.size()}.c_str());
             fflush(stdout);
             service.close(event->transport());
             break;
           case SSLTEST_CHANNEL_SERVER:
-            fprintf(stdout, "==> ssl server: recv message '%s' from client\n", std::string{packet.data(), packet.size()}.c_str());
+            fprintf(stdout, "==> ssl server: recv message '%s' from client\n", std::string{reinterpret_cast<const char*>(packet.data()), packet.size()}.c_str());
             fflush(stdout);
             break;
         }

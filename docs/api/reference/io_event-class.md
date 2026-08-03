@@ -85,7 +85,7 @@ int passive() const
 获取事件携带的消息包
 
 ```cpp
-yasio::sbyte_buffer& packet()
+tlx::byte_buffer& packet()
 ```
 
 ## 返回值

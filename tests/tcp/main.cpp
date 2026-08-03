@@ -57,11 +57,11 @@ void yasioTest()
   std::cout << r0 << ", " << r1 << ", " << f1 << ", " << v5 << ", " << v6 << ", " << v8 << "\n";
 #endif
 
-  tlx::sbyte_buffer vecbuf;
+  tlx::byte_buffer vecbuf;
   std::string strbuf;
   std::array<char, 16> arrbuf;
   char raw_arrbuf[16];
-  yasio::obstream_span<tlx::sbyte_buffer>{vecbuf}.write_bytes("hello world!");
+  yasio::obstream_span<tlx::byte_buffer>{vecbuf}.write_bytes("hello world!");
   yasio::obstream_span<std::string>{strbuf}.write_bytes("hello world!");
   yasio::obstream_span<yasio::fixed_buffer_span>{arrbuf}.write_bytes("hello world!");
   yasio::obstream_span<yasio::fixed_buffer_span>{raw_arrbuf}.write_bytes("hello world!");

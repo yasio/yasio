@@ -1,3 +1,18 @@
+yasio-4.4.1
+
+  1. Remove `tlx::sbyte_buffer`
+
+
+yasio-4.4.0
+
+  1. Update codebase to c++20
+
+
+yasio-4.3.3
+
+  1. Fix some minor issues
+
+
 yasio-4.3.2
 
   1. Fix API `xxsocket::resolve` compatibility issue on android and freebsd

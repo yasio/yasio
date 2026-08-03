@@ -1,6 +1,7 @@
 #include <thread>
+#include <string_view>
+#include "yasio/compiler/feature_test.hpp"
 #include "yasio/bindings/lyasio.hpp"
-#include "yasio/string_view.hpp"
 #if YASIO__HAS_CXX14
 #  if YASIO__HAS_CXX17 // use sol2-3.x
 #    include "sol/sol.hpp"
@@ -31,9 +32,9 @@ int main(int argc, char** argv)
   s.open_libraries();
   luaregister_yasio(s.lua_state());
 
-  cxx17::string_view path = argv[0];
+  std::string_view path = argv[0];
   auto pos                = path.find_last_of("/\\");
-  if (pos != cxx17::string_view::npos)
+  if (pos != std::string_view::npos)
     path.remove_suffix(path.size() - pos - 1);
   std::string package_path = s["package"]["path"];
   package_path.push_back(';');
@@ -62,9 +63,9 @@ int main(int argc, char** argv)
   s.openlibs();
   luaregister_yasio(s.state());
 
-  cxx17::string_view path = argv[0];
+  std::string_view path = argv[0];
   auto pos                = path.find_last_of("/\\");
-  if (pos != cxx17::string_view::npos)
+  if (pos != std::string_view::npos)
     path.remove_suffix(path.size() - pos - 1);
   std::string package_path = s["package"]["path"];
   package_path.push_back(';');

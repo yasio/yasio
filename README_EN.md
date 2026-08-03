@@ -14,7 +14,9 @@
   
 **[简体中文](README.md)**
   
-**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows, macos, ios, android, ohos, linux, freebsd and other unix-like systems.
+**yasio** is a multi-platform support and lightweight library with focus on asynchronous socket I/O for any client application, support windows, macos, ios, android, ohos, linux, freebsd and other unix-like systems.  
+
+*Starting with version 4.4.0, C++20 or later is required.*
 
 ## Supported Platforms
 
